@@ -106,7 +106,7 @@ Clean up old images without ever deleting one that is deployed. The label says w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same policy engine checks an image when it is pushed and when it is deployed. Unsigned, unscanned or vulnerable images can be refused at either point.
+The same policy engine checks an image when it is pushed to the built-in registry, as it already does for a push from a pipeline and for a deploy. Unsigned, unscanned or vulnerable images can be refused at either point.
 
 **Depends on:** Policy gates.
 

@@ -183,7 +183,7 @@ Optional summaries and review comments on pull requests, labelled as AI. It neve
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Explain why a run or deploy failed, with the evidence it used. Always shows the facts first.
+Explain why a deploy failed as well as a step, with the evidence used. Explaining a failed step already works. Always shows the facts first.
 
 **Depends on:** Why did it fail to deploy.
 

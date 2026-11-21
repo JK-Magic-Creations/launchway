@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 2 available · 7 in progress · 69 planned · 78 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 2 available · 11 in progress · 66 planned · 79 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,16 +48,16 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 0 | 1 | 19 |
+| [Host your code](#g-host-your-code) | 20 | 0 | 2 | 18 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 0 | 0 | 10 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
-| [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 0 | 6 |
-| [Move your repositories in](#g-move-your-repositories-in) | 4 | 0 | 1 | 3 |
+| [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
+| [Move your repositories in](#g-move-your-repositories-in) | 4 | 0 | 2 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
 | [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 7 | 2 | 1 | 4 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 0 | 3 | 6 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
-| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 4 | 0 | 1 | 3 |
+| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 5 | 0 | 2 | 3 |
 
 ### Host your code {#g-host-your-code}
 
@@ -175,7 +175,7 @@ A deleted repository goes to a trash and can come back within a set time. Delete
 
 #### Mirrors in and out {#mirrors-in-and-out}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Pull a repository from another host on a schedule, or push every change to another host as a safety copy. Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace.
 
@@ -526,7 +526,7 @@ Users, repositories, queues, background tasks, a banner and a maintenance mode. 
 
 #### Compatible addresses and tools {#compatible-addresses-and-tools}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Clone addresses, push events and read interfaces shaped like the common ones, so existing remotes, bots and editors keep working. This makes moving over a matter of changing a setting, not rewriting scripts.
 
@@ -550,7 +550,7 @@ A tested path from another Git host, so switching is a step and not a leap.
 
 #### Move your repositories in {#move-your-repositories-in}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time.
 
@@ -679,7 +679,7 @@ Each step proves its identity to a cloud with short-lived tokens, so no long-liv
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Re-run just the failed steps of a run, with earlier results reused. Combined with caches, a flaky test costs minutes instead of a full run.
+Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works. Combined with caches, a flaky test costs minutes instead of a full run.
 
 [Area page](pipelines.md)
 
@@ -717,7 +717,7 @@ One sentence about what needs you, rows with one recommended action each, and a 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Home, Projects, Deployments, Activity, Library and Settings replace a long flat menu. Anything switched off is not shown, so a new installation is small and grows as you turn things on.
+A short, plainly named set of sections, with the ones that have nothing to show kept out of sight, replaces a long flat menu. Anything switched off is not shown, so a new installation is small and grows as you turn things on.
 
 [Area page](guided-interface.md)
 
@@ -824,8 +824,9 @@ High availability that covers the database and repository storage as well as the
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. Runners on virtual machines and customer machines update themselves too (see the runner update item).
+Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. Runners on virtual machines and customer machines update themselves too (see the runner update item). The pipeline and the runbook are written and checked; a first real run, with its rollback, is still to come.
 
+[Read the documentation](../howto/self-deploy.md)
 
 #### Fewer concepts to learn {#fewer-concepts-to-learn}
 
@@ -833,6 +834,14 @@ Launchway is built, tested, signed and rolled out by Launchway, in a group of se
 
 No pile of connectors, services and environments to define before anything works. Six words cover everyday use: project, pipeline, step, run, environment and runner.
 
+
+#### Signed releases and installers {#signed-releases-and-installers}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow. All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.
+
+[Read the documentation](../security/verify-downloads.md)
 
 ## What done means
 
