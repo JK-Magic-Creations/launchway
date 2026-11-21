@@ -78,6 +78,7 @@ Usage:
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+  launchway encryption init|status|rotate|rewrap     the root key and encryption at rest (launchway encryption, for more)
   launchway config   list|get|set|create|delete|restore|history|export|import|apply ...
                                                 configuration kept in the database (launchway config, for more)
   launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
@@ -150,7 +151,7 @@ func main() {
 		err = cmdBlobs(args)
 	case "projects", "libraries", "environments", "policies", "runner-pools", "role-bindings", "policy-sources", "units", "secret-stores":
 		err = cmdKindAlias(os.Args[1])(args)
-	case "repos", "keys", "pr":
+	case "repos", "keys", "pr", "encryption":
 		err = cmdHosting(os.Args[1], args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
@@ -214,11 +215,11 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	token, err := config.RunnerToken(cfg.Data, eng)
+	secretsSvc, token, err := su.secretsAndToken(eng)
 	if err != nil {
 		return err
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
 	if store.Available() {
 		srv.Settings = store

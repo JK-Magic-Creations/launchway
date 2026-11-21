@@ -38,6 +38,7 @@ func (c *Config) relativeToFile(path string) error {
 	c.Runner.Secrets.RelativeTo(base)
 	c.AI.Secrets.RelativeTo(base)
 	c.Runner.Images.RelativeTo(base)
+	c.Encryption.relativeTo(base)
 	c.relativeTriggerFiles(base)
 	rel(&c.Auth.OIDC.ClientSecretFile)
 	for i := range c.RunnerPools {

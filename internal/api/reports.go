@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
@@ -200,7 +199,7 @@ func (s *Server) runReports(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	key, err := s.hostedKey()
+	key, err := s.hostedKey(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -238,13 +237,13 @@ func escapePath(p string) string {
 
 // hostedKey is the key that signs links to HTML reports, shared by every
 // server.
-func (s *Server) hostedKey() ([]byte, error) {
+func (s *Server) hostedKey(ctx context.Context) ([]byte, error) {
 	s.sealerMu.Lock()
 	defer s.sealerMu.Unlock()
 	if s.reportKey != nil {
 		return s.reportKey, nil
 	}
-	v, err := s.Engine.SharedValue("hosted_report_key", auth.NewKey())
+	v, err := s.sharedSecret(ctx, "hosted_report_key")
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +295,7 @@ func (s *Server) hosted(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "HTML reports are served from "+s.ReportsOrigin)
 		return
 	}
-	key, err := s.hostedKey()
+	key, err := s.hostedKey(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return

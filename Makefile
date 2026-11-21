@@ -76,7 +76,7 @@ LAUNCHWAY_TEST_POSTGRES ?= postgres://launchway:launchway@127.0.0.1:55432/launch
 test-postgres:
 	LAUNCHWAY_TEST_POSTGRES='$(LAUNCHWAY_TEST_POSTGRES)' go test -race -count=1 -timeout 60m ./internal/engine/ ./internal/source/ ./internal/api/
 
-# Runs the vault secret store against a real server. A throwaway OpenBao in
+# Runs the vault secret store, and the transit root key holder of encryption at rest, against a real server. A throwaway OpenBao in
 # dev mode (KV version 2 at secret/):
 #   podman run --rm -d --name launchway-bao -p 127.0.0.1:58200:8200 \
 #     -e BAO_DEV_ROOT_TOKEN_ID=dev-root quay.io/openbao/openbao:latest \
@@ -86,7 +86,7 @@ LAUNCHWAY_TEST_VAULT_ADDR ?= http://127.0.0.1:58200
 LAUNCHWAY_TEST_VAULT_TOKEN ?= dev-root
 test-vault:
 	LAUNCHWAY_TEST_VAULT_ADDR='$(LAUNCHWAY_TEST_VAULT_ADDR)' LAUNCHWAY_TEST_VAULT_TOKEN='$(LAUNCHWAY_TEST_VAULT_TOKEN)' \
-		go test -race -count=1 -run OpenBao -v ./internal/secrets/
+		go test -race -count=1 -run OpenBao -v ./internal/secrets/ ./internal/keyring/transit/ ./internal/sealing/
 
 # Image steps' container tests start a rootless BuildKit (pulled once, its
 # cache kept in Podman volumes launchway-test-buildkit*) and registries, and

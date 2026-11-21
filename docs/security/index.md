@@ -7,6 +7,7 @@ it safely. For security reviewers, operators and pipeline authors.
 |---|---|
 | [Trust model and threats](trust-model.md) | the parts, the trust boundaries between them, what each is trusted with, and the current limits |
 | [Hardening checklist](hardening.md) | what to do before others can reach a server, for operators and pipeline authors |
+| [Encryption at rest](../guide/encryption-at-rest.md) | what is sealed under a root key held outside the database, what is not yet, how to back the key up, rotate and replace it |
 | [How Launchway is scanned](how-launchway-is-scanned.md) | every scan and gate on Launchway's own code, dependencies, images and charts, with results, severity policy and exceptions |
 | [Threat model](threat-model.md) | threats by boundary, what defends against each, and the known gaps |
 | [Supply chain](supply-chain.md) | pinned libraries, image digests, SBOMs, provenance, signatures, scans and policies |

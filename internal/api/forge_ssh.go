@@ -25,6 +25,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 )
 
 const viaSSH = "ssh"
@@ -57,7 +58,7 @@ func (s *Server) StartSSH(ctx context.Context, o SSHOptions) error {
 	if s.Forge == nil || s.Forge.Git == nil || s.Forge.Keys == nil {
 		return errors.New("serving Git over SSH needs Git hosting")
 	}
-	seal, err := s.hostKeySealer()
+	seal, err := s.hostKeySealer(ctx)
 	if err != nil {
 		return err
 	}
@@ -85,15 +86,22 @@ func (s *Server) StartSSH(ctx context.Context, o SSHOptions) error {
 	return nil
 }
 
-// hostKeySealer seals the host keys with a key every server shares through
-// the database (see engine.SharedValue). The key and the sealed keys are
-// separate rows, so a copy of the host key table alone gives no private key.
-func (s *Server) hostKeySealer() (*auth.Sealer, error) {
-	k, err := s.Engine.SharedValue("ssh_host_key_seal", auth.NewKey())
+// hostKeySealer seals the host keys under the installation's root key, each
+// bound to its row, so a copy of the database alone gives no private key. With
+// no root key it refuses to make new host keys and says how to create one.
+func (s *Server) hostKeySealer(ctx context.Context) (sshkeys.Sealer, error) {
+	svc, err := s.secretStore()
 	if err != nil {
 		return nil, err
 	}
-	return auth.NewSealer(k, "ssh-host-key")
+	if err := svc.RequireRootKey("Git over SSH"); err != nil {
+		var n int
+		if qerr := s.Engine.Database().QueryRow(ctx, `SELECT count(*) FROM ssh_host_keys`).Scan(&n); qerr != nil || n == 0 {
+			return nil, err
+		}
+		s.Log.Warn("Git over SSH is using host keys that are stored in the clear, because this server has no root key; create one to seal them: " + keyring.HowToCreateARootKey)
+	}
+	return svc.HostKeys(), nil
 }
 
 // pushPolicy is the rule applied inside every push of this repository, from

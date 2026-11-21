@@ -35,6 +35,7 @@ the database, and nothing an administrator manages day to day.
 | `auth.admins` | The first administrators, and the way back in if the role bindings lock everyone out |
 | `runner` (the built-in runner and its secret stores, the AI secret stores) | Process settings of the machine the server runs on |
 | `reports.origin` | The address the server is reached at |
+| `encryption` | Where the root key for encryption at rest is held: it must be known before the database is opened, and is never kept in the database whose secrets it protects |
 
 Everything else lives in the database: `projects`, `libraries`, `environments`, `runner_pools`,
 `runner_admin`, `auth.access` (role bindings), `auth.tokens`, `policy`, `verification`, `ai.models`,
@@ -143,6 +144,31 @@ runner_pools:
 | `database_wait` | duration | `60s` | How long a starting server keeps trying a database that does not answer. Checked when the server starts |
 | `resilience.stall_budget` | duration | `120s` | How long a request waits for a database that is briefly gone (a failover, a restart) before it is answered `503` with `Retry-After`. Transient errors (connection refused or reset, a failover in progress, a read-only standby, serialization failures, deadlocks, too many connections) are retried inside this budget in the store layer; constraint, syntax and not-found errors never are. A statement cut off in the middle is repeated only if it is a read or its whole transaction was rolled back; a cut-off commit is reported, never repeated blindly |
 | `user` | text | the operating system user, else `local` | Who every action is recorded as when sign-in is off (`auth.mode: none`) |
+
+## Encryption
+
+See [Encryption at rest](../guide/encryption-at-rest.md). The root key is held outside the database; these settings say where. With none set, a new installation generates a key file in its data directory, and an existing one starts "not encrypted at rest" with a warning until one is configured. At most one holder may be configured; set `encryption.holder` to say which when settings for several are present. Environment variables override the file: `LAUNCHWAY_ROOT_KEY_FILE`, `LAUNCHWAY_ROOT_KEY` (the key itself, base64), `LAUNCHWAY_ROOT_KEY_PREVIOUS_FILE`, `LAUNCHWAY_ROOT_KEY_PREVIOUS`, `LAUNCHWAY_KEYSTORE_PASSPHRASE_FILE`.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `encryption.holder` | `key_file`, `env`, `passphrase` or `transit` | the one that is set | Which kind of root key holder is in use |
+| `encryption.key_file` | path | none | A file of 32 random bytes in base64, mode `0600` (or a mounted Secret's `0400` or `0440`). A file that other users can read is refused. `launchway encryption init` makes one. Only as strong as the file system or the cluster Secret that holds it |
+| `encryption.previous_key_file` | path | none | The root key being replaced, given beside the new one while `launchway encryption rewrap` runs; remove it afterwards |
+| `encryption.keystore_file` | path | none | A passphrase keystore file (`launchway encryption init --passphrase`): the root key, encrypted under a key made from a passphrase with Argon2id |
+| `encryption.passphrase_file` | path | none | The keystore's passphrase, first line. Without it the server asks on the terminal at start, and cannot start unattended |
+| `encryption.transit.address` | URL | none | Vault or OpenBao address; turns on the transit holder, whose key never leaves the service |
+| `encryption.transit.mount` | path | `transit` | Where the transit secrets engine is mounted |
+| `encryption.transit.key` | text | none | The transit key that wraps the installation's key-encryption keys. It needs `encrypt` and `decrypt` on `<mount>/encrypt/<key>` and `<mount>/decrypt/<key>` only |
+| `encryption.transit.namespace` | text | none | Sent as `X-Vault-Namespace` |
+| `encryption.transit.ca_file` | path | system roots | PEM certificates to trust for the service |
+| `encryption.transit.token_env` | text | none | Log in with the token in this environment variable |
+| `encryption.transit.token_file` | path | none | Or with the token in this file |
+| `encryption.transit.role` | text | none | Or with Kubernetes auth, as this role |
+| `encryption.transit.auth_path` | text | `kubernetes` | Where Kubernetes auth is mounted |
+| `encryption.transit.jwt_file` | path | the pod's service account token | The service account token for Kubernetes auth |
+| `encryption.require` | boolean | `false` | Refuse to start with no root key, even on an installation that would otherwise generate one or run unencrypted. Turn it on in production |
+| `encryption.no_generate` | boolean | `false` | Do not let a new installation generate a key file; it then runs not encrypted, with the warning |
 
 ## Server
 

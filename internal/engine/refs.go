@@ -192,19 +192,6 @@ func (e *Engine) PushDecisions(project string) ([]PushDecision, error) {
 	return out, rows.Err()
 }
 
-// SharedValue returns the value stored under key, storing proposed first if
-// there is none. Servers starting together all get the same value.
-func (e *Engine) SharedValue(key, proposed string) (string, error) {
-	unlock := e.writeLock()
-	defer unlock()
-	if _, err := e.db.Exec(`INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO NOTHING`, "shared:"+key, proposed); err != nil {
-		return "", err
-	}
-	var v string
-	err := e.db.QueryRow(`SELECT value FROM meta WHERE key = ?`, "shared:"+key).Scan(&v)
-	return v, err
-}
-
 // RecordDecision records a decision about a ref without claiming the change:
 // the ref is not moved, so the next poll looks at the commit again. A
 // decision identical to the project's newest for the same ref and commit is

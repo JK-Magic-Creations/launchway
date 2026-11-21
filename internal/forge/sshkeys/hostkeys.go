@@ -17,11 +17,12 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Sealer encrypts a small value with a key every server shares (internal/auth's
-// Sealer does).
+// Sealer keeps a host key sealed at rest, bound to its row, the algorithm
+// (internal/sealing's Box for ssh_host_keys.sealed does). Sealing refuses,
+// saying how to create a root key, when the server has none.
 type Sealer interface {
-	Seal(v any) (string, error)
-	Open(sealed string, v any) error
+	Seal(ctx context.Context, row string, plain []byte) (string, error)
+	Open(ctx context.Context, row, stored string) ([]byte, error)
 }
 
 // HostAlgorithms are the host keys a server presents, in order of preference:
@@ -81,7 +82,7 @@ func (s *Store) hostSigner(ctx context.Context, seal Sealer, algo string) (ssh.S
 		if err != nil {
 			return nil, err
 		}
-		blob, err := seal.Seal(der)
+		blob, err := seal.Seal(ctx, algo, der)
 		if err != nil {
 			return nil, err
 		}
@@ -97,9 +98,9 @@ func (s *Store) hostSigner(ctx context.Context, seal Sealer, algo string) (ssh.S
 	} else if err != nil {
 		return nil, err
 	}
-	var der []byte
-	if err := seal.Open(sealed, &der); err != nil {
-		return nil, fmt.Errorf("cannot be opened with this server's key (was the sealing key changed?): %w", err)
+	der, err := seal.Open(ctx, algo, sealed)
+	if err != nil {
+		return nil, fmt.Errorf("cannot be opened with this server's key (was the root key changed?): %w", err)
 	}
 	raw, err := x509.ParsePKCS8PrivateKey(der)
 	if err != nil {

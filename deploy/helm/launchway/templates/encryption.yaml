@@ -1,0 +1,30 @@
+{{- /* The generated root key (holder keyFile, no existing Secret): made on first install and kept on every
+       upgrade, like the runner token, and kept when the release is uninstalled, because losing it loses
+       every sealed secret. */ -}}
+{{- $holder := include "launchway.encryptionHolder" . }}
+{{- if and (eq $holder "keyFile") (not .Values.encryption.keyFile.existingSecret) }}
+{{- if not .Values.encryption.keyFile.generate }}
+{{- fail "encryption.holder is keyFile: set encryption.keyFile.existingSecret, or encryption.keyFile.generate: true" }}
+{{- end }}
+{{- $name := include "launchway.rootKeySecretName" . }}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
+{{- $key := "" }}
+{{- if and $existing $existing.data (index $existing.data "root.key") }}
+{{- $key = index $existing.data "root.key" }}
+{{- else }}
+{{- /* randBytes: 32 random bytes as base64, which is the key file's text; Secret data is base64 of that. */ -}}
+{{- $key = randBytes 32 | b64enc }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+data:
+  root.key: {{ $key | quote }}
+{{- end }}

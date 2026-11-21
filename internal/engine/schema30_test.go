@@ -34,12 +34,12 @@ func TestUpgradeFromSchema27ToMirrors(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls} {
+	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaPulls)
+	checkMarkers(t, cur, schemaEncryption)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -73,7 +73,7 @@ func TestUpgradeFromSchema29ToMirrorsKeepsWhatIsThere(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for _, v := range []int{schemaMirror, schemaSSH, schemaRollback, schemaPulls} {
+	for _, v := range []int{schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
@@ -83,7 +83,7 @@ func TestUpgradeFromSchema29ToMirrorsKeepsWhatIsThere(t *testing.T) {
 			t.Errorf("migration %d, already applied, was applied again", v)
 		}
 	}
-	checkMarkers(t, cur, schemaPulls)
+	checkMarkers(t, cur, schemaEncryption)
 	var val string
 	if err := cur.db.QueryRow(`SELECT value FROM variables WHERE name = 'replicas'`).Scan(&val); err != nil || val != "3" {
 		t.Fatalf("variable after the upgrade: %q %v", val, err)

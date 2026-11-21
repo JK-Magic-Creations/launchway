@@ -39,6 +39,8 @@ type Config struct {
 	// DatabaseWait: how long a starting server tries an unanswering database; default 60s.
 	DatabaseWait string           `yaml:"database_wait"`
 	Resilience   ResilienceConfig `yaml:"resilience"` // riding through a brief database outage
+	// Encryption says where the root key for encryption at rest is held (bootstrap: see encryption.go).
+	Encryption EncryptionConfig `yaml:"encryption"`
 	// User is who every action is recorded as when sign-in is off
 	// (auth.mode: none).
 	User     string          `yaml:"user"`

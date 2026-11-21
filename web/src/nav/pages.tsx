@@ -55,6 +55,7 @@ const PullRequestPage = lz(() => import("../pages/PullRequest"), "PullRequestPag
 const ImportRepositoriesPage = lz(() => import("../pages/ImportRepositories"), "ImportRepositoriesPage");
 const AgentsPage = lz(() => import("../pages/Agents"), "AgentsPage");
 const PolicyPage = lz(() => import("../pages/Policy"), "PolicyPage");
+const SettingsSecurityPage = lz(() => import("../pages/SettingsSecurity"), "SettingsSecurityPage");
 const SettingsWordsPage = lz(() => import("../pages/SettingsWords"), "SettingsWordsPage");
 const AuditPage = lz(() => import("../pages/Audit"), "AuditPage");
 const ConfigHomePage = lz(() => import("../pages/ConfigHome"), "ConfigHomePage");
@@ -117,6 +118,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/audit": return <AuditPage />;
     case "/settings/variables": return <SettingsVariablesPage />;
     case "/settings/words": return <SettingsWordsPage />;
+    case "/settings/security": return <SettingsSecurityPage />;
     case "/config": return <ConfigHomePage />;
     case "/config/wizard/:id": return <WizardPage key={p.id} id={p.id} />;
     case "/config/:kind/new": return <ConfigObjectPage key={p.kind + "/new"} kind={p.kind} name="" />;

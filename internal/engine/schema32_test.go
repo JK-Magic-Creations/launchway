@@ -34,12 +34,12 @@ func TestUpgradeFromSchema29ToRollbackAndBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
-	for _, v := range []int{schemaMirror, schemaSSH, schemaRollback} {
+	for _, v := range []int{schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaPulls)
+	checkMarkers(t, cur, schemaEncryption)
 	for _, tb := range []string{"rollbacks", "rollback_reverts"} {
 		var n int
 		if err := cur.db.QueryRow(`SELECT count(*) FROM ` + tb).Scan(&n); err != nil || n != 0 {
@@ -74,7 +74,7 @@ func TestUpgradeFromSchema29ToRollbackAndBack(t *testing.T) {
 		t.Fatalf("a build of schema 29 on a database of 33: %v\n%s", err, olderLog.String())
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaPulls || info.Code != schemaVariables || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaEncryption || info.Code != schemaVariables || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	if d, err := older.GetRun(sum.ID); err != nil || !d.NeedsNewerServer {
@@ -114,7 +114,7 @@ func TestSchema32UpgradesFrom31ApplyingOnlyItself(t *testing.T) {
 			t.Errorf("migration %d, already applied, was applied again", v)
 		}
 	}
-	checkMarkers(t, cur, schemaPulls)
+	checkMarkers(t, cur, schemaEncryption)
 	var n int
 	if err := cur.db.QueryRow(`SELECT count(*) FROM ssh_keys`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("the key did not survive: %d %v", n, err)

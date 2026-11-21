@@ -15,6 +15,7 @@ import (
 )
 
 func addRunLimitTools(srv *mcp.Server, c *mcpCall) {
+	addEncryptionTools(srv, c) // administrators' report on encryption at rest (mcp_encryption.go)
 	addTool(srv, c, &mcp.Tool{Name: "get_run_limits", Annotations: readOnly("Get run limits"),
 		Description: "The installation's limits on pipelines: max_run_timeout, the longest timeout a pipeline may ask for with its top-level timeout. An empty value is not set."},
 		mcpCallTimeout, getRunLimits)

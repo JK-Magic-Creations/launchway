@@ -214,6 +214,7 @@ var permissionTable = map[string]matrixRow{
 	"PATCH /api/v1/repositories/{owner}/{name}":  {"PATCH", "/api/v1/repositories/o/x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"DELETE /api/v1/repositories/{owner}/{name}": {"DELETE", "/api/v1/repositories/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/projects/{name}/lanes":          {"GET", "/api/v1/projects/pay-api/lanes", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/encryption":                     {"GET", "/api/v1/encryption", "", [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/run-limits":                     {"GET", "/api/v1/run-limits", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/run-limits":                     {"PUT", "/api/v1/run-limits", `{"max_run_timeout":"48h"}`, [6]int{401, 403, 403, 403, 403, 200}},
 

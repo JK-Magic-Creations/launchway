@@ -11,6 +11,7 @@ const BLURB: Record<string, string> = {
   access: "Keys for scripts, and how to connect an AI assistant.",
   approvals: "Whether the person who starts a run may approve it themselves.",
   rules: "Rules every pipeline is held to before it deploys.",
+  security: "Whether the secrets this server stores are encrypted at rest, and where the key is held.",
   audit: "Who changed what, and when. Every sign-in and every change.",
   variables: "Named settings you set once at a level, which flow down to everything below. A lock keeps one from being overridden.",
   config: "Everything an administrator sets up, with a guided set-up for each, kept with its history.",

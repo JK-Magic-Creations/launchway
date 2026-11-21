@@ -53,6 +53,8 @@ func cmdHosting(name string, args []string) error {
 		return cmdKeys(args)
 	case "pr":
 		return cmdPR(args)
+	case "encryption":
+		return cmdEncryption(args)
 	}
 	return cmdRepos(args)
 }

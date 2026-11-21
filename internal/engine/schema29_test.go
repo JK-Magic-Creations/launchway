@@ -33,12 +33,12 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
-	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls} {
+	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaPulls)
+	checkMarkers(t, cur, schemaEncryption)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -54,7 +54,7 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 		t.Fatalf("a build of schema 27 on a database of 29: %v\n%s", err, olderLog.String())
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaPulls || info.Code != schemaParity2 || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaEncryption || info.Code != schemaParity2 || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	var n int

@@ -40,7 +40,7 @@ an administrator manages an owner's.
 
 Each hook has a **secret** that signs every delivery. You can give one (with `--secret-file`, never on the
 command line), or leave it out and Launchway makes one and **shows it once**, in the answer that creates the
-hook. After that the secret is never shown again: lists and logs say only that the hook has one. It is
+hook. The secret is stored sealed under the installation's root key ([Encryption at rest](encryption-at-rest.md)); a server with no root key refuses to create a hook (`409`, code `no_root_key`, with how to make a key). After that the secret is never shown again: lists and logs say only that the hook has one. It is
 stored sealed in the database. Replace it with `update` when you need to.
 
 ## What a delivery looks like

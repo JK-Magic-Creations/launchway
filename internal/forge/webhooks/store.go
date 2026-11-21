@@ -21,10 +21,12 @@ type DB interface {
 // ErrNotFound is a hook or delivery that does not exist.
 var ErrNotFound = errors.New("no such webhook")
 
-// Sealer keeps secrets sealed (internal/auth's Sealer does).
+// Sealer keeps secrets sealed at rest, each bound to the row it belongs to
+// (internal/sealing's Box for repo_webhooks.secret_sealed does). Sealing
+// refuses, saying how to create a root key, when the server has none.
 type Sealer interface {
-	Seal(v any) (string, error)
-	Open(sealed string, v any) error
+	Seal(ctx context.Context, row string, plain []byte) (string, error)
+	Open(ctx context.Context, row, stored string) ([]byte, error)
 }
 
 type store struct {
@@ -76,20 +78,31 @@ func scanHook(sc interface{ Scan(...any) error }) (Hook, string, error) {
 }
 
 func (s *store) insertHook(ctx context.Context, h Hook, secret string) (Hook, error) {
+	h.ID = ids.New("hok")
 	sealed := ""
 	if secret != "" {
 		var err error
-		if sealed, err = s.seal.Seal(secret); err != nil {
+		if sealed, err = s.sealSecret(ctx, h.ID, secret); err != nil {
 			return h, err
 		}
 	}
-	h.ID = ids.New("hok")
 	h.CreatedAt = s.now().UTC()
 	ev, _ := json.Marshal(h.Events)
 	_, err := s.db.Exec(ctx, `INSERT INTO repo_webhooks(`+hookCols+`) VALUES(?,?,?,?,?,?,?,?,0,'',0,?,?)`,
 		h.ID, h.RepoID, h.Owner, h.Name, h.URL, string(ev), sealed, b2i(h.Active), ms(h.CreatedAt), h.CreatedBy)
 	h.HasSecret = sealed != ""
 	return h, err
+}
+
+// sealSecret seals a hook's secret, bound to the hook.
+func (s *store) sealSecret(ctx context.Context, id, secret string) (string, error) {
+	b := []byte(secret)
+	defer func() {
+		for i := range b {
+			b[i] = 0
+		}
+	}()
+	return s.seal.Seal(ctx, id, b)
 }
 
 func (s *store) hook(ctx context.Context, id string) (Hook, string, error) {
@@ -123,7 +136,7 @@ func (s *store) saveHook(ctx context.Context, h Hook, newSecret *string) error {
 		sealed := ""
 		if *newSecret != "" {
 			var err error
-			if sealed, err = s.seal.Seal(*newSecret); err != nil {
+			if sealed, err = s.sealSecret(ctx, h.ID, *newSecret); err != nil {
 				return err
 			}
 		}

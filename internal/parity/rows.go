@@ -155,6 +155,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/step-resources/defaults/{kind}", MCP: "get_step_resources", CLI: "step-resources get", Terraform: "launchway_step_resources", Status: Equal, Reason: ""},
 	{Route: "PUT /api/v1/step-resources/defaults/{kind}", MCP: "set_step_resource_default", CLI: "step-resources set-default", Terraform: "launchway_step_resources", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/projects/{name}/lanes", MCP: "list_lanes", CLI: "runs lanes", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/encryption", MCP: "get_encryption_status", CLI: "encryption status", Terraform: "", Status: Exempt, Reason: "a read-only report of the root key and sealing progress; nothing to configure, since the root key is a bootstrap setting held outside the database"},
 	{Route: "GET /api/v1/run-limits", MCP: "get_run_limits", CLI: "run-limits get", Terraform: "", Status: Exempt, Reason: "MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind)"},
 	{Route: "PUT /api/v1/run-limits", MCP: "set_run_limits", CLI: "run-limits set", Terraform: "", Status: Exempt, Reason: "MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind)"},
 	{Route: "POST /api/runner/v1/caches/lookup", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the runner protocol: only runners call it, with their own credentials"},

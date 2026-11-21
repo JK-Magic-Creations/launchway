@@ -83,6 +83,7 @@
         "guide/pull-requests",
         "guide/webhooks",
         "guide/secrets",
+        "guide/encryption-at-rest",
         "guide/configuration",
         "guide/access",
         "guide/runner-identity",

@@ -273,6 +273,63 @@
         "existingSecretKey": { "type": "string", "minLength": 1 }
       }
     },
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "holder": { "enum": ["keyFile", "env", "passphrase", "transit", "none"] },
+        "keyFile": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "generate": { "type": "boolean" },
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "passphrase": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "keystoreSecret": { "type": "string" },
+            "keystoreSecretKey": { "type": "string", "minLength": 1 },
+            "passphraseSecret": { "type": "string" },
+            "passphraseSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "transit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "address": { "type": "string", "pattern": "^(https?://.+)?$" },
+            "mount": { "type": "string" },
+            "key": { "type": "string" },
+            "namespace": { "type": "string" },
+            "tokenSecret": { "type": "string" },
+            "tokenSecretKey": { "type": "string", "minLength": 1 },
+            "role": { "type": "string" },
+            "authPath": { "type": "string" },
+            "caSecret": { "type": "string" }
+          }
+        },
+        "previousKey": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
     "runnerToken": {
       "type": "object",
       "additionalProperties": false,

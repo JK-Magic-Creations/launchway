@@ -1694,6 +1694,29 @@ paths:
             tags:
                 - deployments
             x-launchway-access: signed-in
+    /api/v1/encryption:
+        get:
+            description: 'Encryption at rest: {"encrypted", "dump_alone_cannot_reveal_secrets", "root_key_holder": {"kind", "where", "strength", "reachable"}, "keys", "columns", "secrets_sealed", "secrets_remaining", "migration": {"state", ...}, "warnings", "advice", "not_yet_encrypted", "summary"}. Never any key material. Read-only: the root key is a bootstrap setting held outside the database, and launchway encryption rotates or replaces it where the key is. 409 with code no_root_key is what a request for something that stores secrets (a webhook with a secret) gets on a server with no root key'
+            operationId: get_api_v1_encryption
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Encryption at rest: {"encrypted", "dump_alone_cannot_reveal_secrets", "root_key_holder": {"kind", "where", "strength", "reachable"}, "keys", "columns", "secrets_sealed", "secrets_remaining", "migration": {"state", ...}, "warnings", "advice", "not_yet_encrypted", "summary"}.'
+            tags:
+                - encryption
+            x-launchway-access: admin
     /api/v1/environments:
         get:
             description: The configured environments that list a project the caller may see, with what is deployed in each.

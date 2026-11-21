@@ -378,6 +378,19 @@ curl -s 'http://127.0.0.1:8080/api/v1/audit?limit=2'
 The trail is kept until you remove old rows from the `audit` table yourself. See the
 [HTTP API](http-api.md) for the other endpoints and [roles](roles.md) for who may call them.
 
+## Audit entries of the key operations
+
+These are written to the same audit trail by the keyring, not by an API route, so they have no route in the table above: by the server at start (as user `system`, source `server`) and by `launchway encryption` on the machine that has the root key. They name keys by version and never hold key material.
+
+| Action | When |
+|---|---|
+| `encryption.key_created` | The installation's first key-encryption key was made under the root key, at the first start with one. Written by the server, as `system`; never holds key material |
+| `encryption.migrated` | Stored secrets that were in the clear were sealed (and, after a data key rotation, re-sealed); the detail has the counts |
+| `encryption.kek_rotated` | `launchway encryption rotate`: a new key-encryption key was made and the data keys re-wrapped; the target names its version |
+| `encryption.dek_rotated` | `launchway encryption rotate --data`: new data key versions were made |
+| `encryption.rewrap` | `launchway encryption rewrap`: the key-encryption keys are now wrapped by the configured root key (or a re-wrap failed) |
+| `encryption.unseal` | A server could not unseal its keys with the configured root key and refused to start: outcome `failed`. The detail says which key and why, never the key |
+
 ## Servers' configuration state
 
 Besides the actions above, each server writes an audit entry, action `config.server_state`, when it applies a stored configuration revision or cannot: the user is the server's name, the target is `revision N`, the outcome is `ok` or `failed`, and the detail is the reason. `GET /api/v1/config` shows each server's newest one, so an administrator sees which servers have applied the stored revision and which have not.
