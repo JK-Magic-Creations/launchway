@@ -37,8 +37,11 @@ type Cluster struct {
 	dyn    dynamic.Interface
 	argoNS string
 	// logs reads the end of a pod's log; nil where it cannot (tests).
-	logs   func(ctx context.Context, ns, pod string, tail int) ([]string, error)
-	rights rightsCache
+	logs func(ctx context.Context, ns, pod string, tail int) ([]string, error)
+	// prevLogs reads the end of the log of the container's previous run (what
+	// a crash-looping container said before it exited); nil where it cannot.
+	prevLogs func(ctx context.Context, ns, pod string, tail int) ([]string, error)
+	rights   rightsCache
 	// jobLogs keeps the logs read of failed analysis jobs, by namespace/name.
 	jobLogs sync.Map
 }
@@ -67,7 +70,8 @@ func Connect(t Target) (*Cluster, error) {
 		return nil, err
 	}
 	c := NewCluster(dyn, t.ArgoCDNamespace)
-	c.logs = podLogReader(cfg)
+	c.logs = podLogReader(cfg, false)
+	c.prevLogs = podLogReader(cfg, true)
 	return c, nil
 }
 

@@ -864,3 +864,36 @@ func TestUnknownNotificationKindIsIgnored(t *testing.T) {
 	case <-time.After(200 * time.Millisecond):
 	}
 }
+
+// Pods that keep crashing fail the deployment at once, with the pod's own last
+// words as the reason, and the step's own log says what it saw and why it
+// failed (the run page shows the step log and the failure reason).
+func TestCrashLoopingPodsFailTheStepWithTheirOwnReason(t *testing.T) {
+	e, _ := newDeployEngine(t, prodEnv)
+	id := createShop(t, e, shopPipeline, 1)
+	build(t, e, id, "2.0.0")
+	applied(t, e, leaseDeploy(t, e, deployer), "c1")
+	s := healthy(true)
+	s.App.Health, s.App.Sync = "Progressing", "Synced"
+	s.Rollout = nil
+	s.Evidence = []deploy.PodEvidence{{Pod: "shop-7d9-abc", Reason: "CrashLoopBackOff", Restarts: 4, Crash: true,
+		LogTail: []string{"time=... level=INFO starting", "the configured root key does not open this database's encryption keys (key version 1 was wrapped by a key_file root key, and the one configured is not it). This server will not start"}}}
+	r := observe(t, e, deployer, watchOf(t, e, deployer, "deploy-prod"), s)
+	if r.Phase != deploy.PhaseCrashLoop || !strings.Contains(r.Detail, "new pods are crash-looping") || !strings.Contains(r.Detail, "does not open this database's encryption keys") {
+		t.Fatalf("observation: %+v", r)
+	}
+	if v := stepOf(t, e, id, "deploy-prod"); !strings.Contains(v.Error, "crash-looping") {
+		t.Fatalf("reason: %q", v.Error)
+	}
+	lines, _, err := e.Logs(id, "deploy-prod", 1, 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var text []string
+	for _, l := range lines {
+		text = append(text, l.Text)
+	}
+	if all := strings.Join(text, "\n"); !strings.Contains(all, "[FAILED] crash_looping") || !strings.Contains(all, "encryption keys") {
+		t.Fatalf("the step log lacks the failure:\n%s", all)
+	}
+}

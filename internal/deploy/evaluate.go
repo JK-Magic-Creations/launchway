@@ -29,7 +29,8 @@ const (
 	PhasePaused     = "rollout_paused"
 	PhaseAborted    = "rollout_aborted"
 	PhaseHealthy    = "healthy"
-	PhaseLeftovers  = "leftovers" // objects of an earlier render are still there and pruning is off
+	PhaseCrashLoop  = "crash_looping" // the application's new pods keep crashing
+	PhaseLeftovers  = "leftovers"     // objects of an earlier render are still there and pruning is off
 )
 
 // Verdict is the result of evaluating one snapshot.
@@ -106,6 +107,12 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 	// for it to return to the previous version: the abort is its own doing.
 	if ro := s.Rollout; spec.Kind == "rollback" && ro != nil && ro.Found && ro.Aborted {
 		return cont(PhaseAborted, "the rollout is aborted; waiting for it to return to the previous version%s", colon(ro.Message))
+	}
+	// Pods that keep crashing will not become healthy by waiting.
+	if app.Health != "Healthy" {
+		if v, ok := crashLoop(s.Evidence); ok {
+			return v
+		}
 	}
 	// Objects an earlier render made, still there because pruning is off.
 	lf, lfWarn := leftoverVerdict(spec, app)
@@ -392,4 +399,24 @@ func leftoverVerdict(spec Spec, app *App) (*Verdict, string) {
 	}
 	all := append(append([]string{}, sec...), other...)
 	return nil, "; warning: " + words(len(all), all)
+}
+
+// crashLoop fails a deployment whose pods are crash-looping, with the pod's
+// own last words: what it logged before it exited is the reason.
+func crashLoop(ev []PodEvidence) (Verdict, bool) {
+	for _, e := range ev {
+		if !e.Crash || e.Restarts < 2 {
+			continue
+		}
+		last := ""
+		for i := len(e.LogTail) - 1; i >= 0; i-- {
+			if strings.TrimSpace(e.LogTail[i]) != "" {
+				last = strings.TrimSpace(e.LogTail[i])
+				break
+			}
+		}
+		why := nonEmpty(last, nonEmpty(e.Message, e.Reason))
+		return fail(PhaseCrashLoop, "new pods are crash-looping: %q (pod %s, %s, restarted %d times)", why, e.Pod, e.Reason, e.Restarts), true
+	}
+	return Verdict{}, false
 }

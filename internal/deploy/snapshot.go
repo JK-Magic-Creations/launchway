@@ -23,6 +23,22 @@ type Snapshot struct {
 	// Rights is what the runner found out it may do to the rollout (a
 	// self-check against the cluster's authorizer); nil when it did not ask.
 	Rights *Rights `json:"rights,omitempty"`
+	// Evidence is what the runner saw of the application's pods while it was
+	// not healthy: which are crash-looping, with the last lines they logged.
+	Evidence []PodEvidence `json:"evidence,omitempty"`
+}
+
+// PodEvidence is one pod that is not running well.
+type PodEvidence struct {
+	Pod       string `json:"pod"`
+	Namespace string `json:"namespace,omitempty"`
+	// Reason is the container's state reason (CrashLoopBackOff, ImagePullBackOff, Error...).
+	Reason   string `json:"reason"`
+	Message  string `json:"message,omitempty"`
+	Restarts int    `json:"restarts,omitempty"`
+	// Crash says the pod is crash-looping: it keeps starting and exiting.
+	Crash   bool     `json:"crash,omitempty"`
+	LogTail []string `json:"log_tail,omitempty"`
 }
 
 // Rights is what a deploy runner may do to a watched rollout, as the

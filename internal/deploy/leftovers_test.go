@@ -53,3 +53,17 @@ func TestLeftoversFailOrWarnWithoutPruning(t *testing.T) {
 		t.Fatalf("%+v", v)
 	}
 }
+
+func TestCrashLoopFailsWithThePodsOwnWords(t *testing.T) {
+	spec := Spec{Kind: "deploy", Commit: "c1", Health: "application", Windows: "wait"}
+	app := ReduceApplication(appWithResources(), spec, "https://g/x.git", contains)
+	app.Sync, app.Health = "Synced", "Progressing"
+	v := Evaluate(spec, Snapshot{App: app, Evidence: []PodEvidence{{Pod: "p", Reason: "CrashLoopBackOff", Crash: true, Restarts: 3, LogTail: []string{"boom: x", ""}}}})
+	if v.Outcome != Failed || v.Phase != PhaseCrashLoop || !strings.Contains(v.Detail, `"boom: x"`) {
+		t.Fatalf("%+v", v)
+	}
+	// A pod that has restarted once is not yet a loop.
+	if v := Evaluate(spec, Snapshot{App: app, Evidence: []PodEvidence{{Pod: "p", Crash: true, Restarts: 1}}}); v.Outcome != Continue {
+		t.Fatalf("%+v", v)
+	}
+}

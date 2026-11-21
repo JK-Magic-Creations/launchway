@@ -519,6 +519,11 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	if containsErr != nil && snap.App.Contains == nil {
 		snap.App.Notes = append(snap.App.Notes, "could not compare revisions: "+containsErr.Error())
 	}
+	if app != nil && snap.App.Found && snap.App.Health != "Healthy" && snap.App.Contains != nil && *snap.App.Contains {
+		if ns, _ := mapOf(mapOf(app, "spec"), "destination")["namespace"].(string); ns != "" {
+			snap.Evidence = cl.PodEvidence(ctx, ns, it.Application)
+		}
+	}
 	if ro := it.Spec.Rollout; ro != nil {
 		if !t.RolloutAllowed(ro.Namespace) {
 			return deploy.Snapshot{Error: fmt.Sprintf("this runner may not watch rollouts in namespace %s (see deploy.targets.%s.rollout_namespaces)", ro.Namespace, it.Target)}
