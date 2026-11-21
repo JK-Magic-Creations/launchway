@@ -14,7 +14,7 @@ action differs from the route table in internal/api/api.go.
 
 This page describes every HTTP endpoint a Launchway server serves: who may call it, what it takes and what it returns. It is for people who write scripts and integrations against Launchway, and for operators who put it behind a proxy or load balancer.
 
-> **Verified** on 2026-11-19 against commit f717337: a representative call of every group was made with `curl` against a local server on `127.0.0.1` without sign-in (health, projects, runs, logs, events, tests, findings, artifacts, policies, waivers, validate, the live stream, the audit trail, the CSRF refusal, the unknown-endpoint answer); then, with OpenID Connect sign-in on (a test provider), sign-in and sign-out, making API tokens (and the refusal to make one with a token, or with a role above the maker's), and the `401`, `403` and `404` refusals of each kind with tokens and session cookies; the route list is checked against the server's route table by a test. **Not verified:** deployment commands (they need Argo CD), image search with real images, the Git-host webhooks, and the runner API beyond a refused call.
+> **Verified** on 2026-11-19 against commit f717337: a representative call of every group was made with `curl` against a local server on `127.0.0.1` without sign-in (health, projects, runs, logs, events, tests, findings, artifacts, policies, waivers, validate, the live stream, the Logbook, the CSRF refusal, the unknown-endpoint answer); then, with OpenID Connect sign-in on (a test provider), sign-in and sign-out, making API tokens (and the refusal to make one with a token, or with a role above the maker's), and the `401`, `403` and `404` refusals of each kind with tokens and session cookies; the route list is checked against the server's route table by a test. **Not verified:** deployment commands (they need Argo CD), image search with real images, the Git-host webhooks, and the runner API beyond a refused call.
 
 The command line (`launchway runs`, `policy`, `waivers`) is a client of this API. See [the command-line reference](cli.md).
 
@@ -137,7 +137,7 @@ Lists return at most a fixed number of items. Ask for fewer or more with `limit`
 
 `GET /api/v1/runs/{id}/events` has no paging: it returns the whole log.
 
-Logs page by sequence number: pass the `seq` of the last line you have as `after`. The audit trail pages by entry ID: pass the `next_before` of the previous page as `before`. `next_before` is `0` when a page is shorter than `limit`; when the last page happens to be exactly `limit` long, the next call returns an empty page. Test cases and findings page by `offset`.
+Logs page by sequence number: pass the `seq` of the last line you have as `after`. The Logbook pages by entry ID: pass the `next_before` of the previous page as `before`. `next_before` is `0` when a page is shorter than `limit`; when the last page happens to be exactly `limit` long, the next call returns an empty page. Test cases and findings page by `offset`.
 
 ## Health
 
@@ -168,7 +168,7 @@ These routes exist only with `auth.mode: oidc`; with sign-in off they answer `40
 | `GET /auth/callback` | `public` | — | Where the provider returns. Checks the answer, sets the `launchway_session` cookie and redirects to `next`. A failure redirects to `/signin?error=<code>`. |
 | `POST /auth/logout` | `public` | — | Ends the session on every server. Needs the [CSRF header](#csrf-header). Answers `204`. |
 
-Sign-ins, failed sign-ins and sign-outs are recorded in the audit trail as `auth.sign_in` and `auth.sign_out`. See [Events and audit trail](events.md).
+Sign-ins, failed sign-ins and sign-outs are recorded in the Logbook as `auth.sign_in` and `auth.sign_out`. See [Events and audit trail](events.md).
 
 ## Server and caller
 
@@ -213,7 +213,7 @@ With sign-in on it has only `auth_mode` (`oidc`), `version` and `schema`.
 {"admin": true, "auth_mode": "none", "groups": [], "roles": {"demo-app": "admin", "demo-lib-app": "admin"}, "runners": true, "user": "dana", "via": "none"}
 ```
 
-`via` is `none` (sign-in off), `session` or `token`. `roles` has the caller's role on each project they have one on, after any [token limits](#api-tokens). `admin` says whether they may read the audit trail; `runners` whether they may see the runners.
+`via` is `none` (sign-in off), `session` or `token`. `roles` has the caller's role on each project they have one on, after any [token limits](#api-tokens). `admin` says whether they may read the Logbook; `runners` whether they may see the runners.
 
 ## Projects
 
@@ -407,7 +407,7 @@ The command routes take an optional `{"comment": "..."}` and answer `201` with t
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/policies` | `any-viewer` | — | The rule catalogue, the policies in force with their sources and versions, and recent verdicts (`?recent=N` per policy, at most 100) of runs the caller may see. |
+| `GET /api/v1/policies` | `any-viewer` | — | The rule catalog, the policies in force with their sources and versions, and recent verdicts (`?recent=N` per policy, at most 100) of runs the caller may see. |
 | `GET /api/v1/runs/{id}/policy` | `run-viewer` | — | A run's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive. |
 | `GET /api/v1/waivers` | `signed-in` | — | Waivers of the projects the caller may see: `?project=`, `?active=1`, `?limit=`. |
 | `POST /api/v1/projects/{name}/waivers` | `project-viewer` | `policy.waive` | Waives one rule of one policy. Answers `201` with the waiver. |
@@ -436,7 +436,7 @@ manager may change it afterwards, unless the caller sends `take_ownership: true`
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/config` | `any-viewer` | — | The kinds, the names of the levels, the units, the revision this server runs with, and whether the caller is an administrator. `available` is false on a server limited to a schema before 23, which uses its file |
+| `GET /api/v1/config` | `any-viewer` | — | The kinds, the names of the levels, the Squadrons, the revision this server runs with, and whether the caller is an administrator. `available` is false on a server limited to a schema before 23, which uses its file |
 | `GET /api/v1/config/history` | `admin` | — | The changes of every object, newest first: who, when, the action, what changed. `kind`, `name`, `import`, `before` and `limit` narrow and page it |
 | `GET /api/v1/config/export` | `admin` | — | Every object as configuration text (YAML), for backup, review or Git |
 | `POST /api/v1/config/import` | `admin` | `config.import` | `{"text", "prune", "apply", "digest"}`. Without `apply`, plans the import: what would be created, changed or (with `prune`) deleted. With `apply` and the plan's `digest`, makes exactly those changes, recorded as one import |
@@ -445,12 +445,12 @@ manager may change it afterwards, unless the caller sends `take_ownership: true`
 | `POST /api/v1/config/check/repository` | `admin` | `config.check_repository` | `{"repo", "branch"}`: reads a repository with the server's own Git credentials and keeps nothing. Internal addresses and local paths are refused (`blocked`, `blocked_host`; see Egress in the server settings). Audited and limited to a few a minute per caller. Answers `ok`, a plain `problem`, the `default_branch`, the `branches` and whether the branch has a pipeline file |
 | `POST /api/v1/config/check/signin` | `admin` | `config.check_signin` | `{"issuer", "client_id", "redirect_url", "client_secret_env", "groups_claim", "admin_groups", "admin_users"}`: checks the answers against the identity provider and returns the `auth:` block for the configuration file (`snippet`). Sign-in stays in the file |
 | `POST /api/v1/config/apply` | `admin` | `config.apply` | `{"changes": [{"kind", "name", "action", "unit", "spec", "version", "comment"}]}`, at most 200: all or none. `action` is `put` (the default), `delete` or `restore`; `version` -1 means the object must not exist yet |
-| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the installation, the organization, a unit or the project |
+| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project |
 | `GET /api/v1/config/{kind}` | `admin` | — | The objects of a kind; `?deleted=1` lists the deleted ones |
 | `POST /api/v1/config/{kind}` | `admin` | `config.create` | `{"name", "unit", "spec", "comment"}`: creates an object; `409` if it exists |
 | `GET /api/v1/config/{kind}/{obj}` | `admin` | — | One object: `spec`, `version` (also the `ETag`), `managed_by`, who created and last changed it, and `deleted` |
 | `PUT /api/v1/config/{kind}/{obj}` | `admin` | `config.put` | Creates or replaces the object, declaratively: sending the same body twice changes nothing the second time (`changed` says so). `400` lists every problem the same checks as the configuration file find |
-| `DELETE /api/v1/config/{kind}/{obj}` | `admin` | `config.delete` | Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; `{"force_in_use": true}` deletes it anyway, recorded in the object's history and the audit trail) or if it would leave the configuration invalid |
+| `DELETE /api/v1/config/{kind}/{obj}` | `admin` | `config.delete` | Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; `{"force_in_use": true}` deletes it anyway, recorded in the object's history and the Logbook) or if it would leave the configuration invalid |
 | `POST /api/v1/config/{kind}/{obj}/restore` | `admin` | `config.restore` | Brings a deleted object back as it was |
 | `GET /api/v1/config/{kind}/{obj}/history` | `admin` | — | The object's changes, newest first, each with the fields that changed |
 
@@ -505,12 +505,12 @@ database, as the installation's default with an override for a project.
 
 ## Variables
 
-A variable is a name with a type, a value, an optional environment and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the unit's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations. See the [guide](../guide/variables.md).
+A variable is a name with a type, a value, an optional environment and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the Squadron's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings. See the [guide](../guide/variables.md).
 
 | Route | Who | Audit action | What it does |
 |---|---|---|---|
 | `GET /api/v1/variables` | `signed-in` | — | The variables at a level (`?level=&scope=&environment=&names=`) with what each inherits from above and whether this level may override it. `400` without a level; `404` for a project the caller cannot see |
-| `PUT /api/v1/variables/{name}` | `signed-in` | `variable.set` | Sets a variable: `{level, scope, environment, type, of, value, description}`. Types: `string`, `number`, `boolean`, `list`, `map`, `secret` (a reference `{store, key, field}`, never text) and `connection` (a name, with `of`). A name keeps one type everywhere. Who: an operator of the project, or an admin of the unit's projects, or of every project for the organization and the installation. `409` when a lock above forbids it, naming the level and who can change it |
+| `PUT /api/v1/variables/{name}` | `signed-in` | `variable.set` | Sets a variable: `{level, scope, environment, type, of, value, description}`. Types: `string`, `number`, `boolean`, `list`, `map`, `secret` (a reference `{store, key, field}`, never text) and `connection` (a name, with `of`). A name keeps one type everywhere. Who: an operator of the project, or an admin of the Squadron's projects, or of every project for the Wing and the installation. `409` when a lock above forbids it, naming the level and who can change it |
 | `DELETE /api/v1/variables/{name}` | `signed-in` | `variable.delete` | Deletes a variable at a level (`?level=&scope=&environment=`); what it overrode applies again |
 | `PUT /api/v1/variables/{name}/lock` | `signed-in` | `variable.lock` | Locks it: `{level, scope, environment, reason}`; a reason is required. Needs an admin at that level (of the project, at a project). Answers the variable and the nearer settings now ignored |
 | `DELETE /api/v1/variables/{name}/lock` | `signed-in` | `variable.unlock` | Removes the lock |
@@ -519,7 +519,7 @@ A variable is a name with a type, a value, an optional environment and an option
 
 ## Repositories (Git hosting)
 
-Only with the installation setting `forge.hosting` on (Configuration, Installation settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).
+Only with the Base setting `forge.hosting` on (Configuration, Base settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
@@ -558,7 +558,7 @@ Getting existing repositories into Launchway, safely, before anything is switche
 | `POST /api/v1/connections` | `admin` | `connection.create` | `{"name", "kind", "base_url", "credential"}`. `400` for another kind, an address that is internal and not allowed, or a credential that is a value. |
 | `POST /api/v1/connections/token` | `admin` | `connection.create` | `{"name", "kind", "base_url", "token"}`. The setup guide's way to give the token of another Git server once: it is written to a file only the server's account can read and the connection reads it as a file reference; it is never returned or audited. `409` when this server has no disk of its own (a Kubernetes pod) or no data folder: give an environment variable instead. Otherwise as `POST /api/v1/connections`. |
 | `DELETE /api/v1/connections/{name}` | `admin` | `connection.delete` | Removes a connection that no repository uses; Launchway's own is refused. |
-| `POST /api/v1/imports` | `admin` | `repository.import` | `{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}`. `owner` limits the listing to one user or organization of the source, `repository` (`owner/name`) to one; without them it brings in everything the credential can see. `dry_run` lists what would be created and changes nothing. `wait` copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. `mirror: false` makes each an ordinary repository once copied and checked (needs `wait`). Answers `{"dry_run", "items", "summary"}`; each item has `source`, `repository`, `url`, `visibility`, `action` (`create`, `resume`, `skip`), `state` (`planned`, `queued`, `verified`, `skipped`, `failed`), `reason`, `error` (credentials removed), `source_refs`, `hosted_refs`, `verified`, `differences` and `mirror_id`. One repository failing does not stop the others. |
+| `POST /api/v1/imports` | `admin` | `repository.import` | `{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}`. `owner` limits the listing to one user or Wing of the source, `repository` (`owner/name`) to one; without them it brings in everything the credential can see. `dry_run` lists what would be created and changes nothing. `wait` copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. `mirror: false` makes each an ordinary repository once copied and checked (needs `wait`). Answers `{"dry_run", "items", "summary"}`; each item has `source`, `repository`, `url`, `visibility`, `action` (`create`, `resume`, `skip`), `state` (`planned`, `queued`, `verified`, `skipped`, `failed`), `reason`, `error` (credentials removed), `source_refs`, `hosted_refs`, `verified`, `differences` and `mirror_id`. One repository failing does not stop the others. |
 | `POST /api/v1/imports/verify` | `admin` | `repository.verify` | `{"connection", "urls", "owner", "repository", "target_owner"}`. Proves, or fails to prove, that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has: `{"equal", "items", "summary"}`, each item `equal`, `different` (with the refs that differ), `missing` or `error`. It reads only. |
 
 ### The first-run guide
@@ -617,7 +617,7 @@ The browser's walk-through after the first administrator. It asks the server wha
 
 ### Webhooks
 
-[Webhooks and events](../guide/webhooks.md) of one repository (`repositories/{owner}/{name}/hooks`, its administrators) or of an owner (`owners/{owner}/hooks`, an administrator): the same seven routes under each base. The secret is write-only: it is never in an answer, except one Launchway made because none was given, which the answer that creates the hook carries once as `secret`. A hook of another repository or owner answers `404`.
+[Webhooks and events](../guide/webhooks.md) of one repository (`repositories/{owner}/{name}/hooks`, its administrators) or of an owner (`owners/{owner}/hooks`, an administrator): the same seven routes under each Base. The secret is write-only: it is never in an answer, except one Launchway made because none was given, which the answer that creates the hook carries once as `secret`. A hook of another repository or owner answers `404`.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
@@ -731,7 +731,7 @@ Making and revoking join tokens, and revoking and rotating runners, need the rol
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/audit` | `admin` | — | The audit trail, newest first. |
+| `GET /api/v1/audit` | `admin` | — | The Logbook, newest first. |
 
 Filter with `?user=`, `?project=`, `?action=`, `?from=` and `?to=` (Unix milliseconds); page with `?before=` and `?limit=`:
 
@@ -762,7 +762,7 @@ curl -N http://127.0.0.1:8080/api/v1/stream
 
 ## Webhooks
 
-Webhook routes need no session or token. A caller proves itself with a secret the project's configuration names (an environment variable or a file). A caller that cannot prove itself, a project without the hook, and an unknown project all get the same answer, `404 {"error": "not found"}`. Refused calls count towards the [failure limit](#too-many-failures) and are recorded in the audit trail.
+Webhook routes need no session or token. A caller proves itself with a secret the project's configuration names (an environment variable or a file). A caller that cannot prove itself, a project without the hook, and an unknown project all get the same answer, `404 {"error": "not found"}`. Refused calls count towards the [failure limit](#too-many-failures) and are recorded in the Logbook.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|

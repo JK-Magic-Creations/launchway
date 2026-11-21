@@ -44,7 +44,7 @@ steps:
   step keeps are kept exactly as written. Do not put secrets in them.
 - **The Artifacts tab** of a run lists each artifact with its files, sizes, SHA-256 and how long it
   is kept, with a download for each file and for all of them as a zip. Operators of the project may
-  delete one; the audit trail records who did. Files are always served as downloads, never shown
+  delete one; the Logbook records who did. Files are always served as downloads, never shown
   as pages.
 - **Storage**: with nothing configured, in the database on PostgreSQL (in 1 MiB chunks, each
   checked by SHA-256 when read), so any number of servers share artifacts with nothing else to

@@ -7,7 +7,7 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 |---|---|
 | [The launch line](launch-line.md) | How does a change get from my code to running software, and where is it now? |
 | [Projects, pipelines, steps and runs](pipelines-and-runs.md) | What are the pieces, and how do they fit together? |
-| [Templates, libraries and flight plans](templates-and-libraries.md) | How do many projects share the same steps? |
+| [Templates, libraries and Flight plans](templates-and-libraries.md) | How do many projects share the same steps? |
 | [Variables](variables.md) | Where does a step get its settings and secrets from? |
 | [Environments and deployments](environments-and-deployments.md) | What is a place my software runs, and how does a change get there safely? |
 | [Approvals](approvals.md) | How does a person say go or no-go? |

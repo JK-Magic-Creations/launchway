@@ -1,7 +1,7 @@
 # Sign-in with OpenID Connect and roles
 
 This guide turns on sign-in through your organization's OpenID Connect provider, grants roles per
-project with access bindings, and covers API tokens, sessions and the audit trail. It is for the
+project with access bindings, and covers API tokens, sessions and the Logbook. It is for the
 operator of a Launchway server.
 
 > **Verified** on 2026-11-19 against commit f717337: Dex v2.45.0 in a container (static client and
@@ -9,7 +9,7 @@ operator of a Launchway server.
 > (Playwright 1.65), directly and through an nginx TLS proxy; an admin, a viewer with an operator
 > binding on some projects, and a person with no binding; `403` and `404` answers; API tokens made,
 > limited, used by `launchway login` and `launchway runs`, and revoked; the limit on failed
-> attempts (`429`); sign-out; the audit trail. **Not verified:** other providers (Keycloak, Okta,
+> attempts (`429`); sign-out; the Logbook. **Not verified:** other providers (Keycloak, Okta,
 > Entra ID, Authentik); environment-limited bindings in action on a real deployment (only that
 > the configuration is accepted and checked).
 
@@ -157,7 +157,7 @@ are different issuers.
 |---|---|
 | `viewer` | see projects, runs, logs, pipeline files, approvals and runners; use the Playground and the editor |
 | `operator` | also start, cancel, resume and re-run runs, approve and reject, save pipelines, and start draft runs if `drafts.allow` is `operator` |
-| `admin` | also read the audit trail, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` |
+| `admin` | also read the Logbook, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` |
 
 Each entry in `access` grants a `role` to one `group` or one `user`:
 
@@ -165,7 +165,7 @@ Each entry in `access` grants a `role` to one `group` or one `user`:
   character, `[...]`), or on every project if there is no `projects`;
 - where several entries match, the highest role wins;
 - someone matching none can sign in, but sees nothing;
-- the audit trail and everyone's API tokens need `admin` from an entry without `projects`.
+- The Logbook and everyone's API tokens need `admin` from an entry without `projects`.
 
 ### Limit a binding to environments
 
@@ -193,7 +193,7 @@ Open `https://launchway.example.com/` and sign in. Then open
 ```
 
 If `groups` is empty, the provider did not send groups under `groups_claim`: fix the claim mapping
-at the provider, then sign in again. The audit trail records each sign-in with the groups it
+at the provider, then sign in again. The Logbook records each sign-in with the groups it
 received (`groups: everyone`, or `no groups`).
 
 To check sign-in from a script, drive a headless browser. This Playwright script signs in to Dex's
@@ -333,7 +333,7 @@ A request that changes something and is authenticated by the session cookie must
 
 The UI sends the header. Requests with an API token need not.
 
-## The audit trail
+## the Logbook
 
 Every change made by someone signed in (allowed or refused), every refused token (`token.use`),
 every webhook call, every waiver, and every sign-in, failed sign-in and sign-out is recorded with

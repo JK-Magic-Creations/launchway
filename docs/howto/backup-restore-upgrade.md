@@ -26,7 +26,7 @@ operators.
 
 | What | Where | Back it up? |
 |---|---|---|
-| The database: runs, steps, events, logs, approvals, test results, findings, artifact records (and artifacts themselves, with the default database store on PostgreSQL), sessions, API token hashes, the audit trail, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
+| The database: runs, steps, events, logs, approvals, test results, findings, artifact records (and artifacts themselves, with the default database store on PostgreSQL), sessions, API token hashes, the Logbook, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
 | Artifacts and SBOMs | The database (the default on PostgreSQL, so already in its backup), the S3 bucket, or `artifacts/` in the data directory | Yes, at the same time as the database when they are outside it: the database records which objects exist. Hosted HTML reports and test attachments are artifacts too. |
 | Configuration | `launchway.yaml`, `runner.yaml`, your Helm values | Yes, with your other configuration (in Git, for example). |
 | **The root key** (encryption at rest) | The key file named by `encryption.key_file` (or the chart's `<release>-launchway-root-key` Secret), the keystore and its passphrase, or the Vault or OpenBao transit key | **Yes, and apart from the database's backups.** A database dump holds only ciphertext for the server's own secrets and is useless without the key; the key cannot be recovered if lost. See [Encryption at rest](../guide/encryption-at-rest.md#back-up-the-key-separately). |

@@ -334,6 +334,7 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Glossary', link: '/glossary' },
+          { text: 'Vocabulary rules', link: '/reference/vocabulary' },
           { text: 'FAQ', link: '/faq' },
           { text: 'How Launchway is built', link: '/contributing/codebase' },
           { text: 'Writing the docs', link: '/contributing/docs' },

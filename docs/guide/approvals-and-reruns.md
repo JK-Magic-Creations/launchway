@@ -89,7 +89,7 @@ the values they would have. Its log stays in the run where it ran, which the UI 
   decision made in the original, shown with who made it.
 - A draft run's re-run is a draft run of the same text, with the same rules.
 - Re-running needs the operator role on the project (and, for a draft, the right to start drafts),
-  and is recorded in the audit trail as `run.rerun`, with the original run, the step and the new
+  and is recorded in the Logbook as `run.rerun`, with the original run, the step and the new
   run.
 - **Files are not reused.** A re-run starts from a fresh checkout, so files that reused steps wrote
   to the workspace are not there. Outputs are kept; steps that need files an earlier step made

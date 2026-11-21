@@ -1,7 +1,7 @@
 # Monitor Launchway
 
 This guide says how to watch Launchway itself: the health and readiness endpoints of servers and
-runners, what the logs contain, how to use the audit trail, and what to alert on. It is for
+runners, what the logs contain, how to use the Logbook, and what to alert on. It is for
 operators.
 
 > **Verified** on 2026-11-19 against commit f717337: every endpoint below with `curl`, on servers
@@ -120,9 +120,9 @@ Logs never contain secret values, tokens or session ids. Requests that fail on t
 Step output is not in these logs: it is stored with the run, and read in the UI or with
 `launchway runs logs <run-id>`.
 
-## The audit trail
+## the Logbook
 
-The audit trail records every change, every refused request by someone signed in, every refused API
+The Logbook records every change, every refused request by someone signed in, every refused API
 token, every webhook call, every sign-in, failed sign-in and sign-out. Admins of every project read
 it on the **Audit trail** page or through the API:
 
@@ -147,7 +147,7 @@ Useful for monitoring:
 | `action=policy.waive` | someone waived a policy rule |
 
 The trail is kept until you delete old rows from the `audit` table yourself. See
-[Sign-in and roles](oidc-and-roles.md#the-audit-trail).
+[Sign-in and roles](oidc-and-roles.md#the-logbook).
 
 ## What to alert on
 

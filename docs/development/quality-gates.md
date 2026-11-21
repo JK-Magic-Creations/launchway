@@ -24,6 +24,7 @@ make check-all    # the above, plus the bundle budget and the Go tests with the 
 | Go lint | `make lint` | a finding appears that is not in the baseline | `quality/lint-baseline.json` |
 | Architecture | `make arch` | a package imports one it may not | table in `internal/archtest/arch_test.go` |
 | Originality | `make originality` | a comparison or an unlisted product name appears in code or docs | deny-list and allow-list in `internal/archtest/originality_test.go` |
+| Vocabulary | `make vocabulary` | a forbidden word (British spelling, `org`, `tenant`, `audit log`, a hard-coded product word) returns in what people read | rules in `docs/vocabulary.json`, allow-list `quality/vocabulary-allow.json`, baseline `quality/vocabulary-baseline.json` |
 | Size | `make ratchet` | a file over 1,000 lines or a function over 150 lines is new or grew | `quality/size-baseline.json` |
 | Coverage | `make coverage-check` | a package's coverage is below its floor | `quality/coverage-floor.json` |
 | Web lint | `make web-lint` | `eslint` or `tsc` reports something new | `web/eslint-suppressions.json` |

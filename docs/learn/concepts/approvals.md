@@ -26,7 +26,7 @@ sequenceDiagram
 4. A person reads what the run will do and says **Go** or **No-go** (Approve or Reject in the plain
    set of words). If nobody decides before the deadline
    the step sets, it is rejected.
-5. The decision is recorded in the Logbook (the audit trail) with the person's name. Go, and the run
+5. The decision is recorded in the Logbook (the Logbook) with the person's name. Go, and the run
    goes on; No-go, and it stops.
 
 <!-- try -->

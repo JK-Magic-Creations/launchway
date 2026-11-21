@@ -13,7 +13,7 @@ Launchway is early software. Read this before letting anyone but yourself reach 
   if clients cannot reach Launchway except through that proxy.
 - **Keep the runner token secret.** It lets a machine take work, and with it pipelines and the
   secret references they hold. It is separate from sign-in and from API tokens.
-- **Protect the database.** It holds runs, logs and the audit trail. It never holds secret values,
+- **Protect the database.** It holds runs, logs and the Logbook. It never holds secret values,
   session ids or API tokens, only hashes of the last two, but anyone who can write to it can
   change who has done what.
 - **Revoke the API tokens of people who leave.** Launchway cannot see that someone left your
@@ -25,7 +25,7 @@ Every UI and API call, except `/api/v1/info`, health checks and the runner API (
 token), needs a session or an API token, and is checked against the caller's role on the project
 concerned. Things you may not see answer `404`. Sessions and tokens are random 256-bit values
 stored only as SHA-256 hashes. Cookie-authenticated requests that change something need a CSRF
-header and a matching `Origin`. Every change and every sign-in is recorded in the audit trail.
+header and a matching `Origin`. Every change and every sign-in is recorded in the Logbook.
 
 ## Reporting a problem
 

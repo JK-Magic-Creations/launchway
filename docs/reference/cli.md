@@ -661,7 +661,7 @@ launchway verifications show RUN_ID [--json]
 launchway verifications mark RUN_ID STEP passed|failed --reason TEXT
 ```
 
-`list` shows recent verifications (default `--limit 20`). `show` prints a run's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the audit trail (`verification.override`). On a protected environment the person who started the run may not mark it passed.
+`list` shows recent verifications (default `--limit 20`). `show` prints a run's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the Logbook (`verification.override`). On a protected environment the person who started the run may not mark it passed.
 
 ## launchway deployments
 
@@ -704,12 +704,12 @@ launchway runners rotate RUNNER
 | `list` | Each runner, whether it is online, offline or revoked, its pool, whether it is enrolled or uses a shared or pool token (no identity), its version and labels, and what it is running |
 | `join-token` | Makes a join token for a pool and prints it once, with the command to run on the runner's machine. `--uses` (default `1`) is how many runners may enrol with it, `--ttl` (default `1h`, at most `168h`) how long it may be used, `--ephemeral` revokes each runner when it leaves. The pool defaults to `default` |
 | `revoke-token` | Stops a join token from enrolling runners |
-| `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the audit trail |
+| `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the Logbook |
 | `rotate` | Asks an enrolled runner to move to a new key the next time it gets an access token |
 
 ## launchway config
 
-Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, environments, runner pools, role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the audit trail.
+Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, environments, runner pools, role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the Logbook.
 
 ```text
 launchway config overview [--json]
@@ -748,7 +748,7 @@ The same operations are the MCP tools `list_config`, `get_config`, `put_config`,
 
 ## launchway step-resources
 
-Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the audit trail (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a run starts.
+Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a run starts.
 
 ```text
 launchway step-resources get [--json]
@@ -766,7 +766,7 @@ Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi`
 
 ## launchway run-limits
 
-Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the audit trail (`run_limits.set`). The values live in the database, so a change applies to every server at once.
+Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`run_limits.set`). The values live in the database, so a change applies to every server at once.
 
 ```text
 launchway run-limits get [--json]
@@ -782,7 +782,7 @@ The same operations are `GET` and `PUT /api/v1/run-limits` in the [HTTP API](htt
 
 ## launchway caches
 
-Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the audit trail as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.
+Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the Logbook as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.
 
 ```text
 launchway caches list PROJECT [--json]
@@ -804,7 +804,7 @@ The same operations are the routes under [Build caches](http-api.md#build-caches
 
 ## launchway variables
 
-Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the unit, organization or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
+Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
 
 ```text
 launchway variables list --installation|--organization|--unit U|--project P [--environment E] [--json]
@@ -884,7 +884,7 @@ The same report as `status` is `GET /api/v1/encryption` in the [HTTP API](http-a
 
 ## launchway repos
 
-Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the installation setting `forge.hosting`, in Configuration under Installation settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a project's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the audit trail (`repository.create`, `repository.update`, `repository.delete`).
+Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the Base setting `forge.hosting`, in Configuration under Base settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a project's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the Logbook (`repository.create`, `repository.update`, `repository.delete`).
 
 ```text
 launchway repos list [--json]
@@ -898,7 +898,7 @@ The same operations are the routes under [Repositories](http-api.md#repositories
 
 ## launchway repos mirror
 
-Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirror** keeps a hosted repository an exact copy of another server's repository: every branch, tag and note, deletions followed, on a schedule and on demand; meanwhile it takes no pushes. A **push mirror** copies every accepted update to another server. Setting one up needs the admin role on the repository, running one now the operator role; both are recorded in the audit trail (`mirror.create`, `mirror.sync`, `mirror.promote`).
+Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirror** keeps a hosted repository an exact copy of another server's repository: every branch, tag and note, deletions followed, on a schedule and on demand; meanwhile it takes no pushes. A **push mirror** copies every accepted update to another server. Setting one up needs the admin role on the repository, running one now the operator role; both are recorded in the Logbook (`mirror.create`, `mirror.sync`, `mirror.promote`).
 
 ```text
 launchway repos mirror status [OWNER/NAME] [--behind] [--json]
@@ -938,7 +938,7 @@ security` prints the plain security checklist the installer ends with.
 
 ## launchway repos import, verify and connection
 
-Getting existing repositories into Launchway before anything is switched over. Everything here needs the admin role and is recorded in the audit trail.
+Getting existing repositories into Launchway before anything is switched over. Everything here needs the admin role and is recorded in the Logbook.
 
 ```text
 launchway repos connection add NAME --kind gitea|forgejo|plain [--base-url URL] [--credential-env NAME | --credential-file PATH]

@@ -89,33 +89,54 @@ projects, people and addresses in them are made up.
 A short silent recording of starting a run and watching it finish is in
 [start-a-run.webm](public/images/tour/start-a-run.webm).
 
-### Projects
+### Home
 
-![The Projects page listing demo-app, payments-api and web-frontend, each with its latest run, its schedule and buttons for Tests, Security, Edit pipeline and Start a run](images/tour/projects-light.png)
+![Home for the user ana: three things need her, a failed demo-app run, and two runs waiting for a decision, then the changes on their way, each drawn as dots a change passes](images/tour/home-light.png)
 
-Every repository the server watches, with its latest run, schedules and recent pushes.
-Open it from **Projects** in the sidebar.
+What needs a person first, then every change on its way to your users, from commit to deployment.
+Open **Home** in the top bar.
+
+### Repositories
+
+![The Code page listing five repositories: demo-app, docs-site, flight-api hosted by Launchway, payments-api and web-frontend, each with its default branch, its latest run and recent results](images/tour/code-light.png)
+
+Every repository the server watches or hosts, with its latest run. Open **Code** in the top bar.
+
+### Pipelines
+
+![The Pipelines page: five pipelines, one stopped on its last run, each with how it starts, its latest run and how many finished runs passed](images/tour/pipelines-light.png)
+
+One line for each pipeline: how it starts, its latest run and its recent pass rate. Open
+**Pipelines** in the top bar.
+
+### A pull request
+
+![Pull request 1 of acme-flight/flight-api, Let travelers pick a seat: opened, checks 5 of 5, review needing one more approval, and a box saying Cannot merge yet because it needs 1 more approval and 1 conversation is not resolved, above the list of passed checks](images/tour/pull-request-light.png)
+
+A repository hosted by Launchway has pull requests, reviews and merge rules. The page says in one
+sentence why a change cannot merge yet, and lists the checks the pipeline ran. Open a repository
+from **Code**, then **Pull requests**.
 
 ### Start a run
 
 ![The Start a run dialog for demo-app: a branch picker showing main and feature/new-button, and the pipeline's inputs scan (a choice) and alpine (a list of values)](images/tour/start-run-light.png)
 
 Choose a branch or tag, read straight from the repository, and fill in the pipeline's inputs.
-Press **Start a run** on a project.
+Press **Start a run** on a repository's page.
 
 ### A run as it happens
 
 ![A running web-frontend run: the graph of install, unit-tests, audit, e2e and bundle, the e2e step repeated for chromium, firefox and webkit, and the firefox log streaming below](images/tour/run-live-light.png)
 
 The graph shows each step's state, a repeated step shows one box per value, and logs stream live.
-Open any run from **Runs**, then click a step.
+Open any run from **Activity**, then click a step.
 
 ### A failed run and Resume
 
-![A failed demo-app run: the reason, smoke-test failed with exit code 1, the last lines it wrote, and a Resume from smoke-test button](images/tour/run-failed-light.png)
+![A failed demo-app run: What went wrong, smoke-test failed with exit code 1, the last lines it wrote, and buttons to resume from the failed step or re-run from smoke-test](images/tour/run-failed-light.png)
 
-A failed run says which step failed, why, and the last lines it wrote. **Resume from smoke-test**
-runs only that step and the ones after it, at the same commit.
+A failed run says which step failed, why, and the last lines it wrote. **Resume this run from the
+failed step** runs only that step and the ones after it, at the same commit.
 
 ### Test results of a run
 
@@ -152,6 +173,20 @@ Open a run's **Artifacts** tab.
 Steps that come from a library template are framed as one group, and the run records the
 library's commit. Open a payments-api run from **Runs**.
 
+### The library
+
+![The Templates page of the Library: the platform-library at v1 with its ready-made pipelines check, release, service-cd-rollout, service-cd, service-ci-postgres and service-ci, each with how many inputs it takes](images/tour/library-light.png)
+
+Ready-made parts of a pipeline kept in Git, each pinned by version, with typed inputs. Open
+**Library**, then **Templates**.
+
+### Learn
+
+![The Learn hub: a search box, Start here and The concepts, and four paths to choose from: new to Launchway, writing pipelines, deploying and operating, and administering](images/tour/learn-light.png)
+
+The documentation, inside the product and matching the release you run. Open **Learn** in the top
+bar.
+
 ### Approvals
 
 ![The Approvals page with two runs waiting: demo-app asking Deploy this build to dev? and payments-api asking Deploy this build?, each with the time left](images/tour/approvals-light.png)
@@ -164,7 +199,7 @@ a row, to approve or reject in the run.
 ![The pipeline editor for demo-app with an unsaved change: the YAML on the left and, on the right, Valid with 10 steps in 6 stages and the graph it makes](images/tour/editor-light.png)
 
 Edit `.launchway/pipeline.yaml` from a branch, see the graph as you type, then **Run this draft** or
-**Save…**. Press **Edit pipeline** on a project.
+**Save…**. Press **Edit the pipeline** on a pipeline's page.
 
 ### Problems in the editor
 
@@ -178,33 +213,33 @@ number to jump to it.
 ![The Playground: a small pipeline in the editor on the left and, on the right, Valid with 5 steps in 4 stages and its graph](images/tour/playground-light.png)
 
 Write any pipeline and see whether it is valid and the graph it becomes; nothing runs.
-Open **Playground** in the sidebar.
+Open a pipeline and press **Try it without saving**, or **Pipelines**, then **Try a pipeline without saving**.
 
 ### Components
 
 ![The Components page searching for left-pad: 2 projects use it, web-frontend at 1.1.3 and demo-app at 1.3.0, with every run whose SBOM lists it](images/tour/components-light.png)
 
 Find which projects and runs use a component, from the SBOMs the runs made.
-Open **Components** in the sidebar.
+Open **Images**, then **Components**.
 
 ### Policy
 
 ![The Policy page: two policies in report mode from the server's configuration, pinned-libraries and image-digests, their rules, recent verdicts of runs, and the waivers section](images/tour/policy-light.png)
 
 The policies in force, where they come from, and their recent verdicts; the demo's are in report
-mode, so they warn but never block. Open **Policy** in the sidebar.
+mode, so they warn but never block. Open **Settings**, then **Rules**.
 
 ### Audit trail
 
-![The Audit trail: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the project and run, the outcome and a detail](images/tour/audit-light.png)
+![the Logbook: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the project and run, the outcome and a detail](images/tour/audit-light.png)
 
 Every change made through the API, who made it and whether it was allowed. Admins open
-**Audit trail** in the sidebar.
+**Settings**, then **Audit trail**.
 
 ## Make the screenshots again
 
-`scripts/docs-screenshots.sh` makes every picture on this page, and `docs/images/readme-hero.png`,
-from a fresh server:
+`scripts/docs-screenshots.sh` makes every picture on this page, and the ones in
+`docs/public/images/landing/` that the README and the landing page show, from a fresh server:
 
 ```sh
 scripts/docs-screenshots.sh
@@ -212,8 +247,9 @@ scripts/docs-screenshots.sh
 
 It runs `make all`, creates the demo repositories and a configuration in a temporary directory
 (`scripts/docs/seed-demo.sh`), starts a server and a runner named `build-1` on 127.0.0.1:18160,
-starts runs through the API, takes the screenshots with Playwright at 1440x900 in light and dark
-mode, makes them smaller, and stops the server and the runner. It needs what `make run` needs, plus
+starts runs through the API, hosts a repository with a pull request, takes the screenshots with
+Playwright at 1440x900 and device scale 2 in light mode (`--dark` adds dark mode), and hides the
+server's path on this machine in what the pages show, makes them smaller, and stops the server and the runner. It needs what `make run` needs, plus
 Python 3 with Pillow, and a Chromium for Playwright in `~/.cache/ms-playwright` (or set
 `LAUNCHWAY_DOCS_CHROME`). With ffmpeg installed it also makes the recording. Set
 `LAUNCHWAY_DOCS_PORT` to use another port, pass `--no-build` to use the binary you have, and

@@ -195,7 +195,7 @@ cannot run templates, which come from a server's libraries.
   that project, so a secret store's `projects` allow-list applies to templates as to any step, and
   expansion cannot change whose job a step is. Draft runs that may not read secrets refuse
   template steps that ask for them, too.
-- Manual and draft starts record in the audit trail each library's version, any override, the
+- Manual and draft starts record in the Logbook each library's version, any override, the
   commit it resolved to, and the templates used.
 - Whoever can push to a library, or move its tags, changes what every pipeline that uses it runs.
   Protect its tags and branches on the Git host as you would a deployment script, and pin

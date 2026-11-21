@@ -1,6 +1,6 @@
 # Agents (MCP)
 
-How AI agents use Launchway through the Model Context Protocol: tools, rights, limits and the audit trail.
+How AI agents use Launchway through the Model Context Protocol: tools, rights, limits and the Logbook.
 
 AI agents and assistants use Launchway through the [Model Context Protocol](https://modelcontextprotocol.io)
 (MCP). Every server serves it at `/mcp`; there is nothing else to deploy. An agent connecting with
@@ -60,9 +60,9 @@ Tools are marked read-only or destructive with the protocol's annotations. Lists
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.
 
-**Rights and the audit trail.** An agent can do exactly what its token allows: each tool calls the
+**Rights and the Logbook.** An agent can do exactly what its token allows: each tool calls the
 server's own HTTP API with the token, through the same checks as any other call. Every call that
-changes something is in the audit trail with `via MCP, token "<name>", tool <tool>, client "<the
+changes something is in the Logbook with `via MCP, token "<name>", tool <tool>, client "<the
 agent's name>"` at the start of its detail, allowed or refused. Browser session cookies are not
 accepted at `/mcp`. Make agents their own tokens, limited to the projects and the role they need.
 

@@ -8,7 +8,7 @@ and tracked in the security backlog.
 ## Assets
 
 Source code and Git history; secrets and credentials that pipelines resolve; build outputs
-(artifacts, images, caches); the audit trail; the ability to run code on runners and to deploy.
+(artifacts, images, caches); the Logbook; the ability to run code on runners and to deploy.
 
 ## Boundaries and threats
 

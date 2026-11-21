@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 0 in progress · 24 planned · 26 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 1 in progress · 24 planned · 27 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -48,7 +48,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Know what you run](#g-know-what-you-run) | 10 | 1 | 0 | 9 |
-| [Fix it safely](#g-fix-it-safely) | 5 | 1 | 0 | 4 |
+| [Fix it safely](#g-fix-it-safely) | 6 | 1 | 1 | 4 |
 | [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
 
 ### Know what you run {#g-know-what-you-run}
@@ -173,7 +173,17 @@ Launchway finds outdated and vulnerable dependencies in a repository and propose
 
 **Depends on:** Pull requests on the built-in host.
 
-[Read the documentation](../guide/dependency-updates.md) · [Area page](software-graph.md)
+[Area page](software-graph.md)
+
+#### Lock files regenerated in a container and checked {#lock-files-regenerated-in-a-container-and-checked}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
+
+**Depends on:** Built-in dependency updates.
+
+[Area page](software-graph.md)
 
 #### Image refresh and patching of base images {#image-refresh-and-patching-of-base-images}
 
@@ -281,11 +291,11 @@ One change that spans several repositories is tracked, tested and merged togethe
 
 [Area page](dependency-order.md)
 
-#### Branching patterns as flight plans {#branching-patterns-as-flight-plans}
+#### Branching patterns as Flight plans {#branching-patterns-as-flight-plans}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
 
 [Area page](dependency-order.md)
 

@@ -115,7 +115,7 @@ keeps the newest 200 deliveries. From the log you can:
   Tests and redeliveries do not count against the hook.
 
 When **5 deliveries in a row fail for good** (after their retries), Launchway **turns the hook off**,
-records `webhook.disable` in the audit trail and shows this notice on the hook:
+records `webhook.disable` in the Logbook and shows this notice on the hook:
 
 > Turned off automatically after 5 deliveries in a row failed. The last problem: … Fix the address, then turn the webhook on again.
 
@@ -124,7 +124,7 @@ count.
 
 ## Which addresses are allowed
 
-Deliveries use the installation's **egress allow-list** (`egress.allow` in the installation settings). An
+Deliveries use the installation's **egress allow-list** (`egress.allow` in the Base settings). An
 address that is internal (a private network, a loopback or link-local address) is refused unless the
 installation allows it, and the delivery says so in words:
 

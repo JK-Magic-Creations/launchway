@@ -3,6 +3,10 @@ package runner
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -97,5 +101,26 @@ func TestIsOutage(t *testing.T) {
 		if got := isOutage(c.err); got != c.want {
 			t.Errorf("%v: %v", c.err, got)
 		}
+	}
+}
+
+// A runner that stops while it is delivering a spool keeps the spool for the next start; a
+// canceled call is the runner's own doing, not a reason to drop the kept lines.
+func TestStoppingWhileDeliveringKeepsTheSpool(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-r.Context().Done() }))
+	defer srv.Close()
+	r := &Runner{Client: NewClient(srv.URL, "x"), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), DataDir: t.TempDir()}
+	s := testSpool(t, 1<<20, time.Hour, time.Now)
+	s.c = r.Client
+	if err := s.append([]engine.LogLine{lineN(1, time.Now())}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if r.deliverSpool(ctx, s) {
+		t.Fatal("a spool that could not be delivered was reported as finished")
+	}
+	if _, err := os.Stat(s.path("logs.jsonl")); err != nil {
+		t.Fatalf("the kept lines were dropped: %v", err)
 	}
 }

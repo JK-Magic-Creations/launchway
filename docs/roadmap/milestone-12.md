@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 5 available · 2 in progress · 29 planned · 36 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 1 in progress · 33 planned · 38 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -44,11 +44,11 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Encryption at rest](#g-encryption-at-rest) | 9 | 3 | 2 | 4 |
+| [Encryption at rest](#g-encryption-at-rest) | 9 | 2 | 1 | 6 |
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 13 | 0 | 0 | 13 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 0 | 15 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -94,9 +94,9 @@ Artifacts, caches, repository data and logs are encrypted as streams, re-encrypt
 
 #### Rotation without downtime {#rotation-without-downtime}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. Rotation and re-wrapping of the sealed secrets work while the server runs; re-encrypting stored files waits for file encryption.
+Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. Backups and restores keep working across rotations.
 
 **Depends on:** Encrypt stored files, logs and caches.
 
@@ -104,7 +104,7 @@ Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving
 
 #### The doctor reports encryption plainly {#the-doctor-reports-encryption-plainly}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 A plain report of what is encrypted, what is not, and the one step to fix each gap. It never says encrypted when it is not.
 
@@ -116,7 +116,7 @@ A plain report of what is encrypted, what is not, and the one step to fix each g
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The audit trail forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping.
+the Logbook forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping.
 
 **Depends on:** Encrypt stored secrets and tokens.
 
@@ -318,7 +318,7 @@ Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kot
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen. Findings show on the pull request and in the repository, team and organization views.
+Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen. Findings show on the pull request and in the repository, team and Wing views.
 
 [Area page](repository-standards.md)
 
@@ -362,11 +362,31 @@ Start a campaign that opens one fix per affected repository and tracks it until 
 
 [Area page](repository-standards.md)
 
+#### Standards kept in Git, edited in either place {#standards-kept-in-git-edited-in-either-place}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor.
+
+**Depends on:** Every check on, advice or block.
+
+[Area page](repository-standards.md)
+
+#### Adapters for the tools teams already pay for {#adapters-for-the-tools-teams-already-pay-for}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
+
+**Depends on:** Findings in one list.
+
+[Area page](repository-standards.md)
+
 #### A standards home and a posture view {#a-standards-home-and-a-posture-view}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository. The score is a view, never a gate by itself.
+See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself.
 
 [Area page](repository-standards.md)
 

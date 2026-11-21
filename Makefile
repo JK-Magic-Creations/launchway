@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: test-like-ci prepush all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
+.PHONY: test-like-ci prepush all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality vocabulary vocabulary-update test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
 	charts-sync test-install test-runner-chart bundle test-bundle test-git-compat
 
@@ -231,13 +231,13 @@ license-check: tools
 		--ignore github.com/jk-magic-creations/launchway \
 		--ignore github.com/in-toto/attestation --ignore github.com/in-toto/in-toto-golang
 
-# shellcheck on the packaging, release and test scripts (installed, or in a container).
+# shellcheck on the packaging, release and test scripts, always the pinned version in a container, so a
+# hosted runner's own (newer) shellcheck cannot report findings that a laptop does not.
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
 SHELL_SCRIPTS = $(shell git ls-files -co --exclude-standard 'packaging/*.sh' 'deploy/test/install/*.sh' \
 	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh' 'scripts/chart-determinism.sh')
 lint-scripts:
-	if command -v shellcheck >/dev/null 2>&1; then shellcheck $(SHELL_SCRIPTS); \
-	else $(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS); fi
+	$(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS)
 
 lint-workflows: tools
 	$(TOOLS)/actionlint
@@ -356,6 +356,15 @@ arch:
 originality:
 	go test -count=1 -run TestNoOtherProductsAreNamed ./internal/archtest/
 
+# The vocabulary guard: Launchway's own words are used the same way everywhere a person reads them
+# (docs/reference/vocabulary.md). Fast, no network. `make vocabulary-update` lowers the baseline
+# after a fix; `scripts/vocabulary-fix` applies the mechanical replacements.
+vocabulary:
+	node scripts/vocabulary/check.mjs
+
+vocabulary-update:
+	node scripts/vocabulary/check.mjs --update-baseline
+
 ratchet:
 	go test -count=1 -run TestSizeRatchet ./internal/archtest/
 
@@ -406,7 +415,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: fmt-check vet lint arch originality ratchet web-lint web-test learn-check
+check: fmt-check vet lint arch originality vocabulary ratchet web-lint web-test learn-check
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.

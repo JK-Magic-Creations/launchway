@@ -27,7 +27,7 @@ const configUsage = `Usage:
   launchway config list KIND [--deleted] [--json]     objects of a kind: projects, libraries, environments,
                                                       runner-pools, role-bindings, policies, policy-sources,
                                                       health-sources, models, secret-stores, units,
-                                                      installation, organisation
+                                                      installation, organization
   launchway config get KIND NAME [--json]             one object, as YAML (or JSON)
   launchway config set KIND NAME -f SPEC.yaml         create or replace an object; - reads standard input
                      [--unit U] [--version N | --force] [--comment TEXT] [--manager terraform] [--take-ownership]
@@ -382,7 +382,7 @@ func (cl *client) configSet(args []string, create bool) error {
 	fs := flag.NewFlagSet("config set", flag.ContinueOnError)
 	file := fs.String("f", "", "the spec, as YAML or JSON (- for standard input)")
 	inline := fs.String("spec", "", "the spec as JSON, instead of -f")
-	unit := fs.String("unit", "", "the unit it belongs to (a project), or is defined at (anything else)")
+	unit := fs.String("unit", "", "the Squadron (unit) it belongs to (a project), or is defined at (anything else)")
 	ver := fs.Int64("version", 0, "change it only if it is at this version")
 	comment := fs.String("comment", "", "why, for the history")
 	mgr := fs.String("manager", "", "who manages it: api (the default), terraform or git; needs an API token")

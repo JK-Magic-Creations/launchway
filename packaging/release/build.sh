@@ -73,7 +73,7 @@ build_web_container() {
 case ${WEB_BUILD:-container} in
 container) build_web_container ;;
 local) (cd docs && npm ci --no-audit --no-fund) && (cd web && npm ci --no-audit --no-fund && npm run build) && node scripts/docs/build-learn.mjs ;;
-skip) [ -f web/dist/index.html ] && [ -f web/dist/learn-content/manifest.json.gz ] || { echo "build.sh: WEB_BUILD=skip but web/dist/index.html is missing" >&2; exit 1; } ;;
+skip) if [ ! -f web/dist/index.html ] || [ ! -f web/dist/learn-content/manifest.json.gz ]; then echo "build.sh: WEB_BUILD=skip but web/dist/index.html is missing" >&2; exit 1; fi ;;
 *) echo "build.sh: WEB_BUILD must be container, local or skip" >&2; exit 2 ;;
 esac
 

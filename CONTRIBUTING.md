@@ -35,10 +35,10 @@ make test-s3            # a real S3-compatible server, for the artifact store
 
 ## Engineering standard and quality gates
 
-A change is done when its behaviour is tested (a test that fails without it, and for the engine,
+A change is done when its behavior is tested (a test that fails without it, and for the engine,
 what happens on failure, restart and retry), the gates pass, packages keep their boundaries, files
 stay under 1,000 lines and functions under 150, I/O takes a `context.Context`, errors are returned
-with context, input is validated at the edge, public behaviour is documented, migrations are
+with context, input is validated at the edge, public behavior is documented, migrations are
 additive, nothing is duplicated that an existing package provides, and someone other than the author
 has read the diff.
 
@@ -53,18 +53,18 @@ with your change; never add a new finding to a baseline to get a build through. 
 baseline and how to update it are in [Quality gates](docs/development/quality-gates.md), which
 also holds the full engineering standard.
 
-## Licence and contributor licence agreement
+## License and contributor license agreement
 
 Launchway is free software under the [GNU Affero General Public License, version 3](LICENSE)
 (AGPL-3.0). [LICENSING.md](LICENSING.md) explains what that means in plain words. JK Magic
-Creations, which owns Launchway, also offers a commercial licence to organisations that cannot
+Creations, which owns Launchway, also offers a commercial license to organizations that cannot
 accept the AGPL's terms.
 
-To make that possible, every contributor agrees to the [contributor licence agreement](CLA.md)
+To make that possible, every contributor agrees to the [contributor license agreement](CLA.md)
 (CLA):
 
 - **You keep the copyright** to what you write.
-- **You grant JK Magic Creations a licence** to your contribution, including a patent licence and
+- **You grant JK Magic Creations a license** to your contribution, including a patent license and
   the right to sublicense it. This lets JK Magic Creations relicense Launchway, including under
   commercial terms, and distribute your contribution under those terms as well as under the AGPL.
   Read [CLA.md](CLA.md) for the exact terms; it, not this summary, is the agreement.

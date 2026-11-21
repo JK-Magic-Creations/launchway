@@ -9,7 +9,7 @@ The order follows what has to be true before what, and then what is most valuabl
 ```mermaid
 flowchart TD
   Now["Built now<br/>hosting, pull requests and review,<br/>interface, failures say why, scans,<br/>rollback after success"]
-  Building["Being built<br/>installer and built-in accounts,<br/>encryption at rest, cache correctness,<br/>waiting for room"]
+  Building["Built, in final integration<br/>installer and built-in accounts,<br/>encryption at rest, cache correctness,<br/>waiting for room, dependency updates"]
   First["First<br/>zero-downtime on Kubernetes,<br/>Argo CD views, network path,<br/>database failover"]
   Second["Second<br/>toggles and settings as rollouts,<br/>DNS and Istio, database changes,<br/>clusters and workloads"]
   Third["Third<br/>hosts, serverless, chaos and<br/>performance, autoscaling, built-in vault"]
@@ -18,6 +18,18 @@ flowchart TD
 ```
 
 Each phase uses the one before it. Delivery comes before the network and cluster views because their proofs and findings are what a deployment checks.
+
+## The order we are building in
+
+After what is already in flight (the release with encryption at rest, built-in sign-in and the cache fixes, the guided installer, queueing and limits, the delivery gaps and dependency updates), the order is:
+
+1. One combined, tested build, and moving the repositories onto Launchway itself.
+2. Standards for every repository, on by default.
+3. Polished test reports as web pages and PDF.
+4. Adapters for the tools teams already use.
+5. The model gateway.
+6. Runner placement: load-aware runners on personal machines first, then a build’s parallel steps spread across machines, size hints and fairness.
+7. The track towards the first outside user: the files-on-your-machines mode and the wall between Bases, then the opening stages.
 
 ## Why this order
 

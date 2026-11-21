@@ -3,7 +3,7 @@
 Runner pools, join tokens, runner identities and the limits a runner sets for itself.
 
 A runner only ever connects out to the server, over HTTPS, so it can sit in any network that can
-reach the server: another machine, another cluster, a customer's data centre. Each runner belongs
+reach the server: another machine, another cluster, a customer's data center. Each runner belongs
 to a **pool**, and a pool says which projects' work its runners may take.
 
 ## Connecting a runner
@@ -30,7 +30,7 @@ The Runners page shows each runner's pool, identity (key fingerprint and age, wh
 token), version, OS and architecture, labels, what its `accept:` section allows, and what it is
 running. **Revoke** refuses it at once on every server; the steps it held are queued again for
 other runners. **Rotate key** makes it move to a new key at its next request (runners also rotate
-every 30 days). Every join, rotation, revocation and refusal is in the audit trail.
+every 30 days). Every join, rotation, revocation and refusal is in the Logbook.
 
 The shared runner token (`LAUNCHWAY_RUNNER_TOKEN`, `--token`) and deploy pools' tokens keep
 working as before, and runners using them are marked on the Runners page: a shared token gives no

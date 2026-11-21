@@ -138,5 +138,5 @@ address with 10 failed sign-ins in a minute is refused for 5 minutes. Git itself
 ## Checking it works
 
 `launchway doctor ssh` connects to the address and reports whether the SSH port is reachable and which
-host key it presents. In the audit trail, a push over SSH is `git.push` with the detail `ssh key SHA256:...`
+host key it presents. In the Logbook, a push over SSH is `git.push` with the detail `ssh key SHA256:...`
 and the refs it moved.

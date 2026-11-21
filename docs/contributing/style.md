@@ -21,7 +21,7 @@ How to write Launchway's documentation so that it stays clear, honest and consis
 
 - Plain words and short sentences. Define a term the first time, or link to the
   [glossary](../glossary.md).
-- British spelling: organization, behavior, license (the noun).
+- American spelling: organization, behavior, license (the noun).
 - Second person and the imperative for instructions: "Create a file", not "The user creates".
 - Say what happens and why, not only what to type.
 

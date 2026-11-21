@@ -488,7 +488,7 @@ func (s *Service) prepare(c Change) (engine.ConfigWrite, *engine.ConfigObject, e
 	case !ValidName(c.Name):
 		return w, nil, invalid(fmt.Errorf("%q: names are letters, digits, '.', '_' and '-', starting with a letter or digit, at most 100", c.Name))
 	case c.Unit != "" && !k.Levels:
-		return w, nil, invalid(fmt.Errorf("a %s belongs to the whole installation, not to a unit", strings.ToLower(k.Title)))
+		return w, nil, invalid(fmt.Errorf("a %s belongs to the whole Base, not to a Squadron", strings.ToLower(k.Title)))
 	case k.Singleton != "" && (c.Action == engine.ConfigDelete || c.Action == engine.ConfigRestore):
 		return w, nil, invalid(fmt.Errorf("the %s cannot be deleted; change it instead", strings.ToLower(k.Title)))
 	case len(c.Comment) > 500:

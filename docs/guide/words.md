@@ -4,7 +4,7 @@ Launchway names its own levels and parts with a small set of words. This page li
 
 ## Why there are two sets
 
-The documentation and the screens use the **default words**, which come from aviation: a change is a flight, so it has a plan, a checklist, a clearance and a logbook. Some teams prefer plain business words, so a second set is built in, and any single word can be renamed. The choice is made when Launchway is first set up and can be changed at any time.
+The documentation and the screens use the **default words**, which come from aviation: a change is a flight, so it has a plan, a checklist, a clearance and a Logbook. Some teams prefer plain business words, so a second set is built in, and any single word can be renamed. The choice is made when Launchway is first set up and can be changed at any time.
 
 Two rules keep this safe:
 

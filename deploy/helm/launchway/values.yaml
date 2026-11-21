@@ -249,7 +249,7 @@ config:
     maxComponentsPerRun:
     # -- SBOM components a project keeps. Unset: 1000000.
     maxComponentsPerProject:
-    # -- MiB of a step's SBOM files read to summarise them (they are kept whole anyway). Unset: 64.
+    # -- MiB of a step's SBOM files read to summarize them (they are kept whole anyway). Unset: 64.
     maxSbomMiB:
   # -- Test attachments, coverage and HTML reports (reports.tests.attachments, reports.coverage,
   # reports.html). Unset values take the built-in defaults shown, and are not written to the

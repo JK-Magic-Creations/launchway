@@ -33,14 +33,14 @@ git push -o pr.create -o pr.title="Add the retry button" -o pr.target=main origi
 
 `pr.create` opens a pull request from the pushed branch into `pr.target` (the default branch if left out), titled
 `pr.title` (the branch name, spelled out, if left out). It needs a person's credential, not a deploy key or a
-run's, and is recorded in the audit trail as `pull.create` with the source `git push`. The pull request is made
+run's, and is recorded in the Logbook as `pull.create` with the source `git push`. The pull request is made
 after git has finished, so if it cannot be (there is nothing to merge, say), the push still stands and the audit
 trail says why. The default branch, a deleted branch and a branch that already has an open pull request print
 nothing.
 
 The head of every pull request is also a ref of the repository, `refs/pull/N/head`, so it can be fetched
 (`launchway pr checkout N`, or `git fetch origin refs/pull/N/head`) and survives the branch being deleted
-or rewritten. Each time the head or the base moves, a **revision** is recorded, with whether it was a
+or rewritten. Each time the head or the Base moves, a **revision** is recorded, with whether it was a
 force-push; the earlier heads are kept as `refs/pull/N/rev/K`. Nobody can push to `refs/pull/`: the server
 keeps those refs itself.
 
@@ -97,7 +97,7 @@ A **protected branch** can carry merge rules. They are set per branch or pattern
 | Up to date | The head must contain the target's tip |
 | Resolved threads | Every review thread is resolved |
 | No self-approval | The author's own approval does not count |
-| Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the audit trail |
+| Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the Logbook |
 
 Rules and the repository's other settings (which merge methods are allowed, deleting the source branch after a
 merge, dismissing approvals when new commits arrive) are set by a repository administrator in the repository's
@@ -141,7 +141,7 @@ undoes it.
 ## Events
 
 Every change is a `pull_request` webhook event (and reviews are `pull_request_review`); see
-[Webhooks and events](webhooks.md). Each change made by a request is in the audit trail
+[Webhooks and events](webhooks.md). Each change made by a request is in the Logbook
 (`pull.create`, `pull.update`, `pull.merge`, `pull.review`, ...). Notifications are left as events: whatever
 listens decides who is told.
 

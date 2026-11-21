@@ -1,6 +1,6 @@
 # Sign-in and access
 
-Sign-in with OpenID Connect, roles, sessions, API tokens and the audit trail. A step-by-step setup is in [Sign-in with OIDC and roles](../howto/oidc-and-roles.md).
+Sign-in with OpenID Connect, roles, sessions, API tokens and the Logbook. A step-by-step setup is in [Sign-in with OIDC and roles](../howto/oidc-and-roles.md).
 
 Out of the box Launchway has no sign-in (`auth.mode: none`): everything is done as the configured
 `user`, with full rights. That suits a server on your own machine and nothing else, so **a server
@@ -58,12 +58,12 @@ is on.
 |---|---|
 | `viewer` | see a project and its runs, logs, events, pipeline files and approvals; see the runners; use the Playground; open the pipeline editor |
 | `operator` | everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, save pipelines, and start draft runs if `drafts.allow` is `operator` |
-| `admin` | everything an operator may, read the audit trail, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` (the default; see [Policies](policies.md)) |
+| `admin` | everything an operator may, read the Logbook, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` (the default; see [Policies](policies.md)) |
 
 Each entry in `access` grants a role to one `group` (from `groups_claim`) or one `user` (from
 `username_claim`), on the projects matching one of `projects`, or on every project if there are
 none. Patterns use `*` (any characters but `/`), `?` (one character) and `[...]`. Where several entries
-match, the highest role wins. Someone matching none can sign in but sees nothing. The audit trail
+match, the highest role wins. Someone matching none can sign in but sees nothing. The Logbook
 needs `admin` from an entry without `projects`.
 
 An entry may also list `environments` (patterns, as for projects). It then grants its role on
@@ -115,7 +115,7 @@ signed-in browser, not with another token. Over the API: `GET /api/v1/tokens`,
 may last and the highest role you may give it.
 
 A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in
-the audit trail as `token.use`. An address that fails to authenticate 20 times within a minute
+The Logbook as `token.use`. An address that fails to authenticate 20 times within a minute
 (with tokens or webhook secrets) is refused with `429` and `Retry-After` for the rest of that
 minute; each server counts on its own and remembers at most 10,000 addresses. Behind a reverse
 proxy, the address is the one the proxy saw only with `server.trust_proxy: true`; otherwise
@@ -145,7 +145,7 @@ address from the last entry of `X-Forwarded-For`, the one the proxy added. The p
 `Host` header through unchanged, and must not buffer `/api/v1/stream`. Cookies are also `Secure`
 whenever `redirect_url` starts with `https://`.
 
-## Logbook (the audit trail) {#audit-trail}
+## The Logbook {#audit-trail}
 
 Every call that changes something (starting, canceling and resuming runs, starting draft runs
 (`run.draft`), saving pipelines (`pipeline.save`), approving and rejecting, making and revoking

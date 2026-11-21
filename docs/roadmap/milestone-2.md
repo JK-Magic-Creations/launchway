@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 47 planned · 55 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 54 planned · 62 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -33,7 +33,7 @@ flowchart TD
   Graph --> Steps["Steps in sandboxes"]
   Steps -->|typed outputs| Graph
   Designer["Visual designer"] <-->|same file| Repo
-  Catalogue["Catalogue of templates and steps"] --> Repo
+  Catalog["Catalog of templates and steps"] --> Repo
 ```
 
 *Text, designer and generated steps all end in one checked definition.*
@@ -47,6 +47,8 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Write pipelines your way](#g-write-pipelines-your-way) | 15 | 0 | 0 | 15 |
+| [Builds use every machine sensibly](#g-builds-use-every-machine-sensibly) | 6 | 0 | 0 | 6 |
+| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 0 | 1 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
 | [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
@@ -123,11 +125,11 @@ A step declares what it passes on, and a reference to an output that does not ex
 
 [Area page](pipelines.md)
 
-#### A browsable catalogue of templates and steps {#a-browsable-catalogue-of-templates-and-steps}
+#### A browsable catalog of templates and steps {#a-browsable-catalog-of-templates-and-steps}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Shared libraries pinned by tag already work; the catalogue lets you find, compare and update them from inside the product. Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.
+Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product. Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.
 
 **Depends on:** Shared libraries.
 
@@ -139,7 +141,7 @@ Shared libraries pinned by tag already work; the catalogue lets you find, compar
 
 See which projects use an old version of a template and open an update as a reviewable change. Teams keep common pipeline logic current without a manual hunt.
 
-**Depends on:** A browsable catalogue of templates and steps.
+**Depends on:** A browsable catalog of templates and steps.
 
 [Area page](pipelines.md)
 
@@ -203,6 +205,84 @@ Each step has a page: where its code lives, its inputs and types, and which pipe
 
 [Area page](pipelines.md)
 
+### Builds use every machine sensibly {#g-builds-use-every-machine-sensibly}
+
+A team’s machines share the work by what is free, and nobody’s laptop is taken over.
+
+#### Builds placed by free processor and memory {#builds-placed-by-free-processor-and-memory}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A build can run on any of a team’s machines and is placed on one with room for it. Today a runner takes work when it has a free slot; placement by what is really free comes next.
+
+**Depends on:** Runner identity and pools.
+
+[Area page](pipelines.md)
+
+#### Runners on personal machines hold back when busy {#runners-on-personal-machines-hold-back-when-busy}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A runner on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets. This is the first piece of placement to be built, because it makes lending a personal machine safe.
+
+**Depends on:** Runner identity and pools.
+
+[Area page](pipelines.md)
+
+#### A build’s parallel steps spread across machines {#a-build-s-parallel-steps-spread-across-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The parallel steps of one build can run on different machines, with their shared files moved safely between them. The pipeline stays one pipeline, drawn as it is; only where each step runs changes.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+#### Size hints for steps {#size-hints-for-steps}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier runs, to place it. The hints are advice; a wrong hint wastes time but never breaks a build.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+#### Windows and macOS runners {#windows-and-macos-runners}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Runners that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run. This is a gap, listed honestly.
+
+**Depends on:** Matrix builds.
+
+[Area page](build-tools-caches.md)
+
+#### Fair use between the people lending machines {#fair-use-between-the-people-lending-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Work is shared out so that no one person’s machines carry the whole team, and everyone can see how much each machine did. The report is about machines and fairness, never a ranking of people.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+### Reports people want to read {#g-reports-people-want-to-read}
+
+Test results that are a pleasure to read and easy to hand to someone else.
+
+#### Polished test reports as HTML and PDF {#polished-test-reports-as-html-and-pdf}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
+
+**Depends on:** Test, coverage and HTML reports.
+
+[Area page](developer-experience.md)
+
 ### Design visually {#g-design-visually}
 
 Draw it, read it as text, and see that both are the same thing.
@@ -265,7 +345,7 @@ Convert job definitions and shared libraries, with a report of what needs a pers
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A step catalogue and typed custom steps instead of plug-ins that run inside the server. Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.
+A step catalog and typed custom steps instead of plug-ins that run inside the server. Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.
 
 **Depends on:** Custom steps in your own language.
 
@@ -283,11 +363,11 @@ Guidance and checks that show runners on any machine, in any network, replace th
 
 The right amount of sharing at the right level, with the fewest new ideas to learn: a template is an interface, code is what runs, and a nearer level always wins.
 
-#### Templates and flight plans by level {#templates-and-flight-plans-by-level}
+#### Templates and Flight plans by level {#templates-and-flight-plans-by-level}
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Set a template or a flight plan at the organization or unit and every project beneath it uses it. Today a flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
+Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it. Today a Flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
 
 [Read the documentation](../guide/libraries.md)
 
@@ -305,7 +385,7 @@ Declare a variable lower down to override it, let a level above lock it, and see
 
 A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open. You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.
 
-**Depends on:** Shared pipeline templates and flight plans.
+**Depends on:** Shared pipeline templates and Flight plans.
 
 [Area page](pipelines.md)
 
@@ -343,7 +423,7 @@ A connection to a registry, a cluster or a cloud set up once at a level and used
 
 For any template, library or connection, a list of every project that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
 
-**Depends on:** Templates and flight plans by level.
+**Depends on:** Templates and Flight plans by level.
 
 [Area page](pipelines.md)
 
@@ -411,7 +491,7 @@ Run a build with and without cache and compare the results, or run without cache
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
+Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
 
 [Area page](build-tools-caches.md)
 
@@ -471,7 +551,7 @@ A VS Code extension shows your work, the launch line, run details and logs, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Pipeline files get completion and inline checks in any editor that speaks the language-server standard. Generated from the same parser the server uses, so they cannot disagree.
+Pipeline files get completion and inline checks in any editor that speaks the language-server standard. The schema half is being built now (see the editor schema in Milestone 1); the language server follows. Both are generated from the same parser the server uses, so they cannot disagree.
 
 [Area page](developer-experience.md)
 
@@ -543,7 +623,7 @@ A time budget for the first result on a pull request, with fast checks first and
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Detect the tool, apply the recipe and its flight plan, and get a green build, with the clock as a test. Includes mobile templates.
+Detect the tool, apply the recipe and its Flight plan, and get a green build, with the clock as a test. Includes mobile templates.
 
 [Area page](developer-experience.md)
 

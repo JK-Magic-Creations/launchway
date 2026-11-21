@@ -165,7 +165,7 @@ A canary can stop at a pause and wait: for a smoke test of the canary, for a per
   this deployment's version. A command no deploy runner has taken can be withdrawn
   (`POST .../commands/{command}/withdraw`); an abort withdraws the ones not taken yet and goes first.
   Commands given while no deploy runner reaches the cluster wait, and are applied when one does.
-  Every command, withdrawal and refusal is in the audit trail (`deployment.promote` and so on).
+  Every command, withdrawal and refusal is in the Logbook (`deployment.promote` and so on).
 - **Who may.** A command needs the operator role on the run's project from a binding that covers
   the deployment's environment (see `environments:` under [Roles](access.md#roles)). On an environment marked
   `protected: true`, the person who started the run may not promote or retry it (unless
@@ -278,7 +278,7 @@ read it.
 ## Commands tell the truth
 
 A rollout command has a visible life: requested, taken by a runner, then applied or **failed** with the
-reason, shown on the buttons' row and in the run's timeline. The audit trail keeps the request
+reason, shown on the buttons' row and in the run's timeline. The Logbook keeps the request
 (`deployment.promote` and the like) and the outcome (`deployment.command_outcome`, `ok` or `failed`) as
 separate entries. Each deploy runner checks, against the cluster's authorizer, what it may do to the
 rollouts it watches and reports it with its observations; when it may not change a rollout's status, the

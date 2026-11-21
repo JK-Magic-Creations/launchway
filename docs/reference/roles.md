@@ -8,7 +8,7 @@ The call matrix below is generated from the route rows of http-api.md; keep them
 
 This page says who may do what in Launchway: the three roles, how the server works out a person's role for each request, and the settings that narrow it further. It is for operators who write the `auth.access` section of the server configuration, and for security reviewers.
 
-> **Verified** on 2026-11-19 against commit f717337: a local server with OpenID Connect sign-in (a test provider) and bindings for an admin group, an operator group limited to one project and a viewer group; each refusal below (`404` for another team's project, `403` for a viewer starting a run, an operator waiving or reading the audit trail, a viewer-limited token starting a run, a cookie request without the CSRF header, a token making a token) was produced with `curl` and the command line. **Not verified:** environment-limited bindings and protected environments (they need deployments, which need Argo CD), and self-approval with sign-in on (described from the code and its tests).
+> **Verified** on 2026-11-19 against commit f717337: a local server with OpenID Connect sign-in (a test provider) and bindings for an admin group, an operator group limited to one project and a viewer group; each refusal below (`404` for another team's project, `403` for a viewer starting a run, an operator waiving or reading the Logbook, a viewer-limited token starting a run, a cookie request without the CSRF header, a token making a token) was produced with `curl` and the command line. **Not verified:** environment-limited bindings and protected environments (they need deployments, which need Argo CD), and self-approval with sign-in on (described from the code and its tests).
 
 ## Roles
 
@@ -16,7 +16,7 @@ This page says who may do what in Launchway: the three roles, how the server wor
 |---|---|
 | `viewer` | See a project and everything about its runs: logs, events, pipeline files, test results, findings, artifacts, images, policy decisions, approvals waiting. See the runners and their pools, the policies in force, verifications, and the health sources and AI models their projects may use. Check pipeline text. |
 | `operator` | Everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, give deployment commands, mark a running verification passed or failed, ask a model to explain a failed step, delete artifacts, save pipelines from the editor, and start draft runs (if `drafts.allow` is `operator`, the default). |
-| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every project also reads the audit trail, sees and revokes everyone's API tokens, and (by default, see `runner_admin`) makes join tokens and revokes and rotates runners. |
+| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every project also reads the Logbook, sees and revokes everyone's API tokens, and (by default, see `runner_admin`) makes join tokens and revokes and rotates runners. |
 
 Each role includes the ones above it. Someone who signs in but has no role anywhere can sign in, sees no projects, and may still manage their own API tokens.
 
@@ -49,9 +49,9 @@ Patterns use `*` (any characters except `/`), `?` (one character) and `[...]`. W
 
 Rights are worked out on every request, from the configuration and the groups the provider gave at the person's latest sign-in. The server checks them whatever the UI shows.
 
-Some calls need a role "on every project": reading the audit trail and administering everyone's API tokens. Only an entry **without** `projects` counts for those, so `{ group: payments, role: admin, projects: ["payments-*"] }` makes someone admin of those projects but never lets them read the audit trail.
+Some calls need a role "on every project": reading the Logbook and administering everyone's API tokens. Only an entry **without** `projects` counts for those, so `{ group: payments, role: admin, projects: ["payments-*"] }` makes someone admin of those projects but never lets them read the Logbook.
 
-**Managing runners.** Making join tokens, listing them, and revoking or rotating runners need the role `runner_admin` names (`admin` by default; `operator` or `none`) on every project, as for the audit trail: only an entry without `projects` counts. With `none`, managing runners over the API is off. A token limited to projects, or to a lower role, cannot do it.
+**Managing runners.** Making join tokens, listing them, and revoking or rotating runners need the role `runner_admin` names (`admin` by default; `operator` or `none`) on every project, as for the Logbook: only an entry without `projects` counts. With `none`, managing runners over the API is off. A token limited to projects, or to a lower role, cannot do it.
 
 **The MCP endpoint.** `POST /mcp` gives an agent exactly what its API token allows: each tool calls the API above with the token, through the same checks. Browser session cookies are not accepted there. See [Agents (MCP)](../guide/agents.md).
 
@@ -83,7 +83,7 @@ In words:
 3. A request that changes something and is not authenticated by an API token must carry the CSRF header (`403` otherwise).
 4. The route's access class is checked against the person's role on the project in the path (or the run's project). A project or run the person cannot see answers `404`, as if it did not exist; one they can see but not change answers `403`.
 5. The handler checks what depends on the request: the environment of a deployment, `drafts.allow`, `policy.waivers.allow`, force-saving, and whether the person started the run.
-6. Calls that change something are recorded in the audit trail, allowed or refused. See [Events and audit trail](events.md#audit-trail).
+6. Calls that change something are recorded in the Logbook, allowed or refused. See [Events and audit trail](events.md#audit-trail).
 
 ## Access classes
 
@@ -218,7 +218,7 @@ An API token acts as the person who made it, with their rights as of their lates
 - **role**: `viewer`, `operator` or `admin`, no higher than the highest role its maker has anywhere. On each project the token acts with the lower of its role and its maker's.
 - **projects**: up to 20 names or patterns such as `pay-*`. Elsewhere the token sees nothing, as if those projects did not exist.
 
-A token limited to projects is never an admin of every project, so it cannot read the audit trail or other people's tokens. A token can only be made from a signed-in browser session, never with another token. A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in the audit trail as `token.use`. Every token expires: by default after 90 days, at most after `auth.tokens.max_days` (default 365, up to 3650).
+A token limited to projects is never an admin of every project, so it cannot read the Logbook or other people's tokens. A token can only be made from a signed-in browser session, never with another token. A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in the Logbook as `token.use`. Every token expires: by default after 90 days, at most after `auth.tokens.max_days` (default 365, up to 3650).
 
 A limited token works only on servers that know limits. An older server, during a rollback, refuses it rather than grant its owner's full rights.
 
@@ -256,7 +256,7 @@ approvals:
   allow_self: false
 ```
 
-`approvals.allow_self` says whether the person who started a run may approve its approval steps. The default is `false` with sign-in on, and `true` with sign-in off, where everyone is the same user. The starter may still reject. A refused self-approval answers `403` (`dana started this run, so someone else must approve it (you may still reject it)`) and is recorded in the audit trail as `denied`.
+`approvals.allow_self` says whether the person who started a run may approve its approval steps. The default is `false` with sign-in on, and `true` with sign-in off, where everyone is the same user. The starter may still reject. A refused self-approval answers `403` (`dana started this run, so someone else must approve it (you may still reject it)`) and is recorded in the Logbook as `denied`.
 
 ## Protected environments
 

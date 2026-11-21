@@ -24,7 +24,7 @@ These are ideas that grow from one connected platform. They are planned, but the
 ```mermaid
 flowchart TD
   Graph[("Software graph")] --> Cost["Cost by service"]
-  Graph --> Portal["Service catalogue"]
+  Graph --> Portal["Service catalog"]
 ```
 
 *Each idea reuses data the earlier milestones already hold.*
@@ -50,7 +50,7 @@ See what each service, team and environment costs to run, next to what it delive
 **Depends on:** The software graph.
 
 
-#### A developer portal and service catalogue {#a-developer-portal-and-service-catalogue}
+#### A developer portal and service catalog {#a-developer-portal-and-service-catalog}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 

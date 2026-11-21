@@ -64,6 +64,12 @@ func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Opti
 		Pulls: h.Pulls, RepoByID: h.Forge.Repository}
 	e.api.WirePulls()
 	t.Cleanup(h.Pulls.Stop)
+	// The server is already running, and a Git process outside this one is often the first
+	// client; the race detector sees no ordering between this goroutine's setup and that
+	// request. One request through the server's own socket, made after the setup, publishes it.
+	if r, err := e.srv.Client().Get(e.srv.URL + "/healthz"); err == nil {
+		_ = r.Body.Close()
+	}
 	return e, h
 }
 

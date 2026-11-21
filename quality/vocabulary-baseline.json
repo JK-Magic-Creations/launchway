@@ -1,0 +1,4 @@
+{
+  "comment": "Counts of vocabulary errors that predate the guard (scripts/vocabulary/check.mjs). They may only shrink: lower with `make vocabulary-update`; fix, do not add.",
+  "counts": {}
+}

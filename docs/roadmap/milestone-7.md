@@ -4,19 +4,22 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 2 in progress · 39 planned · 41 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 2 in progress · 66 planned · 68 capabilities</p>
 
-Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.
+Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.
 
 ## What it is, and who it is for
 
-Milestone 7 lets you use Launchway without running it. Organizations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.
+Milestone 7 lets you use Launchway without running it, and shows people the way to run it themselves when that suits them better. The first customers are small teams, so sign-up is short: an email or an existing account, a strong second factor, and a guided first project. Three ways to run it share one product: fully hosted, hosted with your own machines doing the work and holding the files, or self-hosted, and a team can move between them one project or one Base at a time. The hosted service is protected from its customers and its customers from it and from each other, and it is never a place to park files. It opens to outsiders in stages, each only after its checks pass. Plans have every feature on; what changes is a limit, and the spend limit starts at zero. The same milestone adds the identity, audit and retention controls enterprises ask for.
 
-**Who it is for.** Teams that want Launchway as a service, evaluators who want to try it, and enterprises and regulated teams that need strong identity, audit and compliance.
+**Who it is for.** Start-ups, freelancers and small teams first, then enterprises and regulated teams that must keep everything on their side.
 
 ## What you will be able to do
 
-- You sign up, connect a runner on your own cluster and run a pipeline without any of your code leaving your network.
+- Two friends at two houses sign up, protect their accounts with a passkey, and have a first green build in minutes, with no network set-up on either side.
+- A team that does not want its files on anyone else’s server chooses to keep them on its own machines, and both people reach them through Launchway over an encrypted relay that cannot read them.
+- A team that started fully hosted moves one project to its own hardware with a preview first, and keeps working during the move.
+- A Base nearing the hosted size limit gets plain notices and a guided move, and is never locked out of its own data.
 - A regulated team enables encryption keys with rotation and a retention rule.
 - An auditor exports a tamper-evident audit trail to the security tools.
 - A visitor explores the public demo with realistic data.
@@ -44,6 +47,12 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
+| [Sign up and go](#g-sign-up-and-go) | 7 | 0 | 0 | 7 |
+| [Three ways to run, and easy moves between them](#g-three-ways-to-run-and-easy-moves-between-them) | 8 | 0 | 0 | 8 |
+| [A size ceiling, with notices, and nothing held hostage](#g-a-size-ceiling-with-notices-and-nothing-held-hostage) | 2 | 0 | 0 | 2 |
+| [Never a place to park files](#g-never-a-place-to-park-files) | 5 | 0 | 0 | 5 |
+| [Opening in stages](#g-opening-in-stages) | 4 | 0 | 0 | 4 |
+| [Plans that follow your choices](#g-plans-that-follow-your-choices) | 1 | 0 | 0 | 1 |
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
 | [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 2 | 5 |
@@ -57,7 +66,7 @@ Use Launchway without running it, on a plan that follows your choices.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency. Price follows your choices, such as availability and users, and no feature is held back by plan.
+Launchway as a service: sign-up, quotas, usage metering, a free plan with every feature on, pay for use, and data residency. Price follows your choices, such as availability and users, and no feature is held back by plan.
 
 **Depends on:** Organizations.
 
@@ -67,7 +76,7 @@ Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for us
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A free tier, and pay-for-use billing from the start, with no extras for basics. Usage is metered and shown before it is billed.
+A free tier, and pay-for-use billing from the start, with no extras for basics. Usage is metered and shown before it is billed, and the spend limit starts at zero. Prices and limits are not decided yet.
 
 **Depends on:** Hosted service.
 
@@ -87,7 +96,7 @@ Choose where your data lives. Region choices are shown at sign-up and recorded.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network. Only outbound connections are needed.
+Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network. Only outbound connections are needed, and the same runner command works from a laptop. Builds are placed across a team’s machines as described in Milestone 2.
 
 **Depends on:** Runner identity and pools.
 
@@ -117,17 +126,291 @@ Everything is portable, so capacity can be added on any provider as demand justi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once organization isolation exists.
+A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once Wing isolation exists.
 
 **Depends on:** Organizations.
 
 [Read the documentation](../demo.md) · [Area page](hosted-service.md)
 
-#### Organizations {#organizations}
+#### Several Wings on one Base {#several-wings-on-one-base}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Several organizations on one installation, isolated from each other, with the level names you choose. Isolation is tested.
+Several Wings on one installation, isolated from each other, with the level names you choose. Isolation is tested.
+
+[Area page](hosted-service.md)
+
+### Sign up and go {#g-sign-up-and-go}
+
+The first customers are start-ups, freelancers and small teams, so the front door is short and safe.
+
+#### Sign up with the least set-up {#sign-up-with-the-least-set-up}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first project. The aim is a first green build in minutes. The same sentence is shown whether or not an address is already known, so the form reveals nothing about who has an account.
+
+[Area page](hosted-service.md)
+
+#### Passkeys, authenticator apps and recovery codes {#passkeys-authenticator-apps-and-recovery-codes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The account is bound to something only its owner has: a passkey, preferably, or an authenticator app, with recovery codes shown once. The owner and every administrator must use one of the strong ones. Text-message codes are not offered on purpose, because they can be taken over. An email code proves an address; it is never treated as a second factor for owners.
+
+**Depends on:** Built-in accounts with MFA.
+
+[Area page](hosted-service.md)
+
+#### Recovery that is not a back door {#recovery-that-is-not-a-back-door}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A lost second factor is recovered through the other factors you set up, or through a waiting period with notices to every session and to the account’s email. Staff cannot reset a second factor or let anyone in, so no one can talk their way past it.
+
+**Depends on:** Passkeys, authenticator apps and recovery codes.
+
+[Area page](hosted-service.md)
+
+#### Sign-up protection that respects privacy {#sign-up-protection-that-respects-privacy}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Rate limits, a small puzzle the browser solves and friction for throwaway addresses guard the form, with no tracking, no outside challenge service and no phone numbers. Behavior after sign-up is judged on what an account does, not who it is.
+
+[Area page](hosted-service.md)
+
+#### A guided first project {#a-guided-first-project}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Pick a starter, create or import a repository, push or edit in the browser, see a green build, and invite a teammate with one link. Everything is optional later: your own secrets manager, registry, runners and identity provider are offered with a wizard, never required.
+
+**Depends on:** A built-in starter library for each language.
+
+[Area page](hosted-service.md)
+
+#### Protected both ways {#protected-both-ways}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The service is protected from its customers’ code and content, and customers are protected from the operator and from each other. Each protection has a mechanism and a test; the operator sees counts and health, never content.
+
+[Area page](hosted-service.md)
+
+#### Leave completely {#leave-completely}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Export a whole Base in an open format, then delete it: after a grace period its keys are destroyed, which makes every copy, including backups, unreadable, and a certificate says so. The export imports into a self-hosted installation, so leaving is a move, not a loss.
+
+[Area page](hosted-service.md)
+
+### Three ways to run, and easy moves between them {#g-three-ways-to-run-and-easy-moves-between-them}
+
+One product, three places to keep your work. Choose at sign-up, change your mind later, and nothing is held hostage.
+
+#### Fully hosted {#fully-hosted}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The default: repositories, pipelines, runners, secrets, registry and reports all on the hosted service, with nothing to install. The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.
+
+**Depends on:** Every customer has its own Base.
+
+[Area page](hosted-service.md)
+
+#### Hosted with your own Detachment {#hosted-with-your-own-detachment}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The hosted screens and coordination, with builds, secrets and deployments on your side. A project can move here one at a time. The Detachment only calls out, so no port is opened and no tunnel is needed.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Files on your own machines, through a sealed relay {#files-on-your-own-machines-through-a-sealed-relay}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Two people, two houses, no hosted copies: each runs one command, and both reach the files through Launchway over an end-to-end encrypted session that the relay carries but cannot read. The hosted side keeps only accounts, who is on the team, which machines are online and opaque identifiers, never a file name, commit or log. No address, tunnel or certificate is set up at either end.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Replicas across two machines {#replicas-across-two-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+With two machines, every repository has a full copy on each, pushes go to whichever is reachable, and they catch up with each other when both are online. Protected branches have one home at a time, a true disagreement is kept visible and never overwritten, and the product prints the honest limits, such as a sleeping laptop.
+
+**Depends on:** Files on your own machines, through a sealed relay.
+
+[Area page](hosted-service.md)
+
+#### Backup and recovery on your own machines {#backup-and-recovery-on-your-own-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The second machine is a live copy, and an optional encrypted backup goes to storage you own, with a walk-through for “my laptop died”. The hosted service says plainly that it cannot restore what it never held.
+
+**Depends on:** Replicas across two machines.
+
+[Area page](hosted-service.md)
+
+#### Self-hosted, the same product {#self-hosted-the-same-product}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Everything on your own machines, installed with the guided installer, with the same features and the same export format. Nothing about the hosted service is needed to run it.
+
+**Depends on:** One command, three targets.
+
+[Area page](installing.md)
+
+#### Guided moves between the three {#guided-moves-between-the-three}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a rollback window before the source is deleted.
+
+**Depends on:** Leave completely.
+
+[Area page](hosted-service.md)
+
+#### Secrets move without being exposed {#secrets-move-without-being-exposed}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Secret values are re-sealed to the destination’s key, exported under a passphrase only you know, or re-entered and rotated, so they are never in the clear on the way. You choose the way in the preview.
+
+**Depends on:** Guided moves between the three.
+
+[Area page](hosted-service.md)
+
+### A size ceiling, with notices, and nothing held hostage {#g-a-size-ceiling-with-notices-and-nothing-held-hostage}
+
+Hosting is for teams that fit; the ones that outgrow it are helped on, never locked out.
+
+#### Size ceilings on hosted Bases {#size-ceilings-on-hosted-bases}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each hosted Base has a ceiling. As it approaches, Launchway says what is growing, offers cleanup and offers the guided move, and at the ceiling only the growing kind of data stops. Reading, cloning, downloading, exporting and moving always keep working, builds on your own runners keep running, and data is never deleted for being over a ceiling. The limits themselves are not decided yet.
+
+**Depends on:** Guided moves between the three.
+
+[Area page](hosted-service.md)
+
+#### Nothing held hostage {#nothing-held-hostage}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every hosted Base can be exported completely, at any time, in an open and documented format with a verifier. The export, the move and deletion are tested on every release, including the round trip back.
+
+[Area page](hosted-service.md)
+
+### Never a place to park files {#g-never-a-place-to-park-files}
+
+The hosted service is for your work, not for storing arbitrary files, and it is built so it cannot become that.
+
+#### Nothing anonymous or public {#nothing-anonymous-or-public}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+No repository, artifact, image, page, report or file on the hosted service can be reached without signing in as a member of that Base. There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.
+
+[Area page](hosted-service.md)
+
+#### No general file storage {#no-general-file-storage}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The service holds repositories, build results and registry images that pipelines produce, and nothing else: there is no upload-a-file feature. Per-file, per-push and total quotas, short retention for build results and upload rate limits keep even that small and bounded.
+
+[Area page](hosted-service.md)
+
+#### Identity checks in proportion to risk {#identity-checks-in-proportion-to-risk}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A verified address, a second factor and limits that start low for a new account and rise as it shows normal use. Throwaway addresses add a cool-down rather than a refusal.
+
+[Area page](hosted-service.md)
+
+#### Abuse reports, takedown and suspension {#abuse-reports-takedown-and-suspension}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A published way to report abuse, a process to act on it, suspension with an appeal, and detection that respects the promise that the operator cannot read your work. Known-bad material and unusual behavior can be noticed without reading customers’ content.
+
+[Area page](hosted-service.md)
+
+#### Customer files kept apart from the operator’s own systems {#customer-files-kept-apart-from-the-operator-s-own-systems}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Whatever outsiders store is kept on capacity separate from anything the operator runs for itself, with its own keys per Base. Where that capacity is rented is a decision still to be made and announced.
+
+[Area page](hosted-service.md)
+
+### Opening in stages {#g-opening-in-stages}
+
+Outsiders are let in a step at a time, and a step opens only when every check for it and for the earlier ones is green.
+
+#### Stage 1: invited people {#stage-1-invited-people}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A handful of people the operator knows use the hosted service under a short plain agreement, with their own runners. No customer code runs on the service at this stage.
+
+**Depends on:** Proven by tests that gate every release.
+
+[Area page](hosted-service.md)
+
+#### Stage 2: files on your own machines {#stage-2-files-on-your-own-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The first public opening offers only the mode where files stay on your machines. Fully hosted is shown as coming, never as a choice that fails. It needs no customer storage, no content scanning and no runner isolation, so it can open first. An independent penetration test is required before it does.
+
+**Depends on:** Files on your own machines, through a sealed relay.
+
+[Area page](hosted-service.md)
+
+#### Stage 3: fully hosted, on rented capacity {#stage-3-fully-hosted-on-rented-capacity}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Public sign-up with hosted storage, your own runners and takedown tools, on capacity rented for the purpose. It requires the wall between Bases, the abuse process, the size ceilings and a second independent test.
+
+**Depends on:** Never a place to park files.
+
+[Area page](hosted-service.md)
+
+#### Stage 4: hosted runners {#stage-4-hosted-runners}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Public sign-up with sandboxed runners run by the service. It requires the runner isolation suite, a test that tries to escape, and abuse limits on compute.
+
+**Depends on:** Sandboxed hosted runners.
+
+[Area page](hosted-service.md)
+
+### Plans that follow your choices {#g-plans-that-follow-your-choices}
+
+A free plan with every feature, and no surprises on the bill.
+
+#### Every feature on, the spend limit at zero {#every-feature-on-the-spend-limit-at-zero}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The free plan turns every feature on. A plan changes limits, never features, and a new account’s spend limit starts at zero, so nothing can be charged until its owner raises it. Prices and numeric limits are not decided and are not published here.
+
+**Depends on:** Hosted service.
 
 [Area page](hosted-service.md)
 
@@ -169,7 +452,7 @@ The pages you read are drawn in your browser from data fetched live from your De
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Build logs, test reports, artifacts and an audit log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. The hosted service keeps a separate record of what it did.
+Build logs, test reports, artifacts and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold. The hosted service keeps a separate record of what it did.
 
 **Depends on:** The Detachment.
 
@@ -318,7 +601,7 @@ An audit trail nobody can quietly edit, streamed to your security tools. Entries
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted. A hold overrides cleanup. Secrets are sealed at rest with a key held outside the database; encrypting stored files, logs and caches is next (see Milestone 12).
+Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted. A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12).
 
 
 #### A compliance pack for PCI DSS and HIPAA {#a-compliance-pack-for-pci-dss-and-hipaa}
@@ -352,7 +635,7 @@ A customer’s top level is its own complete, private Base, and the highest thin
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The service operator’s own organization is a separate Base that no customer or demonstration visitor can see, list, search or guess. Nothing flows down from it: shared starters and libraries are published by the product, public by nature.
+The service operator’s own Base is a separate Base that no customer or demonstration visitor can see, list, search or guess. Nothing flows down from it: shared starters and libraries are published by the product, public by nature.
 
 [Area page](hosted-service.md)
 
@@ -440,15 +723,19 @@ Every release runs in a development installation first, and only builds that pas
 
 This milestone is done when all of these are true.
 
-- Organizations cannot see each other, proven by a test.
+- Wings cannot see each other, proven by a test.
 - A step in a sandbox cannot reach anything but the internet.
 - Usage is metered and shown before it is billed.
 - Audit entries are chained and exportable.
 - The compliance pack lists each control with its evidence.
+- Someone can sign up, protect the account, and run a first build in a few minutes, using only a browser and one command.
+- Every move between the three ways to run is previewed, verified and reversible for a stated time, and ends with the source cleanly deleted only when the owner confirms.
+- Nothing on the hosted service is public or anonymous, and the tests that prove it run on every release.
 
 ## What is deliberately not in it
 
 - Any claim of certification.
+- Prices and numeric limits for plans; those are not decided and are not published here.
 
 ---
 

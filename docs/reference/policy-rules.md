@@ -15,7 +15,7 @@ This page lists every rule a Launchway policy can use, with its options, when it
 
 > **Verified** on 2026-11-19 against commit f717337: every YAML example on this page was parsed with the server's own policy and configuration parsers (`policy.ParseFile` and `config.Load`, in a scratch test); a report-mode policy with `max_timeout`, `step_images` and `forbid_secrets` was judged on a local server (`launchway policy list`, `launchway policy run`); a waiver was granted, refused for a missing environment, an overlong expiry and a finding on another rule, and revoked, through `POST /api/v1/projects/{name}/waivers`. With OpenID Connect sign-in on, an operator's waiver was refused (`403`) and an admin's granted, from the command line. **Not verified:** the deploy and image-push rules against a real deployment or image push, environment-limited waiver checks, and policy sources loaded from Git.
 
-A policy is a name, a scope, a mode and rules taken from a fixed catalogue. There is no policy language: each rule is a typed setting with a fixed meaning. Policies live in the server's configuration (`policy.policies`) or in a Git repository the server reads at a pinned tag (`policy.sources`), never in the pipeline file, so a pipeline's authors cannot switch them off. See the [glossary](../glossary.md) for terms such as run, step and environment.
+A policy is a name, a scope, a mode and rules taken from a fixed catalog. There is no policy language: each rule is a typed setting with a fixed meaning. Policies live in the server's configuration (`policy.policies`) or in a Git repository the server reads at a pinned tag (`policy.sources`), never in the pipeline file, so a pipeline's authors cannot switch them off. See the [glossary](../glossary.md) for terms such as run, step and environment.
 
 ## Where policies are judged
 
@@ -46,7 +46,7 @@ flowchart TD
   F -- enforce --> BLOCK["block: step or run fails"]
 ```
 
-## The rule catalogue
+## The rule catalog
 
 <!-- rule-catalogue:start -->
 | Rule | Value | Judged | Passes when |
@@ -309,7 +309,7 @@ Each policy is a mapping with these keys. Unknown keys are refused.
 | `description` | text | none | at most 500 characters |
 | `mode` | text, required | none | `enforce` or `report` |
 | `scope` | mapping | every run | see [Scope](#scope) |
-| `rules` | mapping, required | none | at least one rule from the catalogue |
+| `rules` | mapping, required | none | at least one rule from the catalog |
 
 There may be at most 200 policies in one list, and at most 100 values in any list of patterns.
 
@@ -456,7 +456,7 @@ launchway waivers revoke demo-app wvr_06gzdc7h6jffagj069w0 --reason "fixed"
 
 How waivers behave:
 
-- Waivers are a log of grants and revocations. Each is written to the audit trail as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
+- Waivers are a log of grants and revocations. Each is written to the Logbook as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
 - A waiver counts only while it is in force: a decision made after it expires does not count it, even in a run that started before. A decision notes waivers that would have applied but had expired.
 - A rule is judged again when the run is resumed or re-run, so the usual path is to grant a waiver, then resume the run.
 - Who may waive is `policy.waivers.allow` on the project. A deploy rule needs that role on the environment too; a waiver that names no environment needs it from an access binding not limited to environments. A limited API token never grants more than its limits. See [roles](roles.md).
@@ -483,7 +483,7 @@ launchway policy run run_06gzdc4xkndxsbjw21eg
     forbid_secrets     pass   this is a manual run
 ```
 
-`GET /api/v1/policies` and `launchway policy list` show the catalogue, the sources with their versions and errors, the policies in force and recent verdicts of the runs you may see. See the [HTTP API reference](http-api.md) for the request and response details.
+`GET /api/v1/policies` and `launchway policy list` show the catalog, the sources with their versions and errors, the policies in force and recent verdicts of the runs you may see. See the [HTTP API reference](http-api.md) for the request and response details.
 
 ## What policies do not protect against
 

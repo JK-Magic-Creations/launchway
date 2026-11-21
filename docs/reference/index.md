@@ -15,7 +15,8 @@ behind it.
 | [Configuration objects](config-objects.md) | the kinds of configuration kept in the database, their settings, and how the API, CLI, MCP and Terraform name them |
 | [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
 | [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
-| [Events and audit actions](events.md) | the run event log, the live stream and the audit trail |
+| [Events and audit actions](events.md) | the run event log, the live stream and the Logbook |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
-| [Policy rules](policy-rules.md) | the policy rule catalogue |
+| [Policy rules](policy-rules.md) | the policy rule catalog |
+| [Vocabulary](vocabulary.md) | the words Launchway uses for its own concepts, and the rules for using them |
 | [Environment variables](environment-variables.md) | what Launchway reads, and what steps receive |

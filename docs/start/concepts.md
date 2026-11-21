@@ -109,7 +109,7 @@ cannot approve it themselves, by default. See [Approvals and re-runs](../guide/a
 
 People sign in with the organization's OpenID Connect provider. Each person gets a **role** on
 each project: **viewer** (see), **operator** (start, cancel, approve, save pipelines) or **admin**
-(also read the audit trail and waive policy rules). Roles come from groups in the identity
+(also read the Logbook and waive policy rules). Roles come from groups in the identity
 provider. Scripts use **API tokens** that expire. See [Sign-in and access](../guide/access.md) and
 [Roles and permissions](../reference/roles.md).
 

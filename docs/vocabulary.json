@@ -1,0 +1,555 @@
+{
+  "comment": "The glossary of record as data. docs/reference/vocabulary.md is the page people read; this file is what the tools read: scripts/vocabulary-fix (the check and the fixer) and `make vocabulary`. Edit this file, then run `scripts/vocabulary-fix --docs` to rewrite the page's tables. Not legal advice: the safety notes live in the private research file.",
+  "version": 1,
+  "rules": {
+    "people-read": "What a person reads (screens, documentation, command help and output, the `error` and `next` sentences, MCP descriptions, notices, chart comments) uses the product words. Screens and messages the server builds ask the terms system ({key}, terms().label) so a rename takes effect; documentation names the default word and, once per page that introduces a level, the plain word beside it. Never a hard-coded plain level name where the level is meant.",
+    "identifiers": "Stable identifiers (API JSON fields and paths, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds, Go identifiers) cannot follow a renameable word. Each level has one neutral, permanent name: installation, organization, unit, project. They are documented as 'the API name of a Base' and are never themed.",
+    "ordinary-words": "Where an industry word is the accepted term it stays ordinary: pipeline, step, run, branch, commit, pull request, secret, environment, deploy, rollback, variable, template, library, runner, artifact, registry.",
+    "buttons": "Open decision, not applied: the owner chose Clearance with Go and No-go, so the decision buttons say Go and No-go. A proposal to put the ordinary verbs Approve and Reject on the buttons, and keep Go and No-go as the recorded answer, is the owner's to take.",
+    "capitals": "Level words are the product's proper names for its levels: write Base, Wing, Squadron and Project capitalized when they mean the level (a lower-case 'base' or 'wing' reads as an ordinary word). Feature words are product nouns too: Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload. 'launch line' stays lower case. (The screens' terms helper lower-cases a word in the middle of a sentence; that is an open decision.)",
+    "spelling": "American English: organization, color, behavior, license (noun and verb), initialize, customize.",
+    "disclaimer": "These are ordinary words used descriptively. Launchway is not affiliated with or endorsed by any military service.",
+    "levels-in-prose": "Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list."
+  },
+  "terms": [
+    {
+      "key": "installation",
+      "default": "Base",
+      "plural": "Bases",
+      "plain": "Installation",
+      "meaning": "The whole installation, and every customer's own walled-off space on the hosted service: the top level.",
+      "renameable": true,
+      "identifier": "installation",
+      "appears": "navigation, first-run wizard, settings, sign-up, hosted-service docs",
+      "mustNotBeCalled": [
+        "tenant",
+        "workspace",
+        "account",
+        "instance",
+        "organization (for the top level)"
+      ]
+    },
+    {
+      "key": "organization",
+      "default": "Wing",
+      "plural": "Wings",
+      "plain": "Organization",
+      "meaning": "The group that owns the projects: the second level.",
+      "renameable": true,
+      "identifier": "organization (kind name today: organisation)",
+      "appears": "settings, variables, policies, wizards",
+      "mustNotBeCalled": [
+        "org",
+        "organisation",
+        "company (in product text)",
+        "tenant"
+      ]
+    },
+    {
+      "key": "unit",
+      "default": "Squadron",
+      "plural": "Squadrons",
+      "plain": "Team",
+      "meaning": "An optional group of projects with shared settings: the third level.",
+      "renameable": true,
+      "identifier": "unit",
+      "appears": "settings, variables, wizards, project pages",
+      "mustNotBeCalled": [
+        "group",
+        "namespace",
+        "workspace",
+        "team (when the default words are in effect)"
+      ]
+    },
+    {
+      "key": "project",
+      "default": "Project",
+      "plural": "Projects",
+      "plain": "Project",
+      "meaning": "One repository and its pipeline: the fourth level.",
+      "renameable": true,
+      "identifier": "project",
+      "appears": "everywhere",
+      "mustNotBeCalled": [
+        "repo (as the level)",
+        "app (that is an application, a deployed thing)"
+      ]
+    },
+    {
+      "key": "guide",
+      "default": "Wingman",
+      "plural": "Wingmen",
+      "plain": "Guide",
+      "meaning": "The helper panel beside every page: where you are and what you can do next.",
+      "renameable": true,
+      "identifier": "guide",
+      "appears": "the panel, the first-run wizard, learn pages",
+      "mustNotBeCalled": [
+        "assistant",
+        "copilot",
+        "chatbot",
+        "bot"
+      ]
+    },
+    {
+      "key": "preflight",
+      "default": "Preflight",
+      "plain": "Checks",
+      "meaning": "The checks made before a run, a merge or a deploy.",
+      "renameable": true,
+      "identifier": "preflight",
+      "appears": "run and deploy pages, policy docs",
+      "mustNotBeCalled": [
+        "pre-checks",
+        "gate checks"
+      ]
+    },
+    {
+      "key": "checklist",
+      "default": "Checklist",
+      "plain": "Checklist",
+      "meaning": "The list of things that must be true before a change goes on.",
+      "renameable": true,
+      "identifier": "checklist",
+      "appears": "environments, merge rules, support bundles",
+      "mustNotBeCalled": [
+        "gate list"
+      ]
+    },
+    {
+      "key": "clearance",
+      "default": "Clearance",
+      "plain": "Approval",
+      "meaning": "A person decides whether a change may go on, by saying Go or No-go.",
+      "renameable": true,
+      "identifier": "approval (step kind, path /approvals)",
+      "appears": "run pages, the decisions list, settings, policies",
+      "mustNotBeCalled": [
+        "sign-off",
+        "gate (for the thing a person gives)"
+      ]
+    },
+    {
+      "key": "go",
+      "default": "Go",
+      "plain": "Approve",
+      "meaning": "The recorded answer that lets the run continue. The button says Approve in both sets.",
+      "renameable": true,
+      "identifier": "approve (path)",
+      "appears": "decision records, the run timeline",
+      "mustNotBeCalled": []
+    },
+    {
+      "key": "no_go",
+      "default": "No-go",
+      "plain": "Reject",
+      "meaning": "The recorded answer that fails the step. The button says Reject in both sets.",
+      "renameable": true,
+      "identifier": "reject (path)",
+      "appears": "decision records, the run timeline",
+      "mustNotBeCalled": [
+        "nogo",
+        "no go",
+        "NoGo"
+      ]
+    },
+    {
+      "key": "hold",
+      "default": "Hold",
+      "plain": "Freeze",
+      "meaning": "A time when changes may not go out.",
+      "renameable": true,
+      "identifier": "hold",
+      "appears": "environments, schedules, policies",
+      "mustNotBeCalled": [
+        "blackout",
+        "code freeze (use freeze in the plain set)"
+      ]
+    },
+    {
+      "key": "flight_plan",
+      "default": "Flight plan",
+      "plain": "Starter pipeline",
+      "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
+      "renameable": true,
+      "identifier": "flight_plan",
+      "appears": "new project, template library, learn pages",
+      "mustNotBeCalled": [
+        "blueprint",
+        "boilerplate",
+        "pipeline template (a step template is a different thing)"
+      ]
+    },
+    {
+      "key": "logbook",
+      "default": "Logbook",
+      "plain": "Audit trail",
+      "meaning": "The append-only record of who did what, and when.",
+      "renameable": true,
+      "identifier": "audit (paths and event actions)",
+      "appears": "settings, run pages, security docs",
+      "mustNotBeCalled": [
+        "audit log"
+      ]
+    },
+    {
+      "key": "payload",
+      "default": "Payload",
+      "plain": "Contents",
+      "meaning": "What a change delivers.",
+      "renameable": true,
+      "identifier": "payload",
+      "appears": "deploy pages, release notes",
+      "mustNotBeCalled": [
+        "delivery contents",
+        "manifest (that is a file)"
+      ]
+    },
+    {
+      "key": "in_flight",
+      "default": "In flight",
+      "plain": "In progress",
+      "meaning": "A change on its way to production.",
+      "renameable": true,
+      "identifier": "in_flight",
+      "appears": "overview, application pages",
+      "mustNotBeCalled": []
+    },
+    {
+      "key": "launch_line",
+      "default": "Launch line",
+      "plain": "Launch line",
+      "meaning": "The path a change travels, from commit to production. Named after the product, so the same in both sets.",
+      "renameable": true,
+      "identifier": "launch_line",
+      "appears": "application and project pages, docs",
+      "mustNotBeCalled": [
+        "pipeline view (a pipeline is the definition; the launch line is the path of one change)"
+      ]
+    },
+    {
+      "key": "detachment",
+      "default": "Detachment",
+      "plain": "Site agent (proposed)",
+      "meaning": "The agent on the customer's side that does the work and holds the data, so the hosted service holds nothing sensitive.",
+      "renameable": true,
+      "inTermsSystem": false,
+      "identifier": "none yet",
+      "appears": "hosted-service roadmap; not yet in the product",
+      "mustNotBeCalled": [
+        "connector",
+        "delegate",
+        "relay"
+      ]
+    }
+  ],
+  "stableNames": {
+    "today": [
+      {
+        "layer": "config kind, overview JSON, CLI `config`",
+        "name": "installation, organisation, unit, project",
+        "note": "second level is British here"
+      },
+      {
+        "layer": "variables API, CLI flags, MCP schemas",
+        "name": "installation, organization, unit, project",
+        "note": "American; organisation accepted as an alias"
+      },
+      {
+        "layer": "terms keys, web code",
+        "name": "installation, organization, unit, project",
+        "note": "American"
+      },
+      {
+        "layer": "Go types",
+        "name": "settings.Organisation, settings.LevelOrganization",
+        "note": "both spellings"
+      }
+    ],
+    "recommendation": "Keep installation, organization, unit, project as the permanent API names. Make organization (American) canonical in the configuration kind, the overview JSON and the Go types with organisation accepted as a documented read alias for at least two releases. Do not number the levels and do not use the aviation words as identifiers."
+  },
+  "scan": {
+    "docs": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "SUPPORT.md",
+      "docs/**/*.md",
+      "internal/pipeline/guide/*.md"
+    ],
+    "web": [
+      "web/src/**/*.ts",
+      "web/src/**/*.tsx"
+    ],
+    "go": [
+      "cmd/launchway/*.go",
+      "internal/api/*.go",
+      "internal/settings/*.go",
+      "internal/config/*.go"
+    ],
+    "helm": [
+      "deploy/helm/**/values.yaml",
+      "deploy/helm/**/NOTES.txt"
+    ],
+    "json": [
+      "docs/roadmap/roadmap.json"
+    ],
+    "skipPaths": [
+      "node_modules/",
+      "/dist/",
+      "docs/.vitepress/",
+      "docs/public/",
+      ".test.",
+      "_test.go",
+      "web/src/test/",
+      "/testdata/",
+      "docs/vocabulary.json"
+    ],
+    "generated": [
+      "docs/reference/interface-parity.md",
+      "docs/reference/helm-values.md",
+      "docs/roadmap-list.md",
+      "docs/roadmap/milestone-*.md",
+      "docs/roadmap/beyond.md"
+    ]
+  },
+  "checks": [
+    {
+      "id": "british-spelling",
+      "severity": "error",
+      "pattern": "\\b(organisation\\w*|colour\\w*|behaviour\\w*|favour\\w*|licence[sd]?|initialis\\w+|authoris\\w+|customis\\w+|summaris\\w+|recognis\\w+|normalis\\w+|synchronis\\w+|catalogue[sd]?|centre[sd]?|defence|artefacts?)\\b",
+      "britishOnly": false,
+      "use": "the American spelling (organization, color, behavior, license, initialize, customize ...)",
+      "fix": "american"
+    },
+    {
+      "id": "org-shorthand",
+      "severity": "error",
+      "pattern": "(?<![./@\\w-])orgs?(?![./\\w-])",
+      "use": "the level word through the terms system ({organization}), or write the plain word",
+      "fix": null
+    },
+    {
+      "id": "tenant",
+      "severity": "error",
+      "pattern": "(?<!multi-)(?<!multi)\\btenants?\\b",
+      "use": "the top level word ({installation}: Base) or 'customer'",
+      "fix": null
+    },
+    {
+      "id": "audit-log",
+      "severity": "error",
+      "pattern": "\\baudit logs?\\b",
+      "use": "the Logbook ({logbook}) or, in plain description, the audit trail",
+      "fix": "audit-trail"
+    },
+    {
+      "id": "detachment-synonym",
+      "severity": "error",
+      "pattern": "\\bdelegates?\\b|\\b(?:customer|remote|on-prem\\w*)[- ](?:side )?(?:agent|connector)s?\\b",
+      "use": "Detachment",
+      "fix": null
+    },
+    {
+      "id": "wingman-synonym",
+      "severity": "error",
+      "pattern": "\\b(?:copilot|co-pilot|chat-?bot)s?\\b",
+      "use": "the guide ({guide}: Wingman)",
+      "fix": null
+    },
+    {
+      "id": "assistant-in-screens",
+      "severity": "error",
+      "scope": [
+        "web",
+        "go"
+      ],
+      "pattern": "(?<!AI )\\bassistants?\\b",
+      "use": "the guide ({guide}: Wingman); 'assistant' stays only for a third-party AI assistant that connects through MCP",
+      "fix": null
+    },
+    {
+      "id": "hardcoded-product-word",
+      "severity": "error",
+      "scope": [
+        "web"
+      ],
+      "pattern": "(?<![{_])\\b(?:Wingmen|Wingman|Squadrons?|Preflight|Clearances?|Logbook|Flight plans?|Payloads?|No-go)\\b(?!\\})",
+      "caseSensitive": true,
+      "use": "the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go}",
+      "fix": null
+    },
+    {
+      "id": "hardcoded-level-word",
+      "severity": "review",
+      "scope": [
+        "web"
+      ],
+      "pattern": "(?<!\\{)\\b(?:organi[sz]ations?|installations?)\\b(?!\\})",
+      "use": "the terms system when the level is meant ({organization}, {installation}); ordinary use (an organization's identity provider; installing software) may stay and goes on the allow list",
+      "fix": null
+    },
+    {
+      "id": "approval-for-clearance",
+      "severity": "review",
+      "scope": [
+        "web",
+        "docs"
+      ],
+      "pattern": "\\b(?:deploy|deployment|run|step)[- ]approvals?\\b|\\bapprovals? (?:step|gate)\\b",
+      "use": "clearance for the thing a person gives; approval stays for pull-request reviews and the step key",
+      "fix": null
+    },
+    {
+      "id": "template-ambiguity",
+      "severity": "review",
+      "scope": [
+        "docs",
+        "web"
+      ],
+      "pattern": "\\bpipeline templates?\\b",
+      "use": "flight plan (a whole ready-made pipeline) or step template (a reusable part)",
+      "fix": null
+    },
+    {
+      "id": "level-organization",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "(?<!your )(?<!their )\\borgani[sz]ations?\\b",
+      "use": "Wing (the second level) or, for the real-world company, add the use to the allow-list",
+      "fix": "wing"
+    },
+    {
+      "id": "level-unit",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "(?<![\\w`-])(?:(?:a|an|the|its|their|that|this|another|each|every|per|one|any|no|other|own|whole|separate|hosted|customer's|operator's|operator’s|customer’s|or|of|at|in|and)|\\(a|\\(the) units?\\b(?! (?:of work|test|tests|file|below|runs the|as a service|applies)|[-\\w])|\\bUnits?\\b(?=\\.\\*\\*)",
+      "use": "Squadron (the third level)",
+      "fix": "squadron"
+    },
+    {
+      "id": "level-installation",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "\\binstallation (?:settings?|level|defaults?)\\b|\\binstallation, (?:the )?organi[sz]ation\\b|\\bthe installation and the organi[sz]ation\\b",
+      "use": "Base (the top level); 'installation' stays for a running deployment",
+      "fix": "base"
+    },
+    {
+      "id": "level-lowercase",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "caseSensitive": true,
+      "pattern": "(?<=[a-z,] )(?:the|a|an|your|its|each|every|own|whole|that|this|one|another|between|into|of|operator's|customer's|hosted|separate|other) (?:wings?|squadrons?)\\b|\\b(?:the|your|its|each|every|own|whole|that|this|one|another|between|into|of|operator's|customer's|hosted|separate|other) base(?:s)?\\b(?! (?:image|images|branch|URL|directory|path|name|class|case|layer|domain|address|[0-9]|and))",
+      "use": "Base, Wing and Squadron are proper names: capitalize them",
+      "fix": "capitalize-level"
+    },
+    {
+      "id": "feature-lowercase",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "caseSensitive": true,
+      "pattern": "(?<=[a-z,;] )(?:wingmen|wingman|logbook|detachments?|flight plans?)\\b",
+      "use": "capitalize the product noun (Wingman, Logbook, Detachment, Flight plan)",
+      "fix": "capitalize-feature"
+    },
+    {
+      "id": "launch-line-capital",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "caseSensitive": true,
+      "pattern": "(?<=[a-z,;] )Launch line\\b",
+      "use": "launch line stays lower case",
+      "fix": "lowercase"
+    },
+    {
+      "id": "the-audit-trail",
+      "severity": "error",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "\\bthe audit trail\\b",
+      "use": "the Logbook",
+      "fix": "logbook"
+    },
+    {
+      "id": "team-as-level",
+      "severity": "review",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "\\b(?:optional|the|each|per|another) teams?\\b",
+      "use": "Squadron when the third level is meant",
+      "fix": null
+    },
+    {
+      "id": "installation-as-level",
+      "severity": "review",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "pattern": "\\bwhole installation\\b|\\binstallation\\b(?= (?:is|has|chooses|calls))",
+      "use": "Base when the top level is meant",
+      "fix": null
+    },
+    {
+      "id": "clearance-preflight-lowercase",
+      "severity": "review",
+      "scope": [
+        "docs",
+        "json"
+      ],
+      "caseSensitive": true,
+      "pattern": "(?<=[a-z,;] )(?:clearances?|preflight|payloads?)\\b",
+      "use": "capitalize when the product concept is meant (webhook payloads and CORS preflight are ordinary)",
+      "fix": null
+    }
+  ],
+  "levelNames": [
+    {
+      "stable": "installation",
+      "aviation": "Base",
+      "plain": "Installation",
+      "note": "the whole installation, the top level"
+    },
+    {
+      "stable": "organization (kind name today: organisation)",
+      "aviation": "Wing",
+      "plain": "Organization",
+      "note": "owns the projects; the second level"
+    },
+    {
+      "stable": "unit",
+      "aviation": "Squadron",
+      "plain": "Team",
+      "note": "an optional group of projects; the third level"
+    },
+    {
+      "stable": "project",
+      "aviation": "Project",
+      "plain": "Project",
+      "note": "one repository and its pipeline; the fourth level"
+    }
+  ]
+}

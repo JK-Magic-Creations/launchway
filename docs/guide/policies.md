@@ -1,11 +1,11 @@
 # Policies
 
-Rules an organization sets for every pipeline, judged at run start, before deploying and before pushing an image. The full catalogue is in the [policy rules reference](../reference/policy-rules.md).
+Rules an organization sets for every pipeline, judged at run start, before deploying and before pushing an image. The full catalog is in the [policy rules reference](../reference/policy-rules.md).
 
 Policies are rules an organization sets for every pipeline, which the pipeline's authors cannot
 switch off: they live in the server's configuration, or in a Git repository the server reads at a
 pinned tag, never in the pipeline file. Each policy is a name, a scope, a mode and rules taken from
-a fixed catalogue. There is no policy language: a rule is a typed setting with a fixed meaning,
+a fixed catalog. There is no policy language: a rule is a typed setting with a fixed meaning,
 checked when the configuration (or the policy file) is read, with its file and line.
 
 ```yaml
@@ -58,7 +58,7 @@ at all, whatever server or restart comes between:
 Rollback steps and aborts are never judged: they return to what ran before, which is what a
 failure needs. A step whose policies pass, and a run no policy governs, run exactly as before.
 
-**The rule catalogue.**
+**The rule catalog.**
 
 | Rule | Judged | Passes when |
 |---|---|---|
@@ -98,7 +98,7 @@ from and at which version, their scope, mode and rules, and recent verdicts of t
 **Waivers.** A waiver lets one rule of one policy pass for a project, optionally only in one run,
 one environment, or (for `findings`) for one finding by its fingerprint, until it expires. A reason
 and an expiry are required (at most `policy.waivers.max_days`, default 30). Waivers are a log of
-grants and revocations, written to the audit trail (`policy.waive`, `policy.revoke_waiver`), shown
+grants and revocations, written to the Logbook (`policy.waive`, `policy.revoke_waiver`), shown
 wherever the verdict they changed is, and expire on their own: a decision made after expiry does
 not count them, even in a run that started before. A rule is judged again when the run is resumed,
 so the usual path is: grant a waiver, then resume. Who may waive:

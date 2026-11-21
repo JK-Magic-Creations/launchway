@@ -26,8 +26,8 @@ Types: string, number, boolean, list (a,b,c or a JSON list), map (JSON), secret
 (store:key#field, a reference and never the secret) and connection (a name, with --of).
 Use --json-value to give the value as JSON. The nearest setting wins: a nearer level
 overrides a wider one, and a lock set at a level beats everything below it.
-Setting needs an operator of the project, or an administrator of the unit, organization
-or installation; locking needs the level's administrator. Changes are audited.
+Setting needs an operator of the project, or an administrator of the Squadron, the Wing
+or the Base; locking needs the level's administrator. Changes are audited.
 `
 
 func cmdVariables(args []string) error {
@@ -70,8 +70,8 @@ type levelFlags struct {
 func addLevelFlags(fs *flag.FlagSet) levelFlags {
 	return levelFlags{
 		installation: fs.Bool("installation", false, "the whole installation"),
-		organization: fs.Bool("organization", false, "the organization"),
-		unit:         fs.String("unit", "", "a unit, by name"),
+		organization: fs.Bool("organization", false, "the Wing (organization)"),
+		unit:         fs.String("unit", "", "a Squadron (unit), by name"),
 		project:      fs.String("project", "", "a project, by name"),
 		env:          fs.String("environment", "", "only for this environment"),
 	}
