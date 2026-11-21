@@ -244,6 +244,7 @@ Each step receives every input as `LAUNCHWAY_INPUT_<NAME>` (upper case, `-` as `
 | `pattern` | regular expression | none | `string` only: an RE2 expression the value must match. Write `^` and `$` to match the whole value. At most 500 characters |
 | `min` | number | none | `number` only: the smallest value allowed |
 | `max` | number | none | `number` only: the largest value allowed; not less than `min` |
+| `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the input takes when a run is not given a value: it stands before `default`. A variable that is locked refuses any other value. Not for secrets or maps |
 | `options_from` | none | none | Not available yet (choices whose options come from a step or another system); refused. List the options under `options` |
 
 Values travel as text in one canonical form: `true` or `false`; a number in its shortest decimal
@@ -1634,6 +1635,7 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
+| `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
 
 A parameter reaches the template in exactly three ways, all resolved when the run is created:
 every step of the template receives it as `PARAM_<NAME>` (names starting with `PARAM_` are reserved

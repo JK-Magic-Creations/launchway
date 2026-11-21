@@ -78,9 +78,13 @@ type Input struct {
 	// Pattern is a regular expression (RE2 syntax) a string must match.
 	Pattern string `json:"pattern,omitempty"`
 	// Min and Max bound a number.
-	Min  *float64 `json:"min,omitempty"`
-	Max  *float64 `json:"max,omitempty"`
-	Line int      `json:"-"`
+	Min *float64 `json:"min,omitempty"`
+	Max *float64 `json:"max,omitempty"`
+	// From names the variable (set at a level, see variables.go) whose value
+	// the input takes when a run is not given one: it stands before the
+	// input's own default.
+	From string `json:"from,omitempty"`
+	Line int    `json:"-"`
 
 	pattern *regexp.Regexp
 }
@@ -253,8 +257,18 @@ func (e InputErrors) Error() string {
 // value that does not fit, and a missing value for a required input that
 // has no default. The error is InputErrors.
 func ResolveInputs(p *Pipeline, given map[string]string) (map[string]string, error) {
+	out, _, err := ResolveInputsWith(p, given, nil)
+	return out, err
+}
+
+// ResolveInputsWith is ResolveInputs with the variables in effect: an input
+// that names one (from:) takes its value when none is given, before its own
+// default. A value given for a variable that is locked is refused unless it
+// is the locked value. It also returns the variables it took.
+func ResolveInputsWith(p *Pipeline, given map[string]string, vars Variables) (map[string]string, []BoundVariable, error) {
 	errs := InputErrors{}
 	out := make(map[string]string, len(p.Inputs))
+	bind := &varBinding{vars: vars}
 	for name := range given {
 		if p.Input(name) == nil {
 			if len(p.Inputs) == 0 {
@@ -267,6 +281,10 @@ func ResolveInputs(p *Pipeline, given map[string]string) (map[string]string, err
 	for _, in := range p.Inputs {
 		in.compile()
 		raw, ok := given[in.Name]
+		bv, bound := BoundVariable{}, false
+		if in.From != "" {
+			bv, bound = bind.lookup(in.From)
+		}
 		switch {
 		case ok:
 			v, msg := in.Canon(raw)
@@ -274,19 +292,42 @@ func ResolveInputs(p *Pipeline, given map[string]string) (map[string]string, err
 				errs[in.Name] = msg
 				continue
 			}
+			if bound && bv.Locked && v != canonOf(in, bv.Text) {
+				errs[in.Name] = LockedMessage(in.From, bv, AskedByRun, v)
+				continue
+			}
 			out[in.Name] = v
+		case bound:
+			text, msg := takeVariable(bv, "the input "+in.Name, in.Type)
+			if msg == "" {
+				var v string
+				if v, msg = in.Canon(text); msg == "" {
+					out[in.Name] = v
+					continue
+				}
+			}
+			errs[in.Name] = fmt.Sprintf("the variable %s (%s) does not fit: %s", in.From, bv.Source, msg)
 		case in.Default != nil:
 			out[in.Name] = *in.Default
 		case in.Required:
-			errs[in.Name] = "a value is required"
+			errs[in.Name] = "a value is required" + noValueHint(in.From)
 		default:
 			out[in.Name] = in.zero()
 		}
 	}
 	if len(errs) > 0 {
-		return nil, errs
+		return nil, nil, errs
 	}
-	return out, nil
+	return out, bind.Used(), nil
+}
+
+// canonOf is a variable's text in the input's canonical form, or the text
+// unchanged if it does not fit.
+func canonOf(in *Input, text string) string {
+	if v, msg := in.Canon(text); msg == "" {
+		return v
+	}
+	return text
 }
 
 // CheckValues checks that values are exactly the pipeline's inputs, each in
@@ -334,7 +375,7 @@ func inputNames(p *Pipeline) string {
 
 // ---- reading inputs ----
 
-var inputKeys = []string{"type", "description", "default", "required", "options", "pattern", "min", "max", "options_from"}
+var inputKeys = []string{"type", "description", "default", "required", "options", "pattern", "min", "max", "options_from", "from"}
 
 // parseInputs reads inputs: { name: { type, description, default, required,
 // options, pattern, min, max } }.
@@ -384,6 +425,8 @@ func (ps *parser) parseInputs(n *yaml.Node, p *Pipeline) {
 				in.Required = ps.bool(v2, where)
 			case "pattern":
 				in.Pattern = ps.str(v2, where)
+			case "from":
+				in.From = ps.variableName(v2, where)
 			case "options_from":
 				ps.add(k2, where, "options_from is not supported yet: list the options under options")
 			}

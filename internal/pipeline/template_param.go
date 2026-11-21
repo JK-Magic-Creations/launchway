@@ -1,0 +1,79 @@
+package pipeline
+
+// A template parameter and the check of a value against it.
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+)
+
+// Param is one parameter a template declares.
+type Param struct {
+	Name        string   `json:"name"`
+	Type        string   `json:"type"` // string, number or boolean
+	Default     *string  `json:"default,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Options     []string `json:"options,omitempty"`
+	From        string   `json:"from,omitempty"` // the variable it takes (variables.go)
+	// SecretReference says a step takes its secret reference's store, key or
+	// field from the parameter; set when templates are described.
+	SecretReference bool `json:"secret_reference,omitempty"`
+	Line            int  `json:"-"`
+}
+
+// check returns why v is not a value of the parameter, or "".
+func (p *Param) check(v string) string {
+	switch p.Type {
+	case paramTypeNumber:
+		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		if err != nil || math.IsInf(f, 0) || math.IsNaN(f) {
+			return fmt.Sprintf("%s is a number; %q is not one", p.Name, v)
+		}
+	case paramTypeBoolean:
+		if v != "true" && v != "false" {
+			return fmt.Sprintf("%s is true or false; %q is neither", p.Name, v)
+		}
+	case paramTypeList:
+		if _, msg := ParseList(v); msg != "" {
+			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
+		}
+	default:
+		switch {
+		case len(v) > MaxParamValueLen:
+			return fmt.Sprintf("the value of %s is longer than %d bytes", p.Name, MaxParamValueLen)
+		case !utf8.ValidString(v) || strings.ContainsRune(v, 0):
+			return fmt.Sprintf("the value of %s is not text", p.Name)
+		}
+	}
+	if len(p.Options) > 0 {
+		for _, o := range p.Options {
+			if sameValue(p.Type, o, v) {
+				return ""
+			}
+		}
+		return fmt.Sprintf("%s must be one of %s; %q is not", p.Name, strings.Join(quoteAll(p.Options), ", "), v)
+	}
+	return ""
+}
+
+// sameValue compares two values of a parameter type: numbers by value,
+// everything else as written.
+func sameValue(typ, a, b string) bool {
+	if typ == paramTypeNumber {
+		x, err1 := strconv.ParseFloat(strings.TrimSpace(a), 64)
+		y, err2 := strconv.ParseFloat(strings.TrimSpace(b), 64)
+		return err1 == nil && err2 == nil && x == y
+	}
+	return a == b
+}
+
+func quoteAll(list []string) []string {
+	out := make([]string, len(list))
+	for i, s := range list {
+		out[i] = strconv.Quote(s)
+	}
+	return out
+}

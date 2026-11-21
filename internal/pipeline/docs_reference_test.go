@@ -453,7 +453,7 @@ func accepted(t *testing.T, pr probe) []string {
 	}
 	var problems Problems
 	if pr.template {
-		_, problems = readTemplate(data, "check", nil, nil, 1, func(int, int, string, string) {}, DefaultMaxLoopMembers, "ci/")
+		_, problems = readTemplate(data, "check", nil, nil, 1, func(int, int, string, string) {}, DefaultMaxLoopMembers, "ci/", nil)
 	} else {
 		_, err := Parse(data)
 		problems, _ = err.(Problems)
@@ -498,7 +498,7 @@ func TestReferenceBasePipelinesParse(t *testing.T) {
 		t.Fatalf("the probe pipeline has problems, so probes would not reach every mapping:\n%v", err)
 	}
 	_, ps := readTemplate([]byte(probeTemplate), "check", nil, nil, 1, func(_, _ int, path, msg string) { t.Errorf("with.%s: %s", path, msg) },
-		DefaultMaxLoopMembers, "ci/")
+		DefaultMaxLoopMembers, "ci/", nil)
 	if len(ps) > 0 {
 		t.Fatalf("the probe template has problems:\n%v", ps)
 	}
@@ -780,7 +780,7 @@ func TestReferencePipelineExamples(t *testing.T) {
 			}
 			_, ps := readTemplate([]byte(ex.text), head.Template, nil, nil, 1, func(_, _ int, path, msg string) {
 				t.Errorf("%s: the template example on line %d, used without values: %s: %s", pipelineReference, ex.line, path, msg)
-			}, DefaultMaxLoopMembers, "ci/")
+			}, DefaultMaxLoopMembers, "ci/", nil)
 			if len(ps) > 0 {
 				t.Errorf("%s: the template example that starts on line %d has problems (lines are the example's own):\n%v", pipelineReference, ex.line, ps)
 			}
