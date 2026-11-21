@@ -5,7 +5,7 @@
 import type { Me } from "../api";
 import { match } from "../router";
 import type { IconName } from "../kit/Icon";
-import { comingTitle } from "../shell/comingData";
+import { comingTitle } from "../shell/comingTitles";
 import { terms } from "../terms";
 
 /** The words in effect, filled into a sentence: {Hold} is what this installation calls a freeze. */
@@ -181,8 +181,20 @@ function page(pattern: string, section: SectionId, tab: string | undefined, titl
 
 /** Every page, most specific first. The pattern is the router's. */
 /** A page of one project's pipeline: its title, and the trail back to the project. */
+const projectCrumb = (p: Record<string, string>): Crumb => ({ label: p.name, href: `/projects/${enc(p.name)}/pipeline` });
+const togglesCrumb = (p: Record<string, string>): Crumb => ({ label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` });
 const projectSub = (sub: string, title: string, label: string) =>
-  page(`/projects/:name/${sub}`, "pipelines", undefined, (p) => `${title} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label }]);
+  page(`/projects/:name/${sub}`, "pipelines", undefined, (p) => `${title} of ${p.name}`, (p) => [projectCrumb(p), { label }]);
+
+const repo = (p: Record<string, string>) => p.owner + "/" + p.name;
+const repoHref = (p: Record<string, string>) => `/repositories/${enc(p.owner)}/${enc(p.name)}`;
+const repoCrumb = (p: Record<string, string>, to = ""): Crumb => ({ label: repo(p), href: repoHref(p) + to });
+const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
+/** A page of one repository: its title ("Mirrors of owner/name"), and the trail back to the repository. */
+const repoSub = (sub: string, title: string, label: string, themed = false) => {
+  const word = (t: string) => (themed ? terms().say(t) : t);
+  return page(`/repositories/:owner/:name/${sub}`, "projects", undefined, (p) => `${word(title)} ${repo(p)}`, (p) => [repoCrumb(p), { label: word(label) }]);
+};
 
 /** A page of Settings whose tab, title and trail are one word. */
 const settingsPage = (tab: string, label: string) => page(`/settings/${tab}`, "settings", tab, () => label, () => [{ label }]);
@@ -205,32 +217,22 @@ export const PAGES: PageInfo[] = [
   page("/runs/:id/configuration/:step", "pipelines", undefined, (p) => `Configuration report of ${p.step}`, () => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: "Configuration report" }]),
   projectSub("variables", "Variables", "Variables"),
   page("/setup/guide", "settings", "guide", () => "Setup guide", () => [{ label: "Setup guide" }]),
-  page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}") }]),
-  page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` }, { label: p.toggle }]),
-  page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` }, { label: "Keys and safeguards" }]),
+  page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [projectCrumb(p), { label: terms().say("{Toggles}") }]),
+  page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: p.toggle }]),
+  page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: "Keys and safeguards" }]),
   page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
   page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
-  page("/repositories/:owner/:name/mirrors", "projects", undefined, (p) => `Mirrors of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Mirrors" }]),
-  page("/repositories/:owner/:name/dependencies", "projects", undefined, (p) => `Dependencies of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Dependencies" }]),
-  page("/repositories/:owner/:name/graph", "projects", undefined, (p) => `Graph of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Graph" }]),
+  repoSub("mirrors", "Mirrors of", "Mirrors"),
+  repoSub("dependencies", "Dependencies of", "Dependencies"),
+  repoSub("graph", "Graph of", "Graph"),
   page("/graph", "projects", undefined, () => "Graph", () => [{ label: "Graph" }]),
-  page("/repositories/:owner/:name/updates", "projects", undefined, (p) => terms().say(`{Dependency_updatess} of ${p.owner}/${p.name}`),
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: terms().say("{Dependency_updatess}") }]),
-  page("/repositories/:owner/:name/history", "projects", undefined, (p) => `Imported history of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Imported history" }]),
-  page("/repositories/:owner/:name/pulls", "projects", undefined, (p) => `Pull requests of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests" }]),
-  page("/repositories/:owner/:name/pulls/new", "projects", undefined, (p) => `New pull request in ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: "New" }]),
-  page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: `#${p.number}` }]),
-  page("/repositories/:owner/:name/:view", "projects", undefined, (p) => `${p.view[0].toUpperCase() + p.view.slice(1)}: ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}/code` }, { label: p.view[0].toUpperCase() + p.view.slice(1) }]),
-  page("/repositories/:owner/:name/commit/:sha", "projects", undefined, (p) => `Commit ${p.sha.slice(0, 8)}: ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}/code` }, { label: p.sha.slice(0, 8) }]),
+  repoSub("updates", "{Dependency_updatess} of", "{Dependency_updatess}", true),
+  repoSub("history", "Imported history of", "Imported history"),
+  repoSub("pulls", "Pull requests of", "Pull requests"),
+  page("/repositories/:owner/:name/pulls/new", "projects", undefined, (p) => `New pull request in ${repo(p)}`, (p) => [repoCrumb(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: "New" }]),
+  page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${repo(p)}`, (p) => [repoCrumb(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: `#${p.number}` }]),
+  page("/repositories/:owner/:name/:view", "projects", undefined, (p) => `${cap(p.view)}: ${repo(p)}`, (p) => [repoCrumb(p, "/code"), { label: cap(p.view) }]),
+  page("/repositories/:owner/:name/commit/:sha", "projects", undefined, (p) => `Commit ${p.sha.slice(0, 8)}: ${repo(p)}`, (p) => [repoCrumb(p, "/code"), { label: p.sha.slice(0, 8) }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => say("{Deploys}"), () => []),

@@ -35,7 +35,7 @@ func (s *Server) once(h http.HandlerFunc) http.HandlerFunc {
 		h(rec, r)
 		if rec.status/100 == 2 && rec.body.Len() <= maxRememberedAnswer {
 			if err := s.Engine.RememberWrite(key, rec.status, rec.body.Bytes()); err != nil {
-				s.Log.Warn("could not record the answer to a runner write", "err", err)
+				s.Log.Warn("could not record the answer to a Station write", "err", err)
 			}
 		}
 	}

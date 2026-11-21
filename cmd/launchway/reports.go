@@ -113,7 +113,7 @@ func (cl *client) coverage(args []string) error {
 		}
 		fmt.Fprintf(cl.out, "Coverage: %s\n", coverageLine(*rc.Totals))
 		if rc.Previous != nil {
-			fmt.Fprintf(cl.out, "  previous run #%d: %s\n", rc.Previous.Run.Number, coverageLine(rc.Previous.Totals))
+			fmt.Fprintf(cl.out, "  previous Sortie #%d: %s\n", rc.Previous.Run.Number, coverageLine(rc.Previous.Totals))
 		}
 		if rc.Base != nil {
 			fmt.Fprintf(cl.out, "  %s (#%d): %s\n", strings.TrimPrefix(rc.Base.Ref, "refs/heads/"), rc.Base.Run.Number, coverageLine(rc.Base.Totals))

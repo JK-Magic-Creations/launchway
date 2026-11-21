@@ -213,7 +213,7 @@ func TestReleaseCarriesTheDigestsOfItsSortie(t *testing.T) {
 	}
 }
 
-var twoEnvs = []Environment{{Name: "dev", Target: "homelab", Projects: []string{"shop"}}, {Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true}}
+var twoEnvs = []Environment{{Name: "dev", Target: "cluster-a", Projects: []string{"shop"}}, {Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true}}
 
 func TestChecklistWindowFreezeAndClearance(t *testing.T) {
 	e, clk := newReleaseEngine(t, twoEnvs)

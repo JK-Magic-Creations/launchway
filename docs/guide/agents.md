@@ -42,7 +42,7 @@ the first lines, or lines containing a text: at most 500 lines and 64 KiB), `get
 `validate_pipeline` (the server's own validator, with line numbers and the text of each line),
 `get_pipeline_reference`, `list_templates` and `get_step_resources` (the default CPU and memory of
 steps, and the limits on what they may ask for), `get_run_limits` (the longest run timeout a pipeline
-may ask for) `list_lanes` (a project's lanes: who holds each, and who waits), `get_standards`, `list_findings`, `get_run_inspection` (Standing orders: what applies to a repository, its findings, a run's Inspection; the operator's `accept_finding` and `reopen_finding` record or end a decision with a reason and an end date, and no tool changes a setting), `list_caches` (a project's build caches
+may ask for) `list_lanes` (a project's lanes: who holds each, and who waits), `get_standards`, `list_findings`, `get_run_inspection` (Standing orders: what applies to a repository, its findings, a Sortie's Inspection; the operator's `accept_finding` and `reopen_finding` record or end a decision with a reason and an end date, and no tool changes a setting), `list_caches` (a project's build caches
 against its quota), `get_cache_policy`, and `list_repositories` and `get_repository` (hosted Git repositories, when hosting is on). Changing, listed only to tokens that may change
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
 `cancel_run`, `retry_run` (resume, or re-run from a step, several steps or the failed ones), `decide_approval`, `control_rollout`,

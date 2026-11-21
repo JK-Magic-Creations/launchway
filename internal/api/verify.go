@@ -238,7 +238,7 @@ func (s *Server) explainStep(w http.ResponseWriter, r *http.Request) {
 	if m.Key != nil {
 		if s.AISecrets == nil {
 			writeErr(w, http.StatusConflict, fmt.Sprintf("model %s needs a key, and this server has no secret store to read it from (ai.secrets); "+
-				"ai steps still work, as runners read keys from their own stores", m.Name))
+				"ai steps still work, as Stations read keys from their own stores", m.Name))
 			return
 		}
 		key, err = s.AISecrets.Lookup(r.Context(), ctxIn.Project, *m.Key)

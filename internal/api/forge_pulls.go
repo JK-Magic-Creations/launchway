@@ -183,7 +183,7 @@ func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRe
 	case !op:
 		add("merge", false, "operator", "you need the operator role on "+repo.Path+" to merge")
 	case rd.Queue && !rd.CanBypass:
-		add("merge", false, "operator", p.TargetBranch+" merges through the merge queue; add the pull request to the queue")
+		add("merge", false, "operator", p.TargetBranch+" merges through the merge queue; add the pull request to the Holding pattern")
 	case !rd.CanMerge && !rd.CanBypass:
 		add("merge", false, "operator", rd.Why)
 	default:

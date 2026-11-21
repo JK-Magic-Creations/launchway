@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const deployFile = `pipeline: beacon
+const deployFile = `pipeline: webapp
 steps:
   build:
     image: alpine:3.22
@@ -16,17 +16,17 @@ steps:
     needs: build
     when: { branch: main }
     environment: prod
-    service: beacon
+    service: webapp
     version: { output: build.tag }
     timeout: 30m
     argocd:
-      application: beacon
+      application: webapp
       write_back:
         repo: gitops
         branch: main
         changes:
-          - file: apps/beacon/base.yaml
-            image: homelab/beacon
+          - file: apps/webapp/base.yaml
+            image: team/webapp
             tag: { output: build.tag }
           - file: helm-values/launchway-dev.yaml
             set: image.tag
@@ -37,13 +37,13 @@ steps:
       sync:
         request: auto
         resources:
-          - { kind: Rollout, name: beacon-hub, namespace: beacon }
+          - { kind: Rollout, name: webapp-hub, namespace: webapp }
         prune: false
         windows: wait
       health: resources
     rollout:
-      name: beacon-hub
-      namespace: beacon
+      name: webapp-hub
+      namespace: webapp
       until: healthy
     on_cancel: leave
   smoke:
@@ -63,16 +63,16 @@ func TestDeployStepParses(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := p.Step("deploy-prod")
-	if !d.IsDeploy() || d.Environment != "prod" || d.Service != "beacon" || d.Version.Output.Step != "build" || d.Timeout.Short() != "30m" {
+	if !d.IsDeploy() || d.Environment != "prod" || d.Service != "webapp" || d.Version.Output.Step != "build" || d.Timeout.Short() != "30m" {
 		t.Fatalf("deploy step: %+v", d)
 	}
 	a := d.ArgoCD
-	if a.Application != "beacon" || a.Health != "resources" || a.Sync.Request != "auto" || a.Sync.Windows != "wait" ||
+	if a.Application != "webapp" || a.Health != "resources" || a.Sync.Request != "auto" || a.Sync.Windows != "wait" ||
 		len(a.Sync.Resources) != 1 || a.Sync.Resources[0].Group != "argoproj.io" || len(a.WriteBack.Changes) != 3 ||
 		a.WriteBack.Changes[2].Value.Run != "sha" || a.WriteBack.Changes[1].Set != "image.tag" {
 		t.Fatalf("argocd: %+v", a)
 	}
-	if d.Rollout.Name != "beacon-hub" || d.OnCancel != "leave" {
+	if d.Rollout.Name != "webapp-hub" || d.OnCancel != "leave" {
 		t.Fatalf("rollout: %+v", d.Rollout)
 	}
 	r := p.Step("rollback-prod")
@@ -136,9 +136,9 @@ func TestDeployValidationMessages(t *testing.T) {
 		{"bad windows", "windows: wait", "windows: override", "windows are never overridden"},
 		{"no environment", "    environment: prod\n", "", "line 6: steps.deploy-prod.environment: name the environment to deploy to"},
 		{"image and set", "            tag: { output: build.tag }", "            tag: { output: build.tag }\n            set: a.b", "a change either sets an image's tag"},
-		{"bad image", "image: homelab/beacon", "image: homelab/beacon:1", "line 21: steps.deploy-prod.argocd.write_back.changes[0].image"},
+		{"bad image", "image: team/webapp", "image: team/webapp:1", "line 21: steps.deploy-prod.argocd.write_back.changes[0].image"},
 		{"bad path", "set: image.tag", "set: image..tag", "steps.deploy-prod.argocd.write_back.changes[1].set"},
-		{"escaping file", "file: apps/beacon/base.yaml", "file: ../secrets.yaml", "must be a path relative to the repository's root"},
+		{"escaping file", "file: apps/webapp/base.yaml", "file: ../secrets.yaml", "must be a path relative to the repository's root"},
 		{"run fact", "{ run: sha }", "{ run: author }", `"author" is not a fact about the run`},
 		{"script key", "    on_cancel: leave", "    on_cancel: leave\n    image: alpine", "a deploy step runs no script, so it takes no image"},
 		{"rollback when", "    timeout: 15m", "    timeout: 15m\n    when: { branch: main }", "a rollback step has no when"},
@@ -165,13 +165,13 @@ func TestTwoDeploysOfOneServiceMustBeOrdered(t *testing.T) {
     kind: deploy
     needs: build
     environment: prod
-    service: beacon
+    service: webapp
     argocd:
-      application: beacon
+      application: webapp
       write_back: { repo: gitops, branch: main, changes: [ { file: a.yaml, set: image.tag, value: "1" } ] }
 `
 	_, err := Parse([]byte(src))
-	if err == nil || !strings.Contains(err.Error(), "line 50: steps.deploy-prod-2: deploy-prod and deploy-prod-2 both deploy beacon to prod and neither needs the other") {
+	if err == nil || !strings.Contains(err.Error(), "line 50: steps.deploy-prod-2: deploy-prod and deploy-prod-2 both deploy webapp to prod and neither needs the other") {
 		t.Fatalf("got %v", err)
 	}
 	// Ordered, they are fine.
@@ -185,9 +185,9 @@ func TestNestedDeployOfOneServiceIsRefused(t *testing.T) {
     kind: deploy
     needs: smoke
     environment: prod
-    service: beacon
+    service: webapp
     argocd:
-      application: beacon
+      application: webapp
       write_back: { repo: gitops, branch: main, changes: [ { file: a.yaml, set: image.tag, value: "1" } ] }
 `
 	_, err := Parse([]byte(src))

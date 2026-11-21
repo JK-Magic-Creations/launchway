@@ -388,7 +388,7 @@ func (cl *client) putState(project, key, env string, st toggles.State, reason, a
 
 func (cl *client) togglesRules(args []string) error {
 	fs := flag.NewFlagSet("toggles rules", flag.ContinueOnError)
-	file := fs.String("f", "", "the YAML file of the environment's state (on, off_value, prerequisites, rules, fallthrough)")
+	file := fs.String("f", "", "the YAML file of the Airfield's state (on, off_value, prerequisites, rules, fallthrough)")
 	reason := fs.String("reason", "", "why")
 	at := fs.String("at", "", "make the change at this time instead of now")
 	pos, err := parseArgs(fs, args)
@@ -445,7 +445,7 @@ func (cl *client) togglesEvaluate(args []string) error {
 
 func (cl *client) togglesHistory(args []string) error {
 	fs := flag.NewFlagSet("toggles history", flag.ContinueOnError)
-	env := fs.String("environment", "", "only this environment")
+	env := fs.String("environment", "", "only this Airfield")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -612,11 +612,11 @@ func (cl *client) togglesSafeguards(args []string) error {
 		return usageErr("launchway toggles safeguards get|set PROJECT ...")
 	}
 	fs := flag.NewFlagSet("toggles safeguards", flag.ContinueOnError)
-	env := fs.String("environment", "", "only this environment (default: all of them)")
+	env := fs.String("environment", "", "only this Airfield (default: all of them)")
 	reasonRequired := fs.String("require-reason", "", "true or false")
 	approval := fs.String("require-approval", "", "true or false")
 	approvals := fs.Int("approvals", 0, "how many people must approve")
-	watch := fs.Int("watch-minutes", -1, "how long after a change the environment is marked as watched")
+	watch := fs.Int("watch-minutes", -1, "how long after a change the Airfield is marked as watched")
 	reason := fs.String("reason", "", "why; required when a safeguard is turned down")
 	var locks multi
 	fs.Var(&locks, "lock", "lock a safeguard so that levels below cannot change it; give it once for each")

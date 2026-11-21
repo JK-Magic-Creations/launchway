@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 6 in progress · 86 planned · 96 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 12 in progress · 80 planned · 96 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -53,14 +53,14 @@ flowchart TD
 | [Applications and rollouts](#g-applications-and-rollouts) | 17 | 4 | 3 | 10 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
-| [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
+| [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 3 | 2 |
 | [Runtime configuration](#g-runtime-configuration) | 6 | 0 | 1 | 5 |
 | [Watch and protect](#g-watch-and-protect) | 10 | 0 | 0 | 10 |
 | [Change and insight](#g-change-and-insight) | 7 | 0 | 0 | 7 |
 | [Moving over from other delivery platforms](#g-moving-over-from-other-delivery-platforms) | 3 | 0 | 0 | 3 |
 | [The golden path](#g-the-golden-path) | 13 | 0 | 0 | 13 |
 | [Built-in platform services](#g-built-in-platform-services) | 9 | 0 | 0 | 9 |
-| [Configuration as code and the automation control center](#g-configuration-as-code-and-the-automation-control-center) | 9 | 0 | 0 | 9 |
+| [Configuration as code and the automation control center](#g-configuration-as-code-and-the-automation-control-center) | 9 | 0 | 3 | 6 |
 
 ### Applications and rollouts {#g-applications-and-rollouts}
 
@@ -412,29 +412,29 @@ State, plans and checks you can trust.
 
 #### Terraform and OpenTofu {#terraform-and-opentofu}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. Users never wonder where state goes, and Launchway guides them to good practice by default.
+Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. Plan, Clearance and the apply of exactly the reviewed plan (refused when the commit or the state has changed), a plan report with destroys and replacements first, OpenTofu by default. Built in this release: the Maneuvers and the report. Not yet: plan results posted to the pull request, a scheduled drift Patrol with its own page, short-lived cloud credentials through OIDC.
 
-[Area page](config-as-code.md)
+[Read the documentation](../guide/terraform-opentofu.md) · [Area page](config-as-code.md)
 
 #### State and locking built in {#state-and-locking-built-in}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. It speaks the standard HTTP backend, so a pipeline step needs no backend setup and existing state can be imported.
+Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.
 
 **Depends on:** Terraform and OpenTofu.
 
-[Area page](platform-services.md)
+[Read the documentation](../guide/terraform-opentofu.md) · [Area page](platform-services.md)
 
 #### Ansible {#ansible}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Typed steps with per-host results and a check mode before apply. Results show per host, with the check result shown before anything is changed.
+Typed steps with per-host results and a check mode before apply. Maneuver and Flight plan with check mode, diff, pinned host keys, keys and vault passwords by reference, cached collections, and a per-host report. Not yet: inventory from the Airfield's hosts, from clouds or hypervisors, and short-lived SSH certificates.
 
-[Area page](config-as-code.md)
+[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
 
 #### Chef {#chef}
 
@@ -901,11 +901,11 @@ Everything that configures a system is code in Git, reviewed like code, applied 
 
 #### A configuration change is a plan {#a-configuration-change-is-a-plan}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. Ansible cannot apply a saved plan the way Terraform can, so a guard enforces it and the page says so.
+A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.
 
-[Area page](config-as-code.md)
+[Read the documentation](../learn/concepts/configuration-as-code.md) · [Area page](config-as-code.md)
 
 #### Inventories {#inventories}
 
@@ -925,19 +925,19 @@ A stack or playbook becomes a Flight plan with a form for its inputs, a schedule
 
 #### Results for every host {#results-for-every-host}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See per host and per task what changed, with the tool’s own output kept alongside. Launchway keeps the tool’s own output beside a readable summary.
+See per host and per task what changed, with the tool’s own output kept alongside. Hosts by plays, what changed with the diff, the failed task first, the recap on the report, filter by host and outcome, and a button to run again on the failed hosts. The tool's own output stays in the step's log.
 
-[Area page](config-as-code.md)
+[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
 
 #### Drift and converge now {#drift-and-converge-now}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. Drift is checked on a schedule and shown per host.
+See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. A scheduled check-mode run is the drift report, shown per Airfield on the Configuration page. Not yet: a converge button that carries the check's diff into the Clearance request, and a Patrol screen of its own.
 
-[Area page](config-as-code.md)
+[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
 
 #### Short-lived access to hosts {#short-lived-access-to-hosts}
 

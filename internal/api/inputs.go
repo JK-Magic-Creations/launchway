@@ -84,7 +84,7 @@ func jsonScalar(v any) (string, bool) {
 // 422, with what is wrong with each value by input name, so a form can
 // show it next to the field.
 func writeInputErrors(w http.ResponseWriter, ie pipeline.InputErrors) {
-	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "the run's inputs have problems: " + inputErrorSummary(ie), "fields": ie})
+	writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "the Sortie's inputs have problems: " + inputErrorSummary(ie), "fields": ie})
 }
 
 func inputErrorSummary(ie pipeline.InputErrors) string {

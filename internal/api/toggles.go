@@ -74,7 +74,7 @@ func (s *Server) toggleRoutes() []route {
 
 func (s *Server) toggleService(w http.ResponseWriter) *togglestore.Service {
 	if s.Toggles == nil {
-		writeErr(w, http.StatusServiceUnavailable, "feature toggles need schema 47; this server's database does not have it")
+		writeErr(w, http.StatusServiceUnavailable, "Switches need schema 47; this server's database does not have it")
 		return nil
 	}
 	return s.Toggles
@@ -452,7 +452,7 @@ func (s *Server) toggleUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"toggle": r.PathValue("key"), "usage": u,
-		"privacy": "Counts only: how many evaluations, per environment, per day, per value. Nothing about who was evaluated is stored."})
+		"privacy": "Counts only: how many evaluations, per Airfield, per day, per value. Nothing about who was evaluated is stored."})
 }
 
 // evaluateToggle tries a context against the toggle as it is now, in every

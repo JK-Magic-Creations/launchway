@@ -430,7 +430,7 @@ launchway runs show RUN_ID [--json]
 of a stage do not wait for each other, so a stage with several runs them at the same time (`stage 2 (runs together): test
 (running), security-go (running)`).
 
-While a run goes on, a line under the stages gives the time left (`Estimate: about 6 min left; waiting for a decision: approve.`), and each step that has not finished says what it usually takes (`[usually about 2 min]`). A finished run says `Took 8m 03s, 12% faster than usual.` See [Watching a run live](../guide/watching-runs.md).
+While a Sortie (run) goes on, a line under the stages gives the time left (`Estimate: about 6 min left; waiting for a decision: approve.`), and each step that has not finished says what it usually takes (`[usually about 2 min]`). A finished Sortie says `Took 8m 03s, 12% faster than usual.` See [Watching a Sortie live](../guide/watching-runs.md).
 
 ```sh
 launchway runs show run_06gzde02yts1v325jvp0
@@ -463,7 +463,7 @@ launchway runs logs RUN_ID [STEP] [--step S] [--service NAME] [--follow]
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
 | `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
 | `--follow` | off | Keep printing new lines until the Sortie finishes. |
-| `--follow` | off | Keep printing new lines until the run finishes, asking every 400 ms. |
+| `--follow` | off | Keep printing new lines until the Sortie finishes, asking every 400 ms. |
 
 ```sh
 launchway runs logs run_06gzde1rb0s24hb652q0 --step smoke-test
@@ -570,7 +570,7 @@ The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
 
 ## launchway debrief and launchway tests
 
-The report of a run's tests, and what the history of a project's tests says. See [The Debrief](../guide/debrief.md).
+The report of a Sortie's tests, and what the history of a project's tests says. See [The Debrief](../guide/debrief.md).
 
 | Command | What it does |
 |---|---|
@@ -1004,7 +1004,7 @@ launchway standards profile [--json]
 
 ## launchway findings
 
-What the checks found. `list` and `show` read the findings the default branch has had; `accept` and `reopen` need the operator role on the project; `inspect` shows a run's Inspection.
+What the checks found. `list` and `show` read the findings the default branch has had; `accept` and `reopen` need the operator role on the project; `inspect` shows a Sortie's Inspection.
 
 ```text
 launchway findings list PROJECT [--status open|fixed|accepted|all] [--severity S,S] [--check ID] [--q TEXT] [--oldest] [--json]
@@ -1021,7 +1021,7 @@ launchway findings inspect RUN [--standing S] [--json]
 | `accept` | Records an accepted risk (or a false positive) with a reason of at least 10 characters and an end date within a year; it stops counting on that date |
 | `reopen` | Ends the decision in force |
 | `export` | The findings as JSON, CSV or SARIF 2.1.0 |
-| `inspect` | A run's Inspection: the verdict, each check and whether it ran, and the findings as new, existing or accepted |
+| `inspect` | A Sortie's Inspection: the verdict, each check and whether it ran, and the findings as new, existing or accepted |
 
 The same operations are the routes under [Standing orders](http-api.md#standing-orders) in the HTTP API, and the MCP tools `get_standards_profile`, `get_standards`, `get_standards_settings`, `get_standards_coverage`, `list_findings`, `export_findings`, `get_run_inspection`, `accept_finding` and `reopen_finding`. The MCP tools read and accept; they do not change settings.
 

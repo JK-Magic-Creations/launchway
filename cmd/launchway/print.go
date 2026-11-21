@@ -92,7 +92,7 @@ func (pr *printer) update(eng *engine.Engine, d *engine.RunDetail) {
 			fmt.Println(pr.prefix(s.ID) + pr.c("32", "✓ succeeded "+took(s)))
 		case engine.StepFailed:
 			if s.AllowedFailure {
-				fmt.Println(pr.prefix(s.ID) + pr.c("33;1", "✗ failed (allowed; the run goes on): "+s.Error))
+				fmt.Println(pr.prefix(s.ID) + pr.c("33;1", "✗ failed (allowed; the Sortie goes on): "+s.Error))
 				break
 			}
 			fmt.Println(pr.prefix(s.ID) + pr.c("31;1", "✗ failed: "+nonEmptyStr(s.Reason, s.Error)))

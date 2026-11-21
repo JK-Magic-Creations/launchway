@@ -40,7 +40,7 @@ func TestCommandPatchesStatusOnly(t *testing.T) {
 	}
 	a := agentFor(t, t.TempDir(), cl)
 	red := deploy.ReduceRollout(ro, nil)
-	j := &engine.CommandJob{ID: "cmd_1", Take: "t", Action: "promote", Project: "shop", Target: "homelab", Application: "shop",
+	j := &engine.CommandJob{ID: "cmd_1", Take: "t", Action: "promote", Project: "shop", Target: "cluster-a", Application: "shop",
 		Rollout: pipeline.RolloutRef{Name: "shop", Namespace: "shop"}, Expect: deploy.Expect{PodHash: red.CurrentPodHash, Step: red.Step}}
 	result, detail, err := a.Command(context.Background(), j, t.Logf)
 	if err != nil || result != deploy.Applied {

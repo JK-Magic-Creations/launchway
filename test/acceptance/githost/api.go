@@ -94,7 +94,7 @@ func (c *Config) newRepo(t *testing.T) string {
 	}
 	c.repos = append(c.repos, name)
 	t.Cleanup(func() { c.deleteRepo(t, name) })
-	// A host that runs pipelines on every push (the homelab's scoped workflow does) must not run any for a test repository.
+	// A host that runs pipelines on every push (the cluster-a's scoped workflow does) must not run any for a test repository.
 	c.api(t, "PATCH", c.repoPath(name), map[string]any{"has_actions": false}, nil, 200)
 	return name
 }

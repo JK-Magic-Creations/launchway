@@ -1,23 +1,23 @@
 # The Debrief
 
-How to read the report of a run's tests, find flaky tests, quarantine them, export the report and split tests among shards.
+How to read the report of a Sortie's tests, find flaky tests, quarantine them, export the report and split tests among shards.
 
-The Debrief is what the **Tests** tab of a run opens on. It takes the results the run's steps reported (see [Test reports](test-reports.md) for the formats) and puts them in the order a person needs: what happened, what changed, what broke and why. **All results** beside it is the full list with its filters.
+The Debrief is what the **Tests** tab of a Sortie (run) opens on. It takes the results the Sortie's steps reported (see [Debriefs (test reports)](test-reports.md) for the formats) and puts them in the order a person needs: what happened, what changed, what broke and why. **All results** beside it is the full list with its filters.
 
 ## Reading a Debrief
 
 - **Summary.** How many tests passed, failed, were skipped, were flaky or quarantined, how long they took and the pass rate, with a bar whose parts differ by pattern as well as color, and the same numbers in a table.
 - **Against the default branch.** The run is compared with the last run of the default branch that succeeded: how many tests are newly failing and newly passing, how the test count and duration moved and which tests are at least twice as slow. On the default branch itself the comparison is with its own earlier run.
-- **Failures.** New breakage first. Each failure has its message, **expected against actual** (a line-by-line diff when the message says what was expected and what came out), the stack, the captured output, screenshots the test attached, **First failed in** (the run where this stretch of failures began on this branch) and **Also failing on the default branch** (yes: this change did not break it; no: it did). A failure that the test's history shows as flaky says so.
+- **Failures.** New breakage first. Each failure has its message, **expected against actual** (a line-by-line diff when the message says what was expected and what came out), the stack, the captured output, screenshots the test attached, **First failed in** (the Sortie where this stretch of failures began on this branch) and **Also failing on the default branch** (yes: this change did not break it; no: it did). A failure that the test's history shows as flaky says so.
 - **Flaky and quarantined tests**, the **slowest tests** (with what they usually take), the **suites** as a table with totals rolled up to each level, a **grid** of tests by browser or version when results carry one, **coverage**, and the **trend** of the branch's pass rate. Every chart has its numbers in a table.
 
-A run that is a restricted pull request (from a fork or an automation account) sees history only for its own branch and the default branch.
+A Sortie that is a restricted pull request (from a fork or an automation account) sees history only for its own branch and the default branch.
 
 ## Flaky tests
 
 A test is **flaky** when its results go against its own history without a change that explains it:
 
-- the same commit both passed and failed it (two runs, or a pass after a retry); or
+- the same commit both passed and failed it (two Sorties, or a pass after a retry); or
 - it failed on a single commit between commits that passed it, at least twice.
 
 A break that lasts, and a failure that was fixed, are not flaky. The **score** is the share of the commits the test ran on that showed this. A test that passed on a retry (a retried step, or the test tool running it again) is shown as **passed on retry: flaky** and never as a plain pass.
@@ -36,7 +36,7 @@ quarantine:
     reason: lock timeouts on the shared database
 ```
 
-The runner sends the file with the step's test reports, from the commit under test, so adding an entry is a change to review in a pull request. While an entry is live, a failure of that test does not fail the step when every failing test of the step is quarantined: the step ends as succeeded with the reason written on it, and the Debrief shows the test loudly under **Quarantined tests**, counted. After the expiry day the entry excuses nothing. Launchway suggests entries on the Flaky tests page and never writes the file.
+The Station (runner) sends the file with the step's Debriefs, from the commit under test, so adding an entry is a change to review in a pull request. While an entry is live, a failure of that test does not fail the step when every failing test of the step is quarantined: the step ends as succeeded with the reason written on it, and the Debrief shows the test loudly under **Quarantined tests**, counted. After the expiry day the entry excuses nothing. Launchway suggests entries on the Flaky tests page and never writes the file.
 
 ## Exports
 

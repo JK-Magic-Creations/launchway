@@ -72,7 +72,7 @@ function CheckRow({ c, w }: { c: EffectiveCheck; w: Record<string, string> }) {
           <td>{sourceText(c.state.from, w)}</td>
         </>
       )}
-      <td>{c.active ? <span className="st-on">Runs on every run</span> : <span className="faint">{c.reason}</span>}{c.applies && <div className="faint small">Because {c.because}</div>}</td>
+      <td>{c.active ? <span className="st-on">{terms().say("Runs on every {run}")}</span> : <span className="faint">{c.reason}</span>}{c.applies && <div className="faint small">Because {c.because}</div>}</td>
     </tr>
   );
 }
@@ -81,7 +81,7 @@ function Gate({ e, w }: { e: Effective; w: Record<string, string> }) {
   const rows: { label: string; v: Value<unknown>; text: string; hint: string }[] = [
     { label: "A change is blocked at", v: e.fail_on, text: `${severityLabel(e.fail_on.value)} and above`, hint: "Only for checks set to block, and only for findings the change introduces." },
     { label: "A vulnerability needs a fix to block", v: e.require_fix, text: e.require_fix.value ? "yes" : "no", hint: "Where no fixed version exists yet, it advises." },
-    { label: "Findings on the default branch", v: e.default_branch, text: e.default_branch.value === "block" ? "fail the run" : "are shown, never fail it", hint: "The backlog is yours to work down; nothing old blocks a change." },
+    { label: "Findings on the default branch", v: e.default_branch, text: e.default_branch.value === "block" ? terms().say("fail the {run}") : "are shown, never fail it", hint: "The backlog is yours to work down; nothing old blocks a change." },
     { label: "A check that did not run", v: e.incomplete, text: e.incomplete.value === "fail" ? "fails the verdict" : "is shown, and the verdict stands", hint: "It is never taken for a clean result." },
     { label: "Licenses denied", v: e.licenses_deny, text: e.licenses_deny.value.join(", ") || "none", hint: "A dependency under one of these is a finding." },
     { label: "Licenses allowed", v: e.licenses_allow, text: e.licenses_allow.value.length ? e.licenses_allow.value.join(", ") : "any not denied", hint: "With a list, a license outside it is flagged; one that cannot be identified is always flagged." },
@@ -284,7 +284,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
         )}
         {list && list.matched > list.findings.length && <p className="faint small">{list.findings.length} of {list.matched} shown; narrow it with the filters or export all.</p>}
         {!canOperate(me, name) && <p className="faint small">You can read these. Accepting a risk needs the operator role on this project.</p>}
-        <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> shows every run’s findings, including the tools you added yourself.</p>
+        <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say("shows every {run}’s findings, including the tools you added yourself.")}</p>
       </section>
     </div>
   );

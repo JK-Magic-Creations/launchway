@@ -514,7 +514,7 @@ func (ps *parser) parseArgoCD(n *yaml.Node, at string) *ArgoCD {
 		return a
 	}
 	if a.Application == "" {
-		ps.add(n, at+".application", "name the Argo CD application, for example: application: beacon")
+		ps.add(n, at+".application", "name the Argo CD application, for example: application: webapp")
 	}
 	if a.WriteBack == nil {
 		ps.add(n, at+".write_back", "say what to commit: write_back: { repo: ..., branch: ..., changes: [...] }")

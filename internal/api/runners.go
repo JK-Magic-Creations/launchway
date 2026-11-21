@@ -49,7 +49,7 @@ func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
 			id, err := s.Engine.RunnerByAccessToken(got)
 			switch {
 			case errors.Is(err, engine.ErrRunnerRevoked):
-				s.runnerDenied(r, "", "a revoked runner's access token")
+				s.runnerDenied(r, "", "a revoked Station's access token")
 				writeErr(w, http.StatusUnauthorized, err.Error())
 				return
 			case errors.Is(err, engine.ErrNotFound), errors.Is(err, engine.ErrNeedsNewer):
@@ -138,10 +138,10 @@ func (s *Server) claimsEnrolled(w http.ResponseWriter, r *http.Request, said eng
 	if !enrolled {
 		return false
 	}
-	msg := "runner " + said.ID + " is enrolled; only it may say it is that runner"
+	msg := "runner " + said.ID + " is enrolled; only it may say it is that Station"
 	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r), RequestID: reqID(r),
 		Action: "runner.identity_refused", Target: said.ID, Outcome: "denied",
-		Detail: "a runner with a shared or pool token said it is the enrolled runner " + said.ID + " (" + r.URL.Path + ")"})
+		Detail: "a Station with a shared or pool token said it is the enrolled Station " + said.ID + " (" + r.URL.Path + ")"})
 	writeErr(w, http.StatusForbidden, msg)
 	return true
 }
@@ -184,7 +184,7 @@ func (s *Server) leaseAllowed(w http.ResponseWriter, r *http.Request, leaseID st
 	}
 	id := callerIdentity(r)
 	refuse := func(msg string) bool {
-		who := "a runner with a shared or pool token"
+		who := "a Station with a shared or pool token"
 		if id != nil {
 			who = id.ID
 		}
@@ -196,16 +196,16 @@ func (s *Server) leaseAllowed(w http.ResponseWriter, r *http.Request, leaseID st
 	}
 	switch {
 	case id != nil && holder != id.ID:
-		return refuse("this lease belongs to another runner")
+		return refuse("this lease belongs to another Station")
 	case id == nil && enrolled:
-		return refuse("this lease belongs to an enrolled runner; only it may act on it")
+		return refuse("this lease belongs to an enrolled Station; only it may act on it")
 	}
 	pool := callerPool(r)
 	switch {
 	case pool == nil && target != "":
-		return refuse("this lease is deploy work; only a runner pool serving target " + target + " may act on it")
+		return refuse("this lease is deploy work; only a Station pool serving target " + target + " may act on it")
 	case pool != nil && !slices.Contains(pool.Targets, target):
-		return refuse("runner pool " + pool.Name + " may not act on this lease")
+		return refuse("Station pool " + pool.Name + " may not act on this lease")
 	}
 	return true
 }
@@ -395,9 +395,9 @@ func (s *Server) mayManageRunners(id *identity) bool {
 
 func (s *Server) manageRefusal() string {
 	if s.runnersRole() == auth.NoRole {
-		return "managing runners is turned off (runner_admin: none)"
+		return "managing Stations is turned off (runner_admin: none)"
 	}
-	return fmt.Sprintf("you need the %s role on every project to manage runners (runner_admin)", s.runnersRole())
+	return fmt.Sprintf("you need the %s role on every project to manage Stations (runner_admin)", s.runnersRole())
 }
 
 // PoolView is a runner pool as people see it.

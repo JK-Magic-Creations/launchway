@@ -83,9 +83,9 @@ func (s *Server) setupGuide(w http.ResponseWriter, r *http.Request) {
 	run := GuideStep{ID: "runner", Title: "A runner", State: "todo"}
 	if online > 0 {
 		run.State = "done"
-		run.Summary = plural(online, "runner is", "runners are") + " connected and can take work."
+		run.Summary = plural(online, "Station is", "Stations are") + " connected and can take work."
 	} else {
-		run.Summary = "No runner is connected, so no step can run yet."
+		run.Summary = "No Station is connected, so no step can run yet."
 	}
 	run.Actions = []engine.Action{act("make_join_token", true, "", "")}
 	g.Steps = append(g.Steps, run)

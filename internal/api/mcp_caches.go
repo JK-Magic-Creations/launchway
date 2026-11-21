@@ -20,7 +20,7 @@ import (
 
 func addCacheTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_caches", Annotations: readOnly("List a project's caches"),
-		Description: "A project's build caches: each entry with its name, key, scope (default, ref:<ref> or pull:<n>), platform, size, when it was last restored, how often, and the run that wrote it, with the total against the project's quota and idle days."},
+		Description: "A project's build caches: each entry with its name, key, scope (default, ref:<ref> or pull:<n>), platform, size, when it was last restored, how often, and the Sortie that wrote it, with the total against the project's quota and idle days."},
 		mcpCallTimeout, listCaches)
 	addTool(srv, c, &mcp.Tool{Name: "get_cache_policy", Annotations: readOnly("Get the cache policy"),
 		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib, idle_days and max_age_days, for one project (its own override, else the installation's) or, without a project, the installation's."},
@@ -38,7 +38,7 @@ func addCacheTools(srv *mcp.Server, c *mcpCall) {
 
 func addCacheChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "delete_cache", Annotations: changes("Delete a cache", true, true),
-		Description: "End one cache entry (by id from list_caches) or every entry of a cache (by name, in every scope and key). The next run that wanted it starts without it and saves it again. Audited."},
+		Description: "End one cache entry (by id from list_caches) or every entry of a cache (by name, in every scope and key). The next Sortie that wanted it starts without it and saves it again. Audited."},
 		mcpCallTimeout, deleteCache)
 }
 

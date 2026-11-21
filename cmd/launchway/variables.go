@@ -73,7 +73,7 @@ func addLevelFlags(fs *flag.FlagSet) levelFlags {
 		organization: fs.Bool("organization", false, "the Wing (organization)"),
 		unit:         fs.String("unit", "", "a Squadron (unit), by name"),
 		project:      fs.String("project", "", "a project, by name"),
-		env:          fs.String("environment", "", "only for this environment"),
+		env:          fs.String("environment", "", "only for this Airfield"),
 	}
 }
 
@@ -125,7 +125,7 @@ func (cl *client) variablesList(args []string) error {
 
 func (cl *client) variablesEffective(args []string) error {
 	fs := flag.NewFlagSet("variables effective", flag.ContinueOnError)
-	env := fs.String("environment", "", "for this environment")
+	env := fs.String("environment", "", "for this Airfield")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -343,7 +343,7 @@ func (cl *client) variablesRun(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		if len(out.Variables) == 0 {
-			fmt.Fprintln(cl.out, "This run used no variables.")
+			fmt.Fprintln(cl.out, "This Sortie used no variables.")
 		}
 		v := settings.VariableView{Variables: nil}
 		for _, r := range out.Variables {

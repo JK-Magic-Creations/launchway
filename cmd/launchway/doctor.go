@@ -170,6 +170,6 @@ func cmdDoctor(args []string) error {
 	for _, l := range as.Lines {
 		fmt.Println("  " + l)
 	}
-	fmt.Printf("  Riding through an outage: a request waits up to %s for the database (resilience.stall_budget), then is answered 503 with Retry-After; runners keep running steps and keep their logs and results on disk.\n", budget)
+	fmt.Printf("  Riding through an outage: a request waits up to %s for the database (resilience.stall_budget), then is answered 503 with Retry-After; Stations keep running steps and keep their logs and results on disk.\n", budget)
 	return nil
 }

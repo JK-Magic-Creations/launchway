@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -25,6 +26,14 @@ var neverNamed = regexp.MustCompile(`(?i)\b(jenkins(file)?|circle ?ci|travis[- ]
 // namedForIntegration are Git hosts and CI services Launchway connects to or runs on; they may
 // appear only in the files of allowedForIntegration.
 var namedForIntegration = regexp.MustCompile(`(?i)\b(gitlab|bitbucket|forgejo|gitea|codeberg|github actions)\b`)
+
+// siteNames are the names of one installation's own projects, clusters and addresses. A product file (a
+// document, a test, a fixture, an example) uses neutral names (shop, webapp, team/shop, cluster-a,
+// example.test), so that no one's own setup is taken for the product's. The real self-deploy pipeline
+// (siteNamesAllowed) is that pipeline's own configuration and keeps its values.
+var siteNames = regexp.MustCompile(`(?i)(jkma|\bbeacon\b|\bhomelab\b|homelab/|home\.jk-magic)`)
+
+var siteNamesAllowed = []string{".launchway/pipeline.yaml"}
 
 var allowedForIntegration = []string{
 	// Webhook and pull-request providers: the code and the pages that document them.
@@ -110,6 +119,9 @@ func TestNoOtherProductsAreNamed(t *testing.T) {
 		allowed := originalityAllowed(path)
 		for n := 1; sc.Scan(); n++ {
 			line := sc.Text()
+			if m := siteNames.FindString(line); m != "" && !slices.Contains(siteNamesAllowed, path) {
+				t.Errorf("%s:%d uses the site-specific name %q as an example; use a neutral one (shop, webapp, team/shop, cluster-a, example.test)", path, n, m)
+			}
 			if m := neverNamed.FindString(line); m != "" {
 				t.Errorf("%s:%d names another product (%q); describe it generically", path, n, m)
 			} else if m := namedForIntegration.FindString(line); m != "" && !allowed {

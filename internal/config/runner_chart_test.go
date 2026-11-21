@@ -121,12 +121,12 @@ runner:
   accept: { projects: [shop] }
   kubernetes: { namespace: lw-steps, createNamespace: true }
 delivery:
-  environments: [ { name: prod, target: homelab, projects: [shop] } ]
+  environments: [ { name: prod, target: cluster-a, projects: [shop] } ]
   verification:
     sources: [ { name: metrics, type: prometheus, url: http://metrics.monitoring.svc, projects: [shop] } ]
   deployRunner:
     enabled: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop, shop-api] } ]
     rolloutNamespaces: [shop]
     repos: { gitops: { url: http://git.example/gitops.git, paths: [ { projects: [shop], files: ["apps/**"] } ] } }
@@ -142,7 +142,7 @@ verification:
   sources: [ { name: metrics, type: prometheus, url: http://metrics.monitoring.svc, projects: [shop] } ]
 deployRunner:
   enabled: true
-  target: homelab
+  target: cluster-a
   token: { existingSecret: pool }
   applications: [ { projects: [shop], names: [shop, shop-api] } ]
   rolloutNamespaces: [shop]

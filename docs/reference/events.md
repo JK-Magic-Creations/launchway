@@ -278,7 +278,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `release.installation` | `PUT /api/v1/release-installation`: public downloads allowed or forbidden for the installation |
 | `release.gate` | `PUT /api/v1/projects/{name}/release-gates/{airfield}`: what a release must pass to reach an Airfield |
 | `release.clearance` | `POST /api/v1/projects/{name}/releases/{version}/clearances`: who gave clearance for which Airfield, with the comment |
-| `release.promote` | `POST /api/v1/projects/{name}/releases/{version}/promote`: the promotion with its run and image digests; a refusal or an override with its reason is recorded too |
+| `release.promote` | `POST /api/v1/projects/{name}/releases/{version}/promote`: the promotion with its Sortie (run) and image digests; a refusal or an override with its reason is recorded too |
 | `release.plan` | `POST /api/v1/projects/{name}/releases/{version}/plan`: a promotion written on the calendar |
 | `release.return` | `POST /api/v1/projects/{name}/release-returns`: an Airfield returned to base, with the reason |
 | `release.freeze` | `POST /api/v1/release-freezes`: a freeze, for which project and Airfield, with the reason |
@@ -309,9 +309,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `state.unlock` | A client released its lock, or a person force-released one (`DELETE /api/v1/projects/{name}/state/{workspace}/lock`, `launchway state unlock`); the detail names the holder and the reason. A delete through the backend protocol is recorded as `state.delete` |
 | `state.lock_released` | A lock whose run had ended was released by the next `LOCK` (Terraform has no lock heartbeat) |
 | `state.rollback` | `POST /api/v1/projects/{name}/state/{workspace}/rollback` (also `launchway state rollback`); the detail says which version was stored again as which, and why |
-| `state.credential` | A runner asked, under a lease, for the state credential of one workspace; the detail says whether it is read only (pull request and draft runs) |
+| `state.credential` | A Station (runner) asked, under a lease, for the state credential of one workspace; the detail says whether it is read only (pull request and draft runs) |
 | `state.denied` | The state backend refused a credential: an invalid, expired or misused state credential, or a token without the role (outcome `denied`) |
-| `config.rerun_failed` | `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` (also `launchway configuration rerun-failed`); the target is the new run and the detail names the hosts |
+| `config.rerun_failed` | `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` (also `launchway configuration rerun-failed`); the target is the new Sortie and the detail names the hosts |
 | `cache.delete` | `DELETE /api/v1/projects/{name}/caches/{id}` and `DELETE /api/v1/projects/{name}/caches?name=` (also `launchway caches delete`); the target is the entry or the cache name and the detail says how much was ended |
 | `standards.settings_set` | `PUT /api/v1/standards/settings` (also `launchway standards set`); the target is the level and scope, the detail says the version saved, and says plainly in capitals when Standing orders were switched off, with the reason |
 | `finding.accept` | `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` (also `launchway findings accept` and the MCP tool `accept_finding`); the target is the finding's fingerprint and the detail holds the decision, the end date and the reason |

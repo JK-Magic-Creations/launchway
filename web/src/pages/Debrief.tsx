@@ -4,6 +4,7 @@ import { ago, shortSha } from "../format";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { Badge, TestIcon, testDuration } from "../components/Tests";
 import "../debrief.css";
+import { terms } from "../terms";
 
 // The Debrief of a run: what its tests say, in the order a person needs
 // them: the summary, what changed, the failures with what each expected and
@@ -25,7 +26,7 @@ export function DebriefView({ runId, version, openCase }: { runId: string; versi
   }, [runId, version]);
   if (error) return <ErrorBox error={error} />;
   if (!d) return <div className="loading">Loading the Debrief…</div>;
-  if (d.summary.total === 0) return <Empty title="No test results to report">{d.notes[0] ?? "Results appear when a step that declares test reports ends."}</Empty>;
+  if (d.summary.total === 0) return <Empty title="No test results to report">{d.notes[0] ?? terms().say("Results appear when a step that declares {debriefs} ends.")}</Empty>;
   return (
     <div className="debrief">
       <Summary d={d} />
@@ -111,7 +112,7 @@ function Summary({ d }: { d: Debrief }) {
       <ResultBar d={d} />
       {c && (
         <div className="dchange">
-          <h3 className="h-xs">Against {branchOf(c.base.branch) || "the default branch"}, <Link href={`/runs/${c.base.id}?tab=tests`}>run #{c.base.number}</Link> ({shortSha(c.base.sha)})</h3>
+          <h3 className="h-xs">Against {branchOf(c.base.branch) || "the default branch"}, <Link href={`/runs/${c.base.id}?tab=tests`}>{terms().say("{run} #")}{c.base.number}</Link> ({shortSha(c.base.sha)})</h3>
           <ul>
             <li><strong className={c.newly_failing > 0 ? "t-bad" : ""}>{c.newly_failing}</strong> newly failing</li>
             <li><strong>{c.newly_passing}</strong> newly passing</li>
@@ -178,8 +179,8 @@ function FailureCard({ f, runId, openCase, open }: { f: DebriefFailure; runId: s
           {f.file && <li>File <strong>{f.file}{f.line ? `:${f.line}` : ""}</strong></li>}
           <li>Took <strong>{testDuration(f.duration_ms)}</strong></li>
           {f.variant && <li>Variant <strong>{f.variant}</strong></li>}
-          {f.owner && <li>Owner <strong>{f.owner}</strong></li>}
-          {f.first_failed_in && <li>First failed in <Link href={`/runs/${f.first_failed_in.id}?tab=tests`}>run #{f.first_failed_in.number}</Link> ({shortSha(f.first_failed_in.sha)}, {ago(f.first_failed_in.created_at)})</li>}
+          {f.owner && <li>{terms().say("{Owner}")} <strong>{f.owner}</strong></li>}
+          {f.first_failed_in && <li>First failed in <Link href={`/runs/${f.first_failed_in.id}?tab=tests`}>{terms().say("{run} #")}{f.first_failed_in.number}</Link> ({shortSha(f.first_failed_in.sha)}, {ago(f.first_failed_in.created_at)})</li>}
           {base === "yes" && <li>Also failing on the default branch: <strong>yes</strong>, so this change did not break it</li>}
           {base === "no" && <li>Also failing on the default branch: <strong>no</strong>, so this change broke it</li>}
           {base === "unknown" && <li>Also failing on the default branch: <strong>not known</strong>, it did not run there</li>}
@@ -233,7 +234,7 @@ function Flaky({ d }: { d: Debrief }) {
       {d.flaky.length === 0 ? <p className="sub">No test in this run has a flaky history.</p> : (
         <div className="dscroll"><table className="dtable">
           <caption className="sub small">A test that passed on a retry is listed here and never counted as a plain pass.</caption>
-          <thead><tr><th scope="col">Test</th><th scope="col">In this run</th><th scope="col" className="num">Score</th><th scope="col">Why</th><th scope="col">First seen</th></tr></thead>
+          <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("In this {run}")}</th><th scope="col" className="num">Score</th><th scope="col">Why</th><th scope="col">First seen</th></tr></thead>
           <tbody>{d.flaky.map((f) => (
             <tr key={f.key}><th scope="row"><span className="dname">{f.name}</span><span className="dsuite">{f.suite}</span></th>
               <td><Badge kind="flaky">{f.this_run}</Badge></td><td className="num">{f.score}</td><td>{f.reason}</td><td>{f.first_seen ? ago(f.first_seen) : "—"}</td></tr>
@@ -249,9 +250,9 @@ function Quarantined({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dq-h">
       <h2 className="h-sm" id="dq-h">Quarantined tests <span className="dcount">{d.quarantined.length}</span></h2>
-      <p className="sub">These tests are listed in the repository's quarantine file. A failure here does not fail the run, and is counted until the entry expires.</p>
+      <p className="sub">{terms().say("These tests are listed in the repository's quarantine file. A failure here does not fail the {run}, and is counted until the entry expires.")}</p>
       <div className="dscroll"><table className="dtable">
-        <thead><tr><th scope="col">Test</th><th scope="col">This run</th><th scope="col">Owner</th><th scope="col">Expires</th><th scope="col">Why</th></tr></thead>
+        <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("This {run}")}</th><th scope="col">{terms().say("{Owner}")}</th><th scope="col">Expires</th><th scope="col">Why</th></tr></thead>
         <tbody>{d.quarantined.map((q) => (
           <tr key={q.key}><th scope="row"><span className="dname">{q.name}</span><span className="dsuite">{q.suite}</span></th>
             <td><TestIcon status={q.status === "passed" ? "passed" : "failed"} size={14} /> {q.status}</td><td>{q.owner}</td>
@@ -329,7 +330,7 @@ function CoverageSection({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dc-h">
       <h2 className="h-sm" id="dc-h">Coverage</h2>
-      {!c ? <p className="sub">No coverage report was collected for this run.</p> : (
+      {!c ? <p className="sub">{terms().say("No coverage report was collected for this {run}.")}</p> : (
         <>
           <dl className="dstats">
             <Stat label="Lines covered" value={pct(Math.round(c.lines.percent * 10) / 10)} />
@@ -395,10 +396,10 @@ function Trend({ d }: { d: Debrief }) {
             </g>
           ))}
         </svg>
-        <figcaption className="sub small">Pass rate per run; the vertical axis starts at {lo}%. A circle is a run where everything that ran passed; a triangle is a run with failures.</figcaption>
+        <figcaption className="sub small">{terms().say("Pass rate per {run}; the vertical axis starts at")} {lo}{terms().say("%. A circle is a {run} where everything that ran passed; a triangle is a run with failures.")}</figcaption>
       </figure>
       <details className="dmore"><summary>Show the trend as a table</summary>
-        <div className="dscroll"><table className="dtable"><thead><tr><th scope="col">Run</th><th scope="col">Commit</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Pass rate</th><th scope="col" className="num">Duration</th><th scope="col" className="num">Flaky</th></tr></thead>
+        <div className="dscroll"><table className="dtable"><thead><tr><th scope="col">{terms().say("{Run}")}</th><th scope="col">Commit</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Pass rate</th><th scope="col" className="num">Duration</th><th scope="col" className="num">Flaky</th></tr></thead>
           <tbody>{t.map((p) => <tr key={p.number}><th scope="row">#{p.number}</th><td>{shortSha(p.sha)}</td><td className="num">{p.total}</td><td className="num">{pct(Math.round(p.pass_rate * 10) / 10)}</td><td className="num">{testDuration(p.duration_ms)}</td><td className="num">{p.flaky}</td></tr>)}</tbody></table></div>
       </details>
     </section>

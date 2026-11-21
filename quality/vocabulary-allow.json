@@ -341,6 +341,90 @@
       "rule": "word:deploy/4",
       "contains": "kind: deploy",
       "why": "The step kind written in a pipeline file: an identifier that never changes with the words."
+    },
+    {
+      "path": "docs/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "docs/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "cmd/launchway/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "internal/api/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/forge/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "internal/forge/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/engine/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "internal/engine/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/",
+      "rule": "word:queue/3",
+      "contains": "merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties: the words name two different lines."
+    },
+    {
+      "path": "web/src/",
+      "rule": "word:queue/3",
+      "contains": "Merge queue",
+      "why": "The merge queue is the line of pull requests that wait to merge into one branch, a different thing from the Holding pattern of Sorties."
+    },
+    {
+      "path": "docs/",
+      "rule": "word:owner",
+      "contains": "viewer role",
+      "why": "A viewer role is the stored role named viewer, which the Observer word names in the Words page; the rows quote the role's name."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "word:queue/3",
+      "contains": "message queues",
+      "why": "Message queues of other systems, not Launchway's Holding pattern."
     }
   ]
 }

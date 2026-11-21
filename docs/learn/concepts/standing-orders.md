@@ -11,12 +11,12 @@ flowchart LR
   V --> B["The default branch's<br/>backlog is tracked,<br/>never punished"]
 ```
 
-## What a run gains
+## What a Sortie (run) gains {#what-a-run-gains}
 
-Every run gets an **Inspection**: a step for each check that fits what the repository holds (secrets in the
+Every Sortie gets an **Inspection**: a step for each check that fits what the repository holds (secrets in the
 history, known vulnerabilities in dependencies, insecure code patterns, licenses, Dockerfile and manifest
 problems, unsafe pipeline files), followed by a verdict step. The repository changes nothing. The steps run
-in the tool's own pinned container, see no secrets, and are drawn in the run's graph as added by Standing
+in the tool's own pinned container, see no secrets, and are drawn in the Sortie's graph as added by Standing
 orders, with a link to the page that says why and how to change it.
 
 ## Old code does not punish new work

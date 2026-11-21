@@ -922,7 +922,7 @@ delivery:
   # -- Airfields launch steps may target, written into the servers' configuration only
   # when set. Default: none, and deploy steps are refused. Example:
   #   - name: prod
-  #     target: homelab          # the cluster: deployRunner.target serves it
+  #     target: cluster-a          # the cluster: deployRunner.target serves it
   #     projects: [shop, "mcp-*"]
   #     queue: newest            # or all; default newest
   #     protected: true          # the person who started a run may not promote it here; default false
@@ -960,7 +960,7 @@ delivery:
   #       type: loki
   #       url: http://loki-gateway.monitoring.svc
   #       projects: [shop, "mcp-*"]
-  #       headers: { X-Scope-OrgID: homelab }
+  #       headers: { X-Scope-OrgID: cluster-a }
   #       limits: { maxLines: 2000 }
   #     - name: clickhouse
   #       type: clickhouse

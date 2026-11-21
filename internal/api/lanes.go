@@ -72,7 +72,7 @@ func addLaneTools(srv *mcp.Server, c *mcpCall) {
 	addRunTriggerTools(srv, c)
 	addGraphFollowTools(srv, c) // result triggers made from the software graph (graph_follow.go)
 	addTool(srv, c, &mcp.Tool{Name: "list_lanes", Annotations: readOnly("List lanes"),
-		Description: "A project's lanes that have a run going or runs waiting: for each, the run that holds it and the runs waiting for it, in the order they start. A pipeline's lane makes its runs take turns; cancel_run cancels a waiting run."},
+		Description: "A project's lanes that have a Sortie going or runs waiting: for each, the Sortie that holds it and the Sorties waiting for it, in the order they start. A pipeline's lane makes its Sorties take turns; cancel_run cancels a waiting run."},
 		mcpCallTimeout, listLanes)
 }
 

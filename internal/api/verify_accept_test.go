@@ -43,14 +43,14 @@ func setupVerifyAccept(t *testing.T) *verifyAcceptEnv {
 	t.Helper()
 	e := &verifyAcceptEnv{}
 	eng, err := engine.Open(engine.Options{Database: testdb.New(t), LeaseTTL: 5 * time.Second, Logger: quiet(),
-		Environments:  []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}},
+		Environments:  []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}},
 		HealthSources: []engine.HealthSource{{Name: "prometheus", Type: "prometheus", Projects: []string{"shop"}}},
-		RunnerPools:   []engine.RunnerPool{{Name: "deploy-homelab", Kind: engine.PoolDeploy, Targets: []string{"homelab"}}}})
+		RunnerPools:   []engine.RunnerPool{{Name: "deploy-main", Kind: engine.PoolDeploy, Targets: []string{"cluster-a"}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	e.eng, e.srv = eng, httptest.NewServer(s.Handler())
 	e.prom = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		e.reads.Add(1)
@@ -100,7 +100,7 @@ func TestDeployRunnerRefusesVerificationItsAcceptSectionExcludes(t *testing.T) {
 	d := &runner.DeployRunner{Client: runner.NewClient(e.srv.URL, poolToken), Agent: &argocd.Agent{}, Log: quiet(),
 		// The server is told nothing of the accept: section (an empty one),
 		// so only the runner's own check stands between it and the sources.
-		Info:   engine.RunnerInfo{ID: "d1", Name: "d1", Targets: []string{"homelab"}, Accept: &accept.Config{}},
+		Info:   engine.RunnerInfo{ID: "d1", Name: "d1", Targets: []string{"cluster-a"}, Accept: &accept.Config{}},
 		Accept: &accept.Config{Projects: []string{"web-*"}}, Sources: srcs, Settle: time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -146,7 +146,7 @@ func TestServerOffersVerificationsOnlyToRunnersThatAcceptThem(t *testing.T) {
 		"project":     {Projects: []string{"web-*"}},
 		"environment": {Environments: []string{"staging"}},
 	} {
-		info := engine.RunnerInfo{ID: "d-" + name, Name: name, Targets: []string{"homelab"}, Features: "verify", Accept: acc}
+		info := engine.RunnerInfo{ID: "d-" + name, Name: name, Targets: []string{"cluster-a"}, Features: "verify", Accept: acc}
 		if j, err := c.LeaseVerify(ctx, info, 0); err != nil || j != nil {
 			t.Fatalf("a runner that accepts only another %s was offered it: %+v %v", name, j, err)
 		}
@@ -158,7 +158,7 @@ func TestServerOffersVerificationsOnlyToRunnersThatAcceptThem(t *testing.T) {
 	if d, err := e.eng.GetRun(e.run); err != nil || !strings.Contains(d.PoolHint, "accepts it") || !strings.Contains(d.PoolHint, "accept.") {
 		t.Fatalf("the run does not say why its verification waits: %q %v", d.PoolHint, err)
 	}
-	info := engine.RunnerInfo{ID: "d-ok", Name: "ok", Targets: []string{"homelab"}, Features: "verify",
+	info := engine.RunnerInfo{ID: "d-ok", Name: "ok", Targets: []string{"cluster-a"}, Features: "verify",
 		Accept: &accept.Config{Projects: []string{"shop"}, Environments: []string{"prod"}}}
 	if j, err := c.LeaseVerify(ctx, info, 0); err != nil || j == nil || j.Verify == nil {
 		t.Fatalf("a runner that accepts it: %+v %v", j, err)

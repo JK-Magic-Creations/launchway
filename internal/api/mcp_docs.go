@@ -79,9 +79,9 @@ func addDocs(srv *mcp.Server, _ *mcpCall) {
 			MIMEType: "application/yaml", Size: int64(len(ex.Text))}, text(uri, "application/yaml", ex.Text))
 	}
 
-	srv.AddPrompt(&mcp.Prompt{Name: "diagnose_failed_run", Title: "Diagnose a failed run",
-		Description: "Find out why a run failed, from its steps, logs, tests and findings, and say what to do about it.",
-		Arguments:   []*mcp.PromptArgument{{Name: "run_id", Description: "the run's ID (run_…)", Required: true}}},
+	srv.AddPrompt(&mcp.Prompt{Name: "diagnose_failed_run", Title: "Diagnose a failed Sortie",
+		Description: "Find out why a Sortie failed, from its steps, logs, tests and findings, and say what to do about it.",
+		Arguments:   []*mcp.PromptArgument{{Name: "run_id", Description: "the Sortie's ID (run_…)", Required: true}}},
 		func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 			id := promptArg(req, "run_id")
 			if id == "" {

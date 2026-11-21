@@ -1,6 +1,6 @@
 # Triggers on results
 
-Start a run of one project when a run, or a launch, of another project ends: build a library, then test the
+Start a run of one project when a Sortie (run), or a launch, of another project ends: build a library, then test the
 application that uses it; finish a deployment, then run the acceptance tests of another team. Every start is an
 [event](events.md) with its reason, and every refusal is too.
 
@@ -29,7 +29,7 @@ at each result, until it is given again.
 
 ## What starts it
 
-- `--when` for a run: `succeeded` (the default), `failed`, `canceled` or `any`. For a launch (`--launch`, a
+- `--when` for a Sortie: `succeeded` (the default), `failed`, `canceled` or `any`. For a launch (`--launch`, a
   deployment that ended): `deployed` (the default), `failed`, `rolled_back` or `any`.
 - `--pipeline NAME` limits it to results of the upstream pipeline with that name.
 - `--filter` is an [expression](event-sources.md#expressions) over `run`, `launch` and `outputs` that must be true.
@@ -47,7 +47,7 @@ Only a description of the result, by reference. In expressions:
 | `launch.verdict`, `launch.environment`, `launch.service`, `launch.version` | for a launch |
 | `outputs.<step>.<name>` | the outputs steps wrote, **only** if the upstream allowed `--share-outputs` |
 
-No secret, log, file or artifact content crosses; the downstream pipeline fetches what it needs by the reference,
+No secret, log, file or Cargo (artifact) content crosses; the downstream pipeline fetches what it needs by the reference,
 with its own permissions. Inputs are checked against the downstream pipeline's inputs like a person's.
 
 ## What you get

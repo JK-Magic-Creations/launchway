@@ -744,12 +744,12 @@ host over SSH with a key from a secret store (never written in the file), takes 
 rotation (drains it), changes it, health-checks it with `check`, and puts it back, in batches of `max_unavailable`. A
 failed check returns every touched host to its previous release and stops. The hosts, their pinned public keys and their
 load balancer names are the Airfield's inventory (schema 50), not part of the pipeline. A Station runs the step with
-`launchway fleet run`; the server does not schedule fleet steps yet and refuses a run that has one.
+`launchway fleet run`; the server does not schedule fleet steps yet and refuses a Sortie (run) that has one.
 
 <!-- keys: fleet -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `method` | text | `systemd` | `systemd`: a release artifact run by a systemd unit. `bootc`: an operating-system image, switched to by digest, staged, then booted |
+| `method` | text | `systemd` | `systemd`: a release Cargo (artifact) run by a systemd unit. `bootc`: an operating-system image, switched to by digest, staged, then booted |
 | `strategy` | text | `rolling` | `rolling`: in place, in batches. `pathfinder`: a second group of hosts takes 10, 50, then 100 percent of the traffic by weights, verified between steps (method `systemd` only) |
 | `service` | name | the step's `service` | The systemd unit (method `systemd`) |
 | `artifact` | path | required for `systemd` | The file to install, inside the workspace |

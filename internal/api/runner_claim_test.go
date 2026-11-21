@@ -21,27 +21,27 @@ import (
 func TestSharedTokenCannotClaimAnEnrolledRunner(t *testing.T) {
 	db := testdb.New(t)
 	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: idTTL, Logger: quiet(),
-		Environments:  []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}},
+		Environments:  []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}},
 		HealthSources: []engine.HealthSource{{Name: "prometheus", Type: "prometheus", Projects: []string{"shop"}}},
-		RunnerPools: append([]engine.RunnerPool{{Name: "deploy-homelab", Kind: engine.PoolDeploy, Targets: []string{"homelab"}}},
+		RunnerPools: append([]engine.RunnerPool{{Name: "deploy-main", Kind: engine.PoolDeploy, Targets: []string{"cluster-a"}}},
 			idPools...)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	e := &idEnv{eng: eng, a: srv, b: srv, dir: t.TempDir(), db: db}
 
 	build, buildID := e.enrol(t, e.joinToken(t, srv, `{"pool":"web"}`), "builder", srv, srv)
-	deploy, deployID := e.enrol(t, e.joinToken(t, srv, `{"pool":"deploy-homelab"}`), "deployer", srv, srv)
+	deploy, deployID := e.enrol(t, e.joinToken(t, srv, `{"pool":"deploy-main"}`), "deployer", srv, srv)
 	ctx := context.Background()
 	// Both are known to the server, as runners that have asked for work.
 	if _, err := build.Lease(ctx, engine.RunnerInfo{ID: buildID.RunnerID, Name: "builder", Features: engine.FeatureArtifacts}, 0); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := deploy.LeaseDeploy(ctx, engine.RunnerInfo{ID: deployID.RunnerID, Name: "deployer", Targets: []string{"homelab"}}, 0); err != nil {
+	if _, err := deploy.LeaseDeploy(ctx, engine.RunnerInfo{ID: deployID.RunnerID, Name: "deployer", Targets: []string{"cluster-a"}}, 0); err != nil {
 		t.Fatal(err)
 	}
 	snapshot := func() string {
@@ -78,7 +78,7 @@ func TestSharedTokenCannotClaimAnEnrolledRunner(t *testing.T) {
 	shared := runner.NewClient(srv.URL, "secret")
 	pooled := runner.NewClient(srv.URL, poolToken)
 	liar := func(id string) engine.RunnerInfo {
-		return engine.RunnerInfo{ID: id, Name: "liar", Targets: []string{"homelab"}, Features: engine.FeatureArtifacts + " verify"}
+		return engine.RunnerInfo{ID: id, Name: "liar", Targets: []string{"cluster-a"}, Features: engine.FeatureArtifacts + " verify"}
 	}
 	forbidden := func(what string, err error) {
 		t.Helper()
@@ -122,7 +122,7 @@ func TestSharedTokenCannotClaimAnEnrolledRunner(t *testing.T) {
 	if _, err := shared.Lease(ctx, engine.RunnerInfo{ID: "plain", Name: "plain", Features: engine.FeatureArtifacts}, 0); err != nil {
 		t.Fatalf("a shared runner with an ID of its own: %v", err)
 	}
-	if _, err := pooled.LeaseVerify(ctx, engine.RunnerInfo{ID: "plain-d", Name: "plain-d", Targets: []string{"homelab"}}, 0); err != nil {
+	if _, err := pooled.LeaseVerify(ctx, engine.RunnerInfo{ID: "plain-d", Name: "plain-d", Targets: []string{"cluster-a"}}, 0); err != nil {
 		t.Fatalf("a pool runner with an ID of its own: %v", err)
 	}
 	if j, err := build.Lease(ctx, engine.RunnerInfo{ID: buildID.RunnerID, Name: "builder", Features: engine.FeatureArtifacts}, 0); err != nil || j == nil {

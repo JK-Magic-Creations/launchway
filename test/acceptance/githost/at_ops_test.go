@@ -56,7 +56,7 @@ func TestAT_HG_19_Network(t *testing.T) {
 	}
 	name, _ := c.pushed(t)
 	if c.Alt == "" {
-		r.NotAutomated(t, "second address: set LW_ACCEPT_URL_ALT (git.home.jk-magic-creations.com)")
+		r.NotAutomated(t, "second address: set LW_ACCEPT_URL_ALT (git.example.test)")
 	} else {
 		alt := &Config{URL: c.Alt, User: c.User, Token: c.Token}
 		d := filepath.Join(t.TempDir(), "alt")
@@ -109,7 +109,7 @@ func TestAT_HG_20_ReadAPI(t *testing.T) {
 		t.Fatalf("surface mismatch: version %q user %q found %v commits %d head ok %v readme %q dir %d branches %d", v.Version, u.Login, found, len(commits), len(commits) > 0 && commits[0].Sha == head, body, len(dir), len(br))
 	}
 	r.Saw(t, "version %s; user %s; repos/search finds the repository; newest commit %.12s; README content decodes; %d root entries; %d branches", v.Version, u.Login, head, len(dir), len(br))
-	r.NotAutomated(t, "Beacon Deliveries and Security for five known commits, mcp-accounts, jkma-sandbox, Homepage, Blackbox; the existing host scaled to zero for an hour")
+	r.NotAutomated(t, "Webapp Deliveries and Security for five known commits, mcp-accounts, shop-sandbox, Homepage, Blackbox; the existing host scaled to zero for an hour")
 }
 
 func TestAT_HG_24_BackupRestore(t *testing.T) {
@@ -273,9 +273,9 @@ func TestAT_HG_30_Browsing(t *testing.T) {
 	r.NotAutomated(t, "the UI pages (tree, blob, commits) in a browser, three real repositories")
 }
 
-// TestHomelabOnly records the acceptance tests this suite does not run, each
+// TestSiteSpecificOnly records the acceptance tests this suite does not run, each
 // with the reason, so a report never lists a test as passed by omission.
-func TestHomelabOnly(t *testing.T) {
+func TestSiteSpecificOnly(t *testing.T) {
 	host(t)
 	for _, e := range Catalog {
 		if e.Coverage != Manual {

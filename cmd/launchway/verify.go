@@ -69,7 +69,7 @@ func cmdModels(args []string) error {
 
 func (cl *client) verifications(args []string) error {
 	fs := flag.NewFlagSet("verifications list", flag.ContinueOnError)
-	env := fs.String("environment", "", "only this environment's")
+	env := fs.String("environment", "", "only this Airfield's")
 	project := fs.String("project", "", "only this project's")
 	service := fs.String("service", "", "only this service's")
 	limit := fs.Int("limit", 20, "at most this many")
@@ -111,7 +111,7 @@ func (cl *client) showVerifications(args []string) error {
 		return err
 	}
 	if len(rest) != 1 {
-		return usageErr("verifications show takes a run id\n\n%s", verifyUsage)
+		return usageErr("verifications show takes a Sortie id\n\n%s", verifyUsage)
 	}
 	var list []engine.VerificationView
 	if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(rest[0])+"/verifications", nil, &list); err != nil {
@@ -161,7 +161,7 @@ func (cl *client) markVerification(args []string) error {
 		return err
 	}
 	if len(rest) != 3 || (rest[2] != "passed" && rest[2] != "failed") {
-		return usageErr("verifications mark takes a run id, a step and passed or failed\n\n%s", verifyUsage)
+		return usageErr("verifications mark takes a Sortie id, a step and passed or failed\n\n%s", verifyUsage)
 	}
 	if strings.TrimSpace(*reason) == "" {
 		return usageErr("verifications mark needs --reason")
@@ -229,7 +229,7 @@ func (cl *client) models(args []string) error {
 			if m.TokensPerDay > 0 {
 				budget = fmt.Sprintf("%d tokens a day per project", m.TokensPerDay)
 			}
-			fmt.Fprintf(cl.out, "%-16s %-10s %-28s %-6s max %d tokens a call, %d calls a run, %s; projects %s\n", m.Name, m.Provider, m.Model,
+			fmt.Fprintf(cl.out, "%-16s %-10s %-28s %-6s max %d tokens a call, %d calls a Sortie, %s; projects %s\n", m.Name, m.Provider, m.Model,
 				where, m.MaxTokens, m.CallsPerRun, budget, strings.Join(m.Projects, ","))
 			for _, u := range m.UsedToday {
 				fmt.Fprintf(cl.out, "    %s today: %d calls, %d in, %d out, $%.4f\n", u.Project, u.Calls, u.InputTokens, u.OutputTokens, u.CostUSD)

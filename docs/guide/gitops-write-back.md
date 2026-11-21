@@ -40,17 +40,17 @@ write_back:
   repo: gitops
   branch: main
   changes:
-    - file: apps/jkma/base.yaml
-      image: homelab/jkma
+    - file: apps/shop/base.yaml
+      image: team/shop
       tag:    { output: tag.tag }
       digest: { output: image.digest }     # with a tag as well: image:tag@sha256:...
 ```
 
 | You give | The reference becomes |
 |---|---|
-| `tag` | `registry/homelab/jkma:20261121-abcdef12` |
-| `digest` | `registry/homelab/jkma@sha256:0123…` |
-| both (or `format: tag_and_digest`) | `registry/homelab/jkma:20261121-abcdef12@sha256:0123…` |
+| `tag` | `registry/team/shop:20261121-abcdef12` |
+| `digest` | `registry/team/shop@sha256:0123…` |
+| both (or `format: tag_and_digest`) | `registry/team/shop:20261121-abcdef12@sha256:0123…` |
 
 The Depot (registry) resolves a reference by its digest, so the pinned image is the one that was built, and
 the tag is there for the people who read the file and the history. Every reference to the image in
@@ -75,18 +75,18 @@ Station. The credential:
 # server configuration
 environments:
   - name: prod
-    target: homelab
+    target: cluster-a
     projects: ["mcp-*"]
     protected: true
     write_back:
-      repo: platform/homelab-gitops       # hosted here
+      repo: platform/platform-gitops       # hosted here
       mode: direct                        # or pull_request
 
 # deploy runner configuration
 deploy:
   repos:
     gitops:
-      url: https://launchway.example.com/git/platform/homelab-gitops.git
+      url: https://launchway.example.com/git/platform/platform-gitops.git
       hosted: true                        # write with the step's own credential
       paths:
         - { projects: ["mcp-*"], files: ["apps/mcp-servers/base.yaml"] }
@@ -101,11 +101,11 @@ The branch stays protected: nobody but an administrator pushes to it. A **pipeli
 the repository admits a project's deploy steps to that branch for exactly the files they may write:
 
 ```sh
-launchway repos protected-branches platform/homelab-gitops --set main \
+launchway repos protected-branches platform/platform-gitops --set main \
   --writer 'main=mcp-*=apps/mcp-servers/base.yaml'
 ```
 
-or `PUT /api/v1/repositories/platform/homelab-gitops/protected-branches` with
+or `PUT /api/v1/repositories/platform/platform-gitops/protected-branches` with
 `{"patterns":["main"],"pipeline_writers":[{"branch":"main","projects":["mcp-*"],"files":["apps/mcp-servers/base.yaml"]}]}`
 (the MCP tool `set_protected_branches` takes the same). When a push arrives the server reads the
 files it changes and refuses it unless every one is admitted: "the pipeline of project mcp-weather

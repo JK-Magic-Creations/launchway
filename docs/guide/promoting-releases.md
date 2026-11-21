@@ -42,7 +42,7 @@ steps:
 
 A pipeline that declares none of `airfield`, `release` and `version` cannot be told what to promote, so promotion is **refused with a sentence that says so**, not run as a rebuild. Before starting the Sortie Launchway also checks that the tag still points to the released commit, that the checklist of the Airfield is met, and that the Sortie really ran at the release's commit (otherwise it is canceled and refused).
 
-In the web interface, open the release and use *Check and promote to AIRFIELD*, or use the matrix. From the command line: `launchway release promote PROJECT VERSION --airfield prod`. The dialog shows the checklist line by line first. The environment's own rules (who may deploy there, protected environments with reviewers) apply exactly as for any deployment.
+In the web interface, open the release and use *Check and promote to AIRFIELD*, or use the matrix. From the command line: `launchway release promote PROJECT VERSION --airfield prod`. The dialog shows the checklist line by line first. The Airfield's own rules (who may deploy there, protected Airfields (environments) with reviewers) apply exactly as for any deployment.
 
 A **candidate** may be promoted to Airfields that are not protected, for testing. A protected Airfield takes only a published release. A withdrawn release is never promoted.
 
@@ -52,7 +52,7 @@ A **candidate** may be promoted to Airfields that are not protected, for testing
 
 ## Return to base
 
-*Return to base* puts an Airfield back on the release it ran before, by the rollback the product already has (see [Rollback after success](rollback-after-success.md)): the same rules, the same lock, a reason that is required and recorded, and the same warning that a rollback never restores a database or configuration. `launchway release return --project shop --airfield prod --reason "checkout fails"` (or the button in the matrix) asks for it. A promotion whose Sortie was returned is shown as returned, and counts as a failure in the [measures](measuring-delivery.md).
+*Return to base* puts an Airfield back on the release it ran before, by the Return to base (rollback) the product already has (see [Return to base after success](rollback-after-success.md)): the same rules, the same lock, a reason that is required and recorded, and the same warning that a Return to base never restores a database or configuration. `launchway release return --project shop --airfield prod --reason "checkout fails"` (or the button in the matrix) asks for it. A promotion whose Sortie was returned is shown as returned, and counts as a failure in the [measures](measuring-delivery.md).
 
 ## Formations
 

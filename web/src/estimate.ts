@@ -67,7 +67,7 @@ export function runTiming(e: RunEstimate | undefined, status: string, now: numbe
   }
   if (status === "succeeded" || status === "failed" || status === "canceled") return { kind: "none-final", text: "" };
   if (!e.known) {
-    return { kind: "none", text: e.reason === "no_history" ? "No estimate yet: these steps have not run before." : "No estimate yet: a step needs three earlier runs." };
+    return { kind: "none", text: e.reason === "no_history" ? "No estimate yet: these steps have not run before." : terms().say("No estimate yet: a step needs three earlier {runs}.") };
   }
   const waiting = (e.waiting_for_person?.length ?? 0) > 0;
   const gone = Math.max(0, now - e.as_of);

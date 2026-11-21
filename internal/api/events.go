@@ -132,7 +132,7 @@ func (s *Server) replayEvent(w http.ResponseWriter, r *http.Request) {
 			"code": "not_verified", "next": "Fix the sender's signature or token, then send the event again."})
 		return
 	case ev.Replay == nil || (ev.Replay.Ref == "" && ev.Replay.SHA == ""):
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "this event has nothing to repeat: it started no run and kept no inputs",
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "this event has nothing to repeat: it started no Sortie and kept no inputs",
 			"code": "not_replayable", "next": "Start a run by hand instead."})
 		return
 	case s.Projects == nil:

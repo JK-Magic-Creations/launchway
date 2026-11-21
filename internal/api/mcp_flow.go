@@ -25,7 +25,7 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 		if s.AllowedFailure {
 			// Not a failure of the run: its step has on_failure: continue.
 			sb.AllowedFailure = true
-			sb.Why += " (allowed: on_failure: continue, so the run goes on)"
+			sb.Why += " (allowed: on_failure: continue, so the Sortie goes on)"
 		} else {
 			l.failed = append(l.failed, s.ID)
 		}
@@ -49,21 +49,21 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 			}
 			text.Message = untrusted(s.Message, 500)
 		case s.WaitKind == engine.WaitLock:
-			sb.Why = "waiting for the lock on environment " + s.Environment + ", which another deployment holds"
+			sb.Why = "waiting for the lock on Airfield " + s.Environment + ", which another deployment holds"
 		case s.WaitKind == engine.WaitObserve:
-			sb.Why = "deployed; waiting for deploy runners to observe that it is healthy"
+			sb.Why = "deployed; waiting for deploy Stations to observe that it is healthy"
 		default:
 			sb.Why = "waiting"
 		}
 	case engine.StepQueuedS:
 		l.queued = append(l.queued, s.ID)
-		sb.Why = "waiting for a runner to take it"
+		sb.Why = "waiting for a Station to take it"
 		if s.WaitingFor != "" {
 			sb.Why, sb.WaitingCode = untrusted(s.WaitingFor, 400), s.WaitingCode
 		}
 		if s.NotBefore > time.Now().UnixMilli() {
 			sb.NotBefore = ts(s.NotBefore)
-			sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a runner is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)
+			sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a Station is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)
 		}
 	case engine.StepLeasedS, engine.StepRunning:
 		l.running = append(l.running, s.ID)
@@ -115,11 +115,11 @@ func (t *stepText) empty() bool {
 // says it can work, otherwise the re-run that does.
 func retryActions(d *engine.RunDetail, id string, failed []string) []string {
 	if d.Resume != nil && !d.Resume.Allowed {
-		return []string{fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run: same version, new deployment attempt, earlier steps reused; this run cannot be resumed)", id, d.Resume.RerunFrom)}
+		return []string{fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run: same version, new deployment attempt, earlier steps reused; this Sortie cannot be resumed)", id, d.Resume.RerunFrom)}
 	}
 	out := []string{"retry_run run_id=" + id + " (resume: runs the failed steps again)"}
 	if len(failed) > 0 {
-		out = append(out, fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run that reuses the earlier steps)", id, failed[0]))
+		out = append(out, fmt.Sprintf("retry_run run_id=%s from_step=%s (a new Sortie that reuses the earlier steps)", id, failed[0]))
 	}
 	return out
 }

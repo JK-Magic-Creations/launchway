@@ -17,7 +17,7 @@ export function HealthCalls({ v, name }: { v: VerificationView; name: string }) 
   return (
     <details className="vreadings" open={bad.length > 0}>
       <summary>
-        {calls.length} call{calls.length === 1 ? "" : "s"} {terms().say("made by the deploy {runner}:")} {calls.length - bad.length} answered as expected, {bad.length} did not (median {median} ms)
+        {calls.length} call{calls.length === 1 ? "" : "s"} {terms().say("made by the {deploy:do} {runner}:")} {calls.length - bad.length} answered as expected, {bad.length} did not (median {median} ms)
       </summary>
       {notes.length > 0 && (
         <ul className="vlog-errors">{notes.map((n) => <li key={n.i}>Interval {n.i + 1}: {n.note}</li>)}</ul>

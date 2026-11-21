@@ -73,7 +73,7 @@ How a runner runs a step: in a Podman or Docker container, in a Kubernetes pod, 
 One result of a security scanner, read from SARIF, with a severity and a fingerprint.
 
 ### Flight plan
-The default word for the ready-made pipeline offered for a kind of project. The plain business word is *Starter pipeline*.
+The default word for the ready-made pipeline offered for a kind of project. The plain business word is *Pipeline template*.
 
 ### GitOps
 Deploying by committing the desired version to a Git repository that a tool (here Argo CD) applies

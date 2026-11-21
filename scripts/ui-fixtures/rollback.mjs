@@ -15,11 +15,11 @@ const target = (version, n, at, reverts, previous) => ({
 });
 const targets = [target("v1.3.2", 18, T + H, [["v1.4.0", 19]], true), target("v1.3.1", 17, T - 5 * H, [["v1.4.0", 19], ["v1.3.2", 18]])];
 const available = { name: "rollback", available: true, who: "operator", targets, risk: targets[0].consequence, suggestion: targets[0].suggestions[0] };
-const unavailable = { name: "rollback", available: false, who: "operator", reason: "no deploy runner is serving target homelab right now, so nothing could revert the change and watch the result", would_help: "start or repair the deploy runner for target homelab (see Runners); it must report in before a rollback is offered" };
+const unavailable = { name: "rollback", available: false, who: "operator", reason: "no deploy runner is serving target cluster-a right now, so nothing could revert the change and watch the result", would_help: "start or repair the deploy runner for target cluster-a (see Runners); it must report in before a rollback is offered" };
 const queueable = { ...available, available: false, queueable: true, reason: "run #20 is deploying shop to dev right now and holds its lock, so a rollback cannot start until it ends", instead: "queue the rollback behind run #20 (it starts when run #20 ends, ahead of other waiting deployments), or cancel run #20 first" };
 
 const rbBrief = { headline: "Emergency rollback of dev: v1.4.0 → v1.3.2, by otto: checkout fails for customers since 1.4.0", to_version: "v1.3.2", from_version: "v1.4.0", actor: "otto", reason: "checkout fails for customers since 1.4.0", emergency: true, needs_review: true };
-const dep = (id, n, version, extra = {}) => ({ id, run_id: "run_" + n, run_number: n, project: "shop", step: "deploy-dev", environment: "dev", service: "shop", target: "homelab", application: "shop", mode: "write_back", version, changed: true,
+const dep = (id, n, version, extra = {}) => ({ id, run_id: "run_" + n, run_number: n, project: "shop", step: "deploy-dev", environment: "dev", service: "shop", target: "cluster-a", application: "shop", mode: "write_back", version, changed: true,
   commit: "c0ffee" + n + "0".repeat(30), branch: "main", repo: "gitops", phase: "healthy", detail: "", verdict: "deployed", opened_at: T + n * H / 4, deployed_at: T + n * H / 4 + 60000, closed_at: T + n * H / 4 + 120000, holding: false,
   observed_at: Date.now(), observed_by: "deployer-1", snapshot: { app: { found: true, sync: "Synced", health: "Healthy", source: 0, automated: true } }, ...extra });
 const history = (rolled) => [
@@ -27,7 +27,7 @@ const history = (rolled) => [
   dep("dep_19", 19, "v1.4.0", { previous_version: "v1.3.2", actions: [available], rolled_back_by: rolled ? [{ id: "run_21", number: 21, actor: "otto", reason: "checkout fails for customers since 1.4.0" }] : undefined }),
   dep("dep_18", 18, "v1.3.2", { previous_version: "v1.3.1" }), dep("dep_17", 17, "v1.3.1", { previous_version: "v1.3.0" }),
 ];
-const env = (rollback) => [{ name: "dev", target: "homelab", queue: "newest", projects: ["shop"], protected: true, observer: "deployer-1", observer_expires: Date.now() + 600000,
+const env = (rollback) => [{ name: "dev", target: "cluster-a", queue: "newest", projects: ["shop"], protected: true, observer: "deployer-1", observer_expires: Date.now() + 600000,
   services: [{ project: "shop", service: "shop", waiting: [], current: { deployment: "dep_19", version: "v1.4.0", run: "run_19", run_number: 19, since: T + 5 * H }, last: { ...dep("dep_19", 19, "v1.4.0", { previous_version: "v1.3.2", actions: [rollback] }) }, rollback }] }];
 
 const st = (id, position, status, extra = {}) => ({ run_id: "run_21", id, position, status, attempt: 1, queued_at: T, started_at: T, finished_at: T + 60000, exit_code: null, error: "", skip_kind: "", runner: "", outputs: {}, excerpt: "", retry: 0, timeout: "15m", deadline: 0, decided_by: "", decided_at: 0, comment: "", inputs: [], ...extra });

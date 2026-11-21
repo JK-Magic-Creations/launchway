@@ -1,6 +1,6 @@
 # Debriefs (test reports) {#test-reports}
 
-The report of a run's tests is the [Debrief](debrief.md).
+The report of a Sortie's tests is the [Debrief](debrief.md).
 
 How Launchway reads test result files and coverage, and what the Tests tab and the project Tests page show.
 

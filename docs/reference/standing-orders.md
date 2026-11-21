@@ -8,14 +8,14 @@ Profile version `2026-11-21.1`. A check applies when a file of the repository ma
 
 | Check | Looks for | Applies when | Tool | Tool license | Default | Can block | Needs the network |
 |---|---|---|---|---|---|---|---|
-| `secrets` | credentials in the history (all commits the first time, then the commits since the last run) | every repository | gitleaks | MIT | block | yes | no |
+| `secrets` | credentials in the history (all commits the first time, then the commits since the last Sortie (run)) | every repository | gitleaks | MIT | block | yes | no |
 | `vuln-deps` | known vulnerabilities in locked dependencies | a lock file or manifest | osv-scanner | Apache-2.0 | block | yes | the OSV advisory database |
 | `vuln-reach-go` | vulnerabilities whose code your Go program can call | `go.mod` | govulncheck | BSD-3-Clause | advise | yes | Go module proxy, Go vulnerability database |
 | `sast-go` | insecure patterns in Go code | `go.mod` | gosec | Apache-2.0 | advise | yes | Go module proxy |
 | `sast-python` | insecure patterns in Python code | `*.py` | ruff (the `S` rules) | MIT | advise | yes | no |
 | `lint-python` | mistakes the language lets through | `*.py` | ruff | MIT | advise | no | no |
 | `license` | denied, not allowed and unidentifiable licenses | a lock file or manifest | osv-scanner | Apache-2.0 | advise | yes | deps.dev |
-| `sbom` | a bill of materials (CycloneDX) kept with the run | a lock file or manifest | trivy | Apache-2.0 | advise | no | no |
+| `sbom` | a bill of materials (CycloneDX) kept with the Sortie | a lock file or manifest | trivy | Apache-2.0 | advise | no | no |
 | `dockerfile` | unsafe or fragile Dockerfile instructions | `Dockerfile`, `Containerfile`, `*.Dockerfile` | hadolint | GPL-3.0-only | advise | yes | no |
 | `misconfig` | misconfiguration in Terraform, Helm, manifests, Dockerfiles | `*.tf`, `Chart.yaml`, `k8s/`, `manifests/`, `charts/`, `helm/`, `terraform/`, `ansible/` | trivy | Apache-2.0 | advise | yes | the rule bundle (built-in rules when unreachable) |
 | `k8s-practice` | missing limits, probes, security context | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `manifests/`, `charts/`, `helm/` | kube-linter | Apache-2.0 | advise | yes | no |
@@ -33,12 +33,12 @@ The tools run as separate programs in their own container image, unmodified. The
 
 ## How the Inspection is added
 
-When a run is made from a commit (push, pull request, run by hand, schedule or webhook; not a draft or a rollback), the server lists the files of the commit, reads `.launchway/standards.yaml` from the default branch, resolves the settings of the levels, and adds to a copy of the pipeline:
+When a run is made from a commit (push, pull request, run by hand, schedule or webhook; not a draft or a Return to base (rollback)), the server lists the files of the commit, reads `.launchway/standards.yaml` from the default branch, resolves the settings of the levels, and adds to a copy of the pipeline:
 
 - one step `inspect-<check>` per check that applies and is not off, with no `needs`, so all run at once; `on_failure: continue`, a time budget (the step's timeout), a step cache where it helps, `reports.findings` or `reports.sbom`, and `added: standing-orders` with the reason it applies;
 - one step `inspection` of kind `gate`, which needs all of them and is settled by the server from their findings. It carries the effective policy as it was when the run was made, so a verdict can be explained later whatever the settings are by then.
 
-The run asks for schema 45, so an older server leaves it alone. The pipeline file is not changed; `launchway validate` does not show these steps; the run page and `GET /api/v1/runs/{id}` do.
+The Sortie asks for schema 45, so an older server leaves it alone. The pipeline file is not changed; `launchway validate` does not show these steps; the Sortie page and `GET /api/v1/runs/{id}` do.
 
 **For the Flight plans.** The Flight plans of the starter library (`go-service`, `go-library`, `node-app`, `python-service`, the Java ones, `helm-chart`, `container-image`, `static-site`, `library-only` and `node-library`) name their secret scan `inspect-secrets`, and the two Go ones their reachable-vulnerability check `inspect-vuln-reach-go`. The server keeps those steps and does not add the check a second time. They are the server's own step (the same script, the same pinned image and the same report path, which a test holds equal), and they continue on failure: what blocks is the verdict step `inspection`, from what they found. A pipeline that skips the check with the parameter (`secret_scan: false`, `vuln_scan: false`) has no such step, so the server adds its own. The Flight plans' other stages (audit, analysis, licenses) are not the same work as a check and still run beside the Inspection.
 
@@ -57,13 +57,13 @@ Every tool's report is read by one reader (SARIF 2.1.0, plus the adapters below)
 | `fix` | what to do: the tool's own suggestion, else a sentence |
 | `fingerprint` | the finding's identity across runs |
 | first seen, status | recorded for the default branch: open, fixed, accepted risk, false positive (with reason, who, end date) |
-| standing | in a run: new (introduced by this change), existing (on the default branch), accepted, false positive |
+| standing | in a Sortie: new (introduced by this change), existing (on the default branch), accepted, false positive |
 
 **The fingerprint** is a hash of the tool, rule and file, plus, for a dependency, the package; otherwise the message with its numbers removed. It does not include the line, so a finding keeps its identity when the code around it moves. Two identical findings in one file are told apart by their order, so inserting a second identical finding before an existing one can swap their identities.
 
 ## The gate
 
-For a run that is not on the default branch, a finding **gates** when its check is set to `block`, its severity is at or above `gate.fail_on`, it is not accepted (a decision or an exemption), it is not on the default branch's open list, and, for a vulnerability, a fixed version exists (`gate.require_fix`) or the code is reachable. An unreachable vulnerability (govulncheck: the module is listed, the function is not called) never gates. With no baseline yet, nothing gates. On the default branch nothing gates unless `gate.default_branch` is `block`. A check that did not run makes the verdict fail only if `gate.incomplete` is `fail`.
+For a Sortie that is not on the default branch, a finding **gates** when its check is set to `block`, its severity is at or above `gate.fail_on`, it is not accepted (a decision or an exemption), it is not on the default branch's open list, and, for a vulnerability, a fixed version exists (`gate.require_fix`) or the code is reachable. An unreachable vulnerability (govulncheck: the module is listed, the function is not called) never gates. With no baseline yet, nothing gates. On the default branch nothing gates unless `gate.default_branch` is `block`. A check that did not run makes the verdict fail only if `gate.incomplete` is `fail`.
 
 ## Settings
 
@@ -105,4 +105,4 @@ Also read: shellcheck's `json1`, and the license report the `license` check writ
 
 ## Tools used and what leaves the machine
 
-The checks that need the network read public data only: advisories (OSV, the Go vulnerability database), license facts (deps.dev), Go modules and Trivy's rule bundle. No source code or finding leaves the runner. Hosted installations run the checks on the customer's own runners.
+The checks that need the network read public data only: advisories (OSV, the Go vulnerability database), license facts (deps.dev), Go modules and Trivy's rule bundle. No source code or finding leaves the Station (runner). Hosted installations run the checks on the customer's own Stations.

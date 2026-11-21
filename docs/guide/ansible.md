@@ -1,6 +1,6 @@
 # Ansible
 
-Configure machines with Ansible from a Flight plan. Launchway runs `ansible-playbook` inside a pinned execution image, in a step, and reads the result into a run report: hosts by plays, what changed, the failed task first, and the hosts to run again. Nothing but the database and Git is needed on the Launchway side; the tool itself is yours.
+Configure machines with Ansible from a Flight plan. Launchway runs `ansible-playbook` inside a pinned execution image, in a step, and reads the result into a Sortie (run) report: hosts by plays, what changed, the failed task first, and the hosts to run again. Nothing but the database and Git is needed on the Launchway side; the tool itself is yours.
 
 ```yaml
 pipeline: web-servers
@@ -26,11 +26,11 @@ The Flight plan lints the playbook (advice), runs it in **check mode** (changes 
 
 ## The execution image
 
-Launchway does not bundle Ansible. Build the default image from `packaging/ansible-ee/Containerfile` (ansible-core, ansible-lint and the SSH client, all version-pinned), push it to your registry, and name it in the `image` parameter; pin it by digest in production. Bring your own image if your playbooks need more, as long as it has `ansible-playbook`, `ansible-galaxy` and `python3`.
+Launchway does not bundle Ansible. Build the default image from `packaging/ansible-ee/Containerfile` (ansible-core, ansible-lint and the SSH client, all version-pinned), push it to your Depot (registry), and name it in the `image` parameter; pin it by digest in production. Bring your own image if your playbooks need more, as long as it has `ansible-playbook`, `ansible-galaxy` and `python3`.
 
 ## What the Maneuver takes
 
-`launchway/ansible-run` is the Maneuver under the Flight plan; use it directly for one run. Its parameters:
+`launchway/ansible-run` is the Maneuver under the Flight plan; use it directly for one Sortie. Its parameters:
 
 | Parameter | Meaning |
 |---|---|
@@ -40,19 +40,19 @@ Launchway does not bundle Ansible. Build the default image from `packaging/ansib
 | `extra_vars` | A JSON object: typed inputs and variables by level. Written to a file in memory, never put on the command line |
 | `secret_vars` | `name=ENVIRONMENT_VARIABLE` pairs for values the step was given by secret reference |
 | `auth`, `ssh_key_*`, `vault_*` | `none`, `key` (an SSH private key by reference) or `key+vault` (and the Ansible vault password by reference) |
-| `known_hosts` | The hosts' public keys. **Pinned**: with none, the run refuses to connect; a changed key fails the run |
+| `known_hosts` | The hosts' public keys. **Pinned**: with none, the Sortie refuses to connect; a changed key fails the Sortie |
 | `requirements` | Collections and roles to install, kept in a cache keyed by the hash of the file and the image |
 | `environment` | The Airfield this configures, for the Configuration page and drift |
 
 ## Secrets
 
-The SSH key and the vault password are **references** (`vault:ansible/deploy#private_key`): the runner looks them up, writes them to memory-backed storage for the run, removes them, and masks them in every log. The run report is read with `no_log` respected, and credential-like text (keys, `password=`, tokens, vault blobs) is removed again by the server before anything is stored. The host key is pinned; a certificate authority that gives each run a five-minute SSH certificate is designed and not built yet.
+The SSH key and the vault password are **references** (`vault:ansible/deploy#private_key`): the Station (runner) looks them up, writes them to memory-backed storage for the Sortie, removes them, and masks them in every log. The Sortie report is read with `no_log` respected, and credential-like text (keys, `password=`, tokens, vault blobs) is removed again by the server before anything is stored. The host key is pinned; a certificate authority that gives each run a five-minute SSH certificate is designed and not built yet.
 
-## The run report
+## The Sortie report {#the-run-report}
 
-Open a run's Configuration report from the project's **Configuration** page, or with `launchway configuration report RUN STEP`. It shows:
+Open a Sortie's Configuration report from the project's **Configuration** page, or with `launchway configuration report RUN STEP`. It shows:
 
-- the recap line, also on the run: `12 hosts: 9 changed, 3 ok, 0 failed` (in check mode, `would change`);
+- the recap line, also on the Sortie: `12 hosts: 9 changed, 3 ok, 0 failed` (in check mode, `would change`);
 - the failed task with its message at the top, or the host that could not be reached;
 - hosts by plays, filterable by host and outcome;
 - what changed, with the diff when diff mode is on;

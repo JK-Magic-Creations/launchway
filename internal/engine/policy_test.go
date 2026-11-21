@@ -267,7 +267,7 @@ func TestDeployGate(t *testing.T) {
 // its deploy gate: a waiver for the run is refused, and a waiver for the
 // project they granted is not applied to their run. Someone else's is.
 func TestSelfWaiverOnAProtectedEnvironment(t *testing.T) {
-	envs := []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true}}
+	envs := []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true}}
 	clk := &clock{t: time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)}
 	no := false
 	e, err := Open(Options{Database: testdb.New(t), LeaseTTL: ttl, Now: clk.Now, Environments: envs, AllowSelfApproval: &no,

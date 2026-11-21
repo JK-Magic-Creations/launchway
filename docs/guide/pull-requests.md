@@ -137,11 +137,11 @@ A **protected branch** can carry merge rules. They are set per branch or pattern
 | Latest push approved by someone else | The newest push needs an approval of its own commit from someone other than who pushed it |
 | Dismiss stale approvals | New commits dismiss earlier approvals on pull requests into this branch (also set repository-wide) |
 | Checks by path | A check that is required only when a changed file matches (`docs/,*.md=docs`). A pipeline that its own path filter kept from running never blocks |
-| Merge queue | Merges into the branch go through the queue (below) |
+| Merge queue | Merges into the branch go through the merge queue (below) |
 | Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the Logbook |
 
 Every rule is checked by the server when a pull request is merged or queued, whichever way it is asked for:
-the web page, the API, the CLI, MCP, auto-merge and the queue all get the same answer.
+the web page, the API, the CLI, MCP, auto-merge and the merge queue all get the same answer.
 
 Rules and the repository's other settings (which merge methods are allowed, deleting the source branch after a
 merge, dismissing approvals when new commits arrive) are set by a repository administrator in the repository's
@@ -163,26 +163,26 @@ sentence instead of a button that would not work:
 
 ## The merge queue
 
-A branch whose rule says **merge queue** takes pull requests only through the queue, so what lands has been tested on
+A branch whose rule says **merge queue** takes pull requests only through the merge queue, so what lands has been tested on
 the branch as it will be, not as it was when the pull request was last green.
 
 1. A ready pull request is added with **Add to the merge queue** (`launchway pr queue N`). It must meet every rule
    except the checks that have not finished; a required check that already failed refuses it, with the sentence.
-2. The queue takes one entry at a time, in the order they arrived (an administrator can give one priority). For the
+2. The merge queue takes one entry at a time, in the order they arrived (an administrator can give one priority). For the
    entry at the front it brings the branch up to date with the target (a merge commit, which is a push, so the
    branch's own checks run on exactly what will land), waits for the required checks of that head, and merges it
-   with the method it asked for. The page shows its place and links the run testing it.
+   with the method it asked for. The page shows its place and links the Sortie (run) testing it.
 3. An entry that fails a required check, conflicts with the branch after the ones ahead of it merged, loses a
    required approval, or gets new commits (a force-push included) while it waits is **taken out with the reason**,
    the person who queued it is told (Needs you, and the channels below), and the next entry goes on.
 4. Its author or an operator can take it out at any time (`launchway pr queue N --cancel`).
 
-A queue never updates a branch that is itself protected: the entry is taken out and says so. A direct merge into a
-branch with a queue is refused; an administrator can still merge past it, saying why, as with any rule. Auto-merge
+A merge queue never updates a branch that is itself protected: the entry is taken out and says so. A direct merge into a
+branch with a merge queue is refused; an administrator can still merge past it, saying why, as with any rule. Auto-merge
 queues the pull request instead of merging it.
 
 Not built yet: testing several entries at once, each on top of the ones ahead, and splitting the batch to find
-the failing one. Today the queue is serial.
+the failing one. Today the merge queue is serial.
 
 ## Merging
 
@@ -212,7 +212,7 @@ Review requested, approved, changes requested, mentioned and taken out of the me
 `pull.queue_failed`): name them in a notification rule to send them to a chat or webhook channel. A channel is
 shared by the installation, so each message names the people it is about. In the product, the pull requests that wait on
 you are in **Needs you** on Home, and `launchway pr inbox` lists them: a review asked of you or your groups,
-changes asked on your own pull request, your own taken out of a queue.
+changes asked on your own pull request, your own taken out of a merge queue.
 
 ## Events
 

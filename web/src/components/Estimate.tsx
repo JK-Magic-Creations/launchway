@@ -3,6 +3,7 @@ import "../estimateApi";
 import { runTiming, stepTiming } from "../estimate";
 import { Link } from "./ui";
 import "../estimate.css";
+import { terms } from "../terms";
 
 /** The line under a run's sentence: the time left, why there is no estimate, or how long it took against
  * what is usual. The words change at most once a minute; they are not announced as they change. */
@@ -25,7 +26,7 @@ export function StepTimingLine({ run, step, now }: { run: RunDetail; step: StepV
   const last = step.estimate?.last_run;
   return (
     <>
-      <div className="est-step" data-kind={t.kind} title={t.usual ? `Usually ${t.usual}, from earlier runs of this step` : undefined}>
+      <div className="est-step" data-kind={t.kind} title={t.usual ? terms().say(`Usually ${t.usual}, from earlier {runs} of this step`) : undefined}>
         {t.fraction !== undefined && (
           <span className={"est-bar" + (t.kind === "slow" ? " slow" : "")} aria-hidden="true"><span style={{ width: `${Math.round(t.fraction * 100)}%` }} /></span>
         )}

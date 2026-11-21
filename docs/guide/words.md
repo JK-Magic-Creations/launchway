@@ -33,7 +33,7 @@ Three rules keep this safe:
 | `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. |
 | `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. |
 | `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. |
-| `debrief` | **Debrief** | Run summary | The summary after a run: what passed, what failed and why, with the test report. |
+| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit). |
 | `schedule` | **Patrol** | Scheduled run | A run that starts by itself at set times, such as every night. |
 
 ### Delivery
@@ -55,7 +55,7 @@ Three rules keep this safe:
 | `go` | **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. |
 | `no_go` | **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. |
 | `hold` | **Hold** | Freeze | A time when changes may not go out. |
-| `flight_plan` | **Flight plan** | Starter pipeline | A complete, ready-made pipeline for a kind of project, with a few things to fill in. |
+| `flight_plan` | **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of project, with a few things to fill in. |
 | `maneuver` | **Maneuver** | Step template | A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment. |
 | `hangar` | **Hangar** | Template library | The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it. |
 | `payload` | **Payload** | Contents | What a change delivers. |
@@ -71,8 +71,8 @@ Three rules keep this safe:
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. |
 | `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. |
-| `standards` | **Standing orders / Standing orders** | Standards / Standards | The rules every project must meet: policies, required checks and approvals. |
-| `scan` | **Inspection** | Security scan | A check of your code and images for known security problems. |
+| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks. |
+| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces. |
 | `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. |
 | `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. |
 | `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. |

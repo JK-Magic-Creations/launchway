@@ -44,7 +44,7 @@ installed system-wide. The versions are in `scripts/security/lib.sh` and the Mak
 
 ## The same checks for your repositories
 
-Launchway offers repositories it hosts or builds the same kind of checks, on by default: see [Standing orders](../guide/standing-orders.md) and [its reference](../reference/standing-orders.md). They use the same pinned-image approach (every tool image is pinned by digest in `internal/standards/tools.yaml`), the same free tools where one exists (gitleaks, osv-scanner, govulncheck, gosec, ruff, Trivy, hadolint, kube-linter, shellcheck), and the same rule that nothing is bundled into the server: each tool runs as a step in its own container on a runner.
+Launchway offers repositories it hosts or builds the same kind of checks, on by default: see [Standing orders](../guide/standing-orders.md) and [its reference](../reference/standing-orders.md). They use the same pinned-image approach (every tool image is pinned by digest in `internal/standards/tools.yaml`), the same free tools where one exists (gitleaks, osv-scanner, govulncheck, gosec, ruff, Trivy, hadolint, kube-linter, shellcheck), and the same rule that nothing is bundled into the server: each tool runs as a step in its own container on a Station (runner).
 
 ### Choices and why
 

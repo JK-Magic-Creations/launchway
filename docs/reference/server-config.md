@@ -384,10 +384,10 @@ Limits on what the server keeps of the Debriefs (test reports) steps declare. `0
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; runners are told and send no more. At most 1024 |
-| `tests.max_cases_per_run` | whole number | `50000` | Individual results one run keeps; beyond it, only the totals |
-| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its runs, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
-| `tests.max_age_days` | whole number | `180` | How long individual test results and a test's statistics (its typical duration, first and last appearance) are kept. Older results are removed whatever the count; each run's totals stay. At most 3650 |
+| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; Stations (runners) are told and send no more. At most 1024 |
+| `tests.max_cases_per_run` | whole number | `50000` | Individual results one Sortie (run) keeps; beyond it, only the totals |
+| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+| `tests.max_age_days` | whole number | `180` | How long individual test results and a test's statistics (its typical duration, first and last appearance) are kept. Older results are removed whatever the count; each Sortie's totals stay. At most 3650 |
 
 ## Reports
 
@@ -488,7 +488,7 @@ per installation, project or repository (`launchway registry policy set`).
 |---|---|---|---|
 | `registry.enabled` | boolean | `true` | Turn the Depot off with `false`. Nothing is deleted |
 | `registry.public_url` | URL | `forge.public_url`, then the address a request came in on | The address clients push and pull at, without a path (`https://registry.example.com`); also the address pipelines' image steps use when they name no Depot |
-| `registry.fallback` | text | none | The registry (a name your Stations' configuration lists, such as `harbor`) that the starter Flight plans push to when the Depot cannot serve here, which is when sign-in is off. Without it they do not push by default in that case, and the Sortie says why. A registry named by the variable `registry` is used first |
+| `registry.fallback` | text | none | The Depot (a name your Stations' configuration lists, such as `harbor`) that the starter Flight plans push to when the Depot cannot serve here, which is when sign-in is off. Without it they do not push by default in that case, and the Sortie says why. A Depot named by the variable `registry` is used first |
 | `registry.allow_insecure_http` | boolean | `false` | Accept a password or token over plain HTTP from any address; otherwise only a loopback listener does |
 | `registry.max_blob_mib` | whole number | `10240` | The largest layer or blob accepted, in MiB |
 | `registry.max_manifest_kib` | whole number | `4096` | The largest manifest accepted, in KiB |

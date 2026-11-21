@@ -97,7 +97,7 @@ func signInFinding(cfg *config.Config) []string {
 		return nil
 	}
 	return []string{
-		"Sign-in: WARNING no sign-in. auth.mode is none on " + c.Listen + ", an address others can reach: anyone who can reach it can start pipelines (which run code on the runners) and approve deployments.",
+		"Sign-in: WARNING no sign-in. auth.mode is none on " + c.Listen + ", an address others can reach: anyone who can reach it can start pipelines (which run code on the Stations) and approve deployments.",
 		"  Turn it on: open the page and choose \"Set up sign-in now\", or set auth.mode to local (built-in accounts, with a one-time setup code) or oidc. An upgrade never changes this by itself.",
 	}
 }

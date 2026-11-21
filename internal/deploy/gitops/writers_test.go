@@ -20,7 +20,7 @@ func TestEightWritersOneFileNoneLost(t *testing.T) {
 	var doc strings.Builder
 	doc.WriteString("# the MCP servers\nitems:\n")
 	for i := 0; i < 8; i++ {
-		fmt.Fprintf(&doc, "  - name: svc%d   # service %d\n    image: harbor.example.com/homelab/svc%d:old\n", i, i, i)
+		fmt.Fprintf(&doc, "  - name: svc%d   # service %d\n    image: harbor.example.com/team/svc%d:old\n", i, i, i)
 	}
 	s.commit(map[string]string{"base.yaml": doc.String()}, "Seed the manifest")
 
@@ -37,7 +37,7 @@ func TestEightWritersOneFileNoneLost(t *testing.T) {
 				Deployment: fmt.Sprintf("dep_%d", i),
 				Message:    fmt.Sprintf("deploy(svc%d)", i),
 				Files: []FileEdit{{Path: "base.yaml", Edit: func(_ string, data []byte) ([]byte, error) {
-					out, _, err := edit.ImageTagDigest(data, fmt.Sprintf("homelab/svc%d", i), fmt.Sprintf("2026112%d-abcdef12", i), digest(i))
+					out, _, err := edit.ImageTagDigest(data, fmt.Sprintf("team/svc%d", i), fmt.Sprintf("2026112%d-abcdef12", i), digest(i))
 					return out, err
 				}}},
 			})
@@ -51,7 +51,7 @@ func TestEightWritersOneFileNoneLost(t *testing.T) {
 	}
 	got := s.file("base.yaml")
 	for i := 0; i < 8; i++ {
-		want := fmt.Sprintf("image: harbor.example.com/homelab/svc%d:2026112%d-abcdef12@%s", i, i, digest(i))
+		want := fmt.Sprintf("image: harbor.example.com/team/svc%d:2026112%d-abcdef12@%s", i, i, digest(i))
 		if !strings.Contains(got, want) {
 			t.Errorf("service %d is missing from the file:\n%s", i, got)
 		}

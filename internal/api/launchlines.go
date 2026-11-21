@@ -361,7 +361,7 @@ func waitReason(st *engine.StepView, deps map[string]engine.DeploymentView, d *e
 	case "lock":
 		return "Waiting for another deployment to leave " + st.Environment
 	case "observe":
-		return "Waiting for a deploy runner to report on " + st.Environment
+		return "Waiting for a deploy Station to report on " + st.Environment
 	case "verify":
 		return "Waiting for a person to confirm the result"
 	}
@@ -373,7 +373,7 @@ func runningReason(st *engine.StepView, deps map[string]engine.DeploymentView, d
 		return dep.Detail
 	}
 	if st.Status == engine.StepLeasedS {
-		return "A runner has taken " + st.ID + " and is starting it"
+		return "A Station has taken " + st.ID + " and is starting it"
 	}
 	return st.ID + " is running"
 }
@@ -392,7 +392,7 @@ func (b *stationBuild) firstWith(status engine.StepStatus) *engine.StepView {
 func holdingReason(st *engine.StepView, d *engine.RunDetail) string {
 	switch {
 	case st.Attempt > 1 && st.FailureCause == "infrastructure":
-		return "Holding: retrying on another runner, attempt " + strconv.Itoa(st.Attempt) + ", after the last one stopped responding"
+		return "Holding: retrying on another Station, attempt " + strconv.Itoa(st.Attempt) + ", after the last one stopped responding"
 	case st.Attempt > 1 && st.FailureCause != "":
 		return "Holding: retrying " + st.ID + ", attempt " + strconv.Itoa(st.Attempt)
 	case st.WaitingFor != "":
@@ -402,7 +402,7 @@ func holdingReason(st *engine.StepView, d *engine.RunDetail) string {
 	case d.RunnerHint != "":
 		return "Holding: " + d.RunnerHint
 	}
-	return "Holding: waiting for a runner to pick up " + st.ID
+	return "Holding: waiting for a Station to pick up " + st.ID
 }
 
 func verifiedFrom(ss []Station, d *engine.RunDetail) Station {

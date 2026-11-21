@@ -150,7 +150,7 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 	}
 	su.rootHolder = rk.primary
 	if !svc.Encrypted() {
-		log.Warn("NOT ENCRYPTED AT REST: no root key is configured, so the signing keys and the shared runner token are stored in the clear in the database, and a copy of the database reveals them. Git over SSH and webhook secrets stay off until a root key exists. " + keyring.HowToCreateARootKey)
+		log.Warn("NOT ENCRYPTED AT REST: no root key is configured, so the signing keys and the shared Station token are stored in the clear in the database, and a copy of the database reveals them. Git over SSH and webhook secrets stay off until a root key exists. " + keyring.HowToCreateARootKey)
 	} else if rk.kind != "" {
 		log.Info("encryption at rest is on", "root_key_holder", rk.primary.Kind())
 	}

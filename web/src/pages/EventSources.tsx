@@ -4,6 +4,7 @@ import { ErrorBox } from "../components/ui";
 import { useLoad } from "../guided/useLoad";
 import { Button, Sheet } from "../kit/layout";
 import { sourcesApi, type EventSource, type SourceTest } from "../eventsApi";
+import { terms } from "../terms";
 
 /** Mapping lines are written one to a line as input=expression. */
 function parseMapping(text: string): Record<string, string> {
@@ -41,7 +42,7 @@ export default function EventSources() {
   };
 
   return (
-    <Sheet title="Event sources" actions={<span className="faint small">An address other systems call, signed, to start a run.</span>}>
+    <Sheet title="Event sources" actions={<span className="faint small">{terms().say("An address other systems call, signed, to start a {run}.")}</span>}>
       <label className="field"><span>Project</span>
         <select value={chosen} onChange={(e) => setProject(e.target.value)}>{(projects.data ?? []).map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
       </label>

@@ -259,7 +259,7 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 			return notFound()
 		}
 		if q.class != repoRead {
-			return deny(http.StatusForbidden, "a run's credential can read a repository, not push to it")
+			return deny(http.StatusForbidden, "a Sortie's credential can read a repository, not push to it")
 		}
 	case c.pipe != nil:
 		if !found || c.pipe.Repo != repo.ID {

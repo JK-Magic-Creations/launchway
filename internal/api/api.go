@@ -542,12 +542,12 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 	if id := callerIdentity(r); id != nil {
 		// An enrolled runner leaves as itself, whatever it says.
 		if id.Ephemeral {
-			if _, err := s.Engine.RevokeRunner(id.ID, "runner:"+id.ID, "an ephemeral runner left"); err != nil {
+			if _, err := s.Engine.RevokeRunner(id.ID, "runner:"+id.ID, "an ephemeral Station left"); err != nil {
 				s.fail(w, err)
 				return
 			}
 			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), RequestID: reqID(r), Action: "runner.revoke",
-				Target: id.ID, Outcome: "ok", Detail: "an ephemeral runner left"})
+				Target: id.ID, Outcome: "ok", Detail: "an ephemeral Station left"})
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -574,7 +574,7 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(in.IDs) > 5000 {
-		writeErr(w, http.StatusBadRequest, "at most 5000 runs per call")
+		writeErr(w, http.StatusBadRequest, "at most 5000 Sorties per call")
 		return
 	}
 	var infos []engine.RunInfo

@@ -129,7 +129,7 @@ func (a stateAuth) Authenticate(r *http.Request, project, workspace string, writ
 		// longer good for anything.
 		sum, err := a.s.Engine.Summary(c.RunID)
 		if err != nil || sum.Project != project || (sum.Status != engine.RunRunning && sum.Status != engine.RunQueued) {
-			a.s.stateDenied(r, project, workspace, "a state credential of a run that has ended")
+			a.s.stateDenied(r, project, workspace, "a state credential of a Sortie that has ended")
 			return tfstate.Actor{}, tfstate.ErrForbidden
 		}
 		return tfstate.Actor{Name: "run:" + c.RunID + "/" + c.Step, RunID: c.RunID}, nil
@@ -194,7 +194,7 @@ func (s *Server) releaseEndedLock(r *http.Request, st *tfstate.Store, project, w
 	}
 	if _, err := st.ForceUnlock(r.Context(), project, workspace); err == nil {
 		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "launchway", Source: s.clientAddr(r), RequestID: reqID(r),
-			Action: "state.lock_released", Project: project, Target: workspace, Outcome: "ok", Detail: "the run that held lock " + ws.Locked.ID + " has ended"})
+			Action: "state.lock_released", Project: project, Target: workspace, Outcome: "ok", Detail: "the Sortie that held lock " + ws.Locked.ID + " has ended"})
 	}
 }
 

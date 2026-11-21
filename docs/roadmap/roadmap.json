@@ -21,7 +21,7 @@
     {
       "theme": "Pipelines",
       "title": "Watching a run live, with time estimates",
-      "value": "Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier runs of the same pipeline, with the time left along the longest path.",
+      "value": "Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier Sorties of the same pipeline, with the time left along the longest path.",
       "link": "guide/watching-runs"
     },
     {
@@ -290,7 +290,7 @@
     {
       "theme": "Tests",
       "title": "The Debrief: test reports, flaky tests and exports",
-      "value": "A report of each run's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit.",
+      "value": "A report of each Sortie's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit.",
       "link": "guide/debrief"
     }
   ],
@@ -548,7 +548,7 @@
               "status": "in-progress",
               "title": "Code owners",
               "value": "Name who must review changes to which paths, using people or groups.",
-              "detail": "Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an environment, and the owners file checked when it is pushed.",
+              "detail": "Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an Airfield, and the owners file checked when it is pushed.",
               "needs": "Review with inline comments and suggestions.",
               "area": "git-hosting"
             },
@@ -564,7 +564,7 @@
               "status": "in-progress",
               "title": "Merge queue",
               "value": "Queue approved changes and test the real merged result with the real pipeline before it lands.",
-              "detail": "Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The queue shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.",
+              "detail": "Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The Holding pattern shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.",
               "needs": "Merge styles and auto-merge.",
               "area": "git-hosting"
             },
@@ -2183,7 +2183,7 @@
               "status": "in-progress",
               "title": "State and locking built in",
               "value": "Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules.",
-              "detail": "The HTTP backend with locks, 50 sealed versions with who, when and which run, rollback, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.",
+              "detail": "The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.",
               "needs": "Terraform and OpenTofu.",
               "area": "platform-services",
               "link": "guide/terraform-opentofu"
@@ -3001,7 +3001,7 @@
               "status": "planned",
               "title": "Machines and platforms in the graph",
               "value": "Machines with their discovered facts, clusters, serverless runtimes, databases and queues, so every placement question has real answers.",
-              "detail": "The adapters and their tests are in place; they are filled in as host inventory, the built-in registry and configuration as code arrive.",
+              "detail": "The adapters and their tests are in place; they are filled in as host inventory, the built-in Depot and configuration as code arrive.",
               "needs": "Host inventory.",
               "area": "software-graph"
             },

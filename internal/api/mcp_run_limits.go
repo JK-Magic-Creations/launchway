@@ -23,7 +23,7 @@ func addRunLimitTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_run_limits", Annotations: changes("Set run limits", true, true),
-		Description: "Administrators only. Replace the installation's limits on pipelines: max_run_timeout, such as 48h (1m to 720h); empty for none. A pipeline whose timeout is longer is refused when a run starts and by validate_pipeline. Audited."},
+		Description: "Administrators only. Replace the installation's limits on pipelines: max_run_timeout, such as 48h (1m to 720h); empty for none. A pipeline whose timeout is longer is refused when a Sortie starts and by validate_pipeline. Audited."},
 		mcpCallTimeout, setRunLimits)
 }
 

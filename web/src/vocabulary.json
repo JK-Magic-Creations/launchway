@@ -152,7 +152,7 @@
       "plain": {
         "one": "Run summary"
       },
-      "meaning": "The summary after a run: what passed, what failed and why, with the test report.",
+      "meaning": "The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit).",
       "renameable": true
     },
     {
@@ -378,7 +378,7 @@
         "one": "Flight plan"
       },
       "plain": {
-        "one": "Starter pipeline"
+        "one": "Pipeline template"
       },
       "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
       "renameable": true
@@ -518,7 +518,7 @@
         "one": "Standards",
         "many": "Standards"
       },
-      "meaning": "The rules every project must meet: policies, required checks and approvals.",
+      "meaning": "The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks.",
       "renameable": true
     },
     {
@@ -530,7 +530,7 @@
       "plain": {
         "one": "Security scan"
       },
-      "meaning": "A check of your code and images for known security problems.",
+      "meaning": "The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces.",
       "renameable": true
     },
     {

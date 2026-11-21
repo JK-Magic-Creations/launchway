@@ -74,10 +74,10 @@ func TestChartDeliverySettings(t *testing.T) {
 	files := renderChart(t, `postgresql: { enabled: true }
 delivery:
   environments:
-    - { name: prod, target: homelab, projects: [shop] }
+    - { name: prod, target: cluster-a, projects: [shop] }
   deployRunner:
     enabled: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop] } ]
     rolloutNamespaces: [shop]
     repos:
@@ -90,7 +90,7 @@ delivery:
 		t.Fatalf("server: %v\n%s", err, files["server"])
 	}
 	c, _ := Load(writeTemp(t, files["server"]))
-	if pools, err := c.Pools("shared"); err != nil || len(pools) != 1 || pools[0].Name != "deploy-homelab" {
+	if pools, err := c.Pools("shared"); err != nil || len(pools) != 1 || pools[0].Name != "deploy-main" {
 		t.Fatalf("pools: %+v %v", pools, err)
 	}
 	if err := loadFile(t, files["deploy-runner"], true); err != nil {
@@ -107,10 +107,10 @@ func TestChartDeployRunnerAccept(t *testing.T) {
 	const base = `postgresql: { enabled: true }
 delivery:
   environments:
-    - { name: dev, target: homelab, projects: [shop] }
+    - { name: dev, target: cluster-a, projects: [shop] }
   deployRunner:
     enabled: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop] } ]
     repos:
       gitops:
@@ -160,10 +160,10 @@ func TestChartRolloutControl(t *testing.T) {
 	base := `postgresql: { enabled: true }
 delivery:
   environments:
-    - { name: prod, target: homelab, projects: [shop] }
+    - { name: prod, target: cluster-a, projects: [shop] }
   deployRunner:
     enabled: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop] } ]
     rolloutNamespaces: [shop]
     repos:
@@ -222,7 +222,7 @@ runner:
         credentials: { username: robot$ci, password: { store: vault, key: ci/harbor, field: password } }
         pullCredentials: { usernameFrom: { store: vault, key: ci/harbor-ro, field: user }, password: { store: vault, key: ci/harbor-ro, field: password } }
         pullProjects: [shop]
-        push: [ { projects: [shop], repositories: ["homelab/**"] } ]
+        push: [ { projects: [shop], repositories: ["team/**"] } ]
     signingSecret: launchway-cosign
     scanner: { dbRepository: harbor.example.com/mirror/trivy-db }
     maxImageMiB: 4096
@@ -235,7 +235,7 @@ runner:
 	im := c.Images
 	if im == nil || len(im.Builders) != 1 || im.Builders[0].CAFile != "/var/run/launchway/buildkit/ca.crt" ||
 		im.Builders[0].ServerName != "buildkitd.launchway-build.svc" || im.Registries["harbor"].PullCredentials.UsernameFrom.Key != "ci/harbor-ro" ||
-		!im.Registries["harbor"].MayPush("shop", "homelab/shop") || im.Registries["harbor"].MayPull("other") || im.Signing.KeyFile != "/var/run/launchway/signing/cosign.key" ||
+		!im.Registries["harbor"].MayPush("shop", "team/shop") || im.Registries["harbor"].MayPull("other") || im.Signing.KeyFile != "/var/run/launchway/signing/cosign.key" ||
 		im.Scanner.DBRepository != "harbor.example.com/mirror/trivy-db" || im.MaxImageMiB != 4096 {
 		t.Fatalf("images: %+v", im)
 	}
@@ -491,7 +491,7 @@ ai:
     vault: { type: vault, address: https://vault.example:8200, role: launchway-server }
 delivery:
   environments:
-    - { name: prod, target: homelab, projects: [shop] }
+    - { name: prod, target: cluster-a, projects: [shop] }
   verification:
     sources:
       - name: prometheus
@@ -502,7 +502,7 @@ delivery:
         type: loki
         url: http://loki-gateway.monitoring.svc
         projects: [shop]
-        headers: { X-Scope-OrgID: homelab }
+        headers: { X-Scope-OrgID: cluster-a }
         limits: { maxLines: 2000 }
       - name: clickhouse
         type: clickhouse
@@ -522,7 +522,7 @@ delivery:
   deployRunner:
     enabled: true
     ai: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop] } ]
     rolloutNamespaces: [shop]
     secretStores:
@@ -542,10 +542,10 @@ func TestChartVerificationAndAI(t *testing.T) {
 	plain := `postgresql: { enabled: true }
 delivery:
   environments:
-    - { name: prod, target: homelab, projects: [shop] }
+    - { name: prod, target: cluster-a, projects: [shop] }
   deployRunner:
     enabled: true
-    target: homelab
+    target: cluster-a
     applications: [ { projects: [shop], names: [shop] } ]
     rolloutNamespaces: [shop]
     repos:
@@ -603,7 +603,7 @@ delivery:
 		ch.Statements["checkout_errors"].Params["service"] != "String" || !strings.Contains(ch.Statements["checkout_errors"].SQL, "{start:DateTime64(3)}") {
 		t.Fatalf("clickhouse: %+v", ch)
 	}
-	if l := d.HealthSources["loki"]; l.Headers["X-Scope-OrgID"] != "homelab" || l.Limits.MaxLines != 2000 {
+	if l := d.HealthSources["loki"]; l.Headers["X-Scope-OrgID"] != "cluster-a" || l.Limits.MaxLines != 2000 {
 		t.Fatalf("loki: %+v", l)
 	}
 	ch.CAFile = "" // the file is mounted in the pod, not here

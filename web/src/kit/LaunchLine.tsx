@@ -1,5 +1,6 @@
 import { Icon } from "./Icon";
 import { stateOfStation, type State } from "./Status";
+import { terms } from "../terms";
 
 /** One station: a place a change has to pass. state is the design's state; unknown states are drawn as not started. */
 export interface LineStation { key: string; label: string; state: State; detail?: string; parallel?: Parallel }
@@ -17,7 +18,7 @@ export function toStations(list: { key: string; label: string; state: string; de
 
 /** "3 at once: 2 passed, 1 running": what a station made of several steps is doing, in words. */
 export function parallelText(p: Parallel): string {
-  const parts = ([[p.done, "passed"], [p.running, "running"], [p.holding ?? 0, "holding for a runner"], [p.waiting, "waiting for a person"], [p.failed, "failed"], [p.skipped, "skipped"], [p.idle, "not started"]] as const)
+  const parts = ([[p.done, "passed"], [p.running, "running"], [p.holding ?? 0, terms().say("holding for a {runner}")], [p.waiting, "waiting for a person"], [p.failed, "failed"], [p.skipped, "skipped"], [p.idle, "not started"]] as const)
     .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`);
   const head = p.together >= p.total ? `${p.total} at once` : p.together > 1 ? `${p.total} steps, ${p.together} at once` : `${p.total} steps in a row`;
   return `${head}: ${parts.join(", ")}`;

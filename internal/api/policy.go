@@ -47,9 +47,9 @@ func (s *Server) waiveRefusal(id *identity, project, env string, deployRule bool
 		// that are not limited to environments.
 		if id.limit(s.cur().Policy.RoleOnEnvironment(id.User, id.Groups, project, env), project) < need {
 			if env == "" {
-				return fmt.Sprintf("a deploy rule waived for every environment needs the %s role on %s from a binding not limited to environments; name the environment", need, project)
+				return fmt.Sprintf("a deploy rule waived for every Airfield needs the %s role on %s from a binding not limited to Airfields; name the Airfield", need, project)
 			}
-			return fmt.Sprintf("you need the %s role on %s in environment %s to waive its deploy rules", need, project, env)
+			return fmt.Sprintf("you need the %s role on %s in Airfield %s to waive its deploy rules", need, project, env)
 		}
 	}
 	return ""

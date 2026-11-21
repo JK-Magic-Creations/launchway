@@ -42,7 +42,7 @@ func (s *Server) roleAction(id *identity, project, env string, a *engine.Action)
 	a.Reason = why
 	a.WouldHelp = "ask an administrator for the operator role on " + project
 	if env != "" {
-		a.WouldHelp += " in environment " + env
+		a.WouldHelp += " in Airfield " + env
 	}
 	a.Risk, a.Suggestion = "", ""
 }
@@ -91,7 +91,7 @@ func (s *Server) requestRollback(w http.ResponseWriter, r *http.Request) {
 	}
 	project := r.PathValue("name")
 	if in.Environment == "" {
-		writeErr(w, http.StatusBadRequest, "say which {environment} to {rollback:do}: {\"environment\": \"dev\", \"reason\": \"...\"}")
+		writeErr(w, http.StatusBadRequest, "say which {environment} to {rollback:do}: {\"Airfield\": \"dev\", \"reason\": \"...\"}")
 		return
 	}
 	setAudit(r, fmt.Sprintf("%s/%s", project, in.Environment), clip("requested: "+in.Reason, 300))

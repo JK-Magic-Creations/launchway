@@ -36,7 +36,7 @@ func addMirrorTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Repository admins only. Make a hosted repository a pull mirror of an https address (direction pull, the default: an exact copy of every branch, tag and note, kept current on a schedule, and the repository takes no pushes meanwhile) or add a push mirror (direction push: every accepted update is copied to the address). The credential is a reference to a secret on the server, credential_env (the name of an environment variable) or credential_file (an absolute path), never the secret itself; username goes with it. A pull mirror needs a repository with no branches or tags of its own. Internal addresses are refused unless the server allows them. Audited."},
 		mcpCallTimeout, setMirror)
 	addTool(srv, c, &mcp.Tool{Name: "sync_mirror", Annotations: changes("Run a mirror now", false, true),
-		Description: "Run a mirror now (needs the operator role on the repository) and return its status. A failed run returns the redacted error. Audited."},
+		Description: "Run a mirror now (needs the operator role on the repository) and return its status. A failed Sortie returns the redacted error. Audited."},
 		mirrorSyncTimeout, syncMirror)
 	addTool(srv, c, &mcp.Tool{Name: "stop_mirroring", Annotations: changes("Stop mirroring", true, false),
 		Description: "Repository admins only. Stop a repository being a pull mirror and make it the primary: it takes pushes from now on and the mirror is deleted. With final_sync, run the mirror once more first, and change nothing if that fails. This is the cut-over step of moving repositories to Launchway. Audited."},

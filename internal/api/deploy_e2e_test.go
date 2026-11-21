@@ -143,8 +143,8 @@ func setupDeploy(t *testing.T) *deployEnv {
 
 func setupDeployAt(t *testing.T, db string) *deployEnv {
 	t.Helper()
-	return setupDeployEnvs(t, db, []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}},
-		{Name: "staging", Target: "homelab", Projects: []string{"shop", "web-*"}}})
+	return setupDeployEnvs(t, db, []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}},
+		{Name: "staging", Target: "cluster-a", Projects: []string{"shop", "web-*"}}})
 }
 
 func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deployEnv {
@@ -155,7 +155,7 @@ func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deploy
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	s.Toggles = testToggles(eng)
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
@@ -169,7 +169,7 @@ func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deploy
 	t.Cleanup(func() { cancel(); <-done })
 	de.agent = &argocd.Agent{
 		Config: argocd.Config{
-			Targets: map[string]argocd.Target{"homelab": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
+			Targets: map[string]argocd.Target{"cluster-a": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
 				Applications: []argocd.AppRule{{Projects: []string{"shop"}, Names: []string{"shop"}}}}},
 			Repos: map[string]argocd.Repo{"gitops": {URL: de.bare, Paths: []argocd.PathRule{{Projects: []string{"shop"}, Files: []string{"apps/**"}}}}},
 		},
@@ -188,7 +188,7 @@ func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deploy
 
 func (de *deployEnv) deployRunner(t *testing.T, name string) context.CancelFunc {
 	d := &runner.DeployRunner{Client: runner.NewClient(de.srv.URL, poolToken), Agent: de.agent,
-		Info: engine.RunnerInfo{ID: name, Name: name, Targets: []string{"homelab"}}, Log: quiet(),
+		Info: engine.RunnerInfo{ID: name, Name: name, Targets: []string{"cluster-a"}}, Log: quiet(),
 		ObserveEvery: 200 * time.Millisecond, ReportEvery: time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -390,7 +390,7 @@ func TestRunnerPoolTokens(t *testing.T) {
 		resp.Body.Close()
 		return resp.StatusCode
 	}
-	runnerBody := `{"runner": {"id": "x", "name": "x", "targets": ["homelab"]}, "wait_seconds": 0}`
+	runnerBody := `{"runner": {"id": "x", "name": "x", "targets": ["cluster-a"]}, "wait_seconds": 0}`
 	for _, c := range []struct {
 		token, path string
 		want        int
@@ -413,7 +413,7 @@ func TestRunnerPoolTokens(t *testing.T) {
 	deadline := time.Now().Add(30 * time.Second)
 	for job == nil && time.Now().Before(deadline) {
 		j, err := runner.NewClient(de.srv.URL, poolToken).LeaseDeploy(context.Background(),
-			engine.RunnerInfo{ID: "manual", Name: "manual", Targets: []string{"homelab", "elsewhere"}}, time.Second)
+			engine.RunnerInfo{ID: "manual", Name: "manual", Targets: []string{"cluster-a", "elsewhere"}}, time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}

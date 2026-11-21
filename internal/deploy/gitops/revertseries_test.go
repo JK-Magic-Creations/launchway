@@ -38,7 +38,7 @@ func TestRevertSeriesRevertsNewestFirstAndPushesOnce(t *testing.T) {
 	// Roll back to the state dep_one left: revert dep_three, then dep_two.
 	res, err := r.RevertSeries(ctx, []RevertItem{
 		{Deployment: "dep_three", Commit: d3.Commit, Message: "Roll back worker 9"},
-		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back beacon 3.0"},
+		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back webapp 3.0"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ func TestRevertSeriesRevertsNewestFirstAndPushesOnce(t *testing.T) {
 	if res.Existing || len(res.Commits) != 2 || res.Commits[1] != s.ref() {
 		t.Fatalf("result = %+v, tip %s", res, s.ref())
 	}
-	if s.file("app.yaml") != "image: beacon:2.0" || s.file("other.yaml") != "x: 1" {
+	if s.file("app.yaml") != "image: webapp:2.0" || s.file("other.yaml") != "x: 1" {
 		t.Fatalf("files = %q, %q", s.file("app.yaml"), s.file("other.yaml"))
 	}
 	if !s.isAncestor(d1.Commit) {
@@ -68,7 +68,7 @@ func TestRevertSeriesRevertsNewestFirstAndPushesOnce(t *testing.T) {
 	r2, _ := s.repo(t)
 	again, err := r2.RevertSeries(ctx, []RevertItem{
 		{Deployment: "dep_three", Commit: d3.Commit, Message: "Roll back worker 9"},
-		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back beacon 3.0"},
+		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back webapp 3.0"},
 	})
 	if err != nil || !again.Existing || again.Commits[0] != res.Commits[0] || again.Commits[1] != res.Commits[1] || s.ref() != before {
 		t.Fatalf("again = %+v, %v", again, err)
@@ -88,7 +88,7 @@ func TestRevertSeriesCompletesAHalfDoneSeries(t *testing.T) {
 	}
 	res, err := r.RevertSeries(ctx, []RevertItem{
 		{Deployment: "dep_three", Commit: d3.Commit, Message: "Roll back worker 9"},
-		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back beacon 3.0"},
+		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back webapp 3.0"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func TestRevertSeriesCompletesAHalfDoneSeries(t *testing.T) {
 	if res.Existing || res.Commits[0] != first.Commit || res.Commits[1] != s.ref() {
 		t.Fatalf("result = %+v", res)
 	}
-	if s.file("app.yaml") != "image: beacon:1.0" {
+	if s.file("app.yaml") != "image: webapp:1.0" {
 		t.Fatalf("app.yaml = %q", s.file("app.yaml"))
 	}
 }
@@ -110,11 +110,11 @@ func TestRevertSeriesRefusesWholeWhenOneConflicts(t *testing.T) {
 	r, _ := s.repo(t)
 	d2, _ := r.Apply(ctx, deploy("dep_two", "3.0"))
 	d3, _ := r.Apply(ctx, applyOther("dep_three", "9"))
-	s.commit(map[string]string{"app.yaml": "image: beacon:hotfix\n"}, "Someone edited app.yaml by hand")
+	s.commit(map[string]string{"app.yaml": "image: webapp:hotfix\n"}, "Someone edited app.yaml by hand")
 	before := s.ref()
 	_, err := r.RevertSeries(ctx, []RevertItem{
 		{Deployment: "dep_three", Commit: d3.Commit, Message: "Roll back worker 9"},
-		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back beacon 3.0"},
+		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back webapp 3.0"},
 	})
 	var conflict *ConflictError
 	if !errors.As(err, &conflict) {
@@ -151,12 +151,12 @@ func TestRevertSeriesRetriesWhenTheBranchMoves(t *testing.T) {
 	}
 	res, err := r.RevertSeries(ctx, []RevertItem{
 		{Deployment: "dep_three", Commit: d3.Commit, Message: "Roll back worker 9"},
-		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back beacon 3.0"},
+		{Deployment: "dep_two", Commit: d2.Commit, Message: "Roll back webapp 3.0"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Commits[1] != s.ref() || s.file("app.yaml") != "image: beacon:1.0" || s.file("third.yaml") != "y: 1" {
+	if res.Commits[1] != s.ref() || s.file("app.yaml") != "image: webapp:1.0" || s.file("third.yaml") != "y: 1" {
 		t.Fatalf("result = %+v", res)
 	}
 }

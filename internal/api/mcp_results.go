@@ -67,7 +67,7 @@ func getTestResults(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 		out.Summary += fmt.Sprintf(", %d flaky", sum.Flaky)
 	}
 	if sum.NewFailures > 0 {
-		out.Summary += fmt.Sprintf(", %d new failures since the previous run", sum.NewFailures)
+		out.Summary += fmt.Sprintf(", %d new failures since the previous Sortie", sum.NewFailures)
 	}
 	out.Summary += "."
 	status := in.Status
@@ -174,7 +174,7 @@ func getFindings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in fin
 	}
 	out.Counts = f.Counts
 	k := f.Counts
-	out.Summary = fmt.Sprintf("%d findings: %d critical, %d high, %d medium, %d low, %d unknown; %d new, %d still there, %d fixed since the previous run.",
+	out.Summary = fmt.Sprintf("%d findings: %d critical, %d high, %d medium, %d low, %d unknown; %d new, %d still there, %d fixed since the previous Sortie.",
 		k.Total, k.Critical, k.High, k.Medium, k.Low, k.Unknown, f.Statuses.New, f.Statuses.Existing, f.Statuses.Fixed)
 	for _, v := range f.Findings {
 		fo := findingOut{ID: v.ID, Step: v.Step, Severity: v.Severity, Status: v.Status, Tool: v.Tool, Secret: v.Secret, Line: v.StartLine}

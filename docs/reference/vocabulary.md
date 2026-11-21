@@ -38,7 +38,7 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. | yes | build (for any run), job (for a whole run), execution |
 | `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. | yes | backlog |
 | `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. | yes | console output |
-| `debrief` | **Debrief** | Run summary | The summary after a run: what passed, what failed and why, with the test report. | yes | post-mortem (for every run) |
+| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit). | yes | post-mortem (for every run) |
 | `schedule` | **Patrol** | Scheduled run | A run that starts by itself at set times, such as every night. | yes | cron job (in text a person reads) |
 
 ### Delivery
@@ -60,7 +60,7 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | `go` | **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. | yes | none |
 | `no_go` | **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. | yes | nogo, no go, NoGo |
 | `hold` | **Hold** | Freeze | A time when changes may not go out. | yes | blackout, code freeze (use freeze in the plain set) |
-| `flight_plan` | **Flight plan** | Starter pipeline | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate, pipeline template (a step template is a different thing) |
+| `flight_plan` | **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate |
 | `maneuver` | **Maneuver** | Step template | A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment. | yes | macro, action (that is another product's word), module |
 | `hangar` | **Hangar** | Template library | The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it. | yes | marketplace, store |
 | `payload` | **Payload** | Contents | What a change delivers. | yes | delivery contents, manifest (that is a file) |
@@ -76,8 +76,8 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. | yes | none |
 | `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. | yes | repository (for the store) |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. | yes | build output |
-| `standards` | **Standing orders / Standing orders** | Standards / Standards | The rules every project must meet: policies, required checks and approvals. | yes | compliance rules |
-| `scan` | **Inspection** | Security scan | A check of your code and images for known security problems. | yes | none |
+| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks. | yes | compliance rules, default policy |
+| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces. | yes | scan job |
 | `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. | yes | none |
 | `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. | yes | none |
 | `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. | yes | none |

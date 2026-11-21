@@ -31,7 +31,7 @@ func open(t *testing.T) (*store.Store, *engine.Engine, string) {
 func TestConnectionsRoundTrip(t *testing.T) {
 	st, _, _ := open(t)
 	ctx := context.Background()
-	c, err := st.CreateConnection(ctx, forge.Connection{Name: "homelab", Kind: forge.KindGitea, BaseURL: "https://git.example.com",
+	c, err := st.CreateConnection(ctx, forge.Connection{Name: "cluster-a", Kind: forge.KindGitea, BaseURL: "https://git.example.com",
 		Credential: forge.SecretRef{Env: "GITEA_TOKEN"}, Events: forge.EventsPolling, Enabled: true}, "dana")
 	if err != nil || !strings.HasPrefix(c.ID, "con_") {
 		t.Fatalf("%+v %v", c, err)
@@ -40,10 +40,10 @@ func TestConnectionsRoundTrip(t *testing.T) {
 	if err != nil || got.Credential.Env != "GITEA_TOKEN" || got.Kind != forge.KindGitea || !got.Enabled || got.CreatedAt.IsZero() {
 		t.Fatalf("%+v %v", got, err)
 	}
-	if byName, err := st.ConnectionByName(ctx, "homelab"); err != nil || byName.ID != c.ID {
+	if byName, err := st.ConnectionByName(ctx, "cluster-a"); err != nil || byName.ID != c.ID {
 		t.Fatalf("by name: %v", err)
 	}
-	if _, err := st.CreateConnection(ctx, forge.Connection{Name: "homelab", Kind: forge.KindGitHub}, "dana"); !errors.Is(err, store.ErrExists) {
+	if _, err := st.CreateConnection(ctx, forge.Connection{Name: "cluster-a", Kind: forge.KindGitHub}, "dana"); !errors.Is(err, store.ErrExists) {
 		t.Errorf("duplicate name: %v", err)
 	}
 	// A literal credential is refused before it reaches the database.

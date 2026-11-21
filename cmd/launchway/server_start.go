@@ -276,7 +276,7 @@ func startBuiltinRunner(runnerCtx, ctx context.Context, cfg *config.Config, ln n
 	go func() {
 		defer close(done)
 		if err := r.Run(runnerCtx); err != nil && runnerCtx.Err() == nil {
-			log.Error("the built-in runner stopped", "err", err)
+			log.Error("the built-in Station stopped", "err", err)
 		}
 	}()
 	return done, nil

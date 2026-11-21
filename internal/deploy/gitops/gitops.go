@@ -45,7 +45,7 @@ type Repo struct {
 	Auth   *Auth  // optional
 	Author Author // used for both author and committer
 	// Log receives progress lines for the step's log, such as
-	// "Committed 3f2a9c1 to main: Deploy beacon 1.4.2 to prod". Never
+	// "Committed 3f2a9c1 to main: Deploy webapp 1.4.2 to prod". Never
 	// credentials. May be nil.
 	Log func(format string, args ...any)
 	// MaxPushTries bounds pushes rejected because the branch moved; default

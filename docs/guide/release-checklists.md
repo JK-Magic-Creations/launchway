@@ -10,7 +10,7 @@ Set it with `launchway release gate set PROJECT --airfield prod ...`, from the p
 |---|---|
 | Ready | The release is published, or a candidate going somewhere that is not protected. A draft or a withdrawn release is never promoted. |
 | Notes (`--notes`) | The release has notes. |
-| Checks (`--checks`) | Every pipeline that ran at the release's commit succeeded in its latest run, and at least one ran. |
+| Checks (`--checks`) | Every pipeline that ran at the release's commit succeeded in its latest Sortie (run), and at least one ran. |
 | No blocking findings (`--no-findings`) | The release's Sortie has no open critical or high findings. |
 | In the previous Airfield (`--previous staging`) | The release is what runs in that Airfield and is healthy there. This also puts the Airfields in order for the matrix. |
 | Soak (`--soak 120`) | It has been there at least that many minutes. |
@@ -42,7 +42,7 @@ Deployments, then Releases, then *Calendar* (or `launchway release calendar`) li
 |---|---|
 | See releases, the matrix, the calendar, the report | viewer of the project (drafts: operator) |
 | Make, edit, publish, withdraw a release; attach files | operator |
-| Promote, plan, return to base | operator on the project, and on the Airfield as the environment says |
+| Promote, plan, return to base | operator on the project, and on the Airfield as the Airfield (environment) says |
 | Give Clearance | the roles the checklist names, never the person who published |
 | Release settings, checklists, a freeze of the project, override a window, soak time or freeze, make a release public | admin of the project |
 | A freeze of every project, allow public downloads | admin of every project |

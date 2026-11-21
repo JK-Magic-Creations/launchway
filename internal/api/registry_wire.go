@@ -120,7 +120,7 @@ func (a registryAuthority) Authenticate(r *http.Request, user, secret string) (*
 			return nil, nil
 		}
 		if s.runEnded(c.Run) {
-			s.tokenDenied(r, true, "", "", "a run credential of a run that has ended")
+			s.tokenDenied(r, true, "", "", "a Sortie credential of a Sortie that has ended")
 			return nil, nil
 		}
 		return s.Registry.Svc.RunPrincipal(c), nil

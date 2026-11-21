@@ -18,7 +18,7 @@ import (
 )
 
 func addConfigCodeTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_config_reports", Annotations: readOnly("List a run's configuration reports"),
+	addTool(srv, c, &mcp.Tool{Name: "list_config_reports", Annotations: readOnly("List a Sortie's configuration reports"),
 		Description: "The configuration reports of a run: one per Ansible or plan step, each with its recap line (for Ansible '12 hosts: 9 changed, 3 ok, 0 failed'; for a plan '2 to add, 1 to change, 1 to destroy'), status and whether it was a check-mode run."},
 		mcpCallTimeout, listConfigReports)
 	addTool(srv, c, &mcp.Tool{Name: "get_config_report", Annotations: readOnly("Get a configuration report"),
@@ -46,10 +46,10 @@ func addConfigCodeTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Store an earlier version of a state as the newest version (with a higher serial). This changes the stored state only: no real resource changes, and the next plan shows the difference. Needs a reason. Refused while the state is locked. Audited."},
 		mcpCallTimeout, rollbackState)
 	addTool(srv, c, &mcp.Tool{Name: "lock_state", Annotations: changes("Lock a state by hand", false, false),
-		Description: "Take the lock of a state workspace so that no run changes it (a maintenance window). Audited."},
+		Description: "Take the lock of a state workspace so that no Sortie changes it (a maintenance window). Audited."},
 		mcpCallTimeout, lockState)
 	addTool(srv, c, &mcp.Tool{Name: "unlock_state", Annotations: changes("Force-release a state's lock", true, false),
-		Description: "Release a state workspace's lock whoever holds it. Refused while the run that holds it is still going (cancel the run first). Needs a reason; the holder is recorded. Audited."},
+		Description: "Release a state workspace's lock whoever holds it. Refused while the Sortie that holds it is still going (cancel the run first). Needs a reason; the holder is recorded. Audited."},
 		mcpCallTimeout, unlockState)
 }
 

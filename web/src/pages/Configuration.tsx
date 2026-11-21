@@ -4,6 +4,7 @@ import { ago } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { ProjectHead } from "./PipelineChrome";
 import "../config-code.css";
+import { terms } from "../terms";
 
 function ReportLine({ label, r }: { label: string; r?: ConfigReportRow }) {
   if (!r) return <div className="cc-row"><span className="label">{label}</span><span className="faint">none yet</span></div>;
@@ -11,7 +12,7 @@ function ReportLine({ label, r }: { label: string; r?: ConfigReportRow }) {
     <div className="cc-row">
       <span className="label">{label}</span>
       <Link href={`/runs/${encodeURIComponent(r.run_id)}/configuration/${encodeURIComponent(r.step)}?kind=${r.kind}`}>{r.recap}</Link>
-      <span className="faint small">run #{r.run_number ?? "?"}, {ago(r.created_at)}</span>
+      <span className="faint small">{terms().say("{run} #")}{r.run_number ?? "?"}, {ago(r.created_at)}</span>
     </div>
   );
 }
@@ -44,7 +45,7 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
               <ReportLine label="Drift check" r={e.drift} />
               <ReportLine label="Last plan" r={e.plan} />
               {e.last_good && (
-                <p className="faint small">Last known good: commit <Mono>{e.last_good.commit.slice(0, 8)}</Mono> (run #{e.last_good.run_number ?? "?"}). To go back, run the playbook of that commit again: configuration is rolled back by applying the previous definition, not by time travel.</p>
+                <p className="faint small">Last known good: commit <Mono>{e.last_good.commit.slice(0, 8)}</Mono> (run #{e.last_good.run_number ?? "?"}{terms().say("). To go back, run the playbook of that commit again: configuration is {rollback:did} by applying the previous definition, not by time travel.")}</p>
               )}
             </section>
           ))}
@@ -65,7 +66,7 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
               </tbody>
             </table>
           )}
-          <p className="faint small">Versions, locks and rollback: <Mono>launchway state versions {name} WORKSPACE</Mono>.</p>
+          <p className="faint small">{terms().say("Versions, locks and {rollback}:")} <Mono>launchway state versions {name} WORKSPACE</Mono>.</p>
         </section>
       )}
     </div>

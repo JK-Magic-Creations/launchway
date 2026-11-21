@@ -93,7 +93,7 @@ func aborted() deploy.Snapshot {
 	return s
 }
 
-var protectedEnv = []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true}}
+var protectedEnv = []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true}}
 
 // toPause runs a gated pipeline's deploy step until it stops at the pause.
 func toPause(t *testing.T, e *Engine, id string) {
@@ -719,7 +719,7 @@ func TestSettingsChangedMidRunDoNotUnprotectADeployment(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	live([]Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}}, &yes)
+	live([]Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}}, &yes)
 	if err := promote(); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("after unprotecting the environment and allowing self-approval: %v", err)
 	}

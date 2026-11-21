@@ -125,13 +125,13 @@ func TestVerifyEndToEndWithRealBackends(t *testing.T) {
 	db := testdb.New(t)
 	dir := t.TempDir()
 	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: 5 * time.Second, Logger: quiet(),
-		Environments:  []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}},
+		Environments:  []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}},
 		HealthSources: []engine.HealthSource{{Name: "prometheus", Type: "prometheus", Projects: []string{"shop"}}, {Name: "loki", Type: "loki", Projects: []string{"shop"}}, {Name: "clickhouse", Type: "clickhouse", Projects: []string{"shop"}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	de := &deployEnv{env: &env{eng: eng, srv: srv, dir: dir, db: db}}
@@ -146,7 +146,7 @@ func TestVerifyEndToEndWithRealBackends(t *testing.T) {
 	stores.Add("env", secrets.Env{}, nil, []string{"VERIFY_TEST_*"})
 	agent := &argocd.Agent{
 		Config: argocd.Config{
-			Targets: map[string]argocd.Target{"homelab": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
+			Targets: map[string]argocd.Target{"cluster-a": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
 				Applications: []argocd.AppRule{{Projects: []string{"shop"}, Names: []string{"shop"}}}}},
 			Repos: map[string]argocd.Repo{"gitops": {URL: de.bare, Paths: []argocd.PathRule{{Projects: []string{"shop"}, Files: []string{"apps/**"}}}}},
 		},
@@ -174,7 +174,7 @@ func TestVerifyEndToEndWithRealBackends(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := &runner.DeployRunner{Client: runner.NewClient(srv.URL, poolToken), Agent: agent,
-		Info: engine.RunnerInfo{ID: "deployer-1", Name: "deployer-1", Targets: []string{"homelab"}}, Log: quiet(),
+		Info: engine.RunnerInfo{ID: "deployer-1", Name: "deployer-1", Targets: []string{"cluster-a"}}, Log: quiet(),
 		ObserveEvery: 200 * time.Millisecond, ReportEvery: time.Second, Sources: srcs, Secrets: stores, Settle: 3 * time.Second}
 	dctx, dcancel := context.WithCancel(context.Background())
 	ddone := make(chan struct{})

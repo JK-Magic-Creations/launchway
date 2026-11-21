@@ -89,7 +89,7 @@ func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, "", fmt.Sprintf("%s: new run #%d %s", detail, run.Number, run.ID))
+	setAudit(r, "", fmt.Sprintf("%s: new Sortie #%d %s", detail, run.Number, run.ID))
 	writeJSON(w, http.StatusCreated, run)
 }
 

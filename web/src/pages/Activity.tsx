@@ -143,7 +143,7 @@ export function RunRow({ r, line, now }: { r: RunSummary; line?: LaunchLineView;
   const took = elapsed(r.started_at || r.created_at, r.finished_at, now);
   const queued = r.steps.find((s) => s.status === "queued");
   const sentence = line?.now && r.status !== "succeeded" ? line.now
-    : tone === "hold" && queued ? `Holding: nothing is running; ${queued.id} waits for a runner.` : runSentence(r, took);
+    : tone === "hold" && queued ? terms().say(`Holding: nothing is running; ${queued.id} waits for a {runner}.`) : runSentence(r, took);
   return (
     <a href={waits ? `/runs/${r.id}?step=${encodeURIComponent(r.waiting[0])}` : `/runs/${r.id}`} onClick={onLink} className={`brow ${tone === "bad" ? "bad" : tone === "wait" || tone === "hold" ? "wait" : ""}`}>
       <div className="ct">

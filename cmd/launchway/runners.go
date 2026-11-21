@@ -43,12 +43,12 @@ func cmdRunners(args []string) error {
 		case "rotate":
 			return cl.oneID(args[1:], "rotate", "/api/v1/runners/%s/rotate", cl.say("{Runner} %s will move to a new key when it next gets an access token."))
 		}
-		return usageErr("unknown command runners %s\n\n%s", args[0], runnersUsage)
+		return usageErr("unknown command Stations %s\n\n%s", args[0], runnersUsage)
 	})
 }
 
 func (cl *client) runnersList(args []string) error {
-	fs := flag.NewFlagSet("runners list", flag.ContinueOnError)
+	fs := flag.NewFlagSet("Stations list", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print as JSON")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
@@ -106,12 +106,12 @@ func nonEmptyStr(s, f string) string {
 }
 
 func (cl *client) joinToken(args []string) error {
-	fs := flag.NewFlagSet("runners join-token", flag.ContinueOnError)
-	pool := fs.String("pool", "default", "the pool the runners join")
-	uses := fs.Int("uses", 1, "how many runners may enrol with it")
+	fs := flag.NewFlagSet("Stations join-token", flag.ContinueOnError)
+	pool := fs.String("pool", "default", "the pool the Stations join")
+	uses := fs.Int("uses", 1, "how many Stations may enrol with it")
 	ttl := fs.Duration("ttl", time.Hour, "how long it may be used, at most 168h")
-	labels := fs.String("labels", "", "labels given to the runners, separated by commas")
-	eph := fs.Bool("ephemeral", false, "the runners are revoked when they leave, as pods that enrol at start should be")
+	labels := fs.String("labels", "", "labels given to the Stations, separated by commas")
+	eph := fs.Bool("ephemeral", false, "the Stations are revoked when they leave, as pods that enrol at start should be")
 	desc := fs.String("description", "", "what it is for")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -148,7 +148,7 @@ func (cl *client) oneID(args []string, name, path, done string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("runners %s takes one ID\n\n%s", name, runnersUsage)
+		return usageErr("Stations %s takes one ID\n\n%s", name, runnersUsage)
 	}
 	if err := cl.call("POST", fmt.Sprintf(path, pos[0]), map[string]any{}, nil); err != nil {
 		return err
@@ -158,14 +158,14 @@ func (cl *client) oneID(args []string, name, path, done string) error {
 }
 
 func (cl *client) revokeRunner(args []string) error {
-	fs := flag.NewFlagSet("runners revoke", flag.ContinueOnError)
+	fs := flag.NewFlagSet("Stations revoke", flag.ContinueOnError)
 	reason := fs.String("reason", "", "why, for the audit trail")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("runners revoke takes one runner ID\n\n%s", runnersUsage)
+		return usageErr("Stations revoke takes one Station ID\n\n%s", runnersUsage)
 	}
 	var out struct {
 		Released int `json:"released"`

@@ -23,13 +23,13 @@ import (
 
 func addConfigTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_config_overview", Annotations: readOnly("Get the configuration overview"),
-		Description: "The kinds of configuration objects this installation keeps in its database (projects, libraries, environments, runner pools, role bindings, policies, policy sources, health sources, AI models, secret stores, units, installation settings), what the levels are called here, and whether this server keeps configuration in the database."},
+		Description: "The kinds of configuration objects this installation keeps in its database (projects, libraries, Airfields, Station pools, role bindings, policies, policy sources, health sources, AI models, secret stores, units, installation settings), what the levels are called here, and whether this server keeps configuration in the database."},
 		mcpCallTimeout, getConfigOverview)
 	if !c.mayAdminister {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "list_config", Annotations: readOnly("List configuration objects"),
-		Description: "List the configuration objects of one kind, with their versions. kind is one of projects, libraries, environments, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation, organization. With deleted true, list the deleted ones, which can be restored."},
+		Description: "List the configuration objects of one kind, with their versions. kind is one of projects, libraries, Airfields, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation, organization. With deleted true, list the deleted ones, which can be restored."},
 		mcpCallTimeout, listConfig)
 	addTool(srv, c, &mcp.Tool{Name: "get_config", Annotations: readOnly("Get a configuration object"),
 		Description: "One configuration object: its spec (the settings, with the keys the configuration file uses), version, who last changed it and who manages it (api, terraform, import)."},

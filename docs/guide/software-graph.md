@@ -44,9 +44,9 @@ and when it held.
 | image | An image by name, without a tag; base images are images too |
 | built | A concrete built image: a digest, per platform |
 | pipeline | A repository's pipeline |
-| Airfield | An environment |
+| Airfield | An Airfield (environment) |
 | deployment | What runs in an Airfield for a project and service |
-| machine, platform | A virtual machine or server; a cluster, a serverless runtime, a database or a queue |
+| machine, platform | A virtual machine or server; a cluster, a serverless runtime, a database or a Holding pattern (queue) |
 | owner | A person or Squadron, from `CODEOWNERS` |
 | commit | A commit that something was built from |
 
@@ -75,15 +75,15 @@ opens a new one; a dependency that was removed is closed.
 
 | Source | Reads | Gives |
 |---|---|---|
-| manifests | `go.mod`, `package.json`, `pyproject.toml`, requirements files (with the same readers the dependency updates use) | packages, components, `depends-on` with constraint and resolved version, owners from `CODEOWNERS` |
+| manifests | `go.mod`, `package.json`, `pyproject.toml`, requirements files (with the same readers the Maintenance (dependency updates) use) | packages, components, `depends-on` with constraint and resolved version, owners from `CODEOWNERS` |
 | containers | Containerfiles and Dockerfiles, and the image steps of `.launchway/pipeline.yaml` | base images by stage, what each pipeline builds and for which platforms |
 | requirements | `.launchway/requirements.yaml`, the pipeline, Containerfiles, Kubernetes manifests, manifests | what each component needs, declared and inferred |
 | sorties | the results of image steps | built images by digest and platform, the commit, and the components of the image's list of components |
 | deployments | what is deployed now | deployments, and which digests each one runs |
-| inventory, registry, infrastructure, clusters | machines and platforms with their discovered facts; registry contents; infrastructure state; cluster workloads | machines, platforms, `hosts`, `configured-by`, `runs-on` |
+| inventory, Depot (registry), infrastructure, clusters | machines and platforms with their discovered facts; Depot contents; infrastructure state; cluster workloads | machines, platforms, `hosts`, `configured-by`, `runs-on` |
 
 The last row is **typed adapters**: each is a small interface with tests that feed it fixtures. The work that owns
-that data (host inventory, the registry, configuration as code) implements the interface when it arrives; nothing
+that data (host inventory, the Depot, configuration as code) implements the interface when it arrives; nothing
 here changes. Until then the graph simply has no machines, and the questions about placement say so.
 
 A push to a repository's default branch is read at once. New results and new Launches are seen within about thirty
@@ -186,7 +186,7 @@ launchway graph reach package:go:example.com/lib
 ```
 
 For a package, the versions in use that have known advisories, what uses each, and the deployments that run them.
-It needs the vulnerability data the dependency updates use; without it the answer says so.
+It needs the vulnerability data the Maintenance use; without it the answer says so.
 
 ## Who may see what
 
@@ -215,15 +215,15 @@ corrections), What it needs (with the edit action and the machine specification)
 It needs nothing beyond the server: it is on whenever the server runs, in the same database. Git hosting
 gives it repositories; without it the graph holds projects, built images and deployments only.
 
-`LAUNCHWAY_GRAPH_REGISTRIES` names the hosts behind the registry names pipelines use, so that an image a
+`LAUNCHWAY_GRAPH_REGISTRIES` names the hosts behind the Depot names pipelines use, so that an image a
 pipeline plans to push (`registry: harbor`) and the image that was pushed (`harbor.example.com/...`) are the same
 node: `LAUNCHWAY_GRAPH_REGISTRIES=harbor=harbor.example.com`. Several are separated by commas. Vulnerability
-questions use the same data as dependency updates (`LAUNCHWAY_UPDATES_OSV_DIR` or `LAUNCHWAY_UPDATES_OSV_URL`).
+questions use the same data as Maintenance (`LAUNCHWAY_UPDATES_OSV_DIR` or `LAUNCHWAY_UPDATES_OSV_URL`).
 
 ## What is not here yet
 
 - Starting the downstream builds by itself after a push. The list is available; the trigger is the next step.
-- Machines and platforms from discovery, the registry, configuration as code and cluster inventory: the interfaces
+- Machines and platforms from discovery, the Depot, configuration as code and cluster inventory: the interfaces
   are in place and tested with fixtures; those parts plug in when they arrive.
 - Code search and call graphs inside a repository.
 - Continuous scanning of what runs: advisories are matched on request (`reach`), not on a schedule.

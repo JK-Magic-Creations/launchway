@@ -25,7 +25,7 @@ func newServer(t *testing.T) *server {
 	t.Helper()
 	s := &server{t: t, path: filepath.Join(t.TempDir(), "gitops.git")}
 	run(t, "", "init", "--quiet", "--bare", "--initial-branch=main", s.path)
-	s.commit(map[string]string{"app.yaml": "image: beacon:1.0\n", "other.yaml": "x: 1\n"}, "Initial")
+	s.commit(map[string]string{"app.yaml": "image: webapp:1.0\n", "other.yaml": "x: 1\n"}, "Initial")
 	return s
 }
 
@@ -123,8 +123,8 @@ func set(content string) Edit {
 func deploy(dep, image string) ChangeSet {
 	return ChangeSet{
 		Deployment: dep,
-		Message:    "Deploy beacon " + image + " to prod\n\nRequested by the release run.",
-		Files:      []FileEdit{{Path: "app.yaml", Edit: set("image: beacon:" + image + "\n")}},
+		Message:    "Deploy webapp " + image + " to prod\n\nRequested by the release run.",
+		Files:      []FileEdit{{Path: "app.yaml", Edit: set("image: webapp:" + image + "\n")}},
 	}
 }
 
@@ -145,14 +145,14 @@ func TestApplyCommitsPushesAndIsFoundFromAFreshClone(t *testing.T) {
 	if s.ref() != res.Commit {
 		t.Fatalf("server is at %s, want %s", s.ref(), res.Commit)
 	}
-	if got := s.file("app.yaml"); got != "image: beacon:2.0" {
+	if got := s.file("app.yaml"); got != "image: webapp:2.0" {
 		t.Fatalf("app.yaml = %q", got)
 	}
-	want := "Deploy beacon 2.0 to prod\n\nRequested by the release run.\n\nLaunchway-Deployment: dep_abc"
+	want := "Deploy webapp 2.0 to prod\n\nRequested by the release run.\n\nLaunchway-Deployment: dep_abc"
 	if got := s.message(res.Commit); got != want {
 		t.Fatalf("message = %q, want %q", got, want)
 	}
-	if !strings.Contains(l.all(), "Committed "+res.Commit[:7]+" to main: Deploy beacon 2.0 to prod") {
+	if !strings.Contains(l.all(), "Committed "+res.Commit[:7]+" to main: Deploy webapp 2.0 to prod") {
 		t.Fatalf("log = %q", l.all())
 	}
 
@@ -196,7 +196,7 @@ func TestApplySamePathTwiceAndOnlyChangedFilesListed(t *testing.T) {
 	s := newServer(t)
 	r, _ := s.repo(t)
 	cs := ChangeSet{Deployment: "dep_two", Message: "Two edits", Files: []FileEdit{
-		{Path: "app.yaml", Edit: set("image: beacon:9.9\n")},
+		{Path: "app.yaml", Edit: set("image: webapp:9.9\n")},
 		{Path: "./app.yaml", Edit: func(_ string, data []byte) ([]byte, error) { return append(data, "replicas: 2\n"...), nil }},
 		{Path: "other.yaml", Edit: set("x: 1\n")}, // unchanged
 	}}
@@ -207,7 +207,7 @@ func TestApplySamePathTwiceAndOnlyChangedFilesListed(t *testing.T) {
 	if len(res.Files) != 1 || res.Files[0] != "app.yaml" {
 		t.Fatalf("files = %v", res.Files)
 	}
-	if got := s.file("app.yaml"); got != "image: beacon:9.9\nreplicas: 2" {
+	if got := s.file("app.yaml"); got != "image: webapp:9.9\nreplicas: 2" {
 		t.Fatalf("app.yaml = %q", got)
 	}
 }
@@ -231,7 +231,7 @@ func TestApplyRetriesWhenTheBranchMoves(t *testing.T) {
 	if !s.isAncestor(foreign) {
 		t.Fatal("the foreign commit was lost")
 	}
-	if s.file("other.yaml") != "x: 2" || s.file("app.yaml") != "image: beacon:2.0" {
+	if s.file("other.yaml") != "x: 2" || s.file("app.yaml") != "image: webapp:2.0" {
 		t.Fatal("files are not both changed")
 	}
 	if parent := run(t, s.path, "rev-parse", res.Commit+"^"); parent != foreign {
@@ -258,7 +258,7 @@ func TestApplyGivesUpWhenTheBranchKeepsMoving(t *testing.T) {
 	if n != 3 {
 		t.Fatalf("pushed %d times, want 3", n)
 	}
-	if s.file("app.yaml") != "image: beacon:1.0" {
+	if s.file("app.yaml") != "image: webapp:1.0" {
 		t.Fatal("the change reached the server")
 	}
 }
@@ -268,7 +268,7 @@ func TestApplyEditErrorLeavesTheServerUntouched(t *testing.T) {
 	r, _ := s.repo(t)
 	before := s.ref()
 	cs := ChangeSet{Deployment: "dep_bad", Message: "Bad", Files: []FileEdit{
-		{Path: "app.yaml", Edit: set("image: beacon:2.0\n")},
+		{Path: "app.yaml", Edit: set("image: webapp:2.0\n")},
 		{Path: "missing.yaml", Edit: set("y: 1\n")},
 	}}
 	_, err := r.Apply(context.Background(), cs)
@@ -296,7 +296,7 @@ func TestApplyEditErrorLeavesTheServerUntouched(t *testing.T) {
 func TestTrailerMatchesWholeLinesOnly(t *testing.T) {
 	ctx := context.Background()
 	s := newServer(t)
-	abc := s.commit(map[string]string{"app.yaml": "image: beacon:5.0\n"}, "Deploy\n\nLaunchway-Deployment: dep_abc")
+	abc := s.commit(map[string]string{"app.yaml": "image: webapp:5.0\n"}, "Deploy\n\nLaunchway-Deployment: dep_abc")
 	r, _ := s.repo(t)
 	if got, err := r.Find(ctx, "dep_ab"); err != nil || got != "" {
 		t.Fatalf("Find(dep_ab) = %q, %v", got, err)
@@ -328,7 +328,7 @@ func TestFindAndApplyIgnoreTheRevertCommit(t *testing.T) {
 	if got, err := r.Find(ctx, "dep_x"); err != nil || got != applied.Commit {
 		t.Fatalf("Find = %q, %v; want %s", got, err, applied.Commit)
 	}
-	rev, err := r.Revert(ctx, "dep_x", applied.Commit, "Roll back beacon 2.0")
+	rev, err := r.Revert(ctx, "dep_x", applied.Commit, "Roll back webapp 2.0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,29 +377,29 @@ func TestRevert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := r.Revert(ctx, "dep_r", applied.Commit, "Roll back beacon 2.0\n\nThe health gate failed.")
+	res, err := r.Revert(ctx, "dep_r", applied.Commit, "Roll back webapp 2.0\n\nThe health gate failed.")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Existing || s.ref() != res.Commit {
 		t.Fatalf("result = %+v", res)
 	}
-	if s.file("app.yaml") != "image: beacon:1.0" {
+	if s.file("app.yaml") != "image: webapp:1.0" {
 		t.Fatalf("app.yaml = %q", s.file("app.yaml"))
 	}
-	want := "Roll back beacon 2.0\n\nThe health gate failed.\n\nThis reverts commit " + applied.Commit +
+	want := "Roll back webapp 2.0\n\nThe health gate failed.\n\nThis reverts commit " + applied.Commit +
 		".\n\nLaunchway-Deployment: dep_r\nLaunchway-Revert: dep_r"
 	if got := s.message(res.Commit); got != want {
 		t.Fatalf("message = %q, want %q", got, want)
 	}
-	if !strings.Contains(l.all(), "Committed "+res.Commit[:7]+" to main: Roll back beacon 2.0") {
+	if !strings.Contains(l.all(), "Committed "+res.Commit[:7]+" to main: Roll back webapp 2.0") {
 		t.Fatalf("log = %q", l.all())
 	}
 
 	// Retried from another machine: found, nothing pushed.
 	before := s.ref()
 	r2, _ := s.repo(t)
-	again, err := r2.Revert(ctx, "dep_r", applied.Commit, "Roll back beacon 2.0")
+	again, err := r2.Revert(ctx, "dep_r", applied.Commit, "Roll back webapp 2.0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +424,7 @@ func TestRevertAfterAnUnrelatedChange(t *testing.T) {
 	if s.ref() != res.Commit || !s.isAncestor(foreign) {
 		t.Fatal("revert not on top of the foreign commit")
 	}
-	if s.file("app.yaml") != "image: beacon:1.0" || s.file("other.yaml") != "x: 3" {
+	if s.file("app.yaml") != "image: webapp:1.0" || s.file("other.yaml") != "x: 3" {
 		t.Fatal("files wrong after the revert")
 	}
 }
@@ -447,7 +447,7 @@ func TestRevertRetriesWhenTheBranchMoves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.ref() != res.Commit || !s.isAncestor(foreign) || s.file("app.yaml") != "image: beacon:1.0" {
+	if s.ref() != res.Commit || !s.isAncestor(foreign) || s.file("app.yaml") != "image: webapp:1.0" {
 		t.Fatal("revert did not land on the new tip")
 	}
 }
@@ -460,7 +460,7 @@ func TestRevertConflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.commit(map[string]string{"app.yaml": "image: beacon:3.0\n"}, "Someone deployed over it")
+	s.commit(map[string]string{"app.yaml": "image: webapp:3.0\n"}, "Someone deployed over it")
 	before := s.ref()
 	_, err = r.Revert(ctx, "dep_c", applied.Commit, "Roll back")
 	var conflict *ConflictError
@@ -619,7 +619,7 @@ func TestRelativeLocalURL(t *testing.T) {
 	if _, err := r.Apply(context.Background(), deploy("dep_rel", "2.0")); err != nil {
 		t.Fatal(err)
 	}
-	if s.file("app.yaml") != "image: beacon:2.0" {
+	if s.file("app.yaml") != "image: webapp:2.0" {
 		t.Fatal("not pushed")
 	}
 }
@@ -663,7 +663,7 @@ func TestPasswordNeverLeaks(t *testing.T) {
 	note(err)
 	_, err = r.Contains(ctx, applied.Commit, "no-such-revision")
 	note(err)
-	s.commit(map[string]string{"app.yaml": "image: beacon:3.0\n"}, "Over it")
+	s.commit(map[string]string{"app.yaml": "image: webapp:3.0\n"}, "Over it")
 	_, err = r.Revert(ctx, "dep_auth", applied.Commit, "Roll back")
 	note(err)
 	// A server that does not exist.

@@ -27,7 +27,7 @@ steps:
 // not offered the change, someone who cannot see the project gets nothing.
 func TestMCPVerification(t *testing.T) {
 	e := mcpEnv(t, envOpts{
-		environments:  []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"pay-api"}}},
+		environments:  []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"pay-api"}}},
 		healthSources: []engine.HealthSource{{Name: "prometheus", Type: "prometheus", Projects: []string{"pay-api"}}},
 	})
 	p, err := pipeline.Parse([]byte(mcpVerifyPipeline))
@@ -39,7 +39,7 @@ func TestMCPVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deployer := engine.RunnerInfo{ID: "deployer", Name: "deployer", Targets: []string{"homelab"}, Pool: "deploy", Features: "verify"}
+	deployer := engine.RunnerInfo{ID: "deployer", Name: "deployer", Targets: []string{"cluster-a"}, Pool: "deploy", Features: "verify"}
 	j, err := e.eng.LeaseVerify(context.Background(), deployer, deployer.Targets, 0)
 	if err != nil || j == nil {
 		d, _ := e.eng.GetRun(r.ID)

@@ -21,30 +21,30 @@ func TestImage(t *testing.T) {
 	}{
 		{
 			name:  "deployment",
-			image: "homelab/beacon", tag: "1.9.0",
+			image: "team/webapp", tag: "1.9.0",
 			in: `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beacon   # the app
+  name: webapp   # the app
 spec:
   template:
     spec:
       containers:
-        - name: beacon
-          image: homelab/beacon:1.8.1 # bumped by Launchway
+        - name: webapp
+          image: team/webapp:1.8.1 # bumped by Launchway
           ports:
           -   containerPort: 8080
 `,
 			want: `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beacon   # the app
+  name: webapp   # the app
 spec:
   template:
     spec:
       containers:
-        - name: beacon
-          image: homelab/beacon:1.9.0 # bumped by Launchway
+        - name: webapp
+          image: team/webapp:1.9.0 # bumped by Launchway
           ports:
           -   containerPort: 8080
 `,
@@ -52,21 +52,21 @@ spec:
 		},
 		{
 			name:  "rollout with registry and sidecar",
-			image: "homelab/beacon", tag: "2",
+			image: "team/webapp", tag: "2",
 			in: `apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 spec:
   template:
     spec:
       initContainers:
-      - image: "harbor.example.com/homelab/beacon:1"
+      - image: "harbor.example.com/team/webapp:1"
         name: migrate
       containers:
-      - image: 'harbor.example.com/homelab/beacon:1'
-        name: beacon
-      - image: harbor.example.com/homelab/beacon-api:1
+      - image: 'harbor.example.com/team/webapp:1'
+        name: webapp
+      - image: harbor.example.com/team/webapp-api:1
         name: api
-      - image: harbor.example.com/other/homelab/beacon:1
+      - image: harbor.example.com/other/team/webapp:1
         name: other
 `,
 			want: `apiVersion: argoproj.io/v1alpha1
@@ -75,30 +75,30 @@ spec:
   template:
     spec:
       initContainers:
-      - image: "harbor.example.com/homelab/beacon:2"
+      - image: "harbor.example.com/team/webapp:2"
         name: migrate
       containers:
-      - image: 'harbor.example.com/homelab/beacon:2'
-        name: beacon
-      - image: harbor.example.com/homelab/beacon-api:1
+      - image: 'harbor.example.com/team/webapp:2'
+        name: webapp
+      - image: harbor.example.com/team/webapp-api:1
         name: api
-      - image: harbor.example.com/other/homelab/beacon:1
+      - image: harbor.example.com/other/team/webapp:1
         name: other
 `,
 			matches: 2,
 		},
 		{
 			name:  "no tag under image key gets one",
-			image: "homelab/beacon", tag: "v3",
-			in:      "image: homelab/beacon\nother: localhost:5000/homelab/beacon\nlist:\n- localhost:5000/homelab/beacon\n",
-			want:    "image: homelab/beacon:v3\nother: localhost:5000/homelab/beacon\nlist:\n- localhost:5000/homelab/beacon\n",
+			image: "team/webapp", tag: "v3",
+			in:      "image: team/webapp\nother: localhost:5000/team/webapp\nlist:\n- localhost:5000/team/webapp\n",
+			want:    "image: team/webapp:v3\nother: localhost:5000/team/webapp\nlist:\n- localhost:5000/team/webapp\n",
 			matches: 1,
 		},
 		{
 			name:  "localhost registry with port",
-			image: "homelab/beacon", tag: "v3",
-			in:      "image: localhost:5000/homelab/beacon\nx: [localhost/homelab/beacon:1, xhomelab/beacon:1]\n",
-			want:    "image: localhost:5000/homelab/beacon:v3\nx: [localhost/homelab/beacon:v3, xhomelab/beacon:1]\n",
+			image: "team/webapp", tag: "v3",
+			in:      "image: localhost:5000/team/webapp\nx: [localhost/team/webapp:1, xteam/webapp:1]\n",
+			want:    "image: localhost:5000/team/webapp:v3\nx: [localhost/team/webapp:v3, xteam/webapp:1]\n",
 			matches: 2,
 		},
 		{
@@ -110,80 +110,80 @@ spec:
 		},
 		{
 			name:  "already at tag is unchanged and counted",
-			image: "homelab/beacon", tag: "1",
-			in:      "image:   'homelab/beacon:1'   # same\n",
-			want:    "image:   'homelab/beacon:1'   # same\n",
+			image: "team/webapp", tag: "1",
+			in:      "image:   'team/webapp:1'   # same\n",
+			want:    "image:   'team/webapp:1'   # same\n",
 			matches: 1,
 		},
 		{
 			name:  "several documents",
-			image: "homelab/beacon", tag: "5",
+			image: "team/webapp", tag: "5",
 			in: `# first
-image: homelab/beacon:4
+image: team/webapp:4
 ---
 kind: Job
 spec:
   containers:
-  - {name: a, image: homelab/beacon:3}
+  - {name: a, image: team/webapp:3}
 ...
 ---
-- homelab/beacon:2
-- "  homelab/beacon:1  "
+- team/webapp:2
+- "  team/webapp:1  "
 `,
 			want: `# first
-image: homelab/beacon:5
+image: team/webapp:5
 ---
 kind: Job
 spec:
   containers:
-  - {name: a, image: homelab/beacon:5}
+  - {name: a, image: team/webapp:5}
 ...
 ---
-- homelab/beacon:5
-- "  homelab/beacon:5  "
+- team/webapp:5
+- "  team/webapp:5  "
 `,
 			matches: 4,
 		},
 		{
 			name:  "flow mapping",
-			image: "homelab/beacon", tag: "9",
-			in:      "c: {image: homelab/beacon:1}\n",
-			want:    "c: {image: homelab/beacon:9}\n",
+			image: "team/webapp", tag: "9",
+			in:      "c: {image: team/webapp:1}\n",
+			want:    "c: {image: team/webapp:9}\n",
 			matches: 1,
 		},
 		{
 			name:  "crlf",
-			image: "homelab/beacon", tag: "9",
-			in:      "# c\r\na:\r\n  image: homelab/beacon:1\r\n  b: 'x'\r\n",
-			want:    "# c\r\na:\r\n  image: homelab/beacon:9\r\n  b: 'x'\r\n",
+			image: "team/webapp", tag: "9",
+			in:      "# c\r\na:\r\n  image: team/webapp:1\r\n  b: 'x'\r\n",
+			want:    "# c\r\na:\r\n  image: team/webapp:9\r\n  b: 'x'\r\n",
 			matches: 1,
 		},
 		{
 			name:  "odd indentation, tabs in comments, unicode before value",
-			image: "homelab/beacon", tag: "9",
-			in:      "\xEF\xBB\xBFköln:     {ü: homelab/beacon:1, é: x}\t# ünïcode\n\n\n      # deep comment\nz:\n       - homelab/beacon:1\n",
-			want:    "\xEF\xBB\xBFköln:     {ü: homelab/beacon:9, é: x}\t# ünïcode\n\n\n      # deep comment\nz:\n       - homelab/beacon:9\n",
+			image: "team/webapp", tag: "9",
+			in:      "\xEF\xBB\xBFköln:     {ü: team/webapp:1, é: x}\t# ünïcode\n\n\n      # deep comment\nz:\n       - team/webapp:1\n",
+			want:    "\xEF\xBB\xBFköln:     {ü: team/webapp:9, é: x}\t# ünïcode\n\n\n      # deep comment\nz:\n       - team/webapp:9\n",
 			matches: 2,
 		},
 		{
 			name:  "keys, block scalars and whole-document values are not looked at",
-			image: "homelab/beacon", tag: "9",
-			in:      "homelab/beacon:1: key\nscript: |\n  homelab/beacon:1\nimage: homelab/beacon:1\n---\nhomelab/beacon:1\n",
-			want:    "homelab/beacon:1: key\nscript: |\n  homelab/beacon:1\nimage: homelab/beacon:9\n---\nhomelab/beacon:1\n",
+			image: "team/webapp", tag: "9",
+			in:      "team/webapp:1: key\nscript: |\n  team/webapp:1\nimage: team/webapp:1\n---\nteam/webapp:1\n",
+			want:    "team/webapp:1: key\nscript: |\n  team/webapp:1\nimage: team/webapp:9\n---\nteam/webapp:1\n",
 			matches: 1,
 		},
 		{
 			name:  "single quote and double quote escapes in other values are kept",
-			image: "homelab/beacon", tag: "9",
-			in:      "a: 'it''s'\nb: \"tab\\there\"\nimage: \"homelab/beacon:1\"\n",
-			want:    "a: 'it''s'\nb: \"tab\\there\"\nimage: \"homelab/beacon:9\"\n",
+			image: "team/webapp", tag: "9",
+			in:      "a: 'it''s'\nb: \"tab\\there\"\nimage: \"team/webapp:1\"\n",
+			want:    "a: 'it''s'\nb: \"tab\\there\"\nimage: \"team/webapp:9\"\n",
 			matches: 1,
 		},
 		{
 			name:  "inside an anchored map, the alias follows",
-			image: "homelab/beacon", tag: "9",
-			in:      "base: &b\n  image: homelab/beacon:1\nuse: *b\n",
-			want:    "base: &b\n  image: homelab/beacon:9\nuse: *b\n",
+			image: "team/webapp", tag: "9",
+			in:      "base: &b\n  image: team/webapp:1\nuse: *b\n",
+			want:    "base: &b\n  image: team/webapp:9\nuse: *b\n",
 			matches: 1,
 		},
 	}
@@ -207,17 +207,17 @@ func TestImageErrors(t *testing.T) {
 	cases := []struct {
 		name, in, image, tag, want string
 	}{
-		{"helm values do not match", "image:\n  repository: homelab/beacon\n  tag: \"1\"\n", "homelab/beacon", "2", "no reference to image homelab/beacon was found"},
-		{"zero matches", "image: other/app:1\n", "homelab/beacon", "2", "no reference to image homelab/beacon"},
-		{"empty file", "", "homelab/beacon", "2", "no reference to image homelab/beacon"},
-		{"digest", "a: 1\nb:\n  image: homelab/beacon@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "homelab/beacon", "2",
-			"line 3: image homelab/beacon is pinned by digest (@sha256:0123456789ab…); a tag cannot move it"},
-		{"tag and digest", "x: homelab/beacon:1@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "homelab/beacon", "2", "line 1: image homelab/beacon is pinned by digest"},
-		{"anchored value", "image: &i homelab/beacon:1\nb: *i\n", "homelab/beacon", "2", "line 1: the reference to image homelab/beacon has an anchor (&i)"},
-		{"tagged value", "image: !!str homelab/beacon:1\n", "homelab/beacon", "2", "line 1: the reference to image homelab/beacon has an explicit tag"},
-		{"bad yaml", "a: [\n", "homelab/beacon", "2", "the file is not valid YAML"},
-		{"bad image", "a: 1\n", "homelab/beacon:1", "2", "has a tag"},
-		{"bad tag", "a: 1\n", "homelab/beacon", "-x", "tag \"-x\" is not valid"},
+		{"helm values do not match", "image:\n  repository: team/webapp\n  tag: \"1\"\n", "team/webapp", "2", "no reference to image team/webapp was found"},
+		{"zero matches", "image: other/app:1\n", "team/webapp", "2", "no reference to image team/webapp"},
+		{"empty file", "", "team/webapp", "2", "no reference to image team/webapp"},
+		{"digest", "a: 1\nb:\n  image: team/webapp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "team/webapp", "2",
+			"line 3: image team/webapp is pinned by digest (@sha256:0123456789ab…); a tag cannot move it"},
+		{"tag and digest", "x: team/webapp:1@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "team/webapp", "2", "line 1: image team/webapp is pinned by digest"},
+		{"anchored value", "image: &i team/webapp:1\nb: *i\n", "team/webapp", "2", "line 1: the reference to image team/webapp has an anchor (&i)"},
+		{"tagged value", "image: !!str team/webapp:1\n", "team/webapp", "2", "line 1: the reference to image team/webapp has an explicit tag"},
+		{"bad yaml", "a: [\n", "team/webapp", "2", "the file is not valid YAML"},
+		{"bad image", "a: 1\n", "team/webapp:1", "2", "has a tag"},
+		{"bad tag", "a: 1\n", "team/webapp", "-x", "tag \"-x\" is not valid"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -238,8 +238,8 @@ func TestSet(t *testing.T) {
 	}{
 		{
 			name: "nested", path: "image.tag", value: "1.9.0",
-			in:   "# values\nimage:\n  repository: homelab/beacon   # repo\n  tag: 1.8.1 # tag\nreplicas: 2\n",
-			want: "# values\nimage:\n  repository: homelab/beacon   # repo\n  tag: 1.9.0 # tag\nreplicas: 2\n",
+			in:   "# values\nimage:\n  repository: team/webapp   # repo\n  tag: 1.8.1 # tag\nreplicas: 2\n",
+			want: "# values\nimage:\n  repository: team/webapp   # repo\n  tag: 1.9.0 # tag\nreplicas: 2\n",
 		},
 		{
 			name: "needs quotes as a number", path: "image.tag", value: "1.20",
@@ -283,7 +283,7 @@ kind: Application
 spec:
   sources:
     - repoURL: https://charts.example.com
-      chart: beacon
+      chart: webapp
       targetRevision: v1.0.0
     - repoURL: https://git.example.com/values.git
       targetRevision: main
@@ -293,7 +293,7 @@ kind: Application
 spec:
   sources:
     - repoURL: https://charts.example.com
-      chart: beacon
+      chart: webapp
       targetRevision: v2.0.0
     - repoURL: https://git.example.com/values.git
       targetRevision: main
@@ -475,19 +475,19 @@ func TestCheckPath(t *testing.T) {
 }
 
 func TestCheckImage(t *testing.T) {
-	for _, s := range []string{"homelab/beacon", "registry.example:5000/team/app", "nginx", "localhost/app",
+	for _, s := range []string{"team/webapp", "registry.example:5000/team/app", "nginx", "localhost/app",
 		"Harbor.Example.com/a/b", "a__b/c-d/e.f"} {
 		if err := CheckImage(s); err != nil {
 			t.Errorf("CheckImage(%q) = %v", s, err)
 		}
 	}
 	bad := map[string]string{
-		"":                 "empty",
-		"homelab/beacon:1": "has a tag",
-		"homelab/Beacon":   "must be lower case",
-		" homelab/beacon":  "spaces",
-		"homelab//beacon":  "not a valid repository",
-		"homelab/beacon@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef": "has a digest",
+		"":              "empty",
+		"team/webapp:1": "has a tag",
+		"team/Webapp":   "must be lower case",
+		" team/webapp":  "spaces",
+		"team//webapp":  "not a valid repository",
+		"team/webapp@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef": "has a digest",
 		"http://x/y":             "not a valid repository",
 		"-a/b":                   "not a valid repository",
 		strings.Repeat("a", 256): "not a valid repository",
@@ -628,28 +628,28 @@ func TestImageDigest(t *testing.T) {
 // host and a tag, a bare name under image, and one already pinned.
 func TestImageTagDigest(t *testing.T) {
 	const d = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	in := "# jkma\n" +
+	in := "# shop\n" +
 		"spec:\n  containers:\n" +
-		"    - image: harbor.example.com/homelab/jkma:ci-latest   # api\n" +
-		"    - image: homelab/jkma:20261101-aaaaaaaa@sha256:" + strings.Repeat("a", 64) + "\n" +
-		"    - name: other\n      image: homelab/other:1\n" +
-		"  env:\n    - { name: IMG, value: homelab/jkma }\n"
-	out, n, err := ImageTagDigest([]byte(in), "homelab/jkma", "20261121-1234abcd", d)
+		"    - image: harbor.example.com/team/shop:ci-latest   # api\n" +
+		"    - image: team/shop:20261101-aaaaaaaa@sha256:" + strings.Repeat("a", 64) + "\n" +
+		"    - name: other\n      image: team/other:1\n" +
+		"  env:\n    - { name: IMG, value: team/shop }\n"
+	out, n, err := ImageTagDigest([]byte(in), "team/shop", "20261121-1234abcd", d)
 	if err != nil || n != 2 {
 		t.Fatalf("n=%d err=%v\n%s", n, err, out)
 	}
 	want := strings.NewReplacer(
-		"harbor.example.com/homelab/jkma:ci-latest", "harbor.example.com/homelab/jkma:20261121-1234abcd@"+d,
-		"homelab/jkma:20261101-aaaaaaaa@sha256:"+strings.Repeat("a", 64), "homelab/jkma:20261121-1234abcd@"+d,
+		"harbor.example.com/team/shop:ci-latest", "harbor.example.com/team/shop:20261121-1234abcd@"+d,
+		"team/shop:20261101-aaaaaaaa@sha256:"+strings.Repeat("a", 64), "team/shop:20261121-1234abcd@"+d,
 	).Replace(in)
 	if string(out) != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", out, want)
 	}
-	if _, _, err := ImageTagDigest([]byte(in), "homelab/jkma", "bad tag", d); err == nil {
+	if _, _, err := ImageTagDigest([]byte(in), "team/shop", "bad tag", d); err == nil {
 		t.Fatal("a bad tag was accepted")
 	}
 	// Written again with the same values, nothing changes.
-	again, _, err := ImageTagDigest(out, "homelab/jkma", "20261121-1234abcd", d)
+	again, _, err := ImageTagDigest(out, "team/shop", "20261121-1234abcd", d)
 	if err != nil || string(again) != string(out) {
 		t.Fatalf("not idempotent: %v", err)
 	}

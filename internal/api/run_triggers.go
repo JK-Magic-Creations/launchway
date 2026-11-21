@@ -171,7 +171,7 @@ type allowIn struct {
 
 func addRunTriggerTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_run_trigger_allows", Annotations: readOnly("List who may trigger on a project"),
-		Description: "The projects an upstream project has allowed to start runs when its runs or launches end, and whether each may read the step outputs."},
+		Description: "The projects an upstream project has allowed to start runs when its Sorties or launches end, and whether each may read the step outputs."},
 		mcpCallTimeout, listRunTriggerAllowsTool)
 	addTool(srv, c, &mcp.Tool{Name: "list_run_triggers", Annotations: readOnly("List result triggers"),
 		Description: "A project's triggers on other projects' results: when the upstream project's run or launch ends the way each says, a run of this project starts with inputs mapped from the result."},

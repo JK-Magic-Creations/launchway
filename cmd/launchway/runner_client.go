@@ -42,7 +42,7 @@ func runnerClient(ctx context.Context, o *runnerOptions) (*runner.Client, *runne
 	}
 	id, err := runner.LoadIdentity(o.Data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading the runner's identity: %w", err)
+		return nil, nil, fmt.Errorf("reading the Station's identity: %w", err)
 	}
 	server := strings.TrimRight(o.Server, "/")
 	switch {
@@ -61,9 +61,9 @@ func runnerClient(ctx context.Context, o *runnerOptions) (*runner.Client, *runne
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Fprintf(os.Stderr, "Enrolled as runner %s in pool %s; its identity is in %s\n", id.RunnerID, id.Pool, filepath.Join(o.Data, "identity"))
+		fmt.Fprintf(os.Stderr, "Enrolled as Station %s in pool %s; its identity is in %s\n", id.RunnerID, id.Pool, filepath.Join(o.Data, "identity"))
 	case o.Join != "":
-		fmt.Fprintf(os.Stderr, "Already enrolled as runner %s; the join token is not used\n", id.RunnerID)
+		fmt.Fprintf(os.Stderr, "Already enrolled as Station %s; the join token is not used\n", id.RunnerID)
 	}
 	c.Auth = &runner.IdentityAuth{ID: id, HTTP: hc}
 	c.Auth.RecoverRotation(ctx)

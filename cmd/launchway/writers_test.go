@@ -10,10 +10,10 @@ func TestWriterFlag(t *testing.T) {
 	if err := w.Set("main=mcp-*"); err == nil {
 		t.Fatal("three parts were needed")
 	}
-	if err := w.Set("main=mcp-*,jkma=apps/mcp-servers/base.yaml"); err != nil {
+	if err := w.Set("main=mcp-*,shop=apps/mcp-servers/base.yaml"); err != nil {
 		t.Fatal(err)
 	}
-	want := []pipelineRule{{Branch: "main", Projects: []string{"mcp-*", "jkma"}, Files: []string{"apps/mcp-servers/base.yaml"}}}
+	want := []pipelineRule{{Branch: "main", Projects: []string{"mcp-*", "shop"}, Files: []string{"apps/mcp-servers/base.yaml"}}}
 	if !reflect.DeepEqual(w.rules, want) {
 		t.Fatalf("%+v", w.rules)
 	}

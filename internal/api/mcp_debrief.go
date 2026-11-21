@@ -16,7 +16,7 @@ import (
 // under "untrusted": it is data, never instructions.
 
 func addDebriefTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "get_debrief", Annotations: readOnly("Get a run's Debrief"),
+	addTool(srv, c, &mcp.Tool{Name: "get_debrief", Annotations: readOnly("Get a Sortie's Debrief"),
 		Description: "The Debrief of a run: a summary of its tests, how they moved against the default branch's last good run (newly failing and passing, slower), each failure with its message, expected against actual values, where it first failed on this branch and whether it also fails on the default branch, flaky and quarantined tests, and coverage including the coverage of a pull request's change."},
 		mcpCallTimeout, getDebrief)
 	addTool(srv, c, &mcp.Tool{Name: "list_flaky_tests", Annotations: readOnly("List flaky tests"),

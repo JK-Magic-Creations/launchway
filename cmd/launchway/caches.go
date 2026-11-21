@@ -124,7 +124,7 @@ func (cl *client) cachesDelete(args []string) error {
 		return err
 	}
 	return cl.print(out, *asJSON, func() {
-		fmt.Fprintf(cl.out, "Ended %d cache entries, %s. The next run that wanted them starts without them.\n", out.Ended, byteText(out.Bytes))
+		fmt.Fprintf(cl.out, "Ended %d cache entries, %s. The next Sortie that wanted them starts without them.\n", out.Ended, byteText(out.Bytes))
 	})
 }
 

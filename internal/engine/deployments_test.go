@@ -46,9 +46,9 @@ steps:
     needs: [smoke]
 `
 
-var prodEnv = []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}}
+var prodEnv = []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}}
 
-var deployer = RunnerInfo{ID: "deployer-1", Name: "deployer one", Targets: []string{"homelab"}, Pool: "deploy"}
+var deployer = RunnerInfo{ID: "deployer-1", Name: "deployer one", Targets: []string{"cluster-a"}, Pool: "deploy"}
 
 func openDeploy(t *testing.T, addr string, clk *clock, envs []Environment) *Engine {
 	t.Helper()
@@ -224,7 +224,7 @@ func TestDeployHappyPath(t *testing.T) {
 
 	j := leaseDeploy(t, e, deployer)
 	d := j.Deploy
-	if d == nil || d.Action != ActionApply || d.Version != "1.4.2" || d.Target != "homelab" || d.Application != "shop" ||
+	if d == nil || d.Action != ActionApply || d.Version != "1.4.2" || d.Target != "cluster-a" || d.Application != "shop" ||
 		len(d.Changes) != 1 || d.Changes[0].Tag != "1.4.2" || d.Changes[0].Image != "team/shop" || !strings.Contains(d.Message, "Deploy shop 1.4.2 to prod") {
 		t.Fatalf("job: %+v", d)
 	}
@@ -455,7 +455,7 @@ func TestLockWaitsAndHandsOver(t *testing.T) {
 func TestQueueNewestAndAll(t *testing.T) {
 	for _, queue := range []string{"newest", "all"} {
 		t.Run(queue, func(t *testing.T) {
-			e, _ := newDeployEngine(t, []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Queue: queue}})
+			e, _ := newDeployEngine(t, []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Queue: queue}})
 			runs := []string{createShop(t, e, shopPipeline, 1), createShop(t, e, shopPipeline, 2), createShop(t, e, shopPipeline, 3)}
 			for i, id := range runs {
 				build(t, e, id, fmt.Sprint(i+1))
@@ -555,7 +555,7 @@ func TestObserverTakeover(t *testing.T) {
 	build(t, e, id, "1")
 	applied(t, e, leaseDeploy(t, e, deployer), "c1")
 	it := watchOf(t, e, deployer, "deploy-prod")
-	other := RunnerInfo{ID: "deployer-2", Name: "deployer two", Targets: []string{"homelab"}, Pool: "deploy"}
+	other := RunnerInfo{ID: "deployer-2", Name: "deployer two", Targets: []string{"cluster-a"}, Pool: "deploy"}
 	if items, _, _ := e.Watch(context.Background(), other, other.Targets, "-", 0); len(items) != 0 {
 		t.Fatalf("a second runner observes too: %+v", items)
 	}
@@ -627,7 +627,7 @@ func TestNoDeployRunnerTimesOut(t *testing.T) {
 	clk.Add(11 * time.Minute)
 	e.expireWaits()
 	want(t, statuses(t, e, id), "deploy-prod", "failed", "rollback-prod", "queued")
-	if v := stepOf(t, e, id, "deploy-prod"); !strings.Contains(v.Error, "no deploy runner serving target homelab") {
+	if v := stepOf(t, e, id, "deploy-prod"); !strings.Contains(v.Error, "no deploy runner serving target cluster-a") {
 		t.Fatalf("reason %q", v.Error)
 	}
 }

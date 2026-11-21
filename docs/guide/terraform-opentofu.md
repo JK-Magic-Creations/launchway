@@ -17,21 +17,21 @@ On a pull request: format check, validation, a scan of the definitions, and the 
 
 ## The plan is the reviewed thing
 
-The plan step writes the plan file as the artifact `launchway-plan`, bound to the commit and to the state serial it was made against, and reads the JSON plan into a report: resources to add, change, destroy and replace, destroys and replacements **first**, attribute differences with sensitive values hidden, and a risk summary. Cost is not estimated.
+The plan step writes the plan file as the Cargo (artifact) `launchway-plan`, bound to the commit and to the state serial it was made against, and reads the JSON plan into a report: resources to add, change, destroy and replace, destroys and replacements **first**, attribute differences with sensitive values hidden, and a risk summary. Cost is not estimated.
 
-The apply step fetches that file and **refuses it when it is stale**: made for another commit, or against a state whose serial has changed since (somebody else applied, or the state was rolled back). It says so and asks you to plan again. There is no option to apply a fresh, unreviewed plan in the Flight plan.
+The apply step fetches that file and **refuses it when it is stale**: made for another commit, or against a state whose serial has changed since (somebody else applied, or the state was returned to base). It says so and asks you to plan again. There is no option to apply a fresh, unreviewed plan in the Flight plan.
 
-A plan made on a pull request or a draft run has no state credential (those runs may not read secrets), so it starts from empty state and every resource looks new. The report says so. It is a check that the code is valid, not a forecast.
+A plan made on a pull request or a draft run has no state credential (those Sorties (runs) may not read secrets), so it starts from empty state and every resource looks new. The report says so. It is a check that the code is valid, not a forecast.
 
 ## State
 
 Launchway implements the HTTP backend protocol that Terraform and OpenTofu both speak, per project and workspace: `GET`, `POST` and `DELETE` on the state, `LOCK` and `UNLOCK` with the client's lock document, `423` with the holder's document when it is taken.
 
 - **Sealed at rest**: every version is sealed under the installation's root key, bound to its own row. A copy of the database holds none of it. A server with no root key refuses to keep state.
-- **Credentials**: a step is given a credential for one workspace of its own project, valid while its run goes, read-only for pull request and draft runs. People use their API token as the password.
+- **Credentials**: a step is given a credential for one workspace of its own project, valid while its Sortie goes, read-only for pull request and draft runs. People use their API token as the password.
 - **Versions**: every accepted state is a version (who, when, which run, serial, resource count), 50 kept. A write with an older serial, another lineage, or the same serial and other content is refused.
-- **Locks**: a lock taken by a run that has ended is released by the next `LOCK`; nobody has to force it. Force-unlock needs a reason and is refused while the holder's run is going.
-- **Rollback**: stores an older version as the newest, with a higher serial. It changes the stored state only; no real resource changes, and the next plan shows the difference.
+- **Locks**: a lock taken by a Sortie that has ended is released by the next `LOCK`; nobody has to force it. Force-unlock needs a reason and is refused while the holder's run is going.
+- **Return to base (rollback)**: stores an older version as the newest, with a higher serial. It changes the stored state only; no real resource changes, and the next plan shows the difference.
 - **Never shown raw**: the Configuration page, the API, the CLI and the MCP server show resources and output names only. `launchway state pull` returns the document, needs a reason, and is recorded in the Logbook with your name. The MCP server never returns it.
 
 ```

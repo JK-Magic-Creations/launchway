@@ -347,7 +347,7 @@ func cmdServer(args []string) error {
 		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
 	}
 	signIn := signInBanner(cfg, authOpts != nil)
-	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Station token for other machines: %s\n\n",
 		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 
 	<-ctx.Done()
@@ -482,12 +482,12 @@ type runnerOptions struct {
 // the --config file, then the defaults.
 func runnerArgs(args []string) (*runnerOptions, error) {
 	fs := flag.NewFlagSet("runner", flag.ContinueOnError)
-	cfgPath := fs.String("config", "", "YAML file of runner settings, the same as runner: in the server's configuration plus server, name and data")
+	cfgPath := fs.String("config", "", "YAML file of Station settings, the same as runner: in the server's configuration plus server, name and data")
 	server := fs.String("server", "", "server URL (or LAUNCHWAY_SERVER)")
-	token := fs.String("token", "", "the shared runner token or a deploy pool's (or LAUNCHWAY_RUNNER_TOKEN)")
-	join := fs.String("join", "", "a join token, to enrol this runner once and get an identity of its own (or LAUNCHWAY_JOIN)")
-	labels := fs.String("labels", "", "labels this runner has, separated by commas, such as arm64,gpu")
-	name := fs.String("name", "", "a name for this runner (default: the host name)")
+	token := fs.String("token", "", "the shared Station token or a deploy pool's (or LAUNCHWAY_RUNNER_TOKEN)")
+	join := fs.String("join", "", "a join token, to enrol this Station once and get an identity of its own (or LAUNCHWAY_JOIN)")
+	labels := fs.String("labels", "", "labels this Station has, separated by commas, such as arm64,gpu")
+	name := fs.String("name", "", "a name for this Station (default: the host name)")
 	data := fs.String("data", "", "directory for workspaces (default launchway-runner)")
 	conc := fs.Int("concurrency", 0, "steps to run at once (default 2)")
 	exe := fs.String("executor", "", "auto (the default), container, podman, docker, host or kubernetes")
@@ -556,7 +556,7 @@ func cmdRunner(args []string) error {
 	}
 	reportLimits, err := o.Reports.Limits()
 	if err != nil {
-		return fmt.Errorf("runner settings: %w", err)
+		return fmt.Errorf("Station settings: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -578,7 +578,7 @@ func cmdRunner(args []string) error {
 	if _, host := ex.(*executor.Host); host && ident != nil && o.Executor != "host" {
 		// An enrolled runner runs other people's code: never on the host
 		// without being told to.
-		return errors.New("no Podman or Docker was found, and an enrolled runner does not fall back to running steps directly on this host; install one, or choose executor: host explicitly")
+		return errors.New("no Podman or Docker was found, and an enrolled Station does not fall back to running steps directly on this host; install one, or choose executor: host explicitly")
 	}
 	if err := checkExecutor(ctx, ex); err != nil {
 		return err
@@ -673,7 +673,7 @@ func cmdRun(args []string) error {
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
-	imagesConfig := fs.String("images-config", "", "a file with the runner's images: section (builders and registries), for image steps")
+	imagesConfig := fs.String("images-config", "", "a file with the Station's images: section (builders and registries), for image steps")
 	var given multi
 	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
@@ -709,7 +709,7 @@ func cmdRun(args []string) error {
 		for _, s := range p.Steps {
 			if s.IsImage() {
 				return fmt.Errorf("step %s builds an image: give the builders and registries to use with --images-config FILE "+
-					"(an images: section, as in a runner's configuration)", s.ID)
+					"(an images: section, as in a Station's configuration)", s.ID)
 			}
 		}
 	}

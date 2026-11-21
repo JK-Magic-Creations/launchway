@@ -188,7 +188,7 @@ func (cl *client) mirrorAdd(args []string) error {
 		return err
 	}
 	return cl.print(out, *asJSON, func() {
-		fmt.Fprintf(cl.out, "%s is now a %s mirror of %s (%s). The first run starts at once; see launchway repos mirror status %s.\n",
+		fmt.Fprintf(cl.out, "%s is now a %s mirror of %s (%s). The first Sortie starts at once; see launchway repos mirror status %s.\n",
 			out.Repository, out.Direction, out.URL, out.ID, out.Repository)
 	})
 }

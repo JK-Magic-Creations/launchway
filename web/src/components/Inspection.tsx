@@ -6,6 +6,7 @@ import { SeverityBadge, safeURL } from "./Security";
 import { CopyBlock } from "./Tests";
 import { ErrorBox, Link } from "./ui";
 import "../standards.css";
+import { terms } from "../terms";
 
 const STANDING_LABEL: Record<Standing, string> = {
   new: "New in this change", existing: "Already on the default branch", accepted: "Accepted risk", "false-positive": "False positive", unscored: "Not compared yet",
@@ -162,7 +163,7 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
       </div>
       <p className="insp-sum">{data.summary}</p>
       <p className="faint small insp-why">
-        Added by Standing orders: this repository’s pipeline did not ask for these steps; the server adds them to every run{data.profile_version ? ` (profile ${data.profile_version})` : ""}.{" "}
+        {terms().say("Added by Standing orders: this repository’s pipeline did not ask for these steps; the server adds them to every {run}")}{data.profile_version ? ` (profile ${data.profile_version})` : ""}.{" "}
         <Link href={`/projects/${encodeURIComponent(project)}/standards`}>Why each check runs, and how to change it</Link>.
       </p>
       {data.notices && data.notices.length > 0 && (
@@ -201,7 +202,7 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
               {shown.map((f) => <FindingCard key={f.fingerprint + f.step} f={fromInspection(f)} project={project} profile={profile} onChanged={load} />)}
             </ul>
           )}
-          {data.truncated && <p className="faint small">Not every finding was kept for this run; the counts include them all.</p>}
+          {data.truncated && <p className="faint small">{terms().say("Not every finding was kept for this {run}; the counts include them all.")}</p>}
         </>
       ) : <p className="faint">The checks found nothing.</p>}
     </section>

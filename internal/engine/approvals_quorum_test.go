@@ -185,7 +185,7 @@ func TestApprovalsSurviveServersAndRerunsReuseThem(t *testing.T) {
 // A protected environment's min_approvals raises a lower count, and nothing
 // in the pipeline lowers it.
 func TestEnvironmentFloorBeatsTheStepsCount(t *testing.T) {
-	envs := []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true, MinApprovals: 3}}
+	envs := []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true, MinApprovals: 3}}
 	e, _ := newDeployEngine(t, envs)
 	id := createShop(t, e, strings.Replace(gatedPipeline, "    message: Promote?\n", "    message: Promote?\n    approvers: { count: 2 }\n", 1), 1)
 	toPause(t, e, id)

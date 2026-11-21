@@ -29,7 +29,7 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
       }
       // A step that goes again because its runner stopped answering is not "waiting for a runner" like any other.
       if (step.attempt > 1 && step.failure_cause === "infrastructure") {
-        return { kind: "runner", short: `Retrying, attempt ${step.attempt}`, text: `Retrying on another runner, attempt ${step.attempt}, because the last one stopped responding.` };
+        return { kind: "runner", short: `Retrying, attempt ${step.attempt}`, text: terms().say(`Retrying on another {runner}, attempt ${step.attempt}, because the last one stopped responding.`) };
       }
       // The server says what a queued step waits for (room in the step namespace, a free runner, ...).
       if (step.waiting_for) return { kind: "runner", short: step.waiting_code === "no_runner" || step.waiting_code === "runners_busy" ? terms().say("Waiting for a {runner}") : "Waiting for room", text: `${step.waiting_for}.` };
@@ -82,6 +82,6 @@ export function runSentence(run: RunDetail, now: number): string {
   const waits = run.step_list.filter((s) => s.status === "waiting" || s.status === "queued" || s.status === "leased");
   const w = waits.length ? whyWaiting(run, waits[0], now) : null;
   const holding = !live.length && waits.length > 0 && waits.every((s) => s.status === "queued");
-  const head = live.length ? `${n} is running ${live.map((s) => s.id).join(" and ")}.` : holding ? `${n} is holding: nothing is running; ${waits[0].id} waits for a runner.` : w ? `${n} is waiting.` : `${n} is not running anything right now.`;
+  const head = live.length ? `${n} is running ${live.map((s) => s.id).join(" and ")}.` : holding ? terms().say(`${n} is holding: nothing is running; ${waits[0].id} waits for a {runner}.`) : w ? `${n} is waiting.` : `${n} is not running anything right now.`;
   return w ? `${head} ${waits[0].id}: ${w.text}` : head;
 }

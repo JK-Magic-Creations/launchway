@@ -101,7 +101,7 @@ func (cl *client) triggersCreate(args []string) error {
 	fs := flag.NewFlagSet("run-triggers create", flag.ContinueOnError)
 	name := fs.String("name", "", "the trigger's name")
 	on := fs.String("on", "", "the upstream project")
-	launch := fs.Bool("launch", false, "trigger on a deployment that ended, not a run")
+	launch := fs.Bool("launch", false, "trigger on a deployment that ended, not a Sortie")
 	when := fs.String("when", "", "which result starts it")
 	pl := fs.String("pipeline", "", "only results of the upstream pipeline with this name")
 	filter := fs.String("filter", "", "an expression that must be true")

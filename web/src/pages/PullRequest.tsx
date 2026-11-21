@@ -12,6 +12,7 @@ import { pullsApi, type Comment, type Conversation, type FileChange, type Patch,
 import { pullHref, stateChip } from "./PullRequests";
 import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
+import { terms } from "../terms";
 
 /** The pull request as a change on the launch line: opened, checked, reviewed, merged. */
 function stations(p: Pull): LineStation[] {
@@ -154,11 +155,11 @@ function QueueBox({ pull }: { pull: Pull }) {
   return (
     <div className="pr-queue" role="group" aria-label="Merge queue">
       <h3>Merge queue</h3>
-      {live && <p role="status">Number {q.position} in the queue for {pull.target_branch}, {q.state === "testing" ? "being tested on the branch's latest commit" : "waiting its turn"}.{" "}
-        {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>the run testing it</Link>)}
+      {live && <p role="status">Number {q.position} in the merge queue for {pull.target_branch}, {q.state === "testing" ? "being tested on the branch's latest commit" : "waiting its turn"}.{" "}
+        {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>{terms().say("the {run} testing it")}</Link>)}
         {q.position === 1 && why ? ` It merges when this is met: ${why}.` : ""}</p>}
-      {q?.state === "removed" && <p role="status">It was taken out of the queue: {q.reason}.</p>}
-      {!q && <p className="faint">{pull.target_branch} merges through a queue: pull requests are brought up to date, tested and merged one at a time.</p>}
+      {q?.state === "removed" && <p role="status">It was taken out of the merge queue: {q.reason}.</p>}
+      {!q && <p className="faint">{pull.target_branch} merges through a merge queue: pull requests are brought up to date, tested and merged one at a time.</p>}
     </div>
   );
 }
@@ -293,7 +294,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             {pull.state === "open" && rd?.queue && <QueueBox pull={pull} />}
             <div className="pr-actions" style={{ marginTop: 10 }}>
               {can("queue") && <Button sm kind="pri" onClick={() => run("queue", () => pullsApi.enqueue(path, number, method))}>Add to the merge queue</Button>}
-              {can("dequeue") && <Button sm onClick={() => run("queue", () => pullsApi.dequeue(path, number))}>Take out of the queue</Button>}
+              {can("dequeue") && <Button sm onClick={() => run("queue", () => pullsApi.dequeue(path, number))}>Take out of the merge queue</Button>}
               {can("update_branch") && <Button sm onClick={() => run("update", () => pullsApi.updateBranch(path, number))}>Update the branch</Button>}
               {can("mark_ready") && <Button sm onClick={() => run("ready", () => pullsApi.update(path, number, { draft: false }))}>Mark ready for review</Button>}
               {can("mark_draft") && <Button sm onClick={() => run("draft", () => pullsApi.update(path, number, { draft: true }))}>Convert to draft</Button>}

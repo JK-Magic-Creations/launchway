@@ -65,7 +65,7 @@ compliance items provide controls and evidence.
 |---|---|
 | Pipelines as code | Typed YAML with steps, dependencies, run inputs, outputs passed between steps and loops, kept in Git next to the code they build. ([more](guide/pipelines.md)) |
 | Flow control | Conditions on steps, retries with back-off, lanes that make runs take turns, run timeouts, and re-running from any step with what each step was given. ([more](reference/pipeline.md#when)) |
-| Watching a run live, with time estimates | Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier runs of the same pipeline, with the time left along the longest path. ([more](guide/watching-runs.md)) |
+| Watching a run live, with time estimates | Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier Sorties of the same pipeline, with the time left along the longest path. ([more](guide/watching-runs.md)) |
 | Build caches | Dependencies kept between runs in the database, with entries a pull request can write but the default branch never reads. ([more](guide/build-caches.md)) |
 | Triggers | Push, pull request (with target-branch filters, and newer pushes cancelling older Sorties), manual, schedule and webhook. ([more](guide/triggers.md)) |
 | Built-in starters and pipelines with no file | The Hangar: Flight plans and Maneuvers that ship with Launchway. A file can be two lines (uses: launchway/python-service), or none at all and the repository's own files choose one. A service Flight plan checks, tests, audits, scans, builds the image, and delivers to each of the project's Airfields in order, with a decision where an Airfield is protected, a health proof and an automatic return to base. Any stage can be switched off, extended or taken over from the file. A gallery shows each with its inputs and what it runs. ([more](guide/starters.md)) |
@@ -110,7 +110,7 @@ compliance items provide controls and evidence.
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Releases and release management | A release is versioned, fixed once published, promoted from Airfield to Airfield with the same commit and image digest, checked by a checklist with windows, freezes and Clearance, and reported on with the four delivery measures. Formations promote several projects' releases together in an order you write; a dependency graph will propose the order later. Not yet: the pipeline language has no release trigger or step of its own (pipelines run the launchway command), releases are not signed, and backports are a pull request you open. ([more](guide/releases.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
-| The Debrief: test reports, flaky tests and exports | A report of each run's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit. ([more](guide/debrief.md)) |
+| The Debrief: test reports, flaky tests and exports | A report of each Sortie's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit. ([more](guide/debrief.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 
@@ -581,8 +581,11 @@ One connected picture of code, dependencies, images and deployments, so you alwa
 
 | Item | Status | What it gives you |
 |---|---|---|
+| [What software needs, and what can run it](roadmap/milestone-5.md#what-software-needs-and-what-can-run-it) | Available | Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. ([docs](reference/requirements-file.md)) |
+| [Build order across repositories](roadmap/milestone-5.md#build-order-across-repositories) | Available | Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. ([docs](guide/software-graph.md)) |
+| [One graph from code to where it runs](roadmap/milestone-5.md#one-graph-from-code-to-where-it-runs) | Available | See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. ([docs](guide/software-graph.md)) |
 | [Findings and SBOMs per run](roadmap/milestone-5.md#findings-and-sboms-per-run) | Available | The starting point already works: findings and components recorded for every Sortie. ([docs](guide/security-findings.md)) |
-| [What is deployed where](roadmap/milestone-5.md#what-is-deployed-where) | Planned | Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. |
+| [What is deployed where](roadmap/milestone-5.md#what-is-deployed-where) | In progress | Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. ([docs](guide/software-graph.md)) |
 | [A continuous observer of what runs](roadmap/milestone-5.md#a-continuous-observer-of-what-runs) | Planned | Watch clusters and hosts for what is actually running, not only what was deployed. |
 | [Continuous scanning of what runs](roadmap/milestone-5.md#continuous-scanning-of-what-runs) | Planned | Scan deployed software for new vulnerabilities and best-practice gaps, not only at build time. |
 | [Advisories, exceptions and licenses](roadmap/milestone-5.md#advisories-exceptions-and-licenses) | Planned | Record which vulnerabilities apply, import vendor statements that they do not, and check licenses. |
@@ -591,6 +594,8 @@ One connected picture of code, dependencies, images and deployments, so you alwa
 | [Code intelligence](roadmap/milestone-5.md#code-intelligence) | Planned | Definitions, references and call information, for people and for agents. |
 | [Code knowledge for AI, with fewer tokens](roadmap/milestone-5.md#code-knowledge-for-ai-with-fewer-tokens) | Planned | Answer AI questions from a graph of code and deployments instead of pasting files. |
 | [Blast radius of a vulnerability](roadmap/milestone-5.md#blast-radius-of-a-vulnerability) | Planned | From an advisory, see which deployed services and Airfields are affected and who owns them. |
+| [Machines and platforms in the graph](roadmap/milestone-5.md#machines-and-platforms-in-the-graph) | Planned | Machines with their discovered facts, clusters, serverless runtimes, databases and queues, so every placement question has real answers. |
+| [Build downstream repositories in order](roadmap/milestone-5.md#build-downstream-repositories-in-order) | Planned | After a push, start the builds of what depends on it, in order, each once. |
 
 ### Fix it safely
 

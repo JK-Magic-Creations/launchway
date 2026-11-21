@@ -130,7 +130,7 @@ func TestExtIsAnOpaqueMapEverywhere(t *testing.T) {
 }
 
 func TestConnectionValidation(t *testing.T) {
-	good := Connection{Name: "homelab", Kind: KindGitea, BaseURL: "https://git.example.com", Credential: SecretRef{Env: "FORGE_TOKEN"}, Events: EventsPolling}
+	good := Connection{Name: "cluster-a", Kind: KindGitea, BaseURL: "https://git.example.com", Credential: SecretRef{Env: "FORGE_TOKEN"}, Events: EventsPolling}
 	if err := good.Validate(); err != nil {
 		t.Fatal(err)
 	}

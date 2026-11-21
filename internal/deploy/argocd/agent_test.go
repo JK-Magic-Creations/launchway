@@ -24,7 +24,7 @@ import (
 func TestConfigCheck(t *testing.T) {
 	good := func() Config {
 		return Config{
-			Targets: map[string]Target{"homelab": {Kubernetes: Kubernetes{Context: "kind-x"},
+			Targets: map[string]Target{"cluster-a": {Kubernetes: Kubernetes{Context: "kind-x"},
 				Applications: []AppRule{{Projects: []string{"shop"}, Names: []string{"shop-*"}}}}},
 			Repos: map[string]Repo{"gitops": {URL: "https://git.example/gitops.git", Paths: []PathRule{{Projects: []string{"shop"}, Files: []string{"apps/shop/**"}}}}},
 		}
@@ -33,13 +33,17 @@ func TestConfigCheck(t *testing.T) {
 	if err := c.Check(); err != nil {
 		t.Fatal(err)
 	}
-	if c.Targets["homelab"].ArgoCDNamespace != "argocd" || c.Repos["gitops"].Username != "launchway" || c.Repos["gitops"].ArgoCDURL != c.Repos["gitops"].URL {
+	if c.Targets["cluster-a"].ArgoCDNamespace != "argocd" || c.Repos["gitops"].Username != "launchway" || c.Repos["gitops"].ArgoCDURL != c.Repos["gitops"].URL {
 		t.Fatalf("defaults: %+v", c)
 	}
 	for name, edit := range map[string]func(*Config){
-		"no cluster named": func(c *Config) { t := c.Targets["homelab"]; t.Kubernetes = Kubernetes{}; c.Targets["homelab"] = t },
-		"both":             func(c *Config) { t := c.Targets["homelab"]; t.Kubernetes.InCluster = true; c.Targets["homelab"] = t },
-		"no applications":  func(c *Config) { t := c.Targets["homelab"]; t.Applications = nil; c.Targets["homelab"] = t },
+		"no cluster named": func(c *Config) { t := c.Targets["cluster-a"]; t.Kubernetes = Kubernetes{}; c.Targets["cluster-a"] = t },
+		"both": func(c *Config) {
+			t := c.Targets["cluster-a"]
+			t.Kubernetes.InCluster = true
+			c.Targets["cluster-a"] = t
+		},
+		"no applications": func(c *Config) { t := c.Targets["cluster-a"]; t.Applications = nil; c.Targets["cluster-a"] = t },
 		"credentials in url": func(c *Config) {
 			r := c.Repos["gitops"]
 			r.URL = "https://user:pass@git.example/x.git"
@@ -129,7 +133,7 @@ func agentFor(t *testing.T, bare string, cl *Cluster) *Agent {
 	t.Helper()
 	a := &Agent{
 		Config: Config{
-			Targets: map[string]Target{"homelab": {Kubernetes: Kubernetes{InCluster: true},
+			Targets: map[string]Target{"cluster-a": {Kubernetes: Kubernetes{InCluster: true},
 				Applications: []AppRule{{Projects: []string{"shop"}, Names: []string{"shop"}}}, RolloutNamespaces: []string{"shop"}}},
 			Repos: map[string]Repo{"gitops": {URL: bare, Paths: []PathRule{{Projects: []string{"shop"}, Files: []string{"**"}}}}},
 		},
@@ -144,7 +148,7 @@ func agentFor(t *testing.T, bare string, cl *Cluster) *Agent {
 }
 
 func job(request string, resources ...pipeline.Resource) *engine.Job {
-	return &engine.Job{Project: "shop", Deploy: &engine.DeployJob{Action: engine.ActionApply, Deployment: "dep_1", Target: "homelab",
+	return &engine.Job{Project: "shop", Deploy: &engine.DeployJob{Action: engine.ActionApply, Deployment: "dep_1", Target: "cluster-a",
 		Application: "shop", Repo: "gitops", Branch: "main", Sync: pipeline.Sync{Request: request, Resources: resources, Windows: "wait"}}}
 }
 

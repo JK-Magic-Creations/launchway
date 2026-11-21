@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { me, project, run } from "../test/fixtures";
 import { NO_FACTS, SECTIONS, locate, redirectFor } from "../nav/model";
-import { COMING, comingTitle, isComing } from "./comingData";
+import { COMING, isComing } from "./comingData";
+import { COMING_TITLES, comingTitle } from "./comingTitles";
 import { ComingPage } from "./Coming";
 import { DoBar } from "./DoBar";
 import { doItems, searchItems } from "./doItems";
@@ -110,6 +111,8 @@ describe("pages that are not built yet", () => {
     render(<ComingPage path="/traffic/nope" />);
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
     expect(comingTitle("/traffic/nope")).toBe("nope");
+    // The titles the first load knows are the titles of the pages that hold the texts.
+    expect(Object.fromEntries(Object.entries(COMING).map(([k, v]) => [k, v.title]))).toEqual(COMING_TITLES);
   });
 });
 

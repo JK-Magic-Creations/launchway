@@ -28,7 +28,7 @@ func addBrowseTools(srv *mcp.Server, c *mcpCall) {
 		Description: "The tags of a hosted repository, newest first, with an annotated tag's message."},
 		mcpCallTimeout, listTagsTool)
 	addTool(srv, c, &mcp.Tool{Name: "get_repository_commit", Annotations: readOnly("Read one commit"),
-		Description: "One commit: message, author, committer, parents and the runs that were started for it (status per run)."},
+		Description: "One commit: message, author, committer, parents and the Sorties that were started for it (status per Sortie)."},
 		mcpCallTimeout, getCommitTool)
 	addTool(srv, c, &mcp.Tool{Name: "get_repository_diff", Annotations: readOnly("What changed between two commits"),
 		Description: "The files changed between two commits (from may be \"root\" for the empty tree), with added and removed line counts; with path, the unified patch of that one file instead."},

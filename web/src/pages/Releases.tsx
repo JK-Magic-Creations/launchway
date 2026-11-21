@@ -295,7 +295,7 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
       {v.may.edit && (
         <div className="rel-inline">
           <label>Upload a file<input type="file" onChange={(e) => upload(e.target.files?.[0])} disabled={busy} /></label>
-          <label>Attach what a Sortie built (its run id)<input type="text" value={run} onChange={(e) => setRun(e.target.value)} placeholder="run_…" /></label>
+          <label>{terms().say("Attach what a Sortie built (its {run} id)")}<input type="text" value={run} onChange={(e) => setRun(e.target.value)} placeholder="run_…" /></label>
           <Button sm disabled={!run.trim() || busy} onClick={async () => { setError(null); try { await releasesApi.attach(r.project, r.version, { run_id: run.trim(), images: true }); setRun(""); onChanged(); } catch (e) { setError(e); } }}>Attach its image digests</Button>
         </div>
       )}

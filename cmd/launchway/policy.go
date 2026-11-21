@@ -170,7 +170,7 @@ func (cl *client) policyRun(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		if len(out.Decisions) == 0 {
-			fmt.Fprintln(cl.out, "No policy judged this run.")
+			fmt.Fprintln(cl.out, "No policy judged this Sortie.")
 		}
 		for _, d := range out.Decisions {
 			where := "run start"
@@ -293,8 +293,8 @@ func (cl *client) waiverGrant(args []string) error {
 	rule := fs.String("rule", "", "the rule of the policy")
 	reason := fs.String("reason", "", "why (required; recorded and shown wherever the verdict is)")
 	expires := fs.Duration("expires", 0, "how long it lasts, such as 72h (required)")
-	run := fs.String("run", "", "only for this run")
-	env := fs.String("environment", "", "only for this environment (deploy rules)")
+	run := fs.String("run", "", "only for this Sortie")
+	env := fs.String("environment", "", "only for this Airfield (deploy rules)")
 	finding := fs.String("finding", "", "only for this finding's fingerprint (the findings rule)")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)

@@ -27,9 +27,9 @@ steps:
     secrets:
       - { id: npm_token, secret: { store: vault, key: ci/npm, field: token } }
     tags:
-      - { registry: harbor, repository: homelab/shop, tag: { run: short_sha } }
-      - { registry: harbor, repository: homelab/shop, tag: latest }
-    cache: { registry: harbor, repository: homelab/cache/shop }
+      - { registry: harbor, repository: team/shop, tag: { run: short_sha } }
+      - { registry: harbor, repository: team/shop, tag: latest }
+    cache: { registry: harbor, repository: team/cache/shop }
     sbom: true
     sign: { key: { store: vault, key: ci/cosign, field: key }, password: { store: vault, key: ci/cosign, field: password } }
     scan: { fail_on: high, mode: enforce }
@@ -45,7 +45,7 @@ steps:
         repo: gitops
         branch: main
         changes:
-          - { file: apps/shop.yaml, image: homelab/shop, digest: { output: image.digest } }
+          - { file: apps/shop.yaml, image: team/shop, digest: { output: image.digest } }
 `
 
 func TestImageStepParses(t *testing.T) {
@@ -68,10 +68,10 @@ func TestImageStepParses(t *testing.T) {
 	if ref := s.Secrets["npm_token"]; ref.Store != "vault" || ref.Key != "ci/npm" || ref.Field != "token" {
 		t.Fatalf("secrets: %+v", s.Secrets)
 	}
-	if len(b.Tags) != 2 || b.Tags[0].Registry != "harbor" || b.Tags[0].Repository != "homelab/shop" || b.Tags[1].Tag.Literal != "latest" {
+	if len(b.Tags) != 2 || b.Tags[0].Registry != "harbor" || b.Tags[0].Repository != "team/shop" || b.Tags[1].Tag.Literal != "latest" {
 		t.Fatalf("tags: %s", mustJSON(b.Tags))
 	}
-	if !b.Pushes() || b.Cache.Repository != "homelab/cache/shop" || !b.SBOM || !b.Provenance || b.Sign.Key.Key != "ci/cosign" ||
+	if !b.Pushes() || b.Cache.Repository != "team/cache/shop" || !b.SBOM || !b.Provenance || b.Sign.Key.Key != "ci/cosign" ||
 		b.Sign.Password.Field != "password" || b.Scan.FailOn != "high" || b.Scan.Mode != "enforce" {
 		t.Fatalf("build: %s", mustJSON(b))
 	}

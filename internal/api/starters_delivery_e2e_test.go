@@ -174,8 +174,8 @@ func TestServicePlanDeliversEndToEnd(t *testing.T) {
 	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: 10 * time.Second, Logger: quiet(),
 		Artifacts: engine.ArtifactOptions{Store: store},
 		Environments: []engine.Environment{
-			{Name: "dev", Target: "homelab", Projects: []string{"app"}},
-			{Name: "prod", Target: "homelab", Projects: []string{"app"}, Protected: true}},
+			{Name: "dev", Target: "cluster-a", Projects: []string{"app"}},
+			{Name: "prod", Target: "cluster-a", Projects: []string{"app"}, Protected: true}},
 		HealthSources: []engine.HealthSource{{Name: "checks", Type: "check", Projects: []string{"app"}}}})
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +206,7 @@ func TestServicePlanDeliversEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	api := &Server{Engine: eng, Projects: mgr, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	srv := httptest.NewServer(api.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	e := &env{eng: eng, srv: srv, dir: dir, db: db}
@@ -224,7 +224,7 @@ func TestServicePlanDeliversEndToEnd(t *testing.T) {
 	t.Cleanup(func() { acancel(); <-adone })
 	agent := &argocd.Agent{
 		Config: argocd.Config{
-			Targets: map[string]argocd.Target{"homelab": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
+			Targets: map[string]argocd.Target{"cluster-a": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
 				Applications: []argocd.AppRule{{Projects: []string{"app"}, Names: []string{"app-*"}}}}},
 			Repos: map[string]argocd.Repo{"gitops": {URL: bare, Paths: []argocd.PathRule{{Projects: []string{"app"}, Files: []string{"apps/**"}}}}},
 		},
@@ -242,7 +242,7 @@ func TestServicePlanDeliversEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := &runner.DeployRunner{Client: runner.NewClient(srv.URL, poolToken), Agent: agent,
-		Info: engine.RunnerInfo{ID: "deployer-1", Name: "deployer-1", Targets: []string{"homelab"}}, Log: quiet(),
+		Info: engine.RunnerInfo{ID: "deployer-1", Name: "deployer-1", Targets: []string{"cluster-a"}}, Log: quiet(),
 		ObserveEvery: 200 * time.Millisecond, ReportEvery: time.Second, Sources: srcs, Secrets: secrets.NewResolver(), Settle: 3 * time.Second}
 	dctx, dcancel := context.WithCancel(context.Background())
 	ddone := make(chan struct{})

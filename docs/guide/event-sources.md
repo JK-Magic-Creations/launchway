@@ -1,6 +1,6 @@
 # Event sources
 
-An event source is an address other systems call to start a run. Use one when a system that is not a Git host
+An event source is an address other systems call to start a Sortie (run). Use one when a system that is not a Git host
 (a release tool, a ticket system, a monitoring alert, another team's service) should start a pipeline, with values
 taken from what it sends. Unlike a [webhook trigger](triggers.md#webhooks), which a pipeline file declares and the
 server's configuration secures, an event source is made in Launchway, keeps its own sealed signing secret, can check
@@ -49,10 +49,10 @@ The refused call is still an event, shown as not verified, so an attempt to gues
    says which input.
 5. **Dedupe key.** An expression; a second call with the same key within a week is *duplicate*, and its reason names
    the first event. A call that could not start a run does not use up its key.
-6. **Window.** With `--debounce N` the run starts once N seconds pass with no new call, using the newest; with
+6. **Window.** With `--debounce N` the Sortie starts once N seconds pass with no new call, using the newest; with
    `--batch N` it starts N seconds after the first call, using the newest. The calls folded in say so.
 7. **Start.** A run with event `webhook`, the source's name as its webhook and `source:<name>` as its actor, subject
-   to the pipeline's lane and the installation's limits like any run.
+   to the pipeline's lane and the installation's limits like any Sortie.
 
 Every step ends in a decision with its reason on the [Events](events.md) page.
 

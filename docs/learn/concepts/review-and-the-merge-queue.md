@@ -31,7 +31,7 @@ flowchart LR
 ## What needs you
 
 The pull requests that wait on you (a review asked of you or your group, changes asked on your own, your own taken
-out of the queue) are listed under **Needs you** on Home and by `launchway pr inbox`.
+out of the merge queue) are listed under **Needs you** on Home and by `launchway pr inbox`.
 
 ## Next
 

@@ -17,13 +17,13 @@ import (
 
 func addVerifyTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_verification", Annotations: readOnly("Get verifications"),
-		Description: "A run's verifications (verify steps): for each, what it watches, its outcome (running, passed, failed or inconclusive) and why, each metric's and log query's outcome, how many intervals were judged, and whether a person marked it. With step, only that verify step."},
+		Description: "A Sortie's verifications (verify steps): for each, what it watches, its outcome (running, passed, failed or inconclusive) and why, each metric's and log query's outcome, how many intervals were judged, and whether a person marked it. With step, only that verify step."},
 		mcpCallTimeout, getVerification)
 }
 
 func addVerifyChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "mark_verification", Annotations: changes("Mark a verification", true, false),
-		Description: "Mark a verification passed or failed, with a reason, as a person may on the run page: while it runs or waits after an inconclusive verdict. Failed acts as the step says (abort or roll back); passed lets the steps after it run. The person who started the run may not be allowed to on a protected environment."},
+		Description: "Mark a verification passed or failed, with a reason, as a person may on the Sortie page: while it runs or waits after an inconclusive verdict. Failed acts as the step says (abort or roll back); passed lets the steps after it run. The person who started the run may not be allowed to on a protected Airfield."},
 		mcpCallTimeout, markVerification)
 }
 

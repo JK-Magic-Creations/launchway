@@ -20,7 +20,7 @@ const signInOffNext = "Set up sign-in now: it gives you a one-time code, and whe
 // signInOffWarning is what a page shows while there is no sign-in on a reachable address.
 func (s *Server) signInOffWarning() map[string]any {
 	out := map[string]any{
-		"warning": "This installation has no sign-in: anyone who can reach this address can start pipelines, which run code on the runners, and approve deployments.",
+		"warning": "This installation has no sign-in: anyone who can reach this address can start pipelines, which run code on the Stations, and approve deployments.",
 		"next":    signInOffNext,
 	}
 	if at, ok, err := s.Engine.LocalSignInRequested(); err == nil && ok {

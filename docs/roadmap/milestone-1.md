@@ -303,7 +303,7 @@ Required approvals, stale-approval dismissal, blocked merges, linear history, pr
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Name who must review changes to which paths, using people or groups. Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an environment, and the owners file checked when it is pushed.
+Name who must review changes to which paths, using people or groups. Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an Airfield, and the owners file checked when it is pushed.
 
 **Depends on:** Review with inline comments and suggestions.
 
@@ -323,7 +323,7 @@ Merge commit, squash and rebase, chosen per repository, and merge automatically 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Queue approved changes and test the real merged result with the real pipeline before it lands. Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The queue shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.
+Queue approved changes and test the real merged result with the real pipeline before it lands. Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The Holding pattern shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.
 
 **Depends on:** Merge styles and auto-merge.
 

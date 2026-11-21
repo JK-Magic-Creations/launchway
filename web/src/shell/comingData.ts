@@ -106,17 +106,12 @@ export const COMING: Record<string, Coming> = {
   },
 };
 
-/** The title of a coming page, or the last word of its address when there is none. */
 /** The page's entry with the words in effect filled in. */
 export function comingFor(path: string): Coming | undefined {
   const c = COMING[path];
   if (!c) return undefined;
   const t = terms();
   return { ...c, title: t.say(c.title), does: t.say(c.does), appears: t.say(c.appears), action: c.action && { ...c.action, label: t.say(c.action.label) } };
-}
-
-export function comingTitle(path: string): string {
-  return comingFor(path)?.title ?? path.split("/").pop()?.replace(/-/g, " ") ?? "Not here";
 }
 
 /** The addresses that have a coming page. */

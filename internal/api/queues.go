@@ -107,8 +107,8 @@ type listQueueOut struct {
 }
 
 func addQueueTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_queue", Annotations: readOnly("List the queue"),
-		Description: "The runs held back by a limit on concurrent runs (or by an operator), in the order they will go, each with why it waits, the runs it waits behind and the actions available (run_next, hold, release). Pushes to protected branches are never held. Use queue_run to change one."},
+	addTool(srv, c, &mcp.Tool{Name: "list_queue", Annotations: readOnly("List the Holding pattern"),
+		Description: "The Sorties held back by a limit on concurrent Sorties (or by an operator), in the order they will go, each with why it waits, the runs it waits behind and the actions available (run_next, hold, release). Pushes to protected branches are never held. Use queue_run to change one."},
 		mcpCallTimeout, listQueue)
 	if !c.mayOperate {
 		return
@@ -116,8 +116,8 @@ func addQueueTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "trust_run", Annotations: changes("Run a restricted run with secrets", false, true),
 		Description: "A maintainer's decision on a restricted run (a pull request from an automation account or a fork, which runs without secrets, deploys, saved caches and registry pushes): approve it, so the steps that have not started may read secrets and deploy. Only after looking at what the pull request changes; recorded with your name. get_run says whether a run is restricted (restriction)."},
 		mcpCallTimeout, trustRun)
-	addTool(srv, c, &mcp.Tool{Name: "queue_run", Annotations: changes("Change a run's place in the queue", false, false),
-		Description: "Move a waiting run: run_next puts it at the front (and lets it go now if the limits allow), hold keeps it waiting until released, release lets the limits decide again. A run that is already going is never stopped by this."},
+	addTool(srv, c, &mcp.Tool{Name: "queue_run", Annotations: changes("Change a Sortie's place in the Holding pattern", false, false),
+		Description: "Move a waiting run: run_next puts it at the front (and lets it go now if the limits allow), hold keeps it waiting until released, release lets the limits decide again. A Sortie that is already going is never stopped by this."},
 		mcpCallTimeout, queueRun)
 }
 
@@ -171,5 +171,5 @@ func trustRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in trustR
 	if err := c.apiJSON(ctx, "trust_run", http.MethodPost, apiPath("/api/v1/runs/%s/trust", in.RunID), map[string]string{"comment": in.Comment}, nil); err != nil {
 		return okOut{}, err
 	}
-	return okOut{OK: true, Summary: "Approved: the steps of this run that have not started may now read secrets and deploy. Recorded with your name."}, nil
+	return okOut{OK: true, Summary: "Approved: the steps of this Sortie that have not started may now read secrets and deploy. Recorded with your name."}, nil
 }

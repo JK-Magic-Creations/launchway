@@ -20,16 +20,16 @@ import (
 // lease (schema 20's lease binding over schema 19's verify calls).
 func TestVerificationLeaseIsBoundToItsDeployPool(t *testing.T) {
 	eng, err := engine.Open(engine.Options{Database: testdb.New(t), LeaseTTL: 5 * time.Second, Logger: quiet(),
-		Environments:  []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}},
+		Environments:  []engine.Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}}},
 		HealthSources: []engine.HealthSource{{Name: "prometheus", Type: "prometheus", Projects: []string{"shop"}}},
-		RunnerPools: []engine.RunnerPool{{Name: "deploy-homelab", Kind: engine.PoolDeploy, Targets: []string{"homelab"}},
+		RunnerPools: []engine.RunnerPool{{Name: "deploy-main", Kind: engine.PoolDeploy, Targets: []string{"cluster-a"}},
 			{Name: "deploy-other", Kind: engine.PoolDeploy, Targets: []string{"other"}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	other := strings.Repeat("o", 40)
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}, {Name: "deploy-other", Token: other, Targets: []string{"other"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-main", Token: poolToken, Targets: []string{"cluster-a"}}, {Name: "deploy-other", Token: other, Targets: []string{"other"}}}}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	p, err := pipeline.Parse([]byte(`pipeline: shop
@@ -50,7 +50,7 @@ steps:
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	info := engine.RunnerInfo{ID: "d1", Name: "d1", Targets: []string{"homelab", "other"}, Features: "verify"}
+	info := engine.RunnerInfo{ID: "d1", Name: "d1", Targets: []string{"cluster-a", "other"}, Features: "verify"}
 	shared := runner.NewClient(srv.URL, "secret")
 	if _, err := shared.LeaseVerify(ctx, info, 0); err == nil || !strings.Contains(err.Error(), "403") {
 		t.Fatalf("the shared token leased a verification: %v", err)

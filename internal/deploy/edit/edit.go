@@ -31,14 +31,14 @@ import (
 // A reference is a single-line value (a map value or a list item, never a
 // key) that reads as [registry/]repository[:tag][@digest]. It refers to
 // image when its repository is image, in any registry or none; if image
-// names a registry, the registry must match too. So for homelab/beacon,
-// harbor.example.com/homelab/beacon:1 matches, but other/homelab/beacon:1
-// and homelab/beacon-api:1 do not.
+// names a registry, the registry must match too. So for team/webapp,
+// harbor.example.com/team/webapp:1 matches, but other/team/webapp:1
+// and team/webapp-api:1 do not.
 //
 // A value with a tag or a digest is a reference wherever it is. A value
-// with neither, such as homelab/beacon, is a reference only as the value
+// with neither, such as team/webapp, is a reference only as the value
 // of a key named image, and gets :tag added. Elsewhere it is left alone,
-// because in a chart's values file (repository: homelab/beacon with a
+// because in a chart's values file (repository: team/webapp with a
 // separate tag key) adding a tag would be wrong; set such a tag with Set.
 //
 // A reference pinned by digest is refused: a tag cannot move it (see

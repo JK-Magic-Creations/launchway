@@ -82,11 +82,11 @@ func (r ref) refersTo(image ref) bool {
 }
 
 // CheckImage reports whether an image name is written correctly: a
-// repository such as homelab/beacon or registry.example:5000/team/app,
+// repository such as team/webapp or registry.example:5000/team/app,
 // without a tag or digest. nil if it is.
 func CheckImage(image string) error {
 	if image == "" {
-		return fmt.Errorf("the image is empty; give a repository such as homelab/beacon")
+		return fmt.Errorf("the image is empty; give a repository such as team/webapp")
 	}
 	if strings.TrimSpace(image) != image {
 		return fmt.Errorf("image %q has spaces around it; remove them", image)
@@ -99,7 +99,7 @@ func CheckImage(image string) error {
 	}
 	switch {
 	case !ok:
-		return fmt.Errorf("image %q is not a valid repository; write one such as homelab/beacon or registry.example:5000/team/app", image)
+		return fmt.Errorf("image %q is not a valid repository; write one such as team/webapp or registry.example:5000/team/app", image)
 	case r.digest != "":
 		return fmt.Errorf("image %q has a digest; give the repository only, without @%s", image, r.digest)
 	case r.tag != "":

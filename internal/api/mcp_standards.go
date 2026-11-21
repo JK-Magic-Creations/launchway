@@ -44,8 +44,8 @@ func addStandardsTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "export_findings", Annotations: readOnly("Export a project's findings"),
 		Description: "A project's findings as json, csv or sarif text (SARIF 2.1.0 with the stable fingerprint as a partial fingerprint)."},
 		mcpCallTimeout, exportFindings)
-	addTool(srv, c, &mcp.Tool{Name: "get_run_inspection", Annotations: readOnly("Get a run's Inspection"),
-		Description: "What the Inspection that Standing orders added to a run found: the verdict (blocked or passed, in a sentence), the profile and thresholds in force when the run was made, each check and whether it ran, and the findings with their standing: new (introduced by this change), existing (already on the default branch), accepted or false positive. Filter by standing, check or severity."},
+	addTool(srv, c, &mcp.Tool{Name: "get_run_inspection", Annotations: readOnly("Get a Sortie's Inspection"),
+		Description: "What the Inspection that Standing orders added to a Sortie found: the verdict (blocked or passed, in a sentence), the profile and thresholds in force when the run was made, each check and whether it ran, and the findings with their standing: new (introduced by this change), existing (already on the default branch), accepted or false positive. Filter by standing, check or severity."},
 		mcpCallTimeout, getRunInspection)
 	if c.mayOperate {
 		addTool(srv, c, &mcp.Tool{Name: "accept_finding", Annotations: changes("Accept a risk or mark a false positive", false, false),

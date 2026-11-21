@@ -30,12 +30,12 @@ func (s *Server) mintWriteBack(ctx context.Context, job *engine.Job) {
 	}
 	wb, d := job.Deploy.WriteBack, job.Deploy
 	if s.Forge == nil || s.Forge.Provider == nil || s.Forge.RunTokens.Key == nil {
-		wb.Error = "this environment writes back to a repository hosted by Launchway, but this server hosts no repositories"
+		wb.Error = "this Airfield writes back to a repository hosted by Launchway, but this server hosts no repositories"
 		return
 	}
 	repo, err := s.Forge.Provider.Repositories().Get(ctx, wb.Repo)
 	if err != nil {
-		wb.Error = fmt.Sprintf("the environment writes back to %s, which is not a repository hosted by this server; create or import it, or take write_back out of the environment", wb.Repo)
+		wb.Error = fmt.Sprintf("the Airfield writes back to %s, which is not a repository hosted by this server; create or import it, or take write_back out of the Airfield", wb.Repo)
 		return
 	}
 	now := s.Now()
@@ -112,7 +112,7 @@ func (s *Server) deployPullRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	claim, err := s.Forge.RunTokens.VerifyDeploy(in.Token)
 	if err != nil || claim.Mode != githttp.ModePullRequest {
-		writeErr(w, http.StatusForbidden, "this deploy credential is not valid for a pull request (it is expired, or the environment does not write back by pull request)")
+		writeErr(w, http.StatusForbidden, "this deploy credential is not valid for a pull request (it is expired, or the Airfield does not write back by pull request)")
 		return
 	}
 	repo, err := s.Forge.RepoByID(r.Context(), claim.Repo)

@@ -357,7 +357,7 @@ func TestAT_HG_16_Statuses(t *testing.T) {
 	var list []any
 	c.api(t, "GET", c.repoPath(name)+"/commits/"+b+"/statuses", nil, &list, 200)
 	r.Saw(t, "pending alone is pending; pending then success is success; success plus a failing second context is failure (2 contexts); %d status records kept for the second commit", len(list))
-	r.NotAutomated(t, "Beacon Deliveries within 30 s; a failing run blocking a proposal (ref rule); a read between two posts of one commit (the existing host answers from a cache: Launchway must not)")
+	r.NotAutomated(t, "Webapp Deliveries within 30 s; a failing run blocking a proposal (ref rule); a read between two posts of one commit (the existing host answers from a cache: Launchway must not)")
 }
 
 func TestAT_HG_17_SignInRedirect(t *testing.T) {

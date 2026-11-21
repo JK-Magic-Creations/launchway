@@ -368,8 +368,8 @@ func TestRunnerPools(t *testing.T) {
 		os.WriteFile(p, []byte(body), 0o644)
 		return p
 	}
-	base := "environments:\n  - { name: prod, target: homelab, projects: [shop] }\n"
-	c, err := Load(write(base + "runner_pools:\n  - { name: a, token_file: pool-token, targets: [homelab] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [homelab] }\n"))
+	base := "environments:\n  - { name: prod, target: cluster-a, projects: [shop] }\n"
+	c, err := Load(write(base + "runner_pools:\n  - { name: a, token_file: pool-token, targets: [cluster-a] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [cluster-a] }\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,14 +377,14 @@ func TestRunnerPools(t *testing.T) {
 	if err != nil || len(pools) != 2 || pools[0].Token != tok || pools[1].Token != strings.Repeat("b", 40) {
 		t.Fatalf("pools: %+v %v", pools, err)
 	}
-	if envs := c.EngineEnvironments(); len(envs) != 1 || envs[0].Target != "homelab" {
+	if envs := c.EngineEnvironments(); len(envs) != 1 || envs[0].Target != "cluster-a" {
 		t.Fatalf("environments: %+v", envs)
 	}
 	for body, want := range map[string]string{
-		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [elsewhere] }\n":                                                             "no environment has target",
-		"runner_pools:\n  - { name: a, token_env: LW_NOT_SET, targets: [homelab] }\n":                                                                 "is not set",
-		"runner_pools:\n  - { name: a, targets: [homelab] }\n":                                                                                        "exactly one of token_env or token_file",
-		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [homelab] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [homelab] }\n": "also the token of pool a",
+		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [elsewhere] }\n":                                                                 "no environment has target",
+		"runner_pools:\n  - { name: a, token_env: LW_NOT_SET, targets: [cluster-a] }\n":                                                                   "is not set",
+		"runner_pools:\n  - { name: a, targets: [cluster-a] }\n":                                                                                          "exactly one of token_env or token_file",
+		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [cluster-a] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [cluster-a] }\n": "also the token of pool a",
 	} {
 		c, err := Load(write(base + body))
 		if err != nil {
@@ -394,7 +394,7 @@ func TestRunnerPools(t *testing.T) {
 			t.Errorf("%s: got %v, want %s", body, err, want)
 		}
 	}
-	c, _ = Load(write(base + "runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [homelab] }\n"))
+	c, _ = Load(write(base + "runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [cluster-a] }\n"))
 	if _, err := c.Pools(strings.Repeat("b", 40)); err == nil || !strings.Contains(err.Error(), "shared runner token") {
 		t.Errorf("a pool with the shared token: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestDeployRunnerFile(t *testing.T) {
 	os.WriteFile(p, []byte(`server: http://x
 deploy:
   targets:
-    homelab:
+    cluster-a:
       kubernetes: { kubeconfig: kube.yaml, context: kind-launchway-test }
       applications: [ { projects: [shop], names: [shop] } ]
   repos:
@@ -419,11 +419,11 @@ deploy:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.Deploy.Targets["homelab"].Kubernetes.Kubeconfig != filepath.Join(dir, "kube.yaml") || f.Deploy.Targets["homelab"].ArgoCDNamespace != "argocd" {
+	if f.Deploy.Targets["cluster-a"].Kubernetes.Kubeconfig != filepath.Join(dir, "kube.yaml") || f.Deploy.Targets["cluster-a"].ArgoCDNamespace != "argocd" {
 		t.Fatalf("deploy: %+v", f.Deploy)
 	}
 	// A target must name its cluster: the current context is never used.
-	os.WriteFile(p, []byte("deploy:\n  targets:\n    homelab:\n      applications: [ { projects: [shop], names: [shop] } ]\n"), 0o644)
+	os.WriteFile(p, []byte("deploy:\n  targets:\n    cluster-a:\n      applications: [ { projects: [shop], names: [shop] } ]\n"), 0o644)
 	if _, err := LoadRunner(p); err == nil || !strings.Contains(err.Error(), "the current context is never used") {
 		t.Fatalf("got %v", err)
 	}
@@ -457,12 +457,12 @@ func TestBuildPoolsAndRunnerAdmin(t *testing.T) {
 		os.WriteFile(p, []byte(body), 0o644)
 		return p
 	}
-	base := "environments:\n  - { name: prod, target: homelab, projects: [shop] }\nrunner: { enabled: false }\n"
+	base := "environments:\n  - { name: prod, target: cluster-a, projects: [shop] }\nrunner: { enabled: false }\n"
 	c, err := Load(write(base + `runner_admin: operator
 runner_pools:
   - { name: default, kind: build, projects: [shop], require_identity: true }
   - { name: web, kind: build, projects: ["web-*"], events: [push, manual] }
-  - { name: deployers, targets: [homelab], require_identity: true }
+  - { name: deployers, targets: [cluster-a], require_identity: true }
 `))
 	if err != nil {
 		t.Fatal(err)
@@ -479,12 +479,12 @@ runner_pools:
 		t.Fatalf("%v %v", r, err)
 	}
 	for body, want := range map[string]string{
-		"runner_pools:\n  - { name: web, kind: build }\n":                                            "list the projects",
-		"runner_pools:\n  - { name: web, kind: build, projects: [a], targets: [homelab] }\n":         "no targets and no token",
-		"runner_pools:\n  - { name: web, kind: gpu }\n":                                              "kind is deploy",
-		"runner_pools:\n  - { name: d, targets: [homelab], projects: [a], token_env: X }\n":          "for build pools",
-		"runner_pools:\n  - { name: default, targets: [homelab], token_env: X }\n":                   "give the deploy pool another name",
-		"runner_pools:\n  - { name: d, targets: [homelab], token_env: X, require_identity: true }\n": "give it none",
+		"runner_pools:\n  - { name: web, kind: build }\n":                                              "list the projects",
+		"runner_pools:\n  - { name: web, kind: build, projects: [a], targets: [cluster-a] }\n":         "no targets and no token",
+		"runner_pools:\n  - { name: web, kind: gpu }\n":                                                "kind is deploy",
+		"runner_pools:\n  - { name: d, targets: [cluster-a], projects: [a], token_env: X }\n":          "for build pools",
+		"runner_pools:\n  - { name: default, targets: [cluster-a], token_env: X }\n":                   "give the deploy pool another name",
+		"runner_pools:\n  - { name: d, targets: [cluster-a], token_env: X, require_identity: true }\n": "give it none",
 	} {
 		c, err := Load(write(base + body))
 		if err != nil {

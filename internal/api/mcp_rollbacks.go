@@ -18,17 +18,17 @@ import (
 func addRollbackReadTools(srv *mcp.Server, c *mcpCall) {
 	addReleaseReadTools(srv, c) // releases ride with the delivery tools
 	addTool(srv, c, &mcp.Tool{Name: "get_rollback_options", Annotations: readOnly("Get rollback options"),
-		Description: "Whether a service of a project can be rolled back in an environment after its deployment succeeded, and to what: the earlier successful deployments (version, when, which run) with, for each, what would be reverted and the consequence and suggestions. When it cannot, the reason and what would help; when another deployment holds the lock, queueable says rollback_deployment with queue true waits behind it."},
+		Description: "Whether a service of a project can be rolled back in an Airfield after its deployment succeeded, and to what: the earlier successful deployments (version, when, which run) with, for each, what would be reverted and the consequence and suggestions. When it cannot, the reason and what would help; when another deployment holds the lock, queueable says rollback_deployment with queue true waits behind it."},
 		mcpCallTimeout, getRollbackOptions)
 	addTool(srv, c, &mcp.Tool{Name: "list_rollback_reviews", Annotations: readOnly("List rollbacks to review"),
-		Description: "Emergency rollbacks of protected environments that no approver has acknowledged yet, with whether this token may acknowledge each."},
+		Description: "Emergency rollbacks of protected Airfields that no approver has acknowledged yet, with whether this token may acknowledge each."},
 		mcpCallTimeout, listRollbackReviews)
 }
 
 func addRollbackChangeTools(srv *mcp.Server, c *mcpCall) {
 	addReleaseChangeTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "rollback_deployment", Annotations: changes("Roll back a deployment", true, false),
-		Description: "Roll a service back to an earlier successful deployment, after its deployment succeeded. It is a run of its own that reverts in Git, newest first, every deployment after the version asked for, and waits until the application is healthy. A reason is required and recorded. It never rolls back a database or configuration. On a protected environment it is an emergency action: no approval first, and an approver reviews it afterwards (unless a setting requires approval first). get_rollback_options says what is possible and what each choice does."},
+		Description: "Roll a service back to an earlier successful deployment, after its deployment succeeded. It is a run of its own that reverts in Git, newest first, every deployment after the version asked for, and waits until the application is healthy. A reason is required and recorded. It never rolls back a database or configuration. On a protected Airfield it is an emergency action: no approval first, and an approver reviews it afterwards (unless a setting requires approval first). get_rollback_options says what is possible and what each choice does."},
 		mcpCallTimeout, rollbackDeployment)
 	addTool(srv, c, &mcp.Tool{Name: "review_rollback", Annotations: changes("Review a rollback", false, false),
 		Description: "Acknowledge an emergency rollback that needed review, with a comment saying what you checked. The person who asked for it usually may not."},
@@ -44,7 +44,7 @@ type rollbackOptionsIn struct {
 func getRollbackOptions(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in rollbackOptionsIn) (engine.RollbackPlan, error) {
 	var plan engine.RollbackPlan
 	if in.Project == "" || in.Environment == "" {
-		return plan, errors.New("say which project and environment")
+		return plan, errors.New("say which project and Airfield")
 	}
 	q := url.Values{"environment": {in.Environment}}
 	if in.Service != "" {
@@ -72,7 +72,7 @@ type rollbackOut struct {
 
 func rollbackDeployment(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in rollbackIn) (rollbackOut, error) {
 	if in.Project == "" || in.Environment == "" {
-		return rollbackOut{}, errors.New("say which project and environment")
+		return rollbackOut{}, errors.New("say which project and Airfield")
 	}
 	var run engine.RunSummary
 	body := map[string]any{"environment": in.Environment, "service": in.Service, "to": in.To, "reason": in.Reason, "queue": in.Queue}

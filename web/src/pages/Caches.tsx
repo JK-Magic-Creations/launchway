@@ -46,15 +46,14 @@ function NothingCached({ use, project }: { use?: CacheUse; project: string }) {
   const layers = use?.layers ?? [];
   const where = layers.length > 0 ? (
     <p className="faint small">
-      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} build layers in the registry
-      ({layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}), apart from this list: the registry holds them, and the Images pages show what it holds.{" "}
+      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} {terms().say("build layers in the {registry} (")}{layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}{terms().say("), apart from this list: the {registry} holds them, and the Images pages show what it holds.")}{" "}
       <Link href={`/projects/${encodeURIComponent(project)}/pipeline`}>See the pipeline</Link>.
     </p>
   ) : null;
   if (none) {
     return (
       <Empty title="No step in this pipeline uses a cache">
-        Nothing is kept between runs, so every run downloads its dependencies again. To keep a directory, give a step a <Mono>cache</Mono>, with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:
+        {terms().say("Nothing is kept between runs, so every {run} downloads its dependencies again. To keep a directory, give a step a")} <Mono>cache</Mono>, with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:
         <pre className="code">{`cache:
   - name: go
     paths: [.cache/go-mod, .cache/go-build]

@@ -12,7 +12,7 @@ or started when you did not expect it, the event log says why, in words.
 | `schedule` | A schedule fired |
 | `webhook` | A webhook trigger was called |
 | `event_source` | An event source of the project received a call (see [Event sources](event-sources.md)) |
-| `manual` | A person, a token or an agent started a run, or re-ran one |
+| `manual` | A person, a token or an agent started a Sortie (run), or re-ran one |
 | `run_result` | Another project's run ended (see [Triggers on results](result-triggers.md)) |
 | `launch_result` | Another project's launch ended (see [Triggers on results](result-triggers.md)) |
 
@@ -24,7 +24,7 @@ at 16 KiB. Do not put a secret in a payload on purpose: the removal is a safety 
 
 ## Decisions
 
-An event is judged against each trigger that could start a run. Each judgment is a **decision** with a sentence
+An event is judged against each trigger that could start a Sortie. Each judgment is a **decision** with a sentence
 saying why:
 
 | Decision | Meaning | Example reason |
@@ -40,7 +40,7 @@ saying why:
 | `error` | The pipeline or the request has problems | `the pipeline file has problems` |
 
 A start is written in the same transaction as the run it started, so an event that says `started` always has its
-run, and a run started by anything has an event. An event that was refused or filtered is written on its own.
+run, and a Sortie started by anything has an event. An event that was refused or filtered is written on its own.
 The guarantee for every event and trigger is **one start, or one recorded reason**, however many servers run.
 
 ## Reading the log

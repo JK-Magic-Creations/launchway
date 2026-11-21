@@ -43,7 +43,7 @@ func (cl *client) queue(args []string) error {
 	}
 	return cl.print(q, *asJSON, func() {
 		if len(q) == 0 {
-			fmt.Fprintln(cl.out, "No run is waiting in a queue.")
+			fmt.Fprintln(cl.out, "No run is waiting in a Holding pattern.")
 		}
 		for _, e := range q {
 			fmt.Fprintf(cl.out, "%d. %s run #%d (%s): %s\n", e.Position, e.Project, e.Number, e.Run, e.Reason)

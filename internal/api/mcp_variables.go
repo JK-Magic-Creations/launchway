@@ -20,25 +20,25 @@ import (
 
 func addVariableTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_effective_variables", Annotations: readOnly("Get a project's variables in effect"),
-		Description: "Every variable in effect for a project, optionally for one environment, each with its chain: the winning value, the level it comes from, every value it overrides in order, whether it is locked and by whom, and why. A secret shows its reference, never a value. " + settings.VariableRule},
+		Description: "Every variable in effect for a project, optionally for one Airfield, each with its chain: the winning value, the level it comes from, every value it overrides in order, whether it is locked and by whom, and why. A secret shows its reference, never a value. " + settings.VariableRule},
 		mcpCallTimeout, getEffectiveVariables)
 	addTool(srv, c, &mcp.Tool{Name: "list_variables", Annotations: readOnly("List variables at a level"),
 		Description: "The variables at a level (installation, organization, unit or project; scope names the Squadron or the project) with what each inherits from above, and whether this level may override it. " + settings.VariableRule},
 		mcpCallTimeout, listVariables)
-	addTool(srv, c, &mcp.Tool{Name: "get_run_variables", Annotations: readOnly("Get the variables a run used"),
-		Description: "The variables a run used, as recorded when it was created, each with its chain at that moment; a re-run shows the original's. A secret shows its reference."},
+	addTool(srv, c, &mcp.Tool{Name: "get_run_variables", Annotations: readOnly("Get the variables a Sortie used"),
+		Description: "The variables a Sortie used, as recorded when it was created, each with its chain at that moment; a re-run shows the original's. A secret shows its reference."},
 		mcpCallTimeout, getRunVariables)
 	if !c.mayOperate {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_variable", Annotations: changes("Set a variable", true, true),
-		Description: "Set a variable at a level (scope names the Squadron or the project; environment makes it apply to one environment only). Types: string, number, boolean, list, map, secret (a reference { store, key, field }, never the secret) and connection (the name of a connection; of says what kind). A name keeps one type everywhere. Refused when a lock above forbids it. Who may: an operator of the project, or an administrator of the unit, the organization or the installation. Audited."},
+		Description: "Set a variable at a level (scope names the Squadron or the project; Airfield makes it apply to one Airfield only). Types: string, number, boolean, list, map, secret (a reference { store, key, field }, never the secret) and connection (the name of a connection; of says what kind). A name keeps one type everywhere. Refused when a lock above forbids it. Who may: an operator of the project, or an administrator of the unit, the organization or the installation. Audited."},
 		mcpCallTimeout, setVariable)
 	addTool(srv, c, &mcp.Tool{Name: "delete_variable", Annotations: changes("Delete a variable", true, true),
 		Description: "Delete a variable set at a level. What it overrode applies again. Audited."},
 		mcpCallTimeout, deleteVariable)
 	addTool(srv, c, &mcp.Tool{Name: "lock_variable", Annotations: changes("Lock a variable", true, true),
-		Description: "Lock a variable at a level, with a reason: nobody below may change it, a pipeline file or a run included. Settings below it are kept but ignored, and listed in the answer. Needs an administrator of that level. Audited."},
+		Description: "Lock a variable at a level, with a reason: nobody below may change it, a pipeline file or a Sortie included. Settings below it are kept but ignored, and listed in the answer. Needs an administrator of that level. Audited."},
 		mcpCallTimeout, lockVariable)
 	addTool(srv, c, &mcp.Tool{Name: "unlock_variable", Annotations: changes("Unlock a variable", true, true),
 		Description: "Remove the lock of a variable at a level; settings below it count again. Needs an administrator of that level. Audited."},

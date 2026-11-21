@@ -17,7 +17,7 @@ describe("the terms module", () => {
     const t = makeTerms({ set: "business" });
     expect([t.label("installation"), t.label("organization"), t.label("unit"), t.label("project")]).toEqual(["Installation", "Organization", "Team", "Project"]);
     expect([t.label("guide"), t.label("preflight"), t.label("clearance"), t.label("go"), t.label("no_go")]).toEqual(["Guide", "Checks", "Approval", "Approve", "Reject"]);
-    expect([t.label("hold"), t.label("flight_plan"), t.label("logbook")]).toEqual(["Freeze", "Starter pipeline", "Audit trail"]);
+    expect([t.label("hold"), t.label("flight_plan"), t.label("logbook")]).toEqual(["Freeze", "Pipeline template", "Audit trail"]);
   });
 
   it("uses American spelling in both sets", () => {

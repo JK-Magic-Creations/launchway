@@ -19,20 +19,20 @@ import (
 )
 
 func addChangeTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "start_run", Annotations: changes("Start a run", false, false),
-		Description: "Start a run of a project's pipeline at a branch or tag, with input values. With pipeline_text, start a draft run instead: that uncommitted text runs against the branch's current commit, to try a pipeline before committing it (steps with a when run only if its event names draft; nothing deploys; secrets only if the project allows). Returns the run's ID; then call wait_for_run."},
+	addTool(srv, c, &mcp.Tool{Name: "start_run", Annotations: changes("Start a Sortie", false, false),
+		Description: "Start a run of a project's pipeline at a branch or tag, with input values. With pipeline_text, start a draft run instead: that uncommitted text runs against the branch's current commit, to try a pipeline before committing it (steps with a when run only if its event names draft; nothing deploys; secrets only if the project allows). Returns the Sortie's ID; then call wait_for_run."},
 		mcpCallTimeout, startRun)
-	addTool(srv, c, &mcp.Tool{Name: "cancel_run", Annotations: changes("Cancel a run", true, true),
-		Description: "Cancel a run that is still going: running steps are stopped and the rest do not start."},
+	addTool(srv, c, &mcp.Tool{Name: "cancel_run", Annotations: changes("Cancel a Sortie", true, true),
+		Description: "Cancel a Sortie that is still going: running steps are stopped and the rest do not start."},
 		mcpCallTimeout, cancelRun)
-	addTool(srv, c, &mcp.Tool{Name: "retry_run", Annotations: changes("Retry a run", false, false),
-		Description: "Resume or re-run a finished run. Without from_step, from_steps and failed_only: RESUME it: the same run goes on, running its failed and canceled steps again, keeping what succeeded and the files its workspace holds (for a day); refused once a deployment opened. With from_step or from_steps: RE-RUN: start a new run of the same commit that runs those steps and every step after them again, reusing the others' results (outputs are kept, workspace files are not; a deploy step always runs again). With failed_only: re-run from the smallest set of steps that covers every failed and canceled step, which is what to use when two independent branches failed and a deployment opened, or when a fresh checkout is wanted. "},
+	addTool(srv, c, &mcp.Tool{Name: "retry_run", Annotations: changes("Retry a Sortie", false, false),
+		Description: "Resume or re-run a finished Sortie. Without from_step, from_steps and failed_only: RESUME it: the same Sortie goes on, running its failed and canceled steps again, keeping what succeeded and the files its workspace holds (for a day); refused once a deployment opened. With from_step or from_steps: RE-RUN: start a new run of the same commit that runs those steps and every step after them again, reusing the others' results (outputs are kept, workspace files are not; a deploy step always runs again). With failed_only: re-run from the smallest set of steps that covers every failed and canceled step, which is what to use when two independent branches failed and a deployment opened, or when a fresh checkout is wanted. "},
 		mcpCallTimeout, retryRun)
 	addTool(srv, c, &mcp.Tool{Name: "decide_approval", Annotations: changes("Approve or reject", true, false),
-		Description: "Approve or reject an approval step that is waiting. Approving lets the steps after it run; rejecting fails it. The person who started a run usually may not approve it."},
+		Description: "Approve or reject an approval step that is waiting. Approving lets the steps after it run; rejecting fails it. The person who started a Sortie usually may not approve it."},
 		mcpCallTimeout, decideApproval)
 	addTool(srv, c, &mcp.Tool{Name: "control_rollout", Annotations: changes("Control a rollout", true, false),
-		Description: "Give a command to a deployment's rollout: promote (to the next step), promote-full (skip the remaining steps), abort (back to the stable version) or retry (an aborted rollout). get_deployments with run_id and deployment says which are possible now. A deploy runner carries the command out."},
+		Description: "Give a command to a deployment's rollout: promote (to the next step), promote-full (skip the remaining steps), abort (back to the stable version) or retry (an aborted rollout). get_deployments with run_id and deployment says which are possible now. A deploy Station carries the command out."},
 		mcpCallTimeout, controlRollout)
 }
 
@@ -219,5 +219,5 @@ func controlRollout(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 		map[string]string{"comment": in.Comment}, nil); err != nil {
 		return okOut{}, err
 	}
-	return okOut{OK: true, Summary: "Asked for " + in.Action + "; a deploy runner carries it out. get_deployments shows when it has."}, nil
+	return okOut{OK: true, Summary: "Asked for " + in.Action + "; a deploy Station carries it out. get_deployments shows when it has."}, nil
 }

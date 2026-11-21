@@ -241,46 +241,46 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 
 func addReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_projects", Annotations: readOnly("List projects"),
-		Description: "List the projects (Git repositories with a pipeline) this token may see, with each one's latest run and whether this token may start runs there. Start here."},
+		Description: "List the projects (Git repositories with a pipeline) this token may see, with each one's latest Sortie and whether this token may start runs there. Start here."},
 		mcpCallTimeout, listProjects)
 	addTool(srv, c, &mcp.Tool{Name: "get_project", Annotations: readOnly("Get a project"),
-		Description: "One project in detail: its branches and tags, the inputs a run of it takes at a ref, and its pipeline file at that ref (the default branch if none is given). Read this before starting a run or changing a pipeline."},
+		Description: "One project in detail: its branches and tags, the inputs a run of it takes at a ref, and its pipeline file at that ref (the default branch if none is given). Read this before starting a Sortie or changing a pipeline."},
 		mcpCallTimeout, getProject)
 	addTool(srv, c, &mcp.Tool{Name: "list_runs", Annotations: readOnly("List runs"),
 		Description: "List runs, newest first, optionally of one project and with one status. Pages with next_cursor."},
 		mcpCallTimeout, listRuns)
-	addTool(srv, c, &mcp.Tool{Name: "get_run", Annotations: readOnly("Get a run"),
-		Description: "A run's state: every step's status and duration, and in words why it is waiting, why it failed and what can be done next. Failed steps carry the last lines of their output."},
+	addTool(srv, c, &mcp.Tool{Name: "get_run", Annotations: readOnly("Get a Sortie"),
+		Description: "A Sortie's state: every step's status and duration, and in words why it is waiting, why it failed and what can be done next. Failed steps carry the last lines of their output."},
 		mcpCallTimeout, getRun)
-	addTool(srv, c, &mcp.Tool{Name: "wait_for_run", Annotations: readOnly("Wait for a run"),
-		Description: "Wait until a run finishes (or, with until=waiting, until it waits for an approval), at most timeout_seconds (default 60, at most 600), sending progress notifications as steps change. Returns the run as get_run does, with timed_out true if it is still going; call again to keep waiting."},
+	addTool(srv, c, &mcp.Tool{Name: "wait_for_run", Annotations: readOnly("Wait for a Sortie"),
+		Description: "Wait until a Sortie finishes (or, with until=waiting, until it waits for an approval), at most timeout_seconds (default 60, at most 600), sending progress notifications as steps change. Returns the run as get_run does, with timed_out true if it is still going; call again to keep waiting."},
 		(maxWaitSeconds+30)*time.Second, waitForRun)
 	addTool(srv, c, &mcp.Tool{Name: "get_step_log", Annotations: readOnly("Read a step's log"),
-		Description: "Read part of one step's log, never all of it: the last lines (mode tail, the default), the first lines or the lines after a sequence number (mode head with after_seq), or the lines that contain a text (mode search). At most 500 lines and 64 KiB. Secrets were masked by the runner."},
+		Description: "Read part of one step's log, never all of it: the last lines (mode tail, the default), the first lines or the lines after a sequence number (mode head with after_seq), or the lines that contain a text (mode search). At most 500 lines and 64 KiB. Secrets were masked by the Station."},
 		mcpCallTimeout, getStepLog)
 	addTool(srv, c, &mcp.Tool{Name: "get_test_results", Annotations: readOnly("Get test results"),
-		Description: "A run's test results from its test reports: the totals, and the results themselves, failed ones by default, with their messages; include_details adds traces and captured output for up to 10."},
+		Description: "A Sortie's test results from its test reports: the totals, and the results themselves, failed ones by default, with their messages; include_details adds traces and captured output for up to 10."},
 		mcpCallTimeout, getTestResults)
 	addTool(srv, c, &mcp.Tool{Name: "get_security_findings", Annotations: readOnly("Get security findings"),
-		Description: "A run's security findings (from SARIF reports) and SBOMs: counts by severity and whether each is new, still there or fixed since the previous run, then the findings, most severe first. Secrets that scanners found are never shown, only where they are."},
+		Description: "A Sortie's security findings (from SARIF reports) and SBOMs: counts by severity and whether each is new, still there or fixed since the previous Sortie, then the findings, most severe first. Secrets that scanners found are never shown, only where they are."},
 		mcpCallTimeout, getFindings)
 	addTool(srv, c, &mcp.Tool{Name: "list_artifacts", Annotations: readOnly("List artifacts"),
-		Description: "The artifacts a run's steps kept, with their files and sizes."},
+		Description: "The artifacts a Sortie's steps kept, with their files and sizes."},
 		mcpCallTimeout, listArtifacts)
 	addTool(srv, c, &mcp.Tool{Name: "read_artifact_file", Annotations: readOnly("Read an artifact file"),
 		Description: "Read part of one file of an artifact as text: at most max_bytes (default 16 KiB, at most 64 KiB) from offset. A binary file is reported as such, without its bytes."},
 		mcpCallTimeout, readArtifactFile)
 	addTool(srv, c, &mcp.Tool{Name: "list_images", Annotations: readOnly("List images"),
-		Description: "Container images: those a run's image steps built (run_id), or those built anywhere this token can see with a repository, digest or tag. Each with its digest, tags, whether it was pushed and signed."},
+		Description: "Container images: those a Sortie's image steps built (run_id), or those built anywhere this token can see with a repository, digest or tag. Each with its digest, tags, whether it was pushed and signed."},
 		mcpCallTimeout, listImages)
 	addTool(srv, c, &mcp.Tool{Name: "get_deployments", Annotations: readOnly("Get deployments"),
-		Description: "Environments and what is deployed in each, recent deployments, and, for one deployment of a run (run_id and deployment), which rollout commands (promote, promote-full, abort, retry) are possible now and why not."},
+		Description: "Airfields and what is deployed in each, recent deployments, and, for one deployment of a Sortie (run_id and deployment), which rollout commands (promote, promote-full, abort, retry) are possible now and why not."},
 		mcpCallTimeout, getDeployments)
 	addTool(srv, c, &mcp.Tool{Name: "list_approvals", Annotations: readOnly("List approvals"),
 		Description: "Approval steps waiting for a person's decision, in the projects this token may see."},
 		mcpCallTimeout, listApprovals)
 	addTool(srv, c, &mcp.Tool{Name: "validate_pipeline", Annotations: readOnly("Validate a pipeline"),
-		Description: "Check pipeline YAML with the server's own validator without running it. Returns every problem with its line, column, path and the text of that line, or, if it is valid, the steps and the order they run in. With project, templates from shared libraries are expanded and deploy environments checked, as a run of that project would."},
+		Description: "Check pipeline YAML with the server's own validator without running it. Returns every problem with its line, column, path and the text of that line, or, if it is valid, the steps and the order they run in. With project, templates from shared libraries are expanded and deploy Airfields checked, as a run of that project would."},
 		mcpCallTimeout, validatePipeline)
 	addTool(srv, c, &mcp.Tool{Name: "get_pipeline_reference", Annotations: readOnly("Pipeline reference"),
 		Description: "The pipeline format: every key, what it means and worked examples. Read it before writing or changing a pipeline. The same text is the resource launchway://docs/pipeline-reference."},
@@ -604,7 +604,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 		actions = append(actions, "wait_for_run run_id="+id)
 	}
 	if d.NeedsNewerServer {
-		sum = append(sum, "This run uses features this server does not know; a newer server carries it on.")
+		sum = append(sum, "This Sortie uses features this server does not know; a newer server carries it on.")
 	}
 	if d.Draft {
 		sum = append(sum, "It is a draft run of uncommitted pipeline text: steps with a when run only if its event names draft, and nothing is deployed.")
@@ -866,7 +866,7 @@ func listArtifacts(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in r
 			out.Summary += ": " + a.Problem
 		}
 	case len(out.Artifacts) == 0:
-		out.Summary = "This run kept no artifacts."
+		out.Summary = "This Sortie kept no artifacts."
 	default:
 		out.Summary = fmt.Sprintf("%d artifacts.", len(out.Artifacts))
 	}

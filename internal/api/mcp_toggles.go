@@ -37,13 +37,13 @@ func tg(ctx context.Context, c *mcpCall, tool, method, path string, body any) (m
 }
 
 func addToggleTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_toggles", Annotations: readOnly("List a project's feature toggles"),
-		Description: "The feature toggles a project sees, each with its state in every environment (off, on, targeted by rules, rollout), its owner, stale mentions and changes waiting for approval. A toggle is a value an application reads at run time, so that something can be turned on, off or rolled out to a share of users without a deployment."},
+	addTool(srv, c, &mcp.Tool{Name: "list_toggles", Annotations: readOnly("List a project's Switches"),
+		Description: "The Switches a project sees, each with its state in every Airfield (off, on, targeted by rules, rollout), its owner, stale mentions and changes waiting for approval. A toggle is a value an application reads at run time, so that something can be turned on, off or rolled out to a share of users without a deployment."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "list_toggles", http.MethodGet, apiPath("/api/v1/projects/%s/toggles", in.Project), nil)
 		})
-	addTool(srv, c, &mcp.Tool{Name: "get_toggle", Annotations: readOnly("Get a feature toggle"),
-		Description: "One toggle with its definition, its state and rules in each environment, lock, stale mentions and when it was last evaluated."},
+	addTool(srv, c, &mcp.Tool{Name: "get_toggle", Annotations: readOnly("Get a Switch"),
+		Description: "One toggle with its definition, its state and rules in each Airfield, lock, stale mentions and when it was last evaluated."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgKey) (map[string]any, error) {
 			return tg(ctx, c, "get_toggle", http.MethodGet, apiPath("/api/v1/projects/%s/toggles/%s", in.Project, in.Toggle), nil)
 		})
@@ -56,7 +56,7 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "toggle_history", http.MethodGet, apiPath("/api/v1/projects/%s/toggles/%s/history", in.Project, in.Toggle)+"?"+url.Values{"environment": {in.Environment}}.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "evaluate_toggle", Annotations: readOnly("Try a context against a toggle"),
-		Description: "What a toggle serves for a context ({\"key\": \"user-1\", \"plan\": \"pro\"}) in each environment, as it is now, with the reason and the rule that matched. Nothing is counted or stored. Use it to check a rule before relying on it."},
+		Description: "What a toggle serves for a context ({\"key\": \"user-1\", \"plan\": \"pro\"}) in each Airfield, as it is now, with the reason and the rule that matched. Nothing is counted or stored. Use it to check a rule before relying on it."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgKey
 			Context     map[string]any `json:"context" jsonschema:"what the application would say about who is asking: key (what percentages are taken over) and attributes"`
@@ -70,8 +70,8 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "list_toggle_changes_waiting", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-changes", in.Project), nil)
 		})
-	addTool(srv, c, &mcp.Tool{Name: "toggle_timeline", Annotations: readOnly("Toggle changes in an environment"),
-		Description: "The toggle changes in one environment, newest first: what the environment's page shows beside its deployments, so that \"what changed before it broke?\" has an answer."},
+	addTool(srv, c, &mcp.Tool{Name: "toggle_timeline", Annotations: readOnly("Toggle changes in an Airfield"),
+		Description: "The toggle changes in one Airfield, newest first: what the Airfield's page shows beside its deployments, so that \"what changed before it broke?\" has an answer."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Environment string `json:"environment" jsonschema:"the environment, such as production"`
@@ -79,7 +79,7 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "toggle_timeline", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-timeline", in.Project)+"?"+url.Values{"environment": {in.Environment}}.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "get_toggle_safeguards", Annotations: readOnly("Toggle safeguards"),
-		Description: "The safeguards that apply to changing toggles in each environment (a reason, an approval, a watch window), and which level set each. They are on by default; a team may turn them down at its level with a reason, and a level above may lock one."},
+		Description: "The safeguards that apply to changing toggles in each Airfield (a reason, an approval, a watch window), and which level set each. They are on by default; a team may turn them down at its level with a reason, and a level above may lock one."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "get_toggle_safeguards", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-safeguards", in.Project), nil)
 		})
@@ -89,7 +89,7 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "list_toggle_keys", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-keys", in.Project), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "plan_toggles_file", Annotations: readOnly("Compare a toggles file with the live toggles"),
-		Description: "How a toggles file (YAML, the same model as the API) differs from the project's live toggles: toggles and environments to add, to change, and ones that exist only live. Changes nothing."},
+		Description: "How a toggles file (YAML, the same model as the API) differs from the project's live toggles: toggles and Airfields to add, to change, and ones that exist only live. Changes nothing."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			File string `json:"file" jsonschema:"the file's text"`
@@ -101,7 +101,7 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 
 func addToggleMoreReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_toggle_usage", Annotations: readOnly("Where a toggle is evaluated"),
-		Description: "How often applications evaluated a toggle in each environment over the last days, per value served, and when it was last evaluated. Counts only: nothing about who was evaluated is stored."},
+		Description: "How often applications evaluated a toggle in each Airfield over the last days, per value served, and when it was last evaluated. Counts only: nothing about who was evaluated is stored."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgKey) (map[string]any, error) {
 			return tg(ctx, c, "get_toggle_usage", http.MethodGet, apiPath("/api/v1/projects/%s/toggles/%s/usage", in.Project, in.Toggle), nil)
 		})
@@ -127,7 +127,7 @@ func addToggleMoreReadTools(srv *mcp.Server, c *mcpCall) {
 
 func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "create_toggle", Annotations: changes("Create a feature toggle", false, false),
-		Description: "Make a toggle in a project: key, type (boolean, string, number, json), default (what it serves while off), kind (release, kill, experiment, operational, permission), owner, description, an expected removal date (expires, 2027-03-01). It starts off in every environment. Audited."},
+		Description: "Make a toggle in a project: key, type (boolean, string, number, json), default (what it serves while off), kind (release, kill, experiment, operational, permission), owner, description, an expected removal date (expires, 2027-03-01). It starts off in every Airfield. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Key         string `json:"key" jsonschema:"lower-case letters, digits and - _ ."`
@@ -148,7 +148,7 @@ func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 			}
 			return tg(ctx, c, "create_toggle", http.MethodPost, apiPath("/api/v1/projects/%s/toggles", in.Project), body)
 		})
-	addTool(srv, c, &mcp.Tool{Name: "set_toggle_state", Annotations: changes("Change a toggle in an environment", false, true),
+	addTool(srv, c, &mcp.Tool{Name: "set_toggle_state", Annotations: changes("Change a toggle in an Airfield", false, true),
 		Description: "Set what a toggle does in an environment: state = {on, off_value, prerequisites, rules, fallthrough}. A rule is {id, clauses: [{attribute, op, values, negate}], serve: {value} or {rollout: {by, buckets: [{value, weight}]}}}; weights are hundredths of a percent and add up to 10000. Ops: equals, in, prefix, suffix, contains, exists, in_segment, semver_eq/lt/lte/gt/gte, number_eq/lt/lte/gt/gte. A reason is required, and in a protected environment the change waits for another person's approval (the answer says so). `at` (RFC 3339) schedules it. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgKey
@@ -161,8 +161,8 @@ func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 				map[string]any{"state": in.State, "reason": in.Reason, "at": in.At})
 		})
 	for _, a := range []struct{ name, route, title, desc string }{
-		{"revert_toggle_change", "revert", "Revert a toggle change", "Go back over a change: the environment (or the definition) returns to what it was before the change. A reason is required; a revert is never held for approval. The answer says how many later changes it also undid. Audited."},
-		{"approve_toggle_change", "approve", "Approve a toggle change", "Approve a change that waits. Someone other than the person who asked, with the operator role in that environment. With enough approvals the change is made. Audited."},
+		{"revert_toggle_change", "revert", "Revert a toggle change", "Go back over a change: the Airfield (or the definition) returns to what it was before the change. A reason is required; a revert is never held for approval. The answer says how many later changes it also undid. Audited."},
+		{"approve_toggle_change", "approve", "Approve a toggle change", "Approve a change that waits. Someone other than the person who asked, with the operator role in that Airfield. With enough approvals the change is made. Audited."},
 		{"reject_toggle_change", "reject", "Reject a toggle change", "Turn a waiting change down, with a comment. Audited."},
 		{"withdraw_toggle_change", "withdraw", "Withdraw a toggle change", "Take back a change you asked for that still waits. Audited."},
 	} {
@@ -173,7 +173,7 @@ func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 			})
 	}
 	addTool(srv, c, &mcp.Tool{Name: "revert_toggle_changes_since", Annotations: changes("Revert the toggle changes since a time", true, false),
-		Description: "Revert every toggle change made in an environment since a time (Unix milliseconds; a rollback page gives it), newest first. dry_run lists them without reverting. Audited."},
+		Description: "Revert every toggle change made in an Airfield since a time (Unix milliseconds; a rollback page gives it), newest first. dry_run lists them without reverting. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Environment string `json:"environment" jsonschema:"the environment, such as production"`
@@ -198,7 +198,7 @@ func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "update_toggle", http.MethodPatch, apiPath("/api/v1/projects/%s/toggles/%s", in.Project, in.Toggle), body)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "delete_toggle", Annotations: changes("Delete a feature toggle", true, false),
-		Description: "Remove a toggle with all its environment states. The removal is kept in the history and can be reverted. A reason is required. Audited. Remove the check from the code first."},
+		Description: "Remove a toggle with all its Airfield states. The removal is kept in the history and can be reverted. A reason is required. Audited. Remove the check from the code first."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgKey
 			Reason string `json:"reason" jsonschema:"why it is removed"`
@@ -264,7 +264,7 @@ func addToggleAdminTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "delete_toggle_segment", http.MethodDelete, apiPath("/api/v1/projects/%s/toggle-segments/%s", in.Project, in.Name)+"?"+url.Values{"reason": {in.Reason}}.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "set_toggle_safeguards", Annotations: changes("Set toggle safeguards", true, true),
-		Description: "Set the safeguards for changing toggles in a project's environment (or all of them): require_reason, require_approval, approvals (how many people), watch_minutes, and locked (names of safeguards that levels below may not change). Turning one down needs a reason and is recorded. Needs the admin role on the project."},
+		Description: "Set the safeguards for changing toggles in a project's Airfield (or all of them): require_reason, require_approval, approvals (how many people), watch_minutes, and locked (names of safeguards that levels below may not change). Turning one down needs a reason and is recorded. Needs the admin role on the project."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Environment string         `json:"environment,omitempty" jsonschema:"only this environment; all of them when empty"`

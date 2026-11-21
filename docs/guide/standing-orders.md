@@ -2,7 +2,7 @@
 
 The same scans and best-practice checks for every repository, on by default: what runs on yours and why, how to change it, and how to accept a risk.
 
-Launchway holds its own code to a set of scans: secrets, known vulnerabilities, insecure code patterns, licenses, Dockerfiles, manifests and more (see [How Launchway is scanned](../security/how-launchway-is-scanned.md)). **Standing orders** offer the same to every repository, with no tool to install and no change to the repository. Every run gains an **Inspection**: one step per check that fits what the repository holds, run in parallel, followed by a verdict step.
+Launchway holds its own code to a set of scans: secrets, known vulnerabilities, insecure code patterns, licenses, Dockerfiles, manifests and more (see [How Launchway is scanned](../security/how-launchway-is-scanned.md)). **Standing orders** offer the same to every repository, with no tool to install and no change to the repository. Every Sortie (run) gains an **Inspection**: one step per check that fits what the repository holds, run in parallel, followed by a verdict step.
 
 ## What runs on your repository
 
@@ -20,7 +20,7 @@ When a run is made, Launchway looks at the files of the commit and picks the che
 
 [The reference](../reference/standing-orders.md) lists every check with its tool, the tool's license, its time budget and what it needs from the network. The project's **Standing orders** page (Pipelines, then your project, then Standing orders) shows, for your repository, each check, whether it runs and why, and where each setting comes from.
 
-The steps are **added by the server**. Your pipeline file does not mention them, and the graph of the run marks them as added by Standing orders, with a link to the page that says why and how to change it. They run in the tool's own pinned container image, never see your project's secrets, use the step cache, and run unchanged for a pull request from a fork or an automation account (a restricted run), because they need no secret.
+The steps are **added by the server**. Your pipeline file does not mention them, and the graph of the Sortie marks them as added by Standing orders, with a link to the page that says why and how to change it. They run in the tool's own pinned container image, never see your project's secrets, use the step cache, and run unchanged for a pull request from a fork or an automation account (a restricted run), because they need no secret.
 
 If your pipeline has a step of its own called `inspect-<check>` (for example `inspect-secrets`), Launchway keeps yours and does not add that check.
 
@@ -28,7 +28,7 @@ If your pipeline has a step of its own called `inspect-<check>` (for example `in
 
 - **A pull request is blocked only by what it introduces.** The baseline is what the default branch already has. A finding that was there before your change is shown as *existing* and never blocks you.
 - By default a check set to **block** (secrets, vulnerabilities in dependencies) stops a change that introduces a finding of **high** or **critical** severity, and for a vulnerability only when a fixed version exists. Everything else advises: it is shown, never blocks.
-- **The default branch shows its backlog without failing.** Findings on it are recorded, tracked from the day they were first seen, and counted as fixed when a later run no longer has them. Set `gate.default_branch` to `block` if you want a finding there to fail the run.
+- **The default branch shows its backlog without failing.** Findings on it are recorded, tracked from the day they were first seen, and counted as fixed when a later run no longer has them. Set `gate.default_branch` to `block` if you want a finding there to fail the Sortie.
 - Until the default branch has been inspected once there is nothing to compare with, so nothing blocks and the verdict says so.
 - A check that did not run is never taken for a clean result: the verdict says which one did not finish.
 
@@ -70,7 +70,7 @@ ignore:
 
 ## Accepting a risk
 
-On a finding (in a run's Security tab, or the project's page) choose **Accept the risk**. It needs:
+On a finding (in a Sortie's Security tab, or the project's page) choose **Accept the risk**. It needs:
 
 - a **reason** of at least 10 characters (why it is safe, or why it is not a problem), and
 - an **end date** within a year.
@@ -87,8 +87,8 @@ Exports: the project's page offers CSV, JSON and SARIF; `launchway findings expo
 
 ## Where the results are
 
-- **The Security tab of a run** starts with the Inspection: verdict, the checks and whether each ran, and the findings split into new, existing and accepted.
+- **The Security tab of a Sortie** starts with the Inspection: verdict, the checks and whether each ran, and the findings split into new, existing and accepted.
 - **The project's Standing orders page**: the open findings over time (with a table of the same numbers), by check, oldest first, the mean time to fix, and exports.
 - **Settings, Standing orders**: which repositories have which checks, at a level, and the settings of the level.
 
-See also: [Security findings and SBOMs](security-findings.md), [Dependency updates](dependency-updates.md), [Variables at levels](variables.md) (the same Base, Wing, Squadron and Project levels and locks).
+See also: [Security findings and SBOMs](security-findings.md), [Maintenance (dependency updates)](dependency-updates.md), [Variables at levels](variables.md) (the same Base, Wing, Squadron and Project levels and locks).

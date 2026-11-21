@@ -17,7 +17,7 @@ func TestHostileNamesAreRefused(t *testing.T) {
 			t.Errorf("%q was accepted (%v)", n, err)
 		}
 	}
-	for _, n := range []string{"a", "demo", "homelab-gitops", "My_Repo.v2", "x1", strings.Repeat("a", MaxNameLength)} {
+	for _, n := range []string{"a", "demo", "platform-gitops", "My_Repo.v2", "x1", strings.Repeat("a", MaxNameLength)} {
 		if err := ValidSegment(n); err != nil {
 			t.Errorf("%q refused: %v", n, err)
 		}

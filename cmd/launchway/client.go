@@ -261,7 +261,7 @@ func (cl *client) call(method, path string, body, v any) error {
 				names = append(names, n)
 			}
 			sort.Strings(names)
-			msg = "the run's inputs have problems:"
+			msg = "the Sortie's inputs have problems:"
 			for _, n := range names {
 				msg += fmt.Sprintf("\n  %s: %s", n, e.Fields[n])
 			}
@@ -717,7 +717,7 @@ type logLine struct {
 func (cl *client) logs(args []string) error {
 	fs := flag.NewFlagSet("runs logs", flag.ContinueOnError)
 	step := fs.String("step", "", "only this step")
-	follow := fs.Bool("follow", false, "keep printing new lines until the run finishes")
+	follow := fs.Bool("follow", false, "keep printing new lines until the Sortie finishes")
 	service := fs.String("service", "", "print this service container's output instead of the steps'")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -846,7 +846,7 @@ func (cl *client) lanes(args []string) error {
 			fmt.Fprintln(cl.out, "No lane is held and no run is waiting for one.")
 		}
 		for _, l := range lanes {
-			holder := "no run holds it"
+			holder := "no Sortie holds it"
 			if l.Holder != nil {
 				holder = fmt.Sprintf("held by run #%d (%s)", l.Holder.Number, l.Holder.Status)
 			}

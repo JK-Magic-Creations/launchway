@@ -221,8 +221,8 @@ steps:
   image:
     kind: image
     tags:
-      - { registry: harbor, repository: homelab/app, tag: { output: tag.tag } }
-      - { registry: harbor, repository: homelab/app, tag: ci-latest, if: { param: moving_tag } }
+      - { registry: harbor, repository: team/app, tag: { output: tag.tag } }
+      - { registry: harbor, repository: team/app, tag: ci-latest, if: { param: moving_tag } }
   verify:
     kind: verify
     if: { param: verify }              # a deploy, verify, rollback or rollout step may be left out too

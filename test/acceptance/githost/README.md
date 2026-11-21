@@ -1,13 +1,13 @@
 # Git hosting acceptance suite
 
-Executable form of AT-HG-01 to AT-HG-31 and AT-GAP-9 (design repository, `docs/32-replacing-homelab-gitea.md`, story S40-01).
+Executable form of AT-HG-01 to AT-HG-31 and AT-GAP-9 (design repository, `docs/32-replacing-cluster-a-gitea.md`, story S40-01).
 The same Go tests run against Launchway's own Git hosting (switch it on with the installation setting `forge.hosting`) and
 against any other compatible Git host, such as the one being replaced (it must pass: that proves the tests). Nothing is skipped by silence: every test records the values it compared, and every part it does not
 cover is listed in the report with the reason.
 
 ```sh
 export LW_ACCEPT_URL=http://192.168.1.242:3000 LW_ACCEPT_TOKEN=...      # token from Vault, never on a command line
-export LW_ACCEPT_URL_ALT=http://git.home.jk-magic-creations.com          # optional second address
+export LW_ACCEPT_URL_ALT=http://git.example.test          # optional second address
 LW_ACCEPT_REPORT=/tmp/report timeout -k 30s 12m go test -count=1 -timeout 10m -v ./test/acceptance/githost/
 ```
 
@@ -42,7 +42,7 @@ when the flavor is `launchway`; `LW_ACCEPT_PR_API=gitea` makes the same test use
 | Result | Ids |
 |---|---|
 | pass | AT-HG-01, 02, 06, 07, 09, 15, 18, 24, 26 (and the catalog check) |
-| skip, with the reason in the report | AT-HG-05 (needs the Gitea push-mirror route), 08 (needs the Gitea tag-protection route or `LW_ACCEPT_OTHER_USER`), 17 (no OIDC sign-in source in the test server), and the eleven homelab-only ids |
+| skip, with the reason in the report | AT-HG-05 (needs the Gitea push-mirror route), 08 (needs the Gitea tag-protection route or `LW_ACCEPT_OTHER_USER`), 17 (no OIDC sign-in source in the test server), and the eleven cluster-a-only ids |
 | fail, because a Gitea-compatible route is missing | AT-HG-04 `POST /repos/migrate`; 10 `POST .../labels`, `/milestones`, `/issues`, `/issues/{n}/comments`, `PATCH /issues/{n}`; 11 `GET .../releases`, `/wiki/pages`, `/packages/{owner}`, `/settings/repository`; 14 `POST .../hooks` (Gitea body, `gitea` type); 16 `POST .../statuses/{sha}`, `GET .../commits/{ref}/status` and `/statuses`; 19 `GET /api/healthz`, `/api/v1/version`; 20 `GET /version`, `/user` (exists), `/repos/search`, `/commits`, `/contents`, `/branches`, `/git/trees`, `/compare`; 25 `GET /api/v1/version`, `/metrics`; 30 `GET /raw/branch/B/PATH`, `/archive/REF.tar.gz`, `.zip`, `/repos/search`, `/git/trees` |
 
 None of the failures is a pull request: AT-HG-09 is the only id about them, and it passes through Launchway's own routes. It would
@@ -64,10 +64,10 @@ The suite drives the host only through these Gitea-compatible surfaces. Each is 
 | 08 | `POST .../tag_protections` (or equal) that refuses force-move and delete of a `v*` tag |
 | 09, 10, 16 | Pull requests (create, rebase/replay merge, list with state and timestamps), issues with labels, milestones, comments, and commit statuses with a combined state: `/pulls`, `/issues`, `/labels`, `/milestones`, `/statuses/{sha}`, `/commits/{sha}/status` |
 | 11 | `GET /settings/repository`, `/releases`, `/wiki/pages`, `/packages/{owner}` answering with empty lists |
-| 14 | Webhooks `POST .../hooks` of type `gitea`, a signed (`X-Gitea-Signature` or `X-Hub-Signature-256`, HMAC-SHA256) `push` payload with `ref`, `after` and `repository.full_name`, delivered within 15 s to a private address (the homelab's receivers are private) |
+| 14 | Webhooks `POST .../hooks` of type `gitea`, a signed (`X-Gitea-Signature` or `X-Hub-Signature-256`, HMAC-SHA256) `push` payload with `ref`, `after` and `repository.full_name`, delivered within 15 s to a private address (the cluster-a's receivers are private) |
 | 17 | A sign-in start path that redirects to the OIDC provider |
 | 19, 25 | `/api/healthz` and `/api/v1/version` under 1 s; `/metrics` (Launchway) |
-| 20, 30 | The read API Beacon, mcp-accounts and the Blackbox probe use (`/version`, `/user`, `/repos/search`, `/commits`, `/contents`, `/branches`, `/git/trees`, `/compare`), `/raw/branch/<b>/<path>` and `/archive/<ref>.tar.gz` and `.zip` |
+| 20, 30 | The read API Webapp, mcp-accounts and the Blackbox probe use (`/version`, `/user`, `/repos/search`, `/commits`, `/contents`, `/branches`, `/git/trees`, `/compare`), `/raw/branch/<b>/<path>` and `/archive/<ref>.tar.gz` and `.zip` |
 | 26 | p95 clone under 2 s and push under 1 s on a seeded repository |
 
 `census/census.py` is the AT-GAP-9 tool: it summarises a window of Gitea access logs from Loki or a log file.

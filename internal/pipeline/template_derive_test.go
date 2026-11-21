@@ -8,7 +8,7 @@ import (
 const deriveTemplate = `template: service
 params:
   name:     { type: string }
-  image:    { type: string, default: { param: name, format: "homelab/%s" } }
+  image:    { type: string, default: { param: name, format: "team/%s" } }
   manifest: { type: string, default: { param: name, format: "apps/%s/base.yaml" } }
   verify:   { type: boolean, default: true }
   moving:   { type: boolean, default: true }
@@ -65,11 +65,11 @@ func TestDerivedDefaultsAndConditionalEntries(t *testing.T) {
 	tm := map[string]string{"service": deriveTemplate}
 	p := mustExpand(t, strings.Replace(deriveUse, "%s", "", 1), tm)
 	img := p.Step("flight/img").ImageBuild
-	if len(img.Tags) != 2 || img.Tags[0].Repository != "homelab/mcp-weather" {
+	if len(img.Tags) != 2 || img.Tags[0].Repository != "team/mcp-weather" {
 		t.Fatalf("tags: %+v", img.Tags)
 	}
 	ch := p.Step("flight/deploy").ArgoCD.WriteBack.Changes
-	if len(ch) != 2 || ch[0].File != "apps/mcp-weather/base.yaml" || ch[0].Image != "homelab/mcp-weather" {
+	if len(ch) != 2 || ch[0].File != "apps/mcp-weather/base.yaml" || ch[0].Image != "team/mcp-weather" {
 		t.Fatalf("changes: %+v", ch)
 	}
 	if v := p.Step("flight/verify"); v == nil || len(v.Verify.Metrics) != 2 || p.Step("flight/rollback") == nil {
@@ -98,11 +98,11 @@ func TestDerivedDefaultsAndConditionalEntries(t *testing.T) {
 func TestDerivedDefaultMistakesAreSaidPlainly(t *testing.T) {
 	use := strings.Replace(deriveUse, "%s", "", 1)
 	for want, tmpl := range map[string]string{
-		"which this template does not have": strings.Replace(deriveTemplate, "{ param: name, format: \"homelab/%s\" }", "{ param: nope }", 1),
-		"from the parameter itself":         strings.Replace(deriveTemplate, "image:    { type: string, default: { param: name, format: \"homelab/%s\" } }", "image:    { type: string, default: { param: image } }", 1),
-		"and no other %":                    strings.Replace(deriveTemplate, `format: "homelab/%s"`, `format: "homelab/%s/%d"`, 1),
-		"taken from each other":             strings.Replace(strings.Replace(deriveTemplate, "name:     { type: string }", "name:     { type: string, default: { param: image } }", 1), `{ param: name, format: "homelab/%s" }`, `{ param: name }`, 1),
-		"is a boolean; a default can be":    strings.Replace(deriveTemplate, `{ param: name, format: "homelab/%s" }`, `{ param: verify }`, 1),
+		"which this template does not have": strings.Replace(deriveTemplate, "{ param: name, format: \"team/%s\" }", "{ param: nope }", 1),
+		"from the parameter itself":         strings.Replace(deriveTemplate, "image:    { type: string, default: { param: name, format: \"team/%s\" } }", "image:    { type: string, default: { param: image } }", 1),
+		"and no other %":                    strings.Replace(deriveTemplate, `format: "team/%s"`, `format: "team/%s/%d"`, 1),
+		"taken from each other":             strings.Replace(strings.Replace(deriveTemplate, "name:     { type: string }", "name:     { type: string, default: { param: image } }", 1), `{ param: name, format: "team/%s" }`, `{ param: name }`, 1),
+		"is a boolean; a default can be":    strings.Replace(deriveTemplate, `{ param: name, format: "team/%s" }`, `{ param: verify }`, 1),
 	} {
 		_, err := expand(t, use, map[string]string{"service": tmpl})
 		if err == nil || !strings.Contains(err.Error(), want) {

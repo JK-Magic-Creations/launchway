@@ -7,7 +7,7 @@ import (
 
 func TestWriteBackIsChecked(t *testing.T) {
 	env := func(w *WriteBack) []Environment {
-		return []Environment{{Name: "prod", Target: "homelab", Projects: []string{"*"}, WriteBack: w}}
+		return []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"*"}, WriteBack: w}}
 	}
 	if _, err := checkEnvironments(env(&WriteBack{Repo: "acme/gitops", Mode: "pull_request", Merge: "person", Method: "squash"})); err != nil {
 		t.Fatal(err)

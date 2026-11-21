@@ -100,7 +100,7 @@ export function ReturnDialog({ project, airfield, version, onClose, onDone }: { 
     <Dialog label={label} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) go(); }}>
         <h2>{label}</h2>
-        <p className="rel-hint">{version ? `${airfield} runs ${version}. ` : ""}It goes back to the release it ran before, by a rollback: the same rules, the same lock, and the reason is kept with it. A rollback never restores a database or configuration.</p>
+        <p className="rel-hint">{version ? `${airfield} runs ${version}. ` : ""}{terms().say("It goes back to the release it ran before, by a {rollback}: the same rules, the same lock, and the reason is kept with it. A {rollback} never restores a database or configuration.")}</p>
         <label className="field"><span>Why? (required)</span><textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} required data-autofocus /></label>
         <ErrorBox error={error} />
         <div className="dialog-actions">

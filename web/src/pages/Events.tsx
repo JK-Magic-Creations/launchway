@@ -5,6 +5,7 @@ import { clock } from "../format";
 import { Button, EmptyState, PageHead, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { DECISIONS, SOURCES, eventsApi, type EventRecord } from "../eventsApi";
+import { terms } from "../terms";
 
 const EventSources = lazy(() => import("./EventSources"));
 
@@ -29,7 +30,7 @@ export function EventsPage() {
   return (
     <div className="page page-wide">
       <PageHead eyebrow="Activity" title="Events"
-        sentence="Everything the server received, and what it decided for each trigger, with the reason. Use it to see why a run started, or why it did not." />
+        sentence={terms().say("Everything the server received, and what it decided for each trigger, with the reason. Use it to see why a {run} started, or why it did not.")} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
         <label className="field"><span>Project</span><input value={draft.project} onChange={set("project")} /></label>
         <label className="field"><span>Source</span>
@@ -61,7 +62,7 @@ export function EventsPage() {
             {ev.decisions.map((d) => (
               <li key={d.id} data-decision={d.decision}>
                 <b>{d.trigger}</b>: <span className="mono">{d.decision}</span>
-                {d.run_id && <> (<a href={`/runs/${d.run_id}`}>run #{d.run_number}</a>)</>}: {d.reason}
+                {d.run_id && <> (<a href={`/runs/${d.run_id}`}>{terms().say("{run} #")}{d.run_number}</a>)</>}: {d.reason}
               </li>
             ))}
             {ev.decisions.length === 0 && <li className="faint">Nothing was decided: no trigger judged this event.</li>}

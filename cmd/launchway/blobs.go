@@ -208,7 +208,7 @@ func printCopyReport(rep *engine.CopyReport, from, to string, took time.Duration
 		}
 	}
 	if rep.Uploading > 0 {
-		fmt.Printf("%d files are still being uploaded; run the copy again once their runs are done.\n", rep.Uploading)
+		fmt.Printf("%d files are still being uploaded; run the copy again once their Sorties are done.\n", rep.Uploading)
 	}
 	if len(rep.Left) > 0 {
 		fmt.Printf("Still recorded elsewhere: %s.\n", engine.DescribeElsewhere(rep.Left))

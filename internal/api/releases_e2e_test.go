@@ -76,7 +76,7 @@ func setupShip(t *testing.T, more ...string) *shipEnv {
 	}
 	e.authEnv = setupAuth(t, envOpts{
 		projects:     projects,
-		environments: []engine.Environment{{Name: "dev", Target: "homelab", Projects: names}, {Name: "prod", Target: "homelab", Projects: names, Protected: true}},
+		environments: []engine.Environment{{Name: "dev", Target: "cluster-a", Projects: names}, {Name: "prod", Target: "cluster-a", Projects: names, Protected: true}},
 		artifacts:    &engine.ArtifactOptions{Store: store},
 	})
 	e.ada, e.otto, e.vic, e.mel = e.signIn(t, "ada"), e.signIn(t, "otto"), e.signIn(t, "vic"), e.signIn(t, "mel")

@@ -63,8 +63,8 @@ type unitFlags struct{ env, project, service *string }
 
 func addUnitFlags(fs *flag.FlagSet) unitFlags {
 	return unitFlags{
-		env:     fs.String("env", "", "the environment"),
-		project: fs.String("project", "", "the project (found from the environment's services when it is the only one)"),
+		env:     fs.String("env", "", "the Airfield"),
+		project: fs.String("project", "", "the project (found from the Airfield's services when it is the only one)"),
 		service: fs.String("service", "", "the service (default: the project's name)"),
 	}
 }
@@ -132,7 +132,7 @@ func (cl *client) printPlan(plan *engine.RollbackPlan) {
 		fmt.Fprintf(cl.out, cl.say("Cannot {rollback:do} %s yet: %s\n  instead: %s\n"), where, a.Reason, a.Instead)
 	}
 	if a.Emergency {
-		fmt.Fprintln(cl.out, "This is an emergency action: the environment is protected, so no approval comes first and an approver reviews it afterwards.")
+		fmt.Fprintln(cl.out, "This is an emergency action: the Airfield is protected, so no approval comes first and an approver reviews it afterwards.")
 		if a.RequiresApproval {
 			fmt.Fprintln(cl.out, "A setting asks for an approval first even then.")
 		}

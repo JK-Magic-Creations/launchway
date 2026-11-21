@@ -252,7 +252,7 @@ func TestRollbackRunCannotBeResumedOrRerun(t *testing.T) {
 // first, flagged for review, listed until an approver acknowledges it with a
 // comment; the person who asked may not review it unless self-approval is on.
 func TestEmergencyRollbackOnAProtectedEnvironmentNeedsReview(t *testing.T) {
-	envs := []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true,
+	envs := []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true,
 		Reviewers: &pipeline.Approvers{Users: []string{"bob", "ann"}}}}
 	e := noSelfEngine(t, envs)
 	shopDone(t, e, 1, "1.0.0", "c1")
@@ -313,7 +313,7 @@ func TestEmergencyRollbackOnAProtectedEnvironmentNeedsReview(t *testing.T) {
 // A policy (installation or environment) can require an approval even for an
 // emergency: the rollback waits for it, and the requester may not give it.
 func TestEmergencyRollbackCanRequireApproval(t *testing.T) {
-	envs := []Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}, Protected: true, EmergencyRollback: EmergencyRequireApproval}}
+	envs := []Environment{{Name: "prod", Target: "cluster-a", Projects: []string{"shop"}, Protected: true, EmergencyRollback: EmergencyRequireApproval}}
 	e := noSelfEngine(t, envs)
 	shopDone(t, e, 1, "1.0.0", "c1")
 	shopDone(t, e, 2, "2.0.0", "c2")
@@ -369,7 +369,7 @@ func TestRollbackNotOfferedWithoutARunnerOrWriteAccess(t *testing.T) {
 	// Its observer lease runs out.
 	clk.Add(time.Hour)
 	p := rollbackPlanOf(t, e)
-	if p.Action.Available || !strings.Contains(p.Action.Reason, "no deploy runner is serving target homelab") || p.Action.WouldHelp == "" {
+	if p.Action.Available || !strings.Contains(p.Action.Reason, "no deploy runner is serving target cluster-a") || p.Action.WouldHelp == "" {
 		t.Fatalf("%+v", p.Action)
 	}
 	if _, err := e.RequestRollback(RollbackRequest{Project: "shop", Environment: "prod", Actor: "ann", Reason: "r"}); err == nil || err.Error() != "conflict: "+p.Action.Reason {

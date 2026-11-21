@@ -29,11 +29,11 @@ notifications:
   channels:
     - name: alert-hub
       kind: webhook                       # a JSON body, signed
-      url:    { store: vault, key: homelab/apps/launchway/notify, field: hub_url }
-      secret: { store: vault, key: homelab/apps/launchway/notify, field: hub_signing_key }
+      url:    { store: vault, key: team/apps/launchway/notify, field: hub_url }
+      secret: { store: vault, key: team/apps/launchway/notify, field: hub_signing_key }
     - name: team-chat
       kind: slack                         # also discord and teams
-      url: { store: vault, key: homelab/apps/launchway/notify, field: slack_url }
+      url: { store: vault, key: team/apps/launchway/notify, field: slack_url }
   rules:
     - on: [approval.requested, step.waiting_long, deployment.failed, deployment.rolled_back, rollback.needs_review]
       to: [alert-hub, team-chat]
