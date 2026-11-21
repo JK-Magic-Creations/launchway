@@ -11,7 +11,6 @@
     "internal/engine/engine.go": 2172,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1442,
-    "internal/pipeline/template.go": 1109,
     "web/src/api.ts": 1564
   },
   "functions": {
@@ -21,7 +20,7 @@
     "internal/engine/testqueries.go:Engine.TestOverview": 165,
     "internal/imagebuild/build.go:Build": 431,
     "internal/pipeline/parse.go:parser.parseSteps": 153,
-    "internal/pipeline/verify.go:parser.parseVerifyStep": 216,
+    "internal/pipeline/verify.go:parser.parseVerifyStep": 212,
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,
     "internal/runner/runner.go:Runner.execute": 151,

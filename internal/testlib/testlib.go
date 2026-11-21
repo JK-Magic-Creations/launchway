@@ -17,8 +17,8 @@ func Git(t testing.TB, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=Dana", "GIT_AUTHOR_EMAIL=d@example.com",
-		"GIT_COMMITTER_NAME=Dana", "GIT_COMMITTER_EMAIL=d@example.com", "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = GitEnv(t, "GIT_AUTHOR_NAME=Dana", "GIT_AUTHOR_EMAIL=d@example.com",
+		"GIT_COMMITTER_NAME=Dana", "GIT_COMMITTER_EMAIL=d@example.com")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v in %s: %v\n%s", args, dir, err, out)

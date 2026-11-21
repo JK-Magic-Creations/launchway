@@ -51,6 +51,14 @@ var allowedForIntegration = []string{
 	// leaving it.
 	"test/acceptance/githost/README.md", "test/acceptance/githost/doc.go", "test/acceptance/githost/config.go",
 	"test/acceptance/githost/servers.go", "test/acceptance/githost/at_access_test.go", "test/acceptance/githost/census/census.py",
+	// Getting repositories in: a connection to another Git server is of a kind the person picks
+	// (gitea or forgejo, whose REST API lists repositories), so the import code, its commands, tools,
+	// pages and tests name the kind.
+	"cmd/launchway/repos_import.go", "cmd/launchway/repos_mirror.go", "cmd/launchway/repos_test.go",
+	"internal/api/forge_import_e2e_test.go", "internal/api/mcp_access_test.go", "internal/api/mcp_import.go",
+	"internal/forge/mirror/import.go", "internal/forge/mirror/import_test.go", "internal/forge/mirror/source.go",
+	"web/src/pages/ImportRepositories.tsx", "web/src/pages/ImportRepositories.test.tsx", "web/src/pages/Repository.tsx",
+	"docs/reference/cli.md",
 	// The project's own release and docs workflows run on a hosted CI service.
 	".github/", "packaging/", "docs/contributing/docs.md",
 	// The Argo CD test bed uses a throwaway Git server image.

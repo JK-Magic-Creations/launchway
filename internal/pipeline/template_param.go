@@ -13,7 +13,7 @@ import (
 // Param is one parameter a template declares.
 type Param struct {
 	Name        string   `json:"name"`
-	Type        string   `json:"type"` // string, number or boolean
+	Type        string   `json:"type"` // string, number, boolean, list, environment or application
 	Default     *string  `json:"default,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Options     []string `json:"options,omitempty"`
@@ -39,6 +39,10 @@ func (p *Param) check(v string) string {
 	case paramTypeList:
 		if _, msg := ParseList(v); msg != "" {
 			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
+		}
+	case paramTypeEnvironment, paramTypeApplication:
+		if msg := p.checkName(v); msg != "" {
+			return msg
 		}
 	default:
 		switch {

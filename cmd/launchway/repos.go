@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 )
@@ -22,7 +23,7 @@ Git hosting must be turned on (the installation setting forge.hosting); otherwis
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
 come from the same role bindings as a project's, matched on that path. Changes are
 recorded in the audit trail. Delete keeps the data and frees the name.
-`
+` + "\n" + reposMirrorUsage
 
 func cmdRepos(args []string) error {
 	return runClient(func() error {
@@ -35,7 +36,16 @@ func cmdRepos(args []string) error {
 			return err
 		}
 		cl := newClient(c, os.Stdout)
+		cl.http.Timeout = 2 * time.Hour // a first sync of a large repository takes a while
 		switch args[0] {
+		case "mirror":
+			return cl.reposMirror(args[1:])
+		case "connection":
+			return cl.reposConnection(args[1:])
+		case "import":
+			return cl.reposImport(args[1:])
+		case "verify":
+			return cl.reposVerify(args[1:])
 		case "list":
 			return cl.reposList(args[1:])
 		case "get":

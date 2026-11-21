@@ -84,6 +84,10 @@ func sampleValue(p *Param) string {
 		return "true"
 	case paramTypeList:
 		return "[]"
+	case paramTypeEnvironment:
+		return "dev"
+	case paramTypeApplication:
+		return "app"
 	}
 	return "x"
 }

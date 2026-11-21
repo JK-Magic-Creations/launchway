@@ -52,6 +52,46 @@ steps:
 `examples/library` is a small working library (a `check` template, a `release` template that uses
 it, and their scripts), and `make demo` makes a repository of it with two releases.
 
+## One delivery definition for every service
+
+A template may hold the whole path from a tested commit to a running, verified version: an image
+step, an approval, a deploy step, a verify step and a rollback step. `examples/library` has the
+pieces of such a library, and the thin pipeline files that use them under `pipelines/`:
+
+| Template | What it does |
+|---|---|
+| `service-ci` | Installs dependencies (cached), lints, runs tests, and scans a Python or Node service; declares the test, coverage and findings reports once for every repository that uses it. `working_directory` makes it usable once for each directory of a monorepo |
+| `service-ci-postgres` | The same with a PostgreSQL service beside the tests, whose address the tests get as `DATABASE_URL` |
+| `service-cd` | Builds, scans and pushes the image, optionally asks a person, deploys to one environment with GitOps, verifies, and rolls back on failure |
+| `service-cd-rollout` | The same for a workload that is an Argo Rollouts rollout |
+
+The environment and the application are typed parameters (`type: environment`, `type: application`),
+so a mistyped name is refused where it is written. A service with two environments uses `service-cd`
+twice, each use with a `when` on its branch, and a service of a different shape changes parameters,
+not the template. The repository's file stays short:
+
+```yaml
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  ci:   { uses: platform/service-ci, with: { coverage_minimum: 70 } }
+  prod:
+    uses: platform/service-cd
+    needs: ci
+    when: { branch: main }
+    with: { environment: prod, application: shop, image_repository: team/shop,
+            manifest: apps/shop/deployment.yaml, workload: shop, namespace: shop,
+            health_query: 'min(probe_success{instance="http://shop.shop.svc:8080/health"})' }
+```
+
+**A template authorizes nothing.** When a run is created the template's steps become ordinary
+steps and are checked as if the pipeline had written them: the environment must exist and list the
+project, the deploy runner's repository settings must allow the files, and policies see the
+deployment. A library cannot be used to reach an environment the project may not use. A library
+author checks a change with `examples/library/check-library.sh`, which also runs the tests that
+expand every example pipeline; a repository that has no pipeline file can get one of these
+templates as a [flight plan](../reference/config-objects.md#a-flight-plan-for-every-repository).
+
 **Which repositories may be libraries** is server configuration. A pipeline's `repo:` must name
 one of them; it can never be an address, so a pipeline cannot make the server fetch from anywhere
 with its credentials. Libraries are fetched exactly as projects are, with the same

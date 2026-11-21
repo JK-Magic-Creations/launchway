@@ -498,7 +498,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			case "if":
 				s.ifTest = ps.parseIf(v2, where)
 			case "message":
-				s.Message = strings.TrimSpace(ps.str(v2, where))
+				s.Message = strings.TrimSpace(ps.scalar(v2, where))
 			case "deployment":
 				s.Deployment = ps.str(v2, where)
 				s.deploymentLine = v2.Line
@@ -590,9 +590,6 @@ func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, ke
 func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys, vals map[string]*yaml.Node) {
 	if n := vals["approvers"]; n != nil {
 		s.Approvers = ps.parseApprovers(n, at+".approvers")
-	}
-	if n := keys["deployment"]; n != nil && ps.tmpl != nil {
-		ps.add(n, at+".deployment", "an approval in a template cannot name a deployment; write it in the pipeline that uses the template")
 	}
 	for _, key := range runOnly {
 		if n := keys[key]; n != nil {
@@ -732,7 +729,7 @@ func (ps *parser) str(n *yaml.Node, at string) string {
 }
 
 func (ps *parser) bool(n *yaml.Node, at string) bool {
-	switch ps.str(n, at) {
+	switch ps.scalar(n, at) {
 	case "true", "yes":
 		return true
 	case "false", "no":

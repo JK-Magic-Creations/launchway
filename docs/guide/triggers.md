@@ -4,8 +4,9 @@ What starts a run besides a person: pushes and pull requests found by polling, s
 
 ## Pull requests
 
-`on: { pull_request: {} }` runs the pipeline for pull requests. There are no webhooks yet:
-Launchway polls, as it does for pushes. Git hosts such as GitHub, Gitea and Forgejo publish each
+`on: { pull_request: {} }` runs the pipeline for pull requests. Launchway finds them by polling,
+as it does for pushes; a Git host's [webhook](#webhooks) makes it look at once instead of at
+the next poll. Git hosts such as GitHub, Gitea and Forgejo publish each
 pull request's head commit as the ref `refs/pull/<number>/head`; the server's mirror fetches it
 with everything else, and a run starts when one appears or moves.
 

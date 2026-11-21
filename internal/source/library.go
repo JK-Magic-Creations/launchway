@@ -46,6 +46,9 @@ type ProjectPipeline struct {
 	// Supersede is the pipeline's supersede: a new run of a push or pull
 	// request cancels the older ones of the same ref still going.
 	Supersede bool `json:"supersede,omitempty"`
+	// Default says which level's default pipeline this is ("organisation" or
+	// "unit <name>"), or is empty when the project configured it itself.
+	Default string `json:"default,omitempty"`
 	// Lane is the pipeline's lane (schema 24), as written in the
 	// configuration; the pipeline parser checks it.
 	Lane *ProjectLane `json:"lane,omitempty"`
@@ -164,9 +167,15 @@ func configuredText(project string, pp *ProjectPipeline) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "# The repository has no .launchway/pipeline.yaml, so this project runs the\n" +
+	head := "# The repository has no .launchway/pipeline.yaml, so this project runs the\n" +
 		"# pipeline configured for it on the server. A file in the repository takes\n" +
-		"# its place.\n" + string(out), nil
+		"# its place.\n"
+	if pp.Default != "" {
+		head = "# The repository has no .launchway/pipeline.yaml, so this project runs the\n" +
+			"# flight plan of its " + levelWord(pp.Default) + ", set on the server. A file in the\n" +
+			"# repository takes its place.\n"
+	}
+	return head + string(out), nil
 }
 
 // pipelineSource says where a commit's pipeline came from.
@@ -194,9 +203,14 @@ func (p *project) note(from pipelineSource) string {
 	switch {
 	case p.Pipeline == nil:
 		return ""
+	case from == fromServer && p.Pipeline.Default != "":
+		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the flight plan of the %s ran: %s@%s, template %s)",
+			levelWord(p.Pipeline.Default), p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
 	case from == fromServer:
 		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the pipeline configured on the server ran: %s@%s, template %s)",
 			p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+	case p.Pipeline.Default != "":
+		return "(the repository's own .launchway/pipeline.yaml ran, in place of the flight plan of the " + levelWord(p.Pipeline.Default) + ")"
 	default:
 		return "(the repository's own .launchway/pipeline.yaml ran, in place of the pipeline configured on the server)"
 	}
@@ -215,6 +229,9 @@ func (p *project) parsedAt(ctx context.Context, sha string) (*pipeline.Pipeline,
 	}
 	if from == fromServer {
 		pl.Origin = &pipeline.Origin{Kind: pipeline.OriginServer, Text: text}
+		if p.Pipeline != nil {
+			pl.Origin.Default = p.Pipeline.Default
+		}
 	}
 	return pl, from, nil
 }
@@ -503,4 +520,11 @@ func (m *Manager) Libraries() []LibraryStatus {
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// levelWord is a level as people read it in a note: the American spelling. A
+// default pipeline is called a flight plan wherever people see it; the
+// configuration key and the API keep default_pipeline.
+func levelWord(level string) string {
+	return strings.Replace(level, "organisation", "organization", 1)
 }

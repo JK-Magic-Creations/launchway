@@ -6,6 +6,7 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -201,10 +202,6 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 	vf := &Verify{Duration: Duration(DefaultVerifyDuration), Interval: Duration(DefaultVerifyInterval), Sensitivity: "medium",
 		Baseline: DefaultVerifyBaseline, OnFail: "fail", OnInconclusive: "fail", lines: map[string]int{}, paramLines: map[string]int{}}
 	s.Verify = vf
-	if ps.tmpl != nil {
-		ps.add(k, at+".kind", "a verify step cannot be in a template yet; write it in the pipeline that uses the template")
-		return s
-	}
 	if v.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(v.Content); i += 2 {
 			key := v.Content[i]
@@ -235,7 +232,7 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		switch key.Value {
 		case "kind":
 		case "description":
-			s.Description = strings.TrimSpace(ps.str(n, where))
+			s.Description = strings.TrimSpace(ps.scalar(n, where))
 			switch {
 			case strings.ContainsAny(s.Description, "\r\n"):
 				ps.add(n, where, "a description is one line; put longer notes in a comment")
@@ -253,16 +250,16 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 				s.timeoutSet = true
 			}
 		case "deployment":
-			s.Deployment = ps.str(n, where)
+			s.Deployment = ps.scalar(n, where)
 			s.deploymentLine = n.Line
 		case "environment":
-			s.Environment = ps.str(n, where)
+			s.Environment = ps.scalar(n, where)
 			s.environmentLine = n.Line
 			if !nameRe.MatchString(s.Environment) {
 				ps.add(n, where, "%q is not a valid environment name: use lower-case letters, digits and hyphens", s.Environment)
 			}
 		case "service":
-			s.Service = ps.str(n, where)
+			s.Service = ps.scalar(n, where)
 			if !nameRe.MatchString(s.Service) {
 				ps.add(n, where, "%q is not a valid service name: use lower-case letters, digits and hyphens", s.Service)
 			}
@@ -282,7 +279,7 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 				vf.Interval = Duration(d)
 			}
 		case "sensitivity":
-			vf.Sensitivity = ps.str(n, where)
+			vf.Sensitivity = ps.scalar(n, where)
 			if !slices.Contains(Sensitivities, vf.Sensitivity) {
 				ps.add(n, where, "write low, medium or high: how large a deviation must be to fail (high fails on smaller ones)")
 			}
@@ -297,12 +294,12 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 				}
 			}
 		case "on_fail":
-			vf.OnFail = ps.str(n, where)
+			vf.OnFail = ps.scalar(n, where)
 			if !slices.Contains(VerifyOnFail, vf.OnFail) {
 				ps.add(n, where, "write fail, abort (also abort the deployment's rollout) or rollback (abort it, and let the deployment's rollback step revert it)")
 			}
 		case "on_inconclusive":
-			vf.OnInconclusive = ps.str(n, where)
+			vf.OnInconclusive = ps.scalar(n, where)
 			if !slices.Contains(VerifyInconclusive, vf.OnInconclusive) {
 				ps.add(n, where, "write fail, pass or pause (wait for a person to mark it passed or failed)")
 			}
@@ -331,12 +328,12 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 				vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
 			}
 		case "model":
-			vf.Model = ps.str(n, where)
+			vf.Model = ps.scalar(n, where)
 			if !modelNameRe.MatchString(vf.Model) {
 				ps.add(n, where, "%q is not a model name; name one of the server's ai.models", vf.Model)
 			}
 		case "decide":
-			vf.Decide = ps.str(n, where)
+			vf.Decide = ps.scalar(n, where)
 			if !slices.Contains(VerifyDecide, vf.Decide) {
 				ps.add(n, where, "write statistics (the default: the statistics decide) or model-assisted (the model may turn a pass into inconclusive or a fail, never a fail into a pass)")
 			}
@@ -438,7 +435,7 @@ func (ps *parser) parseVerifyParams(n *yaml.Node, at string, vf *Verify) {
 		if v.Kind == yaml.MappingNode && hasKey(v, "deployment") {
 			val := &Value{}
 			ps.eachKey(v, where, []string{"deployment"}, func(_, x *yaml.Node) {
-				val.Fact = ps.str(x, where+".deployment")
+				val.Fact = ps.scalar(x, where+".deployment")
 				if !slices.Contains(DeploymentFacts, val.Fact) {
 					ps.add(x, where+".deployment", "%q is not a fact about the deployment; use %s", val.Fact, strings.Join(DeploymentFacts, ", "))
 				}
@@ -456,6 +453,15 @@ func (ps *parser) parseVerifyParams(n *yaml.Node, at string, vf *Verify) {
 
 func (ps *parser) verifyNumber(n *yaml.Node, at string) *float64 {
 	var f float64
+	if n.Kind == yaml.MappingNode && hasKey(n, "param") {
+		// A template's parameter, a number.
+		v, err := strconv.ParseFloat(strings.TrimSpace(ps.scalar(n, at)), 64)
+		if err != nil {
+			ps.add(n, at, "write a number, such as 0.01 or 250")
+			return nil
+		}
+		return &v
+	}
 	if n.Kind != yaml.ScalarNode || n.Decode(&f) != nil {
 		ps.add(n, at, "write a number, such as 0.01 or 250")
 		return nil
@@ -467,7 +473,7 @@ func (ps *parser) verifyNumber(n *yaml.Node, at string) *float64 {
 // mapping written as YAML, kept as JSON.
 func (ps *parser) verifyQuery(n *yaml.Node, at string) string {
 	var q string
-	if n.Kind == yaml.MappingNode {
+	if n.Kind == yaml.MappingNode && !hasKey(n, "param") {
 		var m any
 		if err := n.Decode(&m); err != nil {
 			ps.add(n, at, "the query cannot be read: %v", err)
@@ -480,7 +486,7 @@ func (ps *parser) verifyQuery(n *yaml.Node, at string) string {
 		}
 		q = string(b)
 	} else {
-		q = strings.TrimSpace(ps.str(n, at))
+		q = strings.TrimSpace(ps.scalar(n, at))
 	}
 	switch {
 	case q == "":
@@ -521,22 +527,22 @@ func (ps *parser) parseVerifyMetric(n *yaml.Node, at string) *VerifyMetric {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "name":
-			m.Name = ps.str(v, where)
+			m.Name = ps.scalar(v, where)
 			if !verifyNameRe.MatchString(m.Name) {
 				ps.add(v, where, "%q is not a valid name: lower-case letters, digits, - and _, starting with a letter", m.Name)
 			}
 		case "source":
-			m.Source = ps.str(v, where)
+			m.Source = ps.scalar(v, where)
 		case "query":
 			m.Query = ps.verifyQuery(v, where)
 		case "stable_query":
 			m.StableQuery = ps.verifyQuery(v, where)
 		case "statement":
-			m.Statement = ps.str(v, where)
+			m.Statement = ps.scalar(v, where)
 		case "index":
-			m.Index = ps.str(v, where)
+			m.Index = ps.scalar(v, where)
 		case "direction":
-			m.Direction = ps.str(v, where)
+			m.Direction = ps.scalar(v, where)
 			if !slices.Contains(VerifyDirections, m.Direction) {
 				ps.add(v, where, "write higher-is-worse, lower-is-worse or either")
 			}
@@ -597,22 +603,22 @@ func (ps *parser) parseVerifyLog(n *yaml.Node, at string) *VerifyLog {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "name":
-			l.Name = ps.str(v, where)
+			l.Name = ps.scalar(v, where)
 			if !verifyNameRe.MatchString(l.Name) {
 				ps.add(v, where, "%q is not a valid name: lower-case letters, digits, - and _, starting with a letter", l.Name)
 			}
 		case "source":
-			l.Source = ps.str(v, where)
+			l.Source = ps.scalar(v, where)
 		case "query":
 			l.Query = ps.verifyQuery(v, where)
 		case "stable_query":
 			l.StableQuery = ps.verifyQuery(v, where)
 		case "statement":
-			l.Statement = ps.str(v, where)
+			l.Statement = ps.scalar(v, where)
 		case "index":
-			l.Index = ps.str(v, where)
+			l.Index = ps.scalar(v, where)
 		case "errors":
-			l.Errors = ps.str(v, where)
+			l.Errors = ps.scalar(v, where)
 			if l.Errors != "auto" && l.Errors != "all" {
 				ps.add(v, where, "write auto (lines with words such as error, exception or panic are errors) or all (the query selects only errors)")
 			}

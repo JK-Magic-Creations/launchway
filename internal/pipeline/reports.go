@@ -93,15 +93,20 @@ func isParamNode(n *yaml.Node) bool {
 func (ps *parser) parseFailUnder(n *yaml.Node, at string) *CoverageThreshold {
 	t := &CoverageThreshold{}
 	read := func(v *yaml.Node, where string) float64 {
-		s := strings.TrimSuffix(strings.TrimSpace(ps.str(v, where)), "%")
+		s := strings.TrimSuffix(strings.TrimSpace(ps.scalar(v, where)), "%")
 		f, err := strconv.ParseFloat(s, 64)
+		if err == nil && f == 0 && ps.tmpl != nil && isParamNode(v) {
+			// A template's parameter may be 0: no threshold, so that a
+			// repository that has none leaves it out.
+			return 0
+		}
 		if err != nil || f <= 0 || f > 100 || f != f {
 			ps.add(v, where, "write a percentage above 0 and at most 100, such as 80")
 			return 0
 		}
 		return f
 	}
-	if n.Kind == yaml.MappingNode {
+	if n.Kind == yaml.MappingNode && !isParamNode(n) {
 		ps.eachKey(n, at, []string{"lines", "branches", "functions"}, func(k, v *yaml.Node) {
 			switch k.Value {
 			case "lines":

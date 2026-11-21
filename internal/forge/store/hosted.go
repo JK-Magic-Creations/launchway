@@ -134,3 +134,10 @@ func (s *Store) CountRepositories(ctx context.Context, connection, home string) 
 		connection, home, TrashPrefix+"%").Scan(&n)
 	return n, err
 }
+
+// SetMirror marks a repository as a mirror (it takes no pushes; only its
+// mirror sync writes to it) or lifts that.
+func (s *Store) SetMirror(ctx context.Context, id string, on bool) error {
+	res, err := s.db.Exec(ctx, `UPDATE forge_repositories SET mirror = ?, updated_at = ? WHERE id = ?`, b2i(on), ms(s.now()), id)
+	return affected(res, err, "repository "+id)
+}

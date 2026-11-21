@@ -190,7 +190,9 @@ func (cl *client) call(method, path string, body, v any) error {
 		}
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest(method, cl.c.Server+path, rd)
+	// The address is the server the person configured for this command line, and the path is one of
+	// the command's own; calling it is the point of the client.
+	req, err := http.NewRequest(method, cl.c.Server+path, rd) //nolint:gosec // G704: the user's own configured server
 	if err != nil {
 		return usageErr("%v", err)
 	}

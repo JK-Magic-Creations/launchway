@@ -180,18 +180,6 @@ func TestTwoDeploysOfOneServiceMustBeOrdered(t *testing.T) {
 	}
 }
 
-func TestDeployStepsNotInTemplates(t *testing.T) {
-	_, err := readTemplate([]byte(`template: t
-steps:
-  d:
-    kind: deploy
-    environment: prod
-`), "t", nil, nil, 0, nil, DefaultMaxLoopMembers, "", nil)
-	if err == nil || !strings.Contains(err.Error(), "cannot be in a template yet") {
-		t.Fatalf("got %v", err)
-	}
-}
-
 func TestNestedDeployOfOneServiceIsRefused(t *testing.T) {
 	src := strings.Replace(deployFile, "    needs: [smoke]\n", "    needs: [smoke, deploy-again]\n", 1) + `  deploy-again:
     kind: deploy

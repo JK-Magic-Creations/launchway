@@ -47,7 +47,15 @@ against its quota), `get_cache_policy`, and `list_repositories` and `get_reposit
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
 `cancel_run`, `retry_run` (resume, or re-run from a step, several steps or the failed ones), `decide_approval`, `control_rollout`,
 `delete_cache`, `update_repository`, `delete_repository` and `mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an administrator,
-and audited: `set_step_resource_limits`, `set_step_resource_default`, `set_run_limits`, `set_cache_policy` and `create_repository`.
+and audited: `set_step_resource_limits`, `set_step_resource_default`, `set_run_limits`, `set_cache_policy` and `create_repository`. For hosted repositories (with
+`forge.hosting` on): `list_mirrors` (pull and push mirrors with their status, last error with credentials
+removed, lag and whether they are behind), and, listed to tokens that may change something, `set_mirror`
+(a pull mirror or a push mirror; the credential is the name of an environment variable or the path of a file
+on the server, never a secret), `sync_mirror`, `change_mirror` (pause, resume or remove) and `stop_mirroring` (the cut-over step: the repository becomes
+the primary); the API decides by the caller's role on the repository, and each is audited. For moving
+repositories in, listed to an administrator only: `list_connections`, `add_connection`, `remove_connection`, `import_repositories`
+(a dry run, or one repository or an owner at a time, left as pull mirrors) and `verify_repositories` (proves
+every ref equals the source's, for use before a cut-over).
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.

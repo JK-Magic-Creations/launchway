@@ -28,6 +28,7 @@ launchway caches   list|delete|policy         build caches: what is kept, deleti
 launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
 launchway doctor   [database]                 would this installation survive losing its database?
 launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
+launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
 launchway version
 ```
 
@@ -804,6 +805,57 @@ launchway repos delete OWNER/NAME
 ```
 
 The same operations are the routes under [Repositories](http-api.md#repositories-git-hosting) in the HTTP API, and the MCP tools `list_repositories`, `get_repository`, `create_repository`, `update_repository` and `delete_repository`. A Terraform resource `launchway_repository` is planned.
+
+## launchway repos mirror
+
+Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirror** keeps a hosted repository an exact copy of another server's repository: every branch, tag and note, deletions followed, on a schedule and on demand; meanwhile it takes no pushes. A **push mirror** copies every accepted update to another server. Setting one up needs the admin role on the repository, running one now the operator role; both are recorded in the audit trail (`mirror.create`, `mirror.sync`, `mirror.promote`).
+
+```text
+launchway repos mirror status [OWNER/NAME] [--behind] [--json]
+launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
+                  [--credential-env NAME | --credential-file PATH] [--interval 1h] [--no-prune]
+launchway repos mirror sync OWNER/NAME [--id mir_...]
+launchway repos mirror pause|resume OWNER/NAME --id mir_...
+launchway repos mirror remove OWNER/NAME --id mir_...
+launchway repos mirror stop OWNER/NAME [--final-sync]
+```
+
+`status` lists each mirror with its state (`ok`, `error`, `pending`, `paused`, `running`), its lag, the number of refs and the last error, with credentials removed; `--behind` lists only those that have fallen behind. `add --direction pull` needs a repository with no branches or tags of its own, because mirroring replaces them. `sync` runs the pull mirror (or the one named with `--id`) now and exits with `4` if the run failed, printing why.
+
+`stop` is the cut-over step: the repository stops being a mirror, the mirror is deleted and pushes are accepted. With `--final-sync` the mirror runs once more first, and nothing changes if that run fails. A pull mirror whose source suddenly lists no branches or tags refuses to delete everything; stop mirroring if the other server really was emptied.
+
+A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `sync_mirror` and `stop_mirroring`.
+
+## launchway repos import, verify and connection
+
+Getting existing repositories into Launchway before anything is switched over. Everything here needs the admin role and is recorded in the audit trail.
+
+```text
+launchway repos connection add NAME --kind gitea|forgejo|plain [--base-url URL] [--credential-env NAME | --credential-file PATH]
+launchway repos connection list
+launchway repos connection remove NAME
+launchway repos import --connection NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...]
+                  [--dry-run] [--once] [--interval 1h] [--username U] [--json]
+launchway repos verify --against NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...] [--json]
+```
+
+A **connection** is a server the repositories are on: its kind (`gitea` or `forgejo`, whose REST API lists them; `plain` for addresses you give with `--url`), its address and a credential **reference** (the name of an environment variable of the server, or a file on the server; never the token). Launchway sends the credential only to the connection's own host, refuses internal addresses unless `forge.mirror_allow` lists them, and does not follow redirects.
+
+`import` makes every repository the connection lists (or those of `--owner`, or the one `--repo`) with the same owner, name and visibility, copies every branch, tag and note, checks the copy ref by ref and prints the result for each. By default each is left a **pull mirror** of its source, so the source stays the primary until you decide. `--once` makes ordinary repositories instead, once each copy is checked. `--dry-run` lists what would be created, what would be left alone and why (including an address Launchway may not contact), and changes nothing. It copies one repository at a time, so a failure of one stops nothing; it exits `4` when any did not finish, and running the same command again resumes: a repository already made as a mirror of the same address is synced and checked again, one that exists in any other state is never touched.
+
+`verify` proves that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has, and names each ref that differs. It exits `0` when everything is equal and `1` when not. Run it before a cut-over. The same operations are `POST /api/v1/imports` and `POST /api/v1/imports/verify` in the [HTTP API](http-api.md#importing-repositories-git-hosting), and the MCP tools `list_connections`, `add_connection`, `import_repositories` and `verify_repositories`.
+
+### Moving a server's repositories, in stages
+
+```text
+launchway repos connection add oldgit --kind gitea --base-url https://git.corp.example --credential-env OLDGIT_TOKEN
+launchway repos import --connection oldgit --dry-run          # what would be made, what is refused and why
+launchway repos import --connection oldgit                    # copy and check each; every one a pull mirror
+launchway repos verify --against oldgit                       # exit 0: every ref equal
+launchway repos mirror stop acme/shop --final-sync            # per repository, at the cut-over: it becomes the primary
+launchway repos mirror add acme/shop --direction push --url https://git.corp.example/acme/shop.git --credential-env OLDGIT_TOKEN
+                                                              # optional: keep the old server an exact copy while people move
+```
 
 ## launchway version
 

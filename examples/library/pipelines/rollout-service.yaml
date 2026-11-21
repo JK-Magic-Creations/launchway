@@ -1,0 +1,32 @@
+# A service whose tests need PostgreSQL and which runs as an Argo Rollouts
+# canary in production only. Checks on every push; production delivery from
+# `main`, with the rollout's own analysis and Launchway's verification.
+pipeline: orders
+on:
+  push: { branches: [main] }
+  pull_request: {}
+supersede: true
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  ci:
+    uses: platform/service-ci-postgres
+    with:
+      database: orders_test
+      install_command: "pip install -e .[dev]"
+      lint_command: "ruff check ."
+      coverage_minimum: 80
+  prod:
+    uses: platform/service-cd-rollout
+    needs: ci
+    when: { branch: main }
+    with:
+      environment: prod
+      application: orders
+      image_repository: team/orders
+      dockerfile: deploy/Dockerfile
+      manifest: apps/orders/rollout.yaml
+      workload: orders-api
+      namespace: orders
+      approve: true
+      health_query: 'min(probe_success{instance="http://orders-api.orders.svc:8080/health"})'

@@ -404,3 +404,6 @@ func CleanAddress(raw string) (https, ssh string) {
 	}
 	return "", ""
 }
+
+// IsUnique reports whether a database error is a violated uniqueness rule.
+func IsUnique(err error) bool { return isUnique(err) }
