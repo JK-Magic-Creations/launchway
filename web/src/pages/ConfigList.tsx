@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useState } from "react";
 import { configApi, kindLabel, kindOf, levelOf, useOverview, type ConfigObject } from "../configApi";
 import { ago } from "../format";
@@ -42,16 +43,10 @@ export function ConfigListPage({ kind }: { kind: string }) {
   return (
     <div className="page cf-page">
       <ConfigNav overview={overview} path={path} />
-      <header className="page-head">
-        <div>
-          <h1>{label}</h1>
-          <p className="sub">{levelWords(k.doc, overview.levels)}</p>
-        </div>
-        <div className="cf-head-actions">
+      <PageHead eyebrow="Settings" title={<>{label}</>} sentence={<>{levelWords(k.doc, overview.levels)}</>} actions={<><div className="cf-head-actions">
           {wiz && <Link href={`/config/wizard/${wiz.id}`} className="btn btn-primary">{wiz.title}</Link>}
           <Link href={`/config/${k.path}/new`} className={"btn" + (wiz ? "" : " btn-primary")}>{wiz ? "Add with a plain form" : `Add a ${one.toLowerCase()}`}</Link>
-        </div>
-      </header>
+        </div></>} />
       <ErrorBox error={error} />
       <label className="checkline"><input type="checkbox" checked={deleted} onChange={(e) => setDeleted(e.target.checked)} /> Show deleted ones too</label>
       {objects === null && !error && <div className="loading">Loading…</div>}

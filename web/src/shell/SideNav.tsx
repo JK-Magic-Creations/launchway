@@ -20,7 +20,7 @@ export function SideNav({ ctx, area, path }: { ctx: Ctx; area: SectionId | null;
           <Icon name={t.icon ?? "list"} size="s" />
           <span>{t.label}</span>
           {t.soon && <span className="n soon">soon</span>}
-          {t.id === "approvals" && waiting > 0 && <span className="n" aria-label={`${waiting} waiting`}>{waiting}</span>}
+          {area === "activity" && t.id === "approvals" && waiting > 0 && <span className="n" aria-label={`${waiting} waiting`}>{waiting}</span>}
         </a>
       ))}
     </nav>

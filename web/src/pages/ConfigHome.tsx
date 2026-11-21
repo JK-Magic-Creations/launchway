@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useMe } from "../auth";
@@ -47,13 +48,7 @@ export function ConfigHomePage() {
   return (
     <div className="page cf-page">
       <ConfigNav overview={overview} path={path} />
-      <header className="page-head">
-        <div>
-          <h1>Configuration</h1>
-          <p className="sub">Everything an administrator sets up, kept in the database with the history of every change. Changes apply to every server within seconds, without a restart.</p>
-        </div>
-        <a className="btn" href="/api/v1/config/export" download>Export as YAML</a>
-      </header>
+      <PageHead eyebrow="Settings" title={<>Configuration</>} sentence={<>Everything an administrator sets up, kept in the database with the history of every change. Changes apply to every server within seconds, without a restart.</>} actions={<><a className="btn" href="/api/v1/config/export" download>Export as YAML</a></>} />
       <ErrorBox error={loadError} />
       {overview.status?.safe_mode && (
         <div className="callout callout-bad" role="alert">

@@ -112,6 +112,7 @@ export const SECTIONS: Section[] = [
       { id: "overview", label: "Overview", href: "/settings", icon: "settings" },
       { id: "runners", label: "Runners", href: "/settings/runners", icon: "server", show: ({ me }) => me.runners },
       { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
+      { id: "approvals", label: "Approvals", href: "/settings/approvals", icon: "gate" },
       { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
       { id: "audit", label: "Audit trail", href: "/settings/audit", icon: "clock", show: ({ me }) => me.admin },
       { id: "config", label: "Configuration", href: "/config", icon: "globe", show: ({ me }) => me.admin },
@@ -159,12 +160,12 @@ export const PAGES: PageInfo[] = [
   page("/code/:page", "projects", undefined, (p) => comingTitle("/code/" + p.page), (p) => [{ label: comingTitle("/code/" + p.page) }]),
   page("/pipelines", "pipelines", undefined, () => "Pipelines", () => []),
   page("/projects/:name", "projects", undefined, (p) => p.name, (p) => [{ label: p.name }]),
-  page("/projects/:name/pipeline", "projects", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Pipeline" }]),
-  page("/projects/:name/pipeline/edit", "projects", undefined, (p) => `Edit the pipeline of ${p.name}`,
-    (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Pipeline", href: `/projects/${enc(p.name)}/pipeline` }, { label: "Edit" }]),
-  page("/projects/:name/tests", "projects", undefined, (p) => `Tests of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Tests and coverage" }]),
-  page("/projects/:name/security", "projects", undefined, (p) => `Security of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Security" }]),
-  page("/projects/:name/caches", "projects", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Build caches" }]),
+  page("/projects/:name/pipeline", "pipelines", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name }]),
+  page("/projects/:name/pipeline/edit", "pipelines", undefined, (p) => `Edit the pipeline of ${p.name}`,
+    (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Edit" }]),
+  page("/projects/:name/tests", "pipelines", undefined, (p) => `Tests of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Tests and coverage" }]),
+  page("/projects/:name/security", "pipelines", undefined, (p) => `Security of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Security" }]),
+  page("/projects/:name/caches", "pipelines", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Build caches" }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => "Deployments", () => []),
@@ -178,11 +179,12 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: "Applications", href: "/deployments/applications" }, { label: p.name }]),
 
   page("/activity", "activity", "runs", () => "Runs", () => [{ label: "Runs" }]),
-  page("/activity/approvals", "activity", "approvals", () => "Approvals", () => [{ label: "Approvals" }]),
+  page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
   page("/runs/:id", "activity", "runs", (p) => `Run ${p.id}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}` }]),
 
   page("/images", "images", undefined, () => "Images", () => []),
   page("/images/components", "images", undefined, () => "Components", () => [{ label: "Components" }]),
+  page("/images/digest/:digest", "images", undefined, (p) => `Image ${p.digest.slice(0, 19)}`, (p) => [{ label: "Image " + p.digest.slice(0, 19) }]),
   page("/images/:page", "images", undefined, (p) => comingTitle("/images/" + p.page), (p) => [{ label: comingTitle("/images/" + p.page) }]),
 
   page("/traffic", "traffic", "map", () => "Traffic map", () => []),
@@ -204,6 +206,7 @@ export const PAGES: PageInfo[] = [
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Keys for scripts" }]),
   page("/settings/access/agents", "settings", "access", () => "Connect an agent",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Connect an agent" }]),
+  page("/settings/approvals", "settings", "approvals", () => "Approvals", () => [{ label: "Approvals" }]),
   page("/settings/rules", "settings", "rules", () => "Rules", () => [{ label: "Rules" }]),
   page("/settings/audit", "settings", "audit", () => "Audit trail", () => [{ label: "Audit trail" }]),
 

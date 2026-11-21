@@ -29,8 +29,8 @@ describe("sections", () => {
   });
   it("hides what a person may not use", () => {
     const tabs = (m: ReturnType<typeof me>) => visibleTabs(section("settings"), { me: m, facts: facts() }).map((t) => t.id);
-    expect(tabs(me({ admin: false, runners: false }))).toEqual(["overview", "access"]);
-    expect(tabs(me())).toEqual(["overview", "runners", "access", "rules", "audit", "config"]);
+    expect(tabs(me({ admin: false, runners: false }))).toEqual(["overview", "access", "approvals"]);
+    expect(tabs(me())).toEqual(["overview", "runners", "access", "approvals", "rules", "audit", "config"]);
   });
   it("never lists a tab twice or without an address", () => {
     for (const s of SECTIONS) {
@@ -44,8 +44,8 @@ describe("sections", () => {
 describe("where pages sit", () => {
   it("places every existing page in a section", () => {
     const paths: [string, string][] = [
-      ["/", "home"], ["/projects", "projects"], ["/projects/x", "projects"], ["/projects/x/pipeline", "projects"], ["/projects/x/pipeline/edit", "projects"],
-      ["/projects/x/tests", "projects"], ["/projects/x/security", "projects"], ["/projects/x/caches", "projects"], ["/playground", "projects"],
+      ["/", "home"], ["/projects", "projects"], ["/projects/x", "projects"], ["/projects/x/pipeline", "pipelines"], ["/projects/x/pipeline/edit", "pipelines"],
+      ["/projects/x/tests", "pipelines"], ["/projects/x/security", "pipelines"], ["/projects/x/caches", "pipelines"], ["/playground", "projects"],
       ["/activity", "activity"], ["/activity/approvals", "activity"], ["/runs/abc", "activity"],
       ["/deployments", "deployments"], ["/deployments/environments", "deployments"], ["/deployments/applications/a", "deployments"],
       ["/library/templates/lib/t", "library"], ["/images", "images"], ["/images/components", "images"], ["/images/charts", "images"],
@@ -70,7 +70,7 @@ describe("where pages sit", () => {
 describe("breadcrumbs", () => {
   it("links every step back except the page itself", () => {
     expect(breadcrumbs("/projects/shop-api/pipeline/edit")).toEqual([
-      { label: "Code", href: "/projects" }, { label: "shop-api", href: "/projects/shop-api" }, { label: "Pipeline", href: "/projects/shop-api/pipeline" }, { label: "Edit" },
+      { label: "Pipelines", href: "/pipelines" }, { label: "shop-api", href: "/projects/shop-api/pipeline" }, { label: "Edit" },
     ]);
   });
   it("lets a page give its thing's real name", () => {

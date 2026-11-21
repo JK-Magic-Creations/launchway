@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useEffect, useState } from "react";
 import { api, type ImageHit, type ImageQuery } from "../api";
 import { ago, clock } from "../format";
@@ -101,12 +102,7 @@ export function ImagesPage() {
 
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Images</h1>
-          <p className="sub">Find the container images your runs built: which run built a digest, the latest image of a repository, or every image of a project.</p>
-        </div>
-      </header>
+      <PageHead eyebrow="Images" title="Images" sentence="Find the container images your runs built: which run built a digest, the latest image of a repository, or every image of a project." />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
         <div className="imgform-by">
@@ -178,7 +174,7 @@ export function ImagesPage() {
                         <span className="mono imgref">{h.repository}{h.kind === "tag" && h.tag ? `:${h.tag}` : ""}</span>
                         {h.kind === "platform" && <span className="faint small"> platform {h.platform}</span>}
                       </td>
-                      <td><CopyValue value={h.digest} label={`digest of #${h.run_number} ${h.step}`} keep={DIGEST_KEEP} /></td>
+                      <td><CopyValue value={h.digest} label={`digest of #${h.run_number} ${h.step}`} keep={DIGEST_KEEP} /> <Link href={`/images/digest/${encodeURIComponent(h.digest)}`}>Open</Link></td>
                       <td>
                         <span className="imgbadges">
                           <StatusPill status={h.outcome} />

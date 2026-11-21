@@ -1,3 +1,4 @@
+import { ProjectHead } from "./PipelineChrome";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cacheApi, type CacheEntry, type CacheList } from "../cacheApi";
 import { useMe, canOperate } from "../auth";
@@ -94,13 +95,8 @@ export function ProjectCachesPage({ name }: { name: string }) {
   const share = t && t.quota_bytes > 0 ? t.bytes / t.quota_bytes : 0;
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Caches of {name}</h1>
-          <p className="sub">What its steps keep between runs (the <Mono>cache</Mono> key of a step). A pull request restores the default
-            branch's entries and saves into its own scope only. <Link href="/projects">All projects</Link></p>
-        </div>
-      </header>
+      <ProjectHead name={name} on="caches" title={<>Caches of {name}</>}
+        sentence={<>What its steps keep between runs (the <Mono>cache</Mono> key of a step). A pull request restores the default branch's entries and saves into its own scope only.</>} />
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}
 

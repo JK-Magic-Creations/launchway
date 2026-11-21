@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useEffect, useState } from "react";
 import type { Role } from "../api";
 import { useMe } from "../auth";
@@ -43,7 +44,7 @@ export function AgentsPage() {
   if (me.mcp && !me.mcp.enabled) {
     return (
       <div className="page">
-        <header className="page-head"><div><h1>Connect an agent</h1></div></header>
+        <PageHead eyebrow="Settings" title={<>Connect an agent</>} />
         <Empty title="The MCP endpoint is turned off">An operator turned it off on this server (<Mono>mcp.enabled: false</Mono>).</Empty>
       </div>
     );
@@ -78,14 +79,9 @@ export function AgentsPage() {
 
   return (
     <div className="page agents">
-      <header className="page-head">
-        <div>
-          <h1>Connect an agent</h1>
-          <p className="sub">AI agents and assistants can use Launchway through the Model Context Protocol (MCP): find projects, write and
+      <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>AI agents and assistants can use Launchway through the Model Context Protocol (MCP): find projects, write and
             check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every
-            change it makes is in the audit trail with the token's name.</p>
-        </div>
-      </header>
+            change it makes is in the audit trail with the token's name.</>} />
 
       <section className="card agents-step" aria-labelledby="agents-1">
         <h2 id="agents-1" className="h-sm"><span className="agents-num" aria-hidden="true">1</span>Make a token for the agent</h2>

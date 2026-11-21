@@ -34,5 +34,6 @@ export interface LaunchLineView {
 }
 
 export const launchApi = {
-  lines: (limit = 12, background = false) => call<LaunchLineView[]>("GET", `/api/v1/launch-lines?limit=${limit}`, undefined, { background }),
+  lines: (limit = 12, background = false, project = "") =>
+    call<LaunchLineView[]>("GET", `/api/v1/launch-lines?limit=${limit}${project ? "&project=" + encodeURIComponent(project) : ""}`, undefined, { background }),
 };

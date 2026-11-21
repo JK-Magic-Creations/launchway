@@ -59,6 +59,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/environments", MCP: "list_config (kind environments)", CLI: "environments list", Terraform: "launchway_environment", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/deployments", MCP: "get_deployments", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no deployments command yet"},
 	{Route: "GET /api/v1/launch-lines", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full"},
+	{Route: "GET /api/v1/settings/approvals", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator"},
 	{Route: "GET /api/v1/runs/{id}/deployments/{dep}/controls", MCP: "get_deployments", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no rollout commands yet"},
 	{Route: "POST /api/v1/runs/{id}/deployments/{dep}/promote", MCP: "control_rollout", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no rollout commands yet"},
 	{Route: "POST /api/v1/runs/{id}/deployments/{dep}/promote-full", MCP: "control_rollout", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no rollout commands yet"},

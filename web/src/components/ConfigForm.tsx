@@ -3,6 +3,7 @@
 // choice cards wizards ask with, the wizard frame, and readable summaries
 // and diffs of specs.
 
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { configApi, type ChangeRequest, type ConfigOverview, type Spec } from "../configApi";
 import { navigate } from "../router";
@@ -578,13 +579,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
   const step = steps[at];
   return (
     <div className="page cf-wizard">
-      <header className="page-head">
-        <div>
-          <div className="crumbs"><a href="/config" onClick={(e) => { e.preventDefault(); cancel(); }}>Configuration</a><span aria-hidden="true">/</span><span>{title}</span></div>
-          <h1>{title}</h1>
-          {intro && <p className="sub">{intro}</p>}
-        </div>
-      </header>
+      <PageHead eyebrow="Settings · Set-up" title={title} sentence={intro} actions={<button type="button" className="btn btn-ghost" onClick={cancel}>Leave the set-up</button>} />
       <nav aria-label="Steps" className="cf-steps-nav">
         <ol className="cf-steps">
           {steps.map((s, i) => (

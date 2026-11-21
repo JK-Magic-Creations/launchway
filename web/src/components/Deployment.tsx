@@ -4,6 +4,7 @@ import { ago, clock, duration, shortSha } from "../format";
 import { useNow } from "../live";
 import { Link, Mono } from "./ui";
 import { DeploymentControls } from "./DeploymentControls";
+import { Runway } from "./Runway";
 
 // What a deploy step did and what deploy runners last observed of it. This
 // is read-only: it shows the deployment, it never changes it.
@@ -367,13 +368,12 @@ function Snapshot({ snap, muted, now }: { snap: DeploySnapshot; muted: boolean; 
           )}
         </div>
       )}
-      {snap.rollout && <RolloutView r={snap.rollout} muted={muted} now={now} />}
-      {snap.analysis && snap.analysis.length > 0 && <Analyses list={snap.analysis} muted={muted} />}
+      <Runway snapshot={snap} muted={muted} now={now} />
     </>
   );
 }
 
-function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["rollout"]>; muted: boolean; now: number }) {
+export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["rollout"]>; muted: boolean; now: number }) {
   if (!r.found) return <div className="dep-block"><span className="dep-block-title">Rollout</span> <span className="faint">not found</span></div>;
   const tone = muted ? "idle" : r.aborted ? "bad" : r.phase === "Healthy" ? "ok" : r.phase === "Degraded" ? "bad" : r.paused || r.phase === "Paused" ? "wait" : "run";
   const steps = Array.from({ length: r.steps }, (_, i) => r.step_names?.[i] || `step ${i + 1}`);
@@ -426,7 +426,7 @@ function analysisTone(p: string, muted: boolean): string {
   }
 }
 
-function Analyses({ list, muted }: { list: NonNullable<DeploySnapshot["analysis"]>; muted: boolean }) {
+export function Analyses({ list, muted }: { list: NonNullable<DeploySnapshot["analysis"]>; muted: boolean }) {
   return (
     <div className="dep-block">
       <div className="dep-chips"><span className="dep-block-title">Analysis</span><span className="faint">the rollout's own checks</span></div>

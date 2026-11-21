@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ProjectHead } from "./PipelineChrome";
 import { api, ApiError, type CoverageTrend, type OverviewRun, type TestHistory, type TestOverview, type TestStat } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate, onLink } from "../router";
@@ -50,20 +51,15 @@ export function ProjectTestsPage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <header className="page-head">
-        <div>
-          <h1>Tests and coverage of {name}</h1>
-          <p className="sub">{data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the results move, and the tests that stand out.</> : "Results of the tests its steps report."}</p>
-        </div>
-        {data && data.refs.length > 0 && (
+      <ProjectHead name={name} on="tests" title={<>Tests and coverage of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the results move, and the tests that stand out.</> : "Results of the tests its steps report."}
+        actions={data && data.refs.length > 0 && (
           <div className="chips" role="group" aria-label="Branch">
             {(data.refs.includes(data.ref) || !data.ref ? data.refs : [data.ref, ...data.refs]).slice(0, 8).map((r) => (
               <button key={r} type="button" className={"chip" + (r === data.ref ? " chip-on" : "")} aria-pressed={r === data.ref}
                 onClick={() => go({ ref: r.startsWith("refs/heads/") ? refName(r) : r, test })}>{refName(r)}</button>
             ))}
           </div>
-        )}
-      </header>
+        )} />
 
       <ErrorBox error={error instanceof ApiError && error.status === 404 ? `There is no project called ${name}, or you may not see it.` : error} />
       {test && <HistoryPanel project={name} testKey={test} gref={data?.ref ?? ""} onClose={() => go({ test: "" })} />}
