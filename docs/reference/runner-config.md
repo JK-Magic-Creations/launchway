@@ -83,6 +83,7 @@ kubernetes:
   restricted: true
   run_as_user: 1000
   run_as_group: 1000
+  user_entry: true
 secrets:
   vault:
     type: vault
@@ -206,6 +207,19 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.restricted` | boolean | `true` | Every container, services included, runs as `run_as_user` with no privilege escalation, no capabilities and the `RuntimeDefault` seccomp profile, so step pods meet Pod Security `restricted`. `HOME` is a writable `/home/launchway`. `false` runs images as their own users, often root, and needs a namespace that allows it. Pipelines cannot change this |
 | `kubernetes.run_as_user` | whole number | `1000` | With `restricted`: the user containers run as. Not 0 |
 | `kubernetes.run_as_group` | whole number | `1000` | With `restricted`: the group, which also owns the pod's volumes |
+| `kubernetes.user_entry` | boolean | `true` | With `restricted`: give the step's user an account. A numeric user the image does not know makes `ssh`, `git` over ssh and some other tools fail with `No user exists for uid 1000`. With this on, an init container in each step image copies the image's `/etc/passwd` and `/etc/group` to a small in-memory volume, adds `launchway` (uid and gid as above, home `/home/launchway`, shell `/sbin/nologin`) in place of any entry for that uid or gid, and the step container mounts the two files read-only over the originals. `USER` and `LOGNAME` are `launchway`, `HOME` is `/home/launchway`, and each step's log starts with `Running as launchway (uid 1000, gid 1000)`. Set `false` for images that already handle a numeric user |
+
+### The step's user
+
+The Kubernetes executor runs steps as a numeric user (`run_as_user`) that most images' `/etc/passwd` does not list, so
+`kubernetes.user_entry` (on by default) makes the user resolvable without relaxing anything: the user is still not root,
+privilege escalation and all capabilities stay off, and the image is not changed (the two account files are read-only
+mounts, so it also works with a read-only root filesystem). The init container needs only `/bin/sh` in the step's image,
+which every step image needs anyway because steps run with `sh`; an image with no `/etc/passwd` or `/etc/group` is fine
+(the files are made with `root` and `launchway`). An image that has no shell cannot be a step image at all, so there is no
+shell-less case to support; services are untouched and keep their own account files. If the init container cannot run,
+the step fails with a message that names the image and the setting. The container executor (`podman` or `docker`) runs
+the image's own user, which the image's account files already describe, so it needs nothing.
 
 ### What happens to a run's pod
 

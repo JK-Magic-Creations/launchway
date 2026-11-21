@@ -259,6 +259,18 @@ python3 -c 'import tempfile; tempfile.NamedTemporaryFile(); print("python tempfi
 		t.Fatalf("git:\n%s", out)
 	}
 
+	// The step's user has an account entry: the ssh client, which refuses to run for a uid it cannot look up
+	// ("No user exists for uid 1000"), starts, and the names agree.
+	out = step("user", "git", `ssh -V 2>&1; echo "user=$(id -un) USER=$USER LOGNAME=$LOGNAME"; getent passwd 1000`, nil)
+	for _, want := range []string{"OpenSSH", "stdout: user=launchway USER=launchway LOGNAME=launchway", "launchway:x:1000:1000:", "system: Running as launchway (uid 1000, gid 1000)"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("user entry: missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "No user exists") {
+		t.Fatalf("the user is not resolvable:\n%s", out)
+	}
+
 	// A step's own HOME wins over the pod's.
 	out = step("own-home", "node", `echo "HOME=$HOME"`, map[string]string{"HOME": "/workspace/.myhome"})
 	if !strings.Contains(out, "stdout: HOME=/workspace/.myhome") {

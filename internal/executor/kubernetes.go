@@ -63,6 +63,10 @@ type KubernetesOptions struct {
 	Restricted *bool  `yaml:"restricted"`
 	RunAsUser  *int64 `yaml:"run_as_user"`  // default 1000; never 0
 	RunAsGroup *int64 `yaml:"run_as_group"` // default 1000; also owns the pod's volumes (fsGroup)
+	// UserEntry, true unless set to false, gives the step's user an entry in /etc/passwd and /etc/group of
+	// every step container (see kubernetes_user.go), so that tools that look their user up, such as the ssh
+	// client, work. Set it to false for images that already handle a numeric user. Applies when restricted.
+	UserEntry *bool `yaml:"user_entry"`
 }
 
 // restricted reports whether step pods get the restricted security context.
@@ -260,6 +264,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		k.forget(s.RunID)
 		return -1, infra("the run's pod has no container called %s", s.Container)
 	}
+	out("system", k.stepUserLine())
 
 	key := containerName(s.Name)
 	dir := "/launchway/" + key
@@ -504,6 +509,11 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 			corev1.Volume{Name: "home", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 			corev1.Volume{Name: "tmp", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
 	}
+	userEntry := k.o.userEntry()
+	var inits []corev1.Container
+	if userEntry {
+		volumes = append(volumes, corev1.Volume{Name: userFilesVolume, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}})
+	}
 	containers := map[string]string{}
 	images := map[string]string{}
 	cs := []corev1.Container{{Name: helperName, Image: k.o.HelperImage, Command: keepAlive, WorkingDir: "/workspace",
@@ -512,6 +522,10 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 		images[sp.Name] = sp.Image
 		c := corev1.Container{Name: sp.Name, Image: sp.Image, WorkingDir: "/workspace", VolumeMounts: mounts,
 			Resources: k.resources(sp), ImagePullPolicy: corev1.PullIfNotPresent}
+		if userEntry && !sp.Service {
+			c.VolumeMounts = append(append([]corev1.VolumeMount{}, mounts...), userMounts(sp.Name)...)
+			inits = append(inits, k.userInit(sp))
+		}
 		if sp.Service {
 			c.Command = sp.Command // nil: the image's own entrypoint
 			c.WorkingDir = ""
@@ -551,6 +565,13 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 					cs[i].Env = append(cs[i].Env, e)
 				}
 			}
+			if userEntry && len(cs[i].VolumeMounts) > len(mounts) {
+				for _, e := range userEnv {
+					if !hasEnv(cs[i].Env, e.Name) {
+						cs[i].Env = append(cs[i].Env, e)
+					}
+				}
+			}
 		}
 	}
 	imgJSON, _ := json.Marshal(images)
@@ -567,6 +588,7 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 			ServiceAccountName:            k.o.ServiceAccount,
 			NodeSelector:                  k.o.NodeSelector,
 			SecurityContext:               podSecurity,
+			InitContainers:                inits,
 			Containers:                    cs,
 			Volumes:                       volumes,
 		},
@@ -610,6 +632,14 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 		}
 		if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
 			return cannotStart("the pod stopped: %s", podProblem(pod))
+		}
+		if why := userInitProblem(pod); why != "" {
+			return cannotStart("%s", why)
+		}
+		for _, st := range pod.Status.InitContainerStatuses {
+			if w := st.State.Waiting; w != nil && (w.Reason == "ErrImagePull" || w.Reason == "ImagePullBackOff" || w.Reason == "InvalidImageName") {
+				return cannotStart("cannot pull %s: %s", st.Image, oneLine(w.Message))
+			}
 		}
 		for _, st := range pod.Status.ContainerStatuses {
 			if w := st.State.Waiting; w != nil {
