@@ -2,68 +2,38 @@ package main
 
 import (
 	"context"
-	"io/fs"
 	"log/slog"
 	"os"
 	"strings"
-	"testing/fstest"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/config"
-	"github.com/jk-magic-creations/launchway/internal/depupdate/gitfs"
 	depservice "github.com/jk-magic-creations/launchway/internal/depupdate/service"
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/graph"
 )
 
-// hostedRepos is Git hosting as the graph's sources read it: the repositories
-// that are hosted here, and the files of their default branches, read from
-// the server's own copy without a working tree and without running anything
-// from the repository.
-type hostedRepos struct {
-	prov api.HostedProvider
-	git  interface {
-		WithCache(ctx context.Context, repo string, fn func(gitDir string) error) error
+// hostedLister lists the hosted repositories through the provider.
+func hostedLister(prov api.HostedProvider) func(ctx context.Context) ([]graph.Repo, error) {
+	return func(ctx context.Context) ([]graph.Repo, error) {
+		var out []graph.Repo
+		cursor := ""
+		for {
+			pg, err := prov.Repositories().List(ctx, cursor)
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range pg.Items {
+				out = append(out, graph.Repo{ID: r.ID, Path: r.Path, DefaultBranch: r.DefaultBranch, Archived: r.Archived})
+			}
+			if pg.Next == "" || len(out) > 100000 {
+				return out, nil
+			}
+			cursor = pg.Next
+		}
 	}
-}
-
-func (h hostedRepos) List(ctx context.Context) ([]graph.Repo, error) {
-	var out []graph.Repo
-	cursor := ""
-	for {
-		pg, err := h.prov.Repositories().List(ctx, cursor)
-		if err != nil {
-			return nil, err
-		}
-		for _, r := range pg.Items {
-			out = append(out, graph.Repo{ID: r.ID, Path: r.Path, DefaultBranch: r.DefaultBranch, Archived: r.Archived})
-		}
-		if pg.Next == "" || len(out) > 100000 {
-			return out, nil
-		}
-		cursor = pg.Next
-	}
-}
-
-func (h hostedRepos) Files(ctx context.Context, r graph.Repo, extra []string) (fs.FS, string, error) {
-	if r.DefaultBranch == "" {
-		return fstest.MapFS{}, "", nil
-	}
-	var tree fs.FS = fstest.MapFS{}
-	var commit string
-	err := h.git.WithCache(ctx, r.ID, func(dir string) error {
-		c, err := gitfs.Commit(ctx, dir, r.DefaultBranch)
-		if err != nil {
-			return nil // no such branch yet: an empty repository
-		}
-		commit = c
-		files, _, err := gitfs.Read(ctx, dir, c, append(append([]string{}, extra...), graph.RequirementsPath), gitfs.Limits{})
-		tree = files
-		return err
-	})
-	return tree, commit, err
 }
 
 // startGraph starts the software graph: the store (in the engine's database),
@@ -81,7 +51,7 @@ func startGraph(ctx context.Context, cfg *config.Config, eng *engine.Engine, log
 	}
 	var repos graph.Repos
 	if srv.Forge != nil && srv.Forge.Pulls != nil {
-		repos = hostedRepos{prov: srv.Forge.Provider, git: srv.Forge.Pulls.Git}
+		repos = graph.HostedRepos{Lister: hostedLister(srv.Forge.Provider), Git: srv.Forge.Pulls.Git}
 	}
 	projectRepos := func(ctx context.Context) (map[string]string, error) {
 		out := map[string]string{}

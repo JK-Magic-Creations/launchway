@@ -362,10 +362,8 @@ func (s *Store) Order(ctx context.Context, v Viewer, q OrderQuery) (OrderResult,
 	// The repositories involved.
 	involved := map[string]bool{}
 	if len(q.Repositories) == 0 {
-		for k, e := range d.edges {
-			if e.Override != "ignored" {
-				involved[k[0]], involved[k[1]] = true, true
-			}
+		for k := range d.edges { // an ignored dependency is still shown, marked
+			involved[k[0]], involved[k[1]] = true, true
 		}
 	} else {
 		known := map[string]bool{}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeInv struct {
@@ -258,4 +259,98 @@ func TestTypedStubsAssertWhatTheirFixturesSay(t *testing.T) {
 	if len(c.Repositories) != 1 || c.Repositories[0].Node.Key != "acme/infra" {
 		t.Fatalf("%+v", c)
 	}
+}
+
+type fakeAdv struct{}
+
+func (fakeAdv) For(_ context.Context, eco, name, version string) ([]Advisory, error) {
+	if eco == "go" && name == "example.test/libgo" && version == "v1.2.0" {
+		return []Advisory{{ID: "GO-2026-0001", Summary: "bad", Severity: "high", FixedIn: "v1.2.1"}}, nil
+	}
+	return nil, nil
+}
+
+func TestReachFindsDeploymentsRunningAVersionWithAnAdvisory(t *testing.T) {
+	r := newRunner(t, fixtureRepos())
+	cfg := Config{RegistryHosts: map[string]string{"harbor": "harbor.test"}, ProjectRepos: func(context.Context) (map[string]string, error) { return map[string]string{"svc": "acme/svc"}, nil }}
+	r.Sources = append(r.Sources, SortieSource{DB: r.Store.DB, Cfg: cfg}, DeploymentSource{DB: r.Store.DB, Cfg: cfg})
+	r.Projects = func(context.Context) ([]string, error) { return []string{"svc"}, nil }
+	seedRun(t, r.Store, "svc", "run1", 1, "c-svc-1", "harbor.test/apps/svc", "sha256:aaa111aaa111aaa111", "sha256:bbb222bbb222")
+	seedDeployment(t, r.Store, "prod", "svc", "api", "run1", 1, "1.0.0", "c-svc-1")
+	if _, err := r.Rescan(bg); err != nil {
+		t.Fatal(err)
+	}
+	out, err := r.Store.Reach(bg, AllowAll{}, ref(KindPackage, "go:example.test/libgo"), fakeAdv{}, Limits{}, When{})
+	if err != nil || len(out.Versions) != 1 {
+		t.Fatalf("%+v %v", out, err)
+	}
+	v := out.Versions[0]
+	if v.Version != "v1.2.0" || v.Advisories[0].ID != "GO-2026-0001" || len(v.Deployments) != 1 || v.Deployments[0].Airfield != "prod" {
+		t.Fatalf("%+v", v)
+	}
+	// With no vulnerability data the answer says so.
+	if o, _ := r.Store.Reach(bg, AllowAll{}, ref(KindPackage, "go:example.test/libgo"), nil, Limits{}, When{}); o.Note == "" || len(o.Versions) != 0 {
+		t.Fatalf("%+v", o)
+	}
+	// A viewer who cannot read the project sees no deployment.
+	o, _ := r.Store.Reach(bg, Only{"repo:acme/svc": true, "repo:acme/libgo": true}, ref(KindPackage, "go:example.test/libgo"), fakeAdv{}, Limits{}, When{})
+	for _, v := range o.Versions {
+		if len(v.Deployments) != 0 {
+			t.Fatalf("leaked %+v", v)
+		}
+	}
+}
+
+func TestWatcherReadsWhatChangedAndCoalescesPushes(t *testing.T) {
+	repos := fixtureRepos()
+	r := newRunner(t, repos)
+	cfg := Config{ProjectRepos: func(context.Context) (map[string]string, error) { return map[string]string{"svc": "acme/svc"}, nil }}
+	r.Sources = append(r.Sources, SortieSource{DB: r.Store.DB, Cfg: cfg}, DeploymentSource{DB: r.Store.DB, Cfg: cfg})
+	w := &Watcher{Runner: r, DB: r.Store.DB}
+	if err := w.Tick(bg); err != nil {
+		t.Fatal(err)
+	}
+	seedRun(t, r.Store, "svc", "run1", 1, "c1", "harbor.test/apps/svc", "sha256:aaa", "sha256:bbb")
+	seedDeployment(t, r.Store, "prod", "svc", "api", "run1", 1, "1.0.0", "c1")
+	if err := w.Tick(bg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Store.Get(bg, AllowAll{}, ref(KindDeployment, "prod/svc/api"), When{}); err != nil {
+		t.Fatalf("a launch was not noticed: %v", err)
+	}
+	// A quiet tick reads nothing.
+	before := len(runsOf(t, r.Store))
+	if err := w.Tick(bg); err != nil {
+		t.Fatal(err)
+	}
+	if after := len(runsOf(t, r.Store)); after != before {
+		t.Fatalf("a quiet tick read again: %d runs, then %d", before, after)
+	}
+	// A push is read in the background.
+	repos.Push("acme/libgo", "c9", map[string]string{"go.mod": "module example.test/libgo/v9\n"})
+	w.Pushed("acme/libgo")
+	w.Pushed("acme/libgo")
+	for i := 0; i < 100; i++ {
+		if _, err := r.Store.Get(bg, AllowAll{}, ref(KindPackage, "go:example.test/libgo/v9"), When{}); err == nil {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("a push was not read")
+}
+
+func runsOf(t *testing.T, s *Store) []int64 {
+	t.Helper()
+	rows, err := s.DB.Query(bg, `SELECT id FROM graph_runs`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var id int64
+		rows.Scan(&id)
+		out = append(out, id)
+	}
+	return out
 }
