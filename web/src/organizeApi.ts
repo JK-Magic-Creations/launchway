@@ -49,5 +49,5 @@ export const organizeApi = {
   setMyLayout: (page: string, data: Record<string, unknown>) => call<LayoutAnswer>("PUT", `/api/v1/me/layouts/${page}`, data),
   resetMyLayout: (page?: string) => call<unknown>("DELETE", page ? `/api/v1/me/layouts/${page}` : "/api/v1/me/layouts"),
   search: (q: string, limit = 20) => call<{ q: string; hits: SearchHit[]; favorites?: string[] }>("GET", `/api/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-  needsAttentionRuns: () => call<import("./api").RunSummary[]>("GET", "/api/v1/runs?attention=needs"),
+  attentionRuns: (which: "needs" | "running", background = false) => call<import("./api").RunSummary[]>("GET", `/api/v1/runs?attention=${which}`, undefined, { background }),
 };

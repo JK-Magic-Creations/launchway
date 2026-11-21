@@ -101,9 +101,9 @@ describe("the Explorer", () => {
     render(<Explorer {...props()} />);
     expect(within(screen.getByRole("tree")).getByRole("treeitem", { name: /Payments, 2 items, 1 failed/ })).toBeInTheDocument();
   });
-  it("the slash key jumps to the filter", async () => {
+  it("the f key jumps to the filter (the slash key opens the finder)", async () => {
     render(<Explorer {...props()} />);
-    await userEvent.keyboard("/");
+    await userEvent.keyboard("f");
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
   });
   it("moves an item to a folder from its menu, announces it and can undo", async () => {

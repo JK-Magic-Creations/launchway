@@ -69,7 +69,7 @@ export function Explorer(p: ExplorerProps) {
   useEffect(() => {
     const on = (e: globalThis.KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !/^(input|textarea|select)$/i.test(t.tagName) && !t.isContentEditable) { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === "f" && !e.ctrlKey && !e.metaKey && !/^(input|textarea|select)$/i.test(t.tagName) && !t.isContentEditable) { e.preventDefault(); searchRef.current?.focus(); }
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
@@ -146,7 +146,7 @@ export function Explorer(p: ExplorerProps) {
       <div className="xp-bar">
         <div className="xp-search">
           <Icon name="search" />
-          <input ref={searchRef} type="search" role="searchbox" aria-label={`Filter ${p.noun.plural}`} placeholder={`Filter ${p.noun.plural}, press / to jump here`} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input ref={searchRef} type="search" role="searchbox" aria-label={`Filter ${p.noun.plural}`} placeholder={`Filter ${p.noun.plural}, press f to jump here`} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <label className="xp-sel">Status
           <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>

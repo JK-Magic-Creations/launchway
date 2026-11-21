@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
 import { api, type Project, type RunSummary } from "../api";
 import { launchApi, type LaunchLineView } from "../api/launch";
 import { EntityLink } from "../components/EntityLink";
@@ -12,6 +12,8 @@ import { Status, stateOf, type State } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow, useStream } from "../live";
 import { onLink } from "../router";
+import { oneOf, useUrlState } from "../urlState";
+import { organizeApi } from "../organizeApi";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
 
@@ -37,11 +39,14 @@ function toneOf(r: RunSummary): "bad" | "wait" | "run" | "ok" | "idle" {
 /** Activity answers: what has happened, and what is happening. Each run is one row with its launch line,
  * one sentence about where it is and who started it; a chosen project shows how its runs have been going. */
 export function ActivityPage() {
-  const [project, setProject] = useState("");
-  const [status, setStatus] = useState("");
-  const [lane, setLane] = useState("");
+  // Every filter is in the address, so a link or a bookmark opens the same list.
+  const [project, setProject] = useUrlState("project", "");
+  const [status, setStatus] = useUrlState("status", "");
+  const [lane, setLane] = useUrlState("lane", "");
+  // Which Sorties: all, only those that need a person (the Home page's rule) or only those in progress.
+  const [show, setShow] = useUrlState("show", "all", oneOf("all", "needs", "running"));
   const now = useNow(1000, true);
-  const runsFn = useCallback((bg: boolean) => api.runs({ project, status, lane, limit: 100 }, bg), [project, status, lane]);
+  const runsFn = useCallback((bg: boolean) => (show === "all" ? api.runs({ project, status, lane, limit: 100 }, bg) : organizeApi.attentionRuns(show, bg)), [project, status, lane, show]);
   const runs = useLoad(runsFn);
   const trendFn = useCallback((bg: boolean) => (project ? api.runs({ project, limit: 30 }, bg) : Promise.resolve<RunSummary[]>([])), [project]);
   const trendRuns = useLoad(trendFn);
@@ -58,7 +63,7 @@ export function ActivityPage() {
     const l = list ?? [];
     return { running: l.filter((r) => !isDone(r.status) && (r.waiting?.length ?? 0) === 0).length, waiting: l.filter((r) => !isDone(r.status) && (r.waiting?.length ?? 0) > 0).length, failed: l.filter((r) => r.status === "failed").length };
   }, [list]);
-  const filtered = !!(status || project || lane);
+  const filtered = !!(status || project || lane || show !== "all");
   const trend = trendOf(trendRuns.data ?? []);
 
   const sentence = list === null ? "Loading the runs." : list.length === 0 ? (filtered ? "No run matches these filters." : "Nothing has run yet.")
@@ -72,12 +77,15 @@ export function ActivityPage() {
         actions={<span className={"vchip " + (live ? "run" : "")}><span className={live ? "st run" : "st idle"} aria-hidden="true" style={{ width: 12, height: 12 }} />{live ? "Live" : "Connecting"}</span>} />
 
       <div className="toolbar2">
+        <div className="pillbtns" role="group" aria-label="Which runs">
+          {([["all", "All"], ["needs", "Needs attention"], ["running", "In progress"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k, "push")}>{l}</button>)}
+        </div>
         <div className="pillbtns" role="group" aria-label="Filter by state">
-          {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key)}>{f.label}</button>)}
+          {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
         </div>
         {(projects.data?.length ?? 0) > 1 && (
           <label className="select"><span className="visually-hidden">Project</span>
-            <select value={project} onChange={(e) => setProject(e.target.value)}>
+            <select value={project} onChange={(e) => setProject(e.target.value, "push")}>
               <option value="">All projects</option>
               {projects.data!.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
             </select>
@@ -85,7 +93,7 @@ export function ActivityPage() {
         )}
         {laneNames.length > 0 && (
           <label className="select"><span className="visually-hidden">Lane</span>
-            <select value={lane} onChange={(e) => setLane(e.target.value)}>
+            <select value={lane} onChange={(e) => setLane(e.target.value, "push")}>
               <option value="">All lanes</option>
               {laneNames.map((n) => <option key={n} value={n}>lane {n}</option>)}
             </select>

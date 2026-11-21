@@ -174,3 +174,6 @@
   .frame-head { padding-top: 12px; }
   .side, .side-h { top: 0; }
 }
+
+/* The finder groups what the server found by kind: the label is a visual cue, each option also says its kind in its hint. */
+.res a[data-group]::before { content: attr(data-group); display: block; flex-basis: 100%; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: 4px 0 2px; }

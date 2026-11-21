@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Approval, type Me } from "../api";
 import { attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
@@ -10,7 +10,9 @@ import { isLearn, pageTitle, redirectFor, section, sectionOf, visibleTabs, type 
 import { PageFor } from "../nav/pages";
 import type { Approvals } from "../live";
 import { navigate, onLink, replace, usePath } from "../router";
-import { DoBar, DoBarButton } from "./DoBar";
+import { DoBarButton } from "./DoBarButton";
+// The finder loads when it is first opened.
+const DoBar = lazy(() => import("./DoBar").then((m) => ({ default: m.DoBar })));
 import { ExplainerContext, Guide, type Explainer } from "./Guide";
 import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
@@ -156,7 +158,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
         {guideOpen && <div className="rail-back" onClick={toggleGuide} aria-hidden="true" />}
       </div>
       <TabBar ctx={ctx} on={area} needs={needs.length} onAreas={() => setLayer("areas")} />
-      {layer === "do" && <DoBar ctx={ctx} projects={inst.projects} onClose={() => setLayer(null)} />}
+      {layer === "do" && <Suspense fallback={null}><DoBar ctx={ctx} projects={inst.projects} onClose={() => setLayer(null)} /></Suspense>}
       {layer === "areas" && <Launcher ctx={ctx} onClose={() => setLayer(null)} />}
     </ExplainerContext.Provider>
   );
