@@ -31,6 +31,7 @@
         "concepts/variables",
         "concepts/environments-and-deployments",
         "concepts/approvals",
+        "concepts/releases",
         "concepts/high-availability"
       ]
     },
@@ -79,6 +80,10 @@
         "guide/deployments",
         "guide/gitops-write-back",
         "guide/rollback-after-success",
+        "guide/releases",
+        "guide/promoting-releases",
+        "guide/release-checklists",
+        "guide/measuring-delivery",
         "guide/policies",
         "guide/verification",
         "guide/notifications",
@@ -225,6 +230,9 @@
         "guide/deployments",
         "guide/gitops-write-back",
         "guide/rollback-after-success",
+        "concepts/releases",
+        "guide/releases",
+        "guide/promoting-releases",
         "concepts/approvals",
         "tutorials/deploy-with-approval",
         "guide/verification",

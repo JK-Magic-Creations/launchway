@@ -240,6 +240,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <h2 id="h-changed">What changed in the roadmap</h2>
     <p class="wc-date">21 November 2026</p>
     <ul>
+      <li>Releases: make, publish and promote a release with its notes, Cargo and image digests; a matrix of what runs where; checklists, change windows, freezes and a calendar; Formations; and a report of frequency, lead time, change failure rate and time to restore.</li>
       <li>The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.</li>
       <li>Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.</li>
       <li>Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.</li>
@@ -288,15 +289,15 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </section>
 
   <div class="stats" aria-label="Where things stand">
-    <div class="stat st-available"><b>82</b><span><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span></span></div>
+    <div class="stat st-available"><b>83</b><span><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span></span></div>
     <div class="stat st-in-progress"><b>45</b><span><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></span></div>
     <div class="stat st-planned"><b>476</b><span><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span></span></div>
-    <div class="stat"><b>603</b><span class="stat-l">capabilities in all</span></div>
+    <div class="stat"><b>604</b><span class="stat-l">capabilities in all</span></div>
   </div>
 
   <nav aria-label="Milestones">
 <ol class="journey" aria-label="The milestones, in order">
-  <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">43 things</span></a></li>
+  <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">44 things</span></a></li>
   <li class="when-now"><a href="#milestone-1"><span class="node" aria-hidden="true">1</span><span class="jname">Host and run</span><span class="jwhen">Now</span><span class="bar" role="img" aria-label="23 available, 28 in progress, 60 planned of 111"><span class="seg st-available" style="flex:23"></span><span class="seg st-in-progress" style="flex:28"></span><span class="seg st-planned" style="flex:60"></span></span></a></li>
   <li class="when-next"><a href="#milestone-2"><span class="node" aria-hidden="true">2</span><span class="jname">Pipeline power</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 6 in progress, 54 planned of 62"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:6"></span><span class="seg st-planned" style="flex:54"></span></span></a></li>
   <li class="when-next"><a href="#milestone-3"><span class="node" aria-hidden="true">3</span><span class="jname">Delivery depth</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="4 available, 5 in progress, 87 planned of 96"><span class="seg st-available" style="flex:4"></span><span class="seg st-in-progress" style="flex:5"></span><span class="seg st-planned" style="flex:87"></span></span></a></li>
@@ -423,7 +424,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </div>
 
 <section class="group st-section" id="available" aria-labelledby="h-available">
-  <div class="sec-head"><h2 id="h-available">Available today</h2><span class="sec-note">On the main branch, tested and documented. 43 things.</span></div>
+  <div class="sec-head"><h2 id="h-available">Available today</h2><span class="sec-note">On the main branch, tested and documented. 44 things.</span></div>
   <h3 class="theme-h">Pipelines</h3>
   <ul class="grid">
     <li class="card st-available" data-status="available"><h4><a href="./guide/pipelines.html">Pipelines as code</a></h4><p>Typed YAML with steps, dependencies, run inputs, outputs passed between steps and loops, kept in Git next to the code they build.</p></li>
@@ -462,6 +463,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <li class="card st-available" data-status="available"><h4><a href="./guide/images.html">Container images</a></h4><p>Rootless builds, scans, signatures, provenance and SBOMs, pushed to any OCI registry.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/approvals-and-reruns.html">Approvals and protected environments</a></h4><p>Approval steps; the person who started a run cannot approve its production deploy.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/rollback-after-success.html">Rollback after a successful deployment</a></h4><p>Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry.</p></li>
+    <li class="card st-available" data-status="available"><h4><a href="./guide/releases.html">Releases and release management</a></h4><p>A release is versioned, fixed once published, promoted from Airfield to Airfield with the same commit and image digest, checked by a checklist with windows, freezes and Clearance, and reported on with the four delivery measures. Formations promote several projects' releases together in an order you write; a dependency graph will propose the order later. Not yet: the pipeline language has no release trigger or step of its own (pipelines run the launchway command), releases are not signed, and backports are a pull request you open.</p></li>
   </ul>
   <h3 class="theme-h">Security</h3>
   <ul class="grid">

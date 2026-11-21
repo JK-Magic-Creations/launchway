@@ -258,6 +258,12 @@
       "link": "guide/rollback-after-success"
     },
     {
+      "theme": "Delivery",
+      "title": "Releases and release management",
+      "value": "A release is versioned, fixed once published, promoted from Airfield to Airfield with the same commit and image digest, checked by a checklist with windows, freezes and Clearance, and reported on with the four delivery measures. Formations promote several projects' releases together in an order you write; a dependency graph will propose the order later. Not yet: the pipeline language has no release trigger or step of its own (pipelines run the launchway command), releases are not signed, and backports are a pull request you open.",
+      "link": "guide/releases"
+    },
+    {
       "theme": "Pipelines",
       "title": "Queues, limits and path filters",
       "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
@@ -5613,6 +5619,7 @@
   "whatChanged": {
     "date": "21 November 2026",
     "items": [
+      "Releases: make, publish and promote a release with its notes, Cargo and image digests; a matrix of what runs where; checklists, change windows, freezes and a calendar; Formations; and a report of frequency, lead time, change failure rate and time to restore.",
       "The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.",
       "Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.",
       "Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.",

@@ -12,6 +12,10 @@ and a delivery log shows what was sent, what waits for a retry and what could no
 |---|---|
 | `approval.requested` | A step waits for a person to approve it (or a paused verification waits to be marked passed or failed) |
 | `step.waiting_long` | An approval has waited longer than the rule's `after` (default an hour); told once |
+| `release.published` | A release was published (see [Making a release](releases.md)) |
+| `release.promoted` | A release was promoted to an Airfield; a promotion past a checklist says so |
+| `release.returned` | An Airfield was returned to base |
+| `freeze.started` | A freeze began: nothing is promoted until it ends |
 | `run.failed` | A run failed. Narrow it with `branches: [main]` to hear only about the branches that matter |
 | `deployment.succeeded` | A deployment is done and nothing rolled it back |
 | `deployment.failed` | A deployment failed, or its rollback failed too (then the message says the environment needs a person) |

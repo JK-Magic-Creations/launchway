@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Dependency order and releases · <a href="../roadmap-list.html">as a list</a></p>
 
-Build and release in the right order, and start each repository on the right branching pattern. **Status:** planned, in [Milestone 5](milestone-5.md), with the registry hand-off in [Milestone 4](milestone-4.md). Launchway works the order out from what your code says, and you can always correct it.
+Build and release in the right order, and start each repository on the right branching pattern. **Status:** releases and Formations that you order yourself are available today ([making a release](../guide/releases.md), [promoting a release](../guide/promoting-releases.md)); working the order out from what your code says is planned, in [Milestone 5](milestone-5.md), with the registry hand-off in [Milestone 4](milestone-4.md). Launchway works the order out from what your code says, and you can always correct it.
 
 ## A library changes
 

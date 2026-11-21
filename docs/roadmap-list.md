@@ -42,6 +42,7 @@ After what is already in flight, in this order.
 
 **What changed in the roadmap, 21 November 2026.**
 
+- Releases: make, publish and promote a release with its notes, Cargo and image digests; a matrix of what runs where; checklists, change windows, freezes and a calendar; Formations; and a report of frequency, lead time, change failure rate and time to restore.
 - The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.
 - Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.
 - Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.
@@ -104,6 +105,7 @@ compliance items provide controls and evidence.
 | Pull requests and code review | Open, review, comment on lines, suggest changes and merge inside Launchway, with merge rules that block until required checks pass. ([more](guide/pull-requests.md)) |
 | Pipelines drawn the way they run | Steps that run together appear side by side on the run page, drawn from their dependencies. |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
+| Releases and release management | A release is versioned, fixed once published, promoted from Airfield to Airfield with the same commit and image digest, checked by a checklist with windows, freezes and Clearance, and reported on with the four delivery measures. Formations promote several projects' releases together in an order you write; a dependency graph will propose the order later. Not yet: the pipeline language has no release trigger or step of its own (pipelines run the launchway command), releases are not signed, and backports are a pull request you open. ([more](guide/releases.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)

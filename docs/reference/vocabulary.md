@@ -55,6 +55,21 @@ Every word above is a default that an installation can rename. Words everyone kn
 - **levels-in-prose.** Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.
 <!-- /vocabulary:rules -->
 
+## Words of release management
+
+Release management uses a few more product words. They are not renameable yet, and they are written as shown wherever a person reads them; identifiers (API paths and fields, flags, files) stay plain.
+
+| Word | Means | In identifiers |
+|---|---|---|
+| **Airfield** | a place a release runs: what the configuration calls an environment | `environment`, `airfield` in release routes and inputs |
+| **Launch** | a delivery reaching an Airfield: what is ordinarily called a deploy | `deploy`, `deployment` |
+| **Return to base** | putting an Airfield back on the release before: a rollback | `rollback`, `release-returns` |
+| **Cargo** | the files a step keeps, and what a release carries: artifacts | `artifacts`, `assets` |
+| **Formation** | releases of several projects promoted together in an order | `formation` |
+| **Sortie** | one run, as a release names it | `run`, `run_id` |
+
+"Release", "tag", "version" and "changelog" stay ordinary words. Clearance, the checklist and the Hold (the plain word is freeze) come from the terms system like the rest.
+
 ## The two layers
 
 **What a person reads** uses the words above, through the terms system, so a rename takes effect. **Stable identifiers** do not change with a rename: API paths and JSON fields, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds and Go names. Each level has one permanent name there: `installation`, `organization`, `unit` and `project`. A script never depends on a label.
