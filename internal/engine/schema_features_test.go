@@ -15,7 +15,7 @@ import (
 // using several gets the highest, so a server of any schema between leaves
 // it alone.
 func TestRunMinSchemaAcrossFeatures(t *testing.T) {
-	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || schemaIdentity != 20 || schemaPools != 21 || schemaResources != 22 || schemaConfig != 23 || schemaFlow != 24 || schemaCache != 25 || schemaForge != 26 || schemaParity2 != 27 || len(migrations) != 29 {
+	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || schemaIdentity != 20 || schemaPools != 21 || schemaResources != 22 || schemaConfig != 23 || schemaFlow != 24 || schemaCache != 25 || schemaForge != 26 || schemaParity2 != 27 || len(migrations) != 31 {
 		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, cache %d, forge %d, parity2 %d, migrations %d",
 			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaCache, schemaForge, schemaParity2, len(migrations))
 	}
