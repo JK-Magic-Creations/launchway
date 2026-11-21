@@ -1,0 +1,42 @@
+{
+  "comment": "Justified uses of a word the vocabulary guard would flag: the plain-set names in the terms system itself, quoted identifiers, third-party names. Each entry: path (a file, or a folder ending in /), optional rule, optional contains, and why.",
+  "allow": [
+    {
+      "path": "web/src/terms.ts",
+      "why": "The terms system itself: it holds the two sets' words, so it must spell them."
+    },
+    {
+      "path": "docs/reference/runner-config.md",
+      "rule": "tenant",
+      "contains": "X-Scope-OrgID",
+      "why": "Loki's own word for its tenant header, a third-party name."
+    },
+    {
+      "path": "web/src/pages/wizards/FirstRun.tsx",
+      "rule": "tenant",
+      "contains": "tenant id",
+      "why": "Microsoft Entra's own placeholder in its issuer address."
+    },
+    {
+      "path": "deploy/helm/launchway/values.yaml",
+      "rule": "org-shorthand",
+      "contains": "name: org",
+      "why": "An example source name in a commented-out values example, quoted."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "org-shorthand",
+      "contains": "Org[",
+      "why": "A node name inside a Mermaid diagram, not shown as text."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "why": "The glossary of record must name the words it forbids."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "rule": "level-capitalized-mid-sentence",
+      "why": "Lists the level names as labels."
+    }
+  ]
+}
