@@ -22,7 +22,7 @@ export function FailurePanel({ failure, actions }: { failure: Failure; actions: 
         <div>
           <h3 className="h-sm">What you can do</h3>
           <ul className="explain-advice">{failure.advice.map((a) => <li key={a}>{a}</li>)}</ul>
-          <p className="faint small">{failure.cause ? "Re-running from the failed step makes a new run at the same commit: the steps before it are reused, and nothing is rebuilt." : terms().say("Running again from the failed step keeps the steps that passed and stays in this {run}. Running everything again starts a new run at the same commit.")}</p>
+          <p className="faint small">{failure.cause ? terms().say("Re-running from the failed step makes a new {run} at the same commit: the steps before it are reused, and nothing is rebuilt.") : terms().say("Running again from the failed step keeps the steps that passed and stays in this {run}. Running everything again starts a new {run} at the same commit.")}</p>
           <div className="explain-actions">{actions}</div>
         </div>
         <div>

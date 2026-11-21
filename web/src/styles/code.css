@@ -159,3 +159,7 @@ table.blame tr.sel td { background: var(--warn-wash); }
 /* Names and messages in the lists are links that need no underline to be seen as links: they stand alone in their cell. */
 .code-page .tree-table td a:not([class*="btn"]), .code-page a.msg-link:not([class*="btn"]), .code-page table.blame td a:not([class*="btn"]), .code-page .commit-list a:not([class*="btn"]) { text-decoration: none; }
 .code-page .tree-table td a:not([class*="btn"]):hover, .code-page a.msg-link:not([class*="btn"]):hover, .code-page .tree-table td a:not([class*="btn"]):focus-visible, .code-page a.msg-link:not([class*="btn"]):focus-visible { text-decoration: underline; }
+
+/* A link in the blame gutter is at least 24 px tall (WCAG 2.5.8): its own line has the room. */
+.code-page .bl-line2 a.msg-link { display: block; padding: 4px 0; line-height: 16px; }
+.code-page .bl-prev { padding: 4px 0; min-height: 24px; box-sizing: border-box; }

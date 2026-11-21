@@ -74,7 +74,7 @@ await journey("search: open with the slash key, find a failed run, read why it f
   await page.getByText(/FAIL TestPriceRounding/).first().waitFor();
   // The page change was announced and focus is at the top of the new page.
   assert.equal((await active(page)).id, "main");
-  await page.waitForFunction(() => /Run/.test(document.querySelector('[data-announcer="polite"]')?.textContent ?? ""));
+  await page.waitForFunction(() => /Sortie/.test(document.querySelector('[data-announcer="polite"]')?.textContent ?? ""));
   const tree = await snapshot(page.getByRole("main"));
   has(tree, /heading ".*" \[level=1\]/, /list "Pipeline: \d+ steps?/, /region "What went wrong"/, "TestPriceRounding");
 });
@@ -105,7 +105,7 @@ await journey("decide an approval: reason, then Go, by keyboard; the outcome is 
   const go = await tabTo(page, /Go\b/, 4);
   assert.equal(go.tag, "button");
   await page.keyboard.press("Enter");
-  const status = page.getByRole("status").filter({ hasText: /The run goes on/ });
+  const status = page.getByRole("status").filter({ hasText: /The Sortie goes on/ });
   await status.waitFor();
   const body = await (await fetch(`${url}/api/v1/runs/${runs.RUN_WAITING}`)).json();
   assert.ok(["succeeded", "running"].includes(body.status), "the run went on: " + body.status);
@@ -113,7 +113,7 @@ await journey("decide an approval: reason, then Go, by keyboard; the outcome is 
 
 await journey("start a run: the dialog takes focus, Tab stays inside, Enter starts, Escape would give focus back", async (page) => {
   await open(page, "/projects/shop-docs");
-  await tabTo(page, /^Start a run/);
+  await tabTo(page, /^Start a Sortie/);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await dialog.waitFor();
@@ -124,7 +124,7 @@ await journey("start a run: the dialog takes focus, Tab stays inside, Enter star
   for (let i = 0; i < 12; i++) { await page.keyboard.press("Tab"); assert.ok(await page.evaluate(() => !!document.activeElement?.closest("dialog") || document.activeElement === document.body), "Tab stayed inside"); }
   await page.keyboard.press("Escape");
   await page.locator("dialog").waitFor({ state: "detached" });
-  assert.match((await active(page)).name, /Start a run/, "focus went back to the button that opened the dialog");
+  assert.match((await active(page)).name, /Start a Sortie/, "focus went back to the button that opened the dialog");
   await page.keyboard.press("Enter");
   await dialog.waitFor();
   // Choose the branch: the first option is a button in the Tab order.

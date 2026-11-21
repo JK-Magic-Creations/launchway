@@ -131,7 +131,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <DoBarButton onOpen={() => setLayer("do")} />
           <div className="top-r">
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
-            <a className={"btn btn-sm" + (isLearn(path) ? " on" : "")} href="/learn" onClick={onLink} aria-label="Learn: the documentation of this release" aria-current={isLearn(path) ? "page" : undefined} data-act="learn"><Icon name="book" size="s" /><span className="hide-s">{terms().say("{Learn}")}</span></a>
+            <a className={"btn btn-sm" + (isLearn(path) ? " on" : "")} href="/learn" onClick={onLink} aria-label={`${terms().label("learn")}: the documentation of this release`} aria-current={isLearn(path) ? "page" : undefined} data-act="learn"><Icon name="book" size="s" /><span className="hide-s">{terms().say("{Learn}")}</span></a>
             <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")} data-act="guide"><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>
             <button type="button" className="iconbtn" onClick={flip} aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
             <UserMenu me={me} />

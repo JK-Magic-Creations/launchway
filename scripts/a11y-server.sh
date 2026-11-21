@@ -71,6 +71,7 @@ listen: 127.0.0.1:$port
 data: data
 user: sam.rivera
 egress: { allow_local: true }
+forge: { hosting: true, allow_insecure_http: true }
 projects:
   - { name: shop-api, repo: repos/shop-api, branch: main, poll: 5s }
   - { name: shop-web, repo: repos/shop-web, branch: main, poll: 5s }
@@ -86,6 +87,18 @@ until curl -fsS -o /dev/null "$url/readyz" 2>/dev/null; do
   if [ $i -gt 120 ] || ! kill -0 "$server_pid" 2>/dev/null; then echo "the server did not start" >&2; exit 1; fi
   sleep 0.5
 done
+
+# A hosted repository to read, with a few commits, a branch and a README (the pages of the code browser are scanned too).
+curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' -d '{"home":"demo","name":"shop"}' "$url/api/v1/repositories" >/dev/null
+hosted=$work/hosted
+mkdir -p "$hosted/internal/price" && (
+  cd "$hosted" && git init -q -b main && printf '# Shop\n\nSee the [guide](docs/guide.md).\n' > README.md
+  printf 'package price\n\n// Round rounds a price to cents.\nfunc Round(v float64) float64 { return float64(int(v*100+0.5)) / 100 }\n' > internal/price/price.go
+  git add -A && git -c user.name="Sam Rivera" -c user.email="sam@example.com" commit -q -m "Start the shop"
+  printf '// Total sums lines.\nfunc Total(l []float64) float64 { return 0 }\n' >> internal/price/price.go
+  git -c user.name="Priya Nair" -c user.email="priya@example.com" commit -q -am "Add Total, rounding each line first"
+  git push -q "$url/git/launchway/shop.git" main 2>/dev/null; git checkout -q -b fix && printf '// fix\n' >> README.md && git -c user.name="Sam Rivera" -c user.email="sam@example.com" commit -q -am "Fix the readme" && git push -q "$url/git/launchway/shop.git" fix 2>/dev/null
+) || true
 
 start() { curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' -d '{"ref":"main"}' "$url/api/v1/projects/$1/runs" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'; }
 ok=$(start shop-docs); failed=$(start shop-api); waiting=$(start shop-web)

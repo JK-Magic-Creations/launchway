@@ -15,7 +15,7 @@ export function RerunButton({ run, step, label = "Re-run from this step", primar
   return (
     <>
       <button type="button" className={primary ? "btn btn-primary" : "btn btn-sm"} onClick={() => setOpen(true)}
-        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>{label}</button>
+        title={terms().say(`A new {run} at the same commit: ${step.id} and the steps after it run again; the others are reused.`)}>{label}</button>
       {open && <RerunDialog run={run} from={from} onClose={() => setOpen(false)} />}
     </>
   );
@@ -68,7 +68,7 @@ export function RerunFailedButton({ run }: { run: RunDetail }) {
   return (
     <>
       <button type="button" className="btn" onClick={() => setOpen(true)}
-        title={terms().say("A new run at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this {run}.")}>Re-run failed steps</button>
+        title={terms().say("A new {run} at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this {run}.")}>Re-run failed steps</button>
       {open && <RerunDialog run={run} from={FAILED_ONLY} onClose={() => setOpen(false)} />}
     </>
   );

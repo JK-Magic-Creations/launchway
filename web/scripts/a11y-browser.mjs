@@ -25,6 +25,9 @@ const PAGES = [
   ["Variables", "/settings/variables"], ["Rules", "/settings/rules"], ["Learn", "/learn"], ["A Learn page", "/learn/concepts/launch-line"],
   ["Accessibility guide", "/learn/guide/accessibility"], ["Conformance statement", "/learn/reference/accessibility-conformance"],
   ["Configuration", "/config"], ["First-run wizard", "/config/wizard/connect-repository"], ["Design kit", "/kit"],
+  ["Repository code", "/repositories/launchway/shop/code"], ["A file", "/repositories/launchway/shop/code?path=internal%2Fprice%2Fprice.go"],
+  ["Blame", "/repositories/launchway/shop/blame?ref=main&path=internal%2Fprice%2Fprice.go"], ["Commits", "/repositories/launchway/shop/commits"],
+  ["Branches", "/repositories/launchway/shop/branches"], ["Compare", "/repositories/launchway/shop/compare?head=fix&base=main"],
   ["Sign-in", "/signin", { signedOut: true }],
 ];
 const VIEWS = [["1440", { width: 1440, height: 900 }], ["390", { width: 390, height: 844 }]];
