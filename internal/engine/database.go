@@ -20,7 +20,7 @@ func (e *Engine) Database() *Database { return &Database{d: e.db, e: e} }
 
 // SQL is the underlying handle, for stores that take a *sql.DB (the database
 // blob store).
-func (db *Database) SQL() *sql.DB { return db.d.DB }
+func (db *Database) SQL() *sql.DB { return db.d.DB } //nolint:staticcheck // the field is the handle
 
 // WriteLock takes the engine's SQLite write lock (a no-op on PostgreSQL), so
 // writers inside this process queue instead of failing with "database is
@@ -32,17 +32,17 @@ func (db *Database) Postgres() bool { return db.d.pg }
 
 // Exec runs a statement.
 func (db *Database) Exec(ctx context.Context, q string, a ...any) (sql.Result, error) {
-	return db.d.DB.ExecContext(ctx, rebind(db.d.pg, q), a...)
+	return db.d.ExecContext(ctx, rebind(db.d.pg, q), a...)
 }
 
 // Query runs a query.
 func (db *Database) Query(ctx context.Context, q string, a ...any) (*sql.Rows, error) {
-	return db.d.DB.QueryContext(ctx, rebind(db.d.pg, q), a...)
+	return db.d.QueryContext(ctx, rebind(db.d.pg, q), a...)
 }
 
 // QueryRow runs a query that returns at most one row.
 func (db *Database) QueryRow(ctx context.Context, q string, a ...any) *sql.Row {
-	return db.d.DB.QueryRowContext(ctx, rebind(db.d.pg, q), a...)
+	return db.d.QueryRowContext(ctx, rebind(db.d.pg, q), a...)
 }
 
 // Tx is a transaction.
@@ -54,7 +54,7 @@ type Tx struct {
 // Begin starts a transaction. On SQLite it takes the write lock at once, so
 // a transaction never fails half-way because another committed first.
 func (db *Database) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := db.d.DB.BeginTx(ctx, nil)
+	tx, err := db.d.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

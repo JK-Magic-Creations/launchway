@@ -24,7 +24,7 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                     {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                     {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/forge/storage", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/source", "internal/verify/source"},
 	"internal/accept":                   {},
 	"internal/ai":                       {"internal/pipeline"},
 	"internal/ai/aitest":                {},
@@ -43,6 +43,7 @@ var allowedImports = map[string][]string{
 	"internal/forge":                    {},
 	"internal/forge/forgetest":          {"internal/forge"},
 	"internal/forge/providers/plain":    {"internal/forge", "internal/forge/store", "internal/gitexec", "internal/source"},
+	"internal/forge/storage":            {"internal/blobstore", "internal/engine", "internal/gitexec"},
 	"internal/forge/store":              {"internal/forge", "internal/ids"},
 	"internal/gitexec":                  {"internal/redact"},
 	"internal/findings":                 {"internal/findings/jsonscan"},
