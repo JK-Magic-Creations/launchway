@@ -544,6 +544,7 @@ func (s *Server) myLayoutSet(w http.ResponseWriter, r *http.Request) {
 		s.failOrg(w, err)
 		return
 	}
+	s.homeCache.drop(id.User)
 	writeJSON(w, http.StatusOK, s.layoutOf(id, page, "base"))
 }
 
@@ -557,6 +558,7 @@ func (s *Server) myLayoutReset(w http.ResponseWriter, r *http.Request) {
 		s.failOrg(w, err)
 		return
 	}
+	s.homeCache.drop(id.User)
 	writeJSON(w, http.StatusOK, s.layoutOf(id, r.PathValue("page"), "base"))
 }
 
@@ -566,6 +568,7 @@ func (s *Server) myLayoutsReset(w http.ResponseWriter, r *http.Request) {
 		s.failOrg(w, err)
 		return
 	}
+	s.homeCache.drop(id.User)
 	writeJSON(w, http.StatusOK, map[string]bool{"reset": true})
 }
 

@@ -280,6 +280,8 @@ type homeAnswer struct {
 	Favorites  []homeProject          `json:"favorites"`
 	Recent     []homeRecent           `json:"recent"`
 	Counts     map[string]int         `json:"counts"`
+	// Layout is the Home page arrangement in effect: the shared default under the person's own choices.
+	Layout layoutAnswer `json:"layout"`
 }
 
 // unitOf maps each project to its unit's name and display name.
@@ -301,7 +303,15 @@ func (s *Server) unitOf() (map[string]string, map[string]string) {
 
 func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
+	lay := s.layoutOf(id, "home", "base")
 	view := r.URL.Query().Get("view")
+	if view == "" {
+		var eff struct {
+			View string `json:"view"`
+		}
+		_ = json.Unmarshal(lay.Effective, &eff)
+		view = eff.View
+	}
 	if view != "mine" {
 		view = "all"
 	}
@@ -433,7 +443,7 @@ func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 		return a.Label < b.Label
 	})
 	out := homeAnswer{View: view, At: now, Needs: filterNeeds(open, mineView), Dismissed: filterNeeds(set, mineView), Categories: []homeCategory{}, Favorites: favorites,
-		Running: []homeRunning{}, Recent: []homeRecent{}, Counts: map[string]int{}}
+		Running: []homeRunning{}, Recent: []homeRecent{}, Counts: map[string]int{}, Layout: lay}
 	if out.Favorites == nil {
 		out.Favorites = []homeProject{}
 	}

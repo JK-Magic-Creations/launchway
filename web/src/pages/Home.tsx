@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import type { Approval, Me, Project, RunSummary, Runner } from "../api";
 import type { LaunchLineView } from "../api/launch";
 import { useMe } from "../auth";
@@ -17,6 +17,9 @@ import { useNow } from "../live";
 import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
 import { terms } from "../terms";
+
+// What needs you, what runs, the projects by category: loaded after the first paint (one call, see HomeSections).
+const HomeSections = lazy(() => import("./HomeSections"));
 
 /** Home answers one question: what should I do next? A new installation sees what to set up, in order;
  * a busy one sees what needs it today, then the changes on their way. Everything on it comes from the server's own state. */
@@ -50,11 +53,15 @@ export interface HomeProps {
 export function Home({ me, projects, runs, runners, environments, applications, approvals, now, lines = [], images = null }: HomeProps) {
   const items = me.admin ? checklist(me, { projects, runners, runs, environments }) : [];
   const next = nextStep(items);
-  const needs = needsYou({ projects, approvals, runners, applications, me }, lines, now);
+  const legacy = needsYou({ projects, approvals, runners, applications, me }, lines, now);
+  // Failed runs and decisions are the server's to say (a failure a newer run is retrying needs nobody); the rest stay here.
+  const extra = legacy.filter((n) => !/^(run|approval):/.test(n.key));
+  const [serverNeeds, setServerNeeds] = useState<number | null>(null);
+  const needCount = serverNeeds === null ? legacy.length : serverNeeds + extra.length;
   const finished = items.length > 0 && next.item === null;
   const fresh = items.length > 0 && next.done === 0 && runs.length === 0;
   const onTheirWay = lines.filter((l) => l.tone !== "ok" && l.tone !== "idle").length;
-  const h = headline(needs.length, onTheirWay);
+  const h = headline(needCount, onTheirWay);
   return (
     <div className="page home">
       <PageHead eyebrow={me.user ? `Hello, ${me.user}` : undefined} title={fresh ? "Welcome" : h.title}
@@ -64,7 +71,7 @@ export function Home({ me, projects, runs, runners, environments, applications, 
       {next.item && <NextStepCard item={next.item} done={next.done} total={next.total} />}
       {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> Projects, a runner, a first run and an environment are in place.</div>}
 
-      <NeedsSheet list={needs} />
+      <Suspense fallback={<div aria-busy="true" style={{ minHeight: 420 }} />}><HomeSections onCount={setServerNeeds} extra={extra} /></Suspense>
 
       <ChangesOnTheirWay lines={lines} runs={runs} now={now} />
 

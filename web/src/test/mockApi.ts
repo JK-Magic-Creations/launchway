@@ -21,6 +21,9 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/runs": [failed, run()],
     "/api/v1/runs/run_7": detail,
     "/api/v1/approvals": [approval()],
+    "/api/v1/home": homeFixture(),
+    "/api/v1/organize/pipelines": organizeFixture(),
+    "/api/v1/organize/repositories": organizeFixture(),
     "/api/v1/runners": [runner()],
     "/api/v1/environments": [environment()],
     "/api/v1/runs/run_2": { ...detail, id: "run_2", project: "shop-web", number: 118, status: "running", step_list: [step({ id: "approve", status: "waiting", kind: "approval" })] },
@@ -179,4 +182,23 @@ export function guideFixture() {
       { id: "encryption", state: "ok", title: "Stored secrets are encrypted", detail: "Secrets in the database are sealed under a root key kept outside it." },
     ],
   };
+}
+
+/** Home as the server answers it: one failure that needs a person, one Sortie running (retrying another), two projects in a Squadron. */
+export function homeFixture() {
+  return {
+    view: "all", at: 1, counts: { needs: 1, running: 1, projects: 2 }, favorites: [{ name: "shop-api", favorite: true, last: "failed", last_number: 7, last_at: 1000, running: 1, needs: 1, history: ["succeeded", "failed"] }],
+    needs: [{ key: "failed:run_7", kind: "failed", tone: "bad", project: "shop-api", title: "Sortie #7 of shop-api failed on main", why: "Nothing newer has run since, and it is the latest result on main, the default branch.", do: "See what went wrong, then fix it or run it again.", since: 1000, href: "/runs/run_7" }],
+    dismissed: [],
+    running: [{ id: "run_2", project: "shop-web", number: 118, branch: "main", status: "running", step: "test", started_at: 1000, created_at: 900, actor: "ana", mine: true, retry_of: 117 }],
+    categories: [{ id: "unit:shop", kind: "unit", label: "Shop", needs: 1, running: 1, failing: 1, projects: [
+      { name: "shop-api", favorite: true, last: "failed", last_number: 7, last_at: 1000, running: 0, needs: 1, history: ["succeeded", "failed"] },
+      { name: "shop-web", favorite: false, last: "succeeded", last_number: 118, last_at: 1000, running: 1, needs: 0, history: ["succeeded", "succeeded"] }] }],
+    recent: [{ id: "run_3", project: "shop-web", number: 117, branch: "main", status: "succeeded", finished_at: 900 }],
+    layout: { page: "home", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} },
+  };
+}
+
+export function organizeFixture() {
+  return { area: "pipelines", folders: [], items: {}, favorites: [], may_arrange_base: false, layout: { page: "pipelines", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} } };
 }

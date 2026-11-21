@@ -211,5 +211,4 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits})
 }
 
-
 func authRead() auth.Action { return auth.Read }

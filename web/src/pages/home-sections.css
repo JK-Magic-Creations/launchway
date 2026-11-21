@@ -1,0 +1,35 @@
+/* The sections Home draws after the first paint. */
+.hm { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+.hm-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.hm-seg { display: inline-flex; gap: 4px; }
+.hm-seg .btn[aria-pressed="true"] { background: var(--signal-wash); border-color: var(--signal); color: var(--signal-ink); }
+.hm-cust { position: relative; }
+.hm-cust summary { cursor: pointer; list-style: none; }
+.hm-cust-b { position: absolute; right: 0; z-index: 5; width: min(420px, 90vw); margin-top: 6px; padding: 12px; background: var(--sheet); border: 1px solid var(--line-2); border-radius: var(--r2); box-shadow: var(--lift); }
+.hm-cust-b ul { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hm-cust-b li { display: flex; align-items: center; gap: 6px; }
+.hm-cust-b li > span { flex: 1; }
+.hm-note { margin: 0; }
+.hm-skel { height: 96px; border-radius: var(--r2); background: linear-gradient(90deg, var(--sheet-2), var(--sheet-3), var(--sheet-2)); background-size: 200% 100%; animation: hm-sh 1.4s linear infinite; }
+.hm-skel.tall { height: 220px; }
+@keyframes hm-sh { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .hm-skel { animation: none; } }
+.hm-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; }
+.need.set-aside { opacity: .75; }
+.hm-cards { list-style: none; margin: 0; padding: 12px 16px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.hm-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--sheet); border: 1px solid var(--line); border-left: 4px solid var(--idle); border-radius: var(--r2); min-width: 0; }
+.hm-card.bad { border-left-color: var(--bad); } .hm-card.ok { border-left-color: var(--ok); } .hm-card.run { border-left-color: var(--signal); } .hm-card.wait { border-left-color: var(--warn); }
+.hm-card.mine { background: var(--signal-wash); }
+.hm-card-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hm-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.hm-trend { margin-left: 8px; }
+.hm-cat { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--r2); background: var(--sheet-2); }
+.hm-cat h3 { margin: 0; font-size: 15px; }
+.hm-cat-b { width: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border: 0; background: none; color: var(--ink); font: 650 15px var(--font); cursor: pointer; text-align: left; }
+.hm-cat-b:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
+.hm-cat-h { display: flex; justify-content: space-between; align-items: center; }
+.hm-more { align-self: center; padding: 8px; }
+.hm-recent { opacity: .92; }
+.hm-strip { list-style: none; margin: 0; padding: 8px 16px 14px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.hm-strip li { display: inline-flex; align-items: center; gap: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
