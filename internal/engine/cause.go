@@ -79,11 +79,11 @@ func deployCause(def *pipeline.Step, env string, v deploy.Verdict, snap deploy.S
 	if snap.Rollout != nil {
 		hash = snap.Rollout.CurrentPodHash
 	}
-	switch {
-	case v.Phase == deploy.PhaseSyncFailed || v.Phase == deploy.PhaseSourceBad || v.Phase == deploy.PhaseBlocked:
+	switch v.Phase {
+	case deploy.PhaseSyncFailed, deploy.PhaseSourceBad, deploy.PhaseBlocked:
 		c.Kind = CauseSyncFailed
 		c.Summary = fmt.Sprintf("The %s was stopped: %s.", what, strings.TrimSuffix(v.Detail, "."))
-	case v.Phase == deploy.PhaseAborted || v.Phase == deploy.PhaseDegraded || v.Phase == deploy.PhasePaused || v.Phase == deploy.PhaseRollout:
+	case deploy.PhaseAborted, deploy.PhaseDegraded, deploy.PhasePaused, deploy.PhaseRollout:
 		run := deploy.FailedAnalysisRun(snap.Analysis, hash)
 		if run != nil {
 			c.Kind, c.Analysis = CauseAnalysisFailed, run
@@ -331,4 +331,85 @@ func (st *RunState) rerunTarget(fallback string) string {
 		}
 	}
 	return f
+}
+
+// resumeRefusal is why a run that opened a deployment cannot be resumed,
+// naming the action that works. The Resume call and the run's actions list
+// both say exactly this.
+func (st *RunState) resumeRefusal(opened string) string {
+	failed := st.rerunTarget(opened)
+	return fmt.Sprintf("%s made a deployment in this run, and a half-done deployment is never continued, so this run cannot be resumed. "+
+		"Use \"Re-run from %s\" (the button, launchway runs rerun %s --from %s, or retry_run with from_step): it makes a new deployment of the same version and reuses "+
+		"everything before it, so nothing is rebuilt", opened, failed, st.ID, failed)
+}
+
+// Action is something a person may do with a resource, as the server
+// computes it in one place: the web interface, MCP and the command line
+// all read this list, so they cannot disagree. An action that is not
+// available says why and what to do instead; one that is available but
+// risky says what it will do (Risk) and still goes ahead once confirmed.
+type Action struct {
+	Name      string `json:"name"`
+	Available bool   `json:"available"`
+	// Reason, when unavailable, is the plain reason; Instead names the
+	// action that works, and WouldHelp what would make this one available.
+	Reason    string `json:"reason,omitempty"`
+	Instead   string `json:"instead,omitempty"`
+	WouldHelp string `json:"would_help,omitempty"`
+	// Who is the role it needs.
+	Who string `json:"who"`
+	// Risk is the consequence of a risky action, and Suggestion what to
+	// consider first; the action is not blocked by them.
+	Risk       string `json:"risk,omitempty"`
+	Suggestion string `json:"suggestion,omitempty"`
+}
+
+// runActions computes the actions of a run from its state alone (the
+// caller adds the person's role).
+func (st *RunState) runActions() []Action {
+	over := st.Status.Terminal()
+	acts := []Action{}
+	add := func(a Action) { a.Who = "operator"; acts = append(acts, a) }
+	cancel := Action{Name: "cancel", Available: !over && !st.CancelRequested,
+		Risk: "Running steps are stopped; a deployment in flight is aborted if the step says on_cancel: abort."}
+	switch {
+	case over:
+		cancel.Reason = "the run has already finished"
+	case st.CancelRequested:
+		cancel.Reason = "the run is already being canceled"
+	}
+	add(cancel)
+	failedOrCanceled := st.Status == RunFailed || st.Status == RunCanceled
+	resume := Action{Name: "resume", Available: failedOrCanceled}
+	rerun := Action{Name: "rerun", Available: over}
+	if !failedOrCanceled {
+		resume.Reason = "only a failed or canceled run can be resumed"
+	} else if id := st.openedDeployment(); id != "" {
+		resume.Available, resume.Reason, resume.Instead = false, st.resumeRefusal(id), "rerun from "+st.rerunTarget(id)
+	}
+	if !over {
+		rerun.Reason = "only a finished run can be re-run"
+	}
+	add(resume)
+	add(rerun)
+	return acts
+}
+
+// failCause is the cause a failed observation gives its step.
+func (c *cmd) failCause(stepID string, s *StepState, v deploy.Verdict, snap deploy.Snapshot) *StepCause {
+	env := ""
+	if s.Dep != nil {
+		env = s.Dep.Environment
+	}
+	return deployCause(c.st.Pipeline.Step(stepID), env, v, snap)
+}
+
+// attachCause gives a failed step view its reason and cause.
+func (st *RunState) attachCause(v *StepView) {
+	if v.Status != StepFailed {
+		return
+	}
+	if c := st.causeOf(v.ID); c != nil {
+		v.Cause, v.Reason = c, c.Summary
+	}
 }

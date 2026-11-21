@@ -129,7 +129,7 @@ func (c *Cluster) JobLog(ctx context.Context, ns, job string) *deploy.JobLog {
 	if len(list.Items) == 0 {
 		return &deploy.JobLog{Note: fmt.Sprintf("the job's pod in %s/%s is gone, so its log is too", ns, job)}
 	}
-	pod := list.Items[len(list.Items)-1]
+	pod := list.Items[0]
 	for _, it := range list.Items { // the newest pod
 		if it.GetCreationTimestamp().After(pod.GetCreationTimestamp().Time) {
 			pod = it
@@ -186,8 +186,9 @@ func podLogReader(cfg *rest.Config) func(ctx context.Context, ns, pod string, ta
 // what was read is kept, so that watching does not read it again.
 func (c *Cluster) addJobLogs(ctx context.Context, runs []deploy.AnalysisRun) {
 	for i := range runs {
-		for j := range runs[i].Metrics {
-			m := &runs[i].Metrics[j]
+		metrics := runs[i].Metrics
+		for j := range metrics {
+			m := &metrics[j]
 			if m.Job == nil || (m.Phase != "Failed" && m.Phase != "Error" && m.Phase != "Inconclusive") {
 				continue
 			}

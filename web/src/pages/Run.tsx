@@ -207,7 +207,9 @@ export function RunPage({ id }: { id: string }) {
   const failure = explainFailure(run.step_list);
   // A run that made a deployment is never resumed: re-running from the step
   // the server names (the failed one, or the deploy step it belongs to) is.
-  const resumeBlocked = run.resume?.allowed === false;
+  const act0 = (name: string) => run.actions?.find((a) => a.name === name);
+  const resumeBlocked = run.resume?.allowed === false || act0("resume")?.available === false;
+  const mayCancel = act0("cancel")?.available !== false;
   const rerunTarget = run.step_list.find((s) => s.id === (run.resume?.rerun_from || firstFailed?.id));
   // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
@@ -239,7 +241,7 @@ export function RunPage({ id }: { id: string }) {
       <RunHeader run={run} now={now} done={done} live={live} density={density} onDensity={changeDensity} select={select} setTab={setTab}
         waitingStep={waitingStep} verifyWaiting={verifyWaiting} deploying={deploying} deployingPhase={deploying ? deployingPhase(run, deploying) : undefined}
         actions={<>
-          {mayOperate && !done && !run.cancel_requested && (
+          {mayOperate && !done && !run.cancel_requested && mayCancel && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && !run.draft && <RerunFailedButton run={run} />}

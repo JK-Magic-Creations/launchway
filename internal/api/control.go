@@ -192,3 +192,18 @@ func (s *Server) recordCommandOutcome(r *http.Request, runner engine.RunnerInfo,
 		Action: "deployment.command_outcome", Project: project, Target: cv.RunID + "/" + cv.Deployment + "/" + cv.ID, Outcome: outcome,
 		Detail: cv.Action + " asked for by " + cv.Actor + ": " + cv.Result + ": " + cv.Detail})
 }
+
+// presentRun redacts the run for sending, and makes a run's actions say what this person may do: without the
+// operator role none is available, and each says why and what would help.
+func (s *Server) presentRun(id *identity, d *engine.RunDetail) {
+	d.Source = redactSource(d.Source)
+	if s.authorize(id, auth.Operate, d.Project) {
+		return
+	}
+	for i := range d.Actions {
+		d.Actions[i].Available = false
+		d.Actions[i].Reason = "you need the operator role on " + d.Project + " to do this"
+		d.Actions[i].WouldHelp = "ask an administrator for the operator role on " + d.Project
+		d.Actions[i].Instead = ""
+	}
+}

@@ -210,6 +210,9 @@ type RunDetail struct {
 	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 	// Deployments are the run's deployments, newest first (schema 11).
 	Deployments []DeploymentView `json:"deployments"`
+	// Actions are what a person may do with the run now, computed once by
+	// the server: cancel, resume, rerun.
+	Actions []Action `json:"actions"`
 	// Resume says whether the run can be resumed, and if not, what to do
 	// instead; nil for a run that is not failed or canceled.
 	Resume *ResumeAdvice `json:"resume,omitempty"`
@@ -674,9 +677,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
 		}
-		if c := st.causeOf(v.ID); c != nil && v.Status == StepFailed {
-			v.Cause, v.Reason = c, c.Summary
-		}
+		st.attachCause(v)
 		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
 			v.Caches = s.Evidence.Caches
 		}
@@ -709,6 +710,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	}
 	d.Policy = policySummary(st)
 	d.Resume = st.resumeAdvice()
+	d.Actions = st.runActions()
 	return d, nil
 }
 

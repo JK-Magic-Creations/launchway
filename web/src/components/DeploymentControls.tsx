@@ -3,6 +3,7 @@ import { api, ApiError, type CommandView, type DeploymentControls as Controls, t
 import { ago, clock } from "../format";
 import { ErrorBox, Mono } from "./ui";
 import { freshness } from "./Deployment";
+import { RolloutOverview } from "./RolloutOverview";
 
 // Controlling a deployment's Argo Rollouts rollout: Promote, Promote full,
 // Abort and Retry, and the commands given so far. A command is applied by
@@ -120,6 +121,7 @@ export function DeploymentControls({ run, d, now }: { run: RunDetail; d: Deploym
   const open = !d.verdict;
   return (
     <div className="dctl">
+      <RolloutOverview d={d} now={now} />
       {open && controls && <ControlForm run={run} d={d} now={now} controls={controls} latest={commands[commands.length - 1]}
         onGiven={(c) => { setPosted((p) => [...p, c]); refetch(); }} />}
       {commands.length > 0 && <CommandList run={run} d={d} now={now} commands={commands} controls={controls} onChange={refetch} />}

@@ -884,10 +884,7 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 			return fmt.Errorf("%w: run %s is not a draft run", ErrConflict, runID)
 		}
 		if id := c.st.openedDeployment(); id != "" {
-			failed := c.st.rerunTarget(id)
-			return fmt.Errorf("%w: %s made a deployment in this run, and a half-done deployment is never continued, so this run cannot be resumed. "+
-				"Use \"Re-run from %s\" (the button, launchway runs rerun %s --from %s, or retry_run with from_step): it makes a new deployment of the same version and reuses "+
-				"everything before it, so nothing is rebuilt", ErrConflict, id, failed, c.st.ID, failed)
+			return fmt.Errorf("%w: %s", ErrConflict, c.st.resumeRefusal(id))
 		}
 		// The limit may have been lowered since the run was made, and a
 		// resume gives a run that timed out a whole new budget.

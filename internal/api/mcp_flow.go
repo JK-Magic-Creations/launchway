@@ -88,3 +88,32 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 		}
 	}
 }
+
+type stepText struct {
+	Error   string `json:"error,omitempty" jsonschema:"how the step failed, as reported"`
+	Output  string `json:"last_output,omitempty" jsonschema:"the last lines the failed attempt wrote, secrets masked"`
+	Message string `json:"approval_question,omitempty"`
+	// Reason, Evidence and Next are why a failed step failed, in words, the
+	// evidence behind it (an analysis's metrics, a job's log) and what
+	// happened next. They carry text from the cluster.
+	Reason   string   `json:"reason,omitempty"`
+	Evidence []string `json:"evidence,omitempty"`
+	Next     string   `json:"next,omitempty"`
+}
+
+func (t *stepText) empty() bool {
+	return t.Error == "" && t.Output == "" && t.Message == "" && t.Reason == "" && len(t.Evidence) == 0 && t.Next == ""
+}
+
+// retryActions says which way back a failed run has: resume when the server
+// says it can work, otherwise the re-run that does.
+func retryActions(d *engine.RunDetail, id string, failed []string) []string {
+	if d.Resume != nil && !d.Resume.Allowed {
+		return []string{fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run: same version, new deployment attempt, earlier steps reused; this run cannot be resumed)", id, d.Resume.RerunFrom)}
+	}
+	out := []string{"retry_run run_id=" + id + " (resume: runs the failed steps again)"}
+	if len(failed) > 0 {
+		out = append(out, fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run that reuses the earlier steps)", id, failed[0]))
+	}
+	return out
+}

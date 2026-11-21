@@ -6,6 +6,9 @@ export type StepStatus =
   | "pending" | "queued" | "leased" | "running" | "waiting"
   | "succeeded" | "failed" | "skipped" | "canceled";
 
+import type { DeployAnalysis, DeployMetric, DeployMeasurement, StepCause, ServerAction, RerunPlan } from "./apiDeploy";
+export type { DeployAnalysis, DeployMetric, DeployMeasurement, StepCause, ServerAction, RerunPlan };
+
 export interface StepBrief { id: string; status: StepStatus; /** A failed step: why, in a plain sentence. */ reason?: string }
 
 export interface RunSummary {
@@ -344,33 +347,6 @@ export interface DeployRollout {
   available: number;
 }
 
-export interface DeployMeasurement { phase: string; message?: string; value?: string; at?: number }
-
-export interface DeployMetric {
-  name: string; phase: string; message?: string;
-  count: number; successful: number; failed: number; inconclusive: number; error: number;
-  /** What the metric checks: provider (job, prometheus, web...), its conditions as written, how often, how many failures it allows. */
-  provider?: string; success_condition?: string; failure_condition?: string; interval?: string; failure_limit?: number;
-  measurements?: DeployMeasurement[];
-  /** The Kubernetes Job a job metric ran, and the end of its log when it failed (or why there is none). */
-  job?: { name: string; namespace: string };
-  job_log?: { lines?: string[]; note?: string };
-}
-
-/** One of a rollout's own analysis runs. */
-export interface DeployAnalysis {
-  name: string;
-  phase: string; // Pending, Running, Successful, Failed, Error, Inconclusive
-  message?: string;
-  kind?: string; // Step or Background
-  step_index?: number;
-  pod_hash?: string;
-  revision?: string;
-  created_at?: number;
-  namespace?: string;
-  metrics?: DeployMetric[];
-}
-
 /** What a deploy runner saw of a deployment at one moment. error: it could not see the application at all. */
 export interface DeploySnapshot {
   error?: string;
@@ -551,31 +527,9 @@ export interface StepInputs {
   truncated?: boolean;
 }
 
-/** Why a failed step failed: the kind, one plain sentence, the evidence, and what Launchway did next. */
-export interface StepCause {
-  kind: "analysis_failed" | "rollout_failed" | "sync_failed" | "timeout" | "script_exit" | "refused" | "runner_lost" | "command_failed" | "other";
-  summary: string;
-  environment?: string;
-  phase?: string;
-  analysis?: DeployAnalysis;
-  exit_code?: number;
-  next?: { kind: "rolled_back" | "rolling_back" | "rollback_failed" | "no_rollback"; step?: string; version?: string; summary: string };
-}
-
 export interface AttemptInputs { attempt: number; inputs: StepInputs }
 
 /** What re-running a run from a step would run again and reuse. */
-export interface RerunPlan {
-  run: string[]; reuse: string[];
-  /** How each reused step ended (an approval: who decided it; an image step: its outputs, with the digest). */
-  reused?: { id: string; kind?: string; status: StepStatus; decided_by?: string; decided_at?: number; outputs?: Record<string, string>; approvers?: string[] }[];
-  /** Approvals among the steps that run again: they ask again. */
-  approvals_again?: string[];
-  run_number?: number;
-  /** A deploy step runs again: a new deployment of the same version is made. */
-  deployment?: boolean;
-}
-
 export interface RerunBrief { id: string; number: number; from: string; status: RunStatus; actor: string; created_at: number }
 
 export interface GraphContainer {
@@ -675,6 +629,8 @@ export interface RunDetail extends RunSummary {
   not_understood: string[];
   /** The run's deployments, newest first. */
   deployments?: DeploymentView[];
+  /** What this person may do with the run now, computed once by the server (cancel, resume, rerun). */
+  actions?: ServerAction[];
   /** A failed or canceled run: whether it can be resumed, and if not, the step to re-run from instead. */
   resume?: { allowed: boolean; reason?: string; rerun_from?: string; first_failed?: string };
   /** Why a run with image steps may wait long: no runner that builds images has been seen. */

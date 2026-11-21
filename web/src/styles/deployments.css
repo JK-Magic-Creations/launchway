@@ -143,3 +143,9 @@
 .cause-next[data-next="rolled_back"] { color: var(--ok-ink, inherit); }
 .cause-next[data-next="rollback_failed"] { color: var(--bad-ink); }
 .cause .excerpt pre { max-height: 14em; overflow: auto; }
+
+.rollout-overview { margin: 10px 0; }
+.ro-steps { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ro-step { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 0.9em; }
+.ro-step-done { background: var(--ok-wash); }
+.ro-step-on { border-color: var(--accent, var(--ok)); font-weight: 600; }

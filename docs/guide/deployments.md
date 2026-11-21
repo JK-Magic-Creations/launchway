@@ -254,3 +254,35 @@ Deploy steps need schema 11; rollout steps, `until: paused`, `pauses`, an approv
 `deployment`, `abort_first`, `on_cancel: abort`, commands, `protected:` and `environments:` on access
 bindings need schema 14. Use them only once every server and runner is upgraded, and take them out
 before rolling back (see [docs/development/migrations.md](../development/migrations.md)).
+
+## When a deploy fails: why, and what happened next
+
+A failed deploy, rollout or rollback step always says why. In the run API the step carries `reason` (one
+plain sentence) and `cause`: its `kind` (`analysis_failed`, `rollout_failed`, `sync_failed`, `timeout`,
+`script_exit`, `refused`, `runner_lost` or `command_failed`), the evidence and `next`, what Launchway did
+about it ("Rolled back to v1.2.3 by rollback-dev."). For a failed analysis the evidence is the analysis
+run with each metric: what it checks, its counts, each measurement with its time and message, and for a
+job metric the job's name and namespace and the end of its log. The same fields reach MCP (`get_run`) and
+`launchway runs show`.
+
+A deploy runner reads a failed job's log only when an administrator sets
+`delivery.deployRunner.rbac.readPods`; otherwise the run says where the log is and that the runner may not
+read it.
+
+## Commands tell the truth
+
+A rollout command has a visible life: requested, taken by a runner, then applied or **failed** with the
+reason, shown on the buttons' row and in the run's timeline. The audit trail keeps the request
+(`deployment.promote` and the like) and the outcome (`deployment.command_outcome`, `ok` or `failed`) as
+separate entries. Each deploy runner checks, against the cluster's authorizer, what it may do to the
+rollouts it watches and reports it with its observations; when it may not change a rollout's status, the
+buttons show unavailable with the words to fix it: list the rollout in
+`delivery.deployRunner.rbac.controlRollouts`. Nothing is offered that is known beforehand to fail.
+
+## What you may do: the `actions` list
+
+The server decides, once per resource, what a person may do now. A run's `actions` list (cancel, resume,
+rerun) has for each action its name, whether it is `available`, the plain `reason` when not, `instead` (the
+action that works), what role it needs (`who`), and for a risky action the `risk` and a `suggestion`.
+Risky actions are never blocked for being risky: the interface shows the consequence, asks for
+confirmation and goes ahead.

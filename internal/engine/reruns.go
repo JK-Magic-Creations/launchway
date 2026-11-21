@@ -207,37 +207,10 @@ func planRerun(orig *RunState, froms []string, failed bool) (RerunPlan, error) {
 			}
 		}
 	}
-	for _, id := range plan.Reuse {
-		def := orig.Pipeline.Step(id)
-		if !def.IsDeployKind() || orig.Steps[id].Status == StepSkippedS {
-			continue
-		}
-		if orig.Steps[id].Status != StepSucceeded {
-			return plan, fmt.Errorf("%w: cannot re-run from %s: deploy step %s did not succeed in run #%d, so it cannot be reused; "+
-				"re-run from %s (a new deployment attempt of the same version) or a step it needs", ErrConflict, named, id, orig.Number, id)
-		}
-		for _, m := range orig.Pipeline.DeploymentScope(id) {
-			if m != id && slices.Contains(plan.Run, m) {
-				return plan, fmt.Errorf("%w: cannot re-run from %s: it would run %s again, which belongs to deployment %s that run #%d made and this run would reuse; "+
-					"re-run from %s so that the deployment is made again", ErrConflict, named, m, id, orig.Number, id)
-			}
-		}
+	if err := checkDeployReuse(orig, plan, named); err != nil {
+		return plan, err
 	}
-	for _, id := range plan.Run {
-		if def := orig.Pipeline.Step(id); def.IsApproval() {
-			plan.Approvals = append(plan.Approvals, id)
-		} else if def.IsDeploy() {
-			plan.Deployment = true
-		}
-	}
-	for _, id := range plan.Reuse {
-		s, def := orig.Steps[id], orig.Pipeline.Step(id)
-		ri := ReusedInfo{ID: id, Kind: def.Kind, Status: s.Status, DecidedBy: s.DecidedBy, DecidedAt: s.DecidedAt, Outputs: s.Outputs}
-		for _, a := range s.Approvals {
-			ri.Approvers = append(ri.Approvers, a.Actor)
-		}
-		plan.Reused = append(plan.Reused, ri)
-	}
+	plan.describe(orig)
 	switch {
 	case len(upstream) > 0:
 		return plan, fmt.Errorf("%w: cannot re-run from %s: it needs %s, which did not succeed in run #%d, so there is nothing to reuse. "+
@@ -374,4 +347,46 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 		return nil, err
 	}
 	return e.runSummary(runID)
+}
+
+// describe fills in what a plan says about the steps it reuses and the
+// approvals that ask again.
+func (plan *RerunPlan) describe(orig *RunState) {
+	for _, id := range plan.Run {
+		if def := orig.Pipeline.Step(id); def.IsApproval() {
+			plan.Approvals = append(plan.Approvals, id)
+		} else if def.IsDeploy() {
+			plan.Deployment = true
+		}
+	}
+	for _, id := range plan.Reuse {
+		s, def := orig.Steps[id], orig.Pipeline.Step(id)
+		ri := ReusedInfo{ID: id, Kind: def.Kind, Status: s.Status, DecidedBy: s.DecidedBy, DecidedAt: s.DecidedAt, Outputs: s.Outputs}
+		for _, a := range s.Approvals {
+			ri.Approvers = append(ri.Approvers, a.Actor)
+		}
+		plan.Reused = append(plan.Reused, ri)
+	}
+}
+
+// checkDeployReuse refuses to reuse a deploy step that did not succeed, or
+// whose deployment something that runs again belongs to.
+func checkDeployReuse(orig *RunState, plan RerunPlan, named string) error {
+	for _, id := range plan.Reuse {
+		def := orig.Pipeline.Step(id)
+		if !def.IsDeployKind() || orig.Steps[id].Status == StepSkippedS {
+			continue
+		}
+		if orig.Steps[id].Status != StepSucceeded {
+			return fmt.Errorf("%w: cannot re-run from %s: deploy step %s did not succeed in run #%d, so it cannot be reused; "+
+				"re-run from %s (a new deployment attempt of the same version) or a step it needs", ErrConflict, named, id, orig.Number, id)
+		}
+		for _, m := range orig.Pipeline.DeploymentScope(id) {
+			if m != id && slices.Contains(plan.Run, m) {
+				return fmt.Errorf("%w: cannot re-run from %s: it would run %s again, which belongs to deployment %s that run #%d made and this run would reuse; "+
+					"re-run from %s so that the deployment is made again", ErrConflict, named, m, id, orig.Number, id)
+			}
+		}
+	}
+	return nil
 }

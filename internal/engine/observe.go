@@ -537,12 +537,8 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepSucceeded), Outputs: outputs})
 			c.advance()
 		case deploy.Failed:
-			env := ""
-			if s.Dep != nil {
-				env = s.Dep.Environment
-			}
 			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed), Reason: v.Detail,
-				Why: deployCause(c.st.Pipeline.Step(stepID), env, v, o.Snapshot)})
+				Why: c.failCause(stepID, s, v, o.Snapshot)})
 			c.advance()
 		}
 		return nil
