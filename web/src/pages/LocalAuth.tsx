@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { call, ApiError } from "../api";
+import { QrCode } from "../kit/QrCode";
 
 // Built-in accounts: sign-in with a second step, first-run setup with the one-time code, and the page a
 // one-time link opens. Loaded only by someone who is not signed in (see SignIn.tsx and App.tsx).
@@ -74,7 +75,7 @@ export function LocalSignIn({ next }: { next: string }) {
 }
 
 /** Choose a password and set up the authenticator; shared by first-run setup and one-time links. */
-function Enroll({ begin, extra, complete }: { begin: string; extra: (b: Record<string, string>) => Record<string, string>; complete: string }) {
+function Enroll({ begin, extra, complete, after = "/" }: { begin: string; extra: (b: Record<string, string>) => Record<string, string>; complete: string; after?: string }) {
   const [form, setForm] = useState<Record<string, string>>({});
   const [step, setStep] = useState<Begin | null>(null);
   const [code, setCode] = useState("");
@@ -92,7 +93,7 @@ function Enroll({ begin, extra, complete }: { begin: string; extra: (b: Record<s
   };
   const finish = async (b: Begin, c: string) => {
     const d = await call<Done>("POST", complete, { pending: b.pending, code: c });
-    if (d.recovery_codes?.length) setCodes(d.recovery_codes); else location.assign("/");
+    if (d.recovery_codes?.length) setCodes(d.recovery_codes); else location.assign(after);
   };
   const second = async (ev: FormEvent) => {
     ev.preventDefault(); if (!step) return; setBusy(true); setError("");
@@ -104,7 +105,7 @@ function Enroll({ begin, extra, complete }: { begin: string; extra: (b: Record<s
       <div className="stack">
         <p>You are signed in. Save these recovery codes somewhere safe, such as a password manager. Each works once if you lose your authenticator app. They are not shown again.</p>
         <ul className="codes" aria-label="Recovery codes">{codes.map((c) => <li key={c}><code>{c}</code></li>)}</ul>
-        <button className="btn btn-primary btn-wide" onClick={() => location.assign("/")}>I have saved them, continue</button>
+        <button className="btn btn-primary btn-wide" onClick={() => location.assign(after)}>I have saved them, continue</button>
       </div>
     );
   }
@@ -112,9 +113,10 @@ function Enroll({ begin, extra, complete }: { begin: string; extra: (b: Record<s
     return (
       <form onSubmit={second} className="stack">
         <Err error={error} />
-        <p>Add this to an authenticator app (any app that makes six-digit codes): choose to enter a setup key, and type it in.</p>
+        <p>Scan this with an authenticator app (any app that makes six-digit codes), or choose to enter a setup key and type it in.</p>
+        <div className="qr-box"><QrCode text={step.totp_uri} label="QR code for your authenticator app. The same secret is written below as a setup key." /></div>
         <p><code aria-label="Setup key">{step.totp_secret}</code></p>
-        <p className="hint">Or open <a href={step.totp_uri}>this address</a> on the device that has the app.</p>
+        <p className="hint">On the device that has the app, you can also open <a href={step.totp_uri}>this address</a>.</p>
         <label className="field"><span>The six-digit code it shows now</span>
           <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required /></label>
         <button className="btn btn-primary btn-wide" disabled={busy}>Finish</button>
@@ -146,7 +148,7 @@ function Enroll({ begin, extra, complete }: { begin: string; extra: (b: Record<s
 export function SetupPage() {
   return (
     <Shell title="Set up this installation" sub="Enter the one-time setup code from the installation notes (or run `launchway users setup-code` on the server), then create the first administrator.">
-      <Enroll begin="/api/v1/setup/begin" complete="/api/v1/setup/complete"
+      <Enroll begin="/api/v1/setup/begin" complete="/api/v1/setup/complete" after="/setup/guide"
         extra={(f) => ({ code: f.code ?? "", username: f.username ?? "", display_name: f.display_name ?? "", password: f.password ?? "" })} />
     </Shell>
   );
