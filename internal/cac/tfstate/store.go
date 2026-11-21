@@ -200,17 +200,8 @@ func (s *Store) Workspaces(ctx context.Context, project string) ([]Workspace, er
 	if err != nil {
 		return nil, err
 	}
-	var out []Workspace
-	for rows.Next() {
-		var w Workspace
-		if err := rows.Scan(&w.Project, &w.Name, &w.Lineage, &w.Serial, &w.Version, &w.Environment, &w.CreatedAt); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		out = append(out, w)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	out, err := scanWorkspaces(rows)
+	if err != nil {
 		return nil, err
 	}
 	for i := range out {
@@ -219,6 +210,19 @@ func (s *Store) Workspaces(ctx context.Context, project string) ([]Workspace, er
 		}
 	}
 	return out, nil
+}
+
+func scanWorkspaces(rows *sql.Rows) ([]Workspace, error) {
+	defer rows.Close()
+	var out []Workspace
+	for rows.Next() {
+		var w Workspace
+		if err := rows.Scan(&w.Project, &w.Name, &w.Lineage, &w.Serial, &w.Version, &w.Environment, &w.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
 }
 
 // Workspace reads one.

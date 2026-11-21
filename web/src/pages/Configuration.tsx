@@ -43,6 +43,9 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
               <ReportLine label="Last apply" r={e.ansible} />
               <ReportLine label="Drift check" r={e.drift} />
               <ReportLine label="Last plan" r={e.plan} />
+              {e.last_good && (
+                <p className="faint small">Last known good: commit <Mono>{e.last_good.commit.slice(0, 8)}</Mono> (run #{e.last_good.run_number ?? "?"}). To go back, run the playbook of that commit again: configuration is rolled back by applying the previous definition, not by time travel.</p>
+              )}
             </section>
           ))}
         </div>

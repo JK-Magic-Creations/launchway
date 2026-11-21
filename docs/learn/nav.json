@@ -36,7 +36,7 @@
         "concepts/approvals",
         "concepts/review-and-the-merge-queue",
         "concepts/releases",
-        "concepts/high-availability"
+        "concepts/configuration-as-code",
         "concepts/high-availability",
         "concepts/software-graph"
       ]
@@ -89,6 +89,8 @@
         "guide/toggles-sdks",
         "guide/build-caches",
         "guide/registry",
+        "guide/ansible",
+        "guide/terraform-opentofu",
         "artifacts",
         "guide/standing-orders",
         "guide/security-findings",
@@ -174,6 +176,7 @@
         "reference/cli",
         "reference/standing-orders",
         "reference/http-api",
+        "reference/configuration-as-code",
         "reference/config-objects",
         "reference/toggles-protocol",
         "reference/interface-parity",

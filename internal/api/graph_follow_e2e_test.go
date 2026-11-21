@@ -116,7 +116,7 @@ func TestFormationOrderedByDependencies(t *testing.T) {
 		t.Fatalf("%+v", f)
 	}
 	var got engine.Formation
-	e.otto.get(e.srv.URL + "/api/v1/release-formations/deps").json(t, &got)
+	e.otto.get(e.srv.URL+"/api/v1/release-formations/deps").json(t, &got)
 	if got.OrderSource != "dependencies" {
 		t.Fatalf("the source was not kept: %+v", got)
 	}

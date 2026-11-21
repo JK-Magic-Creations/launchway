@@ -49,7 +49,7 @@ export interface ConfigReport<D = AnsibleDocument | PlanDocument> {
   document: D;
 }
 
-export interface EnvironmentConfig { name: string; ansible?: ConfigReportRow; drift?: ConfigReportRow; plan?: ConfigReportRow }
+export interface EnvironmentConfig { name: string; ansible?: ConfigReportRow; drift?: ConfigReportRow; plan?: ConfigReportRow; last_good?: ConfigReportRow }
 export interface StateWorkspace { name: string; serial: number; version: number; environment?: string; lock?: { actor: string; run_id?: string } }
 export interface ConfigurationOverview { environments: EnvironmentConfig[]; state: StateWorkspace[]; sealed: boolean }
 

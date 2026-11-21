@@ -146,7 +146,7 @@ type stateRollbackIn struct {
 	Project   string `json:"project" jsonschema:"the project's name"`
 	Workspace string `json:"workspace" jsonschema:"the state workspace"`
 	Version   int    `json:"version" jsonschema:"the version to restore, from list_state_versions"`
-	Reason    string `json:"reason" jsonschema:"why; recorded in the audit trail"`
+	Reason    string `json:"reason" jsonschema:"why; recorded in the Logbook"`
 }
 
 func rollbackState(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in stateRollbackIn) (cacAnyOut, error) {

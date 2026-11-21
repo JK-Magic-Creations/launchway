@@ -107,10 +107,7 @@ func newLab(t *testing.T, n int) *lab {
 	}
 	deadline := time.Now().Add(60 * time.Second)
 	for _, h := range l.hosts {
-		for {
-			if exec.Command("podman", "exec", h, "systemctl", "is-system-running", "--wait").Run() == nil || time.Now().After(deadline) {
-				break
-			}
+		for exec.Command("podman", "exec", h, "systemctl", "is-system-running", "--wait").Run() != nil && time.Now().Before(deadline) {
 			time.Sleep(time.Second)
 		}
 		podman(t, string(pub), "exec", "-i", h, "sh", "-c", "mkdir -p /root/.ssh; cat > /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys; ssh-keygen -A >/dev/null; systemctl reset-failed ssh; systemctl start ssh")

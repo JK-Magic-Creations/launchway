@@ -1076,7 +1076,7 @@ Reports of Ansible and plan steps, the project's Configuration page, and the bui
 | `GET /api/v1/projects/{name}/state` | `project-viewer` | — | The state workspaces: `name`, `serial`, `version`, `lock`; and whether this server can seal state (`sealed`). |
 | `GET /api/v1/projects/{name}/state/{workspace}` | `project-viewer` | — | Resources (address, provider, instances) and output names (with `sensitive`) of the newest version, or of `?version=`. Never a value. |
 | `GET /api/v1/projects/{name}/state/{workspace}/versions` | `project-viewer` | — | Every kept version (50 by default): serial, size, resource count, `source` (`write`, `push`, `rollback`), who, which run, when. |
-| `GET /api/v1/projects/{name}/state/{workspace}/pull` | `project-operator` | `state.pull` | The raw state document. `?reason=` is required and goes to the audit trail with the caller; `?version=` picks a version. |
+| `GET /api/v1/projects/{name}/state/{workspace}/pull` | `project-operator` | `state.pull` | The raw state document. `?reason=` is required and goes to the Logbook with the caller; `?version=` picks a version. |
 | `PUT /api/v1/projects/{name}/state/{workspace}/push` | `project-operator` | `state.push` | Stores a state document as the next version (an import or a repair). `409` for another lineage unless `?adopt=true`, or a serial older than the stored one. |
 | `POST /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.lock` | Locks the workspace by hand: `{"reason"}`. `423` if it is locked. |
 | `DELETE /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.unlock` | Releases a lock whoever holds it; `?reason=` is required. `409` while the run that holds it is still going. |

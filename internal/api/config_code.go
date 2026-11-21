@@ -701,7 +701,10 @@ func (s *Server) configurationOverview(w http.ResponseWriter, r *http.Request) {
 		Name    string            `json:"name"`
 		Ansible *engine.CacReport `json:"ansible,omitempty"`
 		Drift   *engine.CacReport `json:"drift,omitempty"`
-		Plan    *engine.CacReport `json:"plan,omitempty"`
+		// LastGood is the newest real (not check-mode) run that changed nothing wrongly: ok or changed.
+		// Return to base for configuration is applying the definition of this commit again.
+		LastGood *engine.CacReport `json:"last_good,omitempty"`
+		Plan     *engine.CacReport `json:"plan,omitempty"`
 	}
 	envs := map[string]*env{}
 	order := []string{}
@@ -729,6 +732,10 @@ func (s *Server) configurationOverview(w http.ResponseWriter, r *http.Request) {
 			e.Drift = &rep
 		case rep.Kind == engine.CacAnsible && !rep.Check && e.Ansible == nil:
 			e.Ansible = &rep
+		}
+		if rep.Kind == engine.CacAnsible && !rep.Check && (rep.Status == "ok" || rep.Status == "changed") && e.LastGood == nil {
+			good := rep
+			e.LastGood = &good
 		}
 	}
 	out := make([]*env, 0, len(order))

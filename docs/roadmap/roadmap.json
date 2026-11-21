@@ -2172,26 +2172,29 @@
           "blurb": "State, plans and checks you can trust.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Terraform and OpenTofu",
               "value": "Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection.",
-              "detail": "Users never wonder where state goes, and Launchway guides them to good practice by default.",
-              "area": "config-as-code"
+              "detail": "Plan, Clearance and the apply of exactly the reviewed plan (refused when the commit or the state has changed), a plan report with destroys and replacements first, OpenTofu by default. Built in this release: the Maneuvers and the report. Not yet: plan results posted to the pull request, a scheduled drift Patrol with its own page, short-lived cloud credentials through OIDC.",
+              "area": "config-as-code",
+              "link": "guide/terraform-opentofu"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "State and locking built in",
               "value": "Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules.",
-              "detail": "It speaks the standard HTTP backend, so a pipeline step needs no backend setup and existing state can be imported.",
+              "detail": "The HTTP backend with locks, 50 sealed versions with who, when and which run, rollback, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.",
               "needs": "Terraform and OpenTofu.",
-              "area": "platform-services"
+              "area": "platform-services",
+              "link": "guide/terraform-opentofu"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Ansible",
               "value": "Typed steps with per-host results and a check mode before apply.",
-              "detail": "Results show per host, with the check result shown before anything is changed.",
-              "area": "config-as-code"
+              "detail": "Maneuver and Flight plan with check mode, diff, pinned host keys, keys and vault passwords by reference, cached collections, and a per-host report. Not yet: inventory from the Airfield's hosts, from clouds or hypervisors, and short-lived SSH certificates.",
+              "area": "config-as-code",
+              "link": "guide/ansible"
             },
             {
               "status": "planned",
@@ -2603,11 +2606,12 @@
           "blurb": "Everything that configures a system is code in Git, reviewed like code, applied from a plan, and watched for drift.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "A configuration change is a plan",
               "value": "A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version.",
-              "detail": "Ansible cannot apply a saved plan the way Terraform can, so a guard enforces it and the page says so.",
-              "area": "config-as-code"
+              "detail": "For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.",
+              "area": "config-as-code",
+              "link": "learn/concepts/configuration-as-code"
             },
             {
               "status": "planned",
@@ -2624,18 +2628,20 @@
               "area": "config-as-code"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Results for every host",
               "value": "See per host and per task what changed, with the tool’s own output kept alongside.",
-              "detail": "Launchway keeps the tool’s own output beside a readable summary.",
-              "area": "config-as-code"
+              "detail": "Hosts by plays, what changed with the diff, the failed task first, the recap on the report, filter by host and outcome, and a button to run again on the failed hosts. The tool's own output stays in the step's log.",
+              "area": "config-as-code",
+              "link": "guide/ansible"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Drift and converge now",
               "value": "See which hosts and resources differ from their code and why, and press converge with the same clearance as any change.",
-              "detail": "Drift is checked on a schedule and shown per host.",
-              "area": "config-as-code"
+              "detail": "A scheduled check-mode run is the drift report, shown per Airfield on the Configuration page. Not yet: a converge button that carries the check's diff into the Clearance request, and a Patrol screen of its own.",
+              "area": "config-as-code",
+              "link": "guide/ansible"
             },
             {
               "status": "planned",

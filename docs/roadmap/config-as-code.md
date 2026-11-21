@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Configuration as code · <a href="../roadmap-list.html">as a list</a></p>
 
-Everything that configures a system is code in Git, and Launchway is the control center for it. **Status:** planned, in [Milestone 3](milestone-3.md). The tools stay the tools: Terraform, OpenTofu and Ansible run as themselves, and Chef follows by choice.
+Everything that configures a system is code in Git, and Launchway is the control center for it. **Status:** first slice built (Ansible and OpenTofu steps, run reports, built-in state, drift as a check run); the rest is planned in [Milestone 3](milestone-3.md). The tools stay the tools: Terraform, OpenTofu and Ansible run as themselves, and Chef follows by choice.
 
 ## A configuration change is a plan
 

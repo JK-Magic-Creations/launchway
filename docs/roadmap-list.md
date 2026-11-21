@@ -450,9 +450,9 @@ See and control everything you run, whether it is an application in a cluster, a
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Terraform and OpenTofu](roadmap/milestone-3.md#terraform-and-opentofu) | Planned | Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. |
-| [State and locking built in](roadmap/milestone-3.md#state-and-locking-built-in) | Planned | Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. |
-| [Ansible](roadmap/milestone-3.md#ansible) | Planned | Typed steps with per-host results and a check mode before apply. |
+| [Terraform and OpenTofu](roadmap/milestone-3.md#terraform-and-opentofu) | In progress | Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. ([docs](guide/terraform-opentofu.md)) |
+| [State and locking built in](roadmap/milestone-3.md#state-and-locking-built-in) | In progress | Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. ([docs](guide/terraform-opentofu.md)) |
+| [Ansible](roadmap/milestone-3.md#ansible) | In progress | Typed steps with per-host results and a check mode before apply. ([docs](guide/ansible.md)) |
 | [Chef](roadmap/milestone-3.md#chef) | Planned | A real step with per-node results where Chef reports them, check mode before apply, and templates. |
 | [Packer builds as a first-class step](roadmap/milestone-3.md#packer-builds-as-a-first-class-step) | Planned | Run image builds with their results, logs and Cargo attached to the Sortie. |
 
@@ -538,11 +538,11 @@ See and control everything you run, whether it is an application in a cluster, a
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [A configuration change is a plan](roadmap/milestone-3.md#a-configuration-change-is-a-plan) | Planned | A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. |
+| [A configuration change is a plan](roadmap/milestone-3.md#a-configuration-change-is-a-plan) | In progress | A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. ([docs](learn/concepts/configuration-as-code.md)) |
 | [Inventories](roadmap/milestone-3.md#inventories) | Planned | Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each. |
 | [Flight plans as job templates, with a form](roadmap/milestone-3.md#flight-plans-as-job-templates-with-a-form) | Planned | A stack or playbook becomes a Flight plan with a form for its inputs, a schedule, credentials and role-based access. |
-| [Results for every host](roadmap/milestone-3.md#results-for-every-host) | Planned | See per host and per task what changed, with the tool’s own output kept alongside. |
-| [Drift and converge now](roadmap/milestone-3.md#drift-and-converge-now) | Planned | See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. |
+| [Results for every host](roadmap/milestone-3.md#results-for-every-host) | In progress | See per host and per task what changed, with the tool’s own output kept alongside. ([docs](guide/ansible.md)) |
+| [Drift and converge now](roadmap/milestone-3.md#drift-and-converge-now) | In progress | See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. ([docs](guide/ansible.md)) |
 | [Short-lived access to hosts](roadmap/milestone-3.md#short-lived-access-to-hosts) | Planned | Runs use workload identity or per-run secure shell certificates, never a stored cloud key. |
 | [Launchway’s own settings as code, both ways](roadmap/milestone-3.md#launchway-s-own-settings-as-code-both-ways) | Planned | Change settings on screen or in Git; each way produces a visible, reviewable change in the other. |
 | [Event-driven fixes](roadmap/milestone-3.md#event-driven-fixes) | Planned | An alert or a drift report can start a reviewed fix, with limits so it cannot run away. |

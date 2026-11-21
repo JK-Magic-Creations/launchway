@@ -20,6 +20,8 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
   "/projects/:name/tests": t("Learn more about {debriefs}", "guide/test-reports"),
   "/projects/:name/security": t("Learn more about security findings", "guide/security-findings"),
   "/projects/:name/caches": t("Learn more about build caches", "guide/build-caches"),
+  "/projects/:name/configuration": t("Learn more about configuration as code", "concepts/configuration-as-code"),
+  "/runs/:id/configuration/:step": t("Learn more about configuration reports", "guide/ansible"),
   "/projects/:name/variables": t("Learn more about variables", "concepts/variables", "variables-set-at-a-level"),
   "/settings/variables": t("Learn more about variables", "concepts/variables", "variables-set-at-a-level"),
   "/playground": t("Read about writing pipelines", "guide/pipelines"),
