@@ -233,6 +233,25 @@ helm upgrade launchway deploy/helm/launchway -n launchway -f values.yaml --set i
 
 Going back after a breaking migration means restoring the database from the backup taken before it.
 
+### Upgrading a chart installed before the hook Job
+
+Earlier chart versions made the runner token and the bundled database's password inside the chart. The
+current chart makes every secret with a pre-install and pre-upgrade hook Job that creates a Secret only
+if it does not exist, so on upgrade the Job finds the existing runner token and database password (same
+names, same keys) and leaves them alone, and makes only what is new (the setup code). Three things change
+on an upgrade, so look at your values first:
+
+- The default sign-in is now `auth.mode: local` (built-in accounts). An installation that ran without
+  sign-in keeps doing so only if you say so: `config.extraConfig.auth: { mode: none, allow_anonymous: true }`.
+  One that sets `auth.mode: oidc` is unchanged.
+- `externalURL` is now required. Set it to the address you already use.
+- The chart creates NetworkPolicies. Add the egress your servers and runners need
+  (`networkPolicy.server.extraEgress`, `networkPolicy.runner.extraEgress`) before you upgrade, or set
+  `networkPolicy.enabled=false` for the first upgrade.
+
+**The root key is never deleted** by `helm uninstall` or a GitOps prune: it is not owned by Helm. Keep a copy
+outside the cluster and outside the database backups (see encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work)).
+
 ## Roll back
 
 After an additive upgrade, the previous release starts and serves against the migrated database, so

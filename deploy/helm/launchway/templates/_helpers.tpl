@@ -115,51 +115,26 @@ app.kubernetes.io/component: {{ index . 1 }}
 {{- printf "%s-postgresql" (include "launchway.fullname" .) -}}
 {{- end -}}
 
-{{/*
-The development database's password: the value given, else the one already stored in
-its Secret, else a new random one. Kept stable across upgrades.
-*/}}
-{{- define "launchway.postgresqlPassword" -}}
-{{- if .Values.postgresql.password -}}
-{{- .Values.postgresql.password -}}
-{{- else -}}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace (include "launchway.postgresqlName" .) -}}
-{{- if and $existing $existing.data (index $existing.data "password") -}}
-{{- index $existing.data "password" | b64dec -}}
-{{- else -}}
-{{- /* Generated once per render and cached, so the Secret and the URL agree. */ -}}
-{{- if not (hasKey .Values.postgresql "_generatedPassword") -}}
-{{- $_ := set .Values.postgresql "_generatedPassword" (randAlphaNum 32) -}}
-{{- end -}}
-{{- .Values.postgresql._generatedPassword -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/* The database URL the chart stores in its own Secret, if it stores one. */}}
+{{/* The database URL the chart stores in its own Secret: only when database.url is given. The bundled
+database's URL is never a stored value: the servers build it from the Secret that holds its password
+(see launchway.databaseEnv). */}}
 {{- define "launchway.databaseURL" -}}
-{{- if .Values.database.url -}}
 {{- .Values.database.url -}}
-{{- else if .Values.postgresql.enabled -}}
-{{- printf "postgres://%s:%s@%s.%s.svc:5432/%s?sslmode=disable" (.Values.postgresql.username | urlquery) (include "launchway.postgresqlPassword" . | urlquery) (include "launchway.postgresqlName" .) .Release.Namespace .Values.postgresql.database -}}
-{{- end -}}
 {{- end -}}
 
 {{/* Checks that run on every render. */}}
 {{- define "launchway.validate" -}}
-{{- $sources := 0 -}}
-{{- if .Values.database.url }}{{ $sources = add1 $sources }}{{ end -}}
-{{- if .Values.database.existingSecret }}{{ $sources = add1 $sources }}{{ end -}}
-{{- if .Values.postgresql.enabled }}{{ $sources = add1 $sources }}{{ end -}}
-{{- if eq $sources 0 -}}
-{{- fail "\n\nLaunchway needs a PostgreSQL database shared by all servers. Set one of:\n  database.existingSecret (and database.existingSecretKey): a Secret holding a postgres:// URL\n  database.url: a postgres:// URL\n  postgresql.enabled=true: a single development database, for trying the chart only\nWithout one, each server would keep its own SQLite file and they would not agree.\n" -}}
+{{- if and (not .Values.database.url) (not .Values.database.existingSecret) (not .Values.postgresql.enabled) -}}
+{{- fail "\n\nLaunchway needs a PostgreSQL database shared by all servers. Either leave postgresql.enabled=true (the chart runs one), or set database.existingSecret (a Secret holding a postgres:// URL) or database.url.\nWithout one, each server would keep its own SQLite file and they would not agree.\n" -}}
 {{- end -}}
-{{- if gt $sources 1 -}}
-{{- fail "\n\nSet only one of database.url, database.existingSecret and postgresql.enabled.\n" -}}
+{{- if and .Values.database.url .Values.database.existingSecret -}}
+{{- fail "\n\nSet only one of database.url and database.existingSecret.\n" -}}
 {{- end -}}
 {{- if and .Values.database.url (not (regexMatch "^postgres(ql)?://" .Values.database.url)) -}}
 {{- fail "\n\ndatabase.url must be a postgres:// or postgresql:// URL: several servers cannot share a SQLite file.\n" -}}
 {{- end -}}
+{{- $_ := include "launchway.externalHost" . -}}
+{{- include "launchway.validateStorage" . -}}
 {{- include "launchway.validateAI" . -}}
 {{- end -}}
 
@@ -262,6 +237,10 @@ owns may not appear in it.
 {{- range $key, $value := dict "max_total_gib" $d.maxTotalGiB "max_blob_mib" $d.maxBlobMiB -}}
 {{- if $value }}{{ $_ := set $db $key (int64 $value) }}{{ end -}}
 {{- end -}}
+{{- /* With the bundled database the artifact cap follows its volume (half of it, or what is set and fits). */ -}}
+{{- if and (include "launchway.bundledDB" . | trim) (has (toString $a.store) (list "" "database" "<nil>")) (not $d.maxTotalGiB) -}}
+{{- $_ := set $db "max_total_gib" (int64 (include "launchway.derivedArtifactCapGiB" .)) -}}
+{{- end -}}
 {{- if $db -}}
 {{- if not (has (toString $a.store) (list "" "database" "<nil>")) }}{{ fail "config.artifacts.database is set, but config.artifacts.store is not database (or unset)" }}{{ end -}}
 {{- $_ := set $arts "database" $db -}}
@@ -302,6 +281,11 @@ owns may not appear in it.
 {{- fail "config.mcp.oauth.scopes is set, but config.mcp.oauth.resource is not" -}}
 {{- end -}}
 {{- if $mcp }}{{ $_ := set $config "mcp" $mcp }}{{ end -}}
+{{- /* Behind an Ingress or a Gateway route the servers trust the proxy's forwarded headers (and set
+       the cookie's Secure flag from them), unless extraConfig.server.trust_proxy says otherwise. */ -}}
+{{- if and (or .Values.ingress.enabled .Values.httpRoute.enabled) (not (hasKey (get $extra "server" | default dict) "trust_proxy")) -}}
+{{- $_ := set $config "server" (dict "trust_proxy" true) -}}
+{{- end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- /* The model registry (schema 19): only when set. */ -}}
 {{- $ai := .Values.ai | default dict -}}

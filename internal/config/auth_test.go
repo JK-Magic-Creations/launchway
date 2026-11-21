@@ -82,7 +82,7 @@ auth:
 
 func TestAuthConfigMistakes(t *testing.T) {
 	for yaml, want := range map[string]string{
-		"auth: {mode: ldap}":                                             `mode "ldap" is not one of none, oidc`,
+		"auth: {mode: ldap}":                                             `mode "ldap" is not one of local, oidc, none`,
 		"auth: {access: [{group: a, role: admin}]}":                      `access is set, but mode is "none"`,
 		"auth: {mode: oidc, access: [{group: a, role: admin}]}":          "issuer, client_id and redirect_url are required",
 		"auth: {mode: oidc, oidc: {client_secret: x}}":                   "field client_secret not found", // never inline

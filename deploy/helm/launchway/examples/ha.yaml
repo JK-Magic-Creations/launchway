@@ -7,6 +7,9 @@
 #   kubectl create namespace launchway-steps
 #   helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/ha.yaml
 
+# The address people open (the one required value).
+externalURL: https://launchway.example.com
+
 image:
   repository: ghcr.io/jk-magic-creations/launchway
   tag: "0.1.0"

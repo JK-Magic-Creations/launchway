@@ -16,10 +16,8 @@ metadata:
 spec:
   parentRefs:
     {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
-  {{- with .Values.httpRoute.hostnames }}
   hostnames:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- toYaml (.Values.httpRoute.hostnames | default (list (include "launchway.externalHostname" .))) | nindent 4 }}
   rules:
     - matches:
         - path:

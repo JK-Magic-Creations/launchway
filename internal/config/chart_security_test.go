@@ -22,7 +22,8 @@ type chartCase struct {
 }
 
 var chartCases = []chartCase{
-	{"server with the bundled database", "launchway", nil, []string{"postgresql.enabled=true"}},
+	{"server with only the address set", "launchway", nil, []string{"externalURL=https://launchway.example.com"}},
+	{"server with an Ingress and a Gateway route", "launchway", nil, []string{"externalURL=https://launchway.example.com", "ingress.enabled=true", "httpRoute.enabled=true", "httpRoute.parentRefs[0].name=gw"}},
 	{"server, high availability example", "launchway", []string{"launchway/examples/ha.yaml"}, nil},
 	{"runner, remote with network policy", "launchway-runner", []string{"launchway-runner/examples/remote.yaml", "launchway-runner/examples/networkpolicy.yaml"}, nil},
 	{"runner, deploy runner example", "launchway-runner", []string{"launchway-runner/examples/deploy-runner.yaml"}, nil},
@@ -35,7 +36,7 @@ func renderDocs(t *testing.T, c chartCase) []map[string]any {
 	}
 	args := []string{"template", "t", "../../deploy/helm/" + c.chart}
 	if c.chart == "launchway" {
-		args = append(args, "--set", "encryption.keyFile.allowOfflineGeneration=true")
+		args = append(args, "--set", "externalURL=https://launchway.example.com")
 	}
 	for _, v := range c.values {
 		args = append(args, "-f", "../../deploy/helm/"+v)

@@ -24,7 +24,7 @@ func renderChart(t *testing.T, values string) map[string]string {
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte(values), 0o644)
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", vf).CombinedOutput()
 	if err != nil {
 		t.Fatalf("helm template: %v\n%s", err, out)
 	}
@@ -151,7 +151,7 @@ func TestChartRolloutControl(t *testing.T) {
 	render := func(values string) string {
 		vf := filepath.Join(t.TempDir(), "values.yaml")
 		os.WriteFile(vf, []byte(values), 0o644)
-		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
+		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", vf).CombinedOutput()
 		if err != nil {
 			t.Fatalf("helm template: %v\n%s", err, out)
 		}
@@ -192,7 +192,7 @@ delivery:
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte(base+"    rbac: { controlRollouts: { other: [x] } }\n"), 0o644)
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", vf).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "not in delivery.deployRunner.rolloutNamespaces") {
 		t.Fatalf("a namespace outside rolloutNamespaces: %v %s", err, out)
 	}
@@ -239,7 +239,7 @@ runner:
 		im.Scanner.DBRepository != "harbor.example.com/mirror/trivy-db" || im.MaxImageMiB != 4096 {
 		t.Fatalf("images: %+v", im)
 	}
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, values)).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", writeTemp(t, values)).CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +249,7 @@ runner:
 		}
 	}
 	bad := strings.Replace(values, "    tlsSecret: buildkit-client\n", "", 1)
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "needs mutual TLS") {
 		t.Fatalf("a TCP builder without TLS: %v %s", err, out)
 	}
@@ -303,15 +303,20 @@ config:
 // of its settings, so a server of the release before reads the file: with
 // nothing set, the store is chosen by the engine. Set, they load.
 func TestChartDatabaseStoreSettings(t *testing.T) {
+	// With the bundled database the chart writes ONE setting, the artifact cap derived from the
+	// volume (half of 8Gi); with a database of your own it writes none.
 	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
-		def := renderChart(t, values)
+		def := strings.ReplaceAll(renderChart(t, values)["server"], "artifacts:\n  database:\n    max_total_gib: 4\n", "")
+		if strings.Contains(values, "postgresql") && def == renderChart(t, values)["server"] {
+			t.Errorf("the bundled database's default configuration has no derived artifact cap:\n%s", def)
+		}
 		for _, key := range []string{"database:", "max_total_gib", "max_blob_mib", "store:", "artifacts:"} {
-			if strings.Contains(def["server"], "  "+key) || strings.Contains(def["server"], "\n"+key) {
-				t.Errorf("the default server configuration (%s) has %s:\n%s", strings.TrimSpace(values), key, def["server"])
+			if strings.Contains(def, "  "+key) || strings.Contains(def, "\n"+key) {
+				t.Errorf("the default server configuration (%s) has %s:\n%s", strings.TrimSpace(values), key, def)
 			}
 		}
 	}
-	srv := renderChart(t, `postgresql: { enabled: true }
+	srv := renderChart(t, `postgresql: { enabled: true, persistence: { size: 100Gi } }
 config:
   artifacts:
     store: database
@@ -366,7 +371,7 @@ config:
 	if origin, err := c.ReportsOrigin(); err != nil || origin != "https://reports.ci.example.com" {
 		t.Fatalf("origin %q %v", origin, err)
 	}
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f",
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f",
 		writeTemp(t, "postgresql: { enabled: true }\nconfig: { extraConfig: { reports: { origin: x } } }\n")).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "use config.reports") {
 		t.Fatalf("reports in extraConfig: %v %s", err, out)
@@ -447,6 +452,10 @@ func TestChartDefaultWritesNoNewKeys(t *testing.T) {
 			}
 			if a, ok := doc["artifacts"].(map[string]any); ok {
 				for _, key := range []string{"store", "database"} {
+					// The bundled database's derived cap is the one allowed setting.
+					if d, isMap := a[key].(map[string]any); key == "database" && isMap && len(d) == 1 && d["max_total_gib"] != nil && strings.Contains(values, "postgresql") {
+						continue
+					}
 					if _, ok := a[key]; ok {
 						t.Errorf("the default %s configuration (%s) has artifacts.%s:\n%s", name, strings.TrimSpace(values), key, f)
 					}
@@ -637,7 +646,7 @@ func TestChartVerificationAIRefused(t *testing.T) {
 		if values == chartVerificationAI {
 			t.Fatalf("%s: the values did not change", tc.name)
 		}
-		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, values)).CombinedOutput()
+		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", writeTemp(t, values)).CombinedOutput()
 		if err == nil || !strings.Contains(string(out), tc.want) {
 			t.Errorf("%s: %v %s", tc.name, err, out)
 		}
@@ -645,7 +654,7 @@ func TestChartVerificationAIRefused(t *testing.T) {
 	noModels := `postgresql: { enabled: true }
 runner: { ai: true }
 `
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, noModels)).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", writeTemp(t, noModels)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "runner.ai is true, but ai.models is empty") {
 		t.Errorf("runner.ai without models: %v %s", err, out)
 	}
@@ -687,7 +696,7 @@ runner:
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte("postgresql: { enabled: true }\nrunner: { join: { existingSecret: lw-join } }\n"), 0o644)
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", vf).CombinedOutput()
 	if err != nil || !strings.Contains(string(out), "LAUNCHWAY_JOIN") || strings.Contains(string(out), "name: LAUNCHWAY_RUNNER_TOKEN\n              valueFrom:\n                secretKeyRef:\n                  name: lw-join") {
 		t.Fatalf("join: %v", err)
 	}
@@ -706,6 +715,9 @@ func TestChartDefaultWritesBootstrapKeysOnly(t *testing.T) {
 			t.Fatal(err)
 		}
 		for key := range doc {
+			if key == "artifacts" && strings.Contains(values, "postgresql") {
+				continue // the cap derived from the bundled database's volume, imported once
+			}
 			if !bootstrap[key] {
 				t.Errorf("the default server configuration (%s) has %s, which is kept in the database since schema 23:\n%s", strings.TrimSpace(values), key, f)
 			}

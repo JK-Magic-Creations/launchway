@@ -2530,10 +2530,11 @@
           "blurb": "The controls enterprises and regulated teams ask for.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Built-in accounts with MFA",
               "value": "Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys.",
-              "detail": "Recovery codes and session management are included."
+              "detail": "Built: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn), outgoing mail, and the first-run wizard steps after the first administrator.",
+              "link": "guide/built-in-accounts"
             },
             {
               "status": "planned",

@@ -14,8 +14,9 @@ import (
 
 // The values of auth.mode.
 const (
-	AuthNone = "none"
-	AuthOIDC = "oidc"
+	AuthNone  = "none"
+	AuthOIDC  = "oidc"
+	AuthLocal = "local"
 )
 
 // Session defaults.
@@ -36,6 +37,9 @@ func (a *AuthConfig) check() error {
 			errs = append(errs, errors.New(`admins is set, but mode is "none", where everyone has full access; set mode: oidc`))
 		}
 	case AuthOIDC:
+		if err := a.Local.check(); err != nil {
+			errs = append(errs, err)
+		}
 		o := a.OIDC
 		if o.Issuer == "" || o.ClientID == "" || o.RedirectURL == "" {
 			errs = append(errs, errors.New("oidc: issuer, client_id and redirect_url are required"))
@@ -57,8 +61,12 @@ func (a *AuthConfig) check() error {
 		if len(a.Access) == 0 && a.Admins.Empty() && !a.accessInDatabase {
 			errs = append(errs, errors.New("access is empty, so nobody could do anything; add at least one binding, or name the first administrators in admins"))
 		}
+	case AuthLocal:
+		if err := a.Local.check(); err != nil {
+			errs = append(errs, err)
+		}
 	default:
-		errs = append(errs, fmt.Errorf("mode %q is not one of none, oidc", a.Mode))
+		errs = append(errs, fmt.Errorf("mode %q is not one of local, oidc, none", a.Mode))
 	}
 	if _, _, err := a.Sessions(); err != nil {
 		errs = append(errs, err)
@@ -117,6 +125,12 @@ func (a *AuthConfig) Policy() (*auth.Policy, error) {
 		}
 		bs = append(bs, auth.Binding{Group: g, Role: auth.Admin})
 	}
+	if a.LocalAccounts() {
+		// Built-in accounts get their role through a group no provider may claim.
+		for _, r := range []auth.Role{auth.Admin, auth.Operator, auth.Viewer} {
+			bs = append(bs, auth.Binding{Group: auth.LocalGroup(r), Role: r})
+		}
+	}
 	p, err := auth.NewPolicy(bs)
 	return p, errors.Join(append(errs, err)...)
 }
@@ -165,7 +179,8 @@ func (c *Config) CheckExposure(listen string) error {
 With auth.mode "none" there is no sign-in: anyone who can reach this address could
 start pipelines, which run code on the runners, and approve deployments. Either
   - listen on a loopback address, such as 127.0.0.1:8080; or
-  - turn on sign-in with auth.mode: oidc (see "Sign-in and access" in the README); or
+  - turn on sign-in with built-in accounts (auth.mode: local, the default here) or
+    an identity provider (auth.mode: oidc; see "Sign-in and access" in the README); or
   - if something in front of Launchway already decides who may reach it, set
     auth.allow_anonymous: true`, listen)
 }

@@ -19,13 +19,14 @@ func helmOut(t *testing.T, values string) (out string, failed bool) {
 	if err := os.WriteFile(vf, []byte("postgresql: { enabled: true }\n"+values), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	b, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
+	b, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "externalURL=https://launchway.example.com", "--set", "config.extraConfig.auth.mode=none", "-f", vf).CombinedOutput()
 	return string(b), err != nil
 }
 
-// By default the chart makes a root key Secret that survives helm uninstall,
-// mounts it on the servers with a mode they can read as a non-root user, and
-// makes the servers refuse to start without it. The key's value is never in
+// By default the install hook Job makes the root key Secret (once, only if
+// absent; nothing in the rendered manifests is key material), the servers
+// mount it with a mode they can read as a non-root user, and they refuse to
+// start without it. The key's value is never in
 // the ConfigMap, and the configuration file gains no key (the release before
 // can still read it).
 func TestChartEncryptsAtRestByDefault(t *testing.T) {
@@ -33,12 +34,15 @@ func TestChartEncryptsAtRestByDefault(t *testing.T) {
 	if failed {
 		t.Fatal(out)
 	}
-	for _, want := range []string{"name: t-launchway-root-key", "helm.sh/resource-policy: keep", "root.key:",
+	for _, want := range []string{"name: t-launchway-root-key", "root-key=t-launchway-root-key", "LAUNCHWAY_BOOTSTRAP_ROOT_KEY",
 		"name: LAUNCHWAY_ENCRYPTION_REQUIRE", `value: "true"`, "name: LAUNCHWAY_ROOT_KEY_FILE", "value: /etc/launchway-keys/root.key",
 		"mountPath: /etc/launchway-keys", "defaultMode: 0440"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the default render lacks %q", want)
 		}
+	}
+	if strings.Contains(out, "kind: Secret\nmetadata:\n  name: t-launchway-root-key") || strings.Contains(out, "root.key: ") {
+		t.Error("the render holds the root key Secret; the hook Job makes it in the cluster")
 	}
 	f := renderChart(t, "postgresql: { enabled: true }\n")["server"]
 	if strings.Contains(f, "encryption") {
@@ -89,42 +93,24 @@ func TestChartHoldersAndRefusals(t *testing.T) {
 	}
 }
 
-// Rendered without a cluster (helm template, which is what Argo CD runs), the
-// chart cannot know whether the root key Secret exists, and a key generated
-// there would differ at every render and replace the real one at the next
-// sync. So it refuses, in plain words, unless the Secret is named or the
-// render is explicitly marked as not for applying; two renders that are
-// allowed differ, which is exactly why.
-func TestChartRefusesToGenerateARootKeyWithoutAViewOfTheCluster(t *testing.T) {
-	if _, err := exec.LookPath("helm"); err != nil {
-		t.Skip("needs helm")
+// Rendered without a cluster (helm template, which is what Argo CD runs) the
+// chart is the same every time and holds no key: the hook Job creates the
+// root key Secret only if absent. Bringing your own Secret still works and
+// then no hook makes one; holder none makes none either.
+func TestChartRootKeyIsMadeByTheHookAndRendersTheSameOffline(t *testing.T) {
+	a, failed := helmOut(t, "")
+	b, _ := helmOut(t, "")
+	if failed || a != b {
+		t.Fatalf("two offline renders must be the same (failed=%v)", failed)
 	}
-	render := func(values string, set ...string) (string, bool) {
-		vf := filepath.Join(t.TempDir(), "values.yaml")
-		if err := os.WriteFile(vf, []byte("postgresql: { enabled: true }\n"+values), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		args := append([]string{"template", "t", "../../deploy/helm/launchway", "-f", vf}, set...)
-		b, err := exec.Command("helm", args...).CombinedOutput()
-		return string(b), err != nil
+	if !strings.Contains(a, `"helm.sh/hook": pre-install,pre-upgrade`) {
+		t.Error("no pre-install/pre-upgrade hook for the key")
 	}
-	out, failed := render("")
-	if !failed || !strings.Contains(out, "without a view of the cluster") || !strings.Contains(out, "encryption.keyFile.existingSecret=t-launchway-root-key") || !strings.Contains(out, "kubectl -n default create secret generic t-launchway-root-key") {
-		t.Fatalf("the default offline render must refuse, saying how to go on:\n%s", out)
+	out, failed := helmOut(t, "encryption: { keyFile: { existingSecret: my-key } }")
+	if failed || strings.Contains(out, "root-key=") || strings.Contains(out, "LAUNCHWAY_BOOTSTRAP_ROOT_KEY") || !strings.Contains(out, "name: my-key") {
+		t.Fatalf("an existing Secret must render, with no key made by the hook:\n%s", out)
 	}
-	// A named Secret renders, and the chart makes no key of its own.
-	out, failed = render("encryption: { keyFile: { existingSecret: my-key } }")
-	if failed || strings.Contains(out, "kind: Secret\nmetadata:\n  name: t-launchway-root-key") || !strings.Contains(out, "name: my-key") {
-		t.Fatalf("an existing Secret must render, with no key generated:\n%s", out)
-	}
-	// Marked for lint and tests: renders, but two renders make two keys, which is why it must never be applied.
-	a, failed := render("", "--set", "encryption.keyFile.allowOfflineGeneration=true")
-	b, _ := render("", "--set", "encryption.keyFile.allowOfflineGeneration=true")
-	if failed || a == b {
-		t.Fatalf("the marked render should work (failed=%v) and differ between renders", failed)
-	}
-	// Other holders need no key Secret and render offline as they are.
-	if out, failed := render("encryption: { holder: none }"); failed {
-		t.Fatalf("holder none renders offline:\n%s", out)
+	if out, failed := helmOut(t, "encryption: { holder: none }"); failed || strings.Contains(out, "LAUNCHWAY_BOOTSTRAP_ROOT_KEY") {
+		t.Fatalf("holder none renders offline and makes no key:\n%s", out)
 	}
 }

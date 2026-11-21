@@ -2,29 +2,7 @@
 {{- $r := .Values.delivery.deployRunner -}}
 {{- if $r.enabled }}
 {{- $name := include "launchway.deployRunnerName" . -}}
-{{- if not $r.poolToken.existingSecret }}
-{{- $secret := include "launchway.deployPoolSecretName" . }}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace $secret }}
-{{- $token := "" }}
-{{- if and $existing $existing.data (index $existing.data "token") }}
-{{- $token = index $existing.data "token" }}
-{{- else }}
-{{- $token = randAlphaNum 48 | b64enc }}
-{{- end }}
-# The deploy runner pool's token: only it can take deploy work for target {{ $r.target }}.
-# Generated on first install and kept on upgrade.
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ $secret }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "launchway.componentLabels" (list . "deploy-runner") | nindent 4 }}
-type: Opaque
-data:
-  token: {{ $token | quote }}
----
-{{- end }}
+{{- /* The pool token's Secret (unless one is named) is made once by the install hook Job. */ -}}
 {{- /* The rest is shared with the launchway-runner chart (deploy/helm/shared). */ -}}
 {{- include "launchway.shared.deployRunner" (dict "root" . "r" $r "name" $name "sa" $name "component" "deploy-runner" "server" (include "launchway.runnerServerURL" .) "verification" .Values.delivery.verification "tokenSecret" (include "launchway.deployPoolSecretName" .) "tokenKey" (include "launchway.deployPoolSecretKey" .)) }}
 {{- end }}

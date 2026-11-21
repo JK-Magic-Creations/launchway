@@ -176,6 +176,27 @@ Sign-ins, failed sign-ins and sign-outs are recorded in the audit trail as `auth
 |---|---|---|---|
 | `GET /api/v1/info` | `public` | — | The server's version and schema, and whether sign-in is on. |
 | `GET /api/v1/me` | `signed-in` | — | Who the caller is and what they may do. |
+| `GET /api/v1/setup` | `public` | — | Whether this installation still waits for its first administrator, and when the setup code expires. |
+| `POST /api/v1/setup/begin` | `public` | — | First-run step one: the one-time setup code, the administrator's name and password. Answers a second-factor secret (an `otpauth` address) and a sealed `pending` value. Needs the [CSRF header](#csrf-header). |
+| `POST /api/v1/setup/complete` | `public` | — | First-run step two: the `pending` value and a code from the authenticator. Creates the administrator, signs them in and returns ten recovery codes once. |
+| `POST /api/v1/auth/local/signin` | `public` | — | Built-in sign-in, step one: user name and password. Answers `signed_in`, or `second_factor` with a short-lived `ticket`. Locks an account with backoff after repeated failures (`429`, `Retry-After`). |
+| `POST /api/v1/auth/local/second-factor` | `public` | — | Built-in sign-in, step two: the `ticket` and a TOTP `code` or a `recovery_code`. |
+| `POST /api/v1/auth/link` | `public` | — | What a one-time link (invitation or reset) is for, without using it. `404` when it is unknown, used or expired. |
+| `POST /api/v1/auth/link/begin` | `public` | — | Accepting a link, step one: the token and a new password. Answers the second-factor secret and a `pending` value. |
+| `POST /api/v1/auth/link/complete` | `public` | — | Accepting a link, step two: `pending` and a code. Sets the password, signs the person in, returns recovery codes once. |
+| `GET /api/v1/account` | `signed-in` | — | The caller's built-in account: second factor on, recovery codes left, whether a second factor is required for their role. |
+| `POST /api/v1/account/password` | `signed-in` | `auth.local.password_changed` | Change the caller's password; asks for the current one (and a code). Other sessions end. |
+| `POST /api/v1/account/second-factor` | `signed-in` | `auth.local.second_factor_begin` | Start adding an authenticator; answers the secret. |
+| `POST /api/v1/account/second-factor/confirm` | `signed-in` | `auth.local.second_factor_added` | Prove the authenticator with a code; answers ten recovery codes once. |
+| `DELETE /api/v1/account/second-factor` | `signed-in` | `auth.local.second_factor_removed` | Remove the second factor (refused where the role requires one). |
+| `POST /api/v1/account/recovery-codes` | `signed-in` | `auth.local.recovery_codes_renewed` | Replace the recovery codes. |
+| `POST /api/v1/account/sign-out-everywhere` | `signed-in` | `auth.sign_out_everywhere` | End every session of the caller. |
+| `GET /api/v1/users` | `admin` | — | The built-in accounts, with no secrets. |
+| `POST /api/v1/users` | `admin` | `user.invite` | Invite a person with a role; answers a one-time link (shown once, valid 72 hours). |
+| `POST /api/v1/users/{name}/reset` | `admin` | `user.reset` | A one-time reset link for a person who is locked out (valid 24 hours). |
+| `POST /api/v1/users/{name}` | `admin` | `user.change` | Change role or turn the account off or on. The last administrator is protected. |
+| `DELETE /api/v1/users/{name}` | `admin` | `user.delete` | Delete an account (not the last administrator). |
+| `POST /api/v1/users/{name}/sign-out` | `admin` | `user.sign_out` | End every session of that person. |
 
 `GET /api/v1/info` with sign-in off:
 

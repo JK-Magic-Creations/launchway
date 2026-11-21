@@ -86,6 +86,7 @@ Usage:
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
+  launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway doctor   [database|ssh]             would this installation survive losing its database? is Git over SSH reachable?
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
@@ -116,6 +117,7 @@ var commands = map[string]func([]string) error{
 	"caches":         cmdCaches,
 	"variables":      cmdVariables,
 	"doctor":         cmdDoctor,
+	"users":          cmdUsers,
 }
 
 func main() {
@@ -257,7 +259,7 @@ func cmdServer(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := startHosting(ctx, eff, eng, log, srv); err != nil {
+	if err := startServices(ctx, eff, cfg, eng, log, srv); err != nil {
 		return err
 	}
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
@@ -293,10 +295,7 @@ func cmdServer(args []string) error {
 	if os.Getenv("LAUNCHWAY_RUNNER_TOKEN") != "" {
 		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
 	}
-	signIn := "sign-in with " + cfg.Auth.OIDC.Issuer
-	if authOpts == nil {
-		signIn = "no sign-in: anyone who can reach it has full access"
-	}
+	signIn := signInBanner(cfg, authOpts != nil)
 	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
 		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 
@@ -384,12 +383,8 @@ func serverLive(c *config.Config, runnerToken string, auth *api.Auth) (api.Live,
 
 // serverAuth builds the sign-in settings, or returns nil if sign-in is off.
 func serverAuth(cfg *config.Config) (*api.Auth, error) {
-	if cfg.Auth.Mode != config.AuthOIDC {
+	if cfg.Auth.Mode != config.AuthOIDC && cfg.Auth.Mode != config.AuthLocal {
 		return nil, nil
-	}
-	secret, err := cfg.Auth.OIDC.ClientSecret()
-	if err != nil {
-		return nil, err
 	}
 	policy, err := cfg.Auth.Policy()
 	if err != nil {
@@ -399,13 +394,29 @@ func serverAuth(cfg *config.Config) (*api.Auth, error) {
 	if err != nil {
 		return nil, err
 	}
+	out := &api.Auth{Policy: policy, IdleTimeout: idle, Lifetime: lifetime}
+	if cfg.Auth.LocalAccounts() {
+		ttl := time.Duration(0)
+		if cfg.Auth.Local.SetupCodeTTL != "" {
+			if ttl, err = time.ParseDuration(cfg.Auth.Local.SetupCodeTTL); err != nil || ttl < time.Minute {
+				return nil, fmt.Errorf("auth.local.setup_code_ttl %q must be a duration of at least 1m, such as 24h", cfg.Auth.Local.SetupCodeTTL)
+			}
+		}
+		out.Local = &api.LocalAuth{Required: cfg.Auth.Mode == config.AuthLocal, SecondFactor: cfg.Auth.Local.SecondFactorRule(),
+			SetupCodeFile: nonEmptyStr(os.Getenv("LAUNCHWAY_SETUP_CODE_FILE"), cfg.Auth.Local.SetupCodeFile), SetupTTL: ttl}
+	}
+	if cfg.Auth.Mode == config.AuthLocal {
+		return out, nil
+	}
+	secret, err := cfg.Auth.OIDC.ClientSecret()
+	if err != nil {
+		return nil, err
+	}
 	o := cfg.Auth.OIDC
-	return &api.Auth{
-		OIDC: auth.NewOIDC(auth.OIDCOptions{Issuer: o.Issuer, ClientID: o.ClientID, ClientSecret: secret,
-			RedirectURL: o.RedirectURL, Scopes: o.Scopes, UsernameClaim: o.UsernameClaim, GroupsClaim: o.GroupsClaim}),
-		Policy: policy, IdleTimeout: idle, Lifetime: lifetime,
-		SecureCookies: strings.HasPrefix(o.RedirectURL, "https://"),
-	}, nil
+	out.OIDC = auth.NewOIDC(auth.OIDCOptions{Issuer: o.Issuer, ClientID: o.ClientID, ClientSecret: secret,
+		RedirectURL: o.RedirectURL, Scopes: o.Scopes, UsernameClaim: o.UsernameClaim, GroupsClaim: o.GroupsClaim})
+	out.SecureCookies = strings.HasPrefix(o.RedirectURL, "https://")
+	return out, nil
 }
 
 // runnerOptions is what `launchway runner` runs with.

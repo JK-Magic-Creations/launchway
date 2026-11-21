@@ -49,11 +49,15 @@ $K -n lw-pkg get pods
 The servers wait for the development database to start (each try is logged), so they should not
 restart.
 
-Without a database the install is refused:
+Without the address, or with the bundled database switched off and none of your own named, the
+install is refused:
 
 ```sh
-helm --kube-context $CTX install nodb deploy/helm/launchway -n lw-pkg --dry-run=server
-# Error: ... Launchway needs a PostgreSQL database shared by all servers. Set one of: ...
+helm --kube-context $CTX install noaddr deploy/helm/launchway -n lw-pkg --dry-run=server
+# Error: ... missing property 'externalURL'
+helm --kube-context $CTX install nodb deploy/helm/launchway -n lw-pkg --dry-run=server \
+  --set externalURL=http://launchway.test --set postgresql.enabled=false
+# Error: ... Launchway needs a PostgreSQL database shared by all servers. ...
 ```
 
 ## 3. Both servers ready, both runners connected

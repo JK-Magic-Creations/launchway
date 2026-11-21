@@ -62,6 +62,10 @@ func (s *Server) loginSealer(ctx context.Context) (*auth.Sealer, error) {
 // login starts a sign-in. ?next= is where to go afterwards: a path on this
 // server, or the start page.
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	if s.Auth != nil && s.Auth.OIDC == nil {
+		writeErr(w, http.StatusNotFound, "this installation signs in with built-in accounts; use the sign-in page")
+		return
+	}
 	if s.Auth == nil {
 		writeErr(w, http.StatusNotFound, "sign-in is off on this server (auth.mode: none)")
 		return
@@ -93,6 +97,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 // ID token (sending the PKCE verifier), checks the token and its nonce, and
 // starts a session.
 func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
+	if s.Auth != nil && s.Auth.OIDC == nil {
+		writeErr(w, http.StatusNotFound, "this installation signs in with built-in accounts; use the sign-in page")
+		return
+	}
 	if s.Auth == nil {
 		writeErr(w, http.StatusNotFound, "sign-in is off on this server (auth.mode: none)")
 		return
@@ -143,6 +151,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entry.User = claims.Username
+	claims.Groups = auth.StripReservedGroups(claims.Groups)
 	raw := auth.RandomString(32)
 	if err := s.Engine.SignIn(claims.Username, claims.Groups, engine.Profile{Name: claims.Name, Email: claims.Email}, auth.Hash(raw), now.UnixMilli(),
 		now.Add(s.Auth.Lifetime).UnixMilli(), now.Add(-s.Auth.IdleTimeout).UnixMilli()); err != nil {

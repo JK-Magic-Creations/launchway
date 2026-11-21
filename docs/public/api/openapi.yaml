@@ -872,6 +872,184 @@ paths:
             tags:
                 - runner
             x-launchway-access: public
+    /api/v1/account:
+        get:
+            description: 'The caller''s built-in account: second factor on, recovery codes left, whether a second factor is required for their role.'
+            operationId: get_api_v1_account
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s built-in account: second factor on, recovery codes left, whether a second factor is required for their role.'
+            tags:
+                - account
+            x-launchway-access: signed-in
+    /api/v1/account/password:
+        post:
+            description: Change the caller's password; asks for the current one (and a code). Other sessions end.
+            operationId: post_api_v1_account_password
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Change the caller's password; asks for the current one (and a code).
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.local.password_changed
+    /api/v1/account/recovery-codes:
+        post:
+            description: Replace the recovery codes.
+            operationId: post_api_v1_account_recovery_codes
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replace the recovery codes.
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.local.recovery_codes_renewed
+    /api/v1/account/second-factor:
+        delete:
+            description: Remove the second factor (refused where the role requires one).
+            operationId: delete_api_v1_account_second_factor
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Remove the second factor (refused where the role requires one).
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.local.second_factor_removed
+        post:
+            description: Start adding an authenticator; answers the secret.
+            operationId: post_api_v1_account_second_factor
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Start adding an authenticator; answers the secret.
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.local.second_factor_begin
+    /api/v1/account/second-factor/confirm:
+        post:
+            description: Prove the authenticator with a code; answers ten recovery codes once.
+            operationId: post_api_v1_account_second_factor_confirm
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Prove the authenticator with a code; answers ten recovery codes once.
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.local.second_factor_added
+    /api/v1/account/sign-out-everywhere:
+        post:
+            description: End every session of the caller.
+            operationId: post_api_v1_account_sign_out_everywhere
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: End every session of the caller.
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.sign_out_everywhere
     /api/v1/admin/tokens:
         get:
             description: Everyone's tokens.
@@ -1020,6 +1198,106 @@ paths:
             tags:
                 - audit
             x-launchway-access: admin
+    /api/v1/auth/link:
+        post:
+            description: What a one-time link (invitation or reset) is for, without using it. 404 when it is unknown, used or expired.
+            operationId: post_api_v1_auth_link
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: What a one-time link (invitation or reset) is for, without using it.
+            tags:
+                - auth
+            x-launchway-access: public
+    /api/v1/auth/link/begin:
+        post:
+            description: 'Accepting a link, step one: the token and a new password. Answers the second-factor secret and a pending value.'
+            operationId: post_api_v1_auth_link_begin
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'Accepting a link, step one: the token and a new password.'
+            tags:
+                - auth
+            x-launchway-access: public
+    /api/v1/auth/link/complete:
+        post:
+            description: 'Accepting a link, step two: pending and a code. Sets the password, signs the person in, returns recovery codes once.'
+            operationId: post_api_v1_auth_link_complete
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'Accepting a link, step two: pending and a code.'
+            tags:
+                - auth
+            x-launchway-access: public
+    /api/v1/auth/local/second-factor:
+        post:
+            description: 'Built-in sign-in, step two: the ticket and a TOTP code or a recovery_code.'
+            operationId: post_api_v1_auth_local_second_factor
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'Built-in sign-in, step two: the ticket and a TOTP code or a recovery_code.'
+            tags:
+                - auth
+            x-launchway-access: public
+    /api/v1/auth/local/signin:
+        post:
+            description: 'Built-in sign-in, step one: user name and password. Answers signed_in, or second_factor with a short-lived ticket. Locks an account with backoff after repeated failures (429, Retry-After).'
+            operationId: post_api_v1_auth_local_signin
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'Built-in sign-in, step one: user name and password.'
+            tags:
+                - auth
+            x-launchway-access: public
     /api/v1/cache-policy:
         get:
             description: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days, and source (default until an administrator sets one).'
@@ -6712,6 +6990,66 @@ paths:
             tags:
                 - settings
             x-launchway-access: signed-in
+    /api/v1/setup:
+        get:
+            description: Whether this installation still waits for its first administrator, and when the setup code expires.
+            operationId: get_api_v1_setup
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Whether this installation still waits for its first administrator, and when the setup code expires.
+            tags:
+                - setup
+            x-launchway-access: public
+    /api/v1/setup/begin:
+        post:
+            description: 'First-run step one: the one-time setup code, the administrator''s name and password. Answers a second-factor secret (an otpauth address) and a sealed pending value. Needs the [CSRF header](#csrf-header).'
+            operationId: post_api_v1_setup_begin
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'First-run step one: the one-time setup code, the administrator''s name and password.'
+            tags:
+                - setup
+            x-launchway-access: public
+    /api/v1/setup/complete:
+        post:
+            description: 'First-run step two: the pending value and a code from the authenticator. Creates the administrator, signs them in and returns ten recovery codes once.'
+            operationId: post_api_v1_setup_complete
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'First-run step two: the pending value and a code from the authenticator.'
+            tags:
+                - setup
+            x-launchway-access: public
     /api/v1/ssh:
         get:
             description: '{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}: whether Git over SSH is on, the address clone addresses name, and the server''s host keys to verify.'
@@ -7126,6 +7464,185 @@ paths:
                 - user
             x-launchway-access: signed-in
             x-launchway-audit: ssh_key.delete
+    /api/v1/users:
+        get:
+            description: The built-in accounts, with no secrets.
+            operationId: get_api_v1_users
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The built-in accounts, with no secrets.
+            tags:
+                - users
+            x-launchway-access: admin
+        post:
+            description: Invite a person with a role; answers a one-time link (shown once, valid 72 hours).
+            operationId: post_api_v1_users
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Invite a person with a role; answers a one-time link (shown once, valid 72 hours).
+            tags:
+                - users
+            x-launchway-access: admin
+            x-launchway-audit: user.invite
+    /api/v1/users/{name}:
+        delete:
+            description: Delete an account (not the last administrator).
+            operationId: delete_api_v1_users_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Delete an account (not the last administrator).
+            tags:
+                - users
+            x-launchway-access: admin
+            x-launchway-audit: user.delete
+        post:
+            description: Change role or turn the account off or on. The last administrator is protected.
+            operationId: post_api_v1_users_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Change role or turn the account off or on.
+            tags:
+                - users
+            x-launchway-access: admin
+            x-launchway-audit: user.change
+    /api/v1/users/{name}/reset:
+        post:
+            description: A one-time reset link for a person who is locked out (valid 24 hours).
+            operationId: post_api_v1_users_name_reset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A one-time reset link for a person who is locked out (valid 24 hours).
+            tags:
+                - users
+            x-launchway-access: admin
+            x-launchway-audit: user.reset
+    /api/v1/users/{name}/sign-out:
+        post:
+            description: End every session of that person.
+            operationId: post_api_v1_users_name_sign_out
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: End every session of that person.
+            tags:
+                - users
+            x-launchway-access: admin
+            x-launchway-audit: user.sign_out
     /api/v1/validate:
         post:
             description: Checks pipeline text without running it. With ?project=NAME it checks it for that project too, and a valid pipeline may come back with warnings (for example, a pull-request filter by target branch in a project with no forge connection).

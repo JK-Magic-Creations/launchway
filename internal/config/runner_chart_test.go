@@ -30,7 +30,7 @@ func helmTemplate(t *testing.T, chart, namespace, values string) []map[string]an
 	}
 	args := []string{"template", "t", chart, "-n", namespace, "-f", writeTemp(t, values)}
 	if chart == mainChart {
-		args = append(args, "--set", "encryption.keyFile.allowOfflineGeneration=true")
+		args = append(args, "--set", "externalURL=https://launchway.example.com")
 	}
 	out, err := exec.Command("helm", args...).CombinedOutput()
 	if err != nil {

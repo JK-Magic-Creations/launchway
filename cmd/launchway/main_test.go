@@ -10,12 +10,13 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
-// A server without sign-in refuses to listen where others can reach it,
+// A server without sign-in (auth.mode: none, written on purpose: unwritten, a server that listens beyond loopback
+// uses built-in accounts) refuses to listen where others can reach it,
 // before it opens anything, unless told that is intended.
 func TestServerRefusesAnonymousExposure(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "launchway.yaml")
-	os.WriteFile(cfg, []byte("data: data\nrunner: {enabled: false}\n"), 0o644)
+	os.WriteFile(cfg, []byte("data: data\nrunner: {enabled: false}\nauth: {mode: none}\n"), 0o644)
 	t.Setenv("LAUNCHWAY_DATABASE", "")
 
 	err := cmdServer([]string{"--config", cfg, "--listen", "0.0.0.0:0"})
@@ -26,7 +27,7 @@ func TestServerRefusesAnonymousExposure(t *testing.T) {
 		t.Fatalf("the server created its data directory before refusing: %v", err)
 	}
 
-	os.WriteFile(cfg, []byte("listen: 0.0.0.0:0\ndata: data\nrunner: {enabled: false}\n"), 0o644)
+	os.WriteFile(cfg, []byte("listen: 0.0.0.0:0\ndata: data\nrunner: {enabled: false}\nauth: {mode: none}\n"), 0o644)
 	if err := cmdServer([]string{"--config", cfg}); err == nil || !strings.Contains(err.Error(), "without sign-in") {
 		t.Fatalf("listen from the file: %v", err)
 	}

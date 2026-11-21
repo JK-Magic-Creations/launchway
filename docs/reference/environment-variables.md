@@ -10,6 +10,7 @@ These are read by the `launchway` binary itself: the server, a runner, or the co
 
 | Variable | Read by | What it does |
 |---|---|---|
+| `LAUNCHWAY_SETUP_CODE_FILE` | `launchway server` | A file holding the one-time setup code of a new installation, instead of `auth.local.setup_code_file`. The chart mounts the Secret `<release>-setup-code` there. Without either, the server makes a code and prints it once in its start-up message. |
 | `LAUNCHWAY_DATABASE` | `launchway server` | The database to use, instead of `database:` in the configuration. A SQLite file path, or a `postgres://` URL. Surrounding white space is ignored. Without it, and without `database:`, the server uses `launchway.db` in its data directory. |
 | `LAUNCHWAY_ROOT_KEY_FILE` | `launchway server`, `launchway encryption`, `launchway doctor` | The root key file for encryption at rest (32 random bytes in base64, mode `0600`, or a mounted Secret's `0440`); wins over `encryption.key_file`. A file other users can read is refused. See [Encryption at rest](../guide/encryption-at-rest.md). |
 | `LAUNCHWAY_ROOT_KEY` | `launchway server`, `launchway encryption`, `launchway doctor` | The root key itself, base64: the `env` holder, for containers and tests. Visible to whoever can read the process environment; prefer a key file. |

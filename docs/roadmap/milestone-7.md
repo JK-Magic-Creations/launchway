@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 1 in progress · 28 planned · 29 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 2 in progress · 27 planned · 29 capabilities</p>
 
 Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.
 
@@ -46,7 +46,7 @@ flowchart TD
 | [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
-| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 1 | 6 |
+| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 2 | 5 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
 
@@ -284,10 +284,11 @@ The controls enterprises and regulated teams ask for.
 
 #### Built-in accounts with MFA {#built-in-accounts-with-mfa}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. Recovery codes and session management are included.
+Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. Built: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn), outgoing mail, and the first-run wizard steps after the first administrator.
 
+[Read the documentation](../guide/built-in-accounts.md)
 
 #### Directory groups and custom roles {#directory-groups-and-custom-roles}
 

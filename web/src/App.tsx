@@ -12,9 +12,11 @@ import { isLearn } from "./nav/model";
 
 
 // Loaded only when someone not signed in opens Learn: the first page needs none of it.
+const SetupPage = lazy(() => import("./pages/LocalAuth").then((m) => ({ default: m.SetupPage })));
+const AcceptPage = lazy(() => import("./pages/LocalAuth").then((m) => ({ default: m.AcceptPage })));
 const PublicLearn = lazy(() => import("./learn/PublicLearn").then((m) => ({ default: m.PublicLearn })));
 
-type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
+type Who = { state: "loading" } | { state: "setup" } | { state: "accept" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
 
 // App finds out who is signed in first. Anyone who is not, or whose session
 // ends while they use the page, sees the sign-in page and comes back to
@@ -24,12 +26,15 @@ export function App() {
 }
 
 function AppBody() {
-  const [who, setWho] = useState<Who>({ state: "loading" });
+  const [who, setWho] = useState<Who>(() => (location.pathname === "/accept" ? { state: "accept" } : { state: "loading" }));
   const whoState = useRef(who.state);
   useEffect(() => { whoState.current = who.state; }, [who.state]);
   const loadMe = useCallback(() => {
+    if (location.pathname === "/accept") return;
     api.me().then((me) => setWho({ state: "in", me })).catch((e) => {
-      if (e instanceof ApiError && e.status === 401) setWho({ state: "out", next: nextFromHere() });
+      // A new installation has no administrator yet: every call answers 503 until setup is done.
+      if (e instanceof ApiError && e.status === 503 && e.code === "setup_required") setWho({ state: "setup" });
+      else if (e instanceof ApiError && e.status === 401) setWho({ state: "out", next: nextFromHere() });
       else setWho({ state: "error", error: e });
     });
   }, []);
@@ -45,6 +50,9 @@ function AppBody() {
   }, []);
 
   if (who.state === "loading") return <div className="page"><div className="loading">Loading…</div></div>;
+  const wait = <div className="page"><div className="loading">Loading…</div></div>;
+  if (who.state === "setup") return <Suspense fallback={wait}><SetupPage /></Suspense>;
+  if (who.state === "accept") return <Suspense fallback={wait}><AcceptPage /></Suspense>;
   if (who.state === "error") return <div className="page"><ErrorBox error={who.error} /></div>;
   // The documentation needs no sign-in: it is the public text of this release, and shows nothing of this installation.
   if (who.state === "out" && isLearn(location.pathname)) return <Suspense fallback={<div className="page"><div className="loading">Loading…</div></div>}><PublicLearn /></Suspense>;

@@ -85,6 +85,7 @@ func (c *Config) applyDefaults() {
 		c.Runner.Concurrency = 2
 	}
 	if c.Auth.Mode == "" {
+		c.Auth.modeDefaulted = true
 		c.Auth.Mode = AuthNone
 	}
 }

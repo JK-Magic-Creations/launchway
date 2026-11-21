@@ -42,6 +42,23 @@ See [Encryption at rest](../guide/encryption-at-rest.md).
 - [ ] **Encrypt the database volume and the artifact store as well.** Artifacts, logs, build caches and Git
   packs are not yet encrypted by Launchway.
 - [ ] **Watch the audit trail** for `encryption.unseal` with outcome `failed`.
+### With the Helm chart
+
+The chart ships these on by default; check that you have not switched one off.
+
+- [ ] **Sign-in is required.** The chart's default is built-in accounts (`auth.mode: local`); the first
+  administrator is made with a one-time setup code in a Secret. Do not set `auth.allow_anonymous` in a
+  cluster others can reach.
+- [ ] **Network policies are on** (`networkPolicy.enabled`): default deny for servers, runners and step pods.
+  Step pods can reach only DNS, the Launchway server and the internet over HTTP and HTTPS, never the
+  database, the Kubernetes API or the cloud metadata service. Add your own egress with `extraEgress`;
+  add your cluster API's address to `networkPolicy.steps.exceptCIDRs` if it is public.
+- [ ] **Encryption at rest is on** and the **root key is kept**: it is not deleted by `helm uninstall`.
+  Copy it outside the cluster and the database backups.
+- [ ] **No secret material in the rendered chart.** The install hook Job makes secrets in the cluster; a
+  GitOps repository or a rendered manifest never holds one.
+- [ ] **Pods are restricted** (non-root, read-only root filesystem, no capabilities, seccomp) and have
+  ephemeral-storage limits.
 
 ### Runners
 
@@ -111,3 +128,13 @@ See [Encryption at rest](../guide/encryption-at-rest.md).
 
 - [Trust model](trust-model.md).
 - [Supply chain](supply-chain.md).
+
+## Sign-in (built-in accounts)
+
+- A server that listens beyond its own machine never starts without sign-in: it uses built-in accounts unless you
+  chose an identity provider. `auth.mode: none` is refused anywhere but loopback.
+- Keep a second factor required for administrators (`auth.local.require_second_factor: admins`, the default).
+- Keep the first administrator's recovery codes and a copy of the root key somewhere separate. Run
+  `launchway users list` now and then and remove accounts nobody uses.
+- With an identity provider, leave one built-in administrator as the break-glass account; remove it only after a
+  provider sign-in has worked. See [Built-in accounts](../guide/built-in-accounts.md).

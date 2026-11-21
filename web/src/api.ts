@@ -872,7 +872,7 @@ export interface ValidateResult {
 export type LibraryOverrides = Record<string, string>;
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public problems?: Problem[], public fields?: Record<string, string>) { super(message); }
+  constructor(public status: number, message: string, public problems?: Problem[], public fields?: Record<string, string>, public code?: string) { super(message); }
 }
 
 /** Who is signed in, and what they may do. The server checks every request
@@ -881,7 +881,7 @@ export type Role = "viewer" | "operator" | "admin";
 export interface Me {
   user: string;
   groups: string[];
-  auth_mode: "none" | "oidc";
+  auth_mode: "none" | "oidc" | "local";
   via: "none" | "session" | "token";
   admin: boolean;
   runners: boolean;
@@ -931,14 +931,14 @@ export async function call<T>(method: string, path: string, body?: unknown, opts
   try { data = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
   if (!resp.ok) {
     if (resp.status === 401) window.dispatchEvent(new Event(SIGNED_OUT));
-    const body = data as { error?: string; problems?: Problem[]; fields?: Record<string, string> } | undefined;
-    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems, body?.fields);
+    const body = data as { error?: string; code?: string; problems?: Problem[]; fields?: Record<string, string> } | undefined;
+    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems, body?.fields, body?.code);
   }
   return data as T;
 }
 
 export const api = {
-  info: () => call<{ version: string; auth_mode: "none" | "oidc"; actor?: string }>("GET", "/api/v1/info"),
+  info: () => call<{ version: string; auth_mode: "none" | "oidc" | "local"; actor?: string }>("GET", "/api/v1/info"),
   me: () => call<Me>("GET", "/api/v1/me"),
   logout: () => call<void>("POST", "/auth/logout"),
   runs: (q: { project?: string; status?: string; lane?: string; limit?: number } = {}, background = false) => {

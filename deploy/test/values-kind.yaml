@@ -1,10 +1,11 @@
 # TEST ONLY: values for trying the chart on a kind cluster with an image loaded into it.
+externalURL: http://launchway.test
 image:
   repository: localhost/launchway
   tag: 0.0.0-k8stest
   pullPolicy: Never
 
-# A single development database. Never use this in production.
+# The bundled single database (the default).
 postgresql:
   enabled: true
 
@@ -12,6 +13,7 @@ config:
   # No sign-in in this throwaway cluster; the servers refuse to listen on 0.0.0.0 without this.
   extraConfig:
     auth:
+      mode: none
       allow_anonymous: true
   projects:
     # Served by git-server.yaml in the release namespace.

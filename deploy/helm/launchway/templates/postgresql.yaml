@@ -1,6 +1,8 @@
-{{- if .Values.postgresql.enabled }}
+{{- if include "launchway.bundledDB" . | trim }}
 {{- $name := include "launchway.postgresqlName" . -}}
-# A development PostgreSQL, for trying the chart only: one pod, no backups, no high availability.
+# The bundled PostgreSQL: one pod on one volume, no high availability. Its password is made once by
+# the install hook Job (bootstrap.yaml) and kept; postgresql.password, if set, is stored here instead.
+{{- if .Values.postgresql.password }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -10,8 +12,9 @@ metadata:
     {{- include "launchway.componentLabels" (list . "postgresql") | nindent 4 }}
 type: Opaque
 data:
-  password: {{ include "launchway.postgresqlPassword" . | b64enc | quote }}
+  password: {{ .Values.postgresql.password | b64enc | quote }}
 ---
+{{- end }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -125,7 +128,9 @@ spec:
           persistentVolumeClaim:
             claimName: {{ $name }}
         - name: run
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 16Mi
         - name: tmp
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: 64Mi
 {{- end }}
