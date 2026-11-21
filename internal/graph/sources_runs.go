@@ -65,6 +65,7 @@ func (s SortieSource) Assert(ctx context.Context, sc Scope) (Assertion, string, 
 	if err != nil {
 		return a, "", err
 	}
+	defer rows.Close()
 	type res struct {
 		run, step    string
 		attempt, num int
@@ -75,12 +76,11 @@ func (s SortieSource) Assert(ctx context.Context, sc Scope) (Assertion, string, 
 	for rows.Next() {
 		var r res
 		if err := rows.Scan(&r.run, &r.step, &r.attempt, &r.num, &r.digest, &r.at, &r.sha); err != nil {
-			rows.Close()
 			return a, "", err
 		}
 		rs = append(rs, r)
 	}
-	if err := rows.Close(); err != nil {
+	if err := rows.Err(); err != nil {
 		return a, "", err
 	}
 	last := ""
@@ -92,13 +92,13 @@ func (s SortieSource) Assert(ctx context.Context, sc Scope) (Assertion, string, 
 		if err != nil {
 			return a, "", err
 		}
+		defer refs.Close()
 		stream, indexKey := "", ""
 		type plat struct{ repo, digest, platform string }
 		var plats []plat
 		for refs.Next() {
 			var kind, rp, dg, pl string
 			if err := refs.Scan(&kind, &rp, &dg, &pl); err != nil {
-				refs.Close()
 				return a, "", err
 			}
 			if kind == "index" {
@@ -107,7 +107,7 @@ func (s SortieSource) Assert(ctx context.Context, sc Scope) (Assertion, string, 
 				plats = append(plats, plat{rp, dg, pl})
 			}
 		}
-		if err := refs.Close(); err != nil {
+		if err := refs.Err(); err != nil {
 			return a, "", err
 		}
 		if stream == "" || stream == "docker.io/library/" {
@@ -136,17 +136,17 @@ func (s SortieSource) Assert(ctx context.Context, sc Scope) (Assertion, string, 
 		if err != nil {
 			return a, "", err
 		}
+		defer comps.Close()
 		for comps.Next() {
 			var name, version, typ, purl string
 			if err := comps.Scan(&name, &version, &typ, &purl); err != nil {
-				comps.Close()
 				return a, "", err
 			}
 			key := PackageKeyFromPurl(purl, name)
 			a.Add(Node{Kind: KindPackage, Key: key, Name: name})
 			a.Link(Edge{Kind: EdgeContainsPkg, From: NodeRef{KindBuilt, indexKey}, To: NodeRef{KindPackage, key}, Resolved: version, Attrs: map[string]any{"type": typ}, Subject: sub, Ref: r.sha})
 		}
-		if err := comps.Close(); err != nil {
+		if err := comps.Err(); err != nil {
 			return a, "", err
 		}
 	}
@@ -217,6 +217,7 @@ func (d DeploymentSource) Assert(ctx context.Context, sc Scope) (Assertion, stri
 	if err != nil {
 		return a, "", err
 	}
+	defer rows.Close()
 	type dep struct {
 		env, project, service, id, run, version, sha, app, repo string
 		since, deployedAt                                       int64
@@ -226,12 +227,11 @@ func (d DeploymentSource) Assert(ctx context.Context, sc Scope) (Assertion, stri
 	for rows.Next() {
 		var x dep
 		if err := rows.Scan(&x.env, &x.project, &x.service, &x.since, &x.id, &x.run, &x.num, &x.version, &x.sha, &x.app, &x.deployedAt, &x.repo); err != nil {
-			rows.Close()
 			return a, "", err
 		}
 		ds = append(ds, x)
 	}
-	if err := rows.Close(); err != nil {
+	if err := rows.Err(); err != nil {
 		return a, "", err
 	}
 	for _, x := range ds {
@@ -251,17 +251,17 @@ func (d DeploymentSource) Assert(ctx context.Context, sc Scope) (Assertion, stri
 		if err != nil {
 			return a, "", err
 		}
+		defer imgs.Close()
 		for imgs.Next() {
 			var rp, dg string
 			if err := imgs.Scan(&rp, &dg); err != nil {
-				imgs.Close()
 				return a, "", err
 			}
 			stream := NormalizeImage(rp)
 			bk := BuiltKey(stream, dg)
 			a.Link(Edge{Kind: EdgeDeliveredTo, From: NodeRef{KindBuilt, bk}, To: dn, Qualifier: dg, Attrs: map[string]any{"digest": dg, "at": at, "airfield": x.env, "version": x.version}, Subject: sub, Ref: x.sha})
 		}
-		if err := imgs.Close(); err != nil {
+		if err := imgs.Err(); err != nil {
 			return a, "", err
 		}
 	}

@@ -328,8 +328,8 @@ func TestWatcherReadsWhatChangedAndCoalescesPushes(t *testing.T) {
 	}
 	// A push is read in the background.
 	repos.Push("acme/libgo", "c9", map[string]string{"go.mod": "module example.test/libgo/v9\n"})
-	w.Pushed("acme/libgo")
-	w.Pushed("acme/libgo")
+	w.Pushed(bg, "acme/libgo")
+	w.Pushed(bg, "acme/libgo")
 	for i := 0; i < 100; i++ {
 		if _, err := r.Store.Get(bg, AllowAll{}, ref(KindPackage, "go:example.test/libgo/v9"), When{}); err == nil {
 			return
@@ -341,16 +341,9 @@ func TestWatcherReadsWhatChangedAndCoalescesPushes(t *testing.T) {
 
 func runsOf(t *testing.T, s *Store) []int64 {
 	t.Helper()
-	rows, err := s.DB.Query(bg, `SELECT id FROM graph_runs`)
+	out, err := ids(bg, s.DB, `SELECT id FROM graph_runs`)
 	if err != nil {
 		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []int64
-	for rows.Next() {
-		var id int64
-		rows.Scan(&id)
-		out = append(out, id)
 	}
 	return out
 }

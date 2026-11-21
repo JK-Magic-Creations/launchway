@@ -270,135 +270,135 @@ func (s *Store) Specification(ctx context.Context, v Viewer, refs []NodeRef, opt
 	return buildSpec(all, opt.HeadroomPercent), nil
 }
 
+// specBuilder gathers what the components of one specification need.
+type specBuilder struct {
+	sp               MachineSpec
+	cpu, mem, sto    int64
+	archSets         [][]string
+	platforms, osFam map[string]bool
+	features         map[string]bool
+	kernel           string
+	devices          map[string]*SpecDevice
+	ports            map[string]*SpecPort
+	data             map[string]*SpecData
+}
+
 func buildSpec(all []ComponentNeeds, headroom int) MachineSpec {
-	sp := MachineSpec{Version: 1, Kind: "launchway.machine-specification", Headroom: headroom}
-	var cpu, mem, sto int64
-	var archSets [][]string
-	platforms, osFam := map[string]bool{}, map[string]bool{}
-	features := map[string]bool{}
-	var kernel string
-	devices := map[string]*SpecDevice{}
-	ports := map[string]*SpecPort{}
-	data := map[string]*SpecData{}
+	b := &specBuilder{sp: MachineSpec{Version: 1, Kind: "launchway.machine-specification", Headroom: headroom},
+		platforms: map[string]bool{}, osFam: map[string]bool{}, features: map[string]bool{},
+		devices: map[string]*SpecDevice{}, ports: map[string]*SpecPort{}, data: map[string]*SpecData{}}
 	for _, c := range all {
-		name := c.Component.Name
-		sp.Components = append(sp.Components, SpecComponent{c.Component.Key, c.Repository})
-		var archs []string
-		haveCPU, haveMem := false, false
-		for _, f := range c.Facts {
-			sp.Provenance = append(sp.Provenance, SpecProvenance{c.Component.Key, f.Facet, f.Display(), f.Source, f.Evidence})
-			switch f.Facet {
-			case FacetPlatform:
-				platforms[f.Value] = true
-			case FacetArch:
-				archs = append(archs, f.Value)
-			case FacetCPU:
-				n, _ := strconv.ParseInt(f.Value, 10, 64)
-				cpu += n
-				haveCPU = true
-			case FacetMemory:
-				n, _ := strconv.ParseInt(f.Value, 10, 64)
-				mem += n
-				haveMem = true
-			case FacetStorage:
-				n, _ := strconv.ParseInt(f.Value, 10, 64)
-				sto += n
-			case FacetDevice:
-				kind, rest, _ := strings.Cut(f.Value, ":")
-				cnt, vendor := rest, ""
-				if a, b, ok := strings.Cut(rest, "@"); ok {
-					cnt, vendor = a, b
-				}
-				n, _ := strconv.Atoi(cnt)
-				d := devices[kind+"@"+vendor]
-				if d == nil {
-					d = &SpecDevice{Kind: kind, Vendor: vendor}
-					devices[kind+"@"+vendor] = d
-				}
-				d.Count += max(n, 1)
-			case FacetOS:
-				osFam[f.Value] = true
-			case FacetKernel:
-				_, ver, _ := parseConstraint(f.Value)
-				if kernel == "" || CompareVersions(ver, kernel) > 0 {
-					kernel = ver
-				}
-			case FacetFeature:
-				features[f.Value] = true
-			case FacetPort:
-				p, proto, _ := strings.Cut(f.Value, "/")
-				n, _ := strconv.Atoi(p)
-				k := f.Value
-				pt := ports[k]
-				if pt == nil {
-					pt = &SpecPort{Port: n, Protocol: proto}
-					ports[k] = pt
-				}
-				pt.Component = append(pt.Component, name)
-			case FacetData:
-				kind, con := splitData(f.Value)
-				d := data[kind+con]
-				if d == nil {
-					d = &SpecData{Kind: kind, Constraint: strings.TrimPrefix(con, ">=")}
-					if con != "" && !strings.HasPrefix(con, ">=") {
-						d.Constraint = con
-					}
-					data[kind+con] = d
-				}
-				d.Components = append(d.Components, name)
+		b.add(c)
+	}
+	return b.finish(headroom)
+}
+
+// add takes in one component's facts.
+func (b *specBuilder) add(c ComponentNeeds) {
+	name := c.Component.Name
+	b.sp.Components = append(b.sp.Components, SpecComponent{c.Component.Key, c.Repository})
+	var archs []string
+	haveCPU, haveMem := false, false
+	for _, f := range c.Facts {
+		b.sp.Provenance = append(b.sp.Provenance, SpecProvenance{c.Component.Key, f.Facet, f.Display(), f.Source, f.Evidence})
+		switch f.Facet {
+		case FacetPlatform:
+			b.platforms[f.Value] = true
+		case FacetArch:
+			archs = append(archs, f.Value)
+		case FacetCPU:
+			n, _ := strconv.ParseInt(f.Value, 10, 64)
+			b.cpu, haveCPU = b.cpu+n, true
+		case FacetMemory:
+			n, _ := strconv.ParseInt(f.Value, 10, 64)
+			b.mem, haveMem = b.mem+n, true
+		case FacetStorage:
+			n, _ := strconv.ParseInt(f.Value, 10, 64)
+			b.sto += n
+		case FacetDevice:
+			b.addDevice(f.Value)
+		case FacetOS:
+			b.osFam[f.Value] = true
+		case FacetKernel:
+			if _, ver, _ := parseConstraint(f.Value); b.kernel == "" || CompareVersions(ver, b.kernel) > 0 {
+				b.kernel = ver
 			}
-		}
-		if len(archs) > 0 {
-			archSets = append(archSets, archs)
-		}
-		if !haveCPU {
-			sp.Warnings = append(sp.Warnings, fmt.Sprintf("%s has no CPU requirement, declared or inferred: it adds nothing to the total. Declare cpu in %s.", name, RequirementsPath))
-		}
-		if !haveMem {
-			sp.Warnings = append(sp.Warnings, fmt.Sprintf("%s has no memory requirement, declared or inferred: it adds nothing to the total. Declare memory in %s.", name, RequirementsPath))
+		case FacetFeature:
+			b.features[f.Value] = true
+		case FacetPort:
+			b.addPort(f.Value, name)
+		case FacetData:
+			b.addData(f.Value, name)
 		}
 	}
-	// Platform and operating system must agree.
-	sp.Platform = single(platforms, "platform", &sp.Conflicts)
-	sp.OS.Family = single(osFam, "operating system", &sp.Conflicts)
-	// Architectures: one that every component can run on.
-	if len(archSets) > 0 {
-		common := map[string]int{}
-		for _, set := range archSets {
-			seenA := map[string]bool{}
-			for _, a := range set {
-				if !seenA[a] {
-					seenA[a] = true
-					common[a]++
-				}
-			}
-		}
-		for a, n := range common {
-			if n == len(archSets) {
-				sp.ArchOpts = append(sp.ArchOpts, a)
-			}
-		}
-		sort.Strings(sp.ArchOpts)
-		switch {
-		case len(sp.ArchOpts) == 0:
-			sp.Conflicts = append(sp.Conflicts, "the components share no architecture: "+describeArchSets(archSets))
-		default:
-			sp.Arch = preferredArch(sp.ArchOpts)
-		}
-	} else {
-		sp.Warnings = append(sp.Warnings, "no architecture is declared or inferred for these components")
+	if len(archs) > 0 {
+		b.archSets = append(b.archSets, archs)
 	}
+	if !haveCPU {
+		b.sp.Warnings = append(b.sp.Warnings, fmt.Sprintf("%s has no CPU requirement, declared or inferred: it adds nothing to the total. Declare cpu in %s.", name, RequirementsPath))
+	}
+	if !haveMem {
+		b.sp.Warnings = append(b.sp.Warnings, fmt.Sprintf("%s has no memory requirement, declared or inferred: it adds nothing to the total. Declare memory in %s.", name, RequirementsPath))
+	}
+}
+
+func (b *specBuilder) addDevice(value string) {
+	kind, rest, _ := strings.Cut(value, ":")
+	cnt, vendor := rest, ""
+	if x, y, ok := strings.Cut(rest, "@"); ok {
+		cnt, vendor = x, y
+	}
+	n, _ := strconv.Atoi(cnt)
+	d := b.devices[kind+"@"+vendor]
+	if d == nil {
+		d = &SpecDevice{Kind: kind, Vendor: vendor}
+		b.devices[kind+"@"+vendor] = d
+	}
+	d.Count += max(n, 1)
+}
+
+func (b *specBuilder) addPort(value, component string) {
+	p, proto, _ := strings.Cut(value, "/")
+	n, _ := strconv.Atoi(p)
+	pt := b.ports[value]
+	if pt == nil {
+		pt = &SpecPort{Port: n, Protocol: proto}
+		b.ports[value] = pt
+	}
+	pt.Component = append(pt.Component, component)
+}
+
+func (b *specBuilder) addData(value, component string) {
+	kind, con := splitData(value)
+	d := b.data[kind+con]
+	if d == nil {
+		d = &SpecData{Kind: kind, Constraint: con}
+		if strings.HasPrefix(con, ">=") {
+			d.Constraint = strings.TrimPrefix(con, ">=")
+		}
+		b.data[kind+con] = d
+	}
+	d.Components = append(d.Components, component)
+}
+
+// finish reconciles what was gathered: the one platform, operating system and
+// architecture all share, or a conflict saying why there is none.
+func (b *specBuilder) finish(headroom int) MachineSpec {
+	sp := b.sp
+	sp.Platform = single(b.platforms, "platform", &sp.Conflicts)
+	sp.OS.Family = single(b.osFam, "operating system", &sp.Conflicts)
+	b.chooseArch(&sp)
 	withHead := func(n int64) int64 { return int64(math.Ceil(float64(n) * float64(100+headroom) / 100)) }
-	sp.CPU = SpecAmount{cpu, withHead(cpu), "millicores", FormatCPU(cpu) + " cores, " + FormatCPU(withHead(cpu)) + " with headroom"}
-	sp.Memory = SpecAmount{mem, withHead(mem), "bytes", FormatBytes(mem) + ", " + FormatBytes(withHead(mem)) + " with headroom"}
-	sp.Storage = SpecAmount{sto, withHead(sto), "bytes", FormatBytes(sto) + ", " + FormatBytes(withHead(sto)) + " with headroom"}
-	sp.OS.MinKernel = kernel
-	sp.OS.Features = sortedKeys(features)
-	for _, k := range sortedMapKeys(devices) {
-		sp.Devices = append(sp.Devices, *devices[k])
+	sp.CPU = SpecAmount{b.cpu, withHead(b.cpu), "millicores", FormatCPU(b.cpu) + " cores, " + FormatCPU(withHead(b.cpu)) + " with headroom"}
+	sp.Memory = SpecAmount{b.mem, withHead(b.mem), "bytes", FormatBytes(b.mem) + ", " + FormatBytes(withHead(b.mem)) + " with headroom"}
+	sp.Storage = SpecAmount{b.sto, withHead(b.sto), "bytes", FormatBytes(b.sto) + ", " + FormatBytes(withHead(b.sto)) + " with headroom"}
+	sp.OS.MinKernel = b.kernel
+	sp.OS.Features = sortedKeys(b.features)
+	for _, k := range sortedMapKeys(b.devices) {
+		sp.Devices = append(sp.Devices, *b.devices[k])
 	}
-	for _, k := range sortedMapKeys(ports) {
-		p := ports[k]
+	for _, k := range sortedMapKeys(b.ports) {
+		p := b.ports[k]
 		sort.Strings(p.Component)
 		if len(p.Component) > 1 {
 			sp.Conflicts = append(sp.Conflicts, fmt.Sprintf("port %d/%s is wanted by %s: they cannot share one machine's address without a proxy or another port", p.Port, p.Protocol, strings.Join(p.Component, " and ")))
@@ -406,8 +406,8 @@ func buildSpec(all []ComponentNeeds, headroom int) MachineSpec {
 		sp.Ports = append(sp.Ports, *p)
 	}
 	sort.Slice(sp.Ports, func(i, j int) bool { return sp.Ports[i].Port < sp.Ports[j].Port })
-	for _, k := range sortedMapKeys(data) {
-		d := data[k]
+	for _, k := range sortedMapKeys(b.data) {
+		d := b.data[k]
 		sort.Strings(d.Components)
 		sp.Data = append(sp.Data, *d)
 	}
@@ -419,6 +419,35 @@ func buildSpec(all []ComponentNeeds, headroom int) MachineSpec {
 		return sp.Provenance[i].Facet < sp.Provenance[j].Facet
 	})
 	return sp
+}
+
+// chooseArch takes an architecture every component can run on.
+func (b *specBuilder) chooseArch(sp *MachineSpec) {
+	if len(b.archSets) == 0 {
+		sp.Warnings = append(sp.Warnings, "no architecture is declared or inferred for these components")
+		return
+	}
+	common := map[string]int{}
+	for _, set := range b.archSets {
+		seen := map[string]bool{}
+		for _, a := range set {
+			if !seen[a] {
+				seen[a] = true
+				common[a]++
+			}
+		}
+	}
+	for a, n := range common {
+		if n == len(b.archSets) {
+			sp.ArchOpts = append(sp.ArchOpts, a)
+		}
+	}
+	sort.Strings(sp.ArchOpts)
+	if len(sp.ArchOpts) == 0 {
+		sp.Conflicts = append(sp.Conflicts, "the components share no architecture: "+describeArchSets(b.archSets))
+		return
+	}
+	sp.Arch = preferredArch(sp.ArchOpts)
 }
 
 func single(set map[string]bool, what string, conflicts *[]string) string {

@@ -46,6 +46,7 @@ var allowedImports = map[string][]string{
 	"internal/depupdate/preview":         {"internal/depupdate", "internal/depupdate/ecosystems", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/source"},
 	"internal/depupdate/propose":         {"internal/depupdate", "internal/depupdate/container", "internal/depupdate/gomod", "internal/depupdate/npm", "internal/depupdate/plan", "internal/depupdate/python", "internal/depupdate/version", "internal/depupdate/workflow", "internal/executor", "internal/forge", "internal/gitexec", "internal/redact"},
 	"internal/depupdate/python":          {"internal/depupdate"},
+	"internal/graph":                     {"internal/depupdate", "internal/depupdate/container", "internal/depupdate/ecosystems", "internal/depupdate/gitfs", "internal/depupdate/osv", "internal/engine", "internal/pipeline"},
 	"internal/depupdate/service":         {"internal/depupdate/gitfs", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/source", "internal/forge/pulls"},
 	"internal/depupdate/source":          {"internal/depupdate/version"},
 	"internal/depupdate/version":         {},

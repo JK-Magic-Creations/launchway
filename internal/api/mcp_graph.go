@@ -107,6 +107,9 @@ func addGraphTools(srv *mcp.Server, c *mcpCall) {
 				return out, err
 			})
 	}
+	if c.mayOperate {
+		addGraphChangeTools(srv, c)
+	}
 }
 
 type graphOverrideIn struct {

@@ -101,84 +101,110 @@ var dataFamilies = map[string][]string{
 
 // Satisfies says whether the host offers what a fact needs, and if not, why.
 func (h HostFacts) Satisfies(f Fact) (bool, string) {
-	switch f.Facet {
-	case FacetPlatform:
-		if len(h.Platforms) == 0 || in(h.Platforms, f.Value) {
-			return true, ""
-		}
-		return false, "does not run " + f.Value + " workloads"
-	case FacetArch:
-		if len(h.Arch) == 0 || in(h.Arch, f.Value) {
-			return true, ""
-		}
-		return false, "is " + strings.Join(h.Arch, "/") + ", not " + f.Value
-	case FacetCPU:
-		n, _ := strconv.ParseInt(f.Value, 10, 64)
-		if h.CPU == 0 || h.CPU >= n {
-			return true, ""
-		}
-		return false, fmt.Sprintf("has %s cores, needs %s", FormatCPU(h.CPU), FormatCPU(n))
-	case FacetMemory:
-		n, _ := strconv.ParseInt(f.Value, 10, 64)
-		if h.Memory == 0 || h.Memory >= n {
-			return true, ""
-		}
-		return false, fmt.Sprintf("has %s memory, needs %s", FormatBytes(h.Memory), FormatBytes(n))
-	case FacetStorage:
-		n, _ := strconv.ParseInt(f.Value, 10, 64)
-		if h.Storage == 0 || h.Storage >= n {
-			return true, ""
-		}
-		return false, fmt.Sprintf("has %s storage, needs %s", FormatBytes(h.Storage), FormatBytes(n))
-	case FacetDevice:
-		kind, rest, _ := strings.Cut(f.Value, ":")
-		n, _ := strconv.Atoi(strings.SplitN(rest, "@", 2)[0])
-		if n == 0 {
-			n = 1
-		}
-		if h.Devices[kind] >= n {
-			return true, ""
-		}
-		return false, fmt.Sprintf("has %d %s, needs %d", h.Devices[kind], kind, n)
-	case FacetOS:
-		if h.OS == "" || h.OS == f.Value {
-			return true, ""
-		}
-		return false, "runs " + h.OS + ", not " + f.Value
-	case FacetFeature:
-		if in(h.Features, f.Value) {
-			return true, ""
-		}
-		return false, "lacks " + f.Value
-	case FacetKernel:
-		if h.Kernel == "" || Meets(h.Kernel, f.Value) {
-			return true, ""
-		}
-		return false, "kernel " + h.Kernel + " does not meet " + f.Value
-	case FacetPort:
-		p, _, _ := strings.Cut(f.Value, "/")
-		n, _ := strconv.Atoi(p)
-		for _, u := range h.PortsUsed {
-			if u == n {
-				return false, "port " + p + " is already in use"
-			}
-		}
-		return true, ""
-	case FacetData:
-		kind, cons := splitData(f.Value)
-		for _, k := range append([]string{kind}, dataFamilies[kind]...) {
-			if v, ok := h.Data[k]; ok {
-				if cons == "" || v == "" || Meets(v, cons) {
-					return true, ""
-				}
-				return false, fmt.Sprintf("offers %s %s, needs %s", k, v, cons)
-			}
-		}
-		return false, "offers no " + kind
-	case FacetRuntime:
-		return true, "" // a runtime travels inside the built thing
+	if check, ok := facetChecks[f.Facet]; ok {
+		return check(h, f)
 	}
 	return true, ""
+}
+
+var facetChecks = map[string]func(h HostFacts, f Fact) (bool, string){
+	FacetPlatform: checkPlatform, FacetArch: checkArch, FacetCPU: checkCPU, FacetMemory: checkMemory, FacetStorage: checkStorage,
+	FacetDevice: checkDevice, FacetOS: checkOS, FacetFeature: checkFeature, FacetKernel: checkKernel, FacetPort: checkPort, FacetData: checkData,
+}
+
+func checkPlatform(h HostFacts, f Fact) (bool, string) {
+	if len(h.Platforms) == 0 || in(h.Platforms, f.Value) {
+		return true, ""
+	}
+	return false, "does not run " + f.Value + " workloads"
+}
+
+func checkArch(h HostFacts, f Fact) (bool, string) {
+	if len(h.Arch) == 0 || in(h.Arch, f.Value) {
+		return true, ""
+	}
+	return false, "is " + strings.Join(h.Arch, "/") + ", not " + f.Value
+}
+
+func checkCPU(h HostFacts, f Fact) (bool, string) {
+	n, _ := strconv.ParseInt(f.Value, 10, 64)
+	if h.CPU == 0 || h.CPU >= n {
+		return true, ""
+	}
+	return false, fmt.Sprintf("has %s cores, needs %s", FormatCPU(h.CPU), FormatCPU(n))
+}
+
+func checkMemory(h HostFacts, f Fact) (bool, string) {
+	n, _ := strconv.ParseInt(f.Value, 10, 64)
+	if h.Memory == 0 || h.Memory >= n {
+		return true, ""
+	}
+	return false, fmt.Sprintf("has %s memory, needs %s", FormatBytes(h.Memory), FormatBytes(n))
+}
+
+func checkStorage(h HostFacts, f Fact) (bool, string) {
+	n, _ := strconv.ParseInt(f.Value, 10, 64)
+	if h.Storage == 0 || h.Storage >= n {
+		return true, ""
+	}
+	return false, fmt.Sprintf("has %s storage, needs %s", FormatBytes(h.Storage), FormatBytes(n))
+}
+
+func checkDevice(h HostFacts, f Fact) (bool, string) {
+	kind, rest, _ := strings.Cut(f.Value, ":")
+	n, _ := strconv.Atoi(strings.SplitN(rest, "@", 2)[0])
+	if n == 0 {
+		n = 1
+	}
+	if h.Devices[kind] >= n {
+		return true, ""
+	}
+	return false, fmt.Sprintf("has %d %s, needs %d", h.Devices[kind], kind, n)
+}
+
+func checkOS(h HostFacts, f Fact) (bool, string) {
+	if h.OS == "" || h.OS == f.Value {
+		return true, ""
+	}
+	return false, "runs " + h.OS + ", not " + f.Value
+}
+
+func checkFeature(h HostFacts, f Fact) (bool, string) {
+	if in(h.Features, f.Value) {
+		return true, ""
+	}
+	return false, "lacks " + f.Value
+}
+
+func checkKernel(h HostFacts, f Fact) (bool, string) {
+	if h.Kernel == "" || Meets(h.Kernel, f.Value) {
+		return true, ""
+	}
+	return false, "kernel " + h.Kernel + " does not meet " + f.Value
+}
+
+func checkPort(h HostFacts, f Fact) (bool, string) {
+	p, _, _ := strings.Cut(f.Value, "/")
+	n, _ := strconv.Atoi(p)
+	for _, u := range h.PortsUsed {
+		if u == n {
+			return false, "port " + p + " is already in use"
+		}
+	}
+	return true, ""
+}
+
+func checkData(h HostFacts, f Fact) (bool, string) {
+	kind, cons := splitData(f.Value)
+	for _, k := range append([]string{kind}, dataFamilies[kind]...) {
+		if v, ok := h.Data[k]; ok {
+			if cons == "" || v == "" || Meets(v, cons) {
+				return true, ""
+			}
+			return false, fmt.Sprintf("offers %s %s, needs %s", k, v, cons)
+		}
+	}
+	return false, "offers no " + kind
 }
 
 func splitData(v string) (kind, constraint string) {

@@ -127,7 +127,7 @@ func TestCyclesAreReportedWithThePathAndOverridesResolveThem(t *testing.T) {
 	for i, n := range o.Order {
 		pos[n] = i
 	}
-	if !(pos["acme/c"] < pos["acme/b"] && pos["acme/b"] < pos["acme/a"]) {
+	if pos["acme/c"] >= pos["acme/b"] || pos["acme/b"] >= pos["acme/a"] {
 		t.Fatalf("order %v", o.Order)
 	}
 	// The ignored edge is still shown, marked.

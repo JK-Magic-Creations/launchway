@@ -172,6 +172,37 @@ func (f *graphFlags) one(what string) (string, error) {
 	return f.pos[0], nil
 }
 
+func (cl *client) gget(path string, q url.Values, v any) error {
+	if len(q) > 0 {
+		path += "?" + q.Encode()
+	}
+	return cl.call("GET", "/api/v1/graph"+path, nil, v)
+}
+
+// graphCommands is each word after "launchway graph" and what runs it.
+var graphCommands = map[string]func(cl *client, cmd string, f *graphFlags) error{
+	"summary":              (*client).graphSummary,
+	"search":               (*client).graphSearch,
+	"show":                 (*client).graphShow,
+	"impact":               (*client).graphImpact,
+	"where":                (*client).graphWhere,
+	"contents":             (*client).graphContents,
+	"path":                 (*client).graphPath,
+	"order":                (*client).graphOrder,
+	"rebuild-set":          (*client).graphRebuildSet,
+	"overrides":            (*client).graphOverrides,
+	"override-add":         (*client).graphOverrideAdd,
+	"override-remove":      (*client).graphOverrideRemove,
+	"needs":                (*client).graphNeeds,
+	"placement":            (*client).graphNeeds,
+	"spec":                 (*client).graphSpec,
+	"reach":                (*client).graphReach,
+	"propose-requirements": (*client).graphProposeRequirements,
+	"refresh":              (*client).graphRefresh,
+	"rescan":               (*client).graphRescan,
+	"rebuild":              (*client).graphRescan,
+}
+
 func (cl *client) graph(cmd string, args []string) error {
 	if cmd == "override" {
 		if len(args) == 0 {
@@ -179,367 +210,417 @@ func (cl *client) graph(cmd string, args []string) error {
 		}
 		cmd, args = "override-"+args[0], args[1:]
 	}
+	run, ok := graphCommands[cmd]
+	if !ok {
+		return usageErr("unknown command graph %s\n\n%s", cmd, graphUsage)
+	}
 	f := newGraphFlags(cmd)
 	if err := f.parse(args); err != nil {
 		return err
 	}
-	get := func(path string, q url.Values, v any) error {
-		if len(q) > 0 {
-			path += "?" + q.Encode()
-		}
-		return cl.call("GET", "/api/v1/graph"+path, nil, v)
+	return run(cl, cmd, f)
+}
+
+func (cl *client) graphSummary(cmd string, f *graphFlags) error {
+	_ = cmd
+	var s graph.Summary
+	if err := cl.gget("", nil, &s); err != nil {
+		return err
 	}
-	switch cmd {
-	case "summary":
-		var s graph.Summary
-		if err := get("", nil, &s); err != nil {
-			return err
+	return cl.print(s, *f.asJSON, func() {
+		tw := tabwriter.NewWriter(cl.out, 2, 4, 2, ' ', 0)
+		for _, k := range graph.NodeKinds {
+			if n := s.Nodes[string(k)]; n > 0 {
+				fmt.Fprintf(tw, "%s\t%d\n", k, n)
+			}
 		}
-		return cl.print(s, *f.asJSON, func() {
-			tw := tabwriter.NewWriter(cl.out, 2, 4, 2, ' ', 0)
-			for _, k := range graph.NodeKinds {
-				if n := s.Nodes[string(k)]; n > 0 {
-					fmt.Fprintf(tw, "%s\t%d\n", k, n)
+		fmt.Fprintf(tw, "edges\t%d\n", s.Edges)
+		tw.Flush()
+		for _, r := range s.Sources {
+			fmt.Fprintf(cl.out, "source %s read %d scopes, last at %s\n", r.Source, r.Scopes, time.UnixMilli(r.At).Format(time.RFC3339))
+		}
+	})
+}
+
+func (cl *client) graphSearch(cmd string, f *graphFlags) error {
+	_ = cmd
+	if len(f.pos) != 1 {
+		return usageErr("name what to search for")
+	}
+	q := url.Values{"q": {f.pos[0]}}
+	if *f.kind != "" {
+		q.Set("kind", *f.kind)
+	}
+	var out struct {
+		Items []graph.Node `json:"items"`
+		More  bool         `json:"more"`
+	}
+	if err := cl.gget("/search", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		for _, n := range out.Items {
+			fmt.Fprintf(cl.out, "%s:%s\n", n.Kind, n.Key)
+		}
+		if out.More {
+			fmt.Fprintln(cl.out, "(more: narrow the search)")
+		}
+	})
+}
+
+func (cl *client) graphShow(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("the node")
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Node  graph.Node       `json:"node"`
+		Edges []graph.EdgeView `json:"edges"`
+	}
+	q := f.query()
+	q.Set("ref", ref)
+	if err := cl.gget("/node", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		fmt.Fprintf(cl.out, "%s:%s (%s, from %s)\n", out.Node.Kind, out.Node.Key, out.Node.Confidence, out.Node.Origin)
+		for _, e := range out.Edges {
+			fmt.Fprintf(cl.out, "  %s:%s  --%s-->  %s:%s %s\n", e.From.Kind, e.From.Key, e.Kind, e.To.Kind, e.To.Key, edgeNote(e))
+		}
+	})
+}
+
+func (cl *client) graphImpact(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("what changes")
+	if err != nil {
+		return err
+	}
+	var out graph.ImpactResult
+	q := f.query()
+	q.Set("ref", ref)
+	if err := cl.gget("/impact", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() { printImpact(cl, out) })
+}
+
+func (cl *client) graphWhere(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("the thing")
+	if err != nil {
+		return err
+	}
+	var out graph.WhereResult
+	q := f.query()
+	q.Set("ref", ref)
+	if err := cl.gget("/where", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if len(out.Deployments) == 0 {
+			fmt.Fprintf(cl.out, "%s:%s is not running anywhere the graph knows of\n", out.Start.Kind, out.Start.Key)
+		}
+		for _, d := range out.Deployments {
+			fmt.Fprintf(cl.out, "%-12s %-34s %s  %s %s\n", d.Airfield, d.Deployment.Key, shortDigest(d.Digest), d.Version, exactNote(d.Exact))
+		}
+		truncNote(cl, out.Truncation)
+	})
+}
+
+func (cl *client) graphContents(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("the deployment, image or component")
+	if err != nil {
+		return err
+	}
+	var out graph.ContentsResult
+	q := f.query()
+	q.Set("ref", ref)
+	if err := cl.gget("/contents", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		for _, g := range []struct {
+			name string
+			hits []graph.Hit
+		}{{"images", out.Images}, {"base images", out.BaseImages}, {"packages", out.Packages}, {"commits", out.Commits}, {"repositories", out.Repositories}} {
+			fmt.Fprintf(cl.out, "%s (%d)\n", g.name, len(g.hits))
+			for i, h := range g.hits {
+				if i >= 50 {
+					fmt.Fprintf(cl.out, "  ... and %d more\n", len(g.hits)-i)
+					break
 				}
+				fmt.Fprintf(cl.out, "  %s %s\n", h.Node.Key, lastResolved(h))
 			}
-			fmt.Fprintf(tw, "edges\t%d\n", s.Edges)
-			tw.Flush()
-			for _, r := range s.Sources {
-				fmt.Fprintf(cl.out, "source %s read %d scopes, last at %s\n", r.Source, r.Scopes, time.UnixMilli(r.At).Format(time.RFC3339))
+		}
+		truncNote(cl, out.Truncation)
+	})
+}
+
+func (cl *client) graphPath(cmd string, f *graphFlags) error {
+	_ = cmd
+	if len(f.pos) != 2 {
+		return usageErr("name two nodes: launchway graph path FROM TO")
+	}
+	var out graph.PathResult
+	q := f.query()
+	q.Set("from", f.pos[0])
+	q.Set("to", f.pos[1])
+	if err := cl.gget("/path", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if !out.Found {
+			fmt.Fprintln(cl.out, "no path between them that you may see")
+			return
+		}
+		fmt.Fprintf(cl.out, "%s:%s (%s)\n", out.From.Kind, out.From.Key, out.Way)
+		for _, s := range out.Steps {
+			fmt.Fprintf(cl.out, "  -> %s:%s   via %s %s\n", s.Node.Kind, s.Node.Key, s.Edge.Kind, edgeNote(s.Edge))
+		}
+	})
+}
+
+func (cl *client) graphOrder(cmd string, f *graphFlags) error {
+	_ = cmd
+	q := f.query()
+	for _, r := range f.repos {
+		q.Add("repository", r)
+	}
+	if *f.repo != "" && *f.commit == "" {
+		q.Add("repository", *f.repo)
+	}
+	if *f.upstream {
+		q.Set("upstream", "true")
+	}
+	var out graph.OrderResult
+	if err := cl.gget("/order", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() { printOrder(cl, out) })
+}
+
+func (cl *client) graphRebuildSet(cmd string, f *graphFlags) error {
+	_ = cmd
+	if *f.repo == "" {
+		return usageErr("name the repository that was pushed: -R OWNER/NAME")
+	}
+	q := f.query()
+	q.Set("repository", *f.repo)
+	var out graph.RebuildResult
+	if err := cl.gget("/rebuild-set", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if len(out.Items) == 0 {
+			fmt.Fprintf(cl.out, "nothing else must be built after a push to %s\n", out.Repository)
+		}
+		for _, it := range out.Items {
+			var via []string
+			for _, w := range it.Why {
+				via = append(via, w.Provider+" ("+strings.Join(w.Via, ", ")+")")
 			}
-		})
-	case "search":
-		if len(f.pos) != 1 {
-			return usageErr("name what to search for")
+			fmt.Fprintf(cl.out, "%d  %s   after %s\n", it.Level, it.Repository, strings.Join(via, " then "))
 		}
-		q := url.Values{"q": {f.pos[0]}}
-		if *f.kind != "" {
-			q.Set("kind", *f.kind)
+		for _, s := range out.Skipped {
+			fmt.Fprintf(cl.out, "not rebuilt: %s (%s: %s)\n", s.Consumer, s.Override, s.Reason)
 		}
+		truncNote(cl, out.Truncation)
+	})
+}
+
+func (cl *client) graphOverrides(cmd string, f *graphFlags) error {
+	_ = cmd
+	var out struct {
+		Items []graph.Override `json:"items"`
+	}
+	if err := cl.gget("/overrides", nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		for _, o := range out.Items {
+			fmt.Fprintf(cl.out, "%d  %s %s -> %s %s  because %s (%s)\n", o.ID, o.Kind, o.From, o.To, o.Value, o.Reason, o.Author)
+		}
+	})
+}
+
+func (cl *client) graphOverrideAdd(cmd string, f *graphFlags) error {
+	_ = cmd
+	kind := *f.kind
+	var out graph.Override
+	if err := cl.call("POST", "/api/v1/graph/overrides", graph.Override{Kind: kind, From: *f.from, To: *f.to, Value: *f.value, Reason: *f.reason}, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "override %d recorded\n", out.ID) })
+}
+
+func (cl *client) graphOverrideRemove(cmd string, f *graphFlags) error {
+	_ = cmd
+	if len(f.pos) != 1 {
+		return usageErr("name the override's number")
+	}
+	if err := cl.call("DELETE", "/api/v1/graph/overrides/"+f.pos[0], nil, nil); err != nil {
+		return err
+	}
+	fmt.Fprintln(cl.out, "override removed")
+	return nil
+}
+
+func (cl *client) graphNeeds(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("the component or repository")
+	if err != nil {
+		return err
+	}
+	q := f.query()
+	q.Set("ref", ref)
+	if cmd == "needs" {
 		var out struct {
-			Items []graph.Node `json:"items"`
-			More  bool         `json:"more"`
+			Items []graph.ComponentNeeds `json:"items"`
+			File  string                 `json:"file"`
 		}
-		if err := get("/search", q, &out); err != nil {
+		if err := cl.gget("/needs", q, &out); err != nil {
 			return err
 		}
 		return cl.print(out, *f.asJSON, func() {
 			for _, n := range out.Items {
-				fmt.Fprintf(cl.out, "%s:%s\n", n.Kind, n.Key)
+				fmt.Fprintf(cl.out, "%s\n", n.Component.Key)
+				for _, x := range n.Facts {
+					fmt.Fprintf(cl.out, "  %-9s %-22s %-9s %s\n", x.Facet, x.Display(), x.Source, x.Evidence)
+				}
+				for _, a := range n.Advice {
+					fmt.Fprintf(cl.out, "  advice: %s\n", a.Message)
+				}
 			}
-			if out.More {
-				fmt.Fprintln(cl.out, "(more: narrow the search)")
-			}
+			fmt.Fprintf(cl.out, "\nwrite what is wrong in %s; what is declared there always wins\n", out.File)
 		})
-	case "show":
-		ref, err := f.one("the node")
+	}
+	var out struct {
+		Items []graph.PlacementResult `json:"items"`
+	}
+	if err := cl.gget("/placement", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		for _, p := range out.Items {
+			fmt.Fprintf(cl.out, "%s: %d of %d hosts satisfy it\n", p.Component.Key, len(p.Fits), p.Hosts)
+			for _, c := range p.Fits {
+				fmt.Fprintf(cl.out, "  fits      %s:%s\n", c.Host.Kind, c.Host.Key)
+			}
+			for _, c := range p.NearMisses {
+				var why []string
+				for _, m := range c.Missing {
+					why = append(why, m.Reason)
+				}
+				fmt.Fprintf(cl.out, "  near miss %s:%s  %s\n", c.Host.Kind, c.Host.Key, strings.Join(why, "; "))
+			}
+			for _, g := range p.Gaps {
+				fmt.Fprintf(cl.out, "  GAP       %s\n", g.Message)
+			}
+		}
+	})
+}
+
+func (cl *client) graphSpec(cmd string, f *graphFlags) error {
+	_ = cmd
+	if len(f.pos) == 0 {
+		return usageErr("name the components or repositories that run together")
+	}
+	q := f.query()
+	for _, r := range f.pos {
+		q.Add("ref", r)
+	}
+	if *f.headroom > 0 {
+		q.Set("headroom", strconv.Itoa(*f.headroom))
+	}
+	var out graph.MachineSpec
+	if err := cl.gget("/specification", q, &out); err != nil {
+		return err
+	}
+	if *f.format == "yaml" {
+		y, err := out.YAML()
 		if err != nil {
 			return err
 		}
-		var out struct {
-			Node  graph.Node       `json:"node"`
-			Edges []graph.EdgeView `json:"edges"`
-		}
-		q := f.query()
-		q.Set("ref", ref)
-		if err := get("/node", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			fmt.Fprintf(cl.out, "%s:%s (%s, from %s)\n", out.Node.Kind, out.Node.Key, out.Node.Confidence, out.Node.Origin)
-			for _, e := range out.Edges {
-				fmt.Fprintf(cl.out, "  %s:%s  --%s-->  %s:%s %s\n", e.From.Kind, e.From.Key, e.Kind, e.To.Kind, e.To.Key, edgeNote(e))
-			}
-		})
-	case "impact":
-		ref, err := f.one("what changes")
-		if err != nil {
-			return err
-		}
-		var out graph.ImpactResult
-		q := f.query()
-		q.Set("ref", ref)
-		if err := get("/impact", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() { printImpact(cl, out) })
-	case "where":
-		ref, err := f.one("the thing")
-		if err != nil {
-			return err
-		}
-		var out graph.WhereResult
-		q := f.query()
-		q.Set("ref", ref)
-		if err := get("/where", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			if len(out.Deployments) == 0 {
-				fmt.Fprintf(cl.out, "%s:%s is not running anywhere the graph knows of\n", out.Start.Kind, out.Start.Key)
-			}
-			for _, d := range out.Deployments {
-				fmt.Fprintf(cl.out, "%-12s %-34s %s  %s %s\n", d.Airfield, d.Deployment.Key, shortDigest(d.Digest), d.Version, exactNote(d.Exact))
-			}
-			truncNote(cl, out.Truncation)
-		})
-	case "contents":
-		ref, err := f.one("the deployment, image or component")
-		if err != nil {
-			return err
-		}
-		var out graph.ContentsResult
-		q := f.query()
-		q.Set("ref", ref)
-		if err := get("/contents", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			for _, g := range []struct {
-				name string
-				hits []graph.Hit
-			}{{"images", out.Images}, {"base images", out.BaseImages}, {"packages", out.Packages}, {"commits", out.Commits}, {"repositories", out.Repositories}} {
-				fmt.Fprintf(cl.out, "%s (%d)\n", g.name, len(g.hits))
-				for i, h := range g.hits {
-					if i >= 50 {
-						fmt.Fprintf(cl.out, "  ... and %d more\n", len(g.hits)-i)
-						break
-					}
-					fmt.Fprintf(cl.out, "  %s %s\n", h.Node.Key, lastResolved(h))
-				}
-			}
-			truncNote(cl, out.Truncation)
-		})
-	case "path":
-		if len(f.pos) != 2 {
-			return usageErr("name two nodes: launchway graph path FROM TO")
-		}
-		var out graph.PathResult
-		q := f.query()
-		q.Set("from", f.pos[0])
-		q.Set("to", f.pos[1])
-		if err := get("/path", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			if !out.Found {
-				fmt.Fprintln(cl.out, "no path between them that you may see")
-				return
-			}
-			fmt.Fprintf(cl.out, "%s:%s (%s)\n", out.From.Kind, out.From.Key, out.Way)
-			for _, s := range out.Steps {
-				fmt.Fprintf(cl.out, "  -> %s:%s   via %s %s\n", s.Node.Kind, s.Node.Key, s.Edge.Kind, edgeNote(s.Edge))
-			}
-		})
-	case "order":
-		q := f.query()
-		for _, r := range f.repos {
-			q.Add("repository", r)
-		}
-		if *f.repo != "" && *f.commit == "" {
-			q.Add("repository", *f.repo)
-		}
-		if *f.upstream {
-			q.Set("upstream", "true")
-		}
-		var out graph.OrderResult
-		if err := get("/order", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() { printOrder(cl, out) })
-	case "rebuild-set":
-		if *f.repo == "" {
-			return usageErr("name the repository that was pushed: -R OWNER/NAME")
-		}
-		q := f.query()
-		q.Set("repository", *f.repo)
-		var out graph.RebuildResult
-		if err := get("/rebuild-set", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			if len(out.Items) == 0 {
-				fmt.Fprintf(cl.out, "nothing else must be built after a push to %s\n", out.Repository)
-			}
-			for _, it := range out.Items {
-				var via []string
-				for _, w := range it.Why {
-					via = append(via, w.Provider+" ("+strings.Join(w.Via, ", ")+")")
-				}
-				fmt.Fprintf(cl.out, "%d  %s   after %s\n", it.Level, it.Repository, strings.Join(via, " then "))
-			}
-			for _, s := range out.Skipped {
-				fmt.Fprintf(cl.out, "not rebuilt: %s (%s: %s)\n", s.Consumer, s.Override, s.Reason)
-			}
-			truncNote(cl, out.Truncation)
-		})
-	case "overrides":
-		var out struct {
-			Items []graph.Override `json:"items"`
-		}
-		if err := get("/overrides", nil, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			for _, o := range out.Items {
-				fmt.Fprintf(cl.out, "%d  %s %s -> %s %s  because %s (%s)\n", o.ID, o.Kind, o.From, o.To, o.Value, o.Reason, o.Author)
-			}
-		})
-	case "override-add":
-		kind := *f.kind
-		var out graph.Override
-		if err := cl.call("POST", "/api/v1/graph/overrides", graph.Override{Kind: kind, From: *f.from, To: *f.to, Value: *f.value, Reason: *f.reason}, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "override %d recorded\n", out.ID) })
-	case "override-remove":
-		if len(f.pos) != 1 {
-			return usageErr("name the override's number")
-		}
-		if err := cl.call("DELETE", "/api/v1/graph/overrides/"+f.pos[0], nil, nil); err != nil {
-			return err
-		}
-		fmt.Fprintln(cl.out, "override removed")
-		return nil
-	case "needs", "placement":
-		ref, err := f.one("the component or repository")
-		if err != nil {
-			return err
-		}
-		q := f.query()
-		q.Set("ref", ref)
-		if cmd == "needs" {
-			var out struct {
-				Items []graph.ComponentNeeds `json:"items"`
-				File  string                 `json:"file"`
-			}
-			if err := get("/needs", q, &out); err != nil {
-				return err
-			}
-			return cl.print(out, *f.asJSON, func() {
-				for _, n := range out.Items {
-					fmt.Fprintf(cl.out, "%s\n", n.Component.Key)
-					for _, x := range n.Facts {
-						fmt.Fprintf(cl.out, "  %-9s %-22s %-9s %s\n", x.Facet, x.Display(), x.Source, x.Evidence)
-					}
-					for _, a := range n.Advice {
-						fmt.Fprintf(cl.out, "  advice: %s\n", a.Message)
-					}
-				}
-				fmt.Fprintf(cl.out, "\nwrite what is wrong in %s; what is declared there always wins\n", out.File)
-			})
-		}
-		var out struct {
-			Items []graph.PlacementResult `json:"items"`
-		}
-		if err := get("/placement", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			for _, p := range out.Items {
-				fmt.Fprintf(cl.out, "%s: %d of %d hosts satisfy it\n", p.Component.Key, len(p.Fits), p.Hosts)
-				for _, c := range p.Fits {
-					fmt.Fprintf(cl.out, "  fits      %s:%s\n", c.Host.Kind, c.Host.Key)
-				}
-				for _, c := range p.NearMisses {
-					var why []string
-					for _, m := range c.Missing {
-						why = append(why, m.Reason)
-					}
-					fmt.Fprintf(cl.out, "  near miss %s:%s  %s\n", c.Host.Kind, c.Host.Key, strings.Join(why, "; "))
-				}
-				for _, g := range p.Gaps {
-					fmt.Fprintf(cl.out, "  GAP       %s\n", g.Message)
-				}
-			}
-		})
-	case "spec":
-		if len(f.pos) == 0 {
-			return usageErr("name the components or repositories that run together")
-		}
-		q := f.query()
-		for _, r := range f.pos {
-			q.Add("ref", r)
-		}
-		if *f.headroom > 0 {
-			q.Set("headroom", strconv.Itoa(*f.headroom))
-		}
-		var out graph.MachineSpec
-		if err := get("/specification", q, &out); err != nil {
-			return err
-		}
-		if *f.format == "yaml" {
-			y, err := out.YAML()
-			if err != nil {
-				return err
-			}
-			fmt.Fprint(cl.out, y)
-			return nil
-		}
-		return cl.print(out, true, nil)
-	case "reach":
-		ref, err := f.one("the package")
-		if err != nil {
-			return err
-		}
-		q := f.query()
-		q.Set("ref", ref)
-		var out graph.ReachResult
-		if err := get("/reach", q, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() {
-			if out.Note != "" {
-				fmt.Fprintln(cl.out, out.Note)
-			}
-			for _, v := range out.Versions {
-				var ids []string
-				for _, a := range v.Advisories {
-					ids = append(ids, a.ID)
-				}
-				fmt.Fprintf(cl.out, "%s %s: %s\n", out.Package.Key, v.Version, strings.Join(ids, ", "))
-				for _, d := range v.Deployments {
-					fmt.Fprintf(cl.out, "  runs in %s %s\n", d.Airfield, d.Deployment.Key)
-				}
-			}
-		})
-	case "propose-requirements":
-		if *f.repo == "" || *f.file == "" {
-			return usageErr("give -R OWNER/NAME and --file FILE")
-		}
-		data, err := os.ReadFile(*f.file)
-		if err != nil {
-			return err
-		}
-		var out struct {
-			Number int    `json:"number"`
-			Branch string `json:"branch"`
-		}
-		if err := cl.call("POST", "/api/v1/repositories/"+*f.repo+"/requirements/proposal", map[string]string{"content": string(data), "title": *f.title}, &out); err != nil {
-			return err
-		}
-		fmt.Fprintf(cl.out, "opened pull request #%d from %s\n", out.Number, out.Branch)
-		return nil
-	case "refresh":
-		if *f.repo == "" {
-			return usageErr("name the repository: -R OWNER/NAME")
-		}
-		var out graph.RunResult
-		if err := cl.call("POST", "/api/v1/repositories/"+*f.repo+"/graph/refresh", nil, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "read %s again\n", out.Scope) })
-	case "rescan", "rebuild":
-		var out struct {
-			Scopes int `json:"scopes"`
-		}
-		if err := cl.call("POST", "/api/v1/graph/"+cmd, nil, &out); err != nil {
-			return err
-		}
-		fmt.Fprintf(cl.out, "%s: read %d scopes\n", cmd, out.Scopes)
+		fmt.Fprint(cl.out, y)
 		return nil
 	}
-	return usageErr("unknown command graph %s\n\n%s", cmd, graphUsage)
+	return cl.print(out, true, nil)
+}
+
+func (cl *client) graphReach(cmd string, f *graphFlags) error {
+	_ = cmd
+	ref, err := f.one("the package")
+	if err != nil {
+		return err
+	}
+	q := f.query()
+	q.Set("ref", ref)
+	var out graph.ReachResult
+	if err := cl.gget("/reach", q, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if out.Note != "" {
+			fmt.Fprintln(cl.out, out.Note)
+		}
+		for _, v := range out.Versions {
+			var ids []string
+			for _, a := range v.Advisories {
+				ids = append(ids, a.ID)
+			}
+			fmt.Fprintf(cl.out, "%s %s: %s\n", out.Package.Key, v.Version, strings.Join(ids, ", "))
+			for _, d := range v.Deployments {
+				fmt.Fprintf(cl.out, "  runs in %s %s\n", d.Airfield, d.Deployment.Key)
+			}
+		}
+	})
+}
+
+func (cl *client) graphProposeRequirements(cmd string, f *graphFlags) error {
+	_ = cmd
+	if *f.repo == "" || *f.file == "" {
+		return usageErr("give -R OWNER/NAME and --file FILE")
+	}
+	data, err := os.ReadFile(*f.file) //nolint:gosec // G703: the file the person named on their own command line
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Number int    `json:"number"`
+		Branch string `json:"branch"`
+	}
+	if err := cl.call("POST", "/api/v1/repositories/"+*f.repo+"/requirements/proposal", map[string]string{"content": string(data), "title": *f.title}, &out); err != nil {
+		return err
+	}
+	fmt.Fprintf(cl.out, "opened pull request #%d from %s\n", out.Number, out.Branch)
+	return nil
+}
+
+func (cl *client) graphRefresh(cmd string, f *graphFlags) error {
+	_ = cmd
+	if *f.repo == "" {
+		return usageErr("name the repository: -R OWNER/NAME")
+	}
+	var out graph.RunResult
+	if err := cl.call("POST", "/api/v1/repositories/"+*f.repo+"/graph/refresh", nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "read %s again\n", out.Scope) })
+}
+
+func (cl *client) graphRescan(cmd string, f *graphFlags) error {
+	_ = cmd
+	var out struct {
+		Scopes int `json:"scopes"`
+	}
+	if err := cl.call("POST", "/api/v1/graph/"+cmd, nil, &out); err != nil {
+		return err
+	}
+	fmt.Fprintf(cl.out, "%s: read %d scopes\n", cmd, out.Scopes)
+	return nil
 }
 
 func edgeNote(e graph.EdgeView) string {

@@ -228,9 +228,7 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addRunLimitTools(srv, c)
 	addLaneTools(srv, c)
 	addRollbackReadTools(srv, c)
-	addGraphTools(srv, c)
 	if c.mayOperate {
-		addGraphChangeTools(srv, c)
 		addChangeTools(srv, c)
 		addRollbackChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)

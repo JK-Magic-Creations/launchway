@@ -53,6 +53,7 @@ func (s *Store) visibility(ctx context.Context, v Viewer) (visibility, error) {
 		return visibility{}, err
 	}
 	defer rows.Close()
+	defer rows.Close()
 	var allowed, denied []any
 	for rows.Next() {
 		var sub string
@@ -253,6 +254,7 @@ func (s *Store) walk(ctx context.Context, v Viewer, starts []int64, dir Directio
 	nv, nvArgs := vis.clause("n.subject")
 	ew, ewArgs := when.edge("e")
 	nw, nwArgs := when.node("n")
+	wc := walkCond{from: from, to: to, ev: ev, nv: nv, ew: ew, nw: nw, evArgs: evArgs, nvArgs: nvArgs, ewArgs: ewArgs, nwArgs: nwArgs, kinds: kinds}
 	rowCap := lim.Nodes*8 + 64
 	// SQLite's planner may start from the edges and scan the working set;
 	// CROSS JOIN fixes the order (the working set first), which is what
@@ -298,12 +300,12 @@ SELECT nid, depth FROM walk LIMIT ?`
 		}
 		return res, err
 	}
+	defer rows.Close()
 	n := 0
 	for rows.Next() {
 		var nid int64
 		var depth int
 		if err := rows.Scan(&nid, &depth); err != nil {
-			rows.Close()
 			if cctx.Err() != nil {
 				res.trunc = Truncation{true, "time"}
 				break
@@ -329,7 +331,7 @@ SELECT nid, depth FROM walk LIMIT ?`
 		res.order = append(res.order, nid)
 	}
 	err = rows.Err()
-	rows.Close()
+	_ = rows.Close() // before the next statements: the loop may have stopped early
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || cctx.Err() != nil {
 			res.trunc = Truncation{true, "time"}
@@ -340,7 +342,7 @@ SELECT nid, depth FROM walk LIMIT ?`
 			return res, err
 		}
 	}
-	if err := s.parents(cctx, &res, from, to, ev, evArgs, ew, ewArgs, kinds); err != nil {
+	if err := s.parents(cctx, &res, wc); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || cctx.Err() != nil {
 			res.trunc = Truncation{true, "time"}
 			return res, nil
@@ -348,27 +350,8 @@ SELECT nid, depth FROM walk LIMIT ?`
 		return res, err
 	}
 	sort.SliceStable(res.order, func(i, j int) bool { return res.best[res.order[i]].depth < res.best[res.order[j]].depth })
-	if !res.trunc.Truncated {
-		// Is there more beyond the depth limit?
-		var edge []any
-		for id, r := range res.best {
-			if r.depth == lim.Depth {
-				edge = append(edge, id)
-			}
-		}
-		if len(edge) > 0 && len(edge) <= 2000 {
-			q := `SELECT count(*) FROM (SELECT 1 FROM graph_edges e JOIN graph_nodes n ON n.nid = e.` + to + ` AND ` + nv + ` AND ` + nw + ` WHERE e.org = ? AND e.` + from + ` IN (` + marks(len(edge)) + `) AND ` + ew + ` AND e.kind IN (` + marks(len(kinds)) + `) AND ` + ev + ` LIMIT 1) x`
-			a := append(append([]any{}, nvArgs...), nwArgs...)
-			a = append(a, s.Org)
-			a = append(a, edge...)
-			a = append(a, ewArgs...)
-			a = append(a, kinds...)
-			a = append(a, evArgs...)
-			var more int
-			if err := s.DB.QueryRow(ctx, q, a...).Scan(&more); err == nil && more > 0 {
-				res.trunc = Truncation{true, "depth"}
-			}
-		}
+	if !res.trunc.Truncated && s.moreBeyond(ctx, res, lim.Depth, wc) {
+		res.trunc = Truncation{true, "depth"}
 	}
 	return res, nil
 }
@@ -386,17 +369,17 @@ func (s *Store) load(ctx context.Context, ids []int64) (map[int64]Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var n Node
 			var kind, attrs, conf string
 			if err := rows.Scan(&n.ID, &kind, &n.Key, &n.Name, &n.Subject, &n.Owner, &attrs, &n.Origin, &n.Scope, &n.Ref, &conf, &n.FirstSeen, &n.LastSeen, &n.RemovedAt); err != nil {
-				rows.Close()
 				return nil, err
 			}
 			n.Kind, n.Attrs, n.Confidence = NodeKind(kind), decodeAttrs(attrs), Confidence(conf)
 			out[n.ID] = n
 		}
-		if err := rows.Close(); err != nil {
+		if err := rows.Err(); err != nil {
 			return nil, err
 		}
 	}
@@ -422,17 +405,17 @@ func (s *Store) loadEdges(ctx context.Context, ids []int64, nodes map[int64]Node
 		if err != nil {
 			return nil, err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var r raw
 			var kind, attrs, conf string
 			if err := rows.Scan(&r.v.ID, &kind, &r.src, &r.dst, &r.rev, &r.v.Qualifier, &r.v.Constraint, &r.v.Resolved, &attrs, &r.v.Origin, &r.v.Ref, &conf, &r.v.ValidFrom, &r.v.ValidTo); err != nil {
-				rows.Close()
 				return nil, err
 			}
 			r.v.Kind, r.v.Attrs, r.v.Confidence = EdgeKind(kind), decodeAttrs(attrs), Confidence(conf)
 			all = append(all, r)
 		}
-		if err := rows.Close(); err != nil {
+		if err := rows.Err(); err != nil {
 			return nil, err
 		}
 	}
@@ -650,20 +633,10 @@ func (s *Store) Search(ctx context.Context, v Viewer, text string, kinds []NodeK
 	}
 	q += ` ORDER BY n.kind, n.key LIMIT ?`
 	a = append(a, limit+1)
-	rows, err := s.DB.Query(ctx, q, a...)
+	ids, err := ids(ctx, s.DB, q, a...)
 	if err != nil {
 		return nil, false, err
 	}
-	var ids []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, false, err
-		}
-		ids = append(ids, id)
-	}
-	rows.Close()
 	more := len(ids) > limit
 	if more {
 		ids = ids[:limit]
@@ -701,22 +674,12 @@ func (s *Store) Edges(ctx context.Context, v Viewer, ref NodeRef, when When, lim
 	a = append(a, evArgs...)
 	a = append(a, nvArgs...)
 	a = append(a, limit+1)
-	rows, err := s.DB.Query(ctx, `SELECT e.id FROM graph_edges e JOIN graph_nodes o ON o.nid = CASE WHEN e.src = ? THEN e.dst ELSE e.src END
+	ids, err := ids(ctx, s.DB, `SELECT e.id FROM graph_edges e JOIN graph_nodes o ON o.nid = CASE WHEN e.src = ? THEN e.dst ELSE e.src END
 		WHERE e.org = ? AND (e.src = ? OR e.dst = ?) AND `+ew+` AND `+ev+` AND `+nv+` AND o.removed_at = 0 ORDER BY e.kind, e.id LIMIT ?`,
 		a...)
 	if err != nil {
 		return nil, false, err
 	}
-	var ids []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, false, err
-		}
-		ids = append(ids, id)
-	}
-	rows.Close()
 	more := len(ids) > limit
 	if more {
 		ids = ids[:limit]
@@ -736,7 +699,8 @@ func (s *Store) Edges(ctx context.Context, v Viewer, ref NodeRef, when When, lim
 // parents finds, for each node reached, the edge it was reached by: an edge
 // from a node one step shallower. It reads the edges that leave the nodes
 // reached once each.
-func (s *Store) parents(ctx context.Context, res *walkResult, from, to, ev string, evArgs []any, ew string, ewArgs []any, kinds []any) error {
+func (s *Store) parents(ctx context.Context, res *walkResult, wc walkCond) error {
+	from, to, ev, evArgs, ew, ewArgs, kinds := wc.from, wc.to, wc.ev, wc.evArgs, wc.ew, wc.ewArgs, wc.kinds
 	ids := make([]int64, 0, len(res.best))
 	for id := range res.best {
 		ids = append(ids, id)
@@ -754,10 +718,10 @@ func (s *Store) parents(ctx context.Context, res *walkResult, from, to, ev strin
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var eid, f, t int64
 			if err := rows.Scan(&eid, &f, &t); err != nil {
-				rows.Close()
 				return err
 			}
 			fr, ok1 := res.best[f]
@@ -766,9 +730,39 @@ func (s *Store) parents(ctx context.Context, res *walkResult, from, to, ev strin
 				res.best[t] = walkRow{parent: f, eid: eid, depth: to.depth}
 			}
 		}
-		if err := rows.Close(); err != nil {
+		if err := rows.Err(); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// walkCond is the SQL conditions of one walk: the direction, the viewer's
+// conditions on edges and nodes, the moment, and the kinds followed.
+type walkCond struct {
+	from, to, ev, nv, ew, nw              string
+	evArgs, nvArgs, ewArgs, nwArgs, kinds []any
+}
+
+// moreBeyond says whether any node at the depth limit has a way further on
+// that the walk may follow.
+func (s *Store) moreBeyond(ctx context.Context, res walkResult, depth int, wc walkCond) bool {
+	var edge []any
+	for id, r := range res.best {
+		if r.depth == depth {
+			edge = append(edge, id)
+		}
+	}
+	if len(edge) == 0 || len(edge) > 2000 {
+		return false
+	}
+	q := `SELECT count(*) FROM (SELECT 1 FROM graph_edges e JOIN graph_nodes n ON n.nid = e.` + wc.to + ` AND ` + wc.nv + ` AND ` + wc.nw + ` WHERE e.org = ? AND e.` + wc.from + ` IN (` + marks(len(edge)) + `) AND ` + wc.ew + ` AND e.kind IN (` + marks(len(wc.kinds)) + `) AND ` + wc.ev + ` LIMIT 1) x`
+	a := append(append([]any{}, wc.nvArgs...), wc.nwArgs...)
+	a = append(a, s.Org)
+	a = append(a, edge...)
+	a = append(a, wc.ewArgs...)
+	a = append(a, wc.kinds...)
+	a = append(a, wc.evArgs...)
+	var more int
+	return s.DB.QueryRow(ctx, q, a...).Scan(&more) == nil && more > 0
 }

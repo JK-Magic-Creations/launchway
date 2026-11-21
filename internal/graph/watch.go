@@ -60,17 +60,17 @@ func (w *Watcher) Tick(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	now := map[string]int64{}
 	for rows.Next() {
 		var p string
 		var at int64
 		if err := rows.Scan(&p, &at); err != nil {
-			rows.Close()
 			return err
 		}
 		now[p] = at
 	}
-	if err := rows.Close(); err != nil {
+	if err := rows.Err(); err != nil {
 		return err
 	}
 	var n, since, opened int64
@@ -108,7 +108,7 @@ func (w *Watcher) Tick(ctx context.Context) error {
 // Pushed reads a repository again after a push, in the background. Pushes to
 // the same repository that arrive while it is read are coalesced into one more
 // read.
-func (w *Watcher) Pushed(path string) {
+func (w *Watcher) Pushed(ctx context.Context, path string) {
 	w.mu.Lock()
 	if w.busy == nil {
 		w.busy, w.dirty = map[string]bool{}, map[string]bool{}
@@ -120,9 +120,10 @@ func (w *Watcher) Pushed(path string) {
 	}
 	w.busy[path] = true
 	w.mu.Unlock()
+	bg := context.WithoutCancel(ctx) // the push has committed: what follows is not undone when the client hangs up
 	go func() {
 		for {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			ctx, cancel := context.WithTimeout(bg, 2*time.Minute)
 			if _, err := w.Runner.PushedRepository(ctx, path); err != nil {
 				w.log().Warn("the software graph could not read a pushed repository", "repository", path, "error", err)
 			}

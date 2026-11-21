@@ -116,7 +116,7 @@ func TestGraphFollowsPushesAndFiltersByWhatThePersonMayRead(t *testing.T) {
 	for i, n := range full.Order {
 		pos[n] = i
 	}
-	if !(pos["acme/libgo"] < pos["acme/svc"] && pos["acme/base"] < pos["acme/svc"] && pos["acme/ui"] < pos["acme/web"]) {
+	if pos["acme/libgo"] >= pos["acme/svc"] || pos["acme/base"] >= pos["acme/svc"] || pos["acme/ui"] >= pos["acme/web"] {
 		t.Fatalf("order %v", full.Order)
 	}
 

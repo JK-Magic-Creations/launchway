@@ -13,40 +13,25 @@ func (s *Store) nodesOfKinds(ctx context.Context, kinds ...NodeKind) ([]Node, er
 	for _, k := range kinds {
 		a = append(a, string(k))
 	}
-	rows, err := s.DB.Query(ctx, `SELECT nid FROM graph_nodes WHERE org = ? AND removed_at = 0 AND kind IN (`+marks(len(kinds))+`) ORDER BY kind, key`, a...)
-	if err != nil {
-		return nil, err
-	}
-	return s.collect(ctx, rows)
+	return s.nodesByID(ctx, `SELECT nid FROM graph_nodes WHERE org = ? AND removed_at = 0 AND kind IN (`+marks(len(kinds))+`) ORDER BY kind, key`, a...)
 }
 
 func (s *Store) requirementNodes(ctx context.Context) ([]Node, error) {
 	return s.nodesOfKinds(ctx, KindRequirement)
 }
 
-func (s *Store) collect(ctx context.Context, rows interface {
-	Next() bool
-	Scan(...any) error
-	Close() error
-}) ([]Node, error) {
-	var ids []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	m, err := s.load(ctx, ids)
+// nodesByID runs a query for node numbers and returns the nodes, in that order.
+func (s *Store) nodesByID(ctx context.Context, q string, a ...any) ([]Node, error) {
+	nums, err := ids(ctx, s.DB, q, a...)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]Node, 0, len(ids))
-	for _, id := range ids {
+	m, err := s.load(ctx, nums)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Node, 0, len(nums))
+	for _, id := range nums {
 		out = append(out, m[id])
 	}
 	return out, nil
@@ -65,11 +50,7 @@ func (s *Store) visibleNodesOfKinds(ctx context.Context, v Viewer, when When, ki
 	for _, k := range kinds {
 		a = append(a, string(k))
 	}
-	rows, err := s.DB.Query(ctx, `SELECT nid FROM graph_nodes WHERE org = ? AND `+nv+` AND `+nw+` AND kind IN (`+marks(len(kinds))+`) ORDER BY kind, key`, a...)
-	if err != nil {
-		return nil, err
-	}
-	return s.collect(ctx, rows)
+	return s.nodesByID(ctx, `SELECT nid FROM graph_nodes WHERE org = ? AND `+nv+` AND `+nw+` AND kind IN (`+marks(len(kinds))+`) ORDER BY kind, key`, a...)
 }
 
 // Affected is a node a change reaches.
@@ -170,6 +151,7 @@ func (s *Store) repoOwners(ctx context.Context, v Viewer) (map[string]string, er
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	defer rows.Close()
 	out := map[string]string{}
 	for rows.Next() {

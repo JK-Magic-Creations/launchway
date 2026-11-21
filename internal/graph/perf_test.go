@@ -39,7 +39,6 @@ func synthetic(t testing.TB, s *Store, repos, layers int) (nodes, edges int) {
 		}
 		edges++
 	}
-	type pk struct{ id int64 }
 	perLayer := make([][]int64, layers)
 	for r := 0; r < repos; r++ {
 		sub := fmt.Sprintf("repo:org/r%d", r)

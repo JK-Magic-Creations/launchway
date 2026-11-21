@@ -38,7 +38,7 @@ func (s *Server) afterPush(ctx context.Context, c gitCaller, repo forge.Reposito
 	}
 	s.pullsPushed(ctx, c, repo, updates)
 	s.pollWatchers(repo)
-	s.graphPushed(repo, updates)
+	s.graphPushed(ctx, repo, updates)
 }
 
 func (s *Server) emitRefEvents(ctx context.Context, c gitCaller, repo forge.Repository, u githttp.RefUpdate) {

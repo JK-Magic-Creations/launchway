@@ -520,7 +520,7 @@ func (s *Server) graphSpecification(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/yaml")
-		_, _ = w.Write([]byte(y))
+		_, _ = w.Write([]byte(y)) //nolint:gosec // G705: YAML written from structured data, served as application/yaml and never as a page
 		return
 	}
 	writeJSON(w, http.StatusOK, spec)
@@ -648,13 +648,13 @@ func (s *Server) graphProposeRequirements(w http.ResponseWriter, r *http.Request
 }
 
 // graphPushed tells the graph that a repository's default branch moved.
-func (s *Server) graphPushed(repo forge.Repository, updates []githttp.RefUpdate) {
+func (s *Server) graphPushed(ctx context.Context, repo forge.Repository, updates []githttp.RefUpdate) {
 	if s.Graph == nil || s.Graph.Watch == nil {
 		return
 	}
 	for _, u := range updates {
 		if u.Name == "refs/heads/"+repo.DefaultBranch || repo.DefaultBranch == "" {
-			s.Graph.Watch.Pushed(repo.Path)
+			s.Graph.Watch.Pushed(ctx, repo.Path)
 			return
 		}
 	}

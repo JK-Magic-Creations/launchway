@@ -104,17 +104,19 @@ func (s *Store) Reach(ctx context.Context, v Viewer, pkg NodeRef, adv Advisories
 	if err != nil {
 		return out, err
 	}
+	defer rows.Close()
 	byVersion := map[string][]int64{}
 	for rows.Next() {
 		var dst int64
 		var ver string
 		if err := rows.Scan(&dst, &ver); err != nil {
-			rows.Close()
 			return out, err
 		}
 		byVersion[ver] = append(byVersion[ver], dst)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
 	versions := make([]string, 0, len(byVersion))
 	for ver := range byVersion {
 		versions = append(versions, ver)
@@ -201,16 +203,18 @@ func (s *Store) Summary(ctx context.Context, v Viewer) (Summary, error) {
 	if err != nil {
 		return out, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var k string
 		var n int
 		if err := rows.Scan(&k, &n); err != nil {
-			rows.Close()
 			return out, err
 		}
 		out.Nodes[k] = n
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
 	ev, evArgs := vis.clause("e.subject")
 	av, avArgs := vis.clause("a.subject")
 	bv, bvArgs := vis.clause("b.subject")
@@ -225,6 +229,7 @@ func (s *Store) Summary(ctx context.Context, v Viewer) (Summary, error) {
 	if err != nil {
 		return out, err
 	}
+	defer rows.Close()
 	defer rows.Close()
 	for rows.Next() {
 		var r SourceRun

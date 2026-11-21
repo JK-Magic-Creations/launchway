@@ -2,9 +2,7 @@ package graph
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"path"
 	"regexp"
@@ -57,9 +55,6 @@ type Unit struct {
 	Platforms     []string
 	Facts         []Fact // inferred
 }
-
-// facet kinds that hold several values; the others hold one.
-var multiFacet = map[string]bool{FacetArch: true, FacetDevice: true, FacetFeature: true, FacetPort: true, FacetData: true, FacetRuntime: true}
 
 // Units finds the components of a repository that get requirements and what
 // can safely be inferred for each from the files of the repository.
@@ -203,20 +198,57 @@ func seenSet(m map[string]string) map[string]bool {
 	return out
 }
 
-// applyKubernetes adds the resource requests, devices and ports that
-// Kubernetes manifests in the repository give to the unit whose image they
-// run; with one unit only, to that unit.
-func applyKubernetes(tree fs.FS, units []Unit) {
-	type pod struct {
-		file, kind, name string
-		cpu, mem, eph    int64
-		gpu              int
-		ports            []int
-		images           []string
+// kubePod is what the resource requests of one workload say.
+type kubePod struct {
+	file, kind, name string
+	cpu, mem, eph    int64
+	gpu              int
+	ports            []int
+	images           []string
+}
+
+// readKubePod reads the containers of a workload: images, requests, GPU
+// limits and ports. It returns false for a document that is not a workload.
+func readKubePod(doc map[string]any, file string) (kubePod, bool) {
+	kind, _ := doc["kind"].(string)
+	tmpl := podSpec(doc, kind)
+	if tmpl == nil {
+		return kubePod{}, false
 	}
-	var pods []pod
+	md, _ := doc["metadata"].(map[string]any)
+	nm, _ := md["name"].(string)
+	pd := kubePod{file: file, kind: kind, name: nm}
+	cs, _ := tmpl["containers"].([]any)
+	for _, c := range cs {
+		cm, _ := c.(map[string]any)
+		if img, _ := cm["image"].(string); img != "" {
+			pd.images = append(pd.images, ImageName(img))
+		}
+		res, _ := cm["resources"].(map[string]any)
+		req, _ := res["requests"].(map[string]any)
+		lim, _ := res["limits"].(map[string]any)
+		pd.cpu += qtyCPU(req["cpu"], lim["cpu"])
+		pd.mem += qtyBytes(req["memory"], lim["memory"])
+		pd.eph += qtyBytes(req["ephemeral-storage"], lim["ephemeral-storage"])
+		for _, k := range []string{"nvidia.com/gpu", "amd.com/gpu", "gpu.intel.com/i915"} {
+			pd.gpu += max(qtyInt(lim[k]), 0)
+		}
+		ps, _ := cm["ports"].([]any)
+		for _, x := range ps {
+			pm, _ := x.(map[string]any)
+			if n := qtyInt(pm["containerPort"]); n > 0 {
+				pd.ports = append(pd.ports, n)
+			}
+		}
+	}
+	return pd, true
+}
+
+// kubePods reads every workload of the Kubernetes manifests in the tree.
+func kubePods(tree fs.FS) []kubePod {
+	var pods []kubePod
 	_ = fs.WalkDir(tree, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !(strings.HasSuffix(p, ".yaml") || strings.HasSuffix(p, ".yml")) || strings.HasPrefix(p, ".launchway/") {
+		if err != nil || d.IsDir() || (!strings.HasSuffix(p, ".yaml") && !strings.HasSuffix(p, ".yml")) || strings.HasPrefix(p, ".launchway/") {
 			return nil
 		}
 		data, err := fs.ReadFile(tree, p)
@@ -227,80 +259,60 @@ func applyKubernetes(tree fs.FS, units []Unit) {
 		for {
 			var doc map[string]any
 			if err := dec.Decode(&doc); err != nil {
-				if !errors.Is(err, io.EOF) {
-					return nil
-				}
-				break
+				return nil // the end of the file, or a document that is not YAML
 			}
-			kind, _ := doc["kind"].(string)
-			tmpl := podSpec(doc, kind)
-			if tmpl == nil {
-				continue
+			if pd, ok := readKubePod(doc, p); ok {
+				pods = append(pods, pd)
 			}
-			md, _ := doc["metadata"].(map[string]any)
-			nm, _ := md["name"].(string)
-			pd := pod{file: p, kind: kind, name: nm}
-			cs, _ := tmpl["containers"].([]any)
-			for _, c := range cs {
-				cm, _ := c.(map[string]any)
-				if img, _ := cm["image"].(string); img != "" {
-					pd.images = append(pd.images, NormalizeImage(strings.SplitN(strings.SplitN(img, "@", 2)[0], ":", 2)[0]))
-				}
-				res, _ := cm["resources"].(map[string]any)
-				req, _ := res["requests"].(map[string]any)
-				lim, _ := res["limits"].(map[string]any)
-				pd.cpu += qtyCPU(req["cpu"], lim["cpu"])
-				pd.mem += qtyBytes(req["memory"], lim["memory"])
-				pd.eph += qtyBytes(req["ephemeral-storage"], lim["ephemeral-storage"])
-				for _, k := range []string{"nvidia.com/gpu", "amd.com/gpu", "gpu.intel.com/i915"} {
-					if n := qtyInt(lim[k]); n > 0 {
-						pd.gpu += n
-					}
-				}
-				ps, _ := cm["ports"].([]any)
-				for _, x := range ps {
-					pm, _ := x.(map[string]any)
-					if n := qtyInt(pm["containerPort"]); n > 0 {
-						pd.ports = append(pd.ports, n)
-					}
-				}
-			}
-			pods = append(pods, pd)
 		}
-		return nil
 	})
-	for _, pd := range pods {
-		var target *Unit
-		for i := range units {
-			for _, s := range units[i].Streams {
-				for _, img := range pd.images {
-					if img == s || strings.HasSuffix(s, "/"+strings.TrimPrefix(img, "docker.io/")) || strings.HasSuffix(img, "/"+lastTwo(s)) {
-						target = &units[i]
-					}
+	return pods
+}
+
+// podUnit finds the unit whose image a workload runs; with one unit only, that unit.
+func podUnit(units []Unit, pd kubePod) *Unit {
+	for i := range units {
+		for _, s := range units[i].Streams {
+			for _, img := range pd.images {
+				if img == s || strings.HasSuffix(s, "/"+strings.TrimPrefix(img, "docker.io/")) || strings.HasSuffix(img, "/"+lastTwo(s)) {
+					return &units[i]
 				}
 			}
 		}
-		if target == nil && len(units) == 1 {
-			target = &units[0]
-		}
+	}
+	if len(units) == 1 {
+		return &units[0]
+	}
+	return nil
+}
+
+// applyKubernetes adds the resource requests, devices and ports that
+// Kubernetes manifests in the repository give to the unit whose image they
+// run; with one unit only, to that unit.
+func applyKubernetes(tree fs.FS, units []Unit) {
+	for _, pd := range kubePods(tree) {
+		target := podUnit(units, pd)
 		if target == nil {
 			continue
 		}
 		ev := pd.kind + "/" + pd.name + " in " + pd.file
+		add := func(facet, value, what string) {
+			target.Facts = append(target.Facts, Fact{facet, value, Inferred, what + ev})
+		}
 		if pd.cpu > 0 {
-			target.Facts = append(target.Facts, Fact{FacetCPU, strconv.FormatInt(pd.cpu, 10), Inferred, "resource requests of " + ev})
+			add(FacetCPU, strconv.FormatInt(pd.cpu, 10), "resource requests of ")
 		}
 		if pd.mem > 0 {
-			target.Facts = append(target.Facts, Fact{FacetMemory, strconv.FormatInt(pd.mem, 10), Inferred, "resource requests of " + ev})
+			add(FacetMemory, strconv.FormatInt(pd.mem, 10), "resource requests of ")
 		}
 		if pd.eph > 0 {
-			target.Facts = append(target.Facts, Fact{FacetStorage, strconv.FormatInt(pd.eph, 10), Inferred, "ephemeral storage of " + ev})
+			add(FacetStorage, strconv.FormatInt(pd.eph, 10), "ephemeral storage of ")
 		}
 		if pd.gpu > 0 {
-			target.Facts = append(target.Facts, Fact{FacetDevice, "gpu:" + strconv.Itoa(pd.gpu), Inferred, "GPU limit of " + ev})
+			add(FacetDevice, "gpu:"+strconv.Itoa(pd.gpu), "GPU limit of ")
 		}
 		for _, p := range pd.ports {
-			target.Facts = append(target.Facts, Fact{FacetPort, fmt.Sprintf("%d/tcp", p), Inferred, "containerPort in " + ev})
+			add(FacetPort, fmt.Sprintf("%d/tcp", p), "containerPort in ")
 		}
 	}
 }

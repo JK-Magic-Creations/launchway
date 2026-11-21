@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sort"
@@ -47,6 +48,25 @@ const (
 	OverridePin    = "pin"    // from (the consumer) is pinned to a version of to: a push to to does not rebuild it
 )
 
+// repoNode is what the repository graph needs to know of a node.
+type repoNode struct{ kind, key string }
+
+// repoRelations are the edges that make repositories depend on each other,
+// read once and joined in memory.
+type repoRelations struct {
+	depends, builtFrom []repoDep
+	repoOfComp         map[int64]int64 // component -> repository (contains)
+	pubOfPkg           map[int64]int64 // package -> component that publishes it
+	builder            map[int64]int64 // image -> pipeline that builds it
+	pipeRepo           map[int64]int64 // pipeline -> repository it is defined in
+	truncated          bool
+}
+
+type repoDep struct {
+	src, dst      int64
+	constraint, r string
+}
+
 // repoGraph reads the repository-level dependencies the viewer may see. It
 // reads the handful of edge kinds that make them up (depends-on, contains,
 // built-from, builds, defined-in) and joins them in memory: the same answer
@@ -58,95 +78,93 @@ func (s *Store) repoGraph(ctx context.Context, v Viewer, when When) (map[[2]stri
 		return nil, false, err
 	}
 	allows := vis.predicate()
-	type nrow struct{ kind, key string }
-	nodes := map[int64]nrow{}
-	nw, nwArgs := when.node("n")
-	rows, err := s.DB.Query(ctx, `SELECT n.nid, n.kind, n.key, n.subject FROM graph_nodes n WHERE n.org = ? AND `+nw+` AND n.kind IN ('repository','component','package','image','pipeline')`, append([]any{s.Org}, nwArgs...)...)
+	nodes, err := s.repoNodes(ctx, when, allows)
 	if err != nil {
 		return nil, false, err
 	}
-	for rows.Next() {
-		var id int64
-		var r nrow
-		var sub string
-		if err := rows.Scan(&id, &r.kind, &r.key, &sub); err != nil {
-			rows.Close()
-			return nil, false, err
-		}
-		if allows(sub) {
-			nodes[id] = r
-		}
-	}
-	if err := rows.Close(); err != nil {
+	rel, err := s.repoRelations(ctx, when, allows, nodes)
+	if err != nil {
 		return nil, false, err
 	}
+	return joinRepoEdges(nodes, rel), rel.truncated, nil
+}
+
+func (s *Store) repoNodes(ctx context.Context, when When, allows func(string) bool) (map[int64]repoNode, error) {
+	nodes := map[int64]repoNode{}
+	nw, nwArgs := when.node("n")
+	err := eachRow(ctx, s.DB, `SELECT n.nid, n.kind, n.key, n.subject FROM graph_nodes n WHERE n.org = ? AND `+nw+` AND n.kind IN ('repository','component','package','image','pipeline')`,
+		append([]any{s.Org}, nwArgs...), func(rows *sql.Rows) error {
+			var id int64
+			var r repoNode
+			var sub string
+			if err := rows.Scan(&id, &r.kind, &r.key, &sub); err != nil {
+				return err
+			}
+			if allows(sub) {
+				nodes[id] = r
+			}
+			return nil
+		})
+	return nodes, err
+}
+
+func (s *Store) repoRelations(ctx context.Context, when When, allows func(string) bool, nodes map[int64]repoNode) (repoRelations, error) {
+	rel := repoRelations{repoOfComp: map[int64]int64{}, pubOfPkg: map[int64]int64{}, builder: map[int64]int64{}, pipeRepo: map[int64]int64{}}
 	ew, ewArgs := when.edge("e")
 	const rowCap = 2000000
-	rows, err = s.DB.Query(ctx, `SELECT e.kind, e.src, e.dst, e.constraint_text, e.resolved, e.subject FROM graph_edges e WHERE e.org = ? AND `+ew+
-		` AND e.kind IN ('depends-on','contains','built-from','builds','defined-in') LIMIT ?`, append(append([]any{s.Org}, ewArgs...), rowCap+1)...)
-	if err != nil {
-		return nil, false, err
-	}
-	type dep struct {
-		src, dst      int64
-		constraint, r string
-	}
-	var depends, builtFrom []dep
-	repoOfComp := map[int64]int64{} // component -> repository (contains)
-	pubOfPkg := map[int64]int64{}   // package -> component that publishes it
-	builder := map[int64]int64{}    // image -> pipeline that builds it
-	pipeRepo := map[int64]int64{}   // pipeline -> repository it is defined in
 	n := 0
-	truncated := false
-	for rows.Next() {
+	err := eachRow(ctx, s.DB, `SELECT e.kind, e.src, e.dst, e.constraint_text, e.resolved, e.subject FROM graph_edges e WHERE e.org = ? AND `+ew+
+		` AND e.kind IN ('depends-on','contains','built-from','builds','defined-in') LIMIT ?`, append(append([]any{s.Org}, ewArgs...), rowCap+1), func(rows *sql.Rows) error {
 		var kind, con, res, sub string
 		var src, dst int64
 		if err := rows.Scan(&kind, &src, &dst, &con, &res, &sub); err != nil {
-			rows.Close()
-			return nil, false, err
+			return err
 		}
 		if n++; n > rowCap {
-			truncated = true
-			break
-		}
-		if !allows(sub) {
-			continue
+			rel.truncated = true
+			return errStop
 		}
 		sn, dn := nodes[src], nodes[dst]
-		if sn.kind == "" || dn.kind == "" {
-			continue
+		if !allows(sub) || sn.kind == "" || dn.kind == "" {
+			return nil
 		}
-		switch kind {
-		case "depends-on": // stored: src = package, dst = component
-			if sn.kind == "package" && dn.kind == "component" {
-				depends = append(depends, dep{src, dst, con, res})
-			}
-		case "contains":
-			switch {
-			case sn.kind == "repository" && dn.kind == "component":
-				repoOfComp[dst] = src
-			case sn.kind == "component" && dn.kind == "package":
-				pubOfPkg[dst] = src
-			}
-		case "built-from": // stored: src = base image, dst = component
-			if sn.kind == "image" && dn.kind == "component" {
-				builtFrom = append(builtFrom, dep{src, dst, con, res})
-			}
-		case "builds": // pipeline -> image
-			if sn.kind == "pipeline" && dn.kind == "image" {
-				builder[dst] = src
-			}
-		case "defined-in": // stored: src = repository, dst = pipeline
-			if sn.kind == "repository" && dn.kind == "pipeline" {
-				pipeRepo[dst] = src
-			}
+		rel.take(kind, sn.kind, dn.kind, src, dst, con, res)
+		return nil
+	})
+	return rel, err
+}
+
+// take files one edge by what it says about repositories.
+func (rel *repoRelations) take(kind, sk, dk string, src, dst int64, con, res string) {
+	switch kind {
+	case "depends-on": // stored: src = package, dst = component
+		if sk == "package" && dk == "component" {
+			rel.depends = append(rel.depends, repoDep{src, dst, con, res})
+		}
+	case "contains":
+		switch {
+		case sk == "repository" && dk == "component":
+			rel.repoOfComp[dst] = src
+		case sk == "component" && dk == "package":
+			rel.pubOfPkg[dst] = src
+		}
+	case "built-from": // stored: src = base image, dst = component
+		if sk == "image" && dk == "component" {
+			rel.builtFrom = append(rel.builtFrom, repoDep{src, dst, con, res})
+		}
+	case "builds": // pipeline -> image
+		if sk == "pipeline" && dk == "image" {
+			rel.builder[dst] = src
+		}
+	case "defined-in": // stored: src = repository, dst = pipeline
+		if sk == "repository" && dk == "pipeline" {
+			rel.pipeRepo[dst] = src
 		}
 	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return nil, false, err
-	}
+}
+
+// joinRepoEdges says which repository depends on which, and through what.
+func joinRepoEdges(nodes map[int64]repoNode, rel repoRelations) map[[2]string]*RepoEdge {
 	out := map[[2]string]*RepoEdge{}
 	add := func(consumer, provider int64, via, kind, con, res string) {
 		if consumer == provider || consumer == 0 || provider == 0 {
@@ -168,14 +186,13 @@ func (s *Store) repoGraph(ctx context.Context, v Viewer, when When) (map[[2]stri
 			e.Versions = addUnique(e.Versions, via+"@"+con)
 		}
 	}
-	for _, d := range depends {
-		pub := pubOfPkg[d.src]
-		add(repoOfComp[d.dst], repoOfComp[pub], nodes[d.src].key, "package", d.constraint, d.r)
+	for _, d := range rel.depends {
+		add(rel.repoOfComp[d.dst], rel.repoOfComp[rel.pubOfPkg[d.src]], nodes[d.src].key, "package", d.constraint, d.r)
 	}
-	for _, b := range builtFrom {
-		add(repoOfComp[b.dst], pipeRepo[builder[b.src]], nodes[b.src].key, "image", b.constraint, b.r)
+	for _, b := range rel.builtFrom {
+		add(rel.repoOfComp[b.dst], rel.pipeRepo[rel.builder[b.src]], nodes[b.src].key, "image", b.constraint, b.r)
 	}
-	return out, truncated, nil
+	return out
 }
 
 func addUnique(l []string, s string) []string {
@@ -194,6 +211,7 @@ func (s *Store) Overrides(ctx context.Context, v Viewer) ([]Override, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	defer rows.Close()
 	var out []Override
 	for rows.Next() {
@@ -359,42 +377,9 @@ func (s *Store) Order(ctx context.Context, v Viewer, q OrderQuery) (OrderResult,
 	if d.truncated {
 		res.Reason = "nodes"
 	}
-	// The repositories involved.
-	involved := map[string]bool{}
-	if len(q.Repositories) == 0 {
-		for k := range d.edges { // an ignored dependency is still shown, marked
-			involved[k[0]], involved[k[1]] = true, true
-		}
-	} else {
-		known := map[string]bool{}
-		for k := range d.edges {
-			known[k[0]], known[k[1]] = true, true
-		}
-		nodes, err := s.visibleNodesOfKinds(ctx, v, q.When, KindRepository)
-		if err != nil {
-			return res, err
-		}
-		for _, n := range nodes {
-			known[n.Key] = true
-		}
-		for _, r := range q.Repositories {
-			if known[r] {
-				involved[r] = true
-			} else {
-				res.Unknown = append(res.Unknown, r)
-			}
-		}
-		if q.Upstream {
-			// close over providers
-			for changed := true; changed; {
-				changed = false
-				for k, e := range d.edges {
-					if e.Override != "ignored" && involved[k[0]] && !involved[k[1]] {
-						involved[k[1]], changed = true, true
-					}
-				}
-			}
-		}
+	involved, err := s.involvedRepos(ctx, v, q, d, &res)
+	if err != nil {
+		return res, err
 	}
 	if len(involved) > lim.Nodes {
 		res.Truncated, res.Reason = true, "nodes"
@@ -441,6 +426,46 @@ func (s *Store) Order(ctx context.Context, v Viewer, q OrderQuery) (OrderResult,
 		res.Order = append(res.Order, l...)
 	}
 	return res, nil
+}
+
+// involvedRepos is the set of repositories an order is asked for: the ones
+// named (with what they depend on, if asked), or every one that is part of a
+// dependency. Names that are not known or not readable are listed as unknown.
+func (s *Store) involvedRepos(ctx context.Context, v Viewer, q OrderQuery, d repoDeps, res *OrderResult) (map[string]bool, error) {
+	involved := map[string]bool{}
+	if len(q.Repositories) == 0 {
+		for k := range d.edges { // an ignored dependency is still shown, marked
+			involved[k[0]], involved[k[1]] = true, true
+		}
+		return involved, nil
+	}
+	known := map[string]bool{}
+	for k := range d.edges {
+		known[k[0]], known[k[1]] = true, true
+	}
+	nodes, err := s.visibleNodesOfKinds(ctx, v, q.When, KindRepository)
+	if err != nil {
+		return nil, err
+	}
+	for _, n := range nodes {
+		known[n.Key] = true
+	}
+	for _, r := range q.Repositories {
+		if known[r] {
+			involved[r] = true
+		} else {
+			res.Unknown = append(res.Unknown, r)
+		}
+	}
+	for changed := q.Upstream; changed; { // close over providers
+		changed = false
+		for k, e := range d.edges {
+			if e.Override != "ignored" && involved[k[0]] && !involved[k[1]] {
+				involved[k[1]], changed = true, true
+			}
+		}
+	}
+	return involved, nil
 }
 
 // condense finds the groups of repositories that depend on each other
