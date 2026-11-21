@@ -2,7 +2,7 @@
 // server already reports. Pure functions: tested without a browser.
 
 import type { EntityRef } from "../entities";
-import type { Approval, DeployApp, DeploymentView, EnvironmentView, Me, Project, RunSummary, Runner, StepView } from "../api";
+import type { Approval, StepCause, DeployApp, DeploymentView, EnvironmentView, Me, Project, RunSummary, Runner, StepView } from "../api";
 
 // ---- the setup checklist ----
 
@@ -197,7 +197,7 @@ export function plainHealth(health: string): { label: string; tone: "ok" | "run"
 
 // ---- a failed run, explained ----
 
-export type FailureKind = "policy" | "timeout" | "killed" | "exit" | "infrastructure" | "unknown";
+export type FailureKind = "policy" | "timeout" | "killed" | "exit" | "infrastructure" | "deploy" | "unknown";
 
 export interface Failure {
   kind: FailureKind;
@@ -210,6 +210,8 @@ export interface Failure {
   excerpt: string;
   /** More steps failed than the one explained. */
   others: number;
+  /** The server's structured cause for the step, when it has one: its evidence and what happened next. */
+  cause?: StepCause;
 }
 
 /** Explains the first failed step of a run from what the server recorded about it: its error, exit code, and
@@ -221,6 +223,10 @@ export function explainFailure(steps: StepView[]): Failure | null {
   const s = [...failed].sort((a, b) => a.position - b.position)[0];
   const base = { step: s.id, exitCode: s.exit_code ?? null, excerpt: s.excerpt ?? "", others: failed.length - 1 };
   const err = (s.error ?? "").trim();
+  const c = s.cause;
+  if (c && c.kind !== "script_exit" && c.kind !== "other" && c.kind !== "refused") {
+    return { ...base, kind: c.kind === "timeout" ? "timeout" : "deploy", cause: c, headline: c.summary, advice: causeAdvice(c) };
+  }
   if (s.policy_blocked) {
     return { ...base, kind: "policy", headline: `A rule stopped ${s.id}.`, advice: ["The step itself did not fail: a rule in force refused it.", "Open the rule's decision to see what it wanted. If the rule is wrong for this case, an administrator can grant a time-limited waiver."] };
   }
@@ -246,4 +252,25 @@ export function explainFailure(steps: StepView[]): Failure | null {
     return { ...base, kind: "infrastructure", headline: `${s.id} could not run: ${err.replace(/\.$/, "")}.`, advice: ["The step's command never ran, so the cause is how it was set up, such as its image or the machine it was sent to.", "Open the step to see the full message."] };
   }
   return { ...base, kind: "unknown", headline: `${s.id} failed.`, advice: ["Open the step's logs to see what it said."] };
+}
+
+/** What to do about a failure the server explained. */
+function causeAdvice(c: StepCause): string[] {
+  switch (c.kind) {
+    case "analysis_failed":
+      return ["The new version failed a check the rollout makes before it takes all traffic, so it was not promoted.",
+        "Look at the evidence: which metric failed, when, and what it said. Fix the cause and re-run the deploy; the build is reused."];
+    case "sync_failed":
+      return ["Argo CD could not bring the application to the new version, or the application did not become healthy.", "Open the application in Argo CD for the details, fix it, and re-run the deploy."];
+    case "rollout_failed":
+      return ["The rollout stopped before the new version was healthy.", "Look at the rollout's steps and pods; re-run the deploy when it is fixed."];
+    case "timeout":
+      return ["The step did not finish in time.", "Look at what was last observed; raise the step's timeout if it really needs longer."];
+    case "runner_lost":
+      return ["The runner that was doing this stopped responding.", "Re-run it: nothing it was doing needs cleaning up by hand."];
+    case "command_failed":
+      return ["A command given to the rollout was not applied.", "The reason is in the step; fix it (an administrator may need to grant a right) and try again."];
+    default:
+      return ["Open the step to see the full message."];
+  }
 }

@@ -120,15 +120,15 @@ export function DeploymentControls({ run, d, now }: { run: RunDetail; d: Deploym
   const open = !d.verdict;
   return (
     <div className="dctl">
-      {open && controls && <ControlForm run={run} d={d} now={now} controls={controls}
+      {open && controls && <ControlForm run={run} d={d} now={now} controls={controls} latest={commands[commands.length - 1]}
         onGiven={(c) => { setPosted((p) => [...p, c]); refetch(); }} />}
       {commands.length > 0 && <CommandList run={run} d={d} now={now} commands={commands} controls={controls} onChange={refetch} />}
     </div>
   );
 }
 
-function ControlForm({ run, d, now, controls, onGiven }: {
-  run: RunDetail; d: DeploymentView; now: number; controls: Controls; onGiven: (c: CommandView) => void;
+function ControlForm({ run, d, now, controls, latest, onGiven }: {
+  run: RunDetail; d: DeploymentView; now: number; controls: Controls; latest?: CommandView; onGiven: (c: CommandView) => void;
 }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -141,7 +141,7 @@ function ControlForm({ run, d, now, controls, onGiven }: {
     const c = controls.controls.find((x) => x.action === a);
     if (!c) return [];
     if (c.available) return [{ action: a, enabled: true, reason: "" }];
-    if (c.forbidden && meaningful(a, ro)) return [{ action: a, enabled: false, reason: c.reason ?? "" }];
+    if ((c.forbidden || c.runner_cannot) && meaningful(a, ro)) return [{ action: a, enabled: false, reason: c.reason ?? "" }];
     return [];
   });
   if (shown.length === 0) return null;
@@ -178,6 +178,14 @@ function ControlForm({ run, d, now, controls, onGiven }: {
         </label>
       )}
       <ErrorBox error={error} />
+      {latest && latest.state !== "withdrawn" && (() => {
+        const st = stateOf(latest);
+        return (
+          <p className={`dctl-last dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : "status"}>
+            Last command, {actionLabel(latest.action).toLowerCase()} by {whoGave(latest)}: {st.text}.
+          </p>
+        );
+      })()}
       <div className="approval-actions dctl-actions">
         {shown.map((s) => {
           if (s.action === "abort" && s.enabled && confirmAbort) return null;
@@ -235,8 +243,8 @@ function stateOf(c: CommandView): { text: string; tone: string } {
       switch (c.result) {
         case "applied": return { text: "applied", tone: "ok" };
         case "already_applied": return { text: `already applied${c.detail ? `: ${c.detail}` : ""}`, tone: "ok" };
-        case "not_applied": return { text: `not applied${c.detail ? `: ${c.detail}` : ""}`, tone: "warn" };
-        case "failed": return { text: `failed${c.detail ? `: ${c.detail}` : ""}`, tone: "bad" };
+        case "not_applied": return { text: `not applied, the rollout is unchanged${c.detail ? `: ${c.detail}` : ""}`, tone: "warn" };
+        case "failed": return { text: `FAILED, it did not take effect${c.detail ? `: ${c.detail}` : ""}`, tone: "bad" };
       }
       return { text: String(c.result ?? "done").replace(/_/g, " "), tone: "idle" };
   }
@@ -267,7 +275,7 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
                 <span className={`dpill dpill-${st.tone}`}>{c.state === "done" ? (c.result ?? "done").replace(/_/g, " ") : c.state}</span>
               </div>
               {c.comment && <blockquote className="approval-comment">{c.comment}</blockquote>}
-              <div className={`dcmd-state dcmd-${st.tone}`}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <span className="faint">, {clock(c.done_at)}</span> : null}.</div>
+              <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <span className="faint">, {clock(c.done_at)}</span> : null}.</div>
               <div className="dep-notes">
                 <span>for the rollout {c.expect.step !== undefined ? <>at canary step {c.expect.step + 1}{c.expect.paused ? ", paused" : ""}</> : c.expect.paused ? "paused" : "as it was"}</span>
                 {c.expect.pod_hash && <span>pod template <Mono>{c.expect.pod_hash}</Mono></span>}
