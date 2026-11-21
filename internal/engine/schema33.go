@@ -58,6 +58,8 @@ CREATE TABLE pull_requests (
   merge_state        TEXT    NOT NULL DEFAULT 'unknown',
   merge_files        TEXT    NOT NULL DEFAULT '[]',
   merge_behind       {{BIG}} NOT NULL DEFAULT 0,
+  merge_ahead        {{BIG}} NOT NULL DEFAULT 0,
+  merge_reason       TEXT    NOT NULL DEFAULT '',
   merge_checked_head TEXT    NOT NULL DEFAULT '',
   merge_checked_base TEXT    NOT NULL DEFAULT '',
   merge_checked_at   {{BIG}} NOT NULL DEFAULT 0,

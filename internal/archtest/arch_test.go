@@ -49,6 +49,7 @@ var allowedImports = map[string][]string{
 	"internal/forge/githttp":             {"internal/forge", "internal/forge/storage"},
 	"internal/forge/gitssh":              {},
 	"internal/forge/refrules":            {"internal/ids"},
+	"internal/forge/pulls":               {"internal/forge/storage", "internal/gitexec", "internal/ids"},
 	"internal/forge/sshkeys":             {"internal/ids"},
 	"internal/forge/webhooks":            {"internal/ids"},
 	"internal/forge/hosting":             {"internal/auth", "internal/blobstore", "internal/egress", "internal/engine", "internal/forge", "internal/forge/egress", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/providers/launchway", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/storage", "internal/forge/store", "internal/forge/webhooks", "internal/gitexec"},
