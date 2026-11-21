@@ -13,7 +13,7 @@ does not have. Keep each list in its own section, in that form.
 # Run events and audit trail
 
 This page lists what Launchway records about runs and about people's actions: the run event log,
-the messages of the live stream the web UI listens to, and the audit trail. It is for people who
+the messages of the live stream the web UI listens to, and the Logbook. It is for people who
 read these records through the API, build tools on them, or review them for evidence.
 
 > **Verified** on 2026-11-19 against commit f717337: a server started with `launchway server` on
@@ -225,7 +225,7 @@ buffer this path.
 
 ## Audit trail
 
-The audit trail records who did what: every call that changes something, allowed or refused, every
+The Logbook records who did what: every call that changes something, allowed or refused, every
 refused API token, every webhook call, and every sign-in and sign-out. Launchway only ever adds to
 it. It never holds pipeline text, secrets, tokens or session IDs: a draft run is recorded with the
 SHA-256 of its text, and a save with its branch and commit.
@@ -261,7 +261,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `config.check_repository` | `POST /api/v1/config/check/repository`: the server contacted (or refused to contact) an address a caller gave; the target is the address without credentials, the detail says whether it was readable or refused |
 | `config.check_signin` | `POST /api/v1/config/check/signin`: the same for an identity provider's address |
 | `config.apply` | `POST /api/v1/config/apply`: several changes made together; the detail says how many changed |
-| `config.import` | `POST /api/v1/config/import` with `apply` (also `launchway config import --apply`); the detail holds the import's ID and the number of changes. The first start's import of the configuration file is recorded as an import, not in the audit trail |
+| `config.import` | `POST /api/v1/config/import` with `apply` (also `launchway config import --apply`); the detail holds the import's ID and the number of changes. The first start's import of the configuration file is recorded as an import, not in the Logbook |
 | `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |
 | `step_resources.set_default` | `PUT /api/v1/step-resources/defaults/{kind}` (also `launchway step-resources set-default`); the detail holds the default before and after |
 | `run_limits.set` | `PUT /api/v1/run-limits` (also `launchway run-limits set`); the detail holds the limits before and after |
@@ -344,7 +344,7 @@ Each entry has these fields:
 | `outcome` | `ok`; `denied` when the permission check or the handler refused it with `403`; `failed` when the call was allowed but did not succeed |
 | `detail` | a short description, at most 1000 bytes, such as `run #2 of main at fa0b04cb, inputs scan=quick`, or why it was refused or failed |
 
-### Reading the audit trail
+### Reading the Logbook
 
 Admins of every project read the trail on the **Audit trail** page, or with
 `GET /api/v1/audit`. Every parameter is optional:

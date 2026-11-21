@@ -80,7 +80,7 @@ Deploying by committing the desired version to a Git repository that a tool (her
 to the cluster.
 
 ### Go and No-go
-The two answers to a [clearance](#clearance): Go lets the run continue, No-go fails the step and skips what follows. The buttons say *Approve* and *Reject* in both sets, and the plain business set records them under those words too; the API paths stay `approve` and `reject`.
+The two answers to a [clearance](#clearance): Go lets the run continue, No-go fails the step and skips what follows. The plain business words are *Approve* and *Reject*; the API paths stay `approve` and `reject`.
 
 ### Health source
 A monitoring system (Prometheus, Loki, ClickHouse, Elasticsearch, PostgreSQL or a JSON API) that a
@@ -202,7 +202,7 @@ decides passed, failed or inconclusive. See [Verifying a deployment](guide/verif
 The [role](#role) that may see a project's runs, logs and pipelines, but not change anything.
 
 ### Variable
-A named, typed setting set at a [level](#base) (installation, organization, unit or project), for everything or for one environment. A nearer level overrides a wider one and a lock stops that. A secret variable is a reference, never the secret. See [Variables at levels](guide/variables.md).
+A named, typed setting set at a [level](#base) (Base, Wing, Squadron or Project), for everything or for one environment. A nearer level overrides a wider one and a lock stops that. A secret variable is a reference, never the secret. See [Variables at levels](guide/variables.md).
 
 ### Variable lock
 A lock on a variable at a level, with a reason: nobody below the level may change it, a pipeline file and a run included. In code terms, `final`. See [Variables at levels](guide/variables.md#locks).

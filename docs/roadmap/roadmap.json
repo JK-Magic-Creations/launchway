@@ -206,8 +206,8 @@
     },
     {
       "theme": "Platform",
-      "title": "Shared pipeline templates and flight plans",
-      "value": "A template or a flight plan set once for an organization or unit, used by every project beneath it, with deploy, verify and approval steps included.",
+      "title": "Shared pipeline templates and Flight plans",
+      "value": "A template or a Flight plan set once for a Wing or Squadron, used by every project beneath it, with deploy, verify and approval steps included.",
       "link": "guide/libraries"
     },
     {
@@ -319,7 +319,7 @@
               "status": "available",
               "title": "Built-in Git hosting",
               "value": "Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost.",
-              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.",
+              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.",
               "needs": "A database; the shared blob store that already exists.",
               "area": "git-hosting",
               "link": "guide/git-over-ssh"
@@ -401,7 +401,7 @@
               "status": "planned",
               "title": "Repository trash",
               "value": "A deleted repository goes to a trash and can come back within a set time.",
-              "detail": "Delete is reversible for a period you choose, and both the delete and the restore are in the audit trail.",
+              "detail": "Delete is reversible for a period you choose, and both the delete and the restore are in the Logbook.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -1503,9 +1503,9 @@
           "items": [
             {
               "status": "available",
-              "title": "Templates and flight plans by level",
-              "value": "Set a template or a flight plan at the organization or unit and every project beneath it uses it.",
-              "detail": "Today a flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.",
+              "title": "Templates and Flight plans by level",
+              "value": "Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it.",
+              "detail": "Today a Flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.",
               "link": "guide/libraries"
             },
             {
@@ -1520,7 +1520,7 @@
               "title": "Templates that read like code",
               "value": "A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open.",
               "detail": "You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.",
-              "needs": "Shared pipeline templates and flight plans.",
+              "needs": "Shared pipeline templates and Flight plans.",
               "area": "pipelines"
             },
             {
@@ -1551,7 +1551,7 @@
               "title": "See what is shared and who uses it",
               "value": "For any template, library or connection, a list of every project that uses it and what would change if it changed.",
               "detail": "A change to something shared is previewed before it is applied.",
-              "needs": "Templates and flight plans by level.",
+              "needs": "Templates and Flight plans by level.",
               "area": "pipelines"
             }
           ]
@@ -1612,7 +1612,7 @@
             {
               "status": "planned",
               "title": "Recipes for the popular tools",
-              "value": "Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready flight plan, a correct cache and test reports.",
+              "value": "Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and test reports.",
               "detail": "No hand-written cache keys. First phase of the recipes.",
               "area": "build-tools-caches"
             },
@@ -1730,7 +1730,7 @@
             {
               "status": "planned",
               "title": "A first green build in ten minutes",
-              "value": "Detect the tool, apply the recipe and its flight plan, and get a green build, with the clock as a test.",
+              "value": "Detect the tool, apply the recipe and its Flight plan, and get a green build, with the clock as a test.",
               "detail": "Includes mobile templates.",
               "area": "developer-experience"
             },
@@ -2510,7 +2510,7 @@
             {
               "status": "planned",
               "title": "Flight plans as job templates, with a form",
-              "value": "A stack or playbook becomes a flight plan with a form for its inputs, a schedule, credentials and role-based access.",
+              "value": "A stack or playbook becomes a Flight plan with a form for its inputs, a schedule, credentials and role-based access.",
               "detail": "A wizard writes the pipeline for a repository it finds.",
               "area": "config-as-code"
             },
@@ -2979,8 +2979,8 @@
             },
             {
               "status": "planned",
-              "title": "Branching patterns as flight plans",
-              "value": "Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a flight plan.",
+              "title": "Branching patterns as Flight plans",
+              "value": "Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan.",
               "detail": "Each says what it implies for branches, triggers, versions, environments and fixes.",
               "area": "dependency-order"
             },
@@ -3184,7 +3184,7 @@
       "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organization<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted runners\"]\n  Engine <-->|outbound only| Own[\"Runners on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
       "diagramNote": "Two ways to run steps: hosted in a sandbox, or on your own machines connected outward.",
       "done": [
-        "Organizations cannot see each other, proven by a test.",
+        "Wings cannot see each other, proven by a test.",
         "A step in a sandbox cannot reach anything but the internet.",
         "Usage is metered and shown before it is billed.",
         "Audit entries are chained and exportable.",
@@ -3263,7 +3263,7 @@
               "status": "planned",
               "title": "A public demo",
               "value": "A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start.",
-              "detail": "Try it with your own runner follows once organization isolation exists.",
+              "detail": "Try it with your own runner follows once Wing isolation exists.",
               "needs": "Organizations.",
               "area": "hosted-service",
               "link": "demo"
@@ -3271,7 +3271,7 @@
             {
               "status": "planned",
               "title": "Organizations",
-              "value": "Several organizations on one installation, isolated from each other, with the level names you choose.",
+              "value": "Several Wings on one installation, isolated from each other, with the level names you choose.",
               "detail": "Isolation is tested.",
               "area": "hosted-service"
             }
@@ -3550,7 +3550,7 @@
             {
               "status": "planned",
               "title": "Your logs, artifacts and audit stay with you",
-              "value": "Build logs, test reports, artifacts an audit trail you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
+              "value": "Build logs, test reports, artifacts and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold.",
               "detail": "The hosted service keeps a separate record of what it did.",
               "needs": "The Detachment.",
               "area": "hosted-service"
@@ -3708,7 +3708,7 @@
             {
               "status": "planned",
               "title": "The operator’s own Base is walled off",
-              "value": "The service operator’s own organization is a separate Base that no customer or demonstration visitor can see, list, search or guess.",
+              "value": "The service operator’s own Base is a separate Base that no customer or demonstration visitor can see, list, search or guess.",
               "detail": "Nothing flows down from it: shared starters and libraries are published by the product, public by nature.",
               "area": "hosted-service"
             },
@@ -4690,7 +4690,7 @@
             {
               "status": "planned",
               "title": "Cells for very large installations",
-              "value": "Independent installations each owning a set of organizations, with a small directory above them.",
+              "value": "Independent installations each owning a set of Wings, with a small directory above them.",
               "detail": "Not scheduled until a customer needs it.",
               "needs": "Second site, rehearsed promotion.",
               "area": "databases"
@@ -5108,7 +5108,7 @@
             {
               "status": "planned",
               "title": "Tamper-evident audit trail",
-              "value": "The audit trail forms a chain so a deletion or an edit shows.",
+              "value": "the Logbook forms a chain so a deletion or an edit shows.",
               "detail": "The chain head can be exported for safekeeping.",
               "needs": "Encrypt stored secrets and tokens.",
               "area": "security-trust"
@@ -5291,7 +5291,7 @@
               "status": "planned",
               "title": "Findings in one list",
               "value": "Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen.",
-              "detail": "Findings show on the pull request and in the repository, team and organization views.",
+              "detail": "Findings show on the pull request and in the repository, team and Wing views.",
               "area": "repository-standards"
             },
             {
@@ -5348,7 +5348,7 @@
             {
               "status": "planned",
               "title": "A standards home and a posture view",
-              "value": "See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository.",
+              "value": "See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository.",
               "detail": "The score is a view, never a gate by itself.",
               "area": "repository-standards"
             },
@@ -5496,7 +5496,7 @@
     },
     {
       "title": "Safeguards on, the team in charge",
-      "value": "Every protection starts on and your team may tune or turn it off. Only a level above you, such as the organization for production, can require one."
+      "value": "Every protection starts on and your team may tune or turn it off. Only a level above you, such as the Wing for production, can require one."
     },
     {
       "title": "Never a button that does not work",

@@ -132,7 +132,7 @@ Where the round trip allows, wait for the second site before reporting a write d
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Independent installations each owning a set of organizations, with a small directory above them. Not scheduled until a customer needs it.
+Independent installations each owning a set of Wings, with a small directory above them. Not scheduled until a customer needs it.
 
 **Depends on:** Second site, rehearsed promotion.
 

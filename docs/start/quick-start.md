@@ -53,7 +53,7 @@ nowhere else: a server without sign-in refuses to listen on any other address.
   run starts at the same commit: that step and the ones after it run again, and the steps before
   it are reused with their outputs. Each step's *Inputs* say what it was given, and from where.
 - **Approve a deployment.** On `main`, the demo waits for approval before `deploy-dev`. Open
-  **Waiting for a decision** to find it, then press **Approve** or **Reject** (recorded as Go or No-go) on the run.
+  **Waiting for a decision** to find it, then say **Go** or **No-go** (clear or refuse it) on the run.
 - **Push to trigger a run.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A run
   starts within a few seconds, and *Recent pushes* on the project explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is

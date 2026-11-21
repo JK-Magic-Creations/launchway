@@ -18,7 +18,7 @@ flowchart TD
 
 ## The control center
 
-Inventories, flight plans as job templates with a form for their inputs, schedules, credentials, role-based access and job output sit in one place. You see every host and every difference between what the code says and what is there.
+Inventories, Flight plans as job templates with a form for their inputs, schedules, credentials, role-based access and job output sit in one place. You see every host and every difference between what the code says and what is there.
 
 ## Honest limits
 

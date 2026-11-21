@@ -30,7 +30,7 @@ The Runners page shows each runner's pool, identity (key fingerprint and age, wh
 token), version, OS and architecture, labels, what its `accept:` section allows, and what it is
 running. **Revoke** refuses it at once on every server; the steps it held are queued again for
 other runners. **Rotate key** makes it move to a new key at its next request (runners also rotate
-every 30 days). Every join, rotation, revocation and refusal is in the audit trail.
+every 30 days). Every join, rotation, revocation and refusal is in the Logbook.
 
 The shared runner token (`LAUNCHWAY_RUNNER_TOKEN`, `--token`) and deploy pools' tokens keep
 working as before, and runners using them are marked on the Runners page: a shared token gives no

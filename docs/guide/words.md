@@ -4,7 +4,7 @@ Launchway names its own levels and parts with a small set of words. This page li
 
 ## Why there are two sets
 
-The documentation and the screens use the **default words**, which come from aviation: a change is a flight, so it has a plan, a checklist, a clearance and a logbook. Some teams prefer plain business words, so a second set is built in, and any single word can be renamed. The choice is made when Launchway is first set up and can be changed at any time.
+The documentation and the screens use the **default words**, which come from aviation: a change is a flight, so it has a plan, a checklist, a clearance and a Logbook. Some teams prefer plain business words, so a second set is built in, and any single word can be renamed. The choice is made when Launchway is first set up and can be changed at any time.
 
 Two rules keep this safe:
 
@@ -23,7 +23,7 @@ Two rules keep this safe:
 | **Preflight** | Checks | The checks made before a deploy |
 | **Checklist** | Checklist | The list of things that must be true before a change goes on |
 | **Clearance** | Approval | A person decides whether a change may go on |
-| **Go** / **No-go** | Approve / Reject | The two recorded answers to a clearance. Go lets the run continue; No-go fails the step and skips what follows. The buttons say Approve and Reject in both sets |
+| **Go** / **No-go** | Approve / Reject | The two answers to a clearance. Go lets the run continue; No-go fails the step and skips what follows |
 | **Hold** | Freeze | A time when changes may not go out |
 | **Flight plan** | Starter pipeline | The ready-made pipeline for a kind of project |
 | **Logbook** | Audit trail | The record of who did what, and when |

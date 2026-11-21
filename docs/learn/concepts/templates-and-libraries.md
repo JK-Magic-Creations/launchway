@@ -1,4 +1,4 @@
-# Templates, libraries and flight plans
+# Templates, libraries and Flight plans
 
 Most projects in a company build, test and release in nearly the same way. Writing those steps again
 in every project wastes time and drifts apart. Launchway lets you write them once and share them.
@@ -36,8 +36,8 @@ moves to the new version. Every run records the exact commit of the library it u
 answer "what did this run use?". Browse the templates your installation knows in the
 [Library](app:/library/templates). The page of each template shows its inputs and outputs.
 
-Libraries are registered at a **level**. There are four: the base (your installation), the wing
-(an organization), an optional squadron (a team or a department), and the project. An installation can
+Libraries are registered at a **level**. There are four: the Base (your installation), the Wing
+(a Wing), an optional Squadron (a team or a department), and the project. An installation can
 [rename them](../../guide/words.md). What you register at a level is available to
 everything below it. See [Configuration and levels](../../guide/configuration.md#levels).
 
@@ -45,9 +45,9 @@ everything below it. See [Configuration and levels](../../guide/configuration.md
 
 A **flight plan** is the name for a ready-made pipeline for one kind of project: a service, a library, a
 website. It is a template that also says when the pipeline starts. A project whose file only says "use the
-service flight plan, with these inputs" gets a complete pipeline without writing one.
+service Flight plan, with these inputs" gets a complete pipeline without writing one.
 
-Coming: flight plans as a separate kind of shared thing, and a button that copies a flight plan into your
+Coming: flight plans as a separate kind of shared thing, and a button that copies a Flight plan into your
 repository so you can change it. Today, a template can already describe a whole pipeline, and you can use
 it with `uses:` as shown above.
 

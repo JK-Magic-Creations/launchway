@@ -291,11 +291,11 @@ One change that spans several repositories is tracked, tested and merged togethe
 
 [Area page](dependency-order.md)
 
-#### Branching patterns as flight plans {#branching-patterns-as-flight-plans}
+#### Branching patterns as Flight plans {#branching-patterns-as-flight-plans}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
 
 [Area page](dependency-order.md)
 

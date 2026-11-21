@@ -30,7 +30,7 @@ flowchart TB
 | Part | What it does |
 |---|---|
 | Server | One program, `launchway server`: the web UI, the HTTP API, the run engine, Git polling, schedules, the policy judge and, unless turned off, a built-in runner. |
-| Database | Holds everything durable: projects' state, runs as events, logs, test results, findings, approvals, sessions (as hashes), the audit trail. PostgreSQL for several servers; an embedded SQLite file for one. |
+| Database | Holds everything durable: projects' state, runs as events, logs, test results, findings, approvals, sessions (as hashes), the Logbook. PostgreSQL for several servers; an embedded SQLite file for one. |
 | Artifact store | Files steps keep: a directory for one server, or S3-compatible object storage shared by several. |
 | Runner | `launchway runner`: takes steps from a server and runs them in Podman or Docker containers, Kubernetes pods, or on its own machine. Looks up secrets itself. |
 | Deploy runner | A runner with a `deploy:` section, in or near a cluster: writes to the GitOps repository and talks to Argo CD and Argo Rollouts with its own identity. Never runs a script. |

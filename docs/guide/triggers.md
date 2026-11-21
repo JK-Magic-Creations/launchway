@@ -134,4 +134,4 @@ request is accepted within five minutes of its timestamp, and only once. Prefer 
 can be replayed by anyone who sees one request. Send `Idempotency-Key: <up to 200 characters>` to
 make retries safe: a repeat answers `200` with the run the first call started (and
 `Idempotent-Replayed: true`), and the same key with a different body is refused with `409`. Keys
-are remembered for a week. Every call is in the audit trail (`webhook.run`).
+are remembered for a week. Every call is in the Logbook (`webhook.run`).

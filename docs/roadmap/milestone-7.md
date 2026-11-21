@@ -126,7 +126,7 @@ Everything is portable, so capacity can be added on any provider as demand justi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once organization isolation exists.
+A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once Wing isolation exists.
 
 **Depends on:** Organizations.
 
@@ -136,7 +136,7 @@ A safe instance on the internet with realistic data anyone can explore, read-onl
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Several organizations on one installation, isolated from each other, with the level names you choose. Isolation is tested.
+Several Wings on one installation, isolated from each other, with the level names you choose. Isolation is tested.
 
 [Area page](hosted-service.md)
 
@@ -452,7 +452,7 @@ The pages you read are drawn in your browser from data fetched live from your De
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Build logs, test reports, artifacts an audit trail you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. The hosted service keeps a separate record of what it did.
+Build logs, test reports, artifacts and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold. The hosted service keeps a separate record of what it did.
 
 **Depends on:** The Detachment.
 
@@ -635,7 +635,7 @@ A customer’s top level is its own complete, private Base, and the highest thin
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The service operator’s own organization is a separate Base that no customer or demonstration visitor can see, list, search or guess. Nothing flows down from it: shared starters and libraries are published by the product, public by nature.
+The service operator’s own Base is a separate Base that no customer or demonstration visitor can see, list, search or guess. Nothing flows down from it: shared starters and libraries are published by the product, public by nature.
 
 [Area page](hosted-service.md)
 
@@ -723,7 +723,7 @@ Every release runs in a development installation first, and only builds that pas
 
 This milestone is done when all of these are true.
 
-- Organizations cannot see each other, proven by a test.
+- Wings cannot see each other, proven by a test.
 - A step in a sandbox cannot reach anything but the internet.
 - Usage is metered and shown before it is billed.
 - Audit entries are chained and exportable.

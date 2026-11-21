@@ -53,7 +53,7 @@ the address in a browser, then try these:
 - **Resume it.** `smoke-test` fails on its first attempt on purpose. Press *Resume from smoke-test*:
   only that step and the ones after it run again.
 - **Approve it.** The run then waits before `deploy-dev`. Open **Waiting for a decision**, then the run, and
-  press **Approve**.
+  give it **Go**.
 - **Run the feature branch.** Start a run of `feature/new-button`: a unit test fails and the
   security scan finds one more problem, shown as new.
 - **Use the library.** Start a run of `demo-lib-app`: the library's `release` template is drawn as
@@ -231,7 +231,7 @@ mode, so they warn but never block. Open **Settings**, then **Rules**.
 
 ### Audit trail
 
-![The Audit trail: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the project and run, the outcome and a detail](images/tour/audit-light.png)
+![the Logbook: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the project and run, the outcome and a detail](images/tour/audit-light.png)
 
 Every change made through the API, who made it and whether it was allowed. Admins open
 **Settings**, then **Audit trail**.

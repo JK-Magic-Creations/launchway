@@ -13,7 +13,7 @@ with what each means and what to do. It is for operators and for anyone running 
 
 - Access to the server's log (`journalctl -u launchway`, `podman logs launchway`, or
   `kubectl logs`). Many answers to callers are short on purpose; the log has the details.
-- For sign-in problems: an admin who can read the [audit trail](oidc-and-roles.md#the-audit-trail).
+- For sign-in problems: an admin who can read the [audit trail](oidc-and-roles.md#the-logbook).
 
 ## The server does not start
 
@@ -155,7 +155,7 @@ nothing needs restarting once the provider answers.
 ### The sign-in page says the provider's answer could not be accepted
 
 The browser comes back to the sign-in page with "The sign-in provider's answer could not be
-accepted. If this keeps happening, ask your administrator to look at the audit trail." The audit
+accepted. If this keeps happening, ask your administrator to look at the Logbook." The audit
 trail has an `auth.sign_in` entry with outcome `failed`, and the log the reason, for example:
 
 ```text
@@ -173,7 +173,7 @@ The other messages on that page:
 |---|---|
 | The sign-in took too long or was started in another browser. | more than the allowed time passed, or the browser lost the sign-in cookie; try again |
 | The sign-in could not be matched to this browser. | the `state` did not match; try again from the start |
-| The sign-in provider did not sign you in. | the provider sent an error back; its reason is in the audit trail |
+| The sign-in provider did not sign you in. | the provider sent an error back; its reason is in the Logbook |
 | Launchway could not record the sign-in. | the database did not accept the session; check `/readyz` |
 
 ### Someone signs in but sees nothing
@@ -185,7 +185,7 @@ The other messages on that page:
 ```
 
 Empty `groups` means the provider sent none under `groups_claim`. Fix the claim mapping at the
-provider, then sign in again; the audit trail's `auth.sign_in` entries say `groups: ...` or
+provider, then sign in again; the Logbook's `auth.sign_in` entries say `groups: ...` or
 `no groups`. With Dex, static users get groups only from v2.45 on (v2.41 ignored them). If groups
 are there but `roles` is empty, no entry in `auth.access` matches them, or a `user:` binding uses
 another form of the name than the `user` shown (Dex, for example, gives the email address).
@@ -206,7 +206,7 @@ another form of the name than the `user` shown (Dex, for example, gives the emai
 |---|---|---|
 | 401 | `sign in first, or send a valid API token` | no session, or the token is unknown, revoked or expired; sign in, or make a new token |
 | 403 | `you need the operator role on app to do this` | you may see the project, not change it |
-| 403 | `only admins of every project may do this` | the audit trail and everyone's tokens need `admin` from a binding without `projects` |
+| 403 | `only admins of every project may do this` | The Logbook and everyone's tokens need `admin` from a binding without `projects` |
 | 403 | `you have no access to any project` | you have no role anywhere |
 | 404 | `not found: project app` or `not found: run run_...` | it does not exist, or you may not see it: the answer is the same on purpose |
 | 403 | `this request did not come from Launchway's own pages (the X-Launchway-CSRF header is missing)` | a request with the session cookie that changes something must send `X-Launchway-CSRF: 1` |
@@ -409,7 +409,7 @@ pipeline, or have someone allowed by `policy.waivers.allow` grant a waiver, then
 
 Every webhook caller that cannot prove itself gets this `404`, whatever the reason: no such
 project, no `git_webhook` or `webhooks` entry for it, a trigger the configuration does not list, a
-wrong secret or token, or a bad signature. The audit trail (`webhook.git`, `webhook.run`) says
+wrong secret or token, or a bad signature. The Logbook (`webhook.git`, `webhook.run`) says
 which. Check the project name in the URL, the secret's variable on the server, and for a Git host
 the `kind` (which header it checks).
 

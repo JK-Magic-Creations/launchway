@@ -166,7 +166,7 @@ func ScopeFor(l Level, name string) (string, error) {
 		if name == "" || name == DefaultOrg {
 			return DefaultOrg, nil
 		}
-		return "", variableProblem("there is one organization, %s", DefaultOrg)
+		return "", variableProblem("there is one Wing, %s", DefaultOrg)
 	case LevelUnit, LevelProject:
 		if !variableScopeRe.MatchString(name) {
 			return "", variableProblem("say which %s: its name is lower-case letters, digits and -", l)

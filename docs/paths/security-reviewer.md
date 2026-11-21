@@ -1,7 +1,7 @@
 # Path for security reviewers
 
 A reading order for people who must decide whether Launchway is safe enough for their
-organization, and on what terms.
+Wing, and on what terms.
 
 1. [Trust model and threats](../security/trust-model.md): boundaries, what each part holds, and
    the current limits. Read the limits section in full.

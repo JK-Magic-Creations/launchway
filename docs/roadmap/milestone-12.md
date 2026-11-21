@@ -116,7 +116,7 @@ A plain report of what is encrypted, what is not, and the one step to fix each g
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The audit trail forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping.
+the Logbook forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping.
 
 **Depends on:** Encrypt stored secrets and tokens.
 
@@ -318,7 +318,7 @@ Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kot
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen. Findings show on the pull request and in the repository, team and organization views.
+Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen. Findings show on the pull request and in the repository, team and Wing views.
 
 [Area page](repository-standards.md)
 
@@ -386,7 +386,7 @@ The results of commercial artifact repositories, code-analysis and security prod
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository. The score is a view, never a gate by itself.
+See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself.
 
 [Area page](repository-standards.md)
 

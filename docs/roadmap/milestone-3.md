@@ -879,7 +879,7 @@ Hosts come from a static list first, then from clusters, clouds and other source
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A stack or playbook becomes a flight plan with a form for its inputs, a schedule, credentials and role-based access. A wizard writes the pipeline for a repository it finds.
+A stack or playbook becomes a Flight plan with a form for its inputs, a schedule, credentials and role-based access. A wizard writes the pipeline for a repository it finds.
 
 [Area page](config-as-code.md)
 

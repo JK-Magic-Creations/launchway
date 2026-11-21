@@ -258,7 +258,7 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 | `projects[].pipeline.lane.queue` | `newest` or `all` | `newest` | For `wait`: whether a newer waiting run replaces an older one |
 | `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
 | `projects[].default_pipeline.enabled` | boolean | `true` | `false`: the project runs no [flight plan](config-objects.md#a-flight-plan-for-every-repository). A repository file still runs |
-| `projects[].default_pipeline.with` | mapping | none | Other values for some parameters of the flight plan's template; the rest stay as the flight plan sets them. Ignored when the project has its own `pipeline` |
+| `projects[].default_pipeline.with` | mapping | none | Other values for some parameters of the Flight plan's template; the rest stay as the Flight plan sets them. Ignored when the project has its own `pipeline` |
 
 ## Libraries
 
@@ -369,8 +369,8 @@ never from the file.
 Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
 over HTTPS and, when `forge.ssh.listen` is set, SSH (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.38 or newer on
 the server (older git: hosting refuses to turn on and says so; `launchway doctor git` shows the version) and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
-data. These are installation settings, kept in the database: an administrator sets them under
-Configuration, Installation settings, with `launchway config` or through the API (a file's `forge:` section
+data. These are Base settings, kept in the database: an administrator sets them under
+Configuration, Base settings, with `launchway config` or through the API (a file's `forge:` section
 is imported once, like the other settings that moved). Hosting is off until it is switched on, and a change
 takes effect when each server next restarts.
 
@@ -565,12 +565,12 @@ refused too, because through the API they would read any repository the server's
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `egress.allow_local` | boolean | `false` | Allows repository addresses that are paths on this server or `file:` addresses. Bootstrap file only, never through the API. `examples/local.yaml` (`make run`) sets it |
-| `egress.allow` | list | none | Internal hosts (`git.internal`, `*.corp.internal`), addresses and ranges (`10.0.0.0/8`) the server may reach, such as a self-hosted Git server. Kept in the database: an administrator sets it in the installation settings, and the wizards offer to add the host that was refused |
+| `egress.allow` | list | none | Internal hosts (`git.internal`, `*.corp.internal`), addresses and ranges (`10.0.0.0/8`) the server may reach, such as a self-hosted Git server. Kept in the database: an administrator sets it in the Base settings, and the wizards offer to add the host that was refused |
 
 ## History
 
 How long the change history of the configuration kept in the database is kept. By default all of it
-is, for ever. Like the other settings that moved, it is set in the installation settings once the
+is, for ever. Like the other settings that moved, it is set in the Base settings once the
 database holds them.
 
 <!-- keys: server -->

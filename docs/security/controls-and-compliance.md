@@ -50,7 +50,7 @@ data never reach Launchway:
 
 ## Current limits that matter for an assessment
 
-- The database is the store of record. Anyone who can write to it can change the audit trail; the
+- The database is the store of record. Anyone who can write to it can change the Logbook; the
   trail is append-only by design, not protected cryptographically. Protect the database and copy
   the trail to a log archive you control.
 - There is no built-in retention control: runs, logs and audit records are kept until you remove
@@ -78,7 +78,7 @@ These are designed, not built. Status and order are on the [roadmap](../roadmap-
 
 1. Decide whether Launchway is in scope, and keep regulated data out of it.
 2. Configure the controls in the [hardening checklist](hardening.md).
-3. Show the evidence: the audit trail, run event logs, policy decisions and waivers, the
+3. Show the evidence: The Logbook, run event logs, policy decisions and waivers, the
    Environments page history.
 4. Record the [current limits](#current-limits-that-matter-for-an-assessment) and the
    compensating controls you use (database access control, log archiving, identity provider MFA).

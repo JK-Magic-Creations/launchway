@@ -178,7 +178,7 @@ inputs:
 | `min`, `max` | A number's bounds |
 | `description` | One line |
 | `from` | The name of a variable set at a level (see below): the input takes its value when a run is given none, before `default` |
-| `options_from` | Recognised but not supported yet |
+| `options_from` | Recognized but not supported yet |
 
 Runs started by a push, pull request or draft use the defaults, so a pipeline started by pushes
 may not have a required input without a default. Inputs are not secret: they are recorded with the
@@ -288,9 +288,9 @@ for text around it) stands for a parameter's value, and `if: { param: name }` or
 
 ## Variables set at a level
 
-`from: name` on an input or a template parameter takes the variable `name`, set at the installation, the
-organization, a unit or the project. The nearest setting wins: what is given when a run starts, then the
-pipeline file's own `with:`, then the project, the unit, the organization, the installation, then the
+`from: name` on an input or a template parameter takes the variable `name`, set at the Base, the
+Wing, a Squadron or the project. The nearest setting wins: what is given when a run starts, then the
+pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the
 template's own default; at the same level a variable set for the environment being deployed to beats the
 general one; and a lock set at a level beats everything below it. Lists replace, never merge. A variable
 that is locked refuses a different value under `with:` or given at the start, naming the level that

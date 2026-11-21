@@ -23,7 +23,7 @@ func addVariableTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Every variable in effect for a project, optionally for one environment, each with its chain: the winning value, the level it comes from, every value it overrides in order, whether it is locked and by whom, and why. A secret shows its reference, never a value. " + settings.VariableRule},
 		mcpCallTimeout, getEffectiveVariables)
 	addTool(srv, c, &mcp.Tool{Name: "list_variables", Annotations: readOnly("List variables at a level"),
-		Description: "The variables at a level (installation, organization, unit or project; scope names the unit or the project) with what each inherits from above, and whether this level may override it. " + settings.VariableRule},
+		Description: "The variables at a level (installation, organization, unit or project; scope names the Squadron or the project) with what each inherits from above, and whether this level may override it. " + settings.VariableRule},
 		mcpCallTimeout, listVariables)
 	addTool(srv, c, &mcp.Tool{Name: "get_run_variables", Annotations: readOnly("Get the variables a run used"),
 		Description: "The variables a run used, as recorded when it was created, each with its chain at that moment; a re-run shows the original's. A secret shows its reference."},
@@ -32,7 +32,7 @@ func addVariableTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_variable", Annotations: changes("Set a variable", true, true),
-		Description: "Set a variable at a level (scope names the unit or the project; environment makes it apply to one environment only). Types: string, number, boolean, list, map, secret (a reference { store, key, field }, never the secret) and connection (the name of a connection; of says what kind). A name keeps one type everywhere. Refused when a lock above forbids it. Who may: an operator of the project, or an administrator of the unit, the organization or the installation. Audited."},
+		Description: "Set a variable at a level (scope names the Squadron or the project; environment makes it apply to one environment only). Types: string, number, boolean, list, map, secret (a reference { store, key, field }, never the secret) and connection (the name of a connection; of says what kind). A name keeps one type everywhere. Refused when a lock above forbids it. Who may: an operator of the project, or an administrator of the unit, the organization or the installation. Audited."},
 		mcpCallTimeout, setVariable)
 	addTool(srv, c, &mcp.Tool{Name: "delete_variable", Annotations: changes("Delete a variable", true, true),
 		Description: "Delete a variable set at a level. What it overrode applies again. Audited."},
@@ -65,7 +65,7 @@ func getEffectiveVariables(ctx context.Context, c *mcpCall, _ *mcp.CallToolReque
 
 type levelIn struct {
 	Level       string `json:"level" jsonschema:"installation, organization, unit or project"`
-	Scope       string `json:"scope,omitempty" jsonschema:"the unit's or the project's name; none for the installation and the organization"`
+	Scope       string `json:"scope,omitempty" jsonschema:"the Squadron's or the project's name; none for the Base and the Wing"`
 	Environment string `json:"environment,omitempty" jsonschema:"resolve for this environment"`
 }
 
@@ -79,7 +79,7 @@ func listVariables(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in l
 type setVariableIn struct {
 	Name        string `json:"name" jsonschema:"the variable's name: lower-case letters, digits and _, starting with a letter"`
 	Level       string `json:"level" jsonschema:"installation, organization, unit or project"`
-	Scope       string `json:"scope,omitempty" jsonschema:"the unit's or the project's name"`
+	Scope       string `json:"scope,omitempty" jsonschema:"the Squadron's or the project's name"`
 	Environment string `json:"environment,omitempty" jsonschema:"apply only when deploying to this environment"`
 	Type        string `json:"type" jsonschema:"string, number, boolean, list, map, secret or connection"`
 	Of          string `json:"of,omitempty" jsonschema:"for a connection, what kind of outside system it is (registry, cluster, ...)"`
@@ -104,7 +104,7 @@ func setVariable(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in set
 type variableKeyIn struct {
 	Name        string `json:"name" jsonschema:"the variable's name"`
 	Level       string `json:"level" jsonschema:"installation, organization, unit or project"`
-	Scope       string `json:"scope,omitempty" jsonschema:"the unit's or the project's name"`
+	Scope       string `json:"scope,omitempty" jsonschema:"the Squadron's or the project's name"`
 	Environment string `json:"environment,omitempty" jsonschema:"the environment the variable is for, if it is for one"`
 }
 

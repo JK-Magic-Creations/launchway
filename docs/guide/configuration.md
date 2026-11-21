@@ -2,7 +2,7 @@
 
 Launchway keeps everything an administrator manages in its database, not in a file. This page
 explains what that means, why, how it fits teams that want configuration in Git, and how the
-levels (installation, organization, unit, project) work. For the settings themselves, see
+levels (Base, Wing, Squadron, Project) work. For the settings themselves, see
 [Configuration objects](../reference/config-objects.md).
 
 ## Why the database
@@ -103,18 +103,18 @@ Launchway has four levels, from the whole installation down to one repository. T
 
 Objects that can be defined at a level apply to the projects below it. A **role binding**, a
 **library**, a **policy**, an **environment**, a **runner pool**, a **health source**, an **AI model**
-or a **secret store** defined at a squadron applies to the squadron's projects; defined at the wing it
+or a **secret store** defined at a Squadron applies to the Squadron's projects; defined at the Wing it
 applies to every project. A project can add to what it inherits, or, where a setting allows it,
 change it. The project page shows where each effective value comes from (`launchway config effective
 PROJECT` prints the same).
 
-The **words** for the levels are yours to choose: pick the plain business set, or rename the wing
-"Company", the squadron "Department" or "Squad", the project "Service" or "Repository". Words are
+The **words** for the levels are yours to choose: pick the plain business set, or rename the Wing
+"Company", the Squadron "Department" or "Squad", the project "Service" or "Repository". Words are
 changed on **Settings → Words** (see [the words Launchway uses](words.md)) and are labels only: the
 configuration kinds keep their names (`organisation`, `unit`), so files and scripts do not change.
 Levels nobody uses stay hidden: with no squadron there is no squadron column, picker or page.
 
-There is exactly one wing today. The tables carry an `org` column in their keys, so
+There is exactly one Wing today. The tables carry an `org` column in their keys, so
 several wings can be added later without rewriting them; nothing isolates
 wings from each other yet, and this release does not claim to.
 

@@ -201,7 +201,7 @@ regressed baseline, seasonality, warm-up) are written down in
 [internal/verify/doc.go](https://github.com/JK-Magic-Creations/launchway/blob/main/internal/verify/doc.go).
 
 **Marking a verification passed or failed.** An operator of the project may mark a running or
-paused verification passed or failed, with a reason (`verification.override` in the audit trail);
+paused verification passed or failed, with a reason (`verification.override` in the Logbook);
 on a protected environment the person who started the run may not mark it passed. A pass marked by
 a person does not become part of the baseline.
 

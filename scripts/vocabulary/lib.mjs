@@ -148,7 +148,7 @@ export function fileFindings(path, kind, text, checks) {
     while ((m = c.re.exec(masked))) {
       if (m[0] === '') { c.re.lastIndex++; continue }
       if (c.britishOnly && !isBritish(m[0])) continue
-      out.push({ rule: c.id, severity: c.severity, path, line: lineOf(m.index), start: m.index, end: m.index + m[0].length, match: m[0], fix: c.fix, use: c.use })
+      out.push({ pre: text.slice(Math.max(0, m.index - 12), m.index), rule: c.id, severity: c.severity, path, line: lineOf(m.index), start: m.index, end: m.index + m[0].length, match: m[0], fix: c.fix, use: c.use })
     }
   }
   return out
@@ -159,6 +159,15 @@ export function mechanicalFix(f) {
   const w = f.match
   const keepCase = (to) => (w[0] === w[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to)
   if (f.fix === 'lowercase') return w.toLowerCase()
+  if (f.fix === 'logbook') return /(^|[|.:!?]\s*|\n\s*(?:[-*]\s+)?)$/.test(f.pre) ? 'The Logbook' : 'the Logbook'
+  if (f.fix === 'capitalize-feature') return w[0].toUpperCase() + w.slice(1)
+  if (f.fix === 'capitalize-level') return w.replace(/(?<=\s|^)(wings?|squadrons?|bases?)$/, (x) => x[0].toUpperCase() + x.slice(1))
+  if (f.fix === 'wing' || f.fix === 'squadron' || f.fix === 'base') {
+    const plural = /s$/i.test(w) && !/settings?$/i.test(w) && f.fix !== 'base'
+    if (f.fix === 'base') return w.replace(/^installation/i, 'Base')
+    if (f.fix === 'wing') return w.replace(/organi[sz]ations?$/i, plural ? 'Wings' : 'Wing')
+    return w.replace(/units?$/i, plural ? 'Squadrons' : 'Squadron')
+  }
   if (f.fix === 'audit-trail') return keepCase('audit trail')
   if (f.fix === 'american') {
     const map = [[/organis/i, 'organiz'], [/colour/i, 'color'], [/behaviour/i, 'behavior'], [/favour/i, 'favor'], [/licence/i, 'license'], [/catalogue/i, 'catalog'], [/centre/i, 'center'], [/defence/i, 'defense'], [/artefact/i, 'artifact'], [/initialis/i, 'initializ'], [/authoris/i, 'authoriz'], [/customis/i, 'customiz'], [/summaris/i, 'summariz'], [/recognis/i, 'recogniz'], [/normalis/i, 'normaliz'], [/synchronis/i, 'synchroniz']]

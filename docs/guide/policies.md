@@ -98,7 +98,7 @@ from and at which version, their scope, mode and rules, and recent verdicts of t
 **Waivers.** A waiver lets one rule of one policy pass for a project, optionally only in one run,
 one environment, or (for `findings`) for one finding by its fingerprint, until it expires. A reason
 and an expiry are required (at most `policy.waivers.max_days`, default 30). Waivers are a log of
-grants and revocations, written to the audit trail (`policy.waive`, `policy.revoke_waiver`), shown
+grants and revocations, written to the Logbook (`policy.waive`, `policy.revoke_waiver`), shown
 wherever the verdict they changed is, and expire on their own: a decision made after expiry does
 not count them, even in a run that started before. A rule is judged again when the run is resumed,
 so the usual path is: grant a waiver, then resume. Who may waive:

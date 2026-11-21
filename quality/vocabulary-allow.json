@@ -37,6 +37,267 @@
       "path": "docs/guide/words.md",
       "rule": "level-capitalized-mid-sentence",
       "why": "Lists the level names as labels."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "rule": "level-organization",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "rule": "level-unit",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "rule": "level-installation",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "rule": "level-organization",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "rule": "level-unit",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "rule": "level-installation",
+      "why": "Where the vocabulary is introduced, the plain word is named beside the default word."
+    },
+    {
+      "path": "docs/howto/setup-first-run.md",
+      "rule": "level-organization",
+      "contains": "plain business words",
+      "why": "The wizard step that offers the plain set names its words."
+    },
+    {
+      "path": "docs/guide/configuration.md",
+      "rule": "level-organization",
+      "contains": "plain business set calls them",
+      "why": "Introduction of the plain set."
+    },
+    {
+      "path": "docs/guide/variables.md",
+      "contains": "plain",
+      "why": "The words are introduced here with the plain set."
+    },
+    {
+      "path": "docs/glossary.md",
+      "contains": "plain business word",
+      "why": "Each glossary entry names the plain word once."
+    },
+    {
+      "path": "docs/glossary.md",
+      "rule": "level-organization",
+      "contains": "(installation, organization, unit or project)",
+      "why": "A list of the stable level names."
+    },
+    {
+      "path": "docs/reference/config-objects.md",
+      "contains": "`",
+      "why": "A literal identifier shown in code font beside its prose."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-organization",
+      "contains": "Organization, Team and Project",
+      "why": "Introduction of the plain set."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "rule": "level-organization",
+      "contains": "organizations that cannot",
+      "why": "The licensor's customers: companies."
+    },
+    {
+      "path": "docs/faq.md",
+      "rule": "level-organization",
+      "contains": "organization's own compliance",
+      "why": "A company's compliance, not a level."
+    },
+    {
+      "path": "docs/security/controls-and-compliance.md",
+      "rule": "level-organization",
+      "why": "Compliance is assessed on the company that runs a system, not a level."
+    },
+    {
+      "path": "docs/security/index.md",
+      "rule": "level-organization",
+      "contains": "organization's own compliance",
+      "why": "A company's compliance, not a level."
+    },
+    {
+      "path": "docs/security/how-launchway-is-scanned.md",
+      "rule": "level-organization",
+      "contains": "several organizations",
+      "why": "Contributors from other companies."
+    },
+    {
+      "path": "docs/reference/accessibility-conformance.md",
+      "rule": "level-organization",
+      "contains": "organization's single sign-on",
+      "why": "A company's sign-on."
+    },
+    {
+      "path": "docs/start/concepts.md",
+      "rule": "level-organization",
+      "contains": "organization's OpenID Connect",
+      "why": "A company's identity provider."
+    },
+    {
+      "path": "docs/start/concepts.md",
+      "rule": "level-organization",
+      "contains": "organization sets for every pipeline",
+      "why": "Policies are set by the company's administrators."
+    },
+    {
+      "path": "docs/start/overview.md",
+      "rule": "level-organization",
+      "contains": "organization sets for every pipeline",
+      "why": "Policies are set by the company's administrators."
+    },
+    {
+      "path": "docs/guide/policies.md",
+      "rule": "level-organization",
+      "contains": "organization sets for every pipeline",
+      "why": "Policies are set by the company's administrators."
+    },
+    {
+      "path": "docs/glossary.md",
+      "rule": "level-organization",
+      "contains": "organization sets for every pipeline",
+      "why": "Policies are set by the company's administrators."
+    },
+    {
+      "path": "docs/guide/accessibility.md",
+      "rule": "level-organization",
+      "contains": "organization's single sign-on",
+      "why": "A company's sign-on."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-organization",
+      "contains": "Organizations, teams and collaborators",
+      "why": "The built-in Git host's own organizations, a Git host concept."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-organization",
+      "contains": "Accounts, organizations, tokens",
+      "why": "The built-in Git host's own organizations."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-organization",
+      "contains": "per-organization usage",
+      "why": "The built-in Git host's own organizations."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-unit",
+      "contains": "first-boot unit",
+      "why": "A systemd unit."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-unit",
+      "contains": "release unit",
+      "why": "A release unit of a Formation."
+    },
+    {
+      "path": "docs/howto/connect-runner.md",
+      "rule": "level-unit",
+      "why": "A systemd unit."
+    },
+    {
+      "path": "docs/howto/install-single-server.md",
+      "rule": "level-unit",
+      "why": "A systemd unit."
+    },
+    {
+      "path": "docs/learn/concepts/pipelines-and-runs.md",
+      "rule": "level-unit",
+      "contains": "unit of work",
+      "why": "A step is a unit of work."
+    },
+    {
+      "path": "docs/start/concepts.md",
+      "rule": "level-unit",
+      "contains": "unit of work",
+      "why": "A step is a unit of work."
+    },
+    {
+      "path": "docs/roadmap/dependency-order.md",
+      "rule": "level-unit",
+      "contains": "release unit",
+      "why": "A release unit of a Formation."
+    },
+    {
+      "path": "docs/development/quality-gates.md",
+      "rule": "level-unit",
+      "contains": "units",
+      "why": "Small units of code."
+    },
+    {
+      "path": "docs/glossary.md",
+      "rule": "the-audit-trail",
+      "why": "Names the plain word for the Logbook."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "rule": "the-audit-trail",
+      "why": "Names the plain word for the Logbook."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "rule": "the-audit-trail",
+      "why": "Names the plain word for the Logbook."
+    },
+    {
+      "path": "docs/contributing/style.md",
+      "rule": "level-organization",
+      "contains": "American spelling",
+      "why": "A spelling example."
+    },
+    {
+      "path": "docs/guide/variables.md",
+      "rule": "level-organization",
+      "contains": "team, organization and installation",
+      "why": "The plain set named once where the words are introduced."
+    },
+    {
+      "path": "docs/guide/variables.md",
+      "rule": "level-organization",
+      "contains": "Wing (organization)",
+      "why": "The table names the plain word once, beside the default."
+    },
+    {
+      "path": "docs/development/forge-storage.md",
+      "rule": "level-lowercase",
+      "contains": "base of the product image",
+      "why": "An ordinary word: a container base image."
+    },
+    {
+      "path": "docs/guide/configuration.md",
+      "rule": "level-installation",
+      "contains": "Installation, Organization",
+      "why": "The plain set named once where the words are introduced."
+    },
+    {
+      "path": "docs/howto/setup-first-run.md",
+      "rule": "level-installation",
+      "contains": "Installation, Organization",
+      "why": "The plain set named once where the words are introduced."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "level-installation",
+      "contains": "Installation, Organization",
+      "why": "The plain set named once where the words are introduced."
     }
   ]
 }

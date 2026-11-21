@@ -26,7 +26,7 @@ operators.
 
 | What | Where | Back it up? |
 |---|---|---|
-| The database: runs, steps, events, logs, approvals, test results, findings, artifact records (and artifacts themselves, with the default database store on PostgreSQL), sessions, API token hashes, the audit trail, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
+| The database: runs, steps, events, logs, approvals, test results, findings, artifact records (and artifacts themselves, with the default database store on PostgreSQL), sessions, API token hashes, the Logbook, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
 | Artifacts and SBOMs | The database (the default on PostgreSQL, so already in its backup), the S3 bucket, or `artifacts/` in the data directory | Yes, at the same time as the database when they are outside it: the database records which objects exist. Hosted HTML reports and test attachments are artifacts too. |
 | Configuration | `launchway.yaml`, `runner.yaml`, your Helm values | Yes, with your other configuration (in Git, for example). |
 | Secrets the configuration names | OIDC client secret, `LAUNCHWAY_RUNNER_TOKEN` if you set one, runner pool tokens, S3 keys | Yes, in your secret manager. They are never in the database. |

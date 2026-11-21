@@ -53,7 +53,7 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. Make several configuration changes together, all or none (what a wizard does): each is {kind, name, action (put, delete or restore), unit, spec, version}. Validate first with validate_config."},
 		mcpCallTimeout, applyConfig)
 	addTool(srv, c, &mcp.Tool{Name: "get_effective_config", Annotations: readOnly("Get a project's effective configuration"),
-		Description: "What applies to a project, setting by setting, and where each comes from (the installation, the organization, a unit, the project)."},
+		Description: "What applies to a project, setting by setting, and where each comes from (the Base, the Wing, a Squadron, the project)."},
 		mcpCallTimeout, getEffectiveConfig)
 	addTool(srv, c, &mcp.Tool{Name: "export_config", Annotations: readOnly("Export the configuration"),
 		Description: "The whole configuration as YAML text, for backup, review or Git. import_config reads it back."},
@@ -84,7 +84,7 @@ type kindIn struct {
 
 type nameIn struct {
 	Kind string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name string `json:"name" jsonschema:"the object's name; installation settings are named installation, the organization default"`
+	Name string `json:"name" jsonschema:"the object's name; the Base settings are named installation, the Wing default"`
 }
 
 func needKind(k string) error {
@@ -128,7 +128,7 @@ func getConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in nameI
 type putIn struct {
 	Kind          string `json:"kind" jsonschema:"the kind, as for list_config"`
 	Name          string `json:"name" jsonschema:"the object's name"`
-	Unit          string `json:"unit,omitempty" jsonschema:"the unit the object belongs to or is defined at; empty is the organization"`
+	Unit          string `json:"unit,omitempty" jsonschema:"the Squadron (unit) the object belongs to or is defined at; empty is the Wing"`
 	Spec          any    `json:"spec" jsonschema:"the object's settings, with the keys the configuration file uses (get_config shows an example)"`
 	Version       int64  `json:"version,omitempty" jsonschema:"the version you read; the change is refused if the object has moved on; -1 means it must not exist yet"`
 	Overwrite     bool   `json:"overwrite,omitempty" jsonschema:"replace the object whatever version it is at (the last writer wins); only when you mean to discard what somebody else may have changed. Without it, changing an object that exists needs version"`
@@ -263,7 +263,7 @@ type changeIn struct {
 	Action        string `json:"action,omitempty" jsonschema:"put (the default), delete or restore"`
 	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"for delete: even though active runs depend on the object"`
 	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
-	Unit          string `json:"unit,omitempty" jsonschema:"the unit; empty is the organization"`
+	Unit          string `json:"unit,omitempty" jsonschema:"the Squadron (unit); empty is the Wing"`
 	Spec          any    `json:"spec,omitempty" jsonschema:"the settings, for put"`
 	Version       int64  `json:"version,omitempty" jsonschema:"the version expected; -1 means it must not exist yet"`
 	Comment       string `json:"comment,omitempty"`

@@ -28,6 +28,6 @@ A library, command-line tool, image or chart is built, tested and published, and
 
 ## Branching patterns
 
-Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based releases, forks, promotion by pull request and monorepos each come as a flight plan. A recommender asks six plain questions when a repository is created and suggests the simplest pattern that fits. It helps and never enforces.
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based releases, forks, promotion by pull request and monorepos each come as a Flight plan. A recommender asks six plain questions when a repository is created and suggests the simplest pattern that fits. It helps and never enforces.
 
 Go back to the [Roadmap](../public/roadmap.html).

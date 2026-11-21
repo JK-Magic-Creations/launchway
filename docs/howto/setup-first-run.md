@@ -11,7 +11,7 @@ none`, anyone).
    Preflight, Clearance, Logbook) or the plain business words (Installation, Organization, Team,
    Project; Guide, Checks, Approval, Audit trail), watch the preview change, and rename any single word.
    They are labels only. See [the words Launchway uses](../guide/words.md).
-2. **Your wing and its squadrons.** Say what your organization is called, and whether you want
+2. **Your wing and its Squadrons.** Say what your organization is called, and whether you want
    squadrons (a group of projects with shared settings, such as a team or a department). If you say
    no, squadrons stay out of every screen; you can turn them on later. The questions use the words you
    chose in the first step.
@@ -32,7 +32,7 @@ none`, anyone).
 
 ## What it creates
 
-A summary lists exactly what will be created: the words in the installation settings, and the
+A summary lists exactly what will be created: the words in the Base settings, and the
 project. Nothing is created until you confirm, and the wizard creates it all in one step or not at all;
 cancelling at any step leaves nothing behind.
 

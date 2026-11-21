@@ -64,7 +64,7 @@ flowchart TB
 
 | Part | Holds | Never holds |
 |---|---|---|
-| Servers and database | Runs and their events, masked logs, test results, findings (without secret values or code snippets), SBOM summaries, the audit trail, hashes of sessions and tokens, Git mirrors of projects and libraries | Secret values from secret stores, registry or cluster credentials, session ids or API tokens in clear |
+| Servers and database | Runs and their events, masked logs, test results, findings (without secret values or code snippets), SBOM summaries, the Logbook, hashes of sessions and tokens, Git mirrors of projects and libraries | Secret values from secret stores, registry or cluster credentials, session ids or API tokens in clear |
 | Build runner | Its runner token, its secret store credentials, registry credentials, its signing key, the workspace of the runs it executes | Cluster credentials for deployments |
 | Deploy runner | Its pool token, the GitOps repository credential, its Kubernetes identity | Scripts: it never runs one |
 
@@ -78,7 +78,7 @@ flowchart TB
 | A pipeline makes the server fetch from anywhere | A pipeline can name only libraries the server lists; it can never give an address. |
 | One person deploys their own unreviewed change | With sign-in, the person who started a run cannot approve it by default; protected environments stop them promoting or waiving its gate. |
 | A deployment is reported healthy when it is not | Only observations from a deploy runner serving the target count; stale or missing observations never pass. |
-| Someone quietly changes history | The audit trail is only added to; run events are only appended. |
+| Someone quietly changes history | The Logbook is only added to; run events are only appended. |
 | A server crash leaves a half-made decision | Decisions and what they allow are written in one database transaction. |
 
 ## Current limits, and what is changing
@@ -115,8 +115,8 @@ flowchart TB
 - **People with direct access** to the cluster, the GitOps repository or the registry can change
   what runs without Launchway.
 - **Any signed-in viewer** can list the runners.
-- **There is no separation between wings (organizations)** inside one installation. Run one installation
-  per organization that must not see another's work.
+- **There is no separation between Wings** inside one installation. Run one installation
+  for each company that must not see another's work.
 
 ## What next
 

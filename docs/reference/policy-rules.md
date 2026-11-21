@@ -456,7 +456,7 @@ launchway waivers revoke demo-app wvr_06gzdc7h6jffagj069w0 --reason "fixed"
 
 How waivers behave:
 
-- Waivers are a log of grants and revocations. Each is written to the audit trail as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
+- Waivers are a log of grants and revocations. Each is written to the Logbook as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
 - A waiver counts only while it is in force: a decision made after it expires does not count it, even in a run that started before. A decision notes waivers that would have applied but had expired.
 - A rule is judged again when the run is resumed or re-run, so the usual path is to grant a waiver, then resume the run.
 - Who may waive is `policy.waivers.allow` on the project. A deploy rule needs that role on the environment too; a waiver that names no environment needs it from an access binding not limited to environments. A limited API token never grants more than its limits. See [roles](roles.md).

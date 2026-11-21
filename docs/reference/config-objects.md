@@ -20,14 +20,14 @@ command line, the MCP server and the planned Terraform provider name them. For t
 - **History.** Every change is recorded with who made it, when, the action, the settings before and
   after, and an optional comment. History is never rewritten.
 - **Deleting is reversible.** A deleted object is kept and `restore` brings it back as it was. The
-  installation settings, the organization and the step resources cannot be deleted; change them.
+  Base settings, the Wing and the step resources cannot be deleted; change them.
 - **Managed by.** `managed_by` says who owns an object: `api` (the UI, the CLI, MCP or a direct
   call), `import`, `terraform` or `git` (a tool says which with the header `X-Launchway-Manager`, and
   only with an API token: a signed-in browser is always the web UI). The label is enforced, not
   advisory: an object that Terraform or Git manages is read-only to everyone else, because the next
   run of the tool would undo their change. Whoever really needs to change it sends `take_ownership`
   (`--take-ownership`, or the confirmation in the web UI): it makes them the owner and is recorded in
-  the object's history and the audit trail. Sending the header alone never changes who owns an
+  the object's history and the Logbook. Sending the header alone never changes who owns an
   object; claiming one the UI manages needs `take_ownership` too.
 - **Units.** Objects that can be defined at a level carry a `unit`; empty is the organization. A
   project's `unit` is the unit it belongs to.
@@ -102,15 +102,15 @@ Which pipeline a project runs, first match first:
 
 1. the repository's own `.launchway/pipeline.yaml` at the commit;
 2. the project's own `pipeline`;
-3. the flight plan of the project's unit;
-4. the flight plan of the organization.
+3. the Flight plan of the project's unit;
+4. the Flight plan of the Wing.
 
 A project changes the flight plan it gets, without leaving it, with `default_pipeline` on the project:
 `enabled: false` runs no flight plan (a repository file still runs), and `with` gives other values for
-some of the template's parameters; the rest stay as the flight plan sets them. The flight plan is checked
+some of the template's parameters; the rest stay as the Flight plan sets them. The Flight plan is checked
 with the rest of the configuration: a library or template that does not exist is refused when you
 save. Every run records where its pipeline came from: the run page and the push decisions say "the
-flight plan of the organization ran", and the run keeps the pipeline text it amounts to.
+flight plan of the Wing ran", and the run keeps the pipeline text it amounts to.
 
 ## Where artifacts are kept, and the MCP endpoint
 
@@ -159,7 +159,7 @@ with no differences applies nothing; nothing is write-only (secrets are referenc
 
 `launchway config export` writes objects as configuration text: the sections a configuration file
 has (`projects:`, `environments:`, `runner_pools:`, `policy:` and so on) and, for what the file has
-no place for (units, secret stores, step resources, named role bindings, anything defined at a unit),
+no place for (units, secret stores, step resources, named role bindings, anything defined at a Squadron),
 an `objects:` list. `launchway config import` reads the same text, plans, and applies on request. An
 older server that still runs from a file can use an export with the `objects:` list removed.
 

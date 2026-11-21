@@ -363,11 +363,11 @@ Guidance and checks that show runners on any machine, in any network, replace th
 
 The right amount of sharing at the right level, with the fewest new ideas to learn: a template is an interface, code is what runs, and a nearer level always wins.
 
-#### Templates and flight plans by level {#templates-and-flight-plans-by-level}
+#### Templates and Flight plans by level {#templates-and-flight-plans-by-level}
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Set a template or a flight plan at the organization or unit and every project beneath it uses it. Today a flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
+Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it. Today a Flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
 
 [Read the documentation](../guide/libraries.md)
 
@@ -385,7 +385,7 @@ Declare a variable lower down to override it, let a level above lock it, and see
 
 A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open. You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.
 
-**Depends on:** Shared pipeline templates and flight plans.
+**Depends on:** Shared pipeline templates and Flight plans.
 
 [Area page](pipelines.md)
 
@@ -423,7 +423,7 @@ A connection to a registry, a cluster or a cloud set up once at a level and used
 
 For any template, library or connection, a list of every project that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
 
-**Depends on:** Templates and flight plans by level.
+**Depends on:** Templates and Flight plans by level.
 
 [Area page](pipelines.md)
 
@@ -491,7 +491,7 @@ Run a build with and without cache and compare the results, or run without cache
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
+Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
 
 [Area page](build-tools-caches.md)
 
@@ -623,7 +623,7 @@ A time budget for the first result on a pull request, with fast checks first and
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Detect the tool, apply the recipe and its flight plan, and get a green build, with the clock as a test. Includes mobile templates.
+Detect the tool, apply the recipe and its Flight plan, and get a green build, with the clock as a test. Includes mobile templates.
 
 [Area page](developer-experience.md)
 

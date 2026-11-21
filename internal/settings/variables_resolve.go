@@ -17,9 +17,9 @@ import (
 // VariableRule is the precedence rule, in the one sentence every page,
 // message and document uses. A test holds the documents to it.
 const VariableRule = "The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, " +
-	"then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; " +
+	"then the project, the Squadron, the Wing, the Base, then the template's own default; " +
 	"at the same level a variable set for the environment being deployed to beats the general one; " +
-	"and a lock set at a level beats everything below it. Lists replace, never merge. Variables and locks never cross organizations."
+	"and a lock set at a level beats everything below it. Lists replace, never merge. Variables and locks never cross Wings."
 
 // Kinds of source of a value, from the nearest to a run to the farthest.
 const (

@@ -207,7 +207,7 @@ input without a default (the file is refused, on that input's line); a
 [schedule](triggers.md#schedules) or [webhook](triggers.md#webhooks) must give such an input a value.
 
 The values a run was started with are recorded with it (shown on the run, under *Started with*,
-and in the audit trail), and reach every step as `LAUNCHWAY_INPUT_<NAME>`: `true` or `false`, a
+and in the Logbook), and reach every step as `LAUNCHWAY_INPUT_<NAME>`: `true` or `false`, a
 number in its shortest form (`2`, `2.5`), a list as a JSON array (`["3.12","3.13"]`). There is no
 expression language; an input is used in exactly these places:
 
@@ -224,7 +224,7 @@ expression language; an input is used in exactly these places:
 A run that is resumed keeps its inputs. A re-run copies them and cannot change them: the steps it
 reuses ran with those values, so a re-run with other values would mix two runs. To run with other
 values, start a new run. Inputs are not for secrets: values are recorded with the run, shown to
-everyone who can see it, and written to the audit trail. Use [secrets](secrets.md) for those.
+everyone who can see it, and written to the Logbook. Use [secrets](secrets.md) for those.
 Choices whose options come from a step or another system (`options_from:`) are not supported yet.
 
 ## Repeating a step over lists

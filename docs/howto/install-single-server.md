@@ -316,7 +316,7 @@ The proxy must:
 
 Set `server.trust_proxy: true` only when clients cannot reach Launchway except through the proxy.
 Then Launchway marks cookies `Secure` from `X-Forwarded-Proto` and takes the client's address
-(for the audit trail and the limit on failed sign-ins) from the last `X-Forwarded-For` entry.
+(for the Logbook and the limit on failed sign-ins) from the last `X-Forwarded-For` entry.
 Without it, `X-Forwarded-For` is ignored. Cookies are also `Secure` whenever `redirect_url` starts
 with `https://`.
 
@@ -375,7 +375,7 @@ curl -s https://launchway.example.com/api/v1/info
 ```
 
 After signing in through the proxy, the browser's `launchway_session` cookie should be `HttpOnly`,
-`SameSite=Lax` and `Secure`, and entries in the audit trail should show the client's address, not
+`SameSite=Lax` and `Secure`, and entries in the Logbook should show the client's address, not
 the proxy's.
 
 ## Check that it is healthy

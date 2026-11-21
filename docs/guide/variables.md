@@ -9,9 +9,9 @@ pipeline: every template has its own defaults, and a pipeline file can say every
 
 One sentence, the same on every page, in every message and in every interface:
 
-**The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations.
+**The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
 
-The words *squadron*, *wing* and *base* are the default names of the levels; the business set calls them
+The words Squadron, Wing and Base are the default names of the levels; the business set calls them
 team, organization and installation, and [Words](words.md) renames any of them. The rule does not change.
 
 If you write code, the analogy is exact. A template's inputs are the **interface**. A variable at a wider
@@ -22,15 +22,15 @@ it. A lock is `final`: nothing below may override it.
 
 | Level | Reaches | Set by |
 |---|---|---|
-| Installation (the base) | every project | an administrator of every project |
-| Organization (the wing) | every project of the organization | an administrator of every project |
-| Unit (a squadron) | the projects in that unit | an administrator of every project in the unit |
+| Base (installation) | every project | an administrator of every project |
+| Wing (organization) | every project of the Wing | an administrator of every project |
+| Squadron (unit) | the projects in that Squadron | an administrator of every project in the Squadron |
 | Project | that project | an operator of the project |
 
-A lock needs the level's administrator: of every project for the installation and the organization, of
-the unit's projects for a unit, of the project for a project. A variable set for a unit, or the
-organization, never reaches another unit or another organization: variables and locks do not cross
-organizations.
+A lock needs the level's administrator: of every project for the installation and the Wing, of
+the Squadron's projects for a Squadron, of the project for a project. A variable set for a Squadron, or the
+Wing, never reaches another Squadron or another Wing: variables and locks do not cross
+Wings.
 
 ## Types
 
@@ -52,7 +52,7 @@ a letter, at most 40 characters.
 
 A variable may be for one environment, such as `production`. Resolved for a deploy to that environment,
 at the same level the environment's variable beats the general one. A project's own general setting still
-beats the organization's variable for production: a project is in control of itself unless something
+beats the Wing's variable for production: a project is in control of itself unless something
 above **locks**. A step with no environment, such as a build or a test, sees only the general variables.
 
 ## Locks
@@ -94,7 +94,7 @@ registry is locked to harbor-retail by the wing (everything ships through the au
 
 This is reported by `launchway validate --project`, the editor, and when a run is created, before any
 runner. Giving the locked value itself is accepted. If a template needs a variable and nothing sets it, the
-message says where to set it: for the project, its unit or its organization (Settings, Variables), or under `with:`.
+message says where to set it: for the project, its Squadron or its Wing (Settings, Variables), or under `with:`.
 
 ## What a run used
 
@@ -127,5 +127,5 @@ launchway variables effective cart-api --environment production
 
 Variables bound beyond `from:` on inputs and parameters (the `{ variable: name }` form inside `env:` and
 `with:`), templates that a level requires, connections as objects of their own, and more than one
-organization are still to come; so is a Terraform resource (it is planned, see the
+Wing are still to come; so is a Terraform resource (it is planned, see the
 [parity table](../reference/interface-parity.md)).

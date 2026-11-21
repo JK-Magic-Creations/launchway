@@ -68,7 +68,7 @@ authors. For operators and platform engineers, and for developers who write pipe
 
 - [ ] **Revoke the API tokens of people who leave.** Their tokens keep their last known groups
   until they expire. Keep `auth.tokens.max_days` short.
-- [ ] **Keep the audit trail.** Launchway only adds to it; copy it to your log archive if you must
+- [ ] **Keep the Logbook.** Launchway only adds to it; copy it to your log archive if you must
   keep it longer than the database.
 - [ ] **Watch for failed sign-ins and refused tokens** (`token.use`, `webhook.*` with outcome
   `denied`). See [Monitor Launchway](../howto/monitoring.md).

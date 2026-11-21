@@ -105,7 +105,7 @@ curl -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 A rule is judged again when a run is resumed. Press **Resume** on the run (or
 `POST /api/v1/runs/<run-id>/resume` with the same header). The run passes the gate and succeeds,
 and the Policy tab shows both decisions: the block, then the pass with `step_images` **waived**
-and the waiver's reason. Waivers are recorded in the audit trail (`policy.waive`) and expire on
+and the waiver's reason. Waivers are recorded in the Logbook (`policy.waive`) and expire on
 their own; at most `policy.waivers.max_days` (default 30) ahead.
 
 > [!TIP]

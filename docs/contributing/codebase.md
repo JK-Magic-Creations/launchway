@@ -11,7 +11,7 @@ The packages of the code base and what the tests cover. For contributors.
 | `internal/secrets` | Secret stores (env, file, Vault/OpenBao) and masking, used only by runners |
 | `internal/source` | Mirrors Git repositories, starts runs on matching pushes and pull requests, records why |
 | `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
-| `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
+| `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the Logbook and the live event stream |
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
 | `internal/blobstore` | Where artifacts are kept: the database (in chunks), a directory, or S3-compatible object storage |
 | `internal/findings`, `internal/sbom` | Read SARIF scanner results and CycloneDX SBOMs, treating them as hostile input |
@@ -47,7 +47,7 @@ The packages of the code base and what the tests cover. For contributors.
 - secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
 - sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
   open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
-  stream, the audit trail, and sign-in across two servers;
+  stream, the Logbook, and sign-in across two servers;
 - artifacts: chunked uploads that break off and carry on, checksum mismatches, quotas, pruning by
   two servers at once, fetching in a fresh workspace, and downloads that are never shown as pages
   (`make test-s3` adds a real S3-compatible server);

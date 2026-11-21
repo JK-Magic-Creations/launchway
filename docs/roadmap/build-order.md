@@ -29,7 +29,7 @@ After what is already in flight (the release with encryption at rest, built-in s
 4. Adapters for the tools teams already use.
 5. The model gateway.
 6. Runner placement: load-aware runners on personal machines first, then a build’s parallel steps spread across machines, size hints and fairness.
-7. The track towards the first outside user: the files-on-your-machines mode and the wall between bases, then the opening stages.
+7. The track towards the first outside user: the files-on-your-machines mode and the wall between Bases, then the opening stages.
 
 ## Why this order
 

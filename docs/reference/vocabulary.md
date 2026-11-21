@@ -4,6 +4,19 @@ The glossary of record for the words Launchway uses for its own concepts. The wo
 
 These are ordinary words used descriptively. Launchway is not affiliated with or endorsed by any military service.
 
+## The levels
+
+The four levels have one permanent name in the API, flags and files, and a word people read. Prose uses the default word (Base, Wing, Squadron, Project); the plain word appears where the vocabulary is introduced, here, and next to a literal identifier in code font. "Installation" stays the ordinary word for a running Launchway.
+
+<!-- vocabulary:levels -->
+| Stable name (API, flags, files) | Default word | Plain word | What it is |
+|---|---|---|---|
+| `installation` | **Base** | Installation | the whole installation, the top level |
+| `organization (kind name today: organisation)` | **Wing** | Organization | owns the projects; the second level |
+| `unit` | **Squadron** | Team | an optional group of projects; the third level |
+| `project` | **Project** | Project | one repository and its pipeline; the fourth level |
+<!-- /vocabulary:levels -->
+
 ## The words
 
 <!-- vocabulary:terms -->
@@ -36,9 +49,10 @@ Every word above is a default that an installation can rename. Words everyone kn
 - **people-read.** What a person reads (screens, documentation, command help and output, the `error` and `next` sentences, MCP descriptions, notices, chart comments) uses the product words. Screens and messages the server builds ask the terms system ({key}, terms().label) so a rename takes effect; documentation names the default word and, once per page that introduces a level, the plain word beside it. Never a hard-coded plain level name where the level is meant.
 - **identifiers.** Stable identifiers (API JSON fields and paths, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds, Go identifiers) cannot follow a renameable word. Each level has one neutral, permanent name: installation, organization, unit, project. They are documented as 'the API name of a Base' and are never themed.
 - **ordinary-words.** Where an industry word is the accepted term it stays ordinary: pipeline, step, run, branch, commit, pull request, secret, environment, deploy, rollback, variable, template, library, runner, artifact, registry.
-- **buttons.** Ordinary verb on the button, product noun for the thing: the button says Approve or Reject; the thing a person gives is a clearance; the recorded answer is Go or No-go. Pull-request reviews keep the ordinary word approval; the pipeline key stays kind: approval.
-- **capitals.** Level and feature words are common nouns: lower case in the middle of a sentence (the base, a wing, a flight plan), capitalized at the start of a sentence, in a heading, a label or a button. Wingman and Launchway are names: always capitalized.
+- **buttons.** Open decision, not applied: the owner chose Clearance with Go and No-go, so the decision buttons say Go and No-go. A proposal to put the ordinary verbs Approve and Reject on the buttons, and keep Go and No-go as the recorded answer, is the owner's to take.
+- **capitals.** Level words are the product's proper names for its levels: write Base, Wing, Squadron and Project capitalized when they mean the level (a lower-case 'base' or 'wing' reads as an ordinary word). Feature words are product nouns too: Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload. 'launch line' stays lower case. (The screens' terms helper lower-cases a word in the middle of a sentence; that is an open decision.)
 - **spelling.** American English: organization, color, behavior, license (noun and verb), initialize, customize.
+- **levels-in-prose.** Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.
 <!-- /vocabulary:rules -->
 
 ## The two layers
@@ -61,7 +75,16 @@ Every word above is a default that an installation can rename. Words everyone kn
 | `assistant-in-screens` | fails the check | the guide ({guide}: Wingman); 'assistant' stays only for a third-party AI assistant that connects through MCP |
 | `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go} |
 | `hardcoded-level-word` | review list | the terms system when the level is meant ({organization}, {installation}); ordinary use (an organization's identity provider; installing software) may stay and goes on the allow list |
-| `level-capitalized-mid-sentence` | fails the check | lower case in the middle of a sentence |
 | `approval-for-clearance` | review list | clearance for the thing a person gives; approval stays for pull-request reviews and the step key |
 | `template-ambiguity` | review list | flight plan (a whole ready-made pipeline) or step template (a reusable part) |
+| `level-organization` | fails the check | Wing (the second level) or, for the real-world company, add the use to the allow-list |
+| `level-unit` | fails the check | Squadron (the third level) |
+| `level-installation` | fails the check | Base (the top level); 'installation' stays for a running deployment |
+| `level-lowercase` | fails the check | Base, Wing and Squadron are proper names: capitalize them |
+| `feature-lowercase` | fails the check | capitalize the product noun (Wingman, Logbook, Detachment, Flight plan) |
+| `launch-line-capital` | fails the check | launch line stays lower case |
+| `the-audit-trail` | fails the check | the Logbook |
+| `team-as-level` | review list | Squadron when the third level is meant |
+| `installation-as-level` | review list | Base when the top level is meant |
+| `clearance-preflight-lowercase` | review list | capitalize when the product concept is meant (webhook payloads and CORS preflight are ordinary) |
 <!-- /vocabulary:checks -->

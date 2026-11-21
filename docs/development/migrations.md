@@ -342,8 +342,8 @@ Schema 23 brings configuration in the database (see `internal/engine/configstore
 unit, spec, version, who manages it, soft-delete marks), `config_changes` (the history, appended in
 the transaction of every change and never rewritten, with the object before and after), `config_imports`
 (one row per import, the first start's among them) and `config_revisions` (one counter that every change
-raises, which is what servers watch). Every table has an `org` column, `''` for the one organization
-there is, and `org` is the first column of the keys and indexes: adding organizations later is a new
+raises, which is what servers watch). Every table has an `org` column, `''` for the one Wing
+there is, and `org` is the first column of the keys and indexes: adding Wings later is a new
 value in that column, with no table rewritten. It is additive: nothing older code reads is added, no
 event type is added, and no run carries `requires: 23`.
 
@@ -371,14 +371,14 @@ and line), so the same policies hash the same from the file and from the databas
 server's hash still includes line numbers; the policies are the same.
 
 The artifact store is the one setting chosen before the database can be asked: the engine reads the
-stored installation settings as it opens, and uses the store they name instead of the file's. A change
+stored Base settings as it opens, and uses the store they name instead of the file's. A change
 to it applies when each server next restarts.
 
 Rolling back from schema 23 to 22:
 
 1. Export: `launchway config export -o config.yaml` (or `GET /api/v1/config/export`). Take the
    `objects:` list out of the text: it holds what the file has no place for (units, secret-store
-   definitions, step resources, names of role bindings, objects defined at a unit), which the release
+   definitions, step resources, names of role bindings, objects defined at a Squadron), which the release
    before cannot read; the release before does not have those.
 2. Merge the rest into each server's configuration file (with the Helm chart, into `config.*`;
    `config.projects`, `config.extraConfig` and the other values hold the same sections), together with

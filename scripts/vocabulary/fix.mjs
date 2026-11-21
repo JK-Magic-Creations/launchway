@@ -22,7 +22,8 @@ if (args.includes('--docs')) {
   const terms = ['| Default word | Plain word | Meaning | Renameable | Never call it |', '|---|---|---|---|---|', ...vocab.terms.map(row)].join('\n')
   const rules = Object.entries(vocab.rules).filter(([k]) => k !== 'disclaimer').map(([k, v]) => `- **${k}.** ${v}`).join('\n')
   const sub = (name, body) => { md = md.replace(new RegExp(`(<!-- vocabulary:${name} -->)[\\s\\S]*?(<!-- /vocabulary:${name} -->)`), `$1\n${body}\n$2`) }
-  sub('terms', terms); sub('rules', rules)
+  const levels = ['| Stable name (API, flags, files) | Default word | Plain word | What it is |', '|---|---|---|---|', ...vocab.levelNames.map((l) => `| \`${l.stable}\` | **${l.aviation}** | ${l.plain} | ${l.note} |`)].join('\n')
+  sub('levels', levels); sub('terms', terms); sub('rules', rules)
   const checks = ['| Rule | Kind | Use instead |', '|---|---|---|', ...vocab.checks.map((c) => `| \`${c.id}\` | ${c.severity === 'error' ? 'fails the check' : 'review list'} | ${c.use} |`)].join('\n')
   sub('checks', checks)
   if (!dry) writeFileSync(join(root, page), md)
@@ -42,6 +43,7 @@ for (const { path, kind } of listFiles(root, vocab)) {
     if (to === null) { human.push(`${f.path}:${f.line}: "${f.match}" (${f.rule}): use ${f.use}`); continue }
     out = out.slice(0, f.start + shift) + to + out.slice(f.end + shift); shift += to.length - (f.end - f.start); fixed++
   }
+  out = out.replace(/\ban (Wings?|Base)\b/g, 'a $1').replace(/\bA (Wings?|Squadrons?)\b/g, 'A $1')
   if (out !== text && !dry) writeFileSync(join(root, path), out)
 }
 console.log(`vocabulary-fix: ${fixed} replacement(s)${dry ? ' (dry run)' : ''}; ${human.length} for a person:`)

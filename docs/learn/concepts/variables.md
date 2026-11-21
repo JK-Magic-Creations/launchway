@@ -36,8 +36,8 @@ runs. The value is not written to the pipeline, the database or the log. See [Se
 
 ## Variables set at a level
 
-The places above are inside one pipeline. A variable can also be set once at a **level**: the base,
-a wing, a squadron or a project. Everything below gets it. A nearer level can set the same name to
+The places above are inside one pipeline. A variable can also be set once at a **level**: the Base,
+a Wing, a Squadron or a project. Everything below gets it. A nearer level can set the same name to
 override it, and a level above can lock it so nothing below can change it.
 
 ```mermaid
@@ -51,7 +51,7 @@ flowchart TB
 
 The rule is one sentence:
 
-**The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations.
+**The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
 
 If you write code, you already know it:
 

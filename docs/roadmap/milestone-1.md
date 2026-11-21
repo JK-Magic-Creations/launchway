@@ -69,7 +69,7 @@ Launchway stores your repositories and serves them, so one product and a databas
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.
+Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.
 
 **Depends on:** A database; the shared blob store that already exists.
 
@@ -169,7 +169,7 @@ Scheduled housekeeping, an integrity check, a size report and a health note on t
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A deleted repository goes to a trash and can come back within a set time. Delete is reversible for a period you choose, and both the delete and the restore are in the audit trail.
+A deleted repository goes to a trash and can come back within a set time. Delete is reversible for a period you choose, and both the delete and the restore are in the Logbook.
 
 **Depends on:** Built-in Git hosting.
 

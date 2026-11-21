@@ -999,7 +999,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/audit:
         get:
-            description: The audit trail, newest first.
+            description: The Logbook, newest first.
             operationId: get_api_v1_audit
             responses:
                 "200":
@@ -1016,7 +1016,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The audit trail, newest first.
+            summary: The Logbook, newest first.
             tags:
                 - audit
             x-launchway-access: admin
@@ -1093,7 +1093,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/config:
         get:
-            description: The kinds, the names of the levels, the units, the revision this server runs with, and whether the caller is an administrator. available is false on a server limited to a schema before 23, which uses its file
+            description: The kinds, the names of the levels, the Squadrons, the revision this server runs with, and whether the caller is an administrator. available is false on a server limited to a schema before 23, which uses its file
             operationId: get_api_v1_config
             responses:
                 "200":
@@ -1110,7 +1110,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The kinds, the names of the levels, the units, the revision this server runs with, and whether the caller is an administrator.
+            summary: The kinds, the names of the levels, the Squadrons, the revision this server runs with, and whether the caller is an administrator.
             tags:
                 - config
             x-launchway-access: any-viewer
@@ -1179,7 +1179,7 @@ paths:
             x-launchway-audit: config.create
     /api/v1/config/{kind}/{obj}:
         delete:
-            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the audit trail) or if it would leave the configuration invalid'
+            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the Logbook) or if it would leave the configuration invalid'
             operationId: delete_api_v1_config_kind_obj
             parameters:
                 - in: path
@@ -1441,7 +1441,7 @@ paths:
             x-launchway-audit: config.check_signin
     /api/v1/config/effective/{project}:
         get:
-            description: 'What applies to a project and where each part comes from: the installation, the organization, a unit or the project'
+            description: 'What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project'
             operationId: get_api_v1_config_effective_project
             parameters:
                 - in: path
@@ -1466,7 +1466,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What applies to a project and where each part comes from: the installation, the organization, a unit or the project'
+            summary: 'What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project'
             tags:
                 - config
             x-launchway-access: admin
@@ -1765,7 +1765,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/imports:
         post:
-            description: '{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}. owner limits the listing to one user or organization of the source, repository (owner/name) to one; without them it brings in everything the credential can see. dry_run lists what would be created and changes nothing. wait copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. mirror: false makes each an ordinary repository once copied and checked (needs wait). Answers {"dry_run", "items", "summary"}; each item has source, repository, url, visibility, action (create, resume, skip), state (planned, queued, verified, skipped, failed), reason, error (credentials removed), source_refs, hosted_refs, verified, differences and mirror_id. One repository failing does not stop the others.'
+            description: '{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}. owner limits the listing to one user or Wing of the source, repository (owner/name) to one; without them it brings in everything the credential can see. dry_run lists what would be created and changes nothing. wait copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. mirror: false makes each an ordinary repository once copied and checked (needs wait). Answers {"dry_run", "items", "summary"}; each item has source, repository, url, visibility, action (create, resume, skip), state (planned, queued, verified, skipped, failed), reason, error (credentials removed), source_refs, hosted_refs, verified, differences and mirror_id. One repository failing does not stop the others.'
             operationId: post_api_v1_imports
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -7185,7 +7185,7 @@ paths:
             x-launchway-access: signed-in
             x-launchway-audit: variable.delete
         put:
-            description: 'Sets a variable: {level, scope, environment, type, of, value, description}. Types: string, number, boolean, list, map, secret (a reference {store, key, field}, never text) and connection (a name, with of). A name keeps one type everywhere. Who: an operator of the project, or an admin of the unit''s projects, or of every project for the organization and the installation. 409 when a lock above forbids it, naming the level and who can change it'
+            description: 'Sets a variable: {level, scope, environment, type, of, value, description}. Types: string, number, boolean, list, map, secret (a reference {store, key, field}, never text) and connection (a name, with of). A name keeps one type everywhere. Who: an operator of the project, or an admin of the Squadron''s projects, or of every project for the Wing and the installation. 409 when a lock above forbids it, naming the level and who can change it'
             operationId: put_api_v1_variables_name
             parameters:
                 - in: path
