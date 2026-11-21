@@ -10,7 +10,7 @@
     "internal/engine/db.go": 1560,
     "internal/engine/engine.go": 2117,
     "internal/engine/testqueries.go": 1226,
-    "internal/engine/verify.go": 1442,
+    "internal/engine/verify.go": 1418,
     "web/src/api.ts": 1564
   },
   "functions": {
@@ -24,6 +24,6 @@
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,
     "internal/runner/runner.go:Runner.execute": 151,
-    "internal/verify/source/source.go:openOne": 207
+    "internal/verify/source/source.go:openOne": 192
   }
 }

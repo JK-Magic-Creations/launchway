@@ -79,7 +79,7 @@ var allowedImports = map[string][]string{
 	"internal/testlib":                   {},
 	"internal/testreport":                {},
 	"internal/verify":                    {},
-	"internal/verify/source":             {"internal/pipeline", "internal/verify"},
+	"internal/verify/source":             {"internal/egress", "internal/pipeline", "internal/verify"},
 	"internal/verify/source/sourcetest":  {},
 }
 

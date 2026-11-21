@@ -59,7 +59,7 @@ type HealthSource struct {
 }
 
 // HealthSourceTypes are the types a health source may have.
-var HealthSourceTypes = []string{"prometheus", "loki", "clickhouse", "elasticsearch", "opensearch", "postgres", "http"}
+var HealthSourceTypes = []string{"prometheus", "loki", "clickhouse", "elasticsearch", "opensearch", "postgres", "http", "check"}
 
 // Allows reports whether a project may use the source.
 func (h HealthSource) Allows(project string) bool {
@@ -273,13 +273,14 @@ func (e *Engine) CheckVerify(project string, p *pipeline.Pipeline) pipeline.Prob
 			type q struct {
 				name, source, query, stable, statement string
 				line                                   int
+				check                                  bool
 			}
 			var qs []q
 			for _, m := range s.Verify.Metrics {
-				qs = append(qs, q{m.Name, m.Source, m.Query, m.StableQuery, m.Statement, m.Line})
+				qs = append(qs, q{m.Name, m.Source, m.Query, m.StableQuery, m.Statement, m.Line, m.Check != nil})
 			}
 			for _, l := range s.Verify.Logs {
-				qs = append(qs, q{l.Name, l.Source, l.Query, l.StableQuery, l.Statement, l.Line})
+				qs = append(qs, q{l.Name, l.Source, l.Query, l.StableQuery, l.Statement, l.Line, false})
 			}
 			declared := append(slices.Sorted(mapKeys(s.Verify.Params)), pipeline.ReservedParams...)
 			for _, x := range qs {
@@ -294,6 +295,10 @@ func (e *Engine) CheckVerify(project string, p *pipeline.Pipeline) pipeline.Prob
 					where("health source %q is not configured on this server%s", x.source, knownList(sourceNames(e.live().sources)))
 				case project != "" && !h.Allows(project):
 					where("project %s may not use health source %s (see its projects in the server's configuration)", project, x.source)
+				case x.check && h.Type != "check":
+					where("%s is a %s source: a check needs a source of type check (the deploy runner's list of what it may call)", x.source, h.Type)
+				case !x.check && h.Type == "check":
+					where("%s is a check source: it only runs checks; give the metric check: { url: ... } instead of a query", x.source)
 				case queryLanguage(h.Type) && x.query == "":
 					where("%s is a %s source: write the query (statement is for SQL and HTTP sources, whose operator writes the queries)", x.source, h.Type)
 				case !queryLanguage(h.Type) && x.query != "":
@@ -313,17 +318,26 @@ func (e *Engine) CheckVerify(project string, p *pipeline.Pipeline) pipeline.Prob
 				out = append(out, e.checkModel(project, s, m)...)
 			}
 		case s.IsAI() && s.AI != nil:
-			out = append(out, e.checkModel(project, s, s.AI.Model)...)
-			if s.AI.Schema != "" {
-				if err := checkSchema(s.AI.Schema); err != nil {
-					add(s, ".schema", "%v", err)
-				}
-			}
-			if m, ok := e.model(s.AI.Model); ok {
-				if s.AI.Temperature != nil && !m.SupportsTemperature() {
-					add(s, ".temperature", "model %s (%s) does not take a temperature; take it out", m.Name, m.Provider)
-				}
-			}
+			out = append(out, e.checkAIStep(project, s)...)
+		}
+	}
+	return out
+}
+
+// checkAIStep checks an ai step's model, schema and temperature.
+func (e *Engine) checkAIStep(project string, s *pipeline.Step) pipeline.Problems {
+	out := e.checkModel(project, s, s.AI.Model)
+	add := func(path, format string, a ...any) {
+		out = append(out, pipeline.Problem{Line: s.Line, Path: "steps." + s.ID + path, Message: s.ID + ": " + fmt.Sprintf(format, a...)})
+	}
+	if s.AI.Schema != "" {
+		if err := checkSchema(s.AI.Schema); err != nil {
+			add(".schema", "%v", err)
+		}
+	}
+	if m, ok := e.model(s.AI.Model); ok {
+		if s.AI.Temperature != nil && !m.SupportsTemperature() {
+			add(".temperature", "model %s (%s) does not take a temperature; take it out", m.Name, m.Provider)
 		}
 	}
 	return out
@@ -595,6 +609,8 @@ type VerifyQuery struct {
 	Index       string `json:"index,omitempty"`
 	StepMS      int64  `json:"step_ms,omitempty"`
 	MaxLines    int    `json:"max_lines,omitempty"`
+	// Check, for a metric, is the call the deploy runner makes itself.
+	Check *pipeline.HealthCheck `json:"check,omitempty"`
 }
 
 // VerifyResult is what a deploy runner adds when it finishes a
@@ -808,7 +824,7 @@ func (c *cmd) verifyJob(stepID, leaseID string) *Job {
 	slices.Sort(vj.Done)
 	for _, m := range def.Verify.Metrics {
 		vj.Metrics = append(vj.Metrics, VerifyQuery{Name: m.Name, Source: m.Source, Query: m.Query, StableQuery: m.StableQuery,
-			Statement: m.Statement, Index: m.Index, StepMS: m.Step.D().Milliseconds()})
+			Statement: m.Statement, Index: m.Index, StepMS: m.Step.D().Milliseconds(), Check: m.Check})
 	}
 	for _, l := range def.Verify.Logs {
 		vj.Logs = append(vj.Logs, VerifyQuery{Name: l.Name, Source: l.Source, Query: l.Query, StableQuery: l.StableQuery,
@@ -892,6 +908,8 @@ func checkInterval(v *VerifyState, iv *verify.Interval, now int64) error {
 		m.Canary = clipPoints(m.Canary, iv.Start, iv.End)
 		m.Stable = clipPoints(m.Stable, iv.Start, iv.End)
 		m.Error = clipText(m.Error, verify.MaxErrorBytes)
+		m.Note = clipText(m.Note, verify.MaxErrorBytes)
+		m.Attempts = clipAttempts(m.Attempts, iv.Start, iv.End)
 		ms = append(ms, m)
 	}
 	var ls []verify.LogData
@@ -908,39 +926,6 @@ func checkInterval(v *VerifyState, iv *verify.Interval, now int64) error {
 	}
 	iv.Metrics, iv.Logs = ms, ls
 	return nil
-}
-
-func clipPoints(ps []verify.Point, start, end int64) []verify.Point {
-	var out []verify.Point
-	for _, p := range ps {
-		if p.T < start-60_000 || p.T > end+60_000 { // a little slack for the source's alignment
-			continue
-		}
-		out = append(out, p)
-		if len(out) == verify.MaxPointsPerSeries {
-			break
-		}
-	}
-	return out
-}
-
-func clipClusters(cs []verify.Cluster) []verify.Cluster {
-	if len(cs) > verify.MaxClusters {
-		cs = cs[:verify.MaxClusters]
-	}
-	out := make([]verify.Cluster, 0, len(cs))
-	for _, c := range cs {
-		c.Template = clipText(c.Template, verify.MaxTemplateBytes)
-		c.Count = max(c.Count, 0)
-		if len(c.Samples) > verify.MaxSamples {
-			c.Samples = c.Samples[:verify.MaxSamples]
-		}
-		for i := range c.Samples {
-			c.Samples[i] = clipText(strings.ToValidUTF8(c.Samples[i], "?"), verify.MaxSampleBytes)
-		}
-		out = append(out, c)
-	}
-	return out
 }
 
 // finishVerify records how a deploy runner's verification attempt ended.
@@ -1324,7 +1309,7 @@ func verificationView(st *RunState, def *pipeline.Step, s *StepState) Verificati
 		}
 	}
 	for _, m := range def.Verify.Metrics {
-		vw.Queries = append(vw.Queries, VerifyQuery{Name: m.Name, Source: m.Source, Query: m.Query, StableQuery: m.StableQuery, Statement: m.Statement, Index: m.Index})
+		vw.Queries = append(vw.Queries, VerifyQuery{Name: m.Name, Source: m.Source, Query: m.Query, StableQuery: m.StableQuery, Statement: m.Statement, Index: m.Index, Check: m.Check})
 	}
 	for _, l := range def.Verify.Logs {
 		vw.Queries = append(vw.Queries, VerifyQuery{Name: l.Name, Source: l.Source, Query: l.Query, StableQuery: l.StableQuery, Statement: l.Statement, Index: l.Index})

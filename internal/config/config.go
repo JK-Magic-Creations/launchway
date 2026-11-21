@@ -219,7 +219,7 @@ type VerificationConfig struct {
 // HealthSourceConfig names one health source.
 type HealthSourceConfig struct {
 	Name     string   `yaml:"name"`
-	Type     string   `yaml:"type"` // prometheus, loki, clickhouse, elasticsearch, opensearch, postgres or http
+	Type     string   `yaml:"type"` // prometheus, loki, clickhouse, elasticsearch, opensearch, postgres, http or check
 	Projects []string `yaml:"projects"`
 }
 

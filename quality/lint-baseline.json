@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 466,
+  "total": 464,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -923,12 +923,6 @@
     {
       "file": "internal/engine/verify.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 31 of func `(*Engine).CheckVerify` is high (\u003e 30)",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/verify.go",
-      "linter": "gocyclo",
       "text": "cyclomatic complexity 31 of func `(*cmd).verifyParams` is high (\u003e 30)",
       "count": 1
     },
@@ -1308,12 +1302,6 @@
       "file": "internal/pipeline/verify.go",
       "linter": "funlen",
       "text": "Function 'parseVerifyStep' is too long (207 \u003e 150)",
-      "count": 1
-    },
-    {
-      "file": "internal/pipeline/verify.go",
-      "linter": "gocyclo",
-      "text": "cyclomatic complexity 33 of func `(*parser).parseVerifyMetric` is high (\u003e 30)",
       "count": 1
     },
     {
@@ -1715,7 +1703,7 @@
     {
       "file": "internal/verify/source/source.go",
       "linter": "funlen",
-      "text": "Function 'openOne' has too many statements (137 \u003e 100)",
+      "text": "Function 'openOne' has too many statements (128 \u003e 100)",
       "count": 1
     },
     {
@@ -1727,7 +1715,7 @@
     {
       "file": "internal/verify/source/source.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 92 of func `openOne` is high (\u003e 30)",
+      "text": "cyclomatic complexity 84 of func `openOne` is high (\u003e 30)",
       "count": 1
     },
     {

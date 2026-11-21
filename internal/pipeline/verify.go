@@ -83,15 +83,18 @@ type VerifyMetric struct {
 	// Query is written in the source's language (PromQL, LogQL, or an
 	// Elasticsearch query as JSON); Statement names a query the source's
 	// operator wrote (SQL and HTTP sources). Exactly one is set.
-	Query       string   `json:"query,omitempty"`
-	StableQuery string   `json:"stable_query,omitempty"` // the stable version's, to compare in the same interval
-	Statement   string   `json:"statement,omitempty"`
-	Index       string   `json:"index,omitempty"`     // Elasticsearch and OpenSearch
-	Direction   string   `json:"direction,omitempty"` // higher-is-worse (default), lower-is-worse or either
-	Max         *float64 `json:"max,omitempty"`
-	Min         *float64 `json:"min,omitempty"`
-	FailFastMax *float64 `json:"fail_fast_max,omitempty"`
-	FailFastMin *float64 `json:"fail_fast_min,omitempty"`
+	Query       string `json:"query,omitempty"`
+	StableQuery string `json:"stable_query,omitempty"` // the stable version's, to compare in the same interval
+	Statement   string `json:"statement,omitempty"`
+	Index       string `json:"index,omitempty"` // Elasticsearch and OpenSearch
+	// Check, instead of a query, is a call the deploy runner makes itself
+	// to the deployed service (see HealthCheck).
+	Check       *HealthCheck `json:"check,omitempty"`
+	Direction   string       `json:"direction,omitempty"` // higher-is-worse (default), lower-is-worse or either
+	Max         *float64     `json:"max,omitempty"`
+	Min         *float64     `json:"min,omitempty"`
+	FailFastMax *float64     `json:"fail_fast_max,omitempty"`
+	FailFastMin *float64     `json:"fail_fast_min,omitempty"`
 	// Failures is how many failing intervals in a row fail the metric.
 	Failures     int      `json:"failures,omitempty"`
 	MinIntervals int      `json:"min_intervals,omitempty"`
@@ -139,7 +142,7 @@ var (
 
 var (
 	verifyKeys       = []string{"kind", "description", "needs", "when", "timeout", "deployment", "environment", "service", "delay", "duration", "interval", "sensitivity", "baseline", "on_fail", "on_inconclusive", "params", "metrics", "logs", "model", "decide"}
-	verifyMetricKeys = []string{"name", "source", "query", "stable_query", "statement", "index", "direction", "max", "min", "fail_fast", "failures", "min_intervals", "min_points", "step", "baseline"}
+	verifyMetricKeys = []string{"name", "source", "query", "stable_query", "statement", "index", "check", "direction", "max", "min", "fail_fast", "failures", "min_intervals", "min_points", "step", "baseline"}
 	verifyLogKeys    = []string{"name", "source", "query", "stable_query", "statement", "index", "errors", "max_lines", "baseline"}
 	verifyNameRe     = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,39}$`)
 	verifyParamRe    = regexp.MustCompile(`^[a-z][a-z0-9_]{0,39}$`)
@@ -541,6 +544,8 @@ func (ps *parser) parseVerifyMetric(n *yaml.Node, at string) *VerifyMetric {
 			m.Statement = ps.scalar(v, where)
 		case "index":
 			m.Index = ps.scalar(v, where)
+		case "check":
+			m.Check = ps.parseHealthCheck(v, where)
 		case "direction":
 			m.Direction = ps.scalar(v, where)
 			if !slices.Contains(VerifyDirections, m.Direction) {
@@ -584,17 +589,7 @@ func (ps *parser) parseVerifyMetric(n *yaml.Node, at string) *VerifyMetric {
 			m.NoBaseline = !ps.bool(v, where)
 		}
 	})
-	if n.Kind != yaml.MappingNode {
-		return m
-	}
-	ps.checkVerifySource(n, at, m.Name, m.Source, m.Query, m.StableQuery, m.Statement)
-	if m.Direction == "" {
-		m.Direction = "higher-is-worse"
-	}
-	if m.Max != nil && m.Min != nil && *m.Min > *m.Max {
-		ps.add(n, at, "min is above max")
-	}
-	return m
+	return ps.finishVerifyMetric(n, at, m)
 }
 
 func (ps *parser) parseVerifyLog(n *yaml.Node, at string) *VerifyLog {

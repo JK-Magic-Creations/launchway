@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -220,13 +219,14 @@ func (d *DeployRunner) readIntervals(ctx context.Context, job *engine.Job, sys f
 		return &engine.Result{Outcome: "lost", Error: "this deploy runner has no health sources configured"}
 	}
 	var ack *engine.VerifyAck
+	checks := d.startChecks(ctx, job)
 	for i := 0; i < vj.Intervals; i++ {
 		if slices.Contains(vj.Done, i) {
 			continue
 		}
 		start := vj.Start + int64(i)*vj.IntervalMS
 		end := start + vj.IntervalMS
-		wake := time.UnixMilli(end).Add(cmp.Or(d.Settle, defaultSettle))
+		wake := time.UnixMilli(end).Add(d.settleFor(vj))
 		if w := time.Until(wake); w > 0 {
 			select {
 			case <-time.After(w):
@@ -234,7 +234,11 @@ func (d *DeployRunner) readIntervals(ctx context.Context, job *engine.Job, sys f
 				return nil
 			}
 		}
-		iv := d.readInterval(ctx, job, i, start, end)
+		got, ok := takeChecks(ctx, checks[i])
+		if !ok {
+			return nil
+		}
+		iv := d.readInterval(ctx, job, i, start, end, got)
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -284,7 +288,7 @@ func (d *DeployRunner) readIntervals(ctx context.Context, job *engine.Job, sys f
 }
 
 // readInterval reads every metric and log query of one interval.
-func (d *DeployRunner) readInterval(ctx context.Context, job *engine.Job, index int, start, end int64) verify.Interval {
+func (d *DeployRunner) readInterval(ctx context.Context, job *engine.Job, index int, start, end int64, checks map[string]checkReading) verify.Interval {
 	vj := job.Verify
 	iv := verify.Interval{Index: index, Start: start, End: end}
 	from, to := time.UnixMilli(start), time.UnixMilli(end)
@@ -295,6 +299,10 @@ func (d *DeployRunner) readInterval(ctx context.Context, job *engine.Job, index 
 			Params: vj.Params, Start: from, End: to, Step: step, MaxLines: maxLines})
 	}
 	for _, m := range vj.Metrics {
+		if m.Check != nil {
+			iv.Metrics = append(iv.Metrics, metricFromCheck(m.Name, checks[m.Name]))
+			continue
+		}
 		md := verify.MetricData{Name: m.Name}
 		step := time.Duration(m.StepMS) * time.Millisecond
 		r, err := q(m.Source, m.Query, m.Statement, m.Index, "metric", step, 0)
@@ -356,6 +364,9 @@ func intervalLine(vj *engine.VerifyJob, iv verify.Interval) string {
 			p := fmt.Sprintf("%s %.4g", m.Name, s.Mean)
 			if len(m.Stable) > 0 {
 				p += fmt.Sprintf(" (stable %.4g)", verify.Summarize(values(m.Stable)).Mean)
+			}
+			if m.Note != "" {
+				p += ": " + m.Note
 			}
 			parts = append(parts, p)
 		}

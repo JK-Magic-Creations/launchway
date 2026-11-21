@@ -586,7 +586,7 @@
                 "required": ["name", "type", "url", "projects"],
                 "properties": {
                   "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
-                  "type": { "enum": ["prometheus", "loki", "clickhouse", "elasticsearch", "opensearch", "postgres", "http"] },
+                  "type": { "enum": ["prometheus", "loki", "clickhouse", "elasticsearch", "opensearch", "postgres", "http", "check"] },
                   "url": { "type": "string", "pattern": "^(https?|postgres(ql)?)://.+" },
                   "projects": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
                   "auth": {

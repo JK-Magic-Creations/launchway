@@ -804,6 +804,7 @@ Each metric in `metrics`:
 | `stable_query` | text | none | The same for the stable version, read in the same interval to compare with |
 | `statement` | text | | For ClickHouse, PostgreSQL and HTTP sources: the name of a statement the source's operator wrote |
 | `index` | text | | For Elasticsearch and OpenSearch: the index to search |
+| `check` | mapping | | Instead of `query`: a call the deploy runner makes itself to the service, see below. The metric is then the share of calls that answered as expected, which is lower-is-worse and must reach the check's `success`; `source` names a source of type `check` |
 | `direction` | text | `higher-is-worse` | `higher-is-worse`, `lower-is-worse` (throughput, say) or `either` |
 | `max` | number | none | A fixed upper bound |
 | `min` | number | none | A fixed lower bound. Not above `max` |
@@ -813,6 +814,34 @@ Each metric in `metrics`:
 | `min_points` | whole number | `1` | Readings an interval needs to count as having data, 1 to 500 |
 | `step` | duration | `30s` | The resolution of the readings, `5s` to `1h` |
 | `baseline` | boolean | `true` | `false` turns the comparison with earlier verifications off for this metric |
+
+A `check` is the built-in health proof. The deploy runner calls the address again and again while
+each interval runs (not afterwards) and records every call. Nothing has to scrape the service
+first. See [the health proof](../guide/verification.md#the-built-in-health-proof) for examples and
+the limits the deploy runner enforces.
+
+<!-- keys: verify-check -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `kind` | text | `http` | `http`, or `tcp` (the call only connects; there is no gRPC health check yet) |
+| `url` | text | required | `http://host:port/path` or `https://...`; for `tcp` `host:port`. A Service address such as `api.shop.svc.cluster.local:8080`. No user, no password, no placeholders |
+| `method` | text | `GET` | `GET` or `HEAD`: a health check never changes anything |
+| `status` | list | `[2xx]` | The statuses that count as healthy: `200`, a class such as `2xx`, or a range such as `200-299` |
+| `body_contains` | text | none | Text the first 64 KiB of the answer must contain |
+| `json` | mapping | none | `{ path, equals }`: the answer is JSON and the value at the dotted path (numbers index arrays) equals the text |
+| `headers` | mapping | none | Headers sent as written, at most 10. `Host` sets the request's host, for a service that routes by it. `Authorization` and `Cookie` are refused here |
+| `secret_headers` | mapping | none | Header name to a secret reference (`store`, `key`, `field`); the deploy runner reads the value for each interval and it is never shown or recorded |
+| `timeout` | duration | `5s` | One call, 1s to 30s |
+| `every` | duration | `5s` | The time between calls, at least `1s`; an interval of `30s` makes six calls |
+| `success` | number | `1` | The share of calls in an interval that must be healthy, above 0 and at most 1. `0.95` allows one failure in twenty. It becomes the metric's `min` unless the metric sets its own bounds |
+| `server_name` | text | | The name to verify in the TLS certificate, when the address is not that name |
+| `insecure_tls` | boolean | `false` | Skip the certificate check. Refused unless the deploy runner's source sets `allow_insecure_tls` |
+
+<!-- keys: verify-check-json -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `path` | text | required | A dotted path into the JSON answer |
+| `equals` | text | required | The text the value there must equal |
 
 Each log query in `logs`:
 
