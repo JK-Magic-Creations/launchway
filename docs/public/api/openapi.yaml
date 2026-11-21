@@ -3841,6 +3841,42 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/commits:
+        get:
+            description: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200). {"ref", "items": [{"sha", "subject", "message", "author", "authored_at", "committer", "committed_at", "parents"}]}.'
+            operationId: get_api_v1_repositories_owner_name_commits
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/compare:
         get:
             description: 'What a pull request from ?head= into ?base= (default: the default branch) would contain: commits, files, ahead and behind, mergeability, and the number of an open pull request between them.'
@@ -3993,6 +4029,79 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: deploy_key.delete
+    /api/v1/repositories/{owner}/{name}/files:
+        get:
+            description: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
+            operationId: get_api_v1_repositories_owner_name_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: 'One commit that adds or changes one file: {"branch", "path", "content", "encoding" (utf8 or base64), "message", "expected_sha"}. The branch must exist and the rules of protected branches apply as to a push; an empty expected_sha creates and refuses if the file exists, otherwise it must be the file''s current sha. A mirror or archived repository takes none. Answers {"branch", "path", "commit", "sha", "parent"}. Webhooks, push mirrors and pull requests are told as for a push.'
+            operationId: put_api_v1_repositories_owner_name_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One commit that adds or changes one file: {"branch", "path", "content", "encoding" (utf8 or base64), "message", "expected_sha"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.file_write
     /api/v1/repositories/{owner}/{name}/hooks:
         get:
             description: '{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}.'

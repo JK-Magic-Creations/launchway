@@ -902,6 +902,9 @@ launchway repos verify --against NAME|URL [--owner O] [--repo O/N] [--target-own
 launchway repos import-archive OWNER/NAME FILE [--json]
 launchway repos archive list OWNER/NAME [--state open|closed|all] [--query TEXT] [--page N] [--json]
 launchway repos archive show OWNER/NAME NUMBER [--json]
+launchway repos commits OWNER/NAME [--ref R] [--path P] [--limit N] [--json]
+launchway repos files OWNER/NAME [PATH] [--ref R] [--json]
+launchway repos put-file OWNER/NAME PATH [--file F | --text TEXT] --message M [--branch B] [--expect-sha SHA] [--json]
 ```
 
 A **connection** is a server the repositories are on: its kind (`gitea` or `forgejo`, whose REST API lists them; `plain` for addresses you give with `--url`), its address and a credential **reference** (the name of an environment variable of the server, or a file on the server; never the token). Launchway sends the credential only to the connection's own host, refuses internal addresses unless `forge.mirror_allow` lists them, and does not follow redirects.
@@ -909,6 +912,8 @@ A **connection** is a server the repositories are on: its kind (`gitea` or `forg
 `import` makes every repository the connection lists (or those of `--owner`, or the one `--repo`) with the same owner, name and visibility, copies every branch, tag and note, and the source's pull request refs (`refs/pull/*`, kept read-only under `refs/imported/pull/` because `refs/pull/` is this server's own), checks the copy ref by ref and prints the result for each. By default each is left a **pull mirror** of its source, so the source stays the primary until you decide. `--once` makes ordinary repositories instead, once each copy is checked. `--dry-run` lists what would be created, what would be left alone and why (including an address Launchway may not contact), and changes nothing. It copies one repository at a time, so a failure of one stops nothing; it exits `4` when any did not finish, and running the same command again resumes: a repository already made as a mirror of the same address is synced and checked again, one that exists in any other state is never touched.
 
 `verify` proves that every repository of the source exists here with exactly the branches, tags, notes and pull request refs at exactly the hashes the source has, and names each ref that differs. It prints a table of counts per namespace (branches, tags, notes, imported pull request refs, and the source's refs in namespaces that are not copied), then the refs that differ, or with `--refs` every ref with its hash at the source and here. `--against` takes a connection's name or the address of one repository. It exits `0` when everything is equal and `1` when not. Run it before a cut-over. The same operations are `POST /api/v1/imports` and `POST /api/v1/imports/verify` in the [HTTP API](http-api.md#importing-repositories-git-hosting), and the MCP tools `list_connections`, `add_connection`, `import_repositories` and `verify_repositories`.
+
+`commits` lists the newest commits of a branch, tag or commit; `files` prints a directory's entries or a file's text; `put-file` makes one commit on an existing branch that adds a file, or with `--expect-sha` (the file's current id) replaces it. Protected branches take it only from the repository's administrators, a mirror or archived repository takes none, and webhooks, push mirrors and pull requests are told as for a push.
 
 `import-archive` stores the issues and comments exported from another server (`scripts/export-issues.sh`, see the [archive format](archive-format.md)) in the repository's read-only archive, 200 issues a request; importing a number again replaces it. `archive list` and `archive show` read it back. It is a record, not an issue tracker.
 
