@@ -110,6 +110,9 @@ func (e *Engine) RunsByID(ids []string) ([]*RunSummary, error) {
 	return out, nil
 }
 
+// SearchRunWindow is how many of the newest runs a search looks through.
+const SearchRunWindow = 40000
+
 // SearchRuns finds runs by number ("12" or "#12"), by the start of a commit
 // (4 or more hex digits) or by branch (prefix or contains), newest first, among
 // the projects given (all if nil). It is bounded by limit and by an index on
@@ -148,9 +151,10 @@ func (e *Engine) SearchRuns(only []string, q string, limit int) ([]*RunSummary, 
 			args = append(args, p)
 		}
 	}
+	// Only the newest SearchRunWindow runs are looked at, so a search costs the same on a very large history.
 	since := e.now().Add(-90 * 24 * time.Hour).UnixMilli()
-	args = append(args, since, limit)
-	out, err := e.queryRuns(`SELECT `+e.runCols()+` FROM runs WHERE `+cond+` AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?`, args...)
+	args = append(append([]any{since, SearchRunWindow}, args...), limit) // the window's arguments come first in the query
+	out, err := e.queryRuns(`SELECT `+e.runCols()+` FROM (SELECT * FROM runs WHERE created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?) AS recent WHERE `+cond+` ORDER BY created_at DESC, id DESC LIMIT ?`, args...)
 	if out == nil {
 		out = []*RunSummary{}
 	}

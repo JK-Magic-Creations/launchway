@@ -5,9 +5,10 @@ import { Icon } from "../kit/Icon";
 import { navigate } from "../router";
 import type { Ctx } from "../nav/model";
 import { doItems, searchItems, type DoItem } from "./doItems";
-import { organizeApi, type SearchHit } from "../organizeApi";
+import { organizeApi, type SearchHit, type TrailEntry } from "../organizeApi";
+import { ago } from "../format";
 
-const KIND: Record<string, string> = { project: "Pipelines", repository: "Repositories", folder: "Folders", run: "Sorties" };
+const KIND: Record<string, string> = { project: "Pipelines", repository: "Repositories", folder: "Folders", run: "Sorties", pull: "Pull requests", person: "People" };
 
 type Found = Omit<DoItem, "group"> & { group: string };
 
@@ -21,19 +22,28 @@ export function DoBar({ ctx, projects, onClose }: { ctx: Ctx; projects: Project[
   // commit or branch), and, before anything is typed, their favorites. Local pages and actions come first.
   const [remote, setRemote] = useState<SearchHit[]>([]);
   const [favs, setFavs] = useState<string[]>([]);
+  const [recent, setRecent] = useState<TrailEntry[]>([]);
+  const [opened] = useState(Date.now);
+  const [docs, setDocs] = useState<{ title: string; detail: string; href: string }[]>([]);
   useEffect(() => {
     const text = q.trim();
-    if (text.length < 2) { if (!text) organizeApi.search("").then((r) => setFavs(r.favorites ?? [])).catch(() => {}); return; }
+    if (text.length < 2) { if (!text) organizeApi.search("").then((r) => { setFavs(r.favorites ?? []); setRecent(r.recent ?? []); }).catch(() => {}); return; }
     let live = true;
-    const t = window.setTimeout(() => { organizeApi.search(text, 12).then((r) => { if (live) setRemote(r.hits); }).catch(() => { if (live) setRemote([]); }); }, 180);
+    const t = window.setTimeout(() => {
+      organizeApi.search(text, 12).then((r) => { if (live) setRemote(r.hits); }).catch(() => { if (live) setRemote([]); });
+      // The documentation, from the index that ships in the binary: found with no server.
+      if (text.length >= 3) void import("../learn/finder").then((m) => m.learnHits(text)).then((h) => { if (live) setDocs(h); }).catch(() => { if (live) setDocs([]); });
+    }, 180);
     return () => { live = false; window.clearTimeout(t); };
   }, [q]);
   const found: Found[] = useMemo(() => {
     const have = new Set(local.map((l) => l.href));
-    const more = (q.trim().length >= 2 ? remote : []).filter((h) => !have.has(h.href)).map((h, i) => ({ id: `srv-${i}`, label: h.name, hint: [h.path, h.detail].filter(Boolean).join(" · ") || KIND[h.kind], href: h.href, icon: (h.kind === "run" ? "play" : "code") as DoItem["icon"], group: KIND[h.kind] ?? "Results" }));
+    const more = (q.trim().length >= 2 ? remote : []).filter((h) => !have.has(h.href)).map((h, i) => ({ id: `srv-${i}`, label: h.name, hint: [h.path, h.detail].filter(Boolean).join(" · ") || KIND[h.kind], href: h.href, icon: (h.kind === "run" ? "play" : h.kind === "person" ? "user" : "code") as DoItem["icon"], group: KIND[h.kind] ?? "Results" }));
     const fav = q.trim() ? [] : favs.map((f, i) => { const [kind, name] = [f.slice(0, f.indexOf(":")), f.slice(f.indexOf(":") + 1)]; return { id: `fav-${i}`, label: name, hint: "Favorite", icon: "code" as DoItem["icon"], href: kind === "repository" ? `/repositories/${name}` : `/projects/${encodeURIComponent(name)}/pipeline`, group: "Favorites" }; });
-    return [...fav, ...local, ...more];
-  }, [local, remote, favs, q]);
+    const rec = q.trim() ? [] : recent.map((e, i) => ({ id: `rec-${i}`, label: e.title, hint: e.changed || `${e.kind} · opened ${ago(e.at, opened)}`, icon: "code" as DoItem["icon"], href: e.href, group: "Recent" }));
+    const learn = (q.trim().length >= 3 ? docs : []).map((d, i) => ({ id: `doc-${i}`, label: d.title, hint: d.detail, icon: "book" as DoItem["icon"], href: d.href, group: "Documentation" }));
+    return [...fav, ...rec, ...local, ...more, ...learn];
+  }, [local, remote, favs, recent, docs, q, opened]);
   const go = (href: string) => { onClose(); navigate(href); };
   const key = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(a + 1, found.length - 1)); }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
 // The Home page's one aggregated answer, and the attention rule behind it
@@ -138,7 +139,7 @@ func (s *Server) attentionFor(id *identity, only []string) (engine.AttentionResu
 		}
 	}
 	defaults := map[string]string{}
-	for _, p := range s.projects() {
+	for _, p := range s.briefs() {
 		defaults[p.Name] = p.DefaultBranch
 	}
 	prefs := s.prefsOf(id.User)
@@ -544,8 +545,12 @@ func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	in.unit, in.display = s.unitOf()
-	for _, p := range s.projects() {
-		if only == nil || contains(only, p.Name) {
+	allowed := map[string]bool{}
+	for _, n := range only {
+		allowed[n] = true
+	}
+	for _, p := range s.briefs() {
+		if only == nil || allowed[p.Name] {
 			in.defaults[p.Name] = p.DefaultBranch
 			in.names = append(in.names, p.Name)
 		}
@@ -633,4 +638,12 @@ func (s *Server) listRunsByAttention(w http.ResponseWriter, r *http.Request, whi
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// briefs lists the projects with their default branches without reading anything per project (see source.Brief).
+func (s *Server) briefs() []source.Brief {
+	if s.Projects == nil {
+		return nil
+	}
+	return s.Projects.Briefs()
 }

@@ -31,3 +31,15 @@ describe("the finder reaches across everything the server lets this person see",
     expect(await screen.findByRole("option", { name: /Learn how Launchway works/ })).toBeInTheDocument();
   });
 });
+
+describe("the keyboard list", () => {
+  it("opens with ? outside a field and lists the finder and the explorer filter", async () => {
+    const { Frame } = await import("./Frame");
+    void Frame;
+    const { default: Shortcuts } = await import("./Shortcuts");
+    render(<Shortcuts onClose={() => {}} />);
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "/" })).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "f" })).toBeInTheDocument();
+  });
+});

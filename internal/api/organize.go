@@ -47,8 +47,12 @@ func (s *Server) visibleItems(r *http.Request, area string) (map[string]string, 
 		if err != nil {
 			return nil, err
 		}
-		for _, p := range s.projects() {
-			if only == nil || contains(only, p.Name) {
+		allowed := map[string]bool{}
+		for _, n := range only {
+			allowed[n] = true
+		}
+		for _, p := range s.briefs() {
+			if only == nil || allowed[p.Name] {
 				out[p.Name] = unit[p.Name]
 			}
 		}

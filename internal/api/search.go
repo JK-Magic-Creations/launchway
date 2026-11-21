@@ -9,6 +9,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 )
 
 // One search over everything a person may see: projects (pipelines),
@@ -135,6 +136,8 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 	}
 	s.searchNames(r, id, add)
 	s.searchFolders(r, add)
+	s.searchPeople(id, add)
+	hits = append(hits, s.searchPulls(r, id, q)...)
 	hits = append(hits, s.searchRuns(id, q)...)
 	rankHits(hits)
 	if len(hits) > limit {
@@ -208,7 +211,7 @@ func (s *Server) searchRuns(id *identity, q string) []SearchHit {
 func (s *Server) searchNames(r *http.Request, id *identity, add func(kind, name, detail, path, href string, extra ...string)) {
 	unit, display := s.unitOf()
 	labels, _ := s.Engine.LabelsOf("pipelines")
-	for _, p := range s.projects() {
+	for _, p := range s.briefs() {
 		if !s.authorize(id, authRead(), p.Name) {
 			continue
 		}
@@ -240,4 +243,62 @@ func rankHits(hits []SearchHit) {
 		}
 		return hits[i].Name < hits[j].Name
 	})
+}
+
+// searchPeople offers the people of this installation, to those who may manage access (they may list them anyway).
+func (s *Server) searchPeople(id *identity, add func(kind, name, detail, path, href string, extra ...string)) {
+	if !s.localOn() || !s.authorize(id, auth.Administer, "") {
+		return
+	}
+	as, err := s.Engine.ListLocalAccounts()
+	if err != nil {
+		return
+	}
+	for _, a := range as {
+		add("person", a.Username, a.DisplayName, "", "/settings/access", a.DisplayName, a.Email)
+	}
+}
+
+// pullSearchRepos and pullSearchPerRepo bound the pull request search: it looks at the open pull requests of at most this many
+// repositories, newest first, and never at more than this many of each.
+const (
+	pullSearchRepos   = 60
+	pullSearchPerRepo = 30
+)
+
+// searchPulls finds open pull requests of the repositories the caller may read, by number ("#12"), title or branch.
+func (s *Server) searchPulls(r *http.Request, id *identity, q string) []SearchHit {
+	if s.Forge == nil || s.Forge.Provider == nil || s.Forge.Pulls == nil || len(q) < 2 {
+		return nil
+	}
+	page, err := s.Forge.Provider.Repositories().List(r.Context(), "")
+	if err != nil {
+		return nil
+	}
+	var hits []SearchHit
+	checked := 0
+	num := strings.TrimPrefix(q, "#")
+	for _, repo := range page.Items {
+		if checked >= pullSearchRepos {
+			break
+		}
+		if !s.authorize(id, auth.Read, repo.Path) {
+			continue
+		}
+		checked++
+		items, _, err := s.Forge.Pulls.Store.List(r.Context(), repo.ID, pulls.Filter{State: "open", Limit: pullSearchPerRepo})
+		if err != nil {
+			continue
+		}
+		for _, p := range items {
+			best := max(fuzzyScore(q, strings.ToLower(p.Title)), fuzzyScore(q, strings.ToLower(p.SourceBranch))-10)
+			if num == strconv.Itoa(p.Number) {
+				best = 90
+			}
+			if best > 0 {
+				hits = append(hits, SearchHit{Kind: "pull", Name: "#" + strconv.Itoa(p.Number) + " " + p.Title, Detail: repo.Path + " · " + p.SourceBranch, Href: "/repositories/" + repo.Path + "/pulls/" + strconv.Itoa(p.Number), Score: best})
+			}
+		}
+	}
+	return hits
 }

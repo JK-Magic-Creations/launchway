@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 )
@@ -345,4 +347,40 @@ func testPolicyWithout(t testing.TB, _ string) *auth.Policy {
 		t.Fatal(err)
 	}
 	return p
+}
+
+// Ranking names is done in memory over the permission-filtered catalog, so its cost is the catalog's size: with 5,000
+// pipelines and 2,000 repositories, 20 typed queries rank in a fraction of the 300 ms the answer may take.
+func TestNameRankingIsBounded(t *testing.T) {
+	names := make([]string, 0, 7000)
+	for i := 0; i < 5000; i++ {
+		names = append(names, fmt.Sprintf("squad-%02d-service-%04d-api", i%40, i))
+	}
+	for i := 0; i < 2000; i++ {
+		names = append(names, fmt.Sprintf("owner%d/repository-%04d", i%50, i))
+	}
+	start := time.Now()
+	hits := 0
+	for _, q := range []string{"serv", "api", "squad-07", "repositroy", "owner12", "0042", "pay", "svc", "serice-0100", "x", "squad-39-service", "repo", "owner", "4999", "ssrvice", "sq", "zzz", "service-1", "owner3/rep", "-api"} {
+		for _, n := range names {
+			if fuzzyScore(q, n) > 0 {
+				hits++
+			}
+		}
+	}
+	took := time.Since(start)
+	t.Logf("20 queries over %d names: %v (%d scored)", len(names), took, hits)
+	if took > 300*time.Millisecond {
+		t.Errorf("ranking took %v, want under 300ms", took)
+	}
+}
+
+func TestPeopleAreSearchedOnlyByThoseWhoMayListThem(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	for _, user := range []string{"vic", "dana"} {
+		r := e.signIn(t, user).get(e.srv.URL + "/api/v1/search?q=ada")
+		if strings.Contains(string(r.body), `"kind":"person"`) {
+			t.Errorf("%s finds people: %s", user, r.body)
+		}
+	}
 }

@@ -41,7 +41,7 @@ export const organizeApi = {
   clearTrail: () => call<unknown>("DELETE", "/api/v1/activity"),
   pauseTrail: (paused: boolean) => call<unknown>("PUT", "/api/v1/activity/pause", { paused }),
   home: (view: "mine" | "all", background = false) => call<HomeAnswer>("GET", `/api/v1/home?view=${view}`, undefined, { background }),
-  attention: () => call<{ needs: AttentionItem[]; dismissed: AttentionItem[]; retrying: Retry[]; count: number }>("GET", "/api/v1/attention"),
+  attention: (background = false) => call<{ needs: AttentionItem[]; dismissed: AttentionItem[]; retrying: Retry[]; count: number }>("GET", "/api/v1/attention", undefined, { background }),
   dismiss: (key: string, snoozeHours = 0) => call<unknown>("POST", "/api/v1/attention/dismiss", { key, snooze_hours: snoozeHours }),
   restore: (key: string) => call<unknown>("POST", "/api/v1/attention/restore", { key }),
   organize: (area: Area) => call<OrganizeAnswer>("GET", `/api/v1/organize/${area}`),
