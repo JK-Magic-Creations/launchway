@@ -714,8 +714,8 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             </label>
             <ErrorBox error={error} />
             <div className="approval-actions">
-              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={`${terms().label("go")}: ${terms().lower("clearance")} is given and the run goes on`}>{terms().label("go")}</button>
-              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the run stops here`}>{terms().label("no_go")}</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={`${terms().label("go")}: ${terms().lower("clearance")} is given and the run goes on`}>Approve</button>
+              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the run stops here`}>Reject</button>
             </div>
           </form>
         )}

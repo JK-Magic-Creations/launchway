@@ -109,10 +109,10 @@ export function WordsPreview({ t }: { t: Terms }) {
           <Decision tone="warn" title={`Release 2.4 needs ${t.lower("clearance")}`}
             children={`The ${t.lower("payload")} is one change to the checkout service. The ${t.lower("preflight")} passed; ${t.lower("hold")} windows do not apply today.`}
             actions={<div className="decide-form">
-              <p className="small faint" style={{ margin: 0 }}>{t.label("launch_line")}: {t.lower("in_flight")}, waiting for a person.</p>
+              <p className="small faint" style={{ margin: 0 }}>{t.label("launch_line")}: {t.lower("in_flight")}, waiting for a person. The answer is recorded as {t.label("go")} or {t.label("no_go")}.</p>
               <div className="acts decide">
-                <Button kind="ok" icon="check" tabIndex={-1}>{t.label("go")}</Button>
-                <Button kind="bad" icon="x" tabIndex={-1}>{t.label("no_go")}</Button>
+                <Button kind="ok" icon="check" tabIndex={-1}>Approve</Button>
+                <Button kind="bad" icon="x" tabIndex={-1}>Reject</Button>
               </div>
             </div>} />
         </div>

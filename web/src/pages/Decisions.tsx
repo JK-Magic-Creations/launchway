@@ -74,8 +74,8 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
       actions={
         <div className="decide-form">
           <div className="then">
-            <div><b>If you say {t.label("go")}</b>{next.approve}</div>
-            <div><b>If you say {t.label("no_go")}</b>{next.reject}</div>
+            <div><b>If you approve{t.label("go") !== "Approve" ? ` (${t.label("go")})` : ""}</b>{next.approve}</div>
+            <div><b>If you reject{t.label("no_go") !== "Reject" ? ` (${t.label("no_go")})` : ""}</b>{next.reject}</div>
           </div>
           <p className="small faint" style={{ margin: 0 }}>
             <EntityLink kind="project" name={a.project} /> · <EntityLink kind="run" name={`run #${a.run_number}`} id={a.run_id} />
@@ -124,8 +124,8 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
           <textarea id={`why-${a.run_id}-${a.step_id}`} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} placeholder="For example: tests pass and the release notes are ready." />
           <ErrorBox error={error} />
           <div className="acts decide">
-            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? `You cannot say ${t.label("go")} to this: see the note above` : `${t.label("go")}: ${t.lower("clearance")} is given and the run goes on`}>{t.label("go")}</Button>
-            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? `Say why, then ${t.lower("no_go")}` : `${t.label("no_go")}: ${t.lower("clearance")} is refused and the run stops here`}>{t.label("no_go")}</Button>
+            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? `You cannot say ${t.label("go")} to this: see the note above` : `${t.label("go")}: ${t.lower("clearance")} is given and the run goes on`}>Approve</Button>
+            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? `Say why, then ${t.lower("no_go")}` : `${t.label("no_go")}: ${t.lower("clearance")} is refused and the run stops here`}>Reject</Button>
           </div>
         </>
       )}

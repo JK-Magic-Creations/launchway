@@ -41,7 +41,7 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
 
 function waitingWhy(run: RunDetail, step: StepView): Why {
   if (step.kind === "approval") {
-    const by = step.deadline > 0 ? ` Say ${terms().label("go")} or ${terms().label("no_go")} before ${clock(step.deadline)}, or it is refused.` : "";
+    const by = step.deadline > 0 ? ` Approve or reject (${terms().label("go")} or ${terms().label("no_go")}) before ${clock(step.deadline)}, or it is refused.` : "";
     return { kind: "person", short: "Waiting for a person", text: `Waiting for a person to give ${terms().lower("clearance")}${step.message ? `: ${step.message}` : "."}${by}` };
   }
   if (step.kind === "verify" || step.wait_kind === "verify") {

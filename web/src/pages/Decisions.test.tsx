@@ -31,22 +31,22 @@ describe("the decision card", () => {
     show({ user: "sam", roles: { "shop-web": "operator" } });
     expect(await screen.findByText(/You started this run\. On this base the person who starts a run cannot give clearance for it/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings → Clearances" })).toHaveAttribute("href", "/settings/approvals");
-    expect(screen.getByRole("button", { name: "Go" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "No-go" })).toBeDisabled(); // a reason is needed first
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled(); // a reason is needed first
   });
   it("shows the evidence that exists and what each answer does", async () => {
     show({ user: "dana", roles: { "shop-web": "operator" } });
     expect(await screen.findByText("40 of 40")).toBeInTheDocument();
     expect(screen.getByText("no scan in this run")).toBeInTheDocument();
-    expect(screen.getByText("If you say Go")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Go" })).toBeEnabled();
+    expect(screen.getByText("If you approve (Go)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
   });
   it("uses the plain business words when that set is chosen, with the same consequences", async () => {
     setTerms({ set: "business" });
     show({ user: "dana", roles: { "shop-web": "operator" } });
-    expect(await screen.findByText("If you say Approve")).toBeInTheDocument();
+    expect(await screen.findByText("If you approve")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
-    expect(screen.getByText("If you say Reject")).toBeInTheDocument();
+    expect(screen.getByText("If you reject")).toBeInTheDocument();
   });
   it("says when nothing is waiting", () => {
     const m = me();
