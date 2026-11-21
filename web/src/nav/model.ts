@@ -205,8 +205,6 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: "Applications", href: "/deployments/applications" }, { label: p.name }]),
 
   page("/repositories", "projects", undefined, () => "Repositories", () => [{ label: "Repositories" }]),
-  page("/repositories/:owner/:name", "projects", undefined, (p) => `Repository ${p.owner}/${p.name}`,
-    (p) => [{ label: "Repositories", href: "/repositories" }, { label: `${p.owner}/${p.name}` }]),
   page("/owners/:owner", "projects", undefined, (p) => `Owner ${p.owner}`,
     (p) => [{ label: "Repositories", href: "/repositories" }, { label: p.owner }]),
 

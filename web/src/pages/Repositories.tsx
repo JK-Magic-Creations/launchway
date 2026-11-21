@@ -147,31 +147,33 @@ function Protected({ repo }: { repo: HostedRepo }) {
   );
 }
 
-/** One hosted repository: where to clone it from, and its settings. */
-export function RepositoryPage({ owner, name }: { owner: string; name: string }) {
+/** The clone address and the settings of one hosted repository, for its page (pages/Repository.tsx). The deploy keys,
+ * webhooks and protected branches are for the repository's administrators: their tabs appear only when the server
+ * lets this person see them. */
+export function RepositorySettings({ owner, name }: { owner: string; name: string }) {
   const [repo, setRepo] = useState<HostedRepo | null>(null);
   const [admin, setAdmin] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [tab, setTab] = useTab(["clone", "keys", "hooks", "branches"], "clone");
+  const [tab, setTab] = useTab(["keys", "hooks", "branches"], "keys");
   useEffect(() => {
     forgeApi.repository(owner, name).then(setRepo).catch(setError);
-    // The settings are for the repository's administrators: the tabs appear only when the server lets this person see them.
     forgeApi.deployKeys(owner, name).then(() => setAdmin(true), () => setAdmin(false));
   }, [owner, name]);
-  if (error) return <div className="page"><PageHead eyebrow="Code" title={`${owner}/${name}`} /><ErrorBox error={error} /></div>;
+  if (error) return <ErrorBox error={error} />;
   if (!repo) return null;
   return (
-    <div className="page">
-      <PageHead eyebrow={<Link href="/repositories">Repositories</Link>} title={repo.path}
-        badge={<> <Chip>{repo.visibility}</Chip>{repo.archived && <Chip tone="warn">archived</Chip>}</>}
-        sentence={`Default branch ${repo.default_branch}.`} />
-      <PageTabs current={tab} onChange={setTab}
-        tabs={[{ id: "clone", label: "Clone" }, ...(admin ? [{ id: "keys", label: "Deploy keys" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }] : [])]} />
-      {tab === "clone" && <CloneBox repo={repo} />}
-      {admin && tab === "keys" && <DeployKeys repo={repo} />}
-      {admin && tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
-      {admin && tab === "branches" && <Protected repo={repo} />}
-    </div>
+    <>
+      <CloneBox repo={repo} />
+      {admin && (
+        <>
+          <PageTabs current={tab} onChange={setTab}
+            tabs={[{ id: "keys", label: "Deploy keys" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }]} />
+          {tab === "keys" && <DeployKeys repo={repo} />}
+          {tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
+          {tab === "branches" && <Protected repo={repo} />}
+        </>
+      )}
+    </>
   );
 }
 
