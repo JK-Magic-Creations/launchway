@@ -54,7 +54,7 @@ describe("the Explorer", () => {
     expect(screen.getAllByRole("article")).toHaveLength(4);
   });
   it("opens with the view in the address and restores it", () => {
-    history.replaceState(null, "", "/pipelines?q=pay&status=bad&view=table&sort=name");
+    history.replaceState(null, "", "/pipelines?q=pay&result=bad&view=table&sort=name");
     render(<Explorer {...props()} />);
     expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("pay");
     expect(screen.queryAllByRole("article")).toHaveLength(0);

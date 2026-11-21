@@ -26,7 +26,7 @@ Already on this rule:
 | Dependencies | `eco`, `status`, `q`, `direct`, `vulnerable` |
 | Applications | `show`, `q` |
 | Templates | `tab`, `version` |
-| The explorers (pipelines, repositories) | `q`, `node`, `view`, `status`, `label`, `kind`, `sort`, `group`, `fav`, `mine` |
+| The explorers (pipelines, repositories) | `q`, `node`, `view`, `result`, `label`, `kind`, `sort`, `group`, `fav`, `mine` |
 | The Sorties list | `project`, `status`, `lane`, `show` |
 
 A page names its view for bookmarks and history with `useViewTitle("Tests · run 3f2a1b")`; the shell puts it before the page's title.

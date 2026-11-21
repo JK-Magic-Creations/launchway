@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
 import { useHosting } from "./SshKeys";
-import { api, type RunSummary } from "../api";
+import { api, type Project, type RunSummary } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
@@ -14,6 +14,9 @@ import { Band, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Status, stateOf } from "../kit/Status";
 import { TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
+
+// The grouped, searchable list loads after the first paint; the flat list is what shows meanwhile.
+const Explorer = lazy(() => import("../explorer/PipelinesExplorer"));
 
 /** Code: every project as a repository, with where it lives and how its last pipeline run went. */
 export function CodeListPage() {
@@ -30,6 +33,7 @@ export function CodeListPage() {
   }, [all]);
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   const rows = inst.projects;
+  const flat = flatList(rows, by, now);
   const unreachable = rows.filter((p) => p.error).length;
   return (
     <div className="page">
@@ -47,6 +51,14 @@ export function CodeListPage() {
         <WizardEmpty title="No projects yet" wizard="connect-repository" label="Add a project"
           text="A project is a Git repository. Pick one and Launchway reads its pipeline from Git and runs it each time you push." />
       ) : (
+        <Suspense fallback={flat}><Explorer as="projects" projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
+      )}
+    </div>
+  );
+}
+
+function flatList(rows: Project[], by: Map<string, RunSummary[]>, now: number) {
+  return (
         <Sheet title="Every repository" actions={<LinkButton href="/code/files" sm>Files and reviews</LinkButton>}>
           <ul className="rowlist">
             {rows.map((p) => {
@@ -69,7 +81,5 @@ export function CodeListPage() {
             })}
           </ul>
         </Sheet>
-      )}
-    </div>
   );
 }

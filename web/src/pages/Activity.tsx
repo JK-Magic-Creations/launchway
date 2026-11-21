@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useMemo } from "react";
+import { useMe } from "../auth";
 import { api, type Project, type RunSummary } from "../api";
 import { launchApi, type LaunchLineView } from "../api/launch";
 import { EntityLink } from "../components/EntityLink";
@@ -16,6 +17,8 @@ import { oneOf, useUrlState } from "../urlState";
 import { organizeApi } from "../organizeApi";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
+// The same Sorties arranged by place (Wing, Squadron, pipeline), in the explorer: loaded when asked for.
+const RunsExplorer = lazy(() => import("../explorer/RunsExplorer"));
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" }, { key: "running", label: "Running" }, { key: "failed", label: "Failed" }, { key: "succeeded", label: "Passed" },
@@ -45,6 +48,8 @@ export function ActivityPage() {
   const [lane, setLane] = useUrlState("lane", "");
   // Which Sorties: all, only those that need a person (the Home page's rule) or only those in progress.
   const [show, setShow] = useUrlState("show", "all", oneOf("all", "needs", "running"));
+  const [by, setBy] = useUrlState("by", "list", oneOf<"list" | "place">("list", "place"));
+  const me = useMe();
   const now = useNow(1000, true);
   const runsFn = useCallback((bg: boolean) => (show === "all" ? api.runs({ project, status, lane, limit: 100 }, bg) : organizeApi.attentionRuns(show, bg)), [project, status, lane, show]);
   const runs = useLoad(runsFn);
@@ -79,6 +84,9 @@ export function ActivityPage() {
       <div className="toolbar2">
         <div className="pillbtns" role="group" aria-label="Which runs">
           {([["all", "All"], ["needs", "Needs attention"], ["running", "In progress"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k, "push")}>{l}</button>)}
+        </div>
+        <div className="pillbtns" role="group" aria-label="How to show them">
+          {([["list", "List"], ["place", "By place"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k, "push")}>{l}</button>)}
         </div>
         <div className="pillbtns" role="group" aria-label="Filter by state">
           {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
@@ -118,7 +126,8 @@ export function ActivityPage() {
           {filtered ? "Try another filter." : <>Start one from <Link href="/projects">Code</Link>, push to a watched branch, or try <span className="mono">launchway run</span> in a repository.</>}
         </EmptyState></Sheet>
       )}
-      {list && list.length > 0 && (
+      {list && list.length > 0 && by === "place" && <Suspense fallback={<div className="loading">Loading…</div>}><RunsExplorer runs={list} now={now} me={me?.user ?? ""} /></Suspense>}
+      {list && list.length > 0 && by === "list" && (
         <Sheet title="Runs" actions={<span className="faint small">Newest first. Each dot is a place the change has to pass.</span>}>
           {list.map((r) => <RunRow key={r.id} r={r} line={byRun.get(r.id)} now={now} />)}
         </Sheet>

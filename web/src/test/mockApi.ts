@@ -24,6 +24,8 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/home": homeFixture(),
     "/api/v1/organize/pipelines": organizeFixture(),
     "/api/v1/organize/repositories": organizeFixture(),
+    "/api/v1/organize/projects": organizeFixture(),
+    "/api/v1/organize/runs": organizeFixture(),
     "/api/v1/runners": [runner()],
     "/api/v1/environments": [environment()],
     "/api/v1/runs/run_2": { ...detail, id: "run_2", project: "shop-web", number: 118, status: "running", step_list: [step({ id: "approve", status: "waiting", kind: "approval" })] },

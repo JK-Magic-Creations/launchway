@@ -17,7 +17,7 @@ A pipeline or repository can sit in one folder. There are two ways to make folde
 
 Show the items as **Cards** (name, where it lives, last result with its age, a strip of recent results with a text alternative, what runs now, and the actions that exist) or as a compact **Table**. Search matches the name, description, labels and the place, forgives a typo, and marks what matched. Press **f** to jump to the filter box. You can filter by status, label, kind, favorites and "mine", sort, group by folder, label or status, and expand or collapse the whole tree.
 
-Everything you choose is in the address, for example `/pipelines?q=ledger&status=bad&view=table`, so a link or a bookmark opens the same view and Back goes to the one before. **Copy link to this view** copies it.
+Everything you choose is in the address, for example `/pipelines?q=ledger&result=bad&view=table`, so a link or a bookmark opens the same view and Back goes to the one before. **Copy link to this view** copies it.
 
 Star an item to make it a favorite. Favorites are yours: they show first on Home and in the finder, and a favorite pipeline's failures always matter to you.
 

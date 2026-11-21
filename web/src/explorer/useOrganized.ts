@@ -32,7 +32,7 @@ export function useOrganized(area: Area) {
 
   /** Where an item lives, and the name to show for it. */
   const place = useCallback((name: string, unitName?: string): { path: Seg[]; leaf: string; labels: string[]; folder: string } => {
-    const org = data?.items[name];
+    const org = data?.items?.[name];
     const top: Seg[] = [];
     const u = unitName ? { key: "unit:" + unitName, label: unitName } : unitOf.get(name);
     if (wing && u) top.push(wing);

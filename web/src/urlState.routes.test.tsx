@@ -22,6 +22,8 @@ describe("an address opens the view it names", () => {
     ["/pipelines?q=shop-web&view=table", async () => { const box = (await screen.findByRole("searchbox", {}, { timeout: 8000 })) as HTMLInputElement; expect(box.value).toBe("shop-web"); return box; }],
     ["/activity?show=needs", () => screen.findByRole("button", { name: "Needs attention", pressed: true }, { timeout: 8000 })],
     ["/activity?status=failed", () => screen.findByRole("button", { name: "Failed", pressed: true }, { timeout: 8000 })],
+    ["/activity?by=place", () => screen.findByRole("tree", { name: "Places" }, { timeout: 8000 })],
+    ["/projects?q=shop&kind=local", async () => { const box = (await screen.findByRole("searchbox", {}, { timeout: 8000 })) as HTMLInputElement; expect(box.value).toBe("shop"); return box; }],
     ["/runs/run_7?tab=events", () => screen.findByRole("tab", { name: /Event log/, selected: true }, { timeout: 8000 })],
   ])("%s", async (path, expectView) => {
     await open(path);

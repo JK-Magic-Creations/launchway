@@ -8,7 +8,7 @@ const views = [
   ["home", "/", async () => {}],
   ["pipelines-cards", "/pipelines", async () => {}],
   ["pipelines-table", "/pipelines?view=table&node=wing/unit:payments", async () => {}],
-  ["pipelines-filtered", "/pipelines?q=led&status=bad", async () => {}],
+  ["pipelines-filtered", "/pipelines?q=led&result=bad", async () => {}],
   ["repositories", "/repositories", async () => {}],
   ["finder", "/", async (page) => { await page.keyboard.press("/"); await page.keyboard.type("ledg", { delay: 40 }); await page.waitForTimeout(700); }],
 ];

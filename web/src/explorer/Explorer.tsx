@@ -54,7 +54,7 @@ export function Explorer(p: ExplorerProps) {
   const [q, setQ] = useUrlState("q", "");
   const [node, setNode] = useUrlState("node", ROOT);
   const [view, setView] = useUrlState("view", p.initialView ?? "cards", oneOf<"cards" | "table">("cards", "table"));
-  const [status, setStatus] = useUrlState("status", "all", oneOf(...STATUSES));
+  const [status, setStatus] = useUrlState("result", "all", oneOf(...STATUSES));
   const [label, setLabel] = useUrlState("label", "");
   const [kind, setKind] = useUrlState("kind", "");
   const [sort, setSort] = useUrlState("sort", "attention", oneOf(...SORTS));
@@ -219,7 +219,7 @@ export function Explorer(p: ExplorerProps) {
             <div className="xp-empty" role="status">
               <b>No {p.noun.singular} matches.</b>
               <p className="faint">{filtering ? "Nothing fits the filters. " : "Nothing is in this place yet. "}Try fewer words, or clear the filters.</p>
-              {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, status: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
+              {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
             <Results results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging && !!p.onMove} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
