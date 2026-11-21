@@ -188,7 +188,7 @@ func (s *Server) recordCommandOutcome(r *http.Request, runner engine.RunnerInfo,
 	if cv.Result != "applied" && cv.Result != "already_applied" {
 		outcome = "failed"
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(runner.Name, runner.ID), Source: s.clientAddr(r),
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(runner.Name, runner.ID), Source: s.clientAddr(r), RequestID: reqID(r),
 		Action: "deployment.command_outcome", Project: project, Target: cv.RunID + "/" + cv.Deployment + "/" + cv.ID, Outcome: outcome,
 		Detail: cv.Action + " asked for by " + cv.Actor + ": " + cv.Result + ": " + cv.Detail})
 }

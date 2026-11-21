@@ -196,7 +196,7 @@ func (s *Server) guardAccess(rt route) http.Handler {
 		}
 		var entry *engine.AuditEntry
 		if rt.audit != "" {
-			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r),
+			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), RequestID: reqID(r),
 				Action: rt.audit, Target: auditTarget(r)}
 		}
 		deny := func(code int, msg string) {
@@ -206,7 +206,7 @@ func (s *Server) guardAccess(rt route) http.Handler {
 				markMCP(r, id, entry)
 				s.record(entry)
 			} else if id.Via == viaToken || id.Via == viaOAuth {
-				e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), Action: "token.use",
+				e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), RequestID: reqID(r), Action: "token.use",
 					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg}
 				markMCP(r, id, e)
 				s.record(e)

@@ -139,7 +139,7 @@ func (s *Server) claimsEnrolled(w http.ResponseWriter, r *http.Request, said eng
 		return false
 	}
 	msg := "runner " + said.ID + " is enrolled; only it may say it is that runner"
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r), RequestID: reqID(r),
 		Action: "runner.identity_refused", Target: said.ID, Outcome: "denied",
 		Detail: "a runner with a shared or pool token said it is the enrolled runner " + said.ID + " (" + r.URL.Path + ")"})
 	writeErr(w, http.StatusForbidden, msg)
@@ -189,7 +189,7 @@ func (s *Server) leaseAllowed(w http.ResponseWriter, r *http.Request, leaseID st
 			who = id.ID
 		}
 		project, _ := s.Engine.RunProject(runID)
-		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r), RequestID: reqID(r),
 			Action: "runner.lease_refused", Project: project, Target: leaseID, Outcome: "denied", Detail: who + ": " + msg})
 		writeErr(w, http.StatusForbidden, msg)
 		return false
@@ -248,7 +248,7 @@ func (s *Server) runnerDenied(r *http.Request, target, why string) {
 	if wasBlocked {
 		return
 	}
-	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: "runner", Source: addr, Action: "runner.auth", Target: target, Outcome: "denied",
+	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: "runner", Source: addr, RequestID: reqID(r), Action: "runner.auth", Target: target, Outcome: "denied",
 		Detail: r.URL.Path + ": " + why})
 }
 
@@ -293,7 +293,7 @@ func (s *Server) runnerJoin(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), Action: "runner.join",
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), RequestID: reqID(r), Action: "runner.join",
 		Target: id.ID, Outcome: "ok", Detail: fmt.Sprintf("pool %s, host %s, key %s, join token %s made by %s", id.Pool, id.Hostname,
 			id.KeyFingerprint, id.JoinToken, id.EnrolledBy)})
 	writeJSON(w, http.StatusOK, map[string]any{"runner_id": id.ID, "pool": id.Pool, "kind": id.Kind, "labels": id.Labels,
@@ -340,7 +340,7 @@ func (s *Server) runnerRotate(w http.ResponseWriter, r *http.Request) {
 		s.assertionFailed(w, r, in.Assertion, err)
 		return
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), Action: "runner.rotate",
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), RequestID: reqID(r), Action: "runner.rotate",
 		Target: id.ID, Outcome: "ok", Detail: "new key " + id.KeyFingerprint})
 	writeJSON(w, http.StatusOK, map[string]any{"runner_id": id.ID, "key_fingerprint": id.KeyFingerprint, "server_time": s.Now().Unix()})
 }

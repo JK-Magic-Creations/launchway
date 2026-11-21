@@ -106,7 +106,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := s.Now()
-	entry := &engine.AuditEntry{At: now.UnixMilli(), Source: s.clientAddr(r), Action: "auth.sign_in"}
+	entry := &engine.AuditEntry{At: now.UnixMilli(), Source: s.clientAddr(r), RequestID: reqID(r), Action: "auth.sign_in"}
 	// Whatever happens, this sign-in attempt is over.
 	http.SetCookie(w, s.cookie(r, loginCookie, "", loginPath, 0))
 	w.Header().Set("Cache-Control", "no-store")
@@ -191,7 +191,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user != "" {
-		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: user, Source: s.clientAddr(r),
+		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: user, Source: s.clientAddr(r), RequestID: reqID(r),
 			Action: "auth.sign_out", Outcome: "ok"})
 	}
 	w.WriteHeader(http.StatusNoContent)

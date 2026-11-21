@@ -78,7 +78,7 @@ func (s *Server) hookDenied(r *http.Request, action, who, why string) {
 	if wasBlocked {
 		return
 	}
-	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: who, Source: addr, Action: action, Project: r.PathValue("name"),
+	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: who, Source: addr, RequestID: reqID(r), Action: action, Project: r.PathValue("name"),
 		Outcome: "denied", Detail: why})
 }
 
@@ -136,7 +136,7 @@ func (s *Server) gitHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Projects.PollNow(name)
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: who, Source: s.clientAddr(r), Action: "webhook.git", Project: name,
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: who, Source: s.clientAddr(r), RequestID: reqID(r), Action: "webhook.git", Project: name,
 		Target: clip(delivery, maxTarget), Outcome: "ok", Detail: "event " + clip(event, 60) + ": polling the project now"})
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "polling"})
 }
@@ -250,7 +250,7 @@ func (s *Server) webhookTrigger(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sum := sha256.Sum256(body)
-	entry := &engine.AuditEntry{At: s.Now().UnixMilli(), User: who, Source: s.clientAddr(r), Action: "webhook.run", Project: project}
+	entry := &engine.AuditEntry{At: s.Now().UnixMilli(), User: who, Source: s.clientAddr(r), RequestID: reqID(r), Action: "webhook.run", Project: project}
 	run, repeat, err := s.Projects.StartWebhook(r.Context(), source.WebhookRequest{Project: project, Name: name, Body: body,
 		Key: key, BodyHash: hex.EncodeToString(sum[:])})
 	if err != nil {

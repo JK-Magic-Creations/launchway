@@ -204,7 +204,7 @@ func tooMany(w http.ResponseWriter, wait time.Duration) {
 }
 
 func (s *Server) audit(r *http.Request, user, action, outcome, detail string) {
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: user, Source: s.clientAddr(r), Action: action, Outcome: outcome, Detail: detail})
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: user, Source: s.clientAddr(r), RequestID: reqID(r), Action: action, Outcome: outcome, Detail: detail})
 }
 
 // ---- sign-in ----

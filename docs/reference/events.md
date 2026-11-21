@@ -390,6 +390,37 @@ curl -s 'http://127.0.0.1:8080/api/v1/audit?limit=2'
 The trail is kept until you remove old rows from the `audit` table yourself. See the
 [HTTP API](http-api.md) for the other endpoints and [roles](roles.md) for who may call them.
 
+## Audit stream on standard output
+
+Every audit entry is also written, right after it is saved to the database, as one JSON line on the
+server's standard output, so a log collector can alert on it (for example on repeated sign-in failures)
+without polling the API. It is on by default; `audit.stdout: false` in the configuration file turns it
+off. The stream carries the same entries as the audit trail, in the same order, and nothing else.
+
+| Field | Meaning |
+|---|---|
+| `time` | UTC time, RFC 3339 with milliseconds |
+| `kind` | the audit action, for example `auth.local.sign_in` |
+| `actor` | who acted; `system` when nobody did |
+| `actor_kind` | `person`, `runner` or `system` |
+| `organization` | the organization the entry belongs to (`default`) |
+| `project` | the project, or an empty string |
+| `target` | what was acted on: a run, a token name, a repository path |
+| `outcome` | `ok`, `denied` or `failed` |
+| `detail` | a short note |
+| `source_addr` | the client's address |
+| `request_id` | the `X-Request-Id` of the request, which the response also carries |
+
+Secret values never appear: addresses lose their credentials, bearer tokens and values after
+`password=`, `token=` or similar are replaced by `***`, and the secret and variable operations record
+names only. Three sample lines:
+
+```json
+{"time":"2026-11-21T09:14:03.512Z","kind":"auth.local.sign_in","actor":"ada","actor_kind":"person","organization":"default","project":"","target":"","outcome":"failed","detail":"wrong password (3 in a row)","source_addr":"203.0.113.9","request_id":"req_5f0c2a91b7d3e4a6c81f0d22"}
+{"time":"2026-11-21T09:15:41.077Z","kind":"user.change","actor":"ada","actor_kind":"person","organization":"default","project":"","target":"bob","outcome":"ok","detail":"bob: viewer to admin","source_addr":"198.51.100.20","request_id":"req_a1d9e07c3b5f46280de1c4b7"}
+{"time":"2026-11-21T09:16:12.940Z","kind":"repository.delete","actor":"runner:builder-1","actor_kind":"runner","organization":"default","project":"","target":"platform/old-service","outcome":"denied","detail":"only an administrator may delete a repository","source_addr":"10.0.4.17","request_id":"req_0b6e83f2a4c15d97e3a8b610"}
+```
+
 ## Audit entries of the key operations
 
 These are written to the same audit trail by the keyring, not by an API route, so they have no route in the table above: by the server at start (as user `system`, source `server`) and by `launchway encryption` on the machine that has the root key. They name keys by version and never hold key material.

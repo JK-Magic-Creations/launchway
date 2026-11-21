@@ -121,6 +121,7 @@ func (su *serverSetup) openEngine() (*engine.Engine, error) {
 	e, err := su.openEngineRaw()
 	if err == nil {
 		e.SetStallBudget(su.stall)
+		startAuditStream(su.cfg, e)
 	}
 	return e, err
 }
