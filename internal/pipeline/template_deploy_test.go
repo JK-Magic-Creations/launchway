@@ -459,3 +459,27 @@ func TestExamplePipelines(t *testing.T) {
 		})
 	}
 }
+
+// Two services of one project in one environment (a back end and a front end)
+// give the delivery template different service names and run side by side;
+// without names they would both be the project and must be ordered.
+func TestServiceCDTwoServicesInOneEnvironment(t *testing.T) {
+	use := func(id, service string) string {
+		s := "  " + id + ":\n    uses: platform/service-cd-rollout\n    with:\n      environment: prod\n      application: shop\n" +
+			"      image_repository: team/" + id + "\n      manifest: apps/shop/rollouts.yaml\n      workload: " + id + "\n      namespace: shop\n" +
+			"      health_query: 'min(up)'\n"
+		if service != "" {
+			s += "      service: " + service + "\n"
+		}
+		return s
+	}
+	head := "pipeline: shop\nlibraries:\n  platform: { repo: platform, version: v1 }\nsteps:\n"
+	p := mustExpand(t, head+use("backend", "shop-backend")+use("frontend", "shop-frontend"), exampleLibrary(t))
+	if p.Step("backend/deploy").Service != "shop-backend" || p.Step("frontend/deploy").Service != "shop-frontend" {
+		t.Fatal("service names lost")
+	}
+	_, err := expand(t, head+use("backend", "")+use("frontend", ""), exampleLibrary(t))
+	if err == nil || !strings.Contains(err.Error(), "neither needs the other") {
+		t.Fatalf("got %v", err)
+	}
+}

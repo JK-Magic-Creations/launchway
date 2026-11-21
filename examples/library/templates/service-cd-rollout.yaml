@@ -30,6 +30,7 @@ description: Build and push the image, deploy it to one environment as an Argo R
 params:
   environment:      { type: environment, description: "The environment to deploy to, one of the server's environments" }
   application:      { type: application, description: "The Argo CD application that runs the service there" }
+  service:          { type: string, default: "", description: "What the deployment is called in the environment; empty: the project's name. Two services of one project in one environment, such as a back end and a front end, give different names" }
   image_repository: { type: string, description: "The image's repository in the registry, without the host, such as team/shop" }
   manifest:         { type: string, description: "The file in the GitOps repository whose references to the image change, such as apps/shop/deployment.yaml" }
   workload:         { type: string, description: "The name of the Rollout Argo CD syncs and Launchway watches" }
@@ -80,6 +81,7 @@ steps:
     description: Commit the image to the GitOps repository and wait for Argo CD
     needs: [image, approve]
     environment: { param: environment }
+    service: { param: service }
     version: { output: tag.tag }
     argocd:
       application: { param: application }
