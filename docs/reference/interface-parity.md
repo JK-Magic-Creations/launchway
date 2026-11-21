@@ -144,6 +144,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/compare` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
+| `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `set_step_resource_default` | `step-resources set-default` | `launchway_step_resources` | equal |

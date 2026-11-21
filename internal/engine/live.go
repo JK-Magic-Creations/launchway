@@ -142,3 +142,8 @@ func (e *Engine) selfApprovalNow() *bool {
 	v := e.live().selfOK
 	return &v
 }
+
+// SelfApprovalAllowed says whether the person who started a run may approve
+// it on this installation now: the setting approvals.allow_self, or its
+// default. It is what a decision card tells a person who is refused.
+func (e *Engine) SelfApprovalAllowed() bool { return e.live().selfOK }
