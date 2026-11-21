@@ -289,10 +289,16 @@ type EnvironmentConfig struct {
 	// Reviewers are who may acknowledge an emergency rollback of this
 	// environment (users and groups); empty means any operator of the
 	// project other than the person who asked for it.
-	Reviewers *pipeline.Approvers `yaml:"reviewers"`
+	Reviewers *ReviewersConfig `yaml:"reviewers"`
 	// EmergencyRollback overrides approvals.emergency_rollback for this
 	// environment: allow or require_approval.
 	EmergencyRollback string `yaml:"emergency_rollback"`
+}
+
+// ReviewersConfig names who may acknowledge an emergency rollback.
+type ReviewersConfig struct {
+	Users  []string `yaml:"users"`
+	Groups []string `yaml:"groups"`
 }
 
 // RunnerPoolConfig is one runner pool. A deploy pool (the default kind)
@@ -321,8 +327,12 @@ type RunnerPoolConfig struct {
 func (c *Config) EngineEnvironments() []engine.Environment {
 	out := make([]engine.Environment, 0, len(c.Environments))
 	for _, e := range c.Environments {
+		var reviewers *pipeline.Approvers
+		if e.Reviewers != nil {
+			reviewers = &pipeline.Approvers{Users: e.Reviewers.Users, Groups: e.Reviewers.Groups, Count: 1}
+		}
 		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals,
-			Reviewers: e.Reviewers, EmergencyRollback: e.EmergencyRollback})
+			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback})
 	}
 	return out
 }

@@ -75,6 +75,7 @@
         "guide/security-findings",
         "guide/images",
         "guide/deployments",
+        "guide/rollback-after-success",
         "guide/policies",
         "guide/verification",
         "guide/ai",
@@ -203,6 +204,7 @@
       "steps": [
         "concepts/environments-and-deployments",
         "guide/deployments",
+        "guide/rollback-after-success",
         "concepts/approvals",
         "tutorials/deploy-with-approval",
         "guide/verification",
