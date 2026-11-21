@@ -57,13 +57,14 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     ...forgeFixtures(),
     ...rollbackFixtures(detail),
     ...pullFixtures(),
+    ...browseFixtures(),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
   vi.stubGlobal("EventSource", FakeSource);
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input).split("?")[0];
-    const hit = answers[path];
+    const hit = answers[String(input)] !== undefined ? answers[String(input)] : answers[path];
     const body = hit !== undefined ? hit : path.endsWith("s") || path.includes("list") ? [] : {};
     return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
   }));
@@ -185,5 +186,39 @@ export function guideFixture() {
       { id: "tls", state: "attention", title: "Traffic is encrypted in transit", detail: "The address is plain http." },
       { id: "encryption", state: "ok", title: "Stored secrets are encrypted", detail: "Secrets in the database are sealed under a root key kept outside it." },
     ],
+  };
+}
+
+/** The code of acme/shop: a tree with last commits and a README, a Go file, blame, commits, a commit, a comparison,
+ * branches and tags, and a search. Keyed by the whole address (the query included) where the query decides the answer. */
+export function browseFixtures(): Record<string, unknown> {
+  const b = "/api/v1/repositories/acme/shop";
+  const c1 = "1".repeat(40), c2 = "2".repeat(40);
+  const last = (sha: string, subject: string) => ({ sha, subject, author: "ada", at: "2026-11-20T10:00:00Z" });
+  const root = { path: "", type: "dir", ref: "main", commit: c2, sha: "t1", entries: [
+    { name: "README.md", path: "README.md", type: "file", size: 40, sha: "r1", last: last(c1, "Add the readme") },
+    { name: "price.go", path: "price.go", type: "file", size: 60, sha: "p1", last: last(c2, "Round prices") },
+    { name: "docs", path: "docs", type: "dir", sha: "d1", last: last(c1, "Add docs") }] };
+  const code = "package shop\n\n// Round rounds.\nfunc Round(x float64) float64 {\n\treturn x\n}\n";
+  const file = { path: "price.go", type: "file", ref: "main", commit: c2, sha: "p1", size: code.length, mode: "100644", encoding: "utf8", content: code };
+  const commit = { sha: c2, subject: "Round prices", message: "Round prices\n\nTo the cent.", author: "ada", authored_at: "2026-11-20T10:00:00Z", committer: "ada", committed_at: "2026-11-20T10:00:00Z", parents: 1, parent_shas: [c1] };
+  const ref = (name: string, kind: string, extra = {}) => ({ name, kind, sha: c2, commit: c2, subject: "Round prices", author: "ada", committed_at: "2026-11-20T10:00:00Z", ahead: 0, behind: 0, ...extra });
+  return {
+    [`${b}/files?last=1`]: root,
+    [`${b}/files?ref=${c2}&path=README.md`]: { path: "README.md", type: "file", ref: c2, commit: c2, sha: "r1", encoding: "utf8", content: "# Shop\n\nSee [the docs](docs/guide.md) and ![logo](logo.png).\n\n<script>alert(1)</script>\n" },
+    [`${b}/files?path=price.go&last=1`]: file,
+    [`${b}/files?ref=main&path=price.go&last=1`]: file,
+    [`${b}/files?path=docs&last=1`]: { path: "docs", type: "dir", ref: "main", commit: c2, sha: "d1", entries: [{ name: "guide.md", path: "docs/guide.md", type: "file", size: 5, sha: "g1", last: last(c1, "Add docs") }] },
+    [`${b}/commits`]: { ref: "main", items: [commit, { ...commit, sha: c1, subject: "Add the readme", message: "Add the readme", parents: 0, parent_shas: [] }] },
+    [`${b}/commits/${c2}`]: { commit, runs: [{ id: "run_7", project: "shop-api", number: 7, pipeline: "ci", status: "failed", created_at: 1 }] },
+    [`${b}/diff`]: { files: [{ path: "price.go", status: "modified", additions: 1, deletions: 1, binary: false }], total: 1, additions: 1, deletions: 1, truncated: false },
+    [`${b}/diff/patch`]: { path: "price.go", bytes: 90, diff: "@@ -1,3 +1,4 @@\n func Round(x float64) float64 {\n-\treturn x\n+\treturn math.Round(x*100) / 100\n }\n" },
+    [`${b}/blame`]: { path: "price.go", commit: c2, total: 2, from: 1, to: 2, lines: [{ n: 1, sha: c1, text: "package shop", origin: 1 }, { n: 2, sha: c2, text: "func Round() {}", origin: 2 }],
+      commits: { [c1]: { sha: c1, author: "ada", at: "2026-11-01T10:00:00Z", subject: "Add the readme", path: "price.go" }, [c2]: { sha: c2, author: "grace", at: "2026-11-20T10:00:00Z", subject: "Round prices", previous: c1, previous_path: "price.go", path: "price.go" } } },
+    [`${b}/branches`]: { items: [ref("fix-rounding", "branch", { ahead: 1, behind: 1, open_pull: 1, protected: false }), ref("main", "branch", { default: true, protected: true })], total: 2, truncated: false, default_branch: "main" },
+    [`${b}/tags`]: { items: [ref("v1", "tag", { annotated: true, message: "Version one", tagger: "ada" })], total: 1, truncated: false },
+    [`${b}/search`]: { commit: c2, files: [{ path: "price.go", matches: [{ line: 4, text: "func Round(x float64) float64 {", ranges: [[5, 10]] }] }], matches: 1, partial: true, reason: "the search stopped after 10 seconds; narrow it by folder or extension", millis: 12 },
+    [`${b}/compare`]: { base: "main", head: "fix-rounding", base_sha: c1, head_sha: c2, merge_base: c1, ahead: 1, behind: 1, commits: [{ sha: c2, author: "ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }],
+      changes: { files: [{ path: "price.go", status: "modified", additions: 1, deletions: 1, binary: false }], total: 1, additions: 1, deletions: 1 }, mergeability: { state: "clean", behind: 1, ahead: 1 } },
   };
 }

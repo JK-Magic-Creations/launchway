@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { forgeApi } from "../forgeApi";
 import { api, type Project, type Ref, type RunSummary } from "../api";
 import { canOperate, useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
@@ -18,7 +19,7 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
 
 /** One repository: where it lives, its branches with the last pipeline result on each, its tags, and what starts
- * runs. Files and reviews are not built yet and say so. */
+ * runs. Files open in the code browser; reviews are not built yet and say so. */
 export function RepoPage({ name }: { name: string }) {
   const me = useMe();
   const inst = useInstallation();
@@ -51,11 +52,9 @@ export function RepoPage({ name }: { name: string }) {
           <LinkButton href={`/projects/${enc}/pipeline`} icon="graph">Pipeline</LinkButton>
         </>} />
       <Tabs label="Parts of the repository" on={tab} onChange={setTab}
-        tabs={[{ id: "overview", label: "Overview" }, { id: "files", label: "Files", soon: true }, { id: "reviews", label: "Reviews", soon: true }]} />
+        tabs={[{ id: "overview", label: "Overview" }, { id: "files", label: "Files" }, { id: "reviews", label: "Reviews", soon: true }]} />
       <div role="tabpanel" aria-labelledby={`tab-${tab}`} className="stack">
-        {tab === "files" && <Sheet><EmptyState title="Browsing files is not built yet" action={base ? <a className="btn btn-primary" href={base} target="_blank" rel="noreferrer noopener">Open on {host}</a> : undefined}>
-          Launchway reads the pipeline file today, not the rest of the repository. Files, commits and history will appear here once built-in Git hosting is merged; until then {base ? `${host} shows them.` : "this repository is read from a local path, so use your own tools."}
-        </EmptyState></Sheet>}
+        {tab === "files" && <FilesTab project={p} base={base ?? ""} host={host ?? ""} />}
         {tab === "reviews" && <Sheet><EmptyState title="Reviews are not built yet" action={<LinkButton href="/activity" kind="pri" icon="arrow">See runs of pull requests</LinkButton>}>
           Proposed changes will be read, commented and merged here once built-in Git hosting is merged. Runs started by pull requests exist today and are listed under Activity.
         </EmptyState></Sheet>}
@@ -93,6 +92,28 @@ export function RepoPage({ name }: { name: string }) {
       </div>
       {starting && <StartDialog project={p} onClose={() => setStarting(false)} />}
     </div>
+  );
+}
+
+/** The files of a project whose repository this server hosts open in the code browser; one on another server opens there. */
+function FilesTab({ project, base, host }: { project: Project; base: string; host: string }) {
+  const hosted = /\/git\/([^/]+\/[^?#]+?)(?:\.git)?\/?$/.exec(project.url)?.[1];
+  const [known, setKnown] = useState<boolean | null>(hosted ? null : false);
+  useEffect(() => {
+    if (!hosted) return;
+    const [o, ...n] = hosted.split("/");
+    forgeApi.repository(o, n.join("/")).then(() => setKnown(true)).catch(() => setKnown(false));
+  }, [hosted]);
+  if (known === null) return <Sheet><p className="sh-b faint">Looking for the repository…</p></Sheet>;
+  if (known && hosted) return (
+    <Sheet><EmptyState title="Browse the files" action={<LinkButton href={`/repositories/${hosted}/code`} kind="pri" icon="code">Open the files of {hosted}</LinkButton>}>
+      This repository is hosted here, so its files, commits, branches and search are in the code browser.
+    </EmptyState></Sheet>
+  );
+  return (
+    <Sheet><EmptyState title="This repository is on another server" action={base ? <a className="btn btn-primary" href={base} target="_blank" rel="noreferrer noopener">Open on {host}</a> : undefined}>
+      Launchway reads the pipeline file of a repository it does not host, not the rest of it. {base ? `${host} shows the files.` : "It is read from a local path, so use your own tools."} To read code here, move the repository to this server with an import or a mirror.
+    </EmptyState></Sheet>
   );
 }
 

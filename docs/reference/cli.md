@@ -204,7 +204,7 @@ Checks a pipeline file and prints a summary.
 launchway validate [FILE] [--project NAME] [--library NAME=DIRECTORY ...] [--resolved]
 ```
 
-`FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file, except that the [starters that ship with Launchway](starters.md) (`uses: launchway/go-service`) are always expanded and checked here, with no `--library`. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+`FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file, except that the [starters that ship with Launchway](../guide/starters.md) (`uses: launchway/go-service`) are always expanded and checked here, with no `--library`. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
 
 With `--library NAME=DIRECTORY`, once for each library the pipeline uses, the templates are expanded from those directories, with no server and no network. `NAME` is what the pipeline's `libraries:` section calls the library; `DIRECTORY` is the library's root, the directory that holds `templates/`. It is the same parse, binding and expansion a server runs when it checks a pipeline (a test compares the two on the example library), so the same problems come out, each with the file and line of the template it is in. Which libraries and environments a server allows, and its limits, are the server's to say: add `--project` against a server for that. `--resolved` prints the resolved pipeline (every step of every template, with its needs, containers and environment) as JSON, the graph `POST /api/v1/validate` returns; it needs `--library` for each library the pipeline uses. The library's own version is not looked at: the directory is what is read, so check out the tag you mean.
 
@@ -968,6 +968,18 @@ launchway repos archive show OWNER/NAME NUMBER [--json]
 launchway repos commits OWNER/NAME [--ref R] [--path P] [--limit N] [--json]
 launchway repos files OWNER/NAME [PATH] [--ref R] [--json]
 launchway repos put-file OWNER/NAME PATH [--file F | --text TEXT] --message M [--branch B] [--expect-sha SHA] [--json]
+launchway repos delete-file OWNER/NAME PATH --message M --expect-sha SHA [--branch B] [--json]
+launchway repos tree OWNER/NAME [PATH] [--ref R] [--json]
+launchway repos cat OWNER/NAME PATH [--ref R] [--binary]
+launchway repos log OWNER/NAME [--ref R] [--path P] [--limit N] [--json]
+launchway repos show OWNER/NAME COMMIT [--patch PATH] [--json]
+launchway repos blame OWNER/NAME PATH [--ref R] [--from N] [--to M] [--json]
+launchway repos compare OWNER/NAME --head H [--base B] [--json]
+launchway repos search OWNER/NAME QUERY [--ref R] [--regex] [--case] [--in content|path|both] [--dir D] [--ext go,ts] [--limit N] [--json]
+launchway repos branches OWNER/NAME [--q TEXT] [--json]
+launchway repos branches create OWNER/NAME NAME [--from REF]
+launchway repos branches delete OWNER/NAME NAME
+launchway repos tags OWNER/NAME [--q TEXT] [--json]
 ```
 
 A **connection** is a server the repositories are on: its kind (`gitea` or `forgejo`, whose REST API lists them; `plain` for addresses you give with `--url`), its address and a credential **reference** (the name of an environment variable of the server, or a file on the server; never the token). Launchway sends the credential only to the connection's own host, refuses internal addresses unless `forge.mirror_allow` lists them, and does not follow redirects.

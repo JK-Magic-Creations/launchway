@@ -146,12 +146,20 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues` | `list_archived_issues` | `repos archive list` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/archive/issues` | `import_archive` | `repos import-archive` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues/{number}` | `get_archived_issue` | `repos archive show` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/blame` | `blame_repository_file` | `repos blame` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/branches` | `delete_repository_branch` | `repos branches delete` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/branches` | `list_repository_branches` | `repos branches` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/branches` | `create_repository_branch` | `repos branches create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
-| `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `pr create` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/dependencies` | `list_dependencies` | `deps list` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `delete_deploy_key` | `repos deploy-keys delete` | `planned: launchway_deploy_key` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/diff` | `get_repository_diff` | `repos show` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/diff/patch` | `get_repository_diff` | `repos show` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/files` | `delete_repository_file` | `repos delete-file` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/files` | `read_repository_file` | `repos files` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/files` | `write_repository_file` | `repos put-file` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
@@ -190,7 +198,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss` | `review_pull_request` | `pr review` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
 | `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |

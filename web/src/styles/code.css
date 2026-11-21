@@ -1,0 +1,161 @@
+/* Reading a repository's code: the tree, a file, blame, commits, compare, branches and search. Colors come from tokens. */
+.code-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.code-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.code-bar .grow, .code-file-head .grow { flex: 1 1 auto; }
+.crumbs-code ol { display: flex; flex-wrap: wrap; gap: 0; list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: var(--fs-small); }
+.crumbs-code li + li::before { content: "/"; margin: 0 6px; color: var(--ink-3, var(--text-3)); }
+.crumbs-code [aria-current] { font-weight: 650; }
+.refsw { position: relative; }
+.refsw-btn { min-width: 150px; max-width: 260px; justify-content: space-between; display: inline-flex; gap: 8px; }
+.refsw-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.refsw-pop { position: absolute; z-index: 30; top: calc(100% + 4px); right: 0; width: min(340px, calc(100vw - 32px)); background: var(--surface, var(--bg)); border: 1px solid var(--border); border-radius: 8px; padding: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); }
+.refsw-pop input { width: 100%; margin: 6px 0; }
+.refsw-pop ul { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; }
+.refsw-pop li, .goto li { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.refsw-pop li.on, .goto li.on { background: var(--signal-wash); color: var(--signal-ink); }
+.goto { list-style: none; margin: 8px 0; padding: 0; max-height: 50vh; overflow: auto; }
+.tree-table { width: 100%; border-collapse: collapse; }
+.tree-table th { text-align: left; font-weight: 600; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.tree-table tr:last-child td { border-bottom: 0; }
+.readme .md img, .md-img { max-width: 100%; height: auto; }
+.code-note { padding: 10px 14px; margin: 0; color: var(--text-2); }
+.code-plain { font-family: var(--mono); font-size: var(--fs-small); background: var(--sunken, var(--signal-wash)); padding: 10px 12px; border-radius: 6px; overflow: auto; white-space: pre; text-align: left; }
+table.lines { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-small); line-height: 1.55; }
+table.lines td { padding: 0 10px; vertical-align: top; }
+table.lines td.ln { width: 1%; text-align: right; user-select: none; white-space: nowrap; }
+table.lines td.ln a { color: var(--text-2); text-decoration: none; }
+table.lines td.ln a:hover { color: var(--text); text-decoration: underline; }
+table.lines td.src { white-space: pre; tab-size: 4; }
+.code-file { overflow-x: auto; }
+table.lines tr.sel td { background: var(--warn-wash, var(--signal-wash)); }
+.hl-c { color: var(--text-2); font-style: italic; } .hl-s { color: var(--ok-ink, var(--ok)); } .hl-n { color: var(--signal-ink); } .hl-k { color: var(--accent-ink); font-weight: 600; } .hl-t { color: var(--signal-ink); }
+.code-more { padding: 10px 14px; margin: 0; }
+.code-image { padding: 16px; text-align: center; background: repeating-conic-gradient(var(--border) 0 25%, transparent 0 50%) 50% / 16px 16px; }
+.code-image img { max-width: 100%; height: auto; }
+.commit-list { list-style: none; margin: 0; padding: 0; }
+.commit-head, .compare-sum, .search-form, .branch-new, .search-file { padding: 14px 16px; margin-bottom: 14px; }
+.commit-body { white-space: pre-wrap; font-family: var(--font); margin: 0 0 12px; overflow-wrap: anywhere; }
+.search-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.branch-new { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.search-lines { list-style: none; margin: 8px 0 0; padding: 0; font-family: var(--mono); font-size: var(--fs-small); }
+.search-lines li { display: flex; gap: 12px; padding: 2px 0; }
+.search-lines code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ln-link { min-width: 44px; text-align: right; color: var(--text-2); }
+mark { background: var(--warn-wash, #ffe48a); color: inherit; border-radius: 2px; }
+.partial { color: var(--warn-ink, var(--text)); }
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions .btn + .btn { margin-left: 6px; }
+.editor-text { width: 100%; min-height: 360px; font-family: var(--mono); font-size: var(--fs-small); resize: vertical; tab-size: 4; }
+.editor fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 12px 0; padding: 10px 12px; }
+.editor .radio { display: block; padding: 4px 0; }
+.editor .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.tag-msg { white-space: pre-wrap; }
+kbd { font-family: var(--mono); font-size: .9em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+@media (max-width: 640px) {
+  .tree-when, .tree-table th.tree-when { display: none; }
+  .tree-name { white-space: normal; width: auto; overflow-wrap: anywhere; }
+  .tree-table td, .tree-table th { padding: 8px; }
+  .refsw-pop { right: auto; left: 0; }
+  .refsw-btn { min-width: 0; }
+  table.blame td.bl-who { min-width: 150px; }
+  .code-file-head .grow { display: none; }
+  .search-form .field { flex: 1 1 100%; }
+}
+.card.tree, .card[aria-label="Branches"], .card[aria-label="Tags"] { overflow-x: auto; }
+table.lines td.ln a, table.lines td.ln a:hover { text-decoration: none; border-bottom: 0; }
+table.lines td.ln a:hover { color: var(--text); }
+@media (max-width: 640px) { .branch-table th:nth-child(3), .branch-table td:nth-child(3) { display: none; } }
+.card.editor { display: flex; flex-direction: column; gap: 12px; }
+.editor .field { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 0; }
+.editor .field input:not([type=radio]), .editor .editor-text { width: 100%; box-sizing: border-box; }
+.editor .radio { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.editor fieldset { margin: 0; }
+
+/* ---- polish: spacing like the pull request pages (the page's own gap spaces the blocks), icons, one-line messages ---- */
+.code-page .code-bar, .code-page .card, .code-page .code-note { margin-top: 0; margin-bottom: 0; }
+.code-page .commit-head, .code-page .compare-sum, .code-page .search-form, .code-page .branch-new, .code-page .search-file { margin-bottom: 0; }
+.card.tree, .card.code-file { padding: 0; overflow: hidden; }
+.card.editor { padding: 16px; }
+.rico { flex: none; vertical-align: -3px; }
+.kind { display: inline-flex; color: var(--text-2); margin-right: 8px; vertical-align: middle; }
+.kind-folder { color: var(--accent-ink); }
+.btn-icon { padding-left: 8px; padding-right: 8px; min-width: 32px; justify-content: center; }
+.file-actions { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+.tree-table { table-layout: fixed; }
+.tree-table th, .tree-table td { padding: 8px 14px; vertical-align: middle; }
+.tree-table th.tree-name, .tree-table td.tree-name { width: 32%; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-table .tree-msg { width: auto; }
+.tree-table .tree-who { width: 15%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-table .tree-when { width: 110px; white-space: nowrap; text-align: right; }
+.tree-table td.tree-msg, .msg-cell { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-link, .msg-link:visited { color: var(--text-2); font-weight: 400; text-decoration: none; }
+.msg-link:hover { color: var(--text); text-decoration: underline; }
+.tree-table a, .commit-list li > a.mono, table.blame a, .crumbs-code a { text-decoration: none; }
+.tree-table a:hover, .crumbs-code a:hover, table.blame a:hover { text-decoration: underline; }
+/* A message cut short shows in full to someone on the keyboard: the cell grows over the next columns while its link has focus. */
+.tree-table td.tree-msg:focus-within, .msg-cell:focus-within { max-width: none; overflow: visible; white-space: normal; text-overflow: clip; }
+.tree-table td.tree-msg:focus-within .msg-link, .msg-cell:focus-within .msg-link { overflow-wrap: anywhere; color: var(--text); }
+.tree-table tbody tr:hover td { background: var(--sheet-2); }
+
+.code-file-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--sheet-2); }
+.code-file-head h2 { margin: 0; }
+.code-file-head .kind { margin-right: 0; }
+.file-meta { white-space: nowrap; }
+.jump input { width: 120px; }
+
+.readme-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--sheet-2); }
+.readme-head h2 { margin: 0; }
+.readme-head .kind { margin-right: 0; }
+.card.readme { padding: 0; overflow: hidden; border: 1px solid var(--border); }
+.readme-body { padding: 16px 20px; }
+
+.commit-list { list-style: none; margin: 0; padding: 0; }
+.commit-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 200px) 110px auto; gap: 14px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+.commit-list li:last-child { border-bottom: 0; }
+.commit-list .msg-link { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commit-list .msg-link:focus-visible { overflow: visible; white-space: normal; }
+.commit-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commit-when { text-align: right; white-space: nowrap; }
+.commit-side { display: flex; gap: 6px; align-items: center; }
+.rowlist .msg-cell { flex: 1 1 200px; }
+
+/* Blame: a gutter of groups. Each run of lines from one commit is a group; groups alternate in tone, and the left
+   edge of a group is shaded by how recent its commit is among this file's commits (--age 0 oldest, 1 newest). */
+table.blame { table-layout: auto; }
+table.blame td.bl-who { width: 300px; min-width: 240px; max-width: 340px; padding: 0 10px; font-family: var(--font); font-size: var(--fs-small); vertical-align: top; border-left: 4px solid color-mix(in srgb, var(--signal) calc(10% + var(--age, 0) * 70%), transparent); }
+table.blame tr.bl-odd td { background: var(--sheet-2); }
+table.blame tr.bl-odd td.bl-who { background: var(--sheet-3); }
+table.blame tr.bl-first td { border-top: 1px solid var(--border); }
+table.blame tr.bl-first:first-child td { border-top: 0; }
+table.blame tr.sel td { background: var(--warn-wash); }
+.bl-line1 { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; padding-top: 2px; }
+.bl-line1 .bl-author { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; color: var(--text); }
+.bl-group { position: sticky; top: 8px; padding: 2px 0 4px; }
+.bl-line2 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-line2 .msg-link:focus-visible { white-space: normal; }
+.bl-prev { display: block; font-size: var(--fs-label); padding-bottom: 2px; }
+
+@media (max-width: 640px) {
+  .tree-table th.tree-who, .tree-table td.tree-who { display: none; }
+  .tree-table th.tree-name, .tree-table td.tree-name { width: 42%; white-space: nowrap; overflow-wrap: normal; }
+  .commit-list li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .commit-who { grid-column: 1; grid-row: 2; }
+  .commit-when { grid-column: 2; grid-row: 2; }
+  .commit-side { grid-column: 1 / -1; grid-row: 3; }
+  table.blame td.bl-who { width: 160px; min-width: 150px; }
+  .code-file-head .grow { display: none; }
+}
+
+/* The lists are edge to edge in their card, like the pull request lists. */
+.code-page .card:not(.commit-head):not(.compare-sum):not(.search-form):not(.branch-new):not(.search-file):not(.editor):not(.empty) { padding: 0; overflow: hidden; }
+.code-page .card .branch-table th, .code-page .card .branch-table td { padding: 8px 14px; vertical-align: middle; }
+.code-page .card .branch-table th { text-align: left; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); border-bottom: 1px solid var(--border); }
+.code-page .card .branch-table td { border-bottom: 1px solid var(--border); }
+.code-page .card .branch-table tr:last-child td { border-bottom: 0; }
+.code-page .card .branch-table td.msg-cell { max-width: 0; }
+.code-page .card .rowlist > li { padding: 9px 14px; }
+
+/* Names and messages in the lists are links that need no underline to be seen as links: they stand alone in their cell. */
+.code-page .tree-table td a:not([class*="btn"]), .code-page a.msg-link:not([class*="btn"]), .code-page table.blame td a:not([class*="btn"]), .code-page .commit-list a:not([class*="btn"]) { text-decoration: none; }
+.code-page .tree-table td a:not([class*="btn"]):hover, .code-page a.msg-link:not([class*="btn"]):hover, .code-page .tree-table td a:not([class*="btn"]):focus-visible, .code-page a.msg-link:not([class*="btn"]):focus-visible { text-decoration: underline; }

@@ -362,18 +362,18 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Browse and search your code",
-              "value": "History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder.",
-              "detail": "Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.",
+              "value": "The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges.",
+              "detail": "A go-to-file finder (press t), a branch and tag switcher, syntax colors, a file's history that follows renames, raw downloads that can never run in the page, and branches and tags pages. Not yet: archives, and the newest commit drawn on its journey above the file tree.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Search inside a repository",
-              "value": "Find text and file names in the branch you are looking at.",
-              "detail": "Search runs on a disposable cache with bounded resources, so there is no index to keep in step. Results also cover pipeline files, templates and steps.",
+              "value": "Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension.",
+              "detail": "Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.",
               "needs": "Browse and search your code.",
               "area": "git-hosting"
             },
@@ -386,10 +386,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Edit in the browser, as a commit",
-              "value": "Edit, upload, delete and create a branch from the web page; every save is a real commit.",
-              "detail": "This is the same commit path the pipeline editor uses, so there is one way a change gets into Git. Cherry-pick, revert and patch download are there too.",
+              "value": "Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request.",
+              "detail": "It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },

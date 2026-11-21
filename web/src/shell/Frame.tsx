@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Approval, type Me } from "../api";
 import { attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
@@ -11,7 +11,7 @@ import { PageFor } from "../nav/pages";
 import type { Approvals } from "../live";
 import { navigate, onLink, replace, usePath } from "../router";
 import { DoBar, DoBarButton } from "./DoBar";
-import { ExplainerContext, Guide, type Explainer } from "./Guide";
+import { ExplainerContext, type Explainer } from "./explainer";
 import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
 import { SideNav } from "./SideNav";
@@ -21,6 +21,7 @@ import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
 
+const Guide = lazy(() => import("./Guide").then((m) => ({ default: m.Guide }))); // the first load does not carry the Guide's text
 const GUIDE_KEY = "lw-guide";
 
 function storedGuide(): boolean | null {
@@ -152,7 +153,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           </CrumbLabelContext.Provider>
           {version && <footer className="foot faint small">Launchway {version}</footer>}
         </main>
-        {guideOpen && <Guide ctx={ctx} path={path} explainer={explainer} onClose={toggleGuide} focusOnOpen={!wide} />}
+        {guideOpen && <Suspense fallback={<aside className="rail" aria-label={terms().label("guide")} />}><Guide ctx={ctx} path={path} explainer={explainer} onClose={toggleGuide} focusOnOpen={!wide} /></Suspense>}
         {guideOpen && <div className="rail-back" onClick={toggleGuide} aria-hidden="true" />}
       </div>
       <TabBar ctx={ctx} on={area} needs={needs.length} onAreas={() => setLayer("areas")} />

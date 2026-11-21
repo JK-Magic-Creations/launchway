@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModels } from "../components/Explain";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
@@ -8,16 +8,7 @@ import { terms } from "../terms";
 import { guideFor } from "./guideData";
 import { learnFor } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
-
-/** A page that can offer its own explanation (the run page, for a failed step) puts it here; the Guide
- * shows it as a button, only when a model is configured. */
-export interface Explainer { label: string; run: () => Promise<string> }
-export const ExplainerContext = createContext<(e: Explainer | null) => void>(() => {});
-export function useRegisterExplainer(e: Explainer | null): void {
-  const set = useContext(ExplainerContext);
-  const label = e?.label;
-  useEffect(() => { set(e); return () => set(null); }, [label]); // eslint-disable-line react-hooks/exhaustive-deps
-}
+import type { Explainer } from "./explainer";
 
 /** Guide is the calm right-hand column: where you are, in plain words, and what you can do next. The
  * optional AI help shows only when a model is configured. */
@@ -35,7 +26,7 @@ export function Guide({ ctx, path, explainer, onClose, focusOnOpen }: { ctx: Ctx
   const at = locate(path);
   const s = at ? section(at.info.section) : null;
   const coming = comingFor(path);
-  const g = at ? guideFor(at.info.pattern, s?.label ?? "Launchway", s?.promise ?? "") : guideFor("", "Not here", "This page does not exist.");
+  const g = at ? guideFor(at.info.pattern.replace(":view", at.params.view ?? ""), s?.label ?? "Launchway", s?.promise ?? "") : guideFor("", "Not here", "This page does not exist.");
   const text = coming ? `${coming.does} It is not built yet.` : g.text;
   return (
     <aside className="rail" aria-label={terms().label("guide")} ref={rail}>

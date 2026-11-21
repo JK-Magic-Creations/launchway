@@ -28,6 +28,9 @@ func addFilesTools(srv *mcp.Server, c *mcpCall) {
 		addTool(srv, c, &mcp.Tool{Name: "write_repository_file", Annotations: changes("Add or change one file of a repository", false, true),
 			Description: "Operators of the repository. Make one commit on a branch that adds a file (expected_sha empty: it must not exist) or replaces it (expected_sha: its current id from read_repository_file). The branch must exist; protected branches take it only from administrators; a mirror or archived repository takes none. Same follow-up as a push (webhooks, push mirrors, pull requests). Audited."},
 			mcpCallTimeout, writeRepoFile)
+		addTool(srv, c, &mcp.Tool{Name: "delete_repository_file", Annotations: changes("Delete one file of a repository", true, false),
+			Description: "Operators of the repository. Make one commit on a branch that removes a file (expected_sha: its current id from read_repository_file). Same rules, follow-up and audit as write_repository_file; the file stays in the history."},
+			mcpCallTimeout, deleteRepoFile)
 	}
 }
 
@@ -109,5 +112,23 @@ func writeRepoFile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in w
 	}
 	body := writeFileIn{Branch: in.Branch, Path: in.Path, Content: in.Content, Encoding: in.Encoding, Message: in.Message, ExpectedSHA: in.ExpectedSHA}
 	err := c.apiJSON(ctx, "write_repository_file", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/files", in.Owner, in.Name), body, &out)
+	return out, err
+}
+
+type deleteFileToolIn struct {
+	repositoryIn
+	Branch      string `json:"branch,omitempty" jsonschema:"the branch to commit to (default: the default branch); it must exist"`
+	Path        string `json:"path" jsonschema:"the file's path in the repository"`
+	Message     string `json:"message" jsonschema:"the commit message"`
+	ExpectedSHA string `json:"expected_sha" jsonschema:"the file's current id from read_repository_file"`
+}
+
+func deleteRepoFile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in deleteFileToolIn) (files.Written, error) {
+	var out files.Written
+	if in.Owner == "" || in.Name == "" || in.Path == "" || in.ExpectedSHA == "" {
+		return out, errors.New("say which repository (owner and name), the file's path and its expected_sha")
+	}
+	body := writeFileIn{Branch: in.Branch, Path: in.Path, Message: in.Message, ExpectedSHA: in.ExpectedSHA}
+	err := c.apiJSON(ctx, "delete_repository_file", http.MethodDelete, apiPath("/api/v1/repositories/%s/%s/files", in.Owner, in.Name), body, &out)
 	return out, err
 }

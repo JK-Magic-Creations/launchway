@@ -129,6 +129,8 @@ type Commit struct {
 	Committer string `json:"committer"`
 	CommitAt  string `json:"committed_at"`
 	Parents   int    `json:"parents"`
+	// ParentSHAs are the commit's parents, first parent first.
+	ParentSHAs []string `json:"parent_shas"`
 }
 
 // Commits lists the commits reachable from ref, newest first, optionally only
@@ -151,6 +153,10 @@ func (s *Service) Commits(ctx context.Context, repoID, ref, p string, limit int)
 		}
 		args := []string{"log", "-n", strconv.Itoa(limit), "--format=%H%x1f%an%x1f%aI%x1f%cn%x1f%cI%x1f%P%x1f%B%x1e", sha}
 		if p != "" {
+			// The history of one file follows it through renames; that of a folder does not.
+			if kind, err := g.run(ctx, nil, "cat-file", "-t", "--end-of-options", sha+":"+p); err == nil && strings.TrimSpace(kind) == "blob" {
+				args = append(args[:len(args)-1], "--follow", sha)
+			}
 			args = append(args, "--", p)
 		}
 		raw, err := g.run(ctx, nil, args...)
@@ -165,7 +171,7 @@ func (s *Service) Commits(ctx context.Context, repoID, ref, p string, limit int)
 			}
 			msg := strings.TrimRight(f[6], "\n")
 			subject, _, _ := strings.Cut(msg, "\n")
-			out = append(out, Commit{SHA: f[0], Author: f[1], AuthorAt: f[2], Committer: f[3], CommitAt: f[4], Parents: len(strings.Fields(f[5])), Subject: subject, Message: msg})
+			out = append(out, Commit{SHA: f[0], Author: f[1], AuthorAt: f[2], Committer: f[3], CommitAt: f[4], Parents: len(strings.Fields(f[5])), ParentSHAs: strings.Fields(f[5]), Subject: subject, Message: msg})
 		}
 		return nil
 	})
@@ -182,6 +188,10 @@ type Entry struct {
 	Type string `json:"type"` // file, dir, symlink or submodule
 	Size int64  `json:"size,omitempty"`
 	SHA  string `json:"sha"`
+	// Last is the newest commit that changed the entry: set only when the
+	// caller asked for it (ReadWithLast); nil when it lies beyond the search
+	// bound or was not asked for.
+	Last *LastCommit `json:"last,omitempty"`
 }
 
 // Item is what a path is: a directory with its entries, or a file with its
@@ -197,6 +207,11 @@ type Item struct {
 	Content   string  `json:"content,omitempty"`
 	Truncated bool    `json:"truncated,omitempty"` // a file over the limit: no content
 	Entries   []Entry `json:"entries,omitempty"`
+	// Mode is the file's git mode (100644, 100755, 120000, 160000).
+	Mode string `json:"mode,omitempty"`
+	// LastBounded says the last-commit column stopped at its search bound:
+	// entries without Last were not changed within it.
+	LastBounded bool `json:"last_bounded,omitempty"`
 }
 
 // Read looks up a path at a ref ("" is the root).
@@ -216,12 +231,28 @@ func (s *Service) Read(ctx context.Context, repoID, ref, p string) (Item, error)
 		if p == "" {
 			spec = commit + "^{tree}"
 		}
+		mode := ""
+		if p != "" {
+			ls, err := g.run(ctx, nil, "ls-tree", "-z", "--end-of-options", commit, "--", p)
+			if err != nil || strings.TrimSpace(ls) == "" {
+				return missing("no %q at %s", p, ref)
+			}
+			mode = strings.Fields(ls)[0]
+			if mode == "160000" {
+				f := strings.Fields(strings.SplitN(ls, "\t", 2)[0])
+				it = Item{Path: p, Ref: ref, Commit: commit, Type: "submodule", Mode: mode}
+				if len(f) >= 3 {
+					it.SHA = f[2]
+				}
+				return nil
+			}
+		}
 		kind, err := g.run(ctx, nil, "cat-file", "-t", "--end-of-options", spec)
 		if err != nil {
 			return missing("no %q at %s", p, ref)
 		}
 		sha, _ := g.run(ctx, nil, "rev-parse", "--verify", "--end-of-options", spec)
-		it = Item{Path: p, Ref: ref, Commit: commit, SHA: strings.TrimSpace(sha)}
+		it = Item{Path: p, Ref: ref, Commit: commit, SHA: strings.TrimSpace(sha), Mode: mode}
 		switch strings.TrimSpace(kind) {
 		case "tree":
 			it.Type = "dir"
@@ -236,6 +267,9 @@ func (s *Service) Read(ctx context.Context, repoID, ref, p string) (Item, error)
 			it.Entries = parseTree(raw, p)
 		case "blob":
 			it.Type = "file"
+			if it.Mode == "120000" {
+				it.Type = "symlink"
+			}
 			szs, err := g.run(ctx, nil, "cat-file", "-s", "--end-of-options", spec)
 			if err != nil {
 				return err
@@ -301,6 +335,8 @@ type Write struct {
 	// ExpectedSHA is the blob the caller is replacing: "" means the file must not exist yet.
 	ExpectedSHA string
 	Actor       string
+	// Delete removes the file instead of writing it; ExpectedSHA is then required.
+	Delete bool
 }
 
 // Written says what a write did.
@@ -322,6 +358,8 @@ func (w Write) Check(branch string) (string, error) {
 		return "", invalid("a file needs a path inside the repository")
 	}
 	switch {
+	case w.Delete && w.ExpectedSHA == "":
+		return "", invalid("deleting a file needs expected_sha, its current id")
 	case len(w.Content) > MaxFileBytes:
 		return "", invalid("a file written here may be at most %d bytes", MaxFileBytes)
 	case strings.TrimSpace(w.Message) == "" || len(w.Message) > MaxMessage:
@@ -387,11 +425,18 @@ func (s *Service) Put(ctx context.Context, repoID string, w Write, check func(re
 		if _, err := g.run(ctx, nil, "read-tree", tip); err != nil {
 			return nil, err
 		}
-		blob, err := g.run(ctx, w.Content, "hash-object", "-w", "--stdin")
-		if err != nil {
-			return nil, err
+		var blob string
+		if w.Delete {
+			if _, err := g.run(ctx, []byte("0 "+strings.Repeat("0", len(tip))+"\t"+p+"\n"), "update-index", "--index-info"); err != nil {
+				return nil, err
+			}
+		} else {
+			b, err := g.run(ctx, w.Content, "hash-object", "-w", "--stdin")
+			if err != nil {
+				return nil, err
+			}
+			blob = strings.TrimSpace(b)
 		}
-		blob = strings.TrimSpace(blob)
 		mode := "100644"
 		if cur != "" {
 			if ls, err := g.run(ctx, nil, "ls-tree", "--end-of-options", tip, "--", p); err == nil {
@@ -400,8 +445,10 @@ func (s *Service) Put(ctx context.Context, repoID string, w Write, check func(re
 				}
 			}
 		}
-		if _, err := g.run(ctx, nil, "update-index", "--add", "--cacheinfo", mode+","+blob+","+p); err != nil {
-			return nil, fmt.Errorf("%w: %s cannot be placed there (a file stands where a directory is needed, or the reverse)", ErrConflict, p)
+		if !w.Delete {
+			if _, err := g.run(ctx, nil, "update-index", "--add", "--cacheinfo", mode+","+blob+","+p); err != nil {
+				return nil, fmt.Errorf("%w: %s cannot be placed there (a file stands where a directory is needed, or the reverse)", ErrConflict, p)
+			}
 		}
 		tree, err := g.run(ctx, nil, "write-tree")
 		if err != nil {

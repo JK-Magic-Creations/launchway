@@ -295,6 +295,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.import` | `POST /api/v1/imports` (also `launchway repos import`); the target is the connection, the detail lists the repositories made or resumed and how each ended |
 | `repository.verify` | `POST /api/v1/imports/verify` (also `launchway repos verify`); the detail says whether every ref was equal |
 | `repository.file_write` | `PUT /api/v1/repositories/{owner}/{name}/files` (also `launchway repos put-file`): one commit made by the server; the detail names the branch, the path and the commit range |
+| `repository.file_delete` | `DELETE /api/v1/repositories/{owner}/{name}/files` (also `launchway repos delete-file`): one commit made by the server that removes a file; the detail names the branch, the path and the commit range |
+| `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
+| `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
 | `archive.import` | `POST /api/v1/repositories/{owner}/{name}/archive/issues` (also `launchway repos import-archive`); the target is the repository, the detail the counts of issues and comments stored |
 | `ssh_key.add` | `POST /api/v1/user/ssh-keys`; the target is the person, the detail the key's name and fingerprint |
 | `ssh_key.delete` | `DELETE /api/v1/user/ssh-keys/{id}` |

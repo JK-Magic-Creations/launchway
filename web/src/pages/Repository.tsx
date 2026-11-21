@@ -31,7 +31,10 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
         </div>
       </header>
       <nav className="tabs" aria-label="Repository">
-        <a href={`/repositories/${path}`} className={"tab" + (tab === "overview" ? " tab-on" : "")} aria-current={tab === "overview" ? "page" : undefined}>Overview</a>
+        <a href={`/repositories/${path}/code`} className="tab">Code</a>
+        <a href={`/repositories/${path}/commits`} className="tab">Commits</a>
+        <a href={`/repositories/${path}/branches`} className="tab">Branches</a>
+        <a href={`/repositories/${path}`} className={"tab" + (tab === "overview" ? " tab-on" : "")} aria-current={tab === "overview" ? "page" : undefined}>Settings</a>
         <a href={`/repositories/${path}/pulls`} className="tab">Pull requests</a>
         <a href={`/repositories/${path}/dependencies`} className="tab">Dependencies</a>
         <a href={`/repositories/${path}/mirrors`} className={"tab" + (tab === "mirrors" ? " tab-on" : "")} aria-current={tab === "mirrors" ? "page" : undefined}>Mirrors</a>

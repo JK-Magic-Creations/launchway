@@ -7,6 +7,7 @@ import { Chip } from "../kit/Status";
 import { LaunchLine, type LineStation } from "../kit/LaunchLine";
 import { Tabs } from "../kit/Tabs";
 import { Markdown } from "../markdown";
+import { parsePatch, type Row } from "../components/DiffTable";
 import { pullsApi, type Comment, type Conversation, type FileChange, type Patch, type Pull, type Thread } from "../pullsApi";
 import { pullHref, stateChip } from "./PullRequests";
 import { PullList, PullRunLine } from "./PullPeople";
@@ -27,21 +28,7 @@ function stations(p: Pull): LineStation[] {
   ];
 }
 
-interface Row { kind: "hunk" | "add" | "del" | "ctx"; old?: number; neu?: number; text: string }
-
-export function parsePatch(diff: string): Row[] {
-  const rows: Row[] = [];
-  let o = 0, n = 0, inHunk = false;
-  for (const line of diff.split("\n")) {
-    const h = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/.exec(line);
-    if (h) { o = Number(h[1]); n = Number(h[2]); inHunk = true; rows.push({ kind: "hunk", text: line }); continue; }
-    if (!inHunk) continue;
-    if (line.startsWith("+")) rows.push({ kind: "add", neu: n++, text: line.slice(1) });
-    else if (line.startsWith("-")) rows.push({ kind: "del", old: o++, text: line.slice(1) });
-    else if (line.startsWith(" ")) rows.push({ kind: "ctx", old: o++, neu: n++, text: line.slice(1) });
-  }
-  return rows;
-}
+export { parsePatch };
 
 function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread; path: string; n: number; me: string; canApply: boolean; onChange: () => void; onError: (e: unknown) => void }) {
   const [reply, setReply] = useState("");

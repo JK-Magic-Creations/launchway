@@ -21,11 +21,12 @@ import (
 
 func (s *Server) filesRoutes() []route {
 	const base = "/api/v1/repositories/{owner}/{name}"
-	return []route{
+	return append(s.browseRoutes(), []route{
 		{"GET " + base + "/commits", repoRead, "", s.listCommits},
 		{"GET " + base + "/files", repoRead, "", s.readFile},
 		{"PUT " + base + "/files", repoWrite, "repository.file_write", s.writeFile},
-	}
+		{"DELETE " + base + "/files", repoWrite, "repository.file_delete", s.deleteFile},
+	}...)
 }
 
 // filesService reads and writes through the storage the pull request service
@@ -57,7 +58,9 @@ func (s *Server) failFiles(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, files.ErrConflict):
 		writeErr(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "conflict: "))
-	case errors.Is(err, forge.ErrNotFound), errors.Is(err, forge.ErrInvalid):
+	case errors.Is(err, forge.ErrNotFound):
+		writeErr(w, http.StatusNotFound, strings.TrimPrefix(err.Error(), "not found: "))
+	case errors.Is(err, forge.ErrInvalid):
 		s.failForge(w, err)
 	default:
 		if files.IsStale(err) {
@@ -98,11 +101,16 @@ func (s *Server) readFile(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	it, err := s.filesService().Read(r.Context(), repo.ID, defaultRef(r, repo), r.URL.Query().Get("path"))
+	read := s.filesService().Read
+	if r.URL.Query().Get("last") == "1" {
+		read = s.filesService().ReadWithLast
+	}
+	it, err := read(r.Context(), repo.ID, defaultRef(r, repo), r.URL.Query().Get("path"))
 	if err != nil {
 		s.failFiles(w, err)
 		return
 	}
+	cacheFor(w, defaultRef(r, repo))
 	writeJSON(w, http.StatusOK, it)
 }
 
@@ -115,7 +123,11 @@ type writeFileIn struct {
 	ExpectedSHA string `json:"expected_sha"`
 }
 
-func (s *Server) writeFile(w http.ResponseWriter, r *http.Request) {
+func (s *Server) deleteFile(w http.ResponseWriter, r *http.Request) { s.changeFile(w, r, true) }
+
+func (s *Server) writeFile(w http.ResponseWriter, r *http.Request) { s.changeFile(w, r, false) }
+
+func (s *Server) changeFile(w http.ResponseWriter, r *http.Request, remove bool) {
 	repo, ok := s.filesRepo(w, r)
 	if !ok {
 		return
@@ -161,7 +173,7 @@ func (s *Server) writeFile(w http.ResponseWriter, r *http.Request) {
 		}
 		return policy(ctx, []githttp.RefUpdate{{Name: ref, Old: old, New: next}})
 	}
-	out, err := s.filesService().Put(r.Context(), repo.ID, files.Write{Branch: in.Branch, Path: in.Path, Content: content, Message: in.Message, ExpectedSHA: in.ExpectedSHA, Actor: id.User}, check)
+	out, err := s.filesService().Put(r.Context(), repo.ID, files.Write{Branch: in.Branch, Path: in.Path, Content: content, Message: in.Message, ExpectedSHA: in.ExpectedSHA, Actor: id.User, Delete: remove}, check)
 	if err != nil {
 		s.failFiles(w, err)
 		return

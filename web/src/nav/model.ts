@@ -207,6 +207,10 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: "New" }]),
   page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: `#${p.number}` }]),
+  page("/repositories/:owner/:name/:view", "projects", undefined, (p) => `${p.view[0].toUpperCase() + p.view.slice(1)}: ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}/code` }, { label: p.view[0].toUpperCase() + p.view.slice(1) }]),
+  page("/repositories/:owner/:name/commit/:sha", "projects", undefined, (p) => `Commit ${p.sha.slice(0, 8)}: ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}/code` }, { label: p.sha.slice(0, 8) }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => "Deployments", () => []),

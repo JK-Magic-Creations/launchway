@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 28 in progress · 60 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 31 in progress · 57 planned · 111 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,7 +48,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 4 | 0 | 16 |
+| [Host your code](#g-host-your-code) | 20 | 7 | 0 | 13 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
@@ -59,7 +59,7 @@ flowchart TD
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
 | [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 6 | 1 | 3 | 2 |
-| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 3 | 6 | 3 |
+| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 0 | 9 | 3 |
 
 ### Host your code {#g-host-your-code}
 
@@ -107,9 +107,9 @@ The everyday repository lifecycle: create, rename with redirects, transfer, arch
 
 #### Browse and search your code {#browse-and-search-your-code}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder. Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.
+The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges. A go-to-file finder (press t), a branch and tag switcher, syntax colors, a file's history that follows renames, raw downloads that can never run in the page, and branches and tags pages. Not yet: archives, and the newest commit drawn on its journey above the file tree.
 
 **Depends on:** Built-in Git hosting.
 
@@ -117,9 +117,9 @@ History, file history, blame, raw files, archives, permanent links with line ran
 
 #### Search inside a repository {#search-inside-a-repository}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Find text and file names in the branch you are looking at. Search runs on a disposable cache with bounded resources, so there is no index to keep in step. Results also cover pipeline files, templates and steps.
+Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
 
 **Depends on:** Browse and search your code.
 
@@ -137,9 +137,9 @@ Markdown, diagrams, math, tables of data, images with before and after, document
 
 #### Edit in the browser, as a commit {#edit-in-the-browser-as-a-commit}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Edit, upload, delete and create a branch from the web page; every save is a real commit. This is the same commit path the pipeline editor uses, so there is one way a change gets into Git. Cherry-pick, revert and patch download are there too.
+Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
 
 **Depends on:** Built-in Git hosting.
 
@@ -1022,7 +1022,7 @@ One command and a few plain questions on a laptop, a server or Kubernetes, then 
 
 #### A few values and nothing else {#a-few-values-and-nothing-else}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off. Being built. Everything else is a secure default or is set in the product after first sign-in.
 
@@ -1030,17 +1030,17 @@ The chart starts a secure working installation from about ten lines or fewer: th
 
 #### Secrets made once and kept {#secrets-made-once-and-kept}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the runner token and the database password it found; installing again, and upgrading with unchanged values, kept them.
+The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Being built. It also holds when a GitOps controller renders the chart.
 
 [Area page](installing.md)
 
 #### Secure by default in the chart {#secure-by-default-in-the-chart}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. Sign-in is required, secrets are sealed under a root key, the network policies deny by default and the pods run restricted; checked in a rehearsal on a throwaway cluster, fresh and as an upgrade with unchanged values.
+Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. Being built.
 
 [Area page](installing.md)
 

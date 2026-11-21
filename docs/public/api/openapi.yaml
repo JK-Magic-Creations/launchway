@@ -3986,6 +3986,152 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/blame:
+        get:
+            description: 'Who last changed each line of ?path= at ?ref=, for lines ?from= to ?to= (at most 1000 per answer; next is where the next range starts): {"lines": [{"n", "sha", "text"}], "commits": {sha: {"author", "at", "subject", "previous", "previous_path"}}, "total"}; previous is the commit before that change, for blaming the file as it was. A file over 1 MiB or a binary file is refused. Limited to 120 a minute per person.'
+            operationId: get_api_v1_repositories_owner_name_blame
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Who last changed each line of ?path= at ?ref=, for lines ?from= to ?to= (at most 1000 per answer; next is where the next range starts): {"lines": [{"n", "sha", "text"}], "commits": {sha: {"author", "at", "subject", "previous", "previous_path"}}, "total"}; previous is the commit before that change, for blaming the file as it was.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/branches:
+        delete:
+            description: 'Delete the branch named by ?name=. Never the default branch; protected branches are for administrators. Answers {"name", "was", "undo"}: the commit it pointed at and the command that brings it back. The audit detail holds the same commit.'
+            operationId: delete_api_v1_repositories_owner_name_branches
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Delete the branch named by ?name=.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_delete
+        get:
+            description: 'The branches, newest first: {"items": [{"name", "sha", "subject", "author", "committed_at", "ahead", "behind", "default", "protected", "open_pull"}], "total", "truncated"}. ?base= is the branch ahead and behind are counted against (default: the default branch; -1 when they could not be counted); ?q= keeps names containing the text; ?limit= at most 500 (default 100).'
+            operationId: get_api_v1_repositories_owner_name_branches
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The branches, newest first: {"items": [{"name", "sha", "subject", "author", "committed_at", "ahead", "behind", "default", "protected", "open_pull"}], "total", "truncated"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        post:
+            description: 'Make a branch: {"name", "from"} where from is a branch, tag or commit (default: the default branch). The branch rules of a push apply, so a protected name is for administrators; a mirror or archived repository takes none. Answers 201 {"name", "commit"}; 409 when the name or a part of it is taken.'
+            operationId: post_api_v1_repositories_owner_name_branches
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Make a branch: {"name", "from"} where from is a branch, tag or commit (default: the default branch).'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_create
     /api/v1/repositories/{owner}/{name}/commits:
         get:
             description: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200). {"ref", "items": [{"sha", "subject", "message", "author", "authored_at", "committer", "committed_at", "parents"}]}.'
@@ -4019,6 +4165,47 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             summary: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/commits/{sha}:
+        get:
+            description: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the runs are those of projects the caller may see that were started for this commit.'
+            operationId: get_api_v1_repositories_owner_name_commits_sha
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: sha
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the runs are those of projects the caller may see that were started for this commit.'
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -4210,9 +4397,118 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: deploy_key.delete
-    /api/v1/repositories/{owner}/{name}/files:
+    /api/v1/repositories/{owner}/{name}/diff:
         get:
-            description: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
+            description: 'The files changed from ?from= to ?to= (commits, branches or tags; from=root is the empty tree): {"files", "total", "additions", "deletions", "truncated", "next_offset"}, paged by ?offset= and ?limit= (at most 500). Pinned to a full commit name, the answer is cacheable for ever.'
+            operationId: get_api_v1_repositories_owner_name_diff
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The files changed from ?from= to ?to= (commits, branches or tags; from=root is the empty tree): {"files", "total", "additions", "deletions", "truncated", "next_offset"}, paged by ?offset= and ?limit= (at most 500).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/diff/patch:
+        get:
+            description: 'The unified patch of one or more files (?path=, repeatable) between ?from= and ?to=, as for a pull request: a file over the size limits is held back (held) until ?full=1.'
+            operationId: get_api_v1_repositories_owner_name_diff_patch
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The unified patch of one or more files (?path=, repeatable) between ?from= and ?to=, as for a pull request: a file over the size limits is held back (held) until ?full=1.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/files:
+        delete:
+            description: 'One commit that removes one file: {"branch", "path", "message", "expected_sha"}; expected_sha (the file''s current sha) is required, so a file changed in between is never removed by mistake. The same branch rules, follow-up and answer as PUT. The file stays in the history.'
+            operationId: delete_api_v1_repositories_owner_name_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One commit that removes one file: {"branch", "path", "message", "expected_sha"}; expected_sha (the file''s current sha) is required, so a file changed in between is never removed by mistake.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.file_delete
+        get:
+            description: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha, and with ?last=1 the newest commit that changed each: last; last_bounded says some entries were last changed further back than the search reaches) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
             operationId: get_api_v1_repositories_owner_name_files
             parameters:
                 - in: path
@@ -4242,7 +4538,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
+            summary: 'What ?path= is at ?ref= (the root when empty): a directory (type: dir, entries with name, path, type, size, sha, and with ?last=1 the newest commit that changed each: last; last_bounded says some entries were last changed further back than the search reaches) or a file (type: file, size, sha, and content as utf8, or base64 for binary; no content, truncated: true, above 1 MiB).'
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -5767,6 +6063,78 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: pull.review_dismiss
+    /api/v1/repositories/{owner}/{name}/raw:
+        get:
+            description: 'A file''s bytes at ?ref=. Always a download (Content-Disposition: attachment, application/octet-stream, nosniff, a sandbox policy that forbids scripts and framing); ?inline=1 serves only a picture type (png, jpeg, gif, webp, avif, svg) as itself, still under the sandbox policy. A commit-pinned ref is cacheable for ever. Files up to 200 MiB.'
+            operationId: get_api_v1_repositories_owner_name_raw
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A file's bytes at ?ref=.
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/search:
+        get:
+            description: 'Search the files at ?ref= for ?q= (literal; regex=1 for a POSIX extended expression; case=1 to match case; in=content, path or both; dir= a directory; ext=go,ts; limit= at most 500). {"files": [{"path", "matches": [{"line", "text", "ranges"}]}], "matches", "partial", "reason", "millis"}. It stops after 10 seconds or 4 MiB of matches and says so in partial and reason: the answer is never silently short. Limited to 30 a minute per person.'
+            operationId: get_api_v1_repositories_owner_name_search
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Search the files at ?ref= for ?q= (literal; regex=1 for a POSIX extended expression; case=1 to match case; in=content, path or both; dir= a directory; ext=go,ts; limit= at most 500).
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/stop-mirroring:
         post:
             description: 'Makes the repository the primary: the pull mirror is deleted and pushes are accepted. {"final_sync": true} runs the mirror once more first, and changes nothing if that fails. 409 when it is not a mirror.'
@@ -5805,6 +6173,42 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: mirror.promote
+    /api/v1/repositories/{owner}/{name}/tags:
+        get:
+            description: 'The tags, newest first: {"items": [{"name", "commit", "subject", "annotated", "message", "tagger", "committed_at"}], "total", "truncated"}; ?q= and ?limit= as for branches.'
+            operationId: get_api_v1_repositories_owner_name_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The tags, newest first: {"items": [{"name", "commit", "subject", "annotated", "message", "tagger", "committed_at"}], "total", "truncated"}; ?q= and ?limit= as for branches.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/updates/preview:
         get:
             description: 'What the dependency updater would do now, ignoring its schedule: decisions, each a pull request to open, update in place, close or keep, or one that is queued behind a limit with the reason; security fixes first. Opens nothing: the updater runs as a pipeline step (launchway updates run). Same answer shape as /dependencies.'

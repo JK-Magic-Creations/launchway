@@ -19,7 +19,6 @@
     "internal/engine/testqueries.go:Engine.RunTestCases": 194,
     "internal/engine/testqueries.go:Engine.TestOverview": 165,
     "internal/imagebuild/build.go:Build": 426,
-    "internal/pipeline/parse.go:parser.parseSteps": 153,
     "internal/pipeline/verify.go:parser.parseVerifyStep": 197,
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,

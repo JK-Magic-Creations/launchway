@@ -29,7 +29,7 @@ export interface Review { id: string; author: string; verdict: "comment" | "appr
 export interface Revision { seq: number; head_sha: string; base_sha: string; forced: boolean; actor?: string; created_at: string }
 export interface Conversation { comments: Comment[]; threads: Thread[]; reviews: Review[]; revisions: Revision[] }
 export interface BranchComparison {
-  base: string; head: string; ahead: number; behind: number; commits: Commit[]; existing_pull?: number;
+  base: string; head: string; base_sha?: string; head_sha?: string; merge_base?: string; ahead: number; behind: number; commits: Commit[]; existing_pull?: number;
   changes: { files: FileChange[]; total: number; additions: number; deletions: number };
   mergeability: Pull["mergeability"];
 }

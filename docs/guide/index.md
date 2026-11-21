@@ -26,6 +26,9 @@ key and setting see the [reference](../reference/index.md).
 | [Notifications](notifications.md) | Telling people an approval waits or something went wrong: channels, rules, the delivery log |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
+| [Browsing code](browsing-code.md) | Files, history, blame, comparing, branches and tags of a hosted repository, in the web interface, CLI and tools |
+| [Searching code](searching-code.md) | Literal and regular-expression search inside a repository, with its bounds |
+| [Editing in the browser](editing-in-the-browser.md) | Change one file as a commit, or as a branch with a pull request |
 | [Pull requests and code review](pull-requests.md) | Opening, reviewing and merging changes on hosted repositories; merge rules; checks |
 | [Webhooks and events](webhooks.md) | Repository and owner webhooks, signed deliveries, the delivery log, redelivery, turning off, pipelines on push |
 | [Secrets](secrets.md) | Secret references, stores, masking |
