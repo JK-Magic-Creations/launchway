@@ -204,6 +204,7 @@ libraries:
   platform: { repo: ci-templates, version: v3 }
 containers:
   py: { image: python:3.13 }
+  db: { image: postgres:17, service: true, ready: { http: { path: /health, port: 8080 }, every: 2s, within: 60s } }
 runner: { pool: gpu, labels: [cuda] }
 lane: { name: probe, per: [ref], when_busy: wait }
 steps:
@@ -213,6 +214,7 @@ steps:
     when: { branch: main }
     retry: { times: 2, wait: 10s }
     resources: { cpu: 2, memory: 4Gi }
+    runner: { pool: gpu, labels: [cuda] }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
     reports:
@@ -276,6 +278,7 @@ steps:
     needs: smoke
     deployment: deploy
     message: Promote?
+    approvers: { groups: [release-managers], count: 2 }
   promote:
     kind: rollout
     needs: approve
@@ -365,13 +368,17 @@ var probes = []probe{
 	{table: "reports-coverage", path: []any{"steps", "build", "reports", "coverage"}},
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
+	{table: "container-ready", path: []any{"containers", "db", "ready"}},
+	{table: "container-ready-http", path: []any{"containers", "db", "ready", "http"}},
 	{table: "runner", path: []any{"runner"}},
+	{table: "step-runner", path: []any{"steps", "build", "runner"}},
 	{table: "lane", path: []any{"lane"}},
 	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},
 	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},
 	{table: "artifacts", path: []any{"steps", "build", "artifacts", 0}},
+	{table: "approvers", path: []any{"steps", "approve", "approvers"}},
 	{table: "fetch", path: []any{"steps", "test", "fetch", 0}},
 	{table: "cache", path: []any{"steps", "test", "cache", 0}},
 	{table: "cache-key", path: []any{"steps", "test", "cache", 0, "key"}},

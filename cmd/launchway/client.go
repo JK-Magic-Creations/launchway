@@ -44,8 +44,9 @@ const clientUsage = `Usage:
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
   launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
-  launchway runs logs <run-id> [--step S] [--follow]
+  launchway runs logs <run-id> [--step S] [--service NAME] [--follow]   --service: a service container's output
   launchway runs cancel <run-id>
+  launchway approvals list|approve|reject          see launchway approvals
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
   launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
                                                           a new run from those steps (or the failed ones), reusing the rest
@@ -386,89 +387,6 @@ func parseArgs(fs *flag.FlagSet, args []string) ([]string, error) {
 	}
 }
 
-type runView struct {
-	ID         string `json:"id"`
-	Project    string `json:"project"`
-	Number     int    `json:"number"`
-	Status     string `json:"status"`
-	Event      string `json:"event"`
-	Branch     string `json:"branch"`
-	Tag        string `json:"tag"`
-	SHA        string `json:"sha"`
-	Actor      string `json:"actor"`
-	Message    string `json:"message"`
-	CreatedAt  int64  `json:"created_at"`
-	FinishedAt int64  `json:"finished_at"`
-	// CancelReason says why a run was canceled when not by hand, such as
-	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
-	CancelReason string `json:"cancel_reason"`
-	DeadlineAt   int64  `json:"deadline_at"`
-	// AllowedFailures counts the steps that failed and were allowed to.
-	AllowedFailures     int      `json:"allowed_failures"`
-	AllowedFailureSteps []string `json:"allowed_failure_steps"`
-	// PullRequest and PullRequestInto: a pull-request run, and the branch
-	// it targets.
-	PullRequest     int    `json:"pull_request"`
-	PullRequestInto string `json:"pull_request_into"`
-	// Lane is the run's place in its pipeline's lane, if it has one.
-	Lane *struct {
-		Label    string `json:"label"`
-		State    string `json:"state"`
-		Position int    `json:"position"`
-		Behind   *struct {
-			Number int `json:"number"`
-		} `json:"behind"`
-		Reason string `json:"reason"`
-	} `json:"lane"`
-	StepList []struct {
-		ID       string `json:"id"`
-		Status   string `json:"status"`
-		Attempt  int    `json:"attempt"`
-		Error    string `json:"error"`
-		ExitCode *int   `json:"exit_code"`
-		// AllowedFailure: failed, and its pipeline allows that.
-		AllowedFailure bool `json:"allowed_failure"`
-		// NotBefore is when a retry that waits is handed to a runner;
-		// FailureCause why the last attempt failed.
-		NotBefore    int64  `json:"not_before"`
-		FailureCause string `json:"failure_cause"`
-		Retry        int    `json:"retry"`
-		Caches       []struct {
-			Name     string `json:"name"`
-			Result   string `json:"result"`
-			Restored string `json:"restored"`
-			Bytes    int64  `json:"bytes"`
-			Scope    string `json:"scope"`
-			Reason   string `json:"reason"`
-		} `json:"caches"`
-	} `json:"step_list"`
-	TriggerDetail *struct {
-		Inputs   map[string]string `json:"inputs"`
-		Schedule string            `json:"schedule"`
-		Webhook  string            `json:"webhook"`
-	} `json:"trigger_detail"`
-}
-
-// runRef says what a run is of: its branch or tag, or its pull request and
-// the branch that targets.
-func runRef(r runView) string {
-	if r.PullRequest > 0 {
-		ref := fmt.Sprintf("pull request #%d", r.PullRequest)
-		if r.PullRequestInto != "" {
-			ref += " into " + r.PullRequestInto
-		}
-		return ref
-	}
-	if r.Branch != "" {
-		return r.Branch
-	}
-	return r.Tag
-}
-
-func terminal(status string) bool {
-	return status == "succeeded" || status == "failed" || status == "canceled"
-}
-
 func (cl *client) start(args []string) error {
 	fs := flag.NewFlagSet("runs start", flag.ContinueOnError)
 	ref := fs.String("ref", "", "the branch or tag to run; default the project's default branch")
@@ -699,6 +617,16 @@ func (cl *client) show(args []string) error {
 		if s.FailureCause != "" && s.FailureCause != "exit" {
 			line += " [cause: " + s.FailureCause + "]"
 		}
+		if s.Workspace != "" {
+			line += " [own workspace " + s.Workspace
+			if s.Runner != "" {
+				line += " on " + s.Runner
+			}
+			line += "]"
+		}
+		if s.WaitingFor != "" {
+			line += " (" + s.WaitingFor + ")"
+		}
 		if s.Error != "" {
 			line += ": " + s.Error
 		}
@@ -746,12 +674,13 @@ func (cl *client) logs(args []string) error {
 	fs := flag.NewFlagSet("runs logs", flag.ContinueOnError)
 	step := fs.String("step", "", "only this step")
 	follow := fs.Bool("follow", false, "keep printing new lines until the run finishes")
+	service := fs.String("service", "", "print this service container's output instead of the steps'")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which run: launchway runs logs <run-id> [--step S] [--follow]")
+		return usageErr("say which run: launchway runs logs <run-id> [--step S] [--service NAME] [--follow]")
 	}
 	id := pos[0]
 	type progress struct {
@@ -783,7 +712,7 @@ func (cl *client) logs(args []string) error {
 					Attempt int       `json:"attempt"`
 					Lines   []logLine `json:"lines"`
 				}
-				path := fmt.Sprintf("/api/v1/runs/%s/steps/%s/logs?attempt=%d&after=%d&limit=1000", url.PathEscape(id), url.PathEscape(s.ID), p.attempt, p.after)
+				path := fmt.Sprintf("/api/v1/runs/%s/steps/%s/logs?attempt=%d&after=%d&limit=1000", url.PathEscape(id), url.PathEscape(s.ID), p.attempt, p.after) + serviceQuery(*service)
 				if err := cl.call("GET", path, nil, &page); err != nil {
 					return err
 				}

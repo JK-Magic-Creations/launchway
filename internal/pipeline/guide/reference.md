@@ -82,12 +82,12 @@ steps:
 | `reports` | Files read when the step ends, pass or fail: `tests` (JUnit XML or `go test -json`), `findings` (SARIF 2.1.0), `sbom` (CycloneDX JSON). Each is a glob or a list of globs relative to the workspace |
 | `resources` | CPU and memory for a step that runs a script: `{ cpu: 2, memory: 6Gi }`, with `cpu_limit` and `memory_limit` to let it use more than it is promised. A limit left out is the amount promised. Without it the step gets the installation's default for its kind (up to 4 CPUs and 6 GiB to start with). Tools are told to start only as many parallel jobs as fit (`GOMAXPROCS`, `MAKEFLAGS`, `CARGO_BUILD_JOBS`, `LAUNCHWAY_PARALLELISM`). A run is refused if a step asks for more than the installation or the cluster allows. Not for image, deploy, rollout, rollback, verify, ai or approval steps |
 | `artifacts` | Files kept after the step: a list of `{ name, paths, retain, when }`; `when` is `success` (the default), `failure` or `always` |
-| `fetch` | Artifacts of steps this step needs, put in the workspace first: a list of `{ from: step, name: artifact, into: dir }` |
+| `fetch` | Artifacts of steps this step needs, put in the workspace first: a list of `{ from: step-or-loop, name: artifact, into: dir }`; from a loop, `into` is required and each member's files go in `<into>/<member>` (values joined by `_`), or add `member: { key: value, ... }` for one member |
 | `cache` | Directories kept between runs, so that installs do not start from nothing: a list of `{ name, paths, key: { files, text }, fallback, save }`. Restored after `fetch` and before the script; saved after it. See "Caches" below. Only for steps that run a script (an image step's own `cache` is a registry for build layers) |
 | `message` | For an approval: the question to decide, one line |
 | `uses` | `library/template`: the step becomes that template's steps |
 | `with` | Values for the template's parameters |
-| `for_each` | Repeat the step over lists; with `exclude`, `max_parallel` and `fail_fast` |
+| `for_each` | Repeat the step over lists; with `exclude`, `add` (extra whole combinations), `continue_for` (members that may fail without failing the run), `max_parallel` and `fail_fast` |
 | `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 
@@ -129,7 +129,7 @@ run from unsaved text.
     timeout: 24h
 ```
 
-An approval takes only `needs`, `when`, `message`, `timeout` and `description`. When its needs have
+An approval takes only `needs`, `when`, `message`, `timeout`, `description`, `deployment` and `approvers`. `approvers: { groups: [release-managers], users: [zoe], count: 2 }` limits who may decide (it only narrows the operator role) and asks for `count` (1 to 5) distinct approvals; a protected environment's `min_approvals` is a floor the pipeline cannot lower; anyone allowed may reject. When its needs have
 succeeded it waits for a person: approving lets the steps after it run; rejecting, or nobody
 deciding before the timeout, fails it. With sign-in on, the person who started a run may not
 approve it themselves (unless the server allows it).
@@ -151,6 +151,7 @@ steps:
 | `cpu`, `memory` | Requests, as Kubernetes quantities (`500m`, `2Gi`) |
 | `service` | `true`: runs beside the steps for the whole run, reachable at `localhost` |
 | `command` | For a service: the command to run instead of the image's own |
+| `ready` | For a service: `{ run: "pg_isready", every: 2s, within: 60s }`, `{ tcp: 6379 }` or `{ http: { path: /health, port: 8080 } }`; the first step waits until it is ready |
 
 Every container of a run shares the workspace. All of a run's steps go to one runner while it
 keeps in touch; if another runner takes over, files earlier steps wrote are gone (outputs and
@@ -191,6 +192,8 @@ and in deploy values.
       python: ["3.12", "3.13"]
       os: { input: systems }                   # a list input
     exclude: [ { python: "3.12", os: alpine } ]
+    add: [ { python: "3.14", os: debian } ]   # a combination outside the lists
+    continue_for: [ { python: "3.14" } ]       # may fail without failing the run
     max_parallel: 2
     fail_fast: false                           # default true
     image: { each: python, format: "docker.io/library/python:%s-slim" }
@@ -280,7 +283,16 @@ A template file (`templates/<name>.yaml` in the library) has `template`, `descri
 (`name: { type: string|number|boolean|list, default, description, options }`), `containers`,
 `steps` and `outputs` (`key: { from: step.key }`). In a template, `{ param: name }` (with `format:`
 for text around it) stands for a parameter's value, and `if: { param: name }` or
-`if: { param: name, equals: value }` on a step leaves the step out when false.
+`if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).
+
+## A runner for one step
+
+`runner: { labels: [arm64] }` or `{ pool: gpu }` on a step that runs a script gives it a runner and
+a fresh workspace of its own (a checkout of the run's commit), shared with no other step; files
+travel between such steps only through `artifacts` and `fetch`. In a loop a label may be
+`{ each: arch }`; in a template the pool and labels may be parameters. Steps without it keep the
+run's workspace and the top-level `runner`. Not on image, deploy, rollout, approval, verify or ai
+steps.
 
 ## Container images: kind: image
 

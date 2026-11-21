@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 480,
+  "total": 479,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -671,13 +671,13 @@
     {
       "file": "internal/engine/engine.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 36 of func `(*Engine).CreateRun` is high (\u003e 30)",
+      "text": "cyclomatic complexity 35 of func `(*Engine).tryLease` is high (\u003e 30)",
       "count": 1
     },
     {
       "file": "internal/engine/engine.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 36 of func `(*Engine).tryLease` is high (\u003e 30)",
+      "text": "cyclomatic complexity 36 of func `(*Engine).CreateRun` is high (\u003e 30)",
       "count": 1
     },
     {
@@ -852,7 +852,13 @@
       "file": "internal/engine/queries.go",
       "linter": "sqlclosecheck",
       "text": "Close should use defer",
-      "count": 3
+      "count": 2
+    },
+    {
+      "file": "internal/engine/queries_runners.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
     },
     {
       "file": "internal/engine/refs.go",
@@ -1324,14 +1330,8 @@
     },
     {
       "file": "internal/pipeline/image.go",
-      "linter": "funlen",
-      "text": "Function 'parseImageStep' is too long (155 \u003e 150)",
-      "count": 1
-    },
-    {
-      "file": "internal/pipeline/image.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 68 of func `(*parser).parseImageStep` is high (\u003e 30)",
+      "text": "cyclomatic complexity 51 of func `(*parser).parseImageStep` is high (\u003e 30)",
       "count": 1
     },
     {

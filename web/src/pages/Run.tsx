@@ -9,12 +9,13 @@ import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
-import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, freshness, phaseLabel, shortPhase, verdictLabel } from "../components/Deployment";
+import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, phaseLabel, verdictLabel } from "../components/Deployment";
 import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
 import { RunTrigger } from "../components/RunTrigger";
+import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
@@ -33,6 +34,7 @@ import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 import { CacheResults } from "../components/CacheResults";
 import { Excerpt } from "../components/Excerpt";
+import { commandOf, deployOf, deployPhases, deployingPhase } from "./runDeploy";
 
 // Stands for the run until it is loaded, so hooks run in the same order.
 const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
@@ -532,6 +534,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             )}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta">on {step.runner}</span>}
+            {(step as { workspace?: string }).workspace && <span className="meta" title="a fresh checkout shared with no other step">own workspace</span>}
+            {(step as { waiting_for?: string }).waiting_for && <span className="meta wait">{(step as { waiting_for?: string }).waiting_for}</span>}
             {step.container && !step.container.startsWith("image-") && <span className="meta">in <strong>{step.container}</strong></span>}
             {step.image && <span className="meta mono">{step.image}</span>}
           </div>
@@ -690,6 +694,12 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
               : <>This approval guards the deployment made by {step.deployment}: it is rejected by itself if the rollout is aborted.</>}
           </p>
         )}
+        {(progressText(step as ApprovalProgress) || whoMayDecide(step as ApprovalProgress)) && (
+          <p className="sub approval-progress">
+            {progressText(step as ApprovalProgress)}
+            {whoMayDecide(step as ApprovalProgress) && <> Only {whoMayDecide(step as ApprovalProgress)} may decide.</>}
+          </p>
+        )}
         <div className="run-meta">
           {step.started_at > 0 && <span className="meta" title={clock(step.started_at)}>asked {ago(step.started_at, now)}</span>}
           <span className="meta">run {starter}</span>
@@ -807,41 +817,6 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "deploy.command_withdrawn": (d) => `${d.step}: command withdrawn by ${commandOf(d).actor ?? "someone"}`,
   "step.reused": (d) => `${d.step}: reused from run #${(d.reused as { number?: number })?.number ?? "?"} (${d.outcome})`,
 };
-
-function deployOf(d: Record<string, unknown>): Record<string, unknown> {
-  return (d.deploy as Record<string, unknown> | undefined) ?? {};
-}
-
-function commandOf(d: Record<string, unknown>): Record<string, string | undefined> {
-  return (deployOf(d).command as Record<string, string | undefined> | undefined) ?? {};
-}
-
-// deployPhases says, for each deploy or rollback step at work, where its
-// deployment stands, in words. Out-of-date observations say so instead.
-function deployPhases(run: RunDetail): Record<string, string> {
-  const out: Record<string, string> = {};
-  const now = Date.now();
-  for (const s of run.step_list) {
-    if (s.status === "waiting" && s.wait_kind === "lock") { out[s.id] = "waiting for lock"; continue; }
-    if (s.status !== "waiting" || s.wait_kind !== "observe") continue;
-    const d: DeploymentView | undefined = deploymentOf(run, s);
-    if (!d) continue;
-    const f = freshness(d, now);
-    const where = s.kind === "rollback" ? "rollback" : s.kind === "rollout" ? "rollout" : environmentOf(run, s) || "deploy";
-    out[s.id] = `${where}: ${f.state === "never" ? "not observed" : f.state === "error" ? "cannot see it" : f.state === "stale" ? "out of date" : shortPhase(d.phase)}`;
-  }
-  return out;
-}
-
-// deployingPhase is where a deploy step's deployment stands, in words, only
-// if what was observed is current (the panel explains the other cases).
-function deployingPhase(run: RunDetail, s: StepView): string | undefined {
-  if (s.wait_kind !== "observe") return undefined;
-  const d = deploymentOf(run, s);
-  if (!d) return undefined;
-  const f = freshness(d, Date.now());
-  return f.state === "fresh" ? phaseLabel(d.phase) : undefined;
-}
 
 function EventsTab({ id, version }: { id: string; version: string }) {
   const [events, setEvents] = useState<RunEvent[] | null>(null);

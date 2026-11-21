@@ -1,3 +1,4 @@
+import { progressText, type ApprovalProgress } from "../api/approvals";
 import type { Approvals } from "../live";
 import { useNow } from "../live";
 import { ago, clock, duration, refLabel } from "../format";
@@ -37,6 +38,7 @@ export function ApprovalsPage({ approvals }: { approvals: Approvals }) {
                     <span className="mono faint">{a.step_id}</span>
                   </span>
                   <span className="runrow-msg">{a.message}</span>
+                  {progressText(a as unknown as ApprovalProgress) && <span className="runrow-meta"><span className="meta">{progressText(a as unknown as ApprovalProgress)}</span></span>}
                   <span className="runrow-meta">
                     {refLabel(a) && <span className="meta"><BranchIcon />{refLabel(a)}</span>}
                     {a.short_sha && <span className="meta mono"><CommitIcon />{a.short_sha}</span>}

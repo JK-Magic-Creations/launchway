@@ -124,6 +124,7 @@ Lists return at most a fixed number of items. Ask for fewer or more with `limit`
 |---|---|---|---|---|
 | `GET /api/v1/runs` | `limit` | 50 | 500 | the default |
 | `GET /api/v1/runs/{id}/steps/{step}/logs` | `limit`, `after` | 5000 | 10000 | the default |
+| `GET /api/v1/runs/{id}/steps/{step}/logs` | `stream` (`stdout`, `stderr`, `system` or `service`), `service` | all but `service` | | a name that is not one is refused |
 | `GET /api/v1/runs/{id}/tests/cases` | `limit`, `offset` | 200 | 1000 | the maximum |
 | `GET /api/v1/runs/{id}/findings` | `limit`, `offset` | 100 | 500 | the maximum |
 | `GET /api/v1/projects/{name}/tests/history` | `limit` | 30 | 200 | the maximum |

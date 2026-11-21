@@ -50,7 +50,7 @@ func (c *cmd) runnerCan(r RunnerInfo, stepID string) bool {
 		// fetch the artifacts it reads, which runners that call models can).
 		return r.Has(FeatureAI) && r.Has(FeatureArtifacts)
 	}
-	if c.st.Pipeline.HasImageSteps() && !r.Has(FeatureImages) {
+	if c.st.Pipeline.HasImageSteps() && !r.Has(FeatureImages) && !def.HasOwnRunner() {
 		// A run's steps share one runner's workspace, and an image step
 		// builds from it: a run with image steps runs, from its first step,
 		// on a runner that can build them.

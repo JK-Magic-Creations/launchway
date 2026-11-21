@@ -386,12 +386,13 @@ Steps:
 Prints a run's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
 
 ```text
-launchway runs logs RUN_ID [--step S] [--follow]
+launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
+| `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
 | `--follow` | off | Keep printing new lines until the run finishes. |
 
 ```sh
@@ -781,3 +782,30 @@ launchway f717337
 - [HTTP API](http-api.md): what the client commands call.
 - [Environment variables](environment-variables.md)
 - [Server configuration](server-config.md) and [runner configuration](runner-config.md)
+
+### launchway approvals
+
+Lists the approvals waiting for a decision, and approves or rejects one.
+
+```text
+launchway approvals list [--project P] [--json]
+launchway approvals approve RUN_ID STEP [--comment TEXT]
+launchway approvals reject RUN_ID STEP [--comment TEXT]
+```
+
+`list` prints the run, step, question, who started it, when it has waited since and expires, and
+"1 of 2 approved (ann)" for an approval that asks for several people. The server's refusals (you
+started the run, it expired, it is not waiting, you may not decide it) are printed as they are, and
+the exit code is `4`. The same operations are `GET /api/v1/approvals` and
+`POST /api/v1/runs/{id}/steps/{step}/approve` and `/reject`, and the MCP tools `list_approvals` and
+`decide_approval`.
+
+### launchway templates
+
+```text
+launchway templates list [LIBRARY] [--version V] [--json]
+```
+
+Without a library, the libraries the server lists; with one, its templates and each parameter's type,
+default, and `[names a secret]` when a step takes a secret reference's store, key or field from it. The
+same data is `GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.

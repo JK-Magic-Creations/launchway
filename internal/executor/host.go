@@ -22,7 +22,7 @@ func (*Host) WorkspacePath(hostDir string) string { return hostDir }
 
 func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if len(s.services()) > 0 {
-		return -1, errors.New("services need the container or kubernetes executor")
+		return -1, errors.New("services need the container executor with Podman, or the kubernetes executor: this runner uses the host executor")
 	}
 	if c, ok := s.stepContainer(); ok {
 		// The host can limit nothing. A step that asked for resources is

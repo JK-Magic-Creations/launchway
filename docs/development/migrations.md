@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 26. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 27. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -543,3 +543,12 @@ settings that live in the database is imported once and then ignored.
 
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.
+
+Schema 27 brings the second set of pipeline parity features. It is additive: `steps` gains
+`own_workspace`, `runner_pool` and `runner_labels` (a step that chooses its own runner). A
+pipeline that fetches from a loop (`fetch: [{ from: <loop>, ... }]`, with or without `member`), or
+uses any other key of schema 27, carries `"requires": 27` and `runs.min_schema` 27, so a server of
+schema 26 or older leaves the run alone (`TestOlderServerLeavesFetchFromLoopRunsAlone`): it would
+look for a step named after the loop. It follows the real schemas 25 (caches) and 26 (forges), and
+its file, `schema27.go`, is named so that its migration is appended after theirs. The startup check
+covers the new columns (`schemaMarkersParity2`).

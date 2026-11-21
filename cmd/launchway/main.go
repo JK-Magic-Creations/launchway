@@ -65,6 +65,8 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
+  launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
+  launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
   launchway blobs    status|copy                see and move where artifacts are kept
@@ -113,6 +115,10 @@ func main() {
 		err = cmdBlobs(args)
 	case "runs":
 		err = cmdRuns(args)
+	case "approvals":
+		err = cmdApprovals(args)
+	case "templates":
+		err = cmdTemplates(args)
 	case "policy":
 		err = cmdPolicy(args)
 	case "waivers":

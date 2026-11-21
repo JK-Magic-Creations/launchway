@@ -18,7 +18,7 @@ import (
 // is left alone by it until a newer build runs again.
 func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	t.Setenv(schemaCheckSkipEnv, "") // the guard is on, as in a release
-	if schemaResources != 22 || len(migrations) < schemaForge {
+	if schemaResources != 22 || len(migrations) < schemaParity2 {
 		t.Fatalf("schemas: resources %d, migrations %d", schemaResources, len(migrations))
 	}
 	const flow = "pipeline: p\nsteps:\n  a: {image: x, run: a, on_failure: continue}\n"
@@ -46,10 +46,10 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 		t.Fatalf("the newest build on a schema-22 database: %v\n%s", err, logCur.String())
 	}
 	info, err := cur.Schema(context.Background())
-	if err != nil || info.Database != schemaForge || info.Code != schemaForge || !info.Compatible() || info.Minimum != 7 {
+	if err != nil || info.Database != schemaParity2 || info.Code != schemaParity2 || !info.Compatible() || info.Minimum != 7 {
 		t.Fatalf("after the upgrade: %+v %v", info, err)
 	}
-	for v := schemaResources + 1; v <= schemaForge; v++ {
+	for v := schemaResources + 1; v <= schemaParity2; v++ {
 		if !strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, logCur.String())
 		}
@@ -57,7 +57,7 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	if strings.Contains(logCur.String(), "schema check failed") {
 		t.Fatalf("the startup guard spoke:\n%s", logCur.String())
 	}
-	checkMarkers(t, cur, schemaForge)
+	checkMarkers(t, cur, schemaParity2)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -72,7 +72,7 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	var log syncBuffer
 	older, err := openAs(t, addr, clk, schemaResources, &log)
 	if err != nil {
-		t.Fatalf("a build of schema 22 on a database of schema %d: %v\n%s", schemaForge, err, log.String())
+		t.Fatalf("a build of schema 22 on a database of schema %d: %v\n%s", schemaParity2, err, log.String())
 	}
 	t.Cleanup(func() { older.Close() })
 	got, err := older.Schema(context.Background())
