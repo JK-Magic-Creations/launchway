@@ -202,7 +202,7 @@ func (h sshHandler) Serve(ctx context.Context, sess gitssh.Session, cmd gitssh.C
 		return 1
 	}
 	res := s.Forge.Git.Stream(ctx, githttp.StreamRequest{
-		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user},
+		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user, Notice: s.pushNotice(c, dec.repo, nil)},
 		Protocol: cmd.Protocol, In: sess.In, Out: sess.Out, Policy: s.pushPolicy(c, dec.repo)})
 	if cmd.Service == githttp.ReceivePack {
 		s.gitPushed(ctx, sess.Remote, c, dec.repo, res)

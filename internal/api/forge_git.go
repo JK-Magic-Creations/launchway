@@ -127,7 +127,7 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo)})
+	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: s.pushNotice(c, repo, r)})
 	if q.svc == githttp.ReceivePack && !q.advertise {
 		s.gitPushed(r.Context(), s.clientAddr(r), c, repo, res)
 	}
@@ -356,6 +356,7 @@ func (s *Server) gitPushed(ctx context.Context, source string, c gitCaller, repo
 	}
 	if res.Receive != nil && res.Receive.Committed {
 		s.afterPush(ctx, c, repo, res.Receive.Updates)
+		s.openRequestedPulls(ctx, c, repo, res.Receive)
 	}
 }
 

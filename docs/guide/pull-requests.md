@@ -18,6 +18,26 @@ launchway pr create --title "Add the retry button" --body-file notes.md --review
 launchway pr list
 ```
 
+A push that creates or moves a branch with no open pull request prints one line, the same over HTTPS and
+over SSH, with the address that opens one:
+
+```text
+remote: Open a pull request for my-change: https://launchway.example/repositories/acme/shop/pulls/new?head=my-change (or push again with -o pr.create)
+```
+
+Git push options open it as the push finishes, with no second step:
+
+```sh
+git push -o pr.create -o pr.title="Add the retry button" -o pr.target=main origin my-change
+```
+
+`pr.create` opens a pull request from the pushed branch into `pr.target` (the default branch if left out), titled
+`pr.title` (the branch name, spelled out, if left out). It needs a person's credential, not a deploy key or a
+run's, and is recorded in the audit trail as `pull.create` with the source `git push`. The pull request is made
+after git has finished, so if it cannot be (there is nothing to merge, say), the push still stands and the audit
+trail says why. The default branch, a deleted branch and a branch that already has an open pull request print
+nothing.
+
 The head of every pull request is also a ref of the repository, `refs/pull/N/head`, so it can be fetched
 (`launchway pr checkout N`, or `git fetch origin refs/pull/N/head`) and survives the branch being deleted
 or rewritten. Each time the head or the base moves, a **revision** is recorded, with whether it was a
@@ -79,6 +99,13 @@ A **protected branch** can carry merge rules. They are set per branch or pattern
 | No self-approval | The author's own approval does not count |
 | Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the audit trail |
 
+Rules and the repository's other settings (which merge methods are allowed, deleting the source branch after a
+merge, dismissing approvals when new commits arrive) are set by a repository administrator in the repository's
+**Merge rules** tab, with `launchway pr rules` and `launchway pr settings`, or through the HTTP API and the
+`set_pull_settings` tool. Every interface reads what is possible from the server's `actions`, so nothing is
+offered that would be refused. Labels, assignees and the people asked to review can be changed on the page, and a
+review request can be taken back (`launchway pr review N --unrequest grace`).
+
 Signed commits are reserved: a rule cannot ask for them yet, so none pretends to.
 
 When a pull request cannot merge, the server says why in one sentence, and every screen shows that
@@ -120,4 +147,16 @@ listens decides who is told.
 
 ## What is not here yet
 
-Pull requests from forks, code owners, signed commit checks, and the Gitea-compatible pull request routes.
+Plainly, these do not exist today:
+
+- **Forks.** A pull request's source is a branch of the same repository. There is no way to ask for a
+  change from a copy of the repository.
+- **Code owners.** No file says who must review which paths, and no rule asks for it. A rule counts approvals,
+  not whose.
+- **Signed-commit rules.** Commits are not checked for signatures. A rule that asks for them is refused
+  rather than ignored.
+- **Notifications beyond events and webhooks.** Launchway records every change as an event and sends the
+  webhooks you set up; it sends no email, chat message or inbox entry by itself, and has no per-person
+  "watching" settings. Whatever listens to the events decides who is told.
+- **The Gitea-compatible pull request routes.** Tools written for Gitea's API cannot yet list or open pull
+  requests here; they use Launchway's own routes above.

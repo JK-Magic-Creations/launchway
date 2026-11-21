@@ -194,7 +194,7 @@ func TestPullRequestThroughTheAPI(t *testing.T) {
 				Reason    string `json:"reason"`
 			} `json:"actions"`
 		}
-		who.get(api + "/merge-rules").json(t, &rules)
+		who.get(api+"/merge-rules").json(t, &rules)
 		got := map[string]bool{}
 		for _, a := range rules.Actions {
 			got[a.Name] = a.Available

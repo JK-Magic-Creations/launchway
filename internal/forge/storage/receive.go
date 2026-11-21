@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,9 @@ type hookRequest struct {
 	State      string      `json:"state,omitempty"`
 	Updates    []RefUpdate `json:"updates,omitempty"`
 	Quarantine string      `json:"quarantine,omitempty"`
+	// Options are the push options the client sent (git push -o), read by
+	// the post-receive hook from GIT_PUSH_OPTION_*.
+	Options []string `json:"options,omitempty"`
 }
 
 type hookReply struct {
@@ -57,6 +61,8 @@ type ReceiveResult struct {
 	Stale *ErrStale
 	// Generation is the repository's generation after the commit.
 	Generation int64
+	// Options are the push options the client sent (git push -o).
+	Options []string
 }
 
 // pushState is the server's record of one push, shared by its hooks.
@@ -69,6 +75,7 @@ type pushState struct {
 	packID string
 	result ReceiveResult
 	policy func(ctx context.Context, updates []RefUpdate) error
+	notice func(ctx context.Context, updates []RefUpdate, options []string) string
 }
 
 // Receive serves one request of git's stateless receive-pack: the ref
@@ -95,9 +102,10 @@ func (s *Store) Receive(ctx context.Context, repo string, rpc RPC) (ReceiveResul
 			return res, err
 		}
 	}
-	args := []string{"receive-pack", "--stateless-rpc"}
+	// -c here and not in the cache's configuration, so a cache made before push options existed offers them too.
+	args := []string{"-c", "receive.advertisePushOptions=true", "receive-pack", "--stateless-rpc"}
 	if rpc.Stream {
-		args = []string{"receive-pack"}
+		args = []string{"-c", "receive.advertisePushOptions=true", "receive-pack"}
 	} else if rpc.Advertise {
 		args = append(args, "--advertise-refs")
 	}
@@ -109,7 +117,7 @@ func (s *Store) Receive(ctx context.Context, repo string, rpc RPC) (ReceiveResul
 		_, err := gitexec.Run(ctx, spec)
 		return res, err
 	}
-	st := &pushState{store: s, repo: repo, faults: orNone(faultsFrom(ctx)), token: randomID(), policy: rpc.Policy}
+	st := &pushState{store: s, repo: repo, faults: orNone(faultsFrom(ctx)), token: randomID(), policy: rpc.Policy, notice: rpc.Notice}
 	sock, stop, err := st.listen(ctx)
 	if err != nil {
 		return res, err
@@ -233,6 +241,14 @@ func (st *pushState) handle(ctx context.Context, req hookRequest) hookReply {
 		if err := st.faults.Hit(PtPostReceive); err != nil {
 			return fail(err)
 		}
+		st.mu.Lock()
+		st.result.Options = req.Options
+		committed := st.result.Committed
+		st.mu.Unlock()
+		if st.notice != nil && committed {
+			// What the server wants the pusher to read: git prints it as "remote: ...". It never fails the push.
+			return hookReply{OK: true, Message: st.notice(ctx, req.Updates, req.Options)}
+		}
 	}
 	return hookReply{OK: true}
 }
@@ -339,6 +355,11 @@ func hookEntry() {
 	if len(os.Args) > 1 {
 		req.State = os.Args[1]
 	}
+	if n, _ := strconv.Atoi(os.Getenv("GIT_PUSH_OPTION_COUNT")); n > 0 && n <= 32 {
+		for i := 0; i < n; i++ {
+			req.Options = append(req.Options, os.Getenv("GIT_PUSH_OPTION_"+strconv.Itoa(i)))
+		}
+	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
 		if f := strings.Fields(sc.Text()); len(f) == 3 {
@@ -363,6 +384,9 @@ func hookEntry() {
 		os.Exit(1)
 	}
 	var reply hookReply
+	if json.Unmarshal(line, &reply) == nil && reply.OK && reply.Message != "" {
+		fmt.Fprintln(os.Stderr, reply.Message)
+	}
 	if json.Unmarshal(line, &reply) != nil || !reply.OK {
 		if reply.Message != "" {
 			fmt.Fprintf(os.Stderr, "launchway: %s\n", reply.Message)

@@ -54,7 +54,7 @@ func (h *Handler) Stream(ctx context.Context, q StreamRequest) Result {
 	}
 	in := &capReader{r: q.In, left: limit} // the same ceiling as an HTTP push; a pack is streamed, never held in memory
 	track := &trackReader{r: in}
-	rpc := storage.RPC{Stream: true, In: track, Out: q.Out, GitProtocol: protocolHeader(q.Protocol), Policy: q.Policy}
+	rpc := storage.RPC{Stream: true, In: track, Out: q.Out, GitProtocol: protocolHeader(q.Protocol), Policy: q.Policy, Notice: q.Request.Notice}
 	var res Result
 	var err error
 	switch q.Service {

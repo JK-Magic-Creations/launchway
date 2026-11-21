@@ -101,6 +101,8 @@ type Request struct {
 	// Policy decides, before any ref moves, whether a push may do what it asks
 	// (see storage.RPC.Policy). The same function serves every transport.
 	Policy func(ctx context.Context, updates []RefUpdate) error
+	// Notice is storage.RPC.Notice: a line for the pusher after a push.
+	Notice func(ctx context.Context, updates []RefUpdate, options []string) string
 }
 
 // Result says what came of a request.
@@ -203,7 +205,7 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request, q Request) Resul
 		in = &capReader{r: gz, left: limit} // a small body that inflates enormously is refused too
 	}
 	track := &trackReader{r: in}
-	rpc := storage.RPC{Advertise: q.Advertise, In: track, Out: out, GitProtocol: r.Header.Get("Git-Protocol"), Policy: q.Policy}
+	rpc := storage.RPC{Advertise: q.Advertise, In: track, Out: out, GitProtocol: r.Header.Get("Git-Protocol"), Policy: q.Policy, Notice: q.Notice}
 	h2 := w.Header()
 	h2.Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
 	h2.Set("Pragma", "no-cache")
