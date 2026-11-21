@@ -257,6 +257,66 @@
             }
           }
         },
+        "queues": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "maxWait": { "type": ["string", "null"], "pattern": "^(off|([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)?$" },
+            "runs": { "type": ["integer", "null"], "minimum": 0 },
+            "pipelineRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "pullRequestRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "pushRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "scheduleRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "manualRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "automationRuns": { "type": ["integer", "null"], "minimum": 0 },
+            "supersedePullRequests": { "type": ["boolean", "null"] }
+          }
+        },
+        "automation": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": { "accounts": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 } } }
+        },
+        "pullRequests": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": { "untrusted": { "enum": ["", "restrict", "allow", null] } }
+        },
+        "notifications": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "channels": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "kind", "url"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+                  "kind": { "enum": ["webhook", "slack", "discord", "teams"] },
+                  "url": { "$ref": "#/definitions/secretRef" },
+                  "secret": { "$ref": "#/definitions/secretRef" }
+                }
+              }
+            },
+            "rules": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["on", "to"],
+                "properties": {
+                  "on": { "type": "array", "minItems": 1, "items": { "enum": ["approval.requested", "run.failed", "deployment.succeeded", "deployment.failed", "deployment.rolled_back", "rollback.needs_review", "step.waiting_long"] } },
+                  "projects": { "type": "array", "items": { "type": "string" } },
+                  "environments": { "type": "array", "items": { "type": "string" } },
+                  "branches": { "type": "array", "items": { "type": "string" } },
+                  "to": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
         "runnerPools": {
           "type": ["array", "null"],
           "items": {
@@ -636,6 +696,16 @@
           "additionalProperties": false,
           "properties": {
             "ingressFrom": { "$ref": "#/definitions/objectList" },
+            "publicHTTPS": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+                "exceptCIDRs": { "type": "array", "items": { "type": "string" } },
+                "allowIPv6": { "type": "boolean" }
+              }
+            },
             "extraEgress": { "$ref": "#/definitions/objectList" }
           }
         },
@@ -719,7 +789,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["name", "type", "url", "projects"],
+                "required": ["name", "type", "projects"],
                 "properties": {
                   "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
                   "type": { "enum": ["prometheus", "loki", "clickhouse", "elasticsearch", "opensearch", "postgres", "http", "check"] },
@@ -770,7 +840,10 @@
                   },
                   "indices": { "type": "array", "items": { "type": "string", "minLength": 1 } },
                   "timeField": { "type": "string" },
-                  "messageField": { "type": "string" }
+                  "messageField": { "type": "string" },
+                  "hosts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                  "namespaces": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" } },
+                  "allowInsecureTLS": { "type": "boolean" }
                 }
               }
             }

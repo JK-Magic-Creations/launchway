@@ -355,15 +355,15 @@
             },
             "keepFailed": {
               "type": "string",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))*$"
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$"
             },
             "maxPodAge": {
               "type": "string",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))*$"
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$"
             },
             "startTimeout": {
               "type": "string",
-              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))*$"
+              "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$"
             },
             "restricted": {
               "type": "boolean"
@@ -952,7 +952,6 @@
             "required": [
               "name",
               "type",
-              "url",
               "projects"
             ],
             "properties": {
@@ -968,7 +967,8 @@
                   "elasticsearch",
                   "opensearch",
                   "postgres",
-                  "http"
+                  "http",
+                  "check"
                 ]
               },
               "url": {
@@ -1016,7 +1016,7 @@
               },
               "timeout": {
                 "type": "string",
-                "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$"
+                "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
               },
               "limits": {
                 "type": "object",
@@ -1102,6 +1102,23 @@
               },
               "messageField": {
                 "type": "string"
+              },
+              "hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "namespaces": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+                }
+              },
+              "allowInsecureTLS": {
+                "type": "boolean"
               }
             }
           }

@@ -169,8 +169,8 @@ database's URL is never a stored value: the servers build it from the Secret tha
 {{- fail (printf "ai.models: %s: key must name a store and a key, such as {store: vault, key: ai/anthropic, field: key}" .name) -}}
 {{- end -}}
 {{- end -}}
-{{- if and $ai.serverSecretStores (not $models) -}}
-{{- fail "ai.serverSecretStores is set, but ai.models is empty" -}}
+{{- if and $ai.serverSecretStores (not $models) (not (.Values.config.notifications | default dict).channels) -}}
+{{- fail "ai.serverSecretStores is set, but ai.models is empty (and no config.notifications.channels read their addresses from it)" -}}
 {{- end -}}
 {{- if and (eq (toString .Values.runner.ai) "true") (not $models) -}}
 {{- fail "runner.ai is true, but ai.models is empty: list the models runners may call" -}}
@@ -287,6 +287,34 @@ owns may not appear in it.
 {{- fail "config.mcp.oauth.scopes is set, but config.mcp.oauth.resource is not" -}}
 {{- end -}}
 {{- if $mcp }}{{ $_ := set $config "mcp" $mcp }}{{ end -}}
+{{- /* Queues and limits, automation accounts, pull-request trust and notifications (installation
+       settings, imported once like the others): only what is set. */ -}}
+{{- $q := .Values.config.queues | default dict -}}
+{{- $queues := dict -}}
+{{- range $key, $value := dict "max_wait" $q.maxWait -}}
+{{- if $value }}{{ $_ := set $queues $key (toString $value) }}{{ end -}}
+{{- end -}}
+{{- range $key, $value := dict "runs" $q.runs "pipeline_runs" $q.pipelineRuns "pull_request_runs" $q.pullRequestRuns "push_runs" $q.pushRuns "schedule_runs" $q.scheduleRuns "manual_runs" $q.manualRuns "automation_runs" $q.automationRuns -}}
+{{- if not (kindIs "invalid" $value) }}{{ $_ := set $queues $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if kindIs "bool" $q.supersedePullRequests }}{{ $_ := set $queues "supersede_pull_requests" $q.supersedePullRequests }}{{ end -}}
+{{- if $queues }}{{ $_ := set $config "queues" $queues }}{{ end -}}
+{{- $au := .Values.config.automation | default dict -}}
+{{- if not (kindIs "invalid" $au.accounts) }}{{ $_ := set $config "automation" (dict "accounts" $au.accounts) }}{{ end -}}
+{{- $pr := .Values.config.pullRequests | default dict -}}
+{{- if $pr.untrusted -}}
+{{- if not (has (toString $pr.untrusted) (list "restrict" "allow")) }}{{ fail "config.pullRequests.untrusted is restrict or allow" }}{{ end -}}
+{{- $_ := set $config "pull_requests" (dict "untrusted" (toString $pr.untrusted)) -}}
+{{- end -}}
+{{- $nt := .Values.config.notifications | default dict -}}
+{{- if or $nt.channels $nt.rules -}}
+{{- range $nt.channels | default list -}}
+{{- if or (not .url) (not .url.store) (not .url.key) -}}
+{{- fail (printf "config.notifications.channels: %s: url is a reference to a secret store, such as {store: vault, key: ci/chat-hook, field: url}: the address of a chat webhook is a credential and is never written into the configuration" (toString .name)) -}}
+{{- end -}}
+{{- end -}}
+{{- $_ := set $config "notifications" (dict "channels" ($nt.channels | default list) "rules" ($nt.rules | default list)) -}}
+{{- end -}}
 {{- /* Behind an Ingress or a Gateway route the servers trust the proxy's forwarded headers (and set
        the cookie's Secure flag from them), unless extraConfig.server.trust_proxy says otherwise. */ -}}
 {{- if and (or .Values.ingress.enabled .Values.httpRoute.enabled) (not (hasKey (get $extra "server" | default dict) "trust_proxy")) -}}

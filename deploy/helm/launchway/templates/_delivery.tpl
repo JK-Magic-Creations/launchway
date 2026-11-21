@@ -56,7 +56,18 @@ the configuration stays readable by releases that do not know these settings.
 {{- if not .projects -}}
 {{- fail (printf "delivery.verification.sources: %s: list the projects that may use it under projects (patterns such as shop-* work)" .name) -}}
 {{- end -}}
-{{- if not .url }}{{ fail (printf "delivery.verification.sources: %s: url is missing" .name) }}{{ end -}}
+{{- if eq (toString .type) "check" -}}
+{{- /* A check source is the deploy runner's own list of what a health check may call: no url, no login. */ -}}
+{{- if or .url .auth .headers .statements .indices -}}
+{{- fail (printf "delivery.verification.sources: %s: a check source calls the addresses pipelines give; it takes no url, auth, headers, statements or indices, only hosts and namespaces" .name) -}}
+{{- end -}}
+{{- if not (or .hosts .namespaces) -}}
+{{- fail (printf "delivery.verification.sources: %s: a check source needs hosts or namespaces: where health checks may call (an empty list allows nothing)" .name) -}}
+{{- end -}}
+{{- else if not .url }}{{ fail (printf "delivery.verification.sources: %s: url is missing" .name) }}{{ end -}}
+{{- if and (ne (toString .type) "check") (or .hosts .namespaces .allowInsecureTLS) -}}
+{{- fail (printf "delivery.verification.sources: %s: hosts, namespaces and allowInsecureTLS are for check sources" .name) -}}
+{{- end -}}
 {{- $name := .name -}}
 {{- with .auth -}}
 {{- if not (and .secret .secret.store .secret.key) -}}

@@ -337,6 +337,52 @@ config:
   # -- The role needed on every project to make join tokens and to revoke or rotate runners:
   # admin, operator or none. Written as runner_admin only when set. Unset: admin.
   runnerAdmin:
+  # -- Queues and limits (the guide "Queues and limits"): how long a step waits for room before it
+  # fails, and how many runs go at once. Written only when set. Every number: 0 is no limit at
+  # all, unset is the built-in default (shown). Pushes to protected branches are never held.
+  # They are installation settings, imported once; change them later in the web interface,
+  # `launchway config`, the API or Terraform.
+  queues:
+    # -- The longest a step waits for room in the step namespace, such as 30m, or off. Default 60m.
+    maxWait:
+    # -- Runs of a project at once. Default 10.
+    runs:
+    # -- Runs of one pipeline at once. Default: no limit.
+    pipelineRuns:
+    # -- Pull-request runs of a project at once. Default 4.
+    pullRequestRuns:
+    pushRuns:
+    scheduleRuns:
+    manualRuns:
+    # -- Runs started by automation accounts at once. Default 2.
+    automationRuns:
+    # -- A new commit on a pull request cancels its older run. Default true.
+    supersedePullRequests:
+  # -- Accounts that are automation (dependency bots, release tools, the dependency updater): their
+  # runs are counted apart in the queue and their pull requests run restricted. Unset: the built-in
+  # list (*[bot], dependabot*, renovate*, github-actions*, release-please*, launchway-updater*);
+  # an empty list [] names none.
+  automation:
+    accounts:
+  # -- Trust of pull requests (the guide "Pull-request trust"). untrusted is restrict (default:
+  # pull requests from automation accounts and forks run without secrets, deploys or cache writes
+  # until a maintainer approves) or allow.
+  pullRequests:
+    untrusted: ""
+  # -- Notifications (the guide "Notifications"): who is told when an approval waits or something
+  # went wrong. A channel's address and signing key are REFERENCES to a secret store, never values
+  # (the address of a chat webhook is a credential), and the stores come from ai.serverSecretStores.
+  # Kinds: webhook (signed), slack, discord, teams. Example:
+  #   channels:
+  #     - { name: ops, kind: slack, url: { store: vault, key: ci/slack-hook, field: url } }
+  #   rules:
+  #     - { "on": [approval.requested, deployment.failed], projects: ["*"], to: [ops] }
+  # Write "on" in quotes: unquoted, Helm reads it as the boolean true.
+  # The servers need HTTPS egress to the service: networkPolicy.server.publicHTTPS (on by default)
+  # or networkPolicy.server.extraEgress.
+  notifications:
+    channels: []
+    rules: []
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -789,8 +835,21 @@ networkPolicy:
     # enabled, any source may reach the port (the proxy's namespace is not known to the chart);
     # without one, only runners, step pods and the deploy runner can (port-forward still works).
     ingressFrom: []
-    # -- More egress rules for the servers (NetworkPolicyEgressRule objects): Git hosts, an
-    # identity provider, webhook receivers, an S3 endpoint, the monitoring stores.
+    # -- HTTPS to PUBLIC addresses, which the servers need for the dependency updater's version
+    # sources and vulnerability data (package registries, the Go proxy, an OSV service), for the
+    # chat services and webhook receivers of notifications and repository webhooks, and for other
+    # Git servers to import from or mirror. Private, link-local, carrier-grade NAT and loopback
+    # addresses are never included. The installation's own egress allow-list (a setting, not a
+    # value) narrows it further. false: nothing leaves the servers except what extraEgress adds.
+    publicHTTPS:
+      enabled: true
+      ports: [443]
+      # -- More ranges the servers may NOT reach over HTTPS.
+      exceptCIDRs: []
+      allowIPv6: false
+    # -- More egress rules for the servers (NetworkPolicyEgressRule objects) WITHOUT turning the
+    # policy off: a receiver or registry mirror inside the cluster or on a private network, an
+    # identity provider, an S3 endpoint, the monitoring stores.
     extraEgress: []
   database:
     # -- The database port, when the database is external and its address is not a URL in
@@ -808,7 +867,10 @@ networkPolicy:
     # -- More egress rules for the runner pods: Git hosts, secret stores, BuildKit, registries.
     extraEgress: []
   deployRunner:
-    # -- More egress rules for the deploy runner pods (Argo CD, GitOps repositories, metrics).
+    # -- More egress rules for the deploy runner pods (Argo CD, GitOps repositories, metrics, and
+    # health checks of hosts that are names, not addresses). Health checks (a verification source
+    # of type check) are admitted by default for the namespaces and address ranges the source
+    # lists, and nothing else.
     extraEgress: []
   steps:
     # -- Policy for step pods (the pods runners start for each run, in runner.kubernetes.namespace).

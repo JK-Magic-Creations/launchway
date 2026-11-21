@@ -184,6 +184,19 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.reports.maxCoverageFilesPerRun` | integer or null | unset (20000) | Written as `reports.max_coverage_files_per_run` |
 | `config.reports.maxCoverageFilesPerProject` | integer or null | unset (2000000) | Written as `reports.max_coverage_files_per_project` |
 | `config.reports.origin` | string or null | unset | A separate origin that alone serves hosted HTML reports, such as `https://reports.ci.example.com`: a host name of its own routed to the same servers (add it to the ingress). Unset, reports are served from Launchway's own origin, sandboxed. Written as `reports.origin` |
+| `config.queues.maxWait` | string or null | unset (60m) | The longest a step waits for room in the step namespace before it fails with the reason, such as `30m`, or `off` to wait for ever. See [Queues and limits](../guide/queues.md) |
+| `config.queues.runs` | integer or null | unset (10) | Runs of a project at once; 0 is no limit. Pushes to protected branches are never held |
+| `config.queues.pipelineRuns` | integer or null | unset (no limit) | Runs of one pipeline at once |
+| `config.queues.pullRequestRuns` | integer or null | unset (4) | Pull-request runs of a project at once |
+| `config.queues.pushRuns` | integer or null | unset (no limit) | Push runs of a project at once |
+| `config.queues.scheduleRuns` | integer or null | unset (no limit) | Scheduled runs of a project at once |
+| `config.queues.manualRuns` | integer or null | unset (no limit) | Manually started runs of a project at once |
+| `config.queues.automationRuns` | integer or null | unset (2) | Runs started by automation accounts at once |
+| `config.queues.supersedePullRequests` | boolean or null | unset (true) | A new commit on a pull request cancels its older run |
+| `config.automation.accounts` | list or null | unset (the built-in list) | Accounts that are automation: their runs are counted apart in the queue and their pull requests run restricted. The built-in list is `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*` and `launchway-updater*`; `[]` names none |
+| `config.pullRequests.untrusted` | string | `""` (restrict) | `restrict` or `allow`: whether pull requests from automation accounts and forks run restricted (no secrets, deploys or cache writes) until a maintainer approves. See [Pull-request trust](../guide/pull-request-trust.md) |
+| `config.notifications.channels` | list | `[]` | Where messages go: `{ name, kind: webhook\|slack\|discord\|teams, url: { store, key, field }, secret: { store, key } }`. The address and signing key are secret references (read from `ai.serverSecretStores`), never values: a chat webhook's address is a credential, and a value there is refused |
+| `config.notifications.rules` | list | `[]` | Which events go to which channels: `{ "on": [approval.requested, ...], projects, environments, branches, to: [channel names] }`. Write `"on"` in quotes: unquoted, Helm reads it as the boolean true |
 | `config.mcp.enabled` | boolean or null | unset (on) | `false` turns the MCP endpoint off on every server |
 | `config.mcp.allowedOrigins` | list | `[]` | Origins of web pages, besides the servers' own, that may call `/mcp` from a browser, such as `https://tools.example.com`. Requests without an `Origin` header are not affected |
 | `config.mcp.requestsPerMinute` | integer or null | unset (120) | Requests one token may make to `/mcp` a minute, on each server |
@@ -458,7 +471,7 @@ namespace is affected.
 
 | Part | In | Out |
 |---|---|---|
-| Servers | runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the database, `networkPolicy.server.extraEgress`. Not the Kubernetes API |
+| Servers | runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the database, HTTPS to public addresses (`networkPolicy.server.publicHTTPS`), `networkPolicy.server.extraEgress`. Not the Kubernetes API, not private addresses |
 | Runners | nothing | DNS, the servers, the Kubernetes API (to start step pods), `networkPolicy.runner.extraEgress` |
 | Step pods | nothing | DNS, the Launchway server, and HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
 | Bundled database | the servers | nothing |
@@ -476,7 +489,11 @@ If your cluster's API server has a public address, add it to `networkPolicy.step
 | `networkPolicy.dns.namespace` | string | `kube-system` | The namespace of the cluster DNS |
 | `networkPolicy.dns.podLabels.k8s-app` | string | `kube-dns` | The label of the DNS pods; add others with `--set` |
 | `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, any source; without one, only runners, step pods and the deploy runner (port-forward still works) |
-| `networkPolicy.server.extraEgress` | list | `[]` | More egress rules for the servers: Git hosts, an identity provider, webhook receivers, an S3 endpoint |
+| `networkPolicy.server.publicHTTPS.enabled` | boolean | `true` | HTTPS from the servers to public addresses: the dependency updater's version sources and vulnerability data, chat services and webhook receivers of notifications, other Git servers. Private, link-local, carrier-grade NAT and loopback addresses are never included, and the installation's own egress allow-list narrows it further. `false`: only what `extraEgress` adds |
+| `networkPolicy.server.publicHTTPS.ports` | list | `[443]` | The ports of that rule |
+| `networkPolicy.server.publicHTTPS.exceptCIDRs` | list | `[]` | More ranges the servers may not reach over HTTPS |
+| `networkPolicy.server.publicHTTPS.allowIPv6` | boolean | `false` | Also admit public IPv6 addresses |
+| `networkPolicy.server.extraEgress` | list | `[]` | More egress rules for the servers, added to the policy (it stays on): a receiver or registry mirror in the cluster or on a private network, an identity provider, an S3 endpoint |
 | `networkPolicy.database.port` | integer | `5432` | The port of an external database whose address is not a URL in `database.url` |
 | `networkPolicy.database.cidrs` | list | `[]` | Addresses of an external database. Empty: any address on the port |
 | `networkPolicy.runner.kubernetesAPI.cidrs` | list | `[]` | The Kubernetes API addresses runners and the hook Job may reach (`kubectl get endpoints kubernetes`). Empty: any address on the ports |
@@ -510,7 +527,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `delivery.environments` | list or null | `null` | [Environments](server-config.md#environments), written as `environments`: `[{ name, target, projects, queue, protected }]`. Without any, deploy steps are refused |
-| `delivery.verification.sources` | list or null | `null` | [Health sources](runner-config.md#health-sources) for verify steps. Each entry is split: `name`, `type` and `projects` go to the servers' `verification.sources`, and the whole entry to the deploy runner's `health_sources`, by name. Each is `{ name, type, url, projects }` and optionally `auth`, `headers`, `caFile`, `timeout`, `limits`, `statements`, `indices`, `timeField` and `messageField`, as in the runner reference (camelCase here). Needs `deployRunner.enabled`; credentials are secret references read from `deployRunner.secretStores`. Unset, verify steps are refused |
+| `delivery.verification.sources` | list or null | `null` | [Health sources](runner-config.md#health-sources) for verify steps. Each entry is split: `name`, `type` and `projects` go to the servers' `verification.sources`, and the whole entry to the deploy runner's `health_sources`, by name. Each is `{ name, type, url, projects }` (a source of type `check`, the deploy runner's own HTTP and TCP health proof, has no `url`: it is `{ name, type: check, projects, hosts, namespaces }` plus optionally `caFile` and `allowInsecureTLS`, and the chart admits egress from the deploy runner to exactly those namespaces and address ranges; a host written as a name cannot be written in a NetworkPolicy, so add its addresses to `hosts` or a rule to `networkPolicy.deployRunner.extraEgress`) and optionally `auth`, `headers`, `caFile`, `timeout`, `limits`, `statements`, `indices`, `timeField` and `messageField`, as in the runner reference (camelCase here). Needs `deployRunner.enabled`; credentials are secret references read from `deployRunner.secretStores`. Unset, verify steps are refused |
 | `delivery.deployRunner.enabled` | boolean | `false` | Run a deploy runner in this cluster, with a runner pool token of its own (the chart adds the pool to `runner_pools`) |
 | `delivery.deployRunner.target` | string | `""` | The target this cluster is, as `delivery.environments` names it. Required when enabled |
 | `delivery.deployRunner.replicas` | integer | `1` | One deploy runner observes each target at a time; others take over |
@@ -570,7 +587,7 @@ Nothing is sent to any model unless `ai.models` lists one. See [AI models](../gu
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `ai.models` | list or null | `null` | The model registry, written into the servers' configuration as [`ai.models`](server-config.md#ai-models) exactly as given, so its keys are the configuration's own (snake_case): `name`, `provider`, `endpoint`, `model`, `key: { store, key, field }`, `projects`, `max_tokens`, `price` and the rest. A model's `projects` list says who may use it; empty means no project. The key is a secret reference, looked up in the secret stores of whoever calls the model (`runner.secretStores`, `delivery.deployRunner.secretStores` or `ai.serverSecretStores`). Unset, there are none |
-| `ai.serverSecretStores` | map or null | `null` | Secret stores the servers read model keys from, to explain failed steps themselves (the same map as `runner.secretStores`); written as `ai.secrets`. Mount any token or certificate files they refer to with `server.extraVolumes` and `server.extraVolumeMounts`. Unset, the servers explain only with models that need no key |
+| `ai.serverSecretStores` | map or null | `null` | Secret stores the servers read model keys from, to explain failed steps themselves (the same map as `runner.secretStores`); written as `ai.secrets`. Mount any token or certificate files they refer to with `server.extraVolumes` and `server.extraVolumeMounts`. Unset, the servers explain only with models that need no key. Also the stores that `config.notifications` read channel addresses from, which then need no `ai.models` |
 
 ## What next
 

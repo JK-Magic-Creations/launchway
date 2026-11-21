@@ -389,7 +389,8 @@ how to log in (credentials are secret references only). Empty when none is set. 
 {{- define "launchway.shared.healthSources" -}}
 {{- $out := dict -}}
 {{- range (.verification | default dict).sources | default list -}}
-{{- $s := dict "type" .type "url" .url "projects" (.projects | default list) -}}
+{{- $s := dict "type" .type "projects" (.projects | default list) -}}
+{{- if .url }}{{ $_ := set $s "url" .url }}{{ end -}}
 {{- with .auth -}}
 {{- $a := dict "secret" .secret -}}
 {{- range $key, $value := dict "type" .type "user" .user "header" .header -}}
@@ -397,9 +398,10 @@ how to log in (credentials are secret references only). Empty when none is set. 
 {{- end -}}
 {{- $_ := set $s "auth" $a -}}
 {{- end -}}
-{{- range $key, $value := dict "headers" .headers "ca_file" .caFile "timeout" .timeout "statements" .statements "indices" .indices "time_field" .timeField "message_field" .messageField -}}
+{{- range $key, $value := dict "headers" .headers "ca_file" .caFile "timeout" .timeout "statements" .statements "indices" .indices "time_field" .timeField "message_field" .messageField "hosts" .hosts "namespaces" .namespaces -}}
 {{- if $value }}{{ $_ := set $s $key $value }}{{ end -}}
 {{- end -}}
+{{- if eq (toString .allowInsecureTLS) "true" }}{{ $_ := set $s "allow_insecure_tls" true }}{{ end -}}
 {{- with .limits -}}
 {{- $l := dict -}}
 {{- range $key, $value := dict "max_series" .maxSeries "max_points" .maxPoints "max_lines" .maxLines "max_bytes" .maxBytes -}}

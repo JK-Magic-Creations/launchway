@@ -12,8 +12,11 @@
 {{- $serverEgressPeer = false -}}
 {{- $serverPort = (regexFind "[0-9]+$" $su.host | default (ternary "443" "80" (eq $su.scheme "https"))) | int -}}
 {{- end -}}
-# SERVER: in, only runners, step pods, the deploy runner and the proxy; out, DNS, the database and
-# networkPolicy.server.extraEgress. Not the Kubernetes API.
+# SERVER: in, only runners, step pods, the deploy runner and the proxy; out, DNS, the database, HTTPS to
+# public addresses (version sources and vulnerability data of the dependency updater, chat services of
+# notifications, other Git servers: networkPolicy.server.publicHTTPS, which the installation's own
+# egress allow-list narrows further) and networkPolicy.server.extraEgress. Not the Kubernetes API, and
+# not private addresses unless extraEgress says so.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -81,6 +84,41 @@ spec:
         {{- end }}
       {{- end }}
     {{- end }}
+    {{- if $np.server.publicHTTPS.enabled }}
+    # HTTPS to public addresses only (never private, link-local, carrier-grade NAT or loopback).
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              {{- range $np.server.publicHTTPS.exceptCIDRs }}
+              {{- if not (contains ":" .) }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+        {{- if $np.server.publicHTTPS.allowIPv6 }}
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+              - ::1/128
+              {{- range $np.server.publicHTTPS.exceptCIDRs }}
+              {{- if contains ":" . }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+        {{- end }}
+      ports:
+        {{- range $np.server.publicHTTPS.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+    {{- end }}
     {{- with $np.server.extraEgress }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -146,6 +184,30 @@ spec:
         - ipBlock: { cidr: {{ . }} }
         {{- end }}
       {{- end }}
+    {{- if eq $comp "deploy-runner" }}
+    {{- /* Health checks (verification sources of type check): the namespaces and address ranges the sources list, and nothing else.
+           Host names cannot be written in a NetworkPolicy: list their addresses in the source's hosts, or add the rule to networkPolicy.deployRunner.extraEgress. */ -}}
+    {{- range ($.Values.delivery.verification | default dict).sources | default list }}
+    {{- if eq (toString .type) "check" }}
+    {{- $source := . }}
+    {{- range .namespaces | default list }}
+    # health source {{ $source.name }}: Services in the namespace {{ . }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+    {{- end }}
+    {{- range .hosts | default list }}
+    {{- if regexMatch "^[0-9a-fA-F:.]+(/[0-9]+)?$" . }}
+    # health source {{ $source.name }}: the address range {{ . }}
+    - to:
+        - ipBlock:
+            cidr: {{ ternary . (printf "%s/%d" . (ternary 128 32 (contains ":" .)) | trimSuffix "/") (contains "/" .) }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
     {{- with (ternary $np.runner.extraEgress $np.deployRunner.extraEgress (eq $comp "runner")) }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
