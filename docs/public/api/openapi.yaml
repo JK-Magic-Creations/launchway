@@ -462,6 +462,31 @@ paths:
             tags:
                 - runner
             x-launchway-access: runner
+    /api/runner/v1/config/state-credential:
+        post:
+            description: 'A runner, under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            operationId: post_api_runner_v1_config_state_credential
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security:
+                - runnerToken: []
+            summary: 'A runner, under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            tags:
+                - runner
+            x-launchway-access: runner
     /api/runner/v1/deploy/command-done:
         post:
             description: A launch Station reports how a command went.
@@ -993,6 +1018,200 @@ paths:
                     $ref: '#/components/responses/Error'
             security: []
             summary: 'With a server key: {counts: [{toggle, value, reason, count}]}, aggregated evaluation counts.'
+            tags:
+                - v1
+            x-launchway-access: public
+    /api/state/v1/{project}/{workspace}:
+        delete:
+            description: Removes the workspace and its versions; refused while locked.
+            operationId: delete_api_state_v1_project_workspace
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Removes the workspace and its versions; refused while locked.
+            tags:
+                - v1
+            x-launchway-access: public
+        get:
+            description: 'The Terraform/OpenTofu http backend: the current state, 404 if none. HTTP basic credentials: the password is a run''s state credential (lwst_..., one workspace of one project, until the run ends) or an API token with the viewer role.'
+            operationId: get_api_state_v1_project_workspace
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'The Terraform/OpenTofu http backend: the current state, 404 if none.'
+            tags:
+                - v1
+            x-launchway-access: public
+        post:
+            description: Stores the state (?ID= the lock id). 409 for an older serial, another lineage or the same serial with other content; 423 under another's lock; operator role or a read-write run credential.
+            operationId: post_api_state_v1_project_workspace
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Stores the state (?ID= the lock id).
+            tags:
+                - v1
+            x-launchway-access: public
+        put:
+            description: The same as POST.
+            operationId: put_api_state_v1_project_workspace
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: The same as POST.
+            tags:
+                - v1
+            x-launchway-access: public
+    /api/state/v1/{project}/{workspace}/lock:
+        lock:
+            description: Takes the lock with the client's lock document (an ID), audited as state.lock. 423 answers with the holder's document. A lock whose run has ended is released first.
+            operationId: lock_api_state_v1_project_workspace_lock
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Takes the lock with the client's lock document (an ID), audited as state.lock.
+            tags:
+                - v1
+            x-launchway-access: public
+        unlock:
+            description: Releases the lock the client holds under its ID, audited as state.unlock.
+            operationId: unlock_api_state_v1_project_workspace_lock
+            parameters:
+                - in: path
+                  name: project
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Releases the lock the client holds under its ID, audited as state.unlock.
             tags:
                 - v1
             x-launchway-access: public
@@ -3576,6 +3795,37 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: cache.delete
+    /api/v1/projects/{name}/configuration:
+        get:
+            description: 'The Configuration page: per Airfield the last apply, the last check-mode run (drift), the last plan, and the state workspaces.'
+            operationId: get_api_v1_projects_name_configuration
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The Configuration page: per Airfield the last apply, the last check-mode run (drift), the last plan, and the state workspaces.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
     /api/v1/projects/{name}/coverage:
         get:
             description: A project's coverage over its last runs of a ref (?ref=, ?runs=).
@@ -5939,6 +6189,297 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             summary: The repository's .launchway/standards.yaml as it is, its problems, and the file the project's own settings would make.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/state:
+        get:
+            description: 'The state workspaces: name, serial, version, lock; and whether this server can seal state (sealed).'
+            operationId: get_api_v1_projects_name_state
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The state workspaces: name, serial, version, lock; and whether this server can seal state (sealed).'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/state/{workspace}:
+        get:
+            description: Resources (address, provider, instances) and output names (with sensitive) of the newest version, or of ?version=. Never a value.
+            operationId: get_api_v1_projects_name_state_workspace
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Resources (address, provider, instances) and output names (with sensitive) of the newest version, or of ?version=.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/state/{workspace}/lock:
+        delete:
+            description: Releases a lock whoever holds it; ?reason= is required. 409 while the run that holds it is still going.
+            operationId: delete_api_v1_projects_name_state_workspace_lock
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Releases a lock whoever holds it; ?reason= is required.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: state.unlock
+        post:
+            description: 'Locks the workspace by hand: {"reason"}. 423 if it is locked.'
+            operationId: post_api_v1_projects_name_state_workspace_lock
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Locks the workspace by hand: {"reason"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: state.lock
+    /api/v1/projects/{name}/state/{workspace}/pull:
+        get:
+            description: The raw state document. ?reason= is required and goes to the Logbook with the caller; ?version= picks a version.
+            operationId: get_api_v1_projects_name_state_workspace_pull
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The raw state document.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: state.pull
+    /api/v1/projects/{name}/state/{workspace}/push:
+        put:
+            description: Stores a state document as the next version (an import or a repair). 409 for another lineage unless ?adopt=true, or a serial older than the stored one.
+            operationId: put_api_v1_projects_name_state_workspace_push
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Stores a state document as the next version (an import or a repair).
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: state.push
+    /api/v1/projects/{name}/state/{workspace}/rollback:
+        post:
+            description: '{"version", "reason"}: stores that version as the newest, with a higher serial. Changes the stored state only; no real resource changes. 423 while locked.'
+            operationId: post_api_v1_projects_name_state_workspace_rollback
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"version", "reason"}: stores that version as the newest, with a higher serial.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: state.rollback
+    /api/v1/projects/{name}/state/{workspace}/versions:
+        get:
+            description: 'Every kept version (50 by default): serial, size, resource count, source (write, push, rollback), who, which run, when.'
+            operationId: get_api_v1_projects_name_state_workspace_versions
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: workspace
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Every kept version (50 by default): serial, size, resource count, source (write, push, rollback), who, which run, when.'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -11508,6 +12049,111 @@ paths:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.cancel
+    /api/v1/runs/{id}/config-reports:
+        get:
+            description: 'The run''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
+            operationId: get_api_v1_runs_id_config_reports
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The run''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/config-reports/{step}:
+        get:
+            description: 'One report with its summary (failure, hosts to run again, drift) and document (plays, tasks and hosts; or the plan''s resources with attribute differences and risk). ?kind= picks one when a step has both. No secret value is ever in it: no_log results, sensitive plan values and credential-like text are removed before it is stored.'
+            operationId: get_api_v1_runs_id_config_reports_step
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: step
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One report with its summary (failure, hosts to run again, drift) and document (plays, tasks and hosts; or the plan's resources with attribute differences and risk).
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/config-reports/{step}/rerun-failed:
+        post:
+            description: Starts a run of the same project and branch with the input limit set to the hosts that failed or were unreachable. 409 if none did.
+            operationId: post_api_v1_runs_id_config_reports_step_rerun_failed
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: step
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Starts a run of the same project and branch with the input limit set to the hosts that failed or were unreachable.
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: config.rerun_failed
     /api/v1/runs/{id}/coverage:
         get:
             description: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.

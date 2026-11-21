@@ -159,6 +159,7 @@
             "type": "array"
           },
           "file": {},
+          "fleet": {},
           "for_each": {
             "description": "Repeat the step once for each combination of the lists (a matrix); see exclude, add, max_parallel, fail_fast, continue_for.",
             "type": "object"
