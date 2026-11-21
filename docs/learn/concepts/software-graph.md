@@ -33,4 +33,4 @@ flowchart LR
   evidence. Launchway can write a machine specification for components that run together.
 
 Open [the graph](app:/graph), or the **Graph** tab of a repository. The full guide is
-[The graph: what depends on what](../guide/software-graph.md).
+[The graph: what depends on what](../../guide/software-graph.md).
