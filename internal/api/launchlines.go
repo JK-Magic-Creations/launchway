@@ -56,6 +56,10 @@ type LaunchLine struct {
 	Now string `json:"now"`
 }
 
+func (s *Server) launchRoutes() []route {
+	return []route{{"GET /api/v1/launch-lines", signedIn, "", s.listLaunchLines}}
+}
+
 func (s *Server) listLaunchLines(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))

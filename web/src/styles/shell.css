@@ -1,7 +1,7 @@
 /* The shell (docs 42, sections 2 and 17): the top route with its hairline pulse, the left column of an
    area, the page, the Guide, and the phone's bottom bar. */
-.skip { position: absolute; left: -9999px; top: 0; z-index: 100; background: var(--signal); color: var(--on-signal); padding: 8px 14px; border-radius: 0 0 8px 0; }
-.skip:focus { left: 0; }
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 100; background: var(--signal); color: var(--on-signal); padding: 8px 14px; border-radius: 0 0 8px 0; }
+.skip-link:focus { left: 0; }
 
 .top { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .top-in { display: flex; align-items: center; gap: 20px; height: 56px; max-width: 1640px; margin: 0 auto; padding: 0 24px; }

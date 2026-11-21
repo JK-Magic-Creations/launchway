@@ -97,7 +97,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
 
   return (
     <ExplainerContext.Provider value={setExplainer}>
-      <a href="#main" className="skip">Skip to the page</a>
+      <a href="#main" className="skip-link">Skip to the page</a>
       <header className="top">
         <div className="top-in">
           <a className="brand" href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }} aria-label="Launchway home">
@@ -115,7 +115,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
         <Pulse state={pulse} />
       </header>
       <div className={"shell" + (side && hasSide(ctx, area) ? " has-side" : "") + (guideOpen ? " rail-open" : "")}>
-        <SideNav ctx={ctx} area={area} path={path} />
+        <SideNav ctx={ctx} area={side ? area : null} path={path} />
         <main className="main" id="main" tabIndex={-1}>
           {me.auth_mode === "none" && (
             <div className="notice" role="note"><strong>No sign-in:</strong> anyone who can reach this server has full access.</div>
