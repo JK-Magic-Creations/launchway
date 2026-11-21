@@ -383,3 +383,37 @@ func TestGlobMatch(t *testing.T) {
 		}
 	}
 }
+
+// The reference page names every check, its tool and the tool's license, so a
+// check cannot be added or a tool changed without the page saying so.
+func TestReferencePageListsEveryCheckAndTool(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "docs", "reference", "standing-orders.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(b)
+	for _, c := range Checks() {
+		row := ""
+		for _, line := range strings.Split(page, "\n") {
+			if strings.HasPrefix(line, "| `"+c.ID+"` |") {
+				row = line
+			}
+		}
+		if row == "" {
+			t.Errorf("the check %s has no row in docs/reference/standing-orders.md", c.ID)
+			continue
+		}
+		tool, _ := ToolNamed(c.Tool)
+		if !strings.Contains(row, c.Tool) || !strings.Contains(row, tool.License) && c.Available() {
+			t.Errorf("the row of %s should name its tool %s and the license %s: %s", c.ID, c.Tool, tool.License, row)
+		}
+	}
+	for _, tl := range func() []Tool { x, _ := Tools(); return x }() {
+		if tl.Name != "launchway-pipeline-lint" && tl.Name != "govulncheck" && !strings.Contains(page, tl.Name) {
+			t.Errorf("the tool %s is not named in the reference page", tl.Name)
+		}
+	}
+	if !strings.Contains(page, ProfileVersion) {
+		t.Errorf("the reference page does not say it is for profile %s", ProfileVersion)
+	}
+}

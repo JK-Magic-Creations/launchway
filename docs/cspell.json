@@ -18,7 +18,7 @@
   ],
   "words": [
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
-    "Valkey",
+    "Valkey", "Dockerfiles",
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
     "applicationsets", "blocklist",
     "Authentik",

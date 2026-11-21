@@ -802,6 +802,50 @@ launchway caches policy clear PROJECT [--json]
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
+## launchway standards
+
+Shows and changes Standing orders: the checks every repository gets, with where each setting comes from. Reading needs the rights to read the project (or any project, for a level); changing a level needs to administer that level (an admin of the project at a project). The API refuses a value weaker than a lock above, with the sentence that names the lock.
+
+```text
+launchway standards show PROJECT [--json]
+launchway standards show --level LEVEL [--scope NAME] [--json]
+launchway standards set --level LEVEL [--scope NAME] [KEY=VALUE ...] [--unset KEY] [--reason TEXT] [--lock KEY=REASON] [--unlock KEY] [--json]
+launchway standards explain PROJECT KEY
+launchway standards coverage [--level LEVEL] [--scope NAME] [--json]
+launchway standards profile [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `show` | For a project: each check, its state, where the state comes from, what a lock above holds, the gates, license lists, exemptions and notices. With `--level`, the settings that level has |
+| `set` | Changes a level's settings: `check.secrets=block`, `gate.fail_on=critical`, `gate.require_fix=false`, `gate.default_branch=block`, `gate.incomplete=fail`, `licenses.deny=GPL-3.0-only,AGPL-3.0`, `licenses.allow=...`, `off=true --reason "..."` (switches Standing orders off for the level; recorded in the Logbook). `--lock` and `--unlock` set and remove locks |
+| `explain` | Why a setting has the value it has: every level that sets it, which one won, and any lock |
+| `coverage` | Which repositories of a level have which checks in effect, and their open findings |
+| `profile` | Every check with its tool, license and default |
+
+## launchway findings
+
+What the checks found. `list` and `show` read the findings the default branch has had; `accept` and `reopen` need the operator role on the project; `inspect` shows a run's Inspection.
+
+```text
+launchway findings list PROJECT [--status open|fixed|accepted|all] [--severity S,S] [--check ID] [--q TEXT] [--oldest] [--json]
+launchway findings show PROJECT FINGERPRINT [--json]
+launchway findings accept PROJECT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive] [--json]
+launchway findings reopen PROJECT FINGERPRINT
+launchway findings export PROJECT [--format json|csv|sarif] [--status S] [-o FILE]
+launchway findings inspect RUN [--standing S] [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `list`, `show` | The findings, most severe first (`--oldest` for oldest first), with package, fixed version and how to fix; `show` adds the decision about it |
+| `accept` | Records an accepted risk (or a false positive) with a reason of at least 10 characters and an end date within a year; it stops counting on that date |
+| `reopen` | Ends the decision in force |
+| `export` | The findings as JSON, CSV or SARIF 2.1.0 |
+| `inspect` | A run's Inspection: the verdict, each check and whether it ran, and the findings as new, existing or accepted |
+
+The same operations are the routes under [Standing orders](http-api.md#standing-orders) in the HTTP API, and the MCP tools `get_standards_profile`, `get_standards`, `get_standards_settings`, `get_standards_coverage`, `list_findings`, `export_findings`, `get_run_inspection`, `accept_finding` and `reopen_finding`. The MCP tools read and accept; they do not change settings.
+
 ## launchway variables
 
 Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).

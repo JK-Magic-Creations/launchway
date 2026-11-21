@@ -5409,10 +5409,10 @@
               "area": "repository-standards"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Standards kept in Git, edited in either place",
               "value": "A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step.",
-              "detail": "Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor.",
+              "detail": "Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.",
               "needs": "Every check on, advice or block.",
               "area": "repository-standards"
             },
@@ -5428,7 +5428,7 @@
               "status": "planned",
               "title": "A standards home and a posture view",
               "value": "See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository.",
-              "detail": "The score is a view, never a gate by itself.",
+              "detail": "The score is a view, never a gate by itself. The first slice is built and not yet merged: which repositories have which checks, and each project's open findings over time with the mean time to fix. A score is not built.",
               "area": "repository-standards"
             },
             {

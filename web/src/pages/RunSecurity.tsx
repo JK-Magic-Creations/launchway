@@ -3,6 +3,7 @@ import { api, type ArtifactView, type FindingStatus, type FindingView, type RunD
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { navigate } from "../router";
 import { CopyBlock } from "../components/Tests";
+import { InspectionPanel } from "../components/Inspection";
 import {
   CopyValue, FindingStatusBadge, FindingsHowTo, LockIcon, SEVERITIES, SeverityBadge, SeverityBar, SeverityLegend,
   artifactFileURL, bytes, safeURL, serious, severityLabel, where,
@@ -17,6 +18,15 @@ type StatusFilter = "" | FindingStatus;
 // what changed since the previous run of the branch, every finding, most
 // severe first, and the components its SBOMs list.
 export function SecurityTab({ run, version }: { run: RunDetail; version: string }) {
+  return (
+    <>
+      <InspectionPanel runId={run.id} project={run.project} version={version} />
+      <SecurityReports run={run} version={version} />
+    </>
+  );
+}
+
+function SecurityReports({ run, version }: { run: RunDetail; version: string }) {
   const [severities, setSeverities] = useState<Severity[]>([]);
   const [tool, setTool] = useState("");
   const [status, setStatus] = useState<StatusFilter>("");

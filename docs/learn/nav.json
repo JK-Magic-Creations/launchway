@@ -29,6 +29,7 @@
         "concepts/pipelines-and-runs",
         "concepts/templates-and-libraries",
         "concepts/variables",
+        "concepts/standing-orders",
         "concepts/environments-and-deployments",
         "concepts/approvals",
         "concepts/high-availability"
@@ -74,6 +75,7 @@
         "guide/variables",
         "guide/build-caches",
         "artifacts",
+        "guide/standing-orders",
         "guide/security-findings",
         "guide/images",
         "guide/deployments",
@@ -146,6 +148,7 @@
         "reference/runner-config",
         "reference/helm-values",
         "reference/cli",
+        "reference/standing-orders",
         "reference/http-api",
         "reference/config-objects",
         "reference/interface-parity",

@@ -488,7 +488,7 @@ The same scans and best-practice checks for every repository, on by default (see
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/standards/profile` | `signed-in` | — | The profile: every check with what it looks for, why, its ecosystem, tool, the tool's license and image digest, default state, whether it can block, its time budget and what it needs from the network; the gate defaults and the setting keys. |
-| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` installation, organization, unit or project and `&scope=NAME`, with `version` (0 when none are stored). |
+| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` (`installation`, `organization`, `unit` or `project`: a Base, a Wing, a Squadron or a Project) and `&scope=NAME`, with `version` (0 when none are stored). |
 | `PUT /api/v1/standards/settings` | `signed-in` | `standards.settings_set` | Replaces one level's settings (`level`, `scope`, `settings`, and `version` as read: a different version is `409`). `400` with the plain problems for an invalid value; `409` for a value weaker than a lock above. Switching Standing orders off needs a reason and is recorded as such. |
 | `GET /api/v1/standards/coverage` | `signed-in` | — | For the projects of a level that the caller may read: whether Standing orders are off, each check's state and whether it runs, open findings by severity. |
 | `GET /api/v1/projects/{name}/standards` | `project-viewer` | — | The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository's own file with its problems. |
