@@ -286,3 +286,12 @@ rerun) has for each action its name, whether it is `available`, the plain `reaso
 action that works), what role it needs (`who`), and for a risky action the `risk` and a `suggestion`.
 Risky actions are never blocked for being risky: the interface shows the consequence, asks for
 confirmation and goes ahead.
+
+## Rollout control does not need the chart's admission policy
+
+Whether the buttons work is decided by the deploy runner's own self-check, not by how the cluster is
+configured. A runner that may patch the status of a rollout (listed in `delivery.deployRunner.rbac.controlRollouts`)
+offers promote, promote full, abort and retry. The chart's field-limiting admission policy
+(`delivery.deployRunner.admissionPolicy.enabled`) is optional: where an installation manages that policy
+itself, or runs without it, control still works as long as the runner reports the right. Without the
+right, the buttons show unavailable and say which one is missing.
