@@ -81,7 +81,8 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 	}
 	srv.Forge = &api.ForgeHosting{Provider: h.Provider, Mirrors: h.Mirrors, RunTokens: h.RunTokens, AllowInsecureHTTP: f.AllowInsecureHTTP,
 		Git:  githttp.New(githttp.Options{Backend: h.Store, MaxPushBytes: int64(f.MaxPushMiB) << 20, MaxConcurrent: f.MaxConcurrent, Log: log}),
-		Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks}
+		Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks, Pulls: h.Pulls, RepoByID: h.Forge.Repository}
+	srv.WirePulls()
 	if f.SSH.On() {
 		if err := startSSH(ctx, f, srv, log); err != nil {
 			return err

@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// Events a hook can ask for. pull_request and pull_request_review are
-// reserved: they can be chosen now, and nothing sends them until pull requests
-// exist.
+// Events a hook can ask for. pull_request is sent for every change of a pull
+// request (opened, edited, synchronize, closed, reopened, merged, ...);
+// pull_request_review for a review submitted or dismissed.
 const (
 	EventPush              = "push"
 	EventCreate            = "create"
@@ -167,6 +167,12 @@ type Payload struct {
 	// repository: created, renamed or deleted; Changes says what (renamed: the old path)
 	Action  string            `json:"action,omitempty"`
 	Changes map[string]string `json:"changes,omitempty"`
+	// pull_request and pull_request_review: Action says what happened
+	// (opened, synchronize, closed, merged, review_submitted, ...), Number and
+	// PullRequest say which pull request; Changes carries what is useful (the
+	// review's verdict, the merge method).
+	Number      int            `json:"number,omitempty"`
+	PullRequest map[string]any `json:"pull_request,omitempty"`
 	// ping
 	Zen string `json:"zen,omitempty"`
 }

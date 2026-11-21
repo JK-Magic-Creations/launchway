@@ -388,3 +388,7 @@ func RevisionRef(number, seq int) string { return fmt.Sprintf("refs/pull/%d/rev/
 func (s *Service) afterReview(ctx context.Context, repoID string, p PullRequest) {
 	s.autoMerge(ctx, repoID, p.ID)
 }
+
+// Schedule asks for a pull request's judgement of mergeability to be made in
+// the background (a request that finds it missing or stale calls it).
+func (s *Service) Schedule(repoID, id string) { s.schedule(repoID, id) }

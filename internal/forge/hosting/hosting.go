@@ -22,6 +22,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
+	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
@@ -85,6 +86,8 @@ type Hosting struct {
 	Rules *refrules.Store
 	// Hooks sends the webhooks of repositories.
 	Hooks *webhooks.Service
+	// Pulls is pull requests and code review.
+	Pulls *pulls.Service
 	o     Options
 	log   *slog.Logger
 }
@@ -170,7 +173,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 		hk.Client = g.HTTPClient(10 * time.Second)
 	}
 	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt,
-		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), o: o, log: o.Log}, nil
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pulls.NewService(pulls.NewStore(db), sto, o.Log), o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.
@@ -184,6 +187,7 @@ func (h *Hosting) Resolve(ctx context.Context, path string) (forge.Repository, e
 func (h *Hosting) Start(ctx context.Context) {
 	h.Mirrors.Start(ctx)
 	go h.Hooks.Run(ctx)
+	go h.sweepPulls(ctx)
 	every := h.o.Every
 	if every <= 0 {
 		every = 15 * time.Minute
@@ -250,4 +254,21 @@ func (h *Hosting) Check(ctx context.Context) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+// sweepPulls tries the pull requests that asked for auto-merge now and then:
+// a run that finishes does not tell the pull request, so a periodic look
+// closes that gap.
+func (h *Hosting) sweepPulls(ctx context.Context) {
+	t := time.NewTicker(30 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			h.Pulls.Stop()
+			return
+		case <-t.C:
+			h.Pulls.Sweep(ctx)
+		}
+	}
 }
