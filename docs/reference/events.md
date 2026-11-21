@@ -247,6 +247,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.abort` | `POST /api/v1/runs/{id}/deployments/{dep}/abort` |
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
 | `deployment.command_outcome` | what a deploy runner did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the runner |
+| `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
+| `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an emergency rollback, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |

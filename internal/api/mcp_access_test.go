@@ -62,6 +62,13 @@ var mcpPermissionTable = map[string]mcpRow{
 	"mark_verification": {map[string]any{"run_id": "{pay}", "step": "gate", "outcome": "passed", "reason": "checked by hand"}, true,
 		[5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"control_rollout": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "promote"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	// Rollbacks: anyone who sees a project reads its options; the tools that
+	// change need the operator role. {pay} is no rollback run and pay-api
+	// has no deployments or environment prod: not found after the check.
+	"get_rollback_options":  {map[string]any{"project": "pay-api", "environment": "prod"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_rollback_reviews": {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"rollback_deployment":   {map[string]any{"project": "pay-api", "environment": "prod", "reason": "x"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"review_rollback":       {map[string]any{"run_id": "{pay}", "comment": "x"}, true, [5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	// Hosted repositories, with Git hosting off in this server: every call that
 	// is offered answers feature_off (not found). Operators are offered the
 	// tools that change one, only an administrator the one that creates.

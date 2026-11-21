@@ -239,8 +239,10 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addStepResourceTools(srv, c)
 	addRunLimitTools(srv, c)
 	addLaneTools(srv, c)
+	addRollbackReadTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
+		addRollbackChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)
 	}
 	addDocs(srv, c)

@@ -244,3 +244,14 @@ func (e *Engine) RollbacksNeedingReview(actor string, groups []string, visible f
 	}
 	return out, nil
 }
+
+// EnvironmentOfRollback returns the environment a rollback run is about, for
+// the API's access checks.
+func (e *Engine) EnvironmentOfRollback(runID string) (string, error) {
+	var env string
+	err := e.db.QueryRow(`SELECT environment FROM rollbacks WHERE run_id = ?`, runID).Scan(&env)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("%w: run %s is not a rollback run", ErrConflict, runID)
+	}
+	return env, err
+}

@@ -396,12 +396,24 @@ func pickTarget(plan *RollbackPlan, to string) (*RollbackTarget, error) {
 		return &plan.Action.Targets[0], nil
 	}
 	var names []string
+	var byVersion []*RollbackTarget
 	for i := range plan.Action.Targets {
 		t := &plan.Action.Targets[i]
 		if t.Deployment == to {
 			return t, nil
 		}
+		if t.Version == to {
+			byVersion = append(byVersion, t)
+		}
 		names = append(names, fmt.Sprintf("%s (deployment %s, run #%d)", t.Version, t.Deployment, t.RunNumber))
+	}
+	// A version names its deployment when it is unambiguous.
+	switch len(byVersion) {
+	case 1:
+		return byVersion[0], nil
+	case 0:
+	default:
+		return nil, fmt.Errorf("%w: %s was deployed %d times; name the deployment: %s", ErrConflict, to, len(byVersion), strings.Join(names, ", "))
 	}
 	return nil, fmt.Errorf("%w: %s is not an earlier successful deployment of %s in %s that is still in effect; the choices are: %s",
 		ErrConflict, to, plan.Service, plan.Environment, strings.Join(names, ", "))

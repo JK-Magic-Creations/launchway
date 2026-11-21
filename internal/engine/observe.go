@@ -830,6 +830,9 @@ type UnitView struct {
 	// Live is what deploy runners last saw of the service while nothing
 	// was deploying it, and whether it differs from Current (schema 14).
 	Live *LiveView `json:"live,omitempty"`
+	// Rollback is the rollback action for the service as the server reports
+	// it (schema 32): available with its targets, or why not.
+	Rollback *Action `json:"rollback,omitempty"`
 }
 
 // CurrentView is what an environment runs, as far as Launchway knows.
@@ -973,6 +976,12 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 			v.Observer, v.ObserverExpires = o[0].(string), o[1].(int64)
 		}
 		for _, u := range units[env.Name] {
+			if u.Last != nil && e.knows(schemaRollback) {
+				if plan, err := e.RollbackPlan(u.Project, env.Name, u.Service); err == nil {
+					a := plan.Action
+					u.Rollback = &a
+				}
+			}
 			v.Services = append(v.Services, *u)
 		}
 		sort.Slice(v.Services, func(i, j int) bool {
