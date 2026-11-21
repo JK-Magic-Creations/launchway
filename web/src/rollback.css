@@ -1,0 +1,29 @@
+/* Rolling back after a deployment succeeded: the control, its confirmation, the rollback run's banner and the review list. */
+.rb-control { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.rb-control .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rb-why { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 62ch; }
+.rb-why b { font-weight: 600; }
+.rb-form { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 16px; min-width: min(560px, 88vw); max-height: 80vh; overflow: auto; }
+.rb-form h2 { margin: 0; font-size: 18px; }
+.rb-form label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.rb-form textarea, .rb-form select { font: inherit; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--sheet); color: var(--ink); font-weight: 400; }
+.rb-form textarea { min-height: 72px; resize: vertical; }
+.rb-targets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rb-targets label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r1); cursor: pointer; font-weight: 400; }
+.rb-targets label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.rb-targets input { margin-top: 3px; }
+.rb-targets .v { font-weight: 600; }
+.rb-targets .m { color: var(--ink-3); font-size: 12.5px; }
+.rb-then { margin: 0; padding: 10px 12px; border-radius: var(--r1); background: var(--sheet-2); font-size: 13.5px; }
+.rb-then ul { margin: 6px 0 0; padding-left: 18px; }
+.rb-then li { margin: 2px 0; }
+.rb-suggest { margin: 0; padding-left: 18px; font-size: 13.5px; }
+.rb-banner { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--line-2); border-left: 4px solid var(--warn, #c77700); border-radius: var(--r2); background: var(--sheet); margin-bottom: 14px; }
+.rb-banner.plain { border-left-color: var(--accent); }
+.rb-banner h2 { margin: 0; font-size: 17px; }
+.rb-banner dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13.5px; }
+.rb-banner dt { color: var(--ink-3); }
+.rb-banner dd { margin: 0; }
+.rb-note { font-size: 13px; color: var(--ink-3); margin: 0; }
+.rb-link { font-size: 13px; margin: 0 0 10px; }
+.rb-hist { color: var(--ink-3); font-size: 12.5px; }

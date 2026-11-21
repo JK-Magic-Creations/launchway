@@ -1,0 +1,133 @@
+import { useState } from "react";
+import type { DeploymentView } from "../api";
+import type { RollbackTarget, ServerAction } from "../apiDeploy";
+import { rollbackApi } from "../apiRollback";
+import { ago, clock } from "../format";
+import { Dialog } from "../kit/Dialog";
+import { Button } from "../kit/layout";
+import { useNow } from "../live";
+import { navigate } from "../router";
+import { terms } from "../terms";
+import { EntityLink } from "./EntityLink";
+import { ErrorBox } from "./ui";
+import "../rollback.css";
+
+const RB_NOTE = "A rollback restores the version only. It never restores a database or configuration.";
+
+interface Unit { project: string; service: string; environment: string }
+
+/** RollbackControl offers "Roll back to <version>" (and "Roll back to…" for an older one) where the server says it
+ * will work. Where it says it will not, it shows why and what would help instead of a button that fails; where the
+ * only thing in the way is another deployment holding the lock, it offers to queue behind it. */
+export function RollbackControl({ action, unit, compact }: { action?: ServerAction; unit: Unit; compact?: boolean }) {
+  const [open, setOpen] = useState<null | { pick: boolean; queue: boolean }>(null);
+  if (!action) return null;
+  const targets = action.targets ?? [];
+  const first = targets[0];
+  const where = `${unit.service === unit.project ? "" : unit.service + " in "}${unit.environment}`;
+  const sm = compact ? { sm: true } : {};
+  if (action.available && first) {
+    return (
+      <div className="rb-control">
+        <div className="row">
+          <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: false })} title={first.consequence}>Roll back to {first.version}</Button>
+          {targets.length > 1 && <Button {...sm} onClick={() => setOpen({ pick: true, queue: false })}>Roll back to…</Button>}
+        </div>
+        {!compact && <p className="rb-why">{action.emergency ? "Emergency action on a protected environment: no approval first; an approver reviews it afterwards." : "Goes back to the previous successful deployment unless you choose another."}</p>}
+        {open && <RollbackDialog action={action} unit={unit} pick={open.pick} queue={open.queue} onClose={() => setOpen(null)} />}
+      </div>
+    );
+  }
+  if (action.queueable && first) {
+    const holder = /run #(\d+)/.exec(action.reason ?? "")?.[1];
+    return (
+      <div className="rb-control">
+        <p className="rb-why"><b>Cannot start yet.</b> {action.reason}</p>
+        <div className="row">
+          <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: true })}>Queue the rollback{holder ? ` behind run #${holder}` : ""}</Button>
+          {action.instead && <span className="faint small">or cancel that run first</span>}
+        </div>
+        {open && <RollbackDialog action={action} unit={unit} pick={false} queue={open.queue} onClose={() => setOpen(null)} />}
+      </div>
+    );
+  }
+  return (
+    <div className="rb-control">
+      <Button {...sm} disabled title={action.reason}>Roll back</Button>
+      <p className="rb-why">Cannot roll back {where}: {action.reason}{action.would_help ? <> <span className="faint">To change that: {action.would_help}.</span></> : null}</p>
+    </div>
+  );
+}
+
+function RollbackDialog({ action, unit, pick, queue, onClose }: { action: ServerAction; unit: Unit; pick: boolean; queue: boolean; onClose: () => void }) {
+  const targets = action.targets ?? [];
+  const now = useNow(30000);
+  const [chosen, setChosen] = useState(targets[0]?.deployment ?? "");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const t: RollbackTarget | undefined = targets.find((x) => x.deployment === chosen) ?? targets[0];
+  if (!t) return null;
+  const noReason = reason.trim() === "";
+  const go = async () => {
+    setBusy(true); setError(null);
+    try {
+      const run = await rollbackApi.request(unit.project, { environment: unit.environment, service: unit.service === unit.project ? undefined : unit.service, to: t.deployment, reason: reason.trim(), queue });
+      onClose();
+      navigate(`/runs/${run.id}`);
+    } catch (e) { setError(e); setBusy(false); }
+  };
+  const label = `Roll back ${unit.service} in ${unit.environment} to ${t.version}`;
+  return (
+    <Dialog label={label} onClose={onClose}>
+      <form className="rb-form" onSubmit={(e) => { e.preventDefault(); if (!noReason) go(); }}>
+        <h2>{label}</h2>
+        {(pick || targets.length > 1) && (
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="faint small" style={{ marginBottom: 6 }}>Roll back to</legend>
+            <ul className="rb-targets">
+              {targets.map((x) => (
+                <li key={x.deployment}><label>
+                  <input type="radio" name="rb-target" checked={x.deployment === t.deployment} onChange={() => setChosen(x.deployment)} />
+                  <span><span className="v">{x.version}</span>{x.previous ? " (the previous one)" : ""}
+                    <span className="m"> · deployed {ago(x.at, now)} ({clock(x.at)}) · run #{x.run_number} · reverts {x.reverts.length === 1 ? "1 deployment" : `${x.reverts.length} deployments`}</span></span>
+                </label></li>
+              ))}
+            </ul>
+          </fieldset>
+        )}
+        <p className="rb-then"><b>What happens.</b> {t.consequence}.
+          {t.reverts.length > 0 && <ul>{t.reverts.map((r) => <li key={r.deployment}>revert {r.version} from <EntityLink kind="run" name={`run #${r.run_number}`} id={r.run} /></li>)}</ul>}
+        </p>
+        <p className="rb-note">{RB_NOTE} It takes the environment's lock like any deployment, and is recorded in the {terms().lower("logbook")}.</p>
+        {(t.suggestions ?? []).length > 0 && <div><div className="faint small">Before you go ahead</div><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
+        {action.emergency && !action.requires_approval && <div className="callout callout-wait">This is an emergency action on a protected environment: it needs no approval first, and an approver reviews it afterwards.</div>}
+        {action.emergency && action.requires_approval && <div className="callout callout-wait">This environment asks for an approval first, even for an emergency: the rollback waits for one.</div>}
+        {queue && <div className="callout callout-wait">Another deployment holds the lock. The rollback waits for it and then goes first.</div>}
+        <label className="field"><span>Why are you rolling back? (required, kept with the rollback)</span>
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder="For example: checkout fails for customers since this version" /></label>
+        <ErrorBox error={error} />
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-danger-outline" disabled={busy || noReason} title={noReason ? "Say why first" : undefined}>{busy ? "Starting…" : `Roll back to ${t.version}`}</button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/** On a finished, successful deployment's panel: the rollback action as the server reports it, or what a rollback
+ * run's own deployment restored. */
+export function DeploymentRollback({ d }: { d: DeploymentView }) {
+  if (d.mode === "rollback") {
+    return d.rollback ? <p className="rb-note" style={{ margin: "8px 0 0" }}>{d.rollback.headline}. {RB_NOTE}</p> : null;
+  }
+  const a = d.actions?.[0];
+  if (!a || d.verdict !== "deployed") return null;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="faint small" style={{ marginBottom: 4 }}>Roll back after success</div>
+      <RollbackControl action={a} unit={{ project: d.project, service: d.service, environment: d.environment }} compact />
+    </div>
+  );
+}

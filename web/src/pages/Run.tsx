@@ -1,3 +1,4 @@
+import { RollbackBanner, RolledBackLine } from "../components/RollbackRun";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
@@ -255,6 +256,8 @@ export function RunPage({ id }: { id: string }) {
           )}
         </>} />
       <ErrorBox error={actionErr} />
+      <RollbackBanner run={run} onChanged={() => load(true)} />
+      <RolledBackLine run={run} />
       {actionErr instanceof Error && /Re-run from/.test(actionErr.message) && rerunTarget && mayRerun && (
         <p className="refusal-action"><RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary /></p>
       )}

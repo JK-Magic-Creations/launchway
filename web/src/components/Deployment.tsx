@@ -1,3 +1,4 @@
+import { DeploymentRollback } from "./Rollback";
 import { useEffect, useState } from "react";
 import { api, type DeployApp, type DeployPhase, type DeploySnapshot, type DeploymentView, type RunDetail, type RunEvent, type StepView, type Verdict } from "../api";
 import { ago, clock, duration, shortSha } from "../format";
@@ -294,6 +295,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
       </dl>
       <Observed d={d} now={now} />
       <DeploymentControls run={run} d={d} now={now} />
+      <DeploymentRollback d={d} />
       {d.timeline && d.timeline.length > 0 && <Timeline d={d} />}
     </section>
   );
