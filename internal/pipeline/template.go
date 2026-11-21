@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,20 +37,26 @@ import (
 
 // Limits on libraries, templates and parameters.
 const (
-	MaxLibraries      = 10   // per pipeline
-	MaxParams         = 50   // per template, and values per with
-	MaxParamValueLen  = 4096 // bytes in one parameter value
-	MaxNesting        = 4    // templates using templates, below the pipeline
-	MaxExpandedSteps  = 500  // steps in a pipeline once expanded
-	MaxStepIDLen      = 200  // bytes in an expanded step's ID
-	MaxVersionLen     = 128
-	ParamEnvPrefix    = "PARAM_"
-	paramTypeString   = "string"
-	paramTypeNumber   = "number"
-	paramTypeBoolean  = "boolean"
-	paramTypeList     = "list"
-	templatesDir      = "templates/"
-	templateExtension = ".yaml"
+	MaxLibraries     = 10   // per pipeline
+	MaxParams        = 50   // per template, and values per with
+	MaxParamValueLen = 4096 // bytes in one parameter value
+	MaxNesting       = 4    // templates using templates, below the pipeline
+	MaxExpandedSteps = 500  // steps in a pipeline once expanded
+	MaxStepIDLen     = 200  // bytes in an expanded step's ID
+	MaxVersionLen    = 128
+	ParamEnvPrefix   = "PARAM_"
+	paramTypeString  = "string"
+	paramTypeNumber  = "number"
+	paramTypeBoolean = "boolean"
+	paramTypeList    = "list"
+	// paramTypeEnvironment and paramTypeApplication are strings with a
+	// meaning: the name of a delivery environment, and of an Argo CD
+	// application. A use that passes anything else is refused when it is
+	// written, not when the deploy runs.
+	paramTypeEnvironment = "environment"
+	paramTypeApplication = "application"
+	templatesDir         = "templates/"
+	templateExtension    = ".yaml"
 )
 
 var (
@@ -105,6 +112,9 @@ func EnvName(s string) string {
 	}, s)
 }
 
+// ParamTypes are the types a template's parameter may have.
+var ParamTypes = []string{paramTypeString, paramTypeNumber, paramTypeBoolean, paramTypeList, paramTypeEnvironment, paramTypeApplication}
+
 // Param is one parameter a template declares.
 type Param struct {
 	Name        string   `json:"name"`
@@ -130,6 +140,14 @@ func (p *Param) check(v string) string {
 	case paramTypeList:
 		if _, msg := ParseList(v); msg != "" {
 			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
+		}
+	case paramTypeEnvironment:
+		if !nameRe.MatchString(v) {
+			return fmt.Sprintf("%s is the name of an environment: lower-case letters, digits and hyphens; %q is not one", p.Name, clipText(v, 60))
+		}
+	case paramTypeApplication:
+		if !k8sNameRe.MatchString(v) {
+			return fmt.Sprintf("%s is the name of an Argo CD application; %q is not a valid name", p.Name, clipText(v, 60))
 		}
 	default:
 		switch {
@@ -358,7 +376,7 @@ func (ps *parser) scalar(n *yaml.Node, at string) string {
 		return v
 	}
 	switch {
-	case p.Type != paramTypeString:
+	case p.Type != paramTypeString && p.Type != paramTypeEnvironment && p.Type != paramTypeApplication:
 		ps.add(formatNode, at+".format", "format is for string parameters; %s is a %s", name, p.Type)
 	case strings.Count(format, "%s") != 1 || strings.Count(format, "%") != 1:
 		ps.add(formatNode, at+".format", "a format has exactly one %%s, where the value goes, and no other %%")
@@ -632,8 +650,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			switch k2.Value {
 			case "type":
 				p.Type = ps.str(v2, where)
-				if p.Type != paramTypeString && p.Type != paramTypeNumber && p.Type != paramTypeBoolean && p.Type != paramTypeList {
-					ps.add(v2, where, "the type is string, number, boolean or list")
+				if !slices.Contains(ParamTypes, p.Type) {
+					ps.add(v2, where, "the type is %s or %s", strings.Join(ParamTypes[:len(ParamTypes)-1], ", "), ParamTypes[len(ParamTypes)-1])
 					p.Type = paramTypeString
 				}
 			case "default":
@@ -774,6 +792,24 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if len(x.problems) == 0 && len(out.Steps) > MaxExpandedSteps {
 		x.problems = append(x.problems, Problem{Message: fmt.Sprintf("expanded, the pipeline has %d steps; at most %d are allowed", len(out.Steps), MaxExpandedSteps)})
 	}
+	if len(x.problems) == 0 {
+		// What deploy, rollback, rollout, verify and approval steps say about
+		// each other is checked again on the whole: two templates may deploy
+		// the same service to the same environment, and a pipeline's step may
+		// need a template's step by its expanded name.
+		ps := &parser{}
+		ps.checkDeploys(out)
+		ps.checkVerify(out)
+		for _, pr := range ps.problems {
+			if strings.Contains(pr.Message, " refers to ") {
+				// An output of a group (a uses step) is mapped to a step when
+				// the run starts; the pipeline file's own check covered it.
+				continue
+			}
+			pr.Line = 0
+			x.problems = append(x.problems, pr)
+		}
+	}
 	if len(x.problems) == 0 && len(out.Steps) == 0 {
 		x.problems = append(x.problems, Problem{Message: "expanded, the pipeline has no steps left: every template step's if was false"})
 	}
@@ -800,6 +836,15 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	out.Libraries = kept
 	// A template's step may ask for resources, which the pipeline file itself
 	// did not show.
+	if out.UsesSchemaControl() {
+		out.Requires = max(out.Requires, SchemaControl)
+	}
+	if out.UsesSchema15() {
+		out.Requires = max(out.Requires, SchemaImages)
+	}
+	if out.UsesSchemaVerify() {
+		out.Requires = max(out.Requires, SchemaVerify)
+	}
 	out.Requires = out.requiresNewer(out.Requires) // step resources, build caches
 	out.requireFlow()                              // likewise for the flow control keys a template's step uses
 	return out, nil
@@ -1068,6 +1113,7 @@ func (x *expander) emit(sc *scope) {
 		c.Needs, c.NeedsGroups = needs, groups
 		c.Fetch = x.fetchesOf(sc, s)
 		c.ImageBuild = x.imageOf(sc, s)
+		x.deployOf(sc, &c)
 		c.Each = mergeEach(sc.each, s.Each)
 		c.withLines, c.ifTest = nil, nil
 		if sc.group != nil {
@@ -1095,6 +1141,47 @@ func (x *expander) emit(sc *scope) {
 			c.Env = env
 		}
 		x.out.Steps = append(x.out.Steps, &c)
+	}
+}
+
+// deployOf gives a deploy, rollback, rollout, verify or approval step of a
+// template the names it has in the run: the deploy step it names and the
+// steps whose outputs its values take get the template's prefix. Values are
+// copied, so the template read for this use is not changed.
+func (x *expander) deployOf(sc *scope, c *Step) {
+	if sc.prefix == "" {
+		return
+	}
+	if c.Deployment != "" && sc.byID[c.Deployment] != nil {
+		c.Deployment = sc.prefix + c.Deployment
+	}
+	local := func(v *Value) *Value {
+		if v == nil || v.Output == nil || sc.byID[v.Output.Step] == nil {
+			return v
+		}
+		cv := *v
+		cv.Output = &OutputRef{Step: sc.prefix + v.Output.Step, Key: v.Output.Key}
+		return &cv
+	}
+	c.Version = local(c.Version)
+	if c.ArgoCD != nil && c.ArgoCD.WriteBack != nil {
+		a := *c.ArgoCD
+		w := *a.WriteBack
+		w.Changes = make([]Change, len(a.WriteBack.Changes))
+		for i, ch := range a.WriteBack.Changes {
+			ch.Tag, ch.Digest, ch.Value = local(ch.Tag), local(ch.Digest), local(ch.Value)
+			w.Changes[i] = ch
+		}
+		a.WriteBack = &w
+		c.ArgoCD = &a
+	}
+	if c.Verify != nil && len(c.Verify.Params) > 0 {
+		v := *c.Verify
+		v.Params = make(map[string]*Value, len(c.Verify.Params))
+		for k, pv := range c.Verify.Params {
+			v.Params[k] = local(pv)
+		}
+		c.Verify = &v
 	}
 }
 
@@ -1242,6 +1329,10 @@ func sampleValue(p *Param) string {
 		return "true"
 	case paramTypeList:
 		return "[]"
+	case paramTypeEnvironment:
+		return "dev"
+	case paramTypeApplication:
+		return "app"
 	}
 	return "x"
 }

@@ -583,9 +583,6 @@ func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, ke
 
 // parseApproval checks a step that waits for a person to decide.
 func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[string]*yaml.Node) {
-	if n := keys["deployment"]; n != nil && ps.tmpl != nil {
-		ps.add(n, at+".deployment", "an approval in a template cannot name a deployment; write it in the pipeline that uses the template")
-	}
 	for _, key := range runOnly {
 		if n := keys[key]; n != nil {
 			ps.add(n, at+"."+key, "an approval runs nothing, so it takes no %s", key)
@@ -724,7 +721,7 @@ func (ps *parser) str(n *yaml.Node, at string) string {
 }
 
 func (ps *parser) bool(n *yaml.Node, at string) bool {
-	switch ps.str(n, at) {
+	switch ps.scalar(n, at) {
 	case "true", "yes":
 		return true
 	case "false", "no":

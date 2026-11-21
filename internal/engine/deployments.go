@@ -155,6 +155,9 @@ func (e *Engine) CheckDeploys(project string, p *pipeline.Pipeline) pipeline.Pro
 			continue
 		}
 		line := s.EnvironmentLine()
+		if s.Group != "" {
+			line = 0 // the step is in a library's template, not in the pipeline's file
+		}
 		env, ok := e.live().envs[s.Environment]
 		switch {
 		case !ok && len(e.live().envs) == 0:

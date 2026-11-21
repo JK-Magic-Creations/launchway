@@ -68,6 +68,9 @@ type Origin struct {
 	// Text is the pipeline file the configuration amounts to, kept with the
 	// run because the configuration may change later.
 	Text string `json:"text"`
+	// Default is set when the pipeline is a default shared by many projects:
+	// "organisation", or "unit <name>". Empty: configured for this project.
+	Default string `json:"default,omitempty"`
 }
 
 // OriginServer is the Origin.Kind of a pipeline configured on the server.
