@@ -23,6 +23,7 @@ const ProjectSecurityPage = lazy(() => import("./pages/ProjectSecurity").then((m
 const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ default: m.ComponentsPage })));
 const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
 const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
+const RepositoryPage = lazy(() => import("./pages/Repository").then((m) => ({ default: m.RepositoryPage })));
 const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m.AgentsPage })));
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
@@ -94,6 +95,8 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/projects") page = <ProjectsPage />;
   else if ((m = match("/projects/:name/pipeline", path))) page = <EditPipelinePage key={m.name} name={m.name} />;
   else if ((m = match("/projects/:name/tests", path))) page = <ProjectTestsPage key={m.name} name={m.name} />;
+  else if ((m = match("/repositories/:owner/:name", path))) page = <RepositoryPage key={m.owner + "/" + m.name} path={m.owner + "/" + m.name} tab="overview" />;
+  else if ((m = match("/repositories/:owner/:name/mirrors", path))) page = <RepositoryPage key={m.owner + "/" + m.name} path={m.owner + "/" + m.name} tab="mirrors" />;
   else if (path === "/runners") page = <RunnersPage />;
   else if (path === "/playground") page = <PlaygroundPage />;
   else if (path === "/tokens") page = <TokensPage />;

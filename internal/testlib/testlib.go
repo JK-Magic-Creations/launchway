@@ -12,13 +12,25 @@ import (
 	"testing"
 )
 
+// GitEnv is the environment for any test that starts a git client: built
+// explicitly, never inherited, so that no desktop session's askpass helper, agent
+// or configuration can make git open a credential dialog or read a
+// user's settings. An unauthenticated request fails at once instead.
+func GitEnv(extra ...string) []string {
+	home, _ := os.MkdirTemp("", "lw-githome-")
+	env := []string{"PATH=" + os.Getenv("PATH"), "HOME=" + home, "XDG_CONFIG_HOME=" + home, "LC_ALL=C",
+		"GIT_ASKPASS=/bin/false", "SSH_ASKPASS=/bin/false", "SSH_ASKPASS_REQUIRE=never", "GIT_TERMINAL_PROMPT=0",
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=core.askPass", "GIT_CONFIG_VALUE_0=/bin/false", "GIT_CONFIG_KEY_1=credential.helper", "GIT_CONFIG_VALUE_1="}
+	return append(env, extra...)
+}
+
 // Git runs git in dir as a fixed author and returns its output.
 func Git(t testing.TB, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=Dana", "GIT_AUTHOR_EMAIL=d@example.com",
-		"GIT_COMMITTER_NAME=Dana", "GIT_COMMITTER_EMAIL=d@example.com", "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = GitEnv("GIT_AUTHOR_NAME=Dana", "GIT_AUTHOR_EMAIL=d@example.com", "GIT_COMMITTER_NAME=Dana", "GIT_COMMITTER_EMAIL=d@example.com")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v in %s: %v\n%s", args, dir, err, out)

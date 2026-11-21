@@ -45,7 +45,12 @@ steps, and the limits on what they may ask for). Changing, listed only to tokens
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
 `cancel_run`, `retry_run` (resume, or re-run from a step), `decide_approval`, `control_rollout` and
 `mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an administrator,
-and audited: `set_step_resource_limits` and `set_step_resource_default`.
+and audited: `set_step_resource_limits` and `set_step_resource_default`. For hosted repositories (with
+`forge.hosting` on): `list_mirrors` (pull and push mirrors with their status, last error with credentials
+removed, lag and whether they are behind), and, listed to tokens that may change something, `set_mirror`
+(a pull mirror or a push mirror; the credential is the name of an environment variable or the path of a file
+on the server, never a secret), `sync_mirror` and `stop_mirroring` (the cut-over step: the repository becomes
+the primary); the API decides by the caller's role on the repository, and each is audited.
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.

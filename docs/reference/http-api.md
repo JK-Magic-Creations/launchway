@@ -412,6 +412,22 @@ Only with `forge.hosting` on; otherwise every route answers `404` with `{"error"
 | `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
 
 
+### Mirrors (Git hosting)
+
+A **pull mirror** keeps a hosted repository an exact copy of an address on another server: every branch, tag and note, deletions followed, on a schedule and on demand. While it is a mirror the repository takes no pushes (`403`). A **push mirror** copies every accepted update of a hosted repository to an address elsewhere. Addresses are `https` or `http`; an internal address (loopback, private, link-local, cloud metadata) is refused with `400` unless the server's `forge.mirror_allow` lists it. A credential is a reference, `{"credential": {"env": "NAME"}}` (an environment variable of the server) or `{"credential": {"file": "/path"}}`, never a value, and is never stored in the repository's record, shown or logged; `username` goes with it (the token is sent as the password). Only with `forge.hosting` on.
+
+A mirror is shown as `id`, `repository`, `direction`, `url`, `credential` (where it is read from), `interval_seconds`, `enabled`, `prune`, `state` (`pending`, `ok` or `error`), `running`, `last_attempt`, `last_success`, `last_error` (credentials removed), `failures`, `next_run`, `refs`, `lag_seconds` and `behind`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/mirrors` | `signed-in` | — | Every mirror of the repositories the caller may read; `?behind=true` lists only those that have fallen behind. |
+| `GET /api/v1/repositories/{owner}/{name}/mirrors` | `repo-viewer` | — | The repository's mirrors with their status. |
+| `POST /api/v1/repositories/{owner}/{name}/mirrors` | `repo-admin` | `mirror.create` | Sets a mirror up: `{"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled"}`. For a pull mirror the repository must have no branches or tags of its own (`400`: mirroring would replace them); posting again changes the existing pull mirror. The first sync starts at once. `409` when the repository already has that mirror. |
+| `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `repo-admin` | `mirror.update` | Pauses or resumes (`enabled`), changes `interval_seconds` or `prune`. |
+| `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `repo-admin` | `mirror.delete` | Removes a push mirror. A pull mirror is ended with `stop-mirroring` (`400`). |
+| `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync` | `repo-operator` | `mirror.sync` | Runs the mirror now and answers with its status. `409` when it is already running; `502` with `{"error", "mirror"}` when the run failed (the mirror's `last_error` says why). A pull mirror whose source suddenly lists no branches or tags refuses to delete everything. |
+| `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `repo-admin` | `mirror.promote` | Makes the repository the primary: the pull mirror is deleted and pushes are accepted. `{"final_sync": true}` runs the mirror once more first, and changes nothing if that fails. `409` when it is not a mirror. |
+
 ### Gitea-style repository calls
 
 The few calls tools that create and inspect repositories send to a Gitea server, so they work unchanged against Launchway. This is the start of the compatibility layer, not all of it: there are no issues, pull requests or webhooks here. Answers carry `name`, `full_name`, `owner.login`, `private`, `archived`, `empty`, `default_branch` and `clone_url`.

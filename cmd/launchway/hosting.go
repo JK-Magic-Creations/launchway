@@ -35,13 +35,13 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 	h, err := hosting.New(ctx, hosting.Options{
 		Engine: eng, Data: cfg.Data, Server: host + fmt.Sprintf("-%d", os.Getpid()), BaseURL: f.PublicURL, Log: log,
 		MaxRepoBytes: int64(f.MaxRepoMiB) << 20, MaxPackBytes: int64(f.MaxPushMiB) << 20,
-		Provider: launchway.Options{DefaultHome: f.DefaultOwner, MaxPerHome: f.MaxPerOwner, CreatesPerMinute: f.CreatesPerMinute},
-		Every:    f.MaintainInterval(), CacheBytes: int64(f.CacheGiB) << 30,
+		Provider:    launchway.Options{DefaultHome: f.DefaultOwner, MaxPerHome: f.MaxPerOwner, CreatesPerMinute: f.CreatesPerMinute},
+		MirrorAllow: f.MirrorAllow, Every: f.MaintainInterval(), CacheBytes: int64(f.CacheGiB) << 30,
 	})
 	if err != nil {
 		return fmt.Errorf("forge.hosting: %w", err)
 	}
-	srv.Forge = &api.ForgeHosting{Provider: h.Provider, RunTokens: h.RunTokens, AllowInsecureHTTP: f.AllowInsecureHTTP,
+	srv.Forge = &api.ForgeHosting{Provider: h.Provider, Mirrors: h.Mirrors, RunTokens: h.RunTokens, AllowInsecureHTTP: f.AllowInsecureHTTP,
 		Git: githttp.New(githttp.Options{Backend: h.Store, MaxPushBytes: int64(f.MaxPushMiB) << 20, MaxConcurrent: f.MaxConcurrent, Log: log})}
 	if warns, err := h.Check(ctx); err == nil {
 		for _, w := range warns {

@@ -9,6 +9,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
+	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 )
 
 // Launchway's own Git hosting (forge.hosting; see internal/forge/hosting).
@@ -30,7 +31,9 @@ type ForgeHosting struct {
 	// Git serves clone, fetch and push; RunTokens checks the read-only
 	// credentials of runs. AllowInsecureHTTP lets Basic credentials travel over
 	// plain HTTP to a listener that is not loopback.
-	Git               *githttp.Handler
+	Git *githttp.Handler
+	// Mirrors runs the pull and push mirrors of repositories.
+	Mirrors           *mirror.Service
 	RunTokens         githttp.RunTokens
 	AllowInsecureHTTP bool
 }
@@ -55,7 +58,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(s.gitRoutes(), s.compatRoutes()...), []route{
+	return append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},

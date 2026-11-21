@@ -33,6 +33,18 @@ filesystem or S3 store there are two things to back up, and the marker says whet
 A push that dies before step 3 changes nothing visible; its pending pack is collected after a day. A
 push that dies after step 3 is committed even if the client was not told, and a retry says "up to date".
 
+## A mirror's write (Converge)
+
+A pull mirror does not push through git's receive-pack: `Converge` makes the managed refs (branches, tags and
+notes) of one repository equal to a source, in the same commit point a push uses. It makes a scratch bare
+repository whose objects borrow from the cache (so only what the repository lacks is transferred), lets the
+caller fetch the source into it, packs the new objects as one pack, stores and registers that pack like a push
+does, checks that every new tip is connected, and then makes one `Ledger.Commit` that compares and swaps every
+ref (creations, updates, and deletions when prune is on). A ref that moved meanwhile fails the call with
+`ErrStale` and changes nothing. A source with no refs while the repository has some is refused
+(`ErrEmptySource`). Converge does not check who may write: only a mirror's sync calls it, and the mirror service
+checks that the repository is marked as a mirror (the git routes refuse pushes to one).
+
 ## Reads
 
 A fetch asks the database for the repository's generation (one indexed read). If the server's cache is at

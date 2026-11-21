@@ -24,6 +24,7 @@ launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+launchway repos    mirror ...                 mirror hosted repositories to and from other servers
 launchway version
 ```
 
@@ -41,7 +42,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -613,6 +614,26 @@ launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q]
 | `set-default` | Changes the default of a kind in the same way. Refused for a quantity that does not read, a limit below what is promised, or a value above the limits |
 
 Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi` for memory. The same operations are `GET /api/v1/step-resources` and the routes under it in the [HTTP API](http-api.md#step-resources), and the MCP tools `get_step_resources`, `set_step_resource_limits` and `set_step_resource_default`.
+
+## launchway repos mirror
+
+Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirror** keeps a hosted repository an exact copy of another server's repository: every branch, tag and note, deletions followed, on a schedule and on demand; meanwhile it takes no pushes. A **push mirror** copies every accepted update to another server. Setting one up needs the admin role on the repository, running one now the operator role; both are recorded in the audit trail (`mirror.create`, `mirror.sync`, `mirror.promote`).
+
+```text
+launchway repos mirror status [OWNER/NAME] [--behind] [--json]
+launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
+                  [--credential-env NAME | --credential-file PATH] [--interval 1h] [--no-prune]
+launchway repos mirror sync OWNER/NAME [--id mir_...]
+launchway repos mirror pause|resume OWNER/NAME --id mir_...
+launchway repos mirror remove OWNER/NAME --id mir_...
+launchway repos mirror stop OWNER/NAME [--final-sync]
+```
+
+`status` lists each mirror with its state (`ok`, `error`, `pending`, `paused`, `running`), its lag, the number of refs and the last error, with credentials removed; `--behind` lists only those that have fallen behind. `add --direction pull` needs a repository with no branches or tags of its own, because mirroring replaces them. `sync` runs the pull mirror (or the one named with `--id`) now and exits with `4` if the run failed, printing why.
+
+`stop` is the cut-over step: the repository stops being a mirror, the mirror is deleted and pushes are accepted. With `--final-sync` the mirror runs once more first, and nothing changes if that run fails. A pull mirror whose source suddenly lists no branches or tags refuses to delete everything; stop mirroring if the other server really was emptied.
+
+A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `sync_mirror` and `stop_mirroring`.
 
 ## launchway version
 

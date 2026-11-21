@@ -68,6 +68,13 @@ var mcpPermissionTable = map[string]mcpRow{
 	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
 		[5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	// Mirrors of hosted repositories. The matrix server has Git hosting off, so
+	// every call that is let through is answered feature_off, which is a not-found (the API's own
+	// answer, passed on); a role on the repository decides the rest.
+	"list_mirrors":   {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"set_mirror":     {map[string]any{"repository": "acme/x", "url": "https://git.example.com/x.git"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"sync_mirror":    {map[string]any{"repository": "acme/x", "mirror_id": "mir_x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"stop_mirroring": {map[string]any{"repository": "acme/x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 }
 
 func outcome(errText string) string {
@@ -89,7 +96,8 @@ func outcome(errText string) string {
 // Every tool, called by each person with their own token, does exactly
 // what the API lets that person do: the same answer for the same reason.
 func TestMCPPermissionMatrix(t *testing.T) {
-	e := mcpEnv(t, envOpts{})
+	// One call per tool for each person: more than the default burst.
+	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 1200}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	tools := make([]string, 0, len(mcpPermissionTable))

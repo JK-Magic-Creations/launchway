@@ -152,9 +152,17 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/repositories/{owner}/{name}":    {"GET", "/api/v1/repositories/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PATCH /api/v1/repositories/{owner}/{name}":  {"PATCH", "/api/v1/repositories/o/x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"DELETE /api/v1/repositories/{owner}/{name}": {"DELETE", "/api/v1/repositories/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
-	"PUT /api/v1/step-resources/limits":          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
-	"GET /api/v1/step-resources/defaults/{kind}": {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
-	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
+	// Mirrors of hosted repositories: with hosting off every call is 404 feature_off.
+	"GET /api/v1/mirrors":                                        {"GET", "/api/v1/mirrors", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/mirrors":            {"GET", "/api/v1/repositories/o/x/mirrors", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/mirrors":           {"POST", "/api/v1/repositories/o/x/mirrors", `{"url":"https://git.example.com/x.git"}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}":     {"PATCH", "/api/v1/repositories/o/x/mirrors/mir_x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}":    {"DELETE", "/api/v1/repositories/o/x/mirrors/mir_x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync": {"POST", "/api/v1/repositories/o/x/mirrors/mir_x/sync", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/stop-mirroring":    {"POST", "/api/v1/repositories/o/x/stop-mirroring", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/step-resources/limits":                          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/step-resources/defaults/{kind}":                 {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/step-resources/defaults/{kind}":                 {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 
 	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
 	// permission check (see TestArtifactAccess).
