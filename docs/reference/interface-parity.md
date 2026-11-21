@@ -262,6 +262,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/runs/{id}/trust` | `trust_run` | `runs trust` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
+| `GET /api/v1/search` | — | — | — | exempt: the finder in the top bar: list_projects, list_runs and the repositories commands list and filter the same things for agents and scripts |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
 | `GET /api/v1/setup` | — | `users setup-code` | — | exempt: the first-run page asks it before anyone can sign in; the console command issues the code |
 | `GET /api/v1/setup-guide` | — | `doctor security` | — | exempt: the first-run guide is a walk-through in the browser; its facts are the same ones the other interfaces already read (runners, hosting, connections, projects) and the security checklist is launchway doctor security |

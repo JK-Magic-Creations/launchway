@@ -3,6 +3,7 @@ package parity
 // The rows were drafted from the route table and are kept by hand.
 
 var rows = []Row{
+	{Route: "GET /api/v1/search", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the finder in the top bar: list_projects, list_runs and the repositories commands list and filter the same things for agents and scripts"},
 	{Route: "GET /api/v1/home", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "a read model for the Home page, worked out from the same rule as attention, plus runs and projects that list_runs and list_projects give in full"},
 	{Route: "GET /api/v1/attention", MCP: "attention", CLI: "attention", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/attention/dismiss", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "a personal preference of the person at the Home page (set aside until something newer replaces it); a token or agent has no Home page"},

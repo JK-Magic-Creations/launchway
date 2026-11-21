@@ -22,14 +22,14 @@ func TestHomeNeverLeaksAnotherTeamsProjects(t *testing.T) {
 			}
 		}
 		var h homeAnswer
-		b.get(e.srv.URL + "/api/v1/home").json(t, &h)
+		b.get(e.srv.URL+"/api/v1/home").json(t, &h)
 		if h.Counts["projects"] != 1 || len(h.Running) != 1 {
 			t.Errorf("%s: counts %v running %d; one project and one run are visible", user, h.Counts, len(h.Running))
 		}
 	}
 	// An administrator sees both, with the run in progress.
 	var h homeAnswer
-	e.signIn(t, "ada").get(e.srv.URL + "/api/v1/home").json(t, &h)
+	e.signIn(t, "ada").get(e.srv.URL+"/api/v1/home").json(t, &h)
 	if h.Counts["projects"] != 2 || len(h.Running) != 2 {
 		t.Errorf("ada: counts %v running %d", h.Counts, len(h.Running))
 	}
@@ -41,7 +41,7 @@ func TestDismissingIsPersonal(t *testing.T) {
 	var a attentionAnswer
 	otto := e.signIn(t, "otto")
 	for i := 0; i < 50 && len(a.Needs) == 0; i++ {
-		otto.get(e.srv.URL + "/api/v1/attention").json(t, &a)
+		otto.get(e.srv.URL+"/api/v1/attention").json(t, &a)
 		if len(a.Needs) == 0 {
 			e.api.homeCache.drop("otto")
 		}
@@ -55,12 +55,12 @@ func TestDismissingIsPersonal(t *testing.T) {
 		t.Fatalf("dismiss: %d %s", r.status, r.body)
 	}
 	var after attentionAnswer
-	otto.get(e.srv.URL + "/api/v1/attention").json(t, &after)
+	otto.get(e.srv.URL+"/api/v1/attention").json(t, &after)
 	if after.Count != len(a.Needs)-1 || len(after.Dismissed) != 1 {
 		t.Errorf("after dismissing: %+v", after)
 	}
 	var ada attentionAnswer
-	e.signIn(t, "ada").get(e.srv.URL + "/api/v1/attention").json(t, &ada)
+	e.signIn(t, "ada").get(e.srv.URL+"/api/v1/attention").json(t, &ada)
 	if len(ada.Dismissed) != 0 {
 		t.Errorf("someone else's dismissal changed ada's list: %+v", ada)
 	}
@@ -96,7 +96,7 @@ func TestFoldersAreSharedByRoleAndHiddenByVisibility(t *testing.T) {
 		Items map[string]itemOrg
 	}
 	var seen org
-	vic.get(e.srv.URL + "/api/v1/organize/pipelines").json(t, &seen)
+	vic.get(e.srv.URL+"/api/v1/organize/pipelines").json(t, &seen)
 	if len(seen.Folders) != 1 || seen.Folders[0].Count != 1 || seen.Items["pay-api"].Folder != f.ID {
 		t.Errorf("vic sees %+v", seen)
 	}
@@ -117,7 +117,7 @@ func TestFoldersAreSharedByRoleAndHiddenByVisibility(t *testing.T) {
 	if r := otto.do("PUT", e.srv.URL+"/api/v1/organize/pipelines/labels", `{"item":"pay-api","labels":["Tier-1","team-pay"]}`); r.status != 200 {
 		t.Errorf("an operator labels: %d %s", r.status, r.body)
 	}
-	vic.get(e.srv.URL + "/api/v1/organize/pipelines").json(t, &seen)
+	vic.get(e.srv.URL+"/api/v1/organize/pipelines").json(t, &seen)
 	if got := strings.Join(seen.Items["pay-api"].Labels, ","); got != "team-pay,tier-1" {
 		t.Errorf("labels %q", got)
 	}
@@ -125,7 +125,7 @@ func TestFoldersAreSharedByRoleAndHiddenByVisibility(t *testing.T) {
 	if r := ada.do("DELETE", e.srv.URL+"/api/v1/organize/folders/"+f.ID, ""); r.status != 200 {
 		t.Fatal(r.status)
 	}
-	vic.get(e.srv.URL + "/api/v1/organize/pipelines").json(t, &seen)
+	vic.get(e.srv.URL+"/api/v1/organize/pipelines").json(t, &seen)
 	if len(seen.Folders) != 0 || seen.Items["pay-api"].Folder != "" {
 		t.Errorf("after delete: %+v", seen)
 	}
@@ -141,7 +141,7 @@ func TestLayoutsInheritLockAndPersonalSurvive(t *testing.T) {
 	}
 	get := func(b *browser, scope string) ans {
 		var a ans
-		b.get(e.srv.URL + "/api/v1/layouts/pipelines?scope=" + scope).json(t, &a)
+		b.get(e.srv.URL+"/api/v1/layouts/pipelines?scope="+scope).json(t, &a)
 		return a
 	}
 	put := func(b *browser, scope, data string, locked bool) int {
@@ -202,5 +202,54 @@ func TestLayoutsInheritLockAndPersonalSurvive(t *testing.T) {
 	b, _ := json.Marshal(doc)
 	if r := ada.do("POST", e.srv.URL+"/api/v1/layouts-import?dry_run=1", string(b)); r.status != 200 || !strings.Contains(string(r.body), "layout pipelines") {
 		t.Errorf("import: %d %s", r.status, r.body)
+	}
+}
+
+func TestFuzzyScoreRanksAndForgivesTypos(t *testing.T) {
+	cases := []struct {
+		q, text  string
+		min, max int
+	}{
+		{"pay", "pay", 100, 100},
+		{"pay", "pay-api", 80, 90},
+		{"api", "pay-api", 65, 75},
+		{"ayap", "pay-api", 1, 40},      // letters in order, skipped
+		{"paymnets", "payments", 1, 40}, // swapped letters
+		{"pyment", "payments", 1, 40},   // a missing letter
+		{"zzz", "payments", 0, 0},
+	}
+	for _, c := range cases {
+		if got := fuzzyScore(c.q, c.text); got < c.min || got > c.max {
+			t.Errorf("%q in %q scored %d, want %d to %d", c.q, c.text, got, c.min, c.max)
+		}
+	}
+	if fuzzyScore("pay", "pay") <= fuzzyScore("pay", "pay-api") || fuzzyScore("pay", "pay-api") <= fuzzyScore("api", "pay-api") {
+		t.Error("exact beats prefix beats word-prefix")
+	}
+}
+
+func TestSearchOnlyReturnsWhatThePersonMaySee(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	run := e.startRun(t, "pay-api")
+	_ = run
+	dana, vic := e.signIn(t, "dana"), e.signIn(t, "vic")
+	for _, q := range []string{"pay", "#1", "main", "1"} {
+		r := dana.get(e.srv.URL + "/api/v1/search?q=" + q)
+		if r.status != 200 || strings.Contains(string(r.body), "pay-api") {
+			t.Errorf("dana searches %q and learns of pay-api: %d %s", q, r.status, r.body)
+		}
+	}
+	var out struct{ Hits []SearchHit }
+	vic.get(e.srv.URL+"/api/v1/search?q=pay-ap").json(t, &out)
+	if len(out.Hits) == 0 || out.Hits[0].Name != "pay-api" || out.Hits[0].Kind != "project" {
+		t.Errorf("vic's hits: %+v", out.Hits)
+	}
+	vic.get(e.srv.URL+"/api/v1/search?q=%231").json(t, &out)
+	found := false
+	for _, h := range out.Hits {
+		found = found || h.Kind == "run"
+	}
+	if !found {
+		t.Errorf("a Sortie is found by number: %+v", out.Hits)
 	}
 }

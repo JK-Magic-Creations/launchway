@@ -1,6 +1,10 @@
 package engine
 
-import "time"
+import (
+	"strconv"
+	"strings"
+	"time"
+)
 
 // AttentionWindow is how far back the rule looks, and AttentionRunCap the most
 // runs it reads: the newest ones. Both bound the cost with a very large history.
@@ -107,4 +111,73 @@ func (e *Engine) RunsByID(ids []string) ([]*RunSummary, error) {
 		out = []*RunSummary{}
 	}
 	return out, nil
+}
+
+// SearchRuns finds runs by number ("12" or "#12"), by the start of a commit
+// (4 or more hex digits) or by branch (prefix or contains), newest first, among
+// the projects given (all if nil). It is bounded by limit and by an index on
+// the run's time, and never returns more than the caller may see.
+func (e *Engine) SearchRuns(only []string, q string, limit int) ([]*RunSummary, error) {
+	q = strings.TrimPrefix(strings.TrimSpace(q), "#")
+	if q == "" || limit <= 0 {
+		return []*RunSummary{}, nil
+	}
+	var where []string
+	var args []any
+	if n, err := strconv.Atoi(q); err == nil {
+		where = append(where, "number = ?")
+		args = append(args, n)
+	}
+	esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
+	if len(q) >= 4 && isHex(q) {
+		where = append(where, `sha LIKE ? ESCAPE '\'`)
+		args = append(args, esc+"%")
+	}
+	if len(q) >= 3 {
+		where = append(where, `branch LIKE ? ESCAPE '\'`)
+		args = append(args, "%"+esc+"%")
+	}
+	if len(where) == 0 {
+		return []*RunSummary{}, nil
+	}
+	cond := "(" + strings.Join(where, " OR ") + ")"
+	if only != nil {
+		if len(only) == 0 {
+			return []*RunSummary{}, nil
+		}
+		marks := strings.TrimSuffix(strings.Repeat("?,", len(only)), ",")
+		cond += " AND project IN (" + marks + ")"
+		for _, p := range only {
+			args = append(args, p)
+		}
+	}
+	since := e.now().Add(-90 * 24 * time.Hour).UnixMilli()
+	args = append(args, since, limit)
+	rows, err := e.db.Query(`SELECT `+e.runCols()+` FROM runs WHERE `+cond+` AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?`, args...)
+	if err != nil {
+		return nil, err
+	}
+	var out []*RunSummary
+	for rows.Next() {
+		r, err := e.scanRun(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	rows.Close()
+	if out == nil {
+		out = []*RunSummary{}
+	}
+	return out, rows.Err()
+}
+
+func isHex(s string) bool {
+	for _, c := range s {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F') {
+			return false
+		}
+	}
+	return true
 }

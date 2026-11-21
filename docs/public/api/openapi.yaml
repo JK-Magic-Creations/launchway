@@ -8053,6 +8053,29 @@ paths:
             tags:
                 - runs
             x-launchway-access: run-viewer
+    /api/v1/search:
+        get:
+            description: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch). ?q=, ?limit= (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link.'
+            operationId: get_api_v1_search
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch).'
+            tags:
+                - search
+            x-launchway-access: signed-in
     /api/v1/settings/approvals:
         get:
             description: Whether the person who started a run may approve it here (allow_self), and whether people sign in. The approval cards use it to say exactly why someone cannot approve.
