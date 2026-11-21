@@ -1,0 +1,163 @@
+{
+ "ansible_version": "2.19.15",
+ "check": true,
+ "diff": true,
+ "duration_ms": 9686,
+ "format": "launchway-ansible-report/1",
+ "playbook": "site.yml",
+ "plays": [
+  {
+   "name": "Configure the demo service",
+   "tasks": [
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Install the demo configuration file",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "diff": [
+        {
+         "after": "/etc/lw-demo.conf",
+         "before": "/etc/lw-demo.conf",
+         "text": "--- /etc/lw-demo.conf\n+++ /etc/lw-demo.conf\n@@ -1 +1 @@\n-message=changed-by-hand\n+message=hello from launchway\n"
+        }
+       ],
+       "duration_ms": 3409,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 2621,
+       "status": "ok"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Install the demo service unit",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 2309,
+       "status": "ok"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 2118,
+       "status": "ok"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": false,
+     "name": "Reload systemd after the unit changed",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 10,
+       "status": "skipped"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 11,
+       "status": "skipped"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": false,
+     "name": "Enable and start the demo service",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 1687,
+       "status": "ok"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "duration_ms": 1692,
+       "status": "changed"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Write a token that must never be reported",
+     "no_log": true,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 2126,
+       "status": "ok"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 2217,
+       "status": "ok"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.fail",
+     "handler": false,
+     "name": "Fail on the host asked to fail",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 12,
+       "status": "skipped"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 17,
+       "status": "skipped"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": true,
+     "name": "restart demo",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 7,
+       "status": "skipped"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "lw-cactest-1": {
+   "changed": 1,
+   "failures": 0,
+   "ignored": 0,
+   "ok": 4,
+   "rescued": 0,
+   "skipped": 3,
+   "unreachable": 0
+  },
+  "lw-cactest-2": {
+   "changed": 1,
+   "failures": 0,
+   "ignored": 0,
+   "ok": 4,
+   "rescued": 0,
+   "skipped": 2,
+   "unreachable": 0
+  }
+ }
+}

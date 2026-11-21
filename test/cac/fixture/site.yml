@@ -1,0 +1,58 @@
+---
+- name: Configure the demo service
+  hosts: all
+  become: false
+  gather_facts: false
+  vars:
+    demo_message: hello from launchway
+  tasks:
+    - name: Install the demo configuration file
+      ansible.builtin.copy:
+        dest: /etc/lw-demo.conf
+        content: "message={{ demo_message }}\n"
+        mode: "0644"
+      notify: restart demo
+
+    - name: Install the demo service unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/lw-demo.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Launchway configuration test service
+          [Service]
+          ExecStart=/bin/sleep infinity
+          [Install]
+          WantedBy=multi-user.target
+      register: unit
+
+    - name: Reload systemd after the unit changed
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: unit is changed and not ansible_check_mode
+
+    - name: Enable and start the demo service
+      ansible.builtin.systemd_service:
+        name: lw-demo.service
+        enabled: true
+        state: started
+      when: not ansible_check_mode or unit is not changed
+
+    - name: Write a token that must never be reported
+      ansible.builtin.copy:
+        dest: /etc/lw-demo.token
+        content: "{{ demo_token | default('none') }}\n"
+        mode: "0600"
+      no_log: true
+
+    - name: Fail on the host asked to fail
+      ansible.builtin.fail:
+        msg: "this host was told to fail ({{ inventory_hostname }})"
+      when: (fail_on | default('')) == inventory_hostname
+
+  handlers:
+    - name: restart demo
+      ansible.builtin.systemd_service:
+        name: lw-demo.service
+        state: restarted
+      when: not ansible_check_mode

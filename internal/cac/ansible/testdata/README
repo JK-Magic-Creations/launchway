@@ -1,0 +1,5 @@
+Real reports, written by internal/starters/library/ansible/callback_plugins/launchway_report.py
+(ansible-core 2.19.15) running test/cac/fixture/site.yml against two systemd containers:
+first-run (everything changed), idempotent (second run), one-failed (a task fails on lw-cactest-2),
+check-drift (check mode after a file was changed by hand on one host and a service stopped on the other).
+The token CANARY-s3cr3t-7f3a was given to the playbook under no_log; it must appear nowhere.

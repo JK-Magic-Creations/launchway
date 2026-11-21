@@ -1,0 +1,20 @@
+# The default execution image for Launchway's Ansible Maneuvers.
+#
+# Build it yourself and push it to your registry, or pull one you trust, then
+# name it in the Maneuver's `image` parameter. Launchway does not ship or
+# bundle it: nothing in the server needs Ansible.
+#
+#   podman build -t registry.example.com/ops/ansible-ee:2.19 packaging/ansible-ee
+#
+# Everything is pinned. Raise a version here, rebuild, and name the new image.
+FROM docker.io/library/python:3.12-slim-bookworm
+ARG ANSIBLE_CORE=2.19.15
+ARG ANSIBLE_LINT=25.9.2
+ARG JMESPATH=1.0.1
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssh-client git ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip install --no-cache-dir "ansible-core==${ANSIBLE_CORE}" "ansible-lint==${ANSIBLE_LINT}" "jmespath==${JMESPATH}" \
+ && useradd --create-home --uid 1000 ansible
+USER 1000
+ENV ANSIBLE_FORCE_COLOR=0 ANSIBLE_NOCOLOR=1 PYTHONUNBUFFERED=1

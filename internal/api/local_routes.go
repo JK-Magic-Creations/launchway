@@ -4,7 +4,7 @@ package api
 func (s *Server) routes() []route {
 	var all []route
 	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.flowRoutes(), s.cacheRoutes(), s.launchRoutes(),
-		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.encryptionRoutes(), s.localRoutes(), s.queueRoutes(), s.starterRoutes(), s.registryRoutes(), s.toggleRoutes(), s.toggleSDKRoutes(), s.eventRoutes(), s.eventSourceRoutes(), s.runTriggerRoutes(), s.standardsRoutes(), s.releaseRoutes(), s.releaseManageRoutes(), s.graphRoutes(), s.graphFollowRoutes()} {
+		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.encryptionRoutes(), s.localRoutes(), s.queueRoutes(), s.starterRoutes(), s.registryRoutes(), s.toggleRoutes(), s.toggleSDKRoutes(), s.eventRoutes(), s.eventSourceRoutes(), s.runTriggerRoutes(), s.standardsRoutes(), s.releaseRoutes(), s.releaseManageRoutes(), s.graphRoutes(), s.graphFollowRoutes(), s.cacRoutes()} {
 		all = append(all, part...)
 	}
 	all = append(all, s.guideRoutes()...) // the first-run guide (guide_routes.go)

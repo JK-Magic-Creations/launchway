@@ -732,7 +732,13 @@ func (r *Runner) resolveSecrets(ctx context.Context, job *engine.Job, sys func(s
 	for _, name := range slices.Sorted(maps.Keys(job.Secrets)) {
 		ref := job.Secrets[name]
 		sys("Secret %s ← %s", name, ref)
-		v, err := r.lookup(ctx, job.Project, ref, sys)
+		var v string
+		var err error
+		if ref.Store == stateStore {
+			v, err = r.stateCredential(ctx, job, ref)
+		} else {
+			v, err = r.lookup(ctx, job.Project, ref, sys)
+		}
 		if err == nil {
 			values[name] = v
 			continue

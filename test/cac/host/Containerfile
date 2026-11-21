@@ -1,0 +1,12 @@
+# A systemd machine with sshd, standing in for a host in the configuration
+# tests (container name prefix lw-cactest-). Test use only.
+FROM docker.io/library/debian:12-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends systemd systemd-sysv openssh-server python3 sudo procps iproute2 \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /run/sshd /root/.ssh && chmod 700 /root/.ssh \
+ && systemctl enable ssh \
+ && rm -f /etc/ssh/ssh_host_*
+RUN echo "d /run/sshd 0755 root root -" > /etc/tmpfiles.d/sshd.conf && printf 'PermitRootLogin prohibit-password\nPasswordAuthentication no\nHostKey /etc/ssh/ssh_host_ed25519_key\n' > /etc/ssh/sshd_config.d/lw.conf
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

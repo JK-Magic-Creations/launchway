@@ -90,6 +90,11 @@ var (
 		Writers: []string{"internal/engine/eventsources.go"},
 		Why:     "the secrets that sign calls to a project's event sources",
 	}
+	stateColumn = Column{
+		Table: "tf_state_versions", Column: "sealed", Key: "id", Purpose: keyring.PurposeSecrets,
+		Writers: []string{"internal/cac/tfstate/store.go"},
+		Why:     "Terraform and OpenTofu state: it holds generated passwords, provider credentials and private keys in clear text by design of its format",
+	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
 		Writers: []string{"internal/forge/webhooks/store.go"},
@@ -116,7 +121,7 @@ var (
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
 // ExplainedColumns.
-var Registry = []Column{webhooksColumn, webhookURLColumn, eventSourcesColumn, totpColumn, hostKeysColumn, metaColumn}
+var Registry = []Column{webhooksColumn, webhookURLColumn, eventSourcesColumn, totpColumn, hostKeysColumn, metaColumn, stateColumn}
 
 // ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random

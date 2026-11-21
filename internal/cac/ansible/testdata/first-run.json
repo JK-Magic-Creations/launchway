@@ -1,0 +1,189 @@
+{
+ "ansible_version": "2.19.15",
+ "check": false,
+ "diff": true,
+ "duration_ms": 17687,
+ "format": "launchway-ansible-report/1",
+ "playbook": "site.yml",
+ "plays": [
+  {
+   "name": "Configure the demo service",
+   "tasks": [
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Install the demo configuration file",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "diff": [
+        {
+         "after": "/etc/lw-demo.conf",
+         "before": "",
+         "text": "--- before\n+++ /etc/lw-demo.conf\n@@ -0,0 +1 @@\n+message=hello from launchway\n"
+        }
+       ],
+       "duration_ms": 4750,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "diff": [
+        {
+         "after": "/etc/lw-demo.conf",
+         "before": "",
+         "text": "--- before\n+++ /etc/lw-demo.conf\n@@ -0,0 +1 @@\n+message=hello from launchway\n"
+        }
+       ],
+       "duration_ms": 4720,
+       "status": "changed"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Install the demo service unit",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "diff": [
+        {
+         "after": "/etc/systemd/system/lw-demo.service",
+         "before": "",
+         "text": "--- before\n+++ /etc/systemd/system/lw-demo.service\n@@ -0,0 +1,6 @@\n+[Unit]\n+Description=Launchway configuration test service\n+[Service]\n+ExecStart=/bin/sleep infinity\n+[Install]\n+WantedBy=multi-user.target\n"
+        }
+       ],
+       "duration_ms": 3736,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "diff": [
+        {
+         "after": "/etc/systemd/system/lw-demo.service",
+         "before": "",
+         "text": "--- before\n+++ /etc/systemd/system/lw-demo.service\n@@ -0,0 +1,6 @@\n+[Unit]\n+Description=Launchway configuration test service\n+[Service]\n+ExecStart=/bin/sleep infinity\n+[Install]\n+WantedBy=multi-user.target\n"
+        }
+       ],
+       "duration_ms": 3856,
+       "status": "changed"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": false,
+     "name": "Reload systemd after the unit changed",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 2081,
+       "status": "ok"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 2142,
+       "status": "ok"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": false,
+     "name": "Enable and start the demo service",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "duration_ms": 1737,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "duration_ms": 1791,
+       "status": "changed"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.copy",
+     "handler": false,
+     "name": "Write a token that must never be reported",
+     "no_log": true,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "duration_ms": 3493,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "duration_ms": 3548,
+       "status": "changed"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.fail",
+     "handler": false,
+     "name": "Fail on the host asked to fail",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": false,
+       "duration_ms": 12,
+       "status": "skipped"
+      },
+      "lw-cactest-2": {
+       "changed": false,
+       "duration_ms": 16,
+       "status": "skipped"
+      }
+     }
+    },
+    {
+     "action": "ansible.builtin.systemd_service",
+     "handler": true,
+     "name": "restart demo",
+     "no_log": false,
+     "results": {
+      "lw-cactest-1": {
+       "changed": true,
+       "duration_ms": 1508,
+       "status": "changed"
+      },
+      "lw-cactest-2": {
+       "changed": true,
+       "duration_ms": 1559,
+       "status": "changed"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "stats": {
+  "lw-cactest-1": {
+   "changed": 5,
+   "failures": 0,
+   "ignored": 0,
+   "ok": 6,
+   "rescued": 0,
+   "skipped": 1,
+   "unreachable": 0
+  },
+  "lw-cactest-2": {
+   "changed": 5,
+   "failures": 0,
+   "ignored": 0,
+   "ok": 6,
+   "rescued": 0,
+   "skipped": 1,
+   "unreachable": 0
+  }
+ }
+}
