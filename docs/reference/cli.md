@@ -393,6 +393,8 @@ launchway runs show RUN_ID [--json]
 of a stage do not wait for each other, so a stage with several runs them at the same time (`stage 2 (runs together): test
 (running), security-go (running)`).
 
+While a run goes on, a line under the stages gives the time left (`Estimate: about 6 min left; waiting for a decision: approve.`), and each step that has not finished says what it usually takes (`[usually about 2 min]`). A finished run says `Took 8m 03s, 12% faster than usual.` See [Watching a run live](../guide/watching-runs.md).
+
 ```sh
 launchway runs show run_06gzde02yts1v325jvp0
 ```
@@ -416,7 +418,7 @@ Steps:
 Prints a Sortie's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
 
 ```text
-launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
+launchway runs logs RUN_ID [STEP] [--step S] [--service NAME] [--follow]
 ```
 
 | Flag | Default | Meaning |
@@ -424,6 +426,7 @@ launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
 | `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
 | `--follow` | off | Keep printing new lines until the Sortie finishes. |
+| `--follow` | off | Keep printing new lines until the run finishes, asking every 400 ms. |
 
 ```sh
 launchway runs logs run_06gzde1rb0s24hb652q0 --step smoke-test
@@ -886,18 +889,6 @@ launchway registry retention PROJECT|REPOSITORY [--run] [--json]
 launchway registry policy get [PROJECT|REPOSITORY] [--json]
 launchway registry policy set [PROJECT|REPOSITORY] [--quota-gib N] [--keep-last N] [--keep-tags P,P] [--untagged-days N] [--immutable-tags P,P] [--pull-from P,P] [--json]
 launchway registry gc [--dry-run] [--last] [--json]
-
-## launchway standards
-
-Shows and changes Standing orders: the checks every repository gets, with where each setting comes from. Reading needs the rights to read the project (or any project, for a level); changing a level needs to administer that level (an admin of the project at a project). The API refuses a value weaker than a lock above, with the sentence that names the lock.
-
-```text
-launchway standards show PROJECT [--json]
-launchway standards show --level LEVEL [--scope NAME] [--json]
-launchway standards set --level LEVEL [--scope NAME] [KEY=VALUE ...] [--unset KEY] [--reason TEXT] [--lock KEY=REASON] [--unlock KEY] [--json]
-launchway standards explain PROJECT KEY
-launchway standards coverage [--level LEVEL] [--scope NAME] [--json]
-launchway standards profile [--json]
 ```
 
 | Command | What it does |
@@ -914,6 +905,21 @@ launchway standards profile [--json]
 
 The same operations are the routes under [Built-in Depot](http-api.md#built-in-registry) in the HTTP API, and the MCP tools `registry_status`, `list_registry_images`, `inspect_registry_image`, `delete_registry_image`, `get_registry_policy`, `set_registry_policy`, `preview_registry_retention`, `run_registry_retention` and `registry_gc`. Pushing and pulling are done with the clients you already have (`docker`, `podman`, `skopeo`, `helm`), with an API token as the password.
 
+## launchway standards
+
+Shows and changes Standing orders: the checks every repository gets, with where each setting comes from. Reading needs the rights to read the project (or any project, for a level); changing a level needs to administer that level (an admin of the project at a project). The API refuses a value weaker than a lock above, with the sentence that names the lock.
+
+```text
+launchway standards show PROJECT [--json]
+launchway standards show --level LEVEL [--scope NAME] [--json]
+launchway standards set --level LEVEL [--scope NAME] [KEY=VALUE ...] [--unset KEY] [--reason TEXT] [--lock KEY=REASON] [--unlock KEY] [--json]
+launchway standards explain PROJECT KEY
+launchway standards coverage [--level LEVEL] [--scope NAME] [--json]
+launchway standards profile [--json]
+```
+
+| Command | What it does |
+|---|---|
 | `show` | For a project: each check, its state, where the state comes from, what a lock above holds, the gates, license lists, exemptions and notices. With `--level`, the settings that level has |
 | `set` | Changes a level's settings: `check.secrets=block`, `gate.fail_on=critical`, `gate.require_fix=false`, `gate.default_branch=block`, `gate.incomplete=fail`, `licenses.deny=GPL-3.0-only,AGPL-3.0`, `licenses.allow=...`, `off=true --reason "..."` (switches Standing orders off for the level; recorded in the Logbook). `--lock` and `--unlock` set and remove locks |
 | `explain` | Why a setting has the value it has: every level that sets it, which one won, and any lock |
