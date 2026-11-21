@@ -159,6 +159,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/flaky` | `list_flaky_tests` | `tests flaky` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
+| `GET /api/v1/projects/{name}/tests/shards` | `split_tests` | `tests split` | — | equal |
+| `GET /api/v1/projects/{name}/tests/timings` | `split_tests` | `tests timings` | — | equal |
 | `POST /api/v1/projects/{name}/toggle-apply` | `apply_toggles_file` | `toggles apply` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
 | `GET /api/v1/projects/{name}/toggle-changes` | `list_toggle_changes_waiting` | `toggles waiting` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/toggle-changes/{id}/approve` | `approve_toggle_change` | `toggles approve` | `not needed by terraform` | equal |
@@ -191,8 +193,6 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/toggles/{key}/lock` | `unlock_toggle` | `toggles unlock` | `planned: resource launchway_toggle (lock block)` | equal |
 | `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `lock_toggle` | `toggles lock` | `planned: resource launchway_toggle (lock block)` | equal |
 | `GET /api/v1/projects/{name}/toggles/{key}/usage` | `get_toggle_usage` | `toggles usage` | `not needed by terraform` | equal |
-| `GET /api/v1/projects/{name}/tests/shards` | `split_tests` | `tests split` | — | equal |
-| `GET /api/v1/projects/{name}/tests/timings` | `split_tests` | `tests timings` | — | equal |
 | `GET /api/v1/projects/{name}/variables` | `get_effective_variables` | `variables effective` | `planned: data source launchway_effective_variables` | equal |
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |

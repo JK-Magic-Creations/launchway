@@ -4254,6 +4254,37 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/tests/flaky:
+        get:
+            description: The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. ?limit= (default 100, at most 500).
+            operationId: get_api_v1_projects_name_tests_flaky
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
     /api/v1/projects/{name}/tests/history:
         get:
             description: One test's results in the project's last runs.
@@ -4282,6 +4313,68 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             summary: One test's results in the project's last runs.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/tests/shards:
+        get:
+            description: A balanced split of the tests for ?count= shards (1 to 256) by duration.
+            operationId: get_api_v1_projects_name_tests_shards
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A balanced split of the tests for ?count= shards (1 to 256) by duration.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/tests/timings:
+        get:
+            description: Each test's typical duration from its statistics, slowest first. ?limit= (at most 100000).
+            operationId: get_api_v1_projects_name_tests_timings
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Each test's typical duration from its statistics, slowest first.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -9256,7 +9349,7 @@ paths:
             x-launchway-audit: run.cancel
     /api/v1/runs/{id}/coverage:
         get:
-            description: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            description: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             operationId: get_api_v1_runs_id_coverage
             parameters:
                 - in: path
@@ -9281,13 +9374,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            summary: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/coverage/files:
         get:
-            description: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            description: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
             operationId: get_api_v1_runs_id_coverage_files
             parameters:
                 - in: path
@@ -9312,7 +9405,100 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            summary: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/debrief:
+        get:
+            description: 'The Debrief of a run: summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
+            operationId: get_api_v1_runs_id_debrief
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The Debrief of a run: summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/debrief/export:
+        get:
+            description: 'The Debrief as a download: ?format=html (one file, no network needed), pdf, json or junit (every result, merged).'
+            operationId: get_api_v1_runs_id_debrief_export
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The Debrief as a download: ?format=html (one file, no network needed), pdf, json or junit (every result, merged).'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/debrief/summary:
+        get:
+            description: The short Markdown form for a pull request comment; ?format=json adds the headline and the annotations (failing assertions with a file and line).
+            operationId: get_api_v1_runs_id_debrief_summary
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The short Markdown form for a pull request comment; ?format=json adds the headline and the annotations (failing assertions with a file and line).
             tags:
                 - runs
             x-launchway-access: run-viewer
