@@ -736,6 +736,10 @@ delivery:
       # take their pod template from a Deployment (workloadRef). Off by default: a Deployment
       # holds its pod spec.
       readDeployments: false
+      # -- Grant get and list on pods and get on pods/log in the rollout namespaces, so that the
+      # run page can show the end of a failed analysis job's log and the pods of a rollout. Off
+      # by default: logs can hold anything a job prints.
+      readPods: false
       # -- Rollouts the deploy runner may promote, abort and retry (rollout steps, the run
       # page's buttons, abort_first, on_cancel: abort), by namespace; each namespace must be in
       # rolloutNamespaces. Grants patch on rollouts/status for exactly these names; the

@@ -802,7 +802,7 @@ func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	d.Source = redactSource(d.Source)
+	s.presentRun(identityFrom(r), d)
 	writeJSON(w, http.StatusOK, d)
 }
 

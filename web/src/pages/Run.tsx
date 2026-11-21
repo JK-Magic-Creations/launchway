@@ -3,7 +3,8 @@ import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
 import { RunLine } from "../components/RunLine";
 import { whyWaiting } from "../components/whyWaiting";
-import { RerunButton, RerunFailedButton } from "../components/Rerun";
+import { RerunButton, RerunFailedButton, RerunPicker } from "../components/Rerun";
+import { StepCauseView } from "../components/StepCause";
 import { RunFlowBanners } from "../components/RunFlow";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
@@ -205,6 +206,12 @@ export function RunPage({ id }: { id: string }) {
   // A step that failed and is allowed to (on_failure: continue) does not fail the run.
   const firstFailed = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);
   const failure = explainFailure(run.step_list);
+  // A run that made a deployment is never resumed: re-running from the step
+  // the server names (the failed one, or the deploy step it belongs to) is.
+  const act0 = (name: string) => run.actions?.find((a) => a.name === name);
+  const resumeBlocked = run.resume?.allowed === false || act0("resume")?.available === false;
+  const mayCancel = act0("cancel")?.available !== false;
+  const rerunTarget = run.step_list.find((s) => s.id === (run.resume?.rerun_from || firstFailed?.id));
   // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
@@ -235,11 +242,11 @@ export function RunPage({ id }: { id: string }) {
       <RunHeader run={run} now={now} done={done} live={live} density={density} onDensity={changeDensity} select={select} setTab={setTab}
         waitingStep={waitingStep} verifyWaiting={verifyWaiting} deploying={deploying} deployingPhase={deploying ? deployingPhase(run, deploying) : undefined}
         actions={<>
-          {mayOperate && !done && !run.cancel_requested && (
+          {mayOperate && !done && !run.cancel_requested && mayCancel && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && !run.draft && <RerunFailedButton run={run} />}
-          {mayOperate && !run.needs_newer_server && run.status === "canceled" && (
+          {mayOperate && !run.needs_newer_server && run.status === "canceled" && run.resume?.allowed !== false && (
             <button type="button" className="btn btn-primary" disabled={busy}
               title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
@@ -248,6 +255,9 @@ export function RunPage({ id }: { id: string }) {
           )}
         </>} />
       <ErrorBox error={actionErr} />
+      {actionErr instanceof Error && /Re-run from/.test(actionErr.message) && rerunTarget && mayRerun && (
+        <p className="refusal-action"><RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary /></p>
+      )}
 
       {run.needs_newer_server && (
         <div className="callout callout-draft">
@@ -323,15 +333,25 @@ export function RunPage({ id }: { id: string }) {
 
       <RunFlowBanners run={run} done={done} onSelect={select} />
 
+      {resumeBlocked && mayOperate && !run.needs_newer_server && (
+        <div className="callout callout-info callout-row" role="status">
+          <span><strong>This run cannot be resumed.</strong> {run.resume?.reason}. Re-run from <Mono>{rerunTarget?.id ?? ""}</Mono> instead: it makes a new
+            deployment attempt of the same version and reuses every step before it, so nothing is rebuilt.</span>
+          {rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary />}
+        </div>
+      )}
+
       {run.status === "failed" && failure && firstFailed && (
         <FailurePanel failure={failure} actions={<>
-          {mayOperate && !run.needs_newer_server && (
+          {mayOperate && !run.needs_newer_server && !resumeBlocked && (
             <button type="button" className="btn btn-primary" disabled={busy}
               title="Runs again, in this same run, only the steps that did not succeed. The steps that passed are kept."
-              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Run again from the failed step</button>
+              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Resume this run from the failed step</button>
           )}
-          {mayOperate && !run.needs_newer_server && !run.draft && <RerunFailedButton run={run} />}
-          {mayRerun && run.step_list.length > 1 && <RerunButton run={run} step={run.step_list[0]} label="Run everything again" />}
+          {mayRerun && rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary={resumeBlocked} />}
+          {mayRerun && <RerunPicker run={run} />}
+          {mayOperate && !run.needs_newer_server && !run.draft && !rerunTarget && <RerunFailedButton run={run} />}
+          {mayRerun && run.step_list.length > 1 && <RerunButton run={run} step={run.step_list[0]} label="Re-run everything" />}
           <button type="button" className="btn btn-sm" onClick={() => { select(firstFailed.id); setTab("graph"); }}>Open the log of {firstFailed.id}</button>
           {firstFailed.policy_blocked && <button type="button" className="btn btn-sm" onClick={() => setTab("policy")}>See the policy decision</button>}
         </>} />
@@ -538,7 +558,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
-      {step.status === "failed" && following && step.kind !== "verify" && ((step.excerpt && !excerptInPanel) || (step.error && !/^exit code \d+$/.test(step.error))) && (
+      {step.status === "failed" && following && !reused && step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other" && (
+        <div className="callout callout-bad"><StepCauseView cause={step.cause} /></div>
+      )}
+      {step.status === "failed" && following && step.kind !== "verify" && !(step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other") && ((step.excerpt && !excerptInPanel) || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
           {step.excerpt && !excerptInPanel && <Excerpt step={step} />}
@@ -774,6 +797,9 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   },
   "deploy.command_done": (d) => {
     const c = commandOf(d);
+    if (c.result === "failed" || c.result === "not_applied") {
+      return `${d.step}: the command did NOT take effect (${String(c.result).replace(/_/g, " ")})${c.detail ? `: ${c.detail}` : ""}`;
+    }
     return `${d.step}: command ${String(c.result ?? "done").replace(/_/g, " ")}${c.detail ? `: ${c.detail}` : ""}`;
   },
   "deploy.command_withdrawn": (d) => `${d.step}: command withdrawn by ${commandOf(d).actor ?? "someone"}`,

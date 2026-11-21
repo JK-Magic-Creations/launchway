@@ -656,6 +656,7 @@
                 "create": { "type": "boolean" },
                 "patchApplications": { "type": "boolean" },
                 "readDeployments": { "type": "boolean" },
+                "readPods": { "type": "boolean" },
                 "controlRollouts": {
                   "type": ["object", "null"],
                   "additionalProperties": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" } }

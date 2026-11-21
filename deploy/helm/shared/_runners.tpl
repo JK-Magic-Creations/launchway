@@ -501,6 +501,15 @@ rules:
     resources: [deployments]
     verbs: [get]
   {{- end }}
+  {{- if $r.rbac.readPods }}
+  # Pods and their logs, to show why an analysis job failed (rbac.readPods).
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  {{- end }}
   {{- with (index ($r.rbac.controlRollouts | default dict) $ns) }}
   - apiGroups: [argoproj.io]
     resources: [rollouts/status]

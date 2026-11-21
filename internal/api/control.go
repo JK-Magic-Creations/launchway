@@ -59,7 +59,9 @@ func (s *Server) command(action string) http.HandlerFunc {
 			return
 		}
 		dep := r.PathValue("dep")
-		setAudit(r, r.PathValue("id")+"/"+dep, clip(in.Comment, 300))
+		// The entry records the request; what the deploy runner did with it
+		// is recorded when it reports (deployment.command_outcome).
+		setAudit(r, r.PathValue("id")+"/"+dep, clip("requested: "+in.Comment, 300))
 		if !s.deploymentAccess(w, r, dep) {
 			return
 		}
@@ -169,5 +171,39 @@ func (s *Server) deployCommandDone(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	s.recordCommandOutcome(r, in.Runner, in.Result.Take)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// recordCommandOutcome writes what a deploy runner did with a command to
+// the audit trail, apart from the entry for the request: ok for a command
+// that got to the rollout, failed for one that did not, with why.
+func (s *Server) recordCommandOutcome(r *http.Request, runner engine.RunnerInfo, take string) {
+	cv, err := s.Engine.CommandByTake(take)
+	if err != nil || cv.State != engine.CommandDone {
+		return // handed back: the command is still open
+	}
+	project, _ := s.Engine.RunProject(cv.RunID)
+	outcome := "ok"
+	if cv.Result != "applied" && cv.Result != "already_applied" {
+		outcome = "failed"
+	}
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(runner.Name, runner.ID), Source: s.clientAddr(r),
+		Action: "deployment.command_outcome", Project: project, Target: cv.RunID + "/" + cv.Deployment + "/" + cv.ID, Outcome: outcome,
+		Detail: cv.Action + " asked for by " + cv.Actor + ": " + cv.Result + ": " + cv.Detail})
+}
+
+// presentRun redacts the run for sending, and makes a run's actions say what this person may do: without the
+// operator role none is available, and each says why and what would help.
+func (s *Server) presentRun(id *identity, d *engine.RunDetail) {
+	d.Source = redactSource(d.Source)
+	if s.authorize(id, auth.Operate, d.Project) {
+		return
+	}
+	for i := range d.Actions {
+		d.Actions[i].Available = false
+		d.Actions[i].Reason = "you need the operator role on " + d.Project + " to do this"
+		d.Actions[i].WouldHelp = "ask an administrator for the operator role on " + d.Project
+		d.Actions[i].Instead = ""
+	}
 }

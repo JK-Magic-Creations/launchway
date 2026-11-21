@@ -61,3 +61,10 @@ The full list of keys is in the [pipeline reference](../../reference/pipeline.md
 - [Deployments](../../guide/deployments.md), the full guide
 - [Deploy with approval and rollback](../../tutorials/deploy-with-approval.md), a tutorial
 - [Approvals](approvals.md)
+
+## When a deployment fails
+
+A failed deployment says why in one sentence, shows the evidence (for a failed check, which metric failed and
+what it measured), and says what Launchway did next, such as rolling back. You can re-run from the failed step:
+the earlier steps are reused, so nothing is rebuilt, and the deploy is made again as a new attempt of the same
+version. A half-done deployment is never resumed.

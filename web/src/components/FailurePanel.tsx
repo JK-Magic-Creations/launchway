@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Failure } from "../guided/derive";
 import { Icon } from "../kit/Icon";
+import { StepCauseView } from "./StepCause";
 
 /** FailurePanel says in plain words what went wrong in a failed run and what can be done about it.
  * It is built from what the server recorded: the failed step, its exit code, how it ended, and its last
@@ -20,11 +21,11 @@ export function FailurePanel({ failure, actions }: { failure: Failure; actions: 
         <div>
           <h3 className="h-sm">What you can do</h3>
           <ul className="explain-advice">{failure.advice.map((a) => <li key={a}>{a}</li>)}</ul>
-          <p className="faint small">Running again from the failed step keeps the steps that passed and stays in this run. Running everything again starts a new run at the same commit.</p>
+          <p className="faint small">{failure.cause ? "Re-running from the failed step makes a new run at the same commit: the steps before it are reused, and nothing is rebuilt." : "Running again from the failed step keeps the steps that passed and stays in this run. Running everything again starts a new run at the same commit."}</p>
           <div className="explain-actions">{actions}</div>
         </div>
         <div>
-          {failure.excerpt ? (
+          {failure.cause ? <StepCauseView cause={failure.cause} summary={false} /> : failure.excerpt ? (
             <figure className="excerpt">
               <figcaption>The last lines {failure.step} wrote{failure.exitCode !== null ? ` before exit code ${failure.exitCode}` : ""}:</figcaption>
               <pre>{failure.excerpt}</pre>

@@ -283,6 +283,9 @@ func (c *cmd) commandRefusal(depID, action, actor string) (string, deploy.Expect
 		}
 		return deployID, x, fmt.Errorf("%w: %s", ErrConflict, why)
 	}
+	if why := row.cannotControl(c.now); why != "" {
+		return deployID, x, rightsError{why}
+	}
 	for _, cs := range st.Commands {
 		if cs.Deployment != depID {
 			continue
@@ -961,48 +964,6 @@ func (e *Engine) addControl(out []DeploymentView) error {
 		}
 	}
 	return nil
-}
-
-// Control is whether a command can be given now, and why not.
-type Control struct {
-	Action    string `json:"action"`
-	Available bool   `json:"available"`
-	Reason    string `json:"reason,omitempty"` // why not, in plain words
-	// Forbidden says the reason is who is asking (protected environment),
-	// not where the rollout is.
-	Forbidden bool `json:"forbidden,omitempty"`
-}
-
-// Controls says, for each command, whether actor could give it to a
-// deployment now, as far as the deployment and the protected-environment
-// rule decide; the caller adds the person's role.
-func (e *Engine) Controls(runID, depID, actor string) (env Environment, out []Control, err error) {
-	if !e.knows(schemaControl) {
-		return env, nil, fmt.Errorf("%w: this server does not know commands on deployments", ErrConflict)
-	}
-	err = e.readRun(runID, func(c *cmd) error {
-		_, ds := c.st.deploymentStep(depID)
-		if ds == nil {
-			return fmt.Errorf("%w: deployment %s in run %s", ErrNotFound, depID, runID)
-		}
-		env = c.e.live().envs[ds.Dep.Environment]
-		for _, a := range pipeline.RolloutActions {
-			ctl := Control{Action: a, Available: true}
-			if _, _, err := c.commandRefusal(depID, a, actor); err != nil {
-				switch {
-				case errors.Is(err, ErrForbidden):
-					ctl.Available, ctl.Forbidden, ctl.Reason = false, true, strings.TrimPrefix(err.Error(), ErrForbidden.Error()+": ")
-				case errors.Is(err, ErrConflict):
-					ctl.Available, ctl.Reason = false, strings.TrimPrefix(err.Error(), ErrConflict.Error()+": ")
-				default:
-					return err
-				}
-			}
-			out = append(out, ctl)
-		}
-		return nil
-	})
-	return env, out, err
 }
 
 // readRun folds a run and calls fn with a command whose transaction is

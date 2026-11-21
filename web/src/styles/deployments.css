@@ -130,3 +130,22 @@
 .env-protected { font-size: 11px; vertical-align: middle; }
 .unit-live { display: flex; flex-direction: column; gap: 4px; }
 .unit-drift { padding: 6px 10px; font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+
+/* A failed step's cause: sentence, evidence, what happened next. */
+.cause-summary { margin: 0 0 8px; font-size: 1.02em; }
+.cause-metric { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; background: var(--surface); }
+.cause-metric[data-phase="Failed"], .cause-metric[data-phase="Error"], .cause-metric[data-phase="Inconclusive"] { border-left: 3px solid var(--bad); }
+.cause-metric-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; }
+.cause-measures { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.cause-measures li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: 0.92em; }
+.cause-msg { flex-basis: 100%; padding-left: 18px; color: var(--bad-ink); overflow-wrap: anywhere; }
+.cause-next { margin: 10px 0 0; }
+.cause-next[data-next="rolled_back"] { color: var(--ok-ink, inherit); }
+.cause-next[data-next="rollback_failed"] { color: var(--bad-ink); }
+.cause .excerpt pre { max-height: 14em; overflow: auto; }
+
+.rollout-overview { margin: 10px 0; }
+.ro-steps { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ro-step { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 0.9em; }
+.ro-step-done { background: var(--ok-wash); }
+.ro-step-on { border-color: var(--accent, var(--ok)); font-weight: 600; }

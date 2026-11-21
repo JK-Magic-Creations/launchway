@@ -90,33 +90,39 @@ type StepBrief struct {
 	// Allowed says a failed step was allowed to fail (on_failure:
 	// continue): the run does not count it as a failure.
 	Allowed bool `json:"allowed,omitempty"`
+	// Reason is why a failed step failed, in a plain sentence.
+	Reason string `json:"reason,omitempty"`
 }
 
 // StepView is a step with its definition and current state.
 type StepView struct {
-	RunID      string                        `json:"run_id"`
-	ID         string                        `json:"id"`
-	Position   int                           `json:"position"`
-	Status     StepStatus                    `json:"status"`
-	Attempt    int                           `json:"attempt"`
-	QueuedAt   int64                         `json:"queued_at"`
-	StartedAt  int64                         `json:"started_at"`
-	FinishedAt int64                         `json:"finished_at"`
-	ExitCode   *int                          `json:"exit_code"`
-	Error      string                        `json:"error"`
-	SkipKind   string                        `json:"skip_kind"`
-	Runner     string                        `json:"runner"`
-	Outputs    map[string]string             `json:"outputs"`
-	Excerpt    string                        `json:"excerpt"` // a failed attempt's last lines of output
-	Container  string                        `json:"container,omitempty"`
-	Image      string                        `json:"image,omitempty"`
-	Run        string                        `json:"run,omitempty"`
-	Needs      []string                      `json:"needs,omitempty"`
-	When       *pipeline.Condition           `json:"when,omitempty"`
-	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
-	Retry      int                           `json:"retry"`
-	Timeout    string                        `json:"timeout"`         // as written: 1h, 10m, 90s
-	Group      string                        `json:"group,omitempty"` // the uses step it came from, for a template's step
+	RunID      string     `json:"run_id"`
+	ID         string     `json:"id"`
+	Position   int        `json:"position"`
+	Status     StepStatus `json:"status"`
+	Attempt    int        `json:"attempt"`
+	QueuedAt   int64      `json:"queued_at"`
+	StartedAt  int64      `json:"started_at"`
+	FinishedAt int64      `json:"finished_at"`
+	ExitCode   *int       `json:"exit_code"`
+	Error      string     `json:"error"`
+	// Reason is why a failed step failed, in a plain sentence, and Cause
+	// the structured cause behind it (kind, evidence, what happened next).
+	Reason    string                        `json:"reason,omitempty"`
+	Cause     *StepCause                    `json:"cause,omitempty"`
+	SkipKind  string                        `json:"skip_kind"`
+	Runner    string                        `json:"runner"`
+	Outputs   map[string]string             `json:"outputs"`
+	Excerpt   string                        `json:"excerpt"` // a failed attempt's last lines of output
+	Container string                        `json:"container,omitempty"`
+	Image     string                        `json:"image,omitempty"`
+	Run       string                        `json:"run,omitempty"`
+	Needs     []string                      `json:"needs,omitempty"`
+	When      *pipeline.Condition           `json:"when,omitempty"`
+	Secrets   map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
+	Retry     int                           `json:"retry"`
+	Timeout   string                        `json:"timeout"`         // as written: 1h, 10m, 90s
+	Group     string                        `json:"group,omitempty"` // the uses step it came from, for a template's step
 	// Approvals only. Kind and Message come from the definition; the rest
 	// is the current wait and decision.
 	Kind        string `json:"kind,omitempty"`
@@ -204,6 +210,12 @@ type RunDetail struct {
 	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 	// Deployments are the run's deployments, newest first (schema 11).
 	Deployments []DeploymentView `json:"deployments"`
+	// Actions are what a person may do with the run now, computed once by
+	// the server: cancel, resume, rerun.
+	Actions []Action `json:"actions"`
+	// Resume says whether the run can be resumed, and if not, what to do
+	// instead; nil for a run that is not failed or canceled.
+	Resume *ResumeAdvice `json:"resume,omitempty"`
 	// RunnerHint says why a run that is waiting for a runner may wait a long
 	// time: it builds images, and no runner that can has been seen lately.
 	RunnerHint string `json:"runner_hint,omitempty"`
@@ -448,7 +460,7 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	if e.knows(schemaFlow) {
 		allowed = `allowed`
 	}
-	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
+	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+`, error FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
 		ORDER BY run_id, position`, args...)
 	if err != nil {
 		return err
@@ -458,8 +470,12 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		var runID, kind string
 		var b StepBrief
 		var allowed int
-		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed); err != nil {
+		var reason string
+		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed, &reason); err != nil {
 			return err
+		}
+		if b.Status == StepFailed {
+			b.Reason = clipText(reason, 300)
 		}
 		b.Allowed = b.Status == StepFailed && allowed != 0
 		r := byID[runID]
@@ -661,6 +677,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
 		}
+		st.attachCause(v)
 		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
 			v.Caches = s.Evidence.Caches
 		}
@@ -692,6 +709,8 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 	}
 	d.Policy = policySummary(st)
+	d.Resume = st.resumeAdvice()
+	d.Actions = st.runActions()
 	return d, nil
 }
 

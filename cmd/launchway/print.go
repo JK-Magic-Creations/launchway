@@ -95,7 +95,12 @@ func (pr *printer) update(eng *engine.Engine, d *engine.RunDetail) {
 				fmt.Println(pr.prefix(s.ID) + pr.c("33;1", "✗ failed (allowed; the run goes on): "+s.Error))
 				break
 			}
-			fmt.Println(pr.prefix(s.ID) + pr.c("31;1", "✗ failed: "+s.Error))
+			fmt.Println(pr.prefix(s.ID) + pr.c("31;1", "✗ failed: "+nonEmptyStr(s.Reason, s.Error)))
+			if s.Cause != nil {
+				for _, e := range s.Cause.Evidence() {
+					fmt.Println(pr.prefix(s.ID) + pr.c("2", e))
+				}
+			}
 		case engine.StepSkippedS:
 			fmt.Println(pr.prefix(s.ID) + pr.c("2", "↷ skipped: "+s.Error))
 		case engine.StepCanceledS:

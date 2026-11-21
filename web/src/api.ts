@@ -6,7 +6,10 @@ export type StepStatus =
   | "pending" | "queued" | "leased" | "running" | "waiting"
   | "succeeded" | "failed" | "skipped" | "canceled";
 
-export interface StepBrief { id: string; status: StepStatus }
+import type { DeployAnalysis, DeployMetric, DeployMeasurement, StepCause, ServerAction, RerunPlan } from "./apiDeploy";
+export type { DeployAnalysis, DeployMetric, DeployMeasurement, StepCause, ServerAction, RerunPlan };
+
+export interface StepBrief { id: string; status: StepStatus; /** A failed step: why, in a plain sentence. */ reason?: string }
 
 export interface RunSummary {
   id: string;
@@ -344,28 +347,14 @@ export interface DeployRollout {
   available: number;
 }
 
-export interface DeployMetric {
-  name: string; phase: string; message?: string;
-  count: number; successful: number; failed: number; inconclusive: number; error: number;
-}
-
-/** One of a rollout's own analysis runs. */
-export interface DeployAnalysis {
-  name: string;
-  phase: string; // Pending, Running, Successful, Failed, Error, Inconclusive
-  message?: string;
-  kind?: string; // Step or Background
-  step_index?: number;
-  pod_hash?: string;
-  metrics?: DeployMetric[];
-}
-
 /** What a deploy runner saw of a deployment at one moment. error: it could not see the application at all. */
 export interface DeploySnapshot {
   error?: string;
   app?: DeployApp;
   rollout?: DeployRollout;
   analysis?: DeployAnalysis[];
+  /** What the deploy runner found out it may do to the rollout (a self-check). */
+  rights?: { control?: boolean; control_why?: string; logs?: boolean; logs_why?: string };
 }
 
 export interface TimelineEntry { at: number; step: string; phase: string; detail: string }
@@ -464,6 +453,9 @@ export interface StepView {
   outputs: Record<string, string>;
   /** A failed attempt's last lines of output, masked like the log. */
   excerpt: string;
+  /** A failed step: why, in one plain sentence, and the structured cause behind it. */
+  reason?: string;
+  cause?: StepCause;
   container?: string;
   image?: string;
   run?: string;
@@ -538,8 +530,6 @@ export interface StepInputs {
 export interface AttemptInputs { attempt: number; inputs: StepInputs }
 
 /** What re-running a run from a step would run again and reuse. */
-export interface RerunPlan { run: string[]; reuse: string[] }
-
 export interface RerunBrief { id: string; number: number; from: string; status: RunStatus; actor: string; created_at: number }
 
 export interface GraphContainer {
@@ -639,6 +629,10 @@ export interface RunDetail extends RunSummary {
   not_understood: string[];
   /** The run's deployments, newest first. */
   deployments?: DeploymentView[];
+  /** What this person may do with the run now, computed once by the server (cancel, resume, rerun). */
+  actions?: ServerAction[];
+  /** A failed or canceled run: whether it can be resumed, and if not, the step to re-run from instead. */
+  resume?: { allowed: boolean; reason?: string; rerun_from?: string; first_failed?: string };
   /** Why a run with image steps may wait long: no runner that builds images has been seen. */
   runner_hint?: string;
   /** Why no runner may take the run's waiting steps: pools, labels or what runners accept. */
@@ -1118,7 +1112,7 @@ export interface CommandView {
 }
 
 /** Whether a command can be given now; forbidden: the reason is who is asking, not where the rollout is. */
-export interface Control { action: RolloutAction; available: boolean; reason?: string; forbidden?: boolean }
+export interface Control { action: RolloutAction; available: boolean; reason?: string; forbidden?: boolean; runner_cannot?: boolean }
 
 export interface DeploymentControls {
   environment: string;

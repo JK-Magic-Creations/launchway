@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +36,11 @@ const RefreshAnnotation = "argocd.argoproj.io/refresh"
 type Cluster struct {
 	dyn    dynamic.Interface
 	argoNS string
+	// logs reads the end of a pod's log; nil where it cannot (tests).
+	logs   func(ctx context.Context, ns, pod string, tail int) ([]string, error)
+	rights rightsCache
+	// jobLogs keeps the logs read of failed analysis jobs, by namespace/name.
+	jobLogs sync.Map
 }
 
 // Connect makes a client for a target. It does not contact the cluster.
@@ -60,7 +66,9 @@ func Connect(t Target) (*Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewCluster(dyn, t.ArgoCDNamespace), nil
+	c := NewCluster(dyn, t.ArgoCDNamespace)
+	c.logs = podLogReader(cfg)
+	return c, nil
 }
 
 // NewCluster wraps a dynamic client (tests give a fake one).

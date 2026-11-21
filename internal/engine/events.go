@@ -130,6 +130,9 @@ type Payload struct {
 	Deadline int64             `json:"deadline,omitempty"`  // step.waiting: when nobody deciding rejects it (Unix ms)
 	Comment  string            `json:"comment,omitempty"`   // step.approved and step.rejected
 	Excerpt  string            `json:"excerpt,omitempty"`   // step.finished, failed: the last lines of output, masked
+	// Why is, on step.finished of a failed deploy, rollout or rollback
+	// step, the structured cause with its evidence (see StepCause).
+	Why *StepCause `json:"why,omitempty"`
 	// Allowed, on a step.finished that failed for good, or a step.reused of
 	// one, says that the step has on_failure: continue: the failure does not
 	// fail the run and the steps that need it run as if it had succeeded

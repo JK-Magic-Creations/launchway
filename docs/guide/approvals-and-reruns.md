@@ -123,8 +123,15 @@ run alone.
 | Runs again | the steps that failed, were canceled, or were not run because of them | the steps you name (or the failed ones) and everything after them |
 | Reuses | every step that succeeded stays as it is | every other step, recorded as reused, with its outcome and outputs |
 | Workspace files | the run's workspace on its runner is kept, for up to a day | a fresh checkout: files earlier steps wrote are gone |
-| Deployments | refused once a deployment opened | deploy steps always run again, and are never reused |
+| Deployments | refused once a deployment opened: a half-done deployment is never continued, and the refusal names the re-run that works | a deploy step that runs again makes a new deployment of the same version; one that succeeded earlier is reused when nothing of its deployment runs again |
 | Use it | after a failure that has been put right | to go again from a chosen step, to redeploy what a run built, or when a fresh checkout is wanted |
+
+On a failed run the page offers **Re-run from** the failed step (the earlier steps are reused with their
+outputs, so nothing is rebuilt and the image digest is the same), **Re-run from...** (any step, with the
+list of what is reused and what runs again) and **Re-run everything**. Resume is offered only when it can
+work: a run that made a deployment shows the re-run as a button instead, and the run's `actions` list says
+the same to the API, MCP and the command line. An approval before the chosen step still counts when nothing
+before it changed: the list says "approved by NAME at TIME for this same build". An approval after it asks again.
 
 The MCP tool `retry_run` does both: without steps it resumes, with `from_step`, `from_steps` or
 `failed_only` it re-runs.

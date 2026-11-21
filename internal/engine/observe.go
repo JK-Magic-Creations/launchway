@@ -537,7 +537,8 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepSucceeded), Outputs: outputs})
 			c.advance()
 		case deploy.Failed:
-			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed), Reason: v.Detail})
+			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed), Reason: v.Detail,
+				Why: c.failCause(stepID, s, v, o.Snapshot)})
 			c.advance()
 		}
 		return nil

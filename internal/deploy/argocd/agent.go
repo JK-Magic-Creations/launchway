@@ -448,7 +448,9 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 			meta := mapOf(obj, "metadata")
 			uid, _ := meta["uid"].(string)
 			snap.Analysis = deploy.ReduceAnalysisRuns(runs, uid)
+			cl.addJobLogs(ctx, snap.Analysis)
 		}
+		snap.Rights = cl.Rights(ctx, ro.Namespace, ro.Name)
 	}
 	return snap
 }
