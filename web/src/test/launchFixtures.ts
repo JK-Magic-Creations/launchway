@@ -57,5 +57,5 @@ export function launchDeployment(): DeploymentView {
 }
 
 export function launchRun(base: RunDetail): RunDetail {
-  return { ...base, id: "run_7", deployments: [launchDeployment()] } as RunDetail;
+  return { ...base, id: "run_7", deployments: [launchDeployment()], step_list: [], levels: [], reruns: [], not_understood: [], graph: { name: "shop-api", on: {}, steps: [] } } as unknown as RunDetail;
 }

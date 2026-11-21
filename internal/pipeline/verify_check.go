@@ -62,6 +62,9 @@ type HealthCheck struct {
 	// deploy runner for each interval; the values are never shown.
 	SecretHeaders map[string]SecretRef `json:"secret_headers,omitempty"`
 	Timeout       Duration             `json:"timeout,omitempty"`
+	// MaxLatency is the slowest answer that counts as healthy: a slower
+	// one fails the call even when its status and body are right.
+	MaxLatency Duration `json:"max_latency,omitempty"`
 	Every         Duration             `json:"every,omitempty"`
 	// Success is the share of calls in an interval that must be healthy.
 	Success float64 `json:"success"`
@@ -74,7 +77,7 @@ type HealthCheck struct {
 }
 
 var (
-	checkKeys     = []string{"kind", "url", "method", "status", "body_contains", "json", "headers", "secret_headers", "timeout", "every", "success", "server_name", "insecure_tls"}
+	checkKeys     = []string{"kind", "url", "method", "status", "body_contains", "json", "headers", "secret_headers", "timeout", "max_latency", "every", "success", "server_name", "insecure_tls"}
 	checkJSONKeys = []string{"path", "equals"}
 	statusRe      = regexp.MustCompile(`^([1-5][0-9]{2}|[1-5]xx|[1-5][0-9]{2}-[1-5][0-9]{2})$`)
 )
@@ -165,6 +168,13 @@ func (ps *parser) parseHealthCheck(n *yaml.Node, at string) *HealthCheck {
 		case "timeout":
 			if d, ok := dur(v, where); ok {
 				c.Timeout = d
+			}
+		case "max_latency":
+			if d, ok := dur(v, where); ok {
+				if d < Duration(time.Millisecond) || d > Duration(MaxCheckTimeout) {
+					ps.add(v, where, "max_latency is between 1ms and %s", MaxCheckTimeout)
+				}
+				c.MaxLatency = d
 			}
 		case "every":
 			if d, ok := dur(v, where); ok {

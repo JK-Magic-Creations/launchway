@@ -69,15 +69,15 @@ type liveDeliveryOut struct {
 	Phase       string `json:"phase,omitempty"`
 	Paused      bool   `json:"paused"`
 	// Weights in percent of real traffic; -1 unknown.
-	DesiredWeight int            `json:"desired_weight"`
-	ActualWeight  int            `json:"actual_weight"`
-	WeightSource  string         `json:"weight_source,omitempty"`
-	PreTraffic    string         `json:"pre_traffic,omitempty" jsonschema:"where the new version is tested while it takes no real traffic"`
-	Steps         []string       `json:"steps,omitempty" jsonschema:"each as: state (done, current, next) then the step"`
+	DesiredWeight int                `json:"desired_weight"`
+	ActualWeight  int                `json:"actual_weight"`
+	WeightSource  string             `json:"weight_source,omitempty"`
+	PreTraffic    string             `json:"pre_traffic,omitempty" jsonschema:"where the new version is tested while it takes no real traffic"`
+	Steps         []string           `json:"steps,omitempty" jsonschema:"each as: state (done, current, next) then the step"`
 	Actions       []liveActionOut    `json:"actions" jsonschema:"what control_delivery may do now"`
 	Nodes         []liveDeliveryNode `json:"nodes"`
-	CanLogs       bool           `json:"can_read_logs"`
-	Notes         []string       `json:"untrusted_notes,omitempty"`
+	CanLogs       bool               `json:"can_read_logs"`
+	Notes         []string           `json:"untrusted_notes,omitempty"`
 }
 
 type liveActionOut struct {
@@ -217,7 +217,7 @@ func getDeliveryLogs(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 	}
 	var v struct {
 		Lines []podLogLineOut `json:"lines"`
-		Notes []string     `json:"notes"`
+		Notes []string        `json:"notes"`
 	}
 	if err := c.apiJSON(ctx, "get_delivery_logs", http.MethodGet, apiPath("/api/v1/runs/%s/deployments/%s/inspect/logs", in.RunID, in.Deployment)+"?"+q.Encode(), nil, &v); err != nil {
 		return podLogsOut{}, err

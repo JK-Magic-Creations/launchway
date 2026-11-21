@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/deploy/inspect"
 	"io"
 	"net"
 	"net/http"
@@ -334,14 +335,12 @@ func (s *Sources) httpCall(v *src, c *pipeline.HealthCheck, g *egress.Guard, hea
 		}
 		defer resp.Body.Close()
 		a.Status = resp.StatusCode
-		var body []byte
-		if c.BodyContains != "" || c.JSONPath != "" {
-			body, _ = io.ReadAll(io.LimitReader(resp.Body, maxCheckBody))
-		} else {
-			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxCheckBody))
-		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxCheckBody))
 		a.LatencyMS = time.Since(start).Milliseconds()
+		a.Excerpt = excerpt(body)
 		switch {
+		case c.MaxLatency > 0 && time.Since(start) > time.Duration(c.MaxLatency) && c.StatusMatches(resp.StatusCode):
+			a.Error = fmt.Sprintf("answered %d but took %d ms, over max_latency %s", resp.StatusCode, a.LatencyMS, time.Duration(c.MaxLatency))
 		case !c.StatusMatches(resp.StatusCode):
 			a.Error = "returned " + strconv.Itoa(resp.StatusCode)
 			if resp.StatusCode >= 300 && resp.StatusCode < 400 {
@@ -490,4 +489,28 @@ func CheckNote(as []verify.Attempt, c *pipeline.HealthCheck) string {
 		parts = append(parts, fmt.Sprintf("%d %s", e.n, e.r))
 	}
 	return head + " failed: " + strings.Join(parts, ", ")
+}
+
+// maxExcerpt bounds the part of an answer a call keeps.
+const maxExcerpt = 200
+
+// excerpt is the start of an answer as text a person can read, with
+// anything shaped like a credential hidden.
+func excerpt(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	n := min(len(body), maxExcerpt*2)
+	s := strings.ToValidUTF8(string(body[:n]), "?")
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 && r != '\n' && r != '\t' || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, s)
+	s = inspect.NewRedactor().Text(s)
+	if len(s) > maxExcerpt {
+		s = s[:maxExcerpt] + "…"
+	}
+	return s
 }

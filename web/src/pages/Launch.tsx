@@ -98,7 +98,7 @@ export function LaunchPage({ run, dep }: { run: string; dep: string }) {
             {tab === "overview" && <Overview v={view} run={detail} d={d} now={now} onOpen={open} reload={load} />}
             {tab === "objects" && <ObjectsTab v={view} now={now} sel={sel} selId={st.obj} showLeft={st.left !== "0"} onLeft={(on) => set({ left: on ? "" : "0" })} onSelect={(id) => set({ obj: id })} onLogs={toLogs} />}
             {tab === "logs" && <LogsTab v={view} state={{ src: st.src, prev: st.prev, follow: st.follow, wrap: st.wrap, q: st.q, range: st.range, side: st.side }} setState={(p) => set(p)} />}
-            {tab === "traffic" && <TrafficTab v={view} onOpen={open} />}
+            {tab === "traffic" && <TrafficTab v={view} run={detail} onOpen={open} />}
             {tab === "history" && <HistoryTab d={d} now={now} admin={!!me?.admin} />}
           </div>
         </>

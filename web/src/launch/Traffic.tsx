@@ -1,3 +1,5 @@
+import type { RunDetail } from "../api";
+import { useRunVerifications, VerificationPanel } from "../components/Verification";
 import { Link, Mono } from "../components/ui";
 import { clock } from "../format";
 import type { LMetric, TreeView } from "../launchApi";
@@ -28,7 +30,9 @@ function Proof({ m }: { m: LMetric }) {
 }
 
 /** The Traffic and tests tab: where requests go, what was measured against what, and the test pods that send the requests. */
-export function TrafficTab({ v, onOpen }: { v: TreeView; onOpen: (id: string) => void }) {
+export function TrafficTab({ v, run, onOpen }: { v: TreeView; run: RunDetail; onOpen: (id: string) => void }) {
+  const ver = useRunVerifications(run);
+  const mine = (Array.isArray(ver.list) ? ver.list : []).filter((x) => x.deployment === v.deployment);
   const ro = v.tree.rollout;
   const routes = v.tree.nodes.filter((n) => n.weights && n.weights.length > 0 && n.change !== "leftover");
   const runs = ro?.analysis ?? [];
@@ -69,6 +73,17 @@ export function TrafficTab({ v, onOpen }: { v: TreeView; onOpen: (id: string) =>
           </p>
         )}
       </section>
+
+      {mine.length > 0 && (
+        <section className="lw-card" aria-labelledby="lw-ver-h">
+          <h2 id="lw-ver-h" className="lw-h">Verification of this Launch</h2>
+          <p className="faint lw-small">What the verify steps measured: each metric against its threshold, and for a built-in health check every call the deploy runner made.</p>
+          {mine.map((x) => {
+            const step = run.step_list.find((st) => st.id === x.step);
+            return step ? <VerificationPanel key={x.step} run={run} step={step} list={ver.list} reload={ver.reload} /> : null;
+          })}
+        </section>
+      )}
 
       <section className="lw-card" aria-labelledby="lw-jobs-h">
         <h2 id="lw-jobs-h" className="lw-h">Test pods (push tests)</h2>

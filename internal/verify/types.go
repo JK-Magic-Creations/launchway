@@ -151,6 +151,9 @@ type Attempt struct {
 	Status    int    `json:"status,omitempty"` // HTTP status, when there was an answer
 	LatencyMS int64  `json:"latency_ms"`
 	Error     string `json:"error,omitempty"` // why it did not count, in words
+	// Excerpt is the start of the answer (capped, with anything shaped like
+	// a credential hidden), so a person can see what came back.
+	Excerpt string `json:"excerpt,omitempty"`
 }
 
 // MaxAttempts bounds the calls one interval report carries.
