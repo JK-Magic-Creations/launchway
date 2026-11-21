@@ -38,7 +38,7 @@ installed system-wide. The versions are in `scripts/security/lib.sh` and the Mak
 | Fuzzing | crashes and hangs in parsers fed by outsiders | native Go fuzzing | `make fuzz`, the product's pipeline, Security workflow | yes |
 | Response headers and CSP | a missing or weakened security header | Go tests, a browser test | `go test`, `make web-csp` | yes |
 | Web application | passive findings on a running server | OWASP ZAP baseline | `make dast` (optional) | yes when run |
-| Workflows and scripts | unsafe GitHub Actions, shell mistakes | actionlint, shellcheck | `make lint-workflows lint-scripts` | yes |
+| Workflows and scripts | unsafe workflow files on the public code host, shell mistakes | actionlint, shellcheck | `make lint-workflows lint-scripts` | yes |
 | Reproducible release | a release that cannot be rebuilt byte for byte | `make release-reproduce` | CI | yes |
 | Project posture | repository settings, review, pinning | OpenSSF Scorecard | `make scorecard`, Scorecard workflow | no |
 
@@ -71,7 +71,7 @@ installed system-wide. The versions are in `scripts/security/lib.sh` and the Mak
   and the GitOps file editor. A short run in CI finds shallow problems. A continuous fuzzing service
   such as OSS-Fuzz needs the project to have a significant user base and a committer contact
   ([OSS-Fuzz criteria](https://google.github.io/oss-fuzz/getting-started/accepting-new-projects/));
-  ClusterFuzzLite runs the same engines inside GitHub Actions in the meantime.
+  ClusterFuzzLite runs the same engines inside the public code host's workflow runner in the meantime.
 - **DAST: OWASP ZAP baseline.** It is the OWASP flagship scanner, its baseline mode is passive plus
   a short spider and sends no attack payloads, and it runs from one container against a throwaway
   server. It is optional because it needs a container runtime and a built UI.

@@ -28,7 +28,7 @@ var namedForIntegration = regexp.MustCompile(`(?i)\b(gitlab|bitbucket|forgejo|gi
 
 var allowedForIntegration = []string{
 	// Webhook and pull-request providers: the code and the pages that document them.
-	"internal/api/hooks.go", "internal/api/hooks_e2e_test.go",
+	"internal/api/hooks.go", "internal/api/hooks_e2e_test.go", "internal/api/hooks_fuzz_test.go",
 	"internal/config/triggers.go", "internal/engine/triggers_test.go", "internal/config/triggers_test.go",
 	"internal/source/edit.go", "internal/source/edit_test.go", "internal/source/triggers.go",
 	"internal/findings/secrets.go", "internal/findings/secrets_test.go",
