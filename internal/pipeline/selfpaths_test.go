@@ -17,16 +17,6 @@ func TestOwnPipelineSkipsEverythingButDocsForDocsOnlyChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hasDocs := false
-	for _, s := range p.Steps {
-		hasDocs = hasDocs || s.ID == "docs"
-	}
-	if !hasDocs {
-		// For one release the file is the previous one: the server that builds
-		// this commit cannot read path conditions yet. The file with them
-		// follows as soon as the new server is running.
-		t.Skip("the path conditions arrive with the next commit of the pipeline file")
-	}
 	ctx := func(files ...string) Context {
 		return Context{Event: EventPush, Branch: "main", Changed: &ChangeSet{Known: true, Files: files}}
 	}
