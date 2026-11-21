@@ -6,6 +6,10 @@ import type { Me } from "../api";
 import { match } from "../router";
 import type { IconName } from "../kit/Icon";
 import { comingTitle } from "../shell/comingData";
+import { terms } from "../terms";
+
+/** The words in effect, filled into a sentence: {Hold} is what this installation calls a freeze. */
+const say = (t: string) => terms().say(t);
 
 export type SectionId = "home" | "projects" | "pipelines" | "images" | "deployments" | "traffic" | "changes" | "activity" | "library" | "settings";
 
@@ -28,6 +32,8 @@ export interface Ctx { me: Me; facts: Facts }
 export interface Tab {
   id: string; label: string; href: string; show?: (c: Ctx) => boolean;
   icon?: IconName;
+  /** The plain name of a page whose label is one of the themed words, so a search for it still finds the page. */
+  aka?: string;
   /** The page does not exist yet: it is an honest "coming" page that says what it will do. */
   soon?: boolean;
 }
@@ -81,12 +87,12 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "changes", label: "Changes", href: "/changes", icon: "calendar", group: 2, side: "Planned, approved and done.",
-    promise: "Change management: what is changing, when, why, who approved it and how it went.",
+    get promise() { return say("Change management: what is changing, when, why, who gave {clearance} and how it went."); },
     tabs: [
       { id: "calendar", label: "Calendar", href: "/changes", icon: "calendar", soon: true },
       { id: "records", label: "Change records", href: "/changes/records", icon: "list", soon: true },
-      { id: "freezes", label: "Freeze windows", href: "/changes/freezes", icon: "freeze", soon: true },
-      { id: "rules", label: "Approval rules", href: "/changes/rules", icon: "gate", soon: true },
+      { id: "freezes", get label() { return say("{Hold} windows"); }, href: "/changes/freezes", icon: "freeze", aka: "Freeze windows", soon: true },
+      { id: "rules", get label() { return say("{Clearance} rules"); }, href: "/changes/rules", icon: "gate", aka: "Approval rules", soon: true },
       { id: "tickets", label: "Ticket system", href: "/changes/tickets", icon: "ticket", soon: true },
     ],
   },
@@ -107,14 +113,15 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "settings", label: "Settings", href: "/settings", icon: "settings", group: 3, side: "Set up once, then rarely.",
-    promise: "People, runners, rules, signal sources, configuration and the audit trail.",
+    get promise() { return say("People, runners, rules, signal sources, configuration, the words Launchway uses and the {logbook}."); },
     tabs: [
       { id: "overview", label: "Overview", href: "/settings", icon: "settings" },
       { id: "runners", label: "Runners", href: "/settings/runners", icon: "server", show: ({ me }) => me.runners },
       { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
-      { id: "approvals", label: "Approvals", href: "/settings/approvals", icon: "gate" },
+      { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
       { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
-      { id: "audit", label: "Audit trail", href: "/settings/audit", icon: "clock", show: ({ me }) => me.admin },
+      { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
+      { id: "audit", get label() { return say("{Logbook}"); }, href: "/settings/audit", icon: "clock", aka: "Audit trail", show: ({ me }) => me.admin },
       { id: "config", label: "Configuration", href: "/config", icon: "globe", show: ({ me }) => me.admin },
     ],
   },
@@ -146,6 +153,18 @@ export interface PageInfo {
 }
 
 const enc = encodeURIComponent;
+
+/** What a configuration kind is called in a trail: the level words where the kind is a level. */
+function kindWord(kind: string): string {
+  const t = terms();
+  switch (kind) {
+    case "projects": case "project": return t.plural("project");
+    case "units": case "unit": return t.plural("unit");
+    case "organisation": case "organization": return t.label("organization");
+    case "installation": return `${t.label("installation")} settings`;
+    default: return kind;
+  }
+}
 
 function page(pattern: string, section: SectionId, tab: string | undefined, title: (p: Record<string, string>) => string,
   trail: (p: Record<string, string>) => Crumb[]): PageInfo {
@@ -197,6 +216,11 @@ export const PAGES: PageInfo[] = [
   page("/library/templates/:library/:name", "library", "templates", (p) => `Template ${p.name}`,
     (p) => [{ label: "Templates", href: "/library/templates" }, { label: p.library }, { label: p.name }]),
 
+  // The Learn area is not an eleventh area: it is help, reached from the top bar, the Guide and the pages' own links.
+  page("/learn", "home", undefined, () => "Learn", () => []),
+  page("/learn/:a", "home", undefined, () => "Learn", () => []),
+  page("/learn/:a/:b", "home", undefined, () => "Learn", () => []),
+
   page("/kit", "settings", undefined, () => "Design kit", () => [{ label: "Design kit" }]),
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
@@ -206,16 +230,17 @@ export const PAGES: PageInfo[] = [
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Keys for scripts" }]),
   page("/settings/access/agents", "settings", "access", () => "Connect an agent",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Connect an agent" }]),
-  page("/settings/approvals", "settings", "approvals", () => "Approvals", () => [{ label: "Approvals" }]),
+  page("/settings/approvals", "settings", "approvals", () => say("{Clearances}"), () => [{ label: say("{Clearances}") }]),
+  page("/settings/words", "settings", "words", () => "Words", () => [{ label: "Words" }]),
   page("/settings/rules", "settings", "rules", () => "Rules", () => [{ label: "Rules" }]),
-  page("/settings/audit", "settings", "audit", () => "Audit trail", () => [{ label: "Audit trail" }]),
+  page("/settings/audit", "settings", "audit", () => say("{Logbook}"), () => [{ label: say("{Logbook}") }]),
 
   page("/config", "settings", "config", () => "Configuration", () => [{ label: "Configuration" }]),
   page("/config/wizard/:id", "settings", "config", (p) => `Set-up: ${p.id.replace(/-/g, " ")}`,
     (p) => [{ label: "Configuration", href: "/config" }, { label: p.id.replace(/-/g, " ") }]),
-  page("/config/:kind/new", "settings", "config", (p) => `New ${p.kind}`, (p) => [{ label: "Configuration", href: "/config" }, { label: p.kind, href: `/config/${enc(p.kind)}` }, { label: "New" }]),
-  page("/config/:kind/:name", "settings", "config", (p) => p.name, (p) => [{ label: "Configuration", href: "/config" }, { label: p.kind, href: `/config/${enc(p.kind)}` }, { label: p.name }]),
-  page("/config/:kind", "settings", "config", (p) => p.kind, (p) => [{ label: "Configuration", href: "/config" }, { label: p.kind }]),
+  page("/config/:kind/new", "settings", "config", (p) => `New ${kindWord(p.kind)}`, (p) => [{ label: "Configuration", href: "/config" }, { label: kindWord(p.kind), href: `/config/${enc(p.kind)}` }, { label: "New" }]),
+  page("/config/:kind/:name", "settings", "config", (p) => p.name, (p) => [{ label: "Configuration", href: "/config" }, { label: kindWord(p.kind), href: `/config/${enc(p.kind)}` }, { label: p.name }]),
+  page("/config/:kind", "settings", "config", (p) => kindWord(p.kind), (p) => [{ label: "Configuration", href: "/config" }, { label: kindWord(p.kind) }]),
 ];
 
 export interface Located { info: PageInfo; params: Record<string, string> }
@@ -278,8 +303,14 @@ export function redirectFor(path: string, search = ""): string | null {
   return null;
 }
 
-/** The section a path belongs to; none for an address no page owns. */
+/** Whether an address is in the Learn area (the documentation inside the product). */
+export function isLearn(path: string): boolean {
+  return path === "/learn" || path.startsWith("/learn/");
+}
+
+/** The section a path belongs to; none for an address no page owns, and none for Learn, which is not an area. */
 export function sectionOf(path: string): SectionId | null {
+  if (isLearn(path)) return null;
   return locate(path)?.info.section ?? null;
 }
 

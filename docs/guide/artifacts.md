@@ -34,8 +34,7 @@ steps:
   says so. A step can fetch only from steps it needs, directly or through others; in a template,
   from a step of the same template.
 - **With the other features**: each member of a loop (`for_each`) keeps its own artifacts, so
-  members may use the same name; fetching from a loop's members is not supported yet (fetch from
-  a step that is not repeated). A step that runs after a failure (`when: { upstream: failed }` or
+  members may use the same name; fetch from the loop itself to receive every member's files, each in `<into>/<member>` (see the reference), or name one with `member:`. A step that runs after a failure (`when: { upstream: failed }` or
   `always`) may fetch from a step that failed what that step keeps with `when: failure` or
   `always`; one that runs only after a failure and fetches what is kept only on success is
   refused. Deploy and rollback steps take no `artifacts`, `fetch` or `reports`. Artifact names,

@@ -124,7 +124,7 @@ proxy, the address is the one the proxy saw only with `server.trust_proxy: true`
 A limited token works only on servers that know limits: an older server, during a rollback,
 refuses it rather than grant its owner's full rights. Tokens without limits work on both.
 
-Launchway cannot tell when someone leaves your organisation: their tokens keep the groups of their
+Launchway cannot tell when someone leaves your organization: their tokens keep the groups of their
 last sign-in until they expire. Remove their tokens when they leave, with
 `DELETE FROM api_tokens WHERE username = '...'` in the database.
 
@@ -145,7 +145,7 @@ address from the last entry of `X-Forwarded-For`, the one the proxy added. The p
 `Host` header through unchanged, and must not buffer `/api/v1/stream`. Cookies are also `Secure`
 whenever `redirect_url` starts with `https://`.
 
-## Audit trail
+## Logbook (the audit trail) {#audit-trail}
 
 Every call that changes something (starting, canceling and resuming runs, starting draft runs
 (`run.draft`), saving pipelines (`pipeline.save`), approving and rejecting, making and revoking
@@ -156,7 +156,7 @@ webhook call (`webhook.git`, `webhook.run`), allowed or refused, every waiver gr
 recorded with its time, who, their address, the action, project, target (run, step or token name),
 outcome (`ok`, `denied` or `failed`) and a short detail. A draft run is recorded with the SHA-256
 of its text and a save with its branch and commit; the pipeline text itself is never in the
-trail, nor are secrets, tokens and session ids. Launchway only ever adds to it. Admins read it on the **Audit trail** page or with
+trail, nor are secrets, tokens and session ids. Launchway only ever adds to it. Admins read it on the **Logbook** page (**Settings → Logbook**) or with
 `GET /api/v1/audit?user=&project=&action=&from=&to=&before=&limit=` (times in Unix milliseconds;
 `before` is the `next_before` of the previous page). It is kept until you remove old rows from the
 `audit` table yourself.

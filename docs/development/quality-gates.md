@@ -130,7 +130,7 @@ A baseline moves in one direction.
 
 A change is done when all of the following are true.
 
-**Behaviour is tested.** Every new behaviour has a test that would fail without it: a unit test for
+**Behavior is tested.** Every new behavior has a test that would fail without it: a unit test for
 logic, an integration test where it crosses a boundary (database, runner, HTTP, container). A bug
 fix starts with a test that reproduces the bug. Tests assert what a user or caller can observe, not
 how the code is built. Anything that touches the engine also shows what happens on failure,
@@ -155,13 +155,13 @@ and passes it on. No `context.Background()` below `main` except in documented ba
 names are validated before use, SQL uses placeholders only. Parsers that take outside input get a
 fuzz target.
 
-**Authorisation is in the table.** A new route is added to the route table with a permission class
+**Authorization is in the table.** A new route is added to the route table with a permission class
 and a row in the permission test; hidden resources answer like missing ones.
 
 **Parity.** A new capability is in the HTTP API, the MCP server, the CLI, Terraform and the web UI,
 or has a recorded exemption with a reason.
 
-**Docs.** Public behaviour is documented and the docs tests pass, in plain words.
+**Docs.** Public behavior is documented and the docs tests pass, in plain words.
 
 **Migrations are additive.** Follow [Writing a migration](./migrations.md); servers of two
 versions share a database.
@@ -176,7 +176,7 @@ statement or loses the answer to a commit; the API tests have a switch that make
 503 or drop connections, a transport that sends every runner write twice, and a server that is
 restarted behind a fixed address. Writes a runner makes must be safe to repeat.
 
-**Dependencies.** A new module needs an approved licence, a reason in the pull request, and passes
+**Dependencies.** A new module needs an approved license, a reason in the pull request, and passes
 `govulncheck`.
 
 **Web.** Components use the shared tokens in `styles.css`, call the API only through the typed

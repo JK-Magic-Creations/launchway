@@ -1,18 +1,18 @@
 # Controls and compliance
 
 Which security controls Launchway has today, which are planned, and how they can support an
-organisation's own compliance work, for example under PCI DSS or the HIPAA Security Rule. For
+organization's own compliance work, for example under PCI DSS or the HIPAA Security Rule. For
 security reviewers, auditors and decision makers.
 
 ## What compliance means here
 
 Software on its own is not "PCI compliant" or "HIPAA compliant", and Launchway is not certified
-against any standard. Compliance is assessed on the **organisation** that runs a system, including
+against any standard. Compliance is assessed on the **organization** that runs a system, including
 how it configures and operates it. A build and delivery platform that deploys into regulated
 systems is usually in scope of that assessment even if it never sees regulated data, because it
 can change what runs there.
 
-What Launchway can do is provide **controls** and **evidence** that help an organisation meet its
+What Launchway can do is provide **controls** and **evidence** that help an organization meet its
 own obligations. This page lists them honestly: what exists on the main branch today, and what is
 planned. It is not legal or assessor advice.
 

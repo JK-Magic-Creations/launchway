@@ -312,6 +312,9 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			case StepFailed:
 				p.Allowed, p.Reason = true, s.Error
 			}
+			if len(s.Approvals) > 1 {
+				p.Approvals, p.Requires = s.Approvals, schemaParity2 // the people who approved are kept with the decision
+			}
 			c.emit(StepReused, p)
 		}
 		c.advance()

@@ -23,6 +23,7 @@ import (
 // which, the names of the levels, and where each object is defined.
 type Layout struct {
 	Levels       Levels            `json:"levels"`
+	Terms        Terms             `json:"terms"`
 	Organisation Organisation      `json:"organisation"`
 	Units        []UnitView        `json:"units"`
 	ProjectUnit  map[string]string `json:"project_unit"`
@@ -50,7 +51,7 @@ const noProject = "-"
 // Check does.
 func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *Layout, error) {
 	c := Bootstrap(boot)
-	lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
+	lay := &Layout{Levels: DefaultLevels, Terms: Terms{Set: TermSets[0], Overrides: map[string]string{}}, ProjectUnit: map[string]string{}, Units: []UnitView{}}
 	live := make([]engine.ConfigObject, 0, len(objs))
 	for _, o := range objs {
 		// Objects of a kind this version does not know were written by a
@@ -146,7 +147,8 @@ func composeObject(c *config.Config, lay *Layout, policies *yaml.Node, units map
 	switch t := v.(type) {
 	case *Installation:
 		applyInstallation(c, t)
-		lay.Levels = t.Levels.withDefaults()
+		lay.Levels = t.Terms.levelsFor(t.Levels)
+		lay.Terms = t.Terms.normal()
 	case *Organisation:
 		lay.Organisation = *t
 	case *config.LibraryConfig:
@@ -293,6 +295,7 @@ func applyInstallation(c *config.Config, s *Installation) {
 		ensurePolicy(c).Waivers = s.PolicyWaivers
 	}
 	c.Auth.Tokens = s.Tokens
+	c.Forge = s.Forge
 }
 
 // Bootstrap returns a copy of a configuration with only what the file keeps
@@ -323,6 +326,7 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.AI.Models = nil
 	c.Auth.Access = nil
 	c.Auth.Tokens = config.TokensConfig{}
+	c.Forge = config.ForgeConfig{}
 	c.Auth.SetAccessInDatabase(false)
 	return &c
 }
@@ -460,7 +464,7 @@ func installationOf(c *config.Config) Installation {
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
 			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
 			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
-		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History}
+		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History, Forge: c.Forge}
 	s.Reports.Origin = ""
 	if c.Policy != nil {
 		s.PolicyWaivers = c.Policy.Waivers
@@ -504,6 +508,7 @@ func movedKeys(c *config.Config) []string {
 	set(len(c.AI.Models) > 0, "ai.models")
 	set(len(c.Auth.Access) > 0, "auth.access")
 	set(c.Auth.Tokens != (config.TokensConfig{}), "auth.tokens")
+	set(c.Forge != (config.ForgeConfig{}), "forge")
 	return keys
 }
 

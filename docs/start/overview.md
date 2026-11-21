@@ -38,14 +38,14 @@ called a [pipeline](../glossary.md#pipeline).
   restarts, and resumes from the step that failed.
 - **Runners that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
   pods or containers, with named toolbox containers and services sharing a workspace.
-- **Sign-in with your organisation's OpenID Connect provider**, roles per project, API tokens for
+- **Sign-in with your organization's OpenID Connect provider**, roles per project, API tokens for
   scripts, and an audit trail of every change.
 - **Secrets that never reach the server.** Pipelines hold references; the runner fetches values
   from Vault or OpenBao just before a step and masks them in output.
 - **A delivery model, not only builds:** approvals, environments with one deployment at a time,
   GitOps deployments through Argo CD, canary rollouts that a person or a step can promote, abort
   or retry, and rollback by reverting the change.
-- **Policies an organisation sets for every pipeline**, such as "nothing reaches production
+- **Policies an organization sets for every pipeline**, such as "nothing reaches production
   without passing tests, a clean scan and a second person's approval", with waivers that expire.
 - **Verification after a deploy.** A step reads metrics and logs from Prometheus, Loki and other
   sources, judges them with built-in statistics, and can promote, abort or roll back. Optional AI
@@ -71,7 +71,7 @@ called a [pipeline](../glossary.md#pipeline).
 
 ## How far along it is
 
-Launchway is early software, released under the AGPL-3.0 licence. What these documents describe
+Launchway is early software, released under the AGPL-3.0 license. What these documents describe
 as available works and is tested, including with several servers and with real Kubernetes,
 PostgreSQL, OpenBao, BuildKit and Argo CD. Much more is designed but not built yet. The
 [roadmap](../roadmap-list.md) shows each item as **available**, **in progress** or **planned**;

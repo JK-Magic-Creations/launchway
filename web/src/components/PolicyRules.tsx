@@ -29,7 +29,7 @@ export function PolicyRules({ catalogue, rules, onChange, problems }: {
             onValue={(v) => onChange({ ...rules, [r.name]: v })} problems={problems?.[r.name]} />
         ))}
       </ul>
-      {extra.length > 0 && <p className="cf-help">Also: {extra.join(", ")} (not in this server's catalogue; see the raw tab).</p>}
+      {extra.length > 0 && <p className="cf-help">Also: {extra.join(", ")} (not in this server's catalog; see the raw tab).</p>}
     </fieldset>
   );
 }

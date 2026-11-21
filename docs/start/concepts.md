@@ -92,7 +92,7 @@ same build, scan or release steps. See [Shared libraries](../guide/libraries.md)
 
 ## Policy
 
-A **policy** is a rule set an organisation sets for every pipeline, which the pipeline's authors
+A **policy** is a rule set an organization sets for every pipeline, which the pipeline's authors
 cannot switch off: for example "a deployment to prod needs passing tests, a scan with nothing worse
 than medium, and an approval by someone else". Policies live in the server's configuration or in a
 Git repository pinned by tag. Each policy is **enforced** (it stops the step) or **reported** (it
@@ -107,7 +107,7 @@ cannot approve it themselves, by default. See [Approvals and re-runs](../guide/a
 
 ## Roles and access
 
-People sign in with the organisation's OpenID Connect provider. Each person gets a **role** on
+People sign in with the organization's OpenID Connect provider. Each person gets a **role** on
 each project: **viewer** (see), **operator** (start, cancel, approve, save pipelines) or **admin**
 (also read the audit trail and waive policy rules). Roles come from groups in the identity
 provider. Scripts use **API tokens** that expire. See [Sign-in and access](../guide/access.md) and

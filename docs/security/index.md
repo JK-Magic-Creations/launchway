@@ -9,7 +9,7 @@ it safely. For security reviewers, operators and pipeline authors.
 | [Hardening checklist](hardening.md) | what to do before others can reach a server, for operators and pipeline authors |
 | [Supply chain](supply-chain.md) | pinned libraries, image digests, SBOMs, provenance, signatures, scans and policies |
 | [Verifying downloads](verify-downloads.md) | checking a Launchway binary, package, chart or image against its signature, provenance and source |
-| [Controls and compliance](controls-and-compliance.md) | which controls exist, which are planned, and how they support an organisation's own compliance work |
+| [Controls and compliance](controls-and-compliance.md) | which controls exist, which are planned, and how they support an organization's own compliance work |
 | [Reporting a vulnerability](reporting.md) | how to tell us about a security problem |
 
 Launchway is early software. Read the [trust model](trust-model.md) before letting anyone but

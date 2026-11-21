@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
+.PHONY: all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
 	charts-sync test-install test-runner-chart bundle test-bundle
 
@@ -9,8 +9,19 @@ all: web build
 
 web:
 	cd web && npm ci --no-audit --no-fund && npm run build
+	$(MAKE) learn
 
-build:
+# The documentation inside the binary (the Learn area): docs/ rendered into web/dist/learn-content,
+# which Go's embed takes along with the web UI. Needs the docs tools (npm ci in docs/), no browser and
+# no network; the diagrams are pre-drawn SVG in docs/.vitepress/diagrams (make docs-diagrams-cache).
+LEARN_OUT := web/dist/learn-content/manifest.json.gz
+LEARN_SOURCES := $(wildcard docs/*.md docs/*/*.md docs/*/*/*.md docs/learn/nav.json docs/.vitepress/diagrams/*.svg) \
+	docs/.vitepress/config.mts scripts/docs/build-learn.mjs scripts/docs/learn-pages.mjs
+learn: $(LEARN_OUT)
+$(LEARN_OUT): docs/node_modules $(LEARN_SOURCES)
+	node scripts/docs/build-learn.mjs
+
+build: $(LEARN_OUT)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/launchway ./cmd/launchway
 
 # Builds the container image (see Dockerfile). Docker works too: CONTAINER=docker.
@@ -250,11 +261,23 @@ docs: docs/node_modules
 	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress build .
 	node scripts/docs/check-links.mjs docs/.vitepress/dist '$(DOCS_BASE)'
 	node scripts/docs/build-roadmap.mjs --check .
+	$(MAKE) learn-check
 	cd docs && npx cspell --no-progress --config cspell.json "**/*.md"
 
 # A live preview at http://127.0.0.1:5173/launchway/
 docs-serve: docs/node_modules
 	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress dev . --host 127.0.0.1 --port 5173
+
+# Draws the Mermaid diagrams of the Learn pages as SVG, light and dark, into docs/.vitepress/diagrams
+# (kept in Git, so building the product needs no browser). Needs a Chromium: LAUNCHWAY_DOCS_CHROME=/path/to/chrome.
+docs-diagrams-cache: docs/node_modules
+	node scripts/docs/render-diagrams.mjs
+
+# Fails if a Learn page has a diagram without a drawing, a drawing is unused, or a page or link in the
+# Learn contents is wrong. No browser, no network.
+learn-check: docs/node_modules
+	node scripts/docs/render-diagrams.mjs --check
+	node scripts/docs/build-learn.mjs --check
 
 .PHONY: docs docs-serve docs-roadmap docs-diagrams docs-reference
 
@@ -270,6 +293,7 @@ docs-diagrams: docs/node_modules
 docs-reference: build
 	go test -count=1 -run 'Reference|DocsEvents' ./internal/pipeline/ ./internal/config/ ./internal/api/ ./internal/engine/ ./internal/policy/
 	scripts/docs/check-pipeline-examples.sh docs/reference/pipeline.md bin/launchway
+	for f in $$(grep -l '^<!-- try -->' docs/learn/*.md docs/learn/*/*.md); do scripts/docs/check-pipeline-examples.sh $$f bin/launchway || exit 1; done
 
 # Rebuilds docs/public/roadmap.html and docs/roadmap-list.md from docs/roadmap/.
 docs-roadmap:
@@ -348,7 +372,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: fmt-check vet lint arch originality ratchet web-lint web-test
+check: fmt-check vet lint arch originality ratchet web-lint web-test learn-check
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.

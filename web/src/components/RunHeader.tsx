@@ -1,3 +1,5 @@
+import { EXPLAIN } from "../learn/links";
+import { LearnLink } from "../learn/LearnLink";
 import type { ReactNode } from "react";
 import type { RunDetail, StepView } from "../api";
 import { AllowedFailureBadge } from "./AllowedFailures";
@@ -10,6 +12,7 @@ import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from 
 import { Band } from "../kit/layout";
 import { Icon } from "../kit/Icon";
 import { failing } from "./Tests";
+import { terms } from "../terms";
 
 /** How much of a run's detail shows: the summary, or everything the page knows. Engineers set it once. */
 export type Density = "summary" | "everything";
@@ -49,7 +52,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
   const ended = run.step_list.filter((s) => s.status === "succeeded" || s.status === "skipped").length;
   const badge = run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
     : run.lane?.state === "waiting" && !done ? <StatusPill status="waiting" label="Waiting for lane" />
-    : waitingStep ? <StatusPill status="waiting" label="Waiting for approval" />
+    : waitingStep ? <StatusPill status="waiting" label={terms().say("Waiting for {clearance}")} />
     : verifyWaiting ? <StatusPill status="waiting" label="Waiting for a person" />
     : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase)} />
     : <StatusPill status={run.status} />;
@@ -66,7 +69,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
             {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
-          <p className="sentence" aria-live="polite">{runSentence(run, now)}</p>
+          <p className="sentence" aria-live="polite">{runSentence(run, now)}{run.status === "failed" && <> <LearnLink to={EXPLAIN.stopped} /></>}</p>
         </div>
         <div className="acts">
           <DensityToggle value={density} onChange={onDensity} />
@@ -91,7 +94,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             {!done && !run.cancel_requested && (run.deadline_at ?? 0) > 0 && (
-              <span className="meta" title={`The pipeline's timeout cancels the run at ${clock(run.deadline_at!)}. Time spent waiting for an approval does not count.`}>
+              <span className="meta" title={`The pipeline's timeout cancels the run at ${clock(run.deadline_at!)}. Time spent waiting for {clearance} does not count.`}>
                 times out in {duration(Math.max(0, run.deadline_at! - now))}</span>
             )}
             {run.cancel_requested && run.cancel_reason && <span className="meta">{run.cancel_reason}</span>}

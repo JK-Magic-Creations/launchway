@@ -361,6 +361,31 @@ share: the database (the default on PostgreSQL), `s3`, or a directory on a share
 S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` variants),
 never from the file.
 
+## Forge
+
+Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
+over HTTPS (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.28 or newer on
+the server and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
+data. These are installation settings, kept in the database: an administrator sets them under
+Configuration, Installation settings, with `launchway config` or through the API (a file's `forge:` section
+is imported once, like the other settings that moved). Hosting is off until it is switched on, and a change
+takes effect when each server next restarts.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `forge.hosting` | boolean | `false` | Turn Git hosting on. The first time, the connection named `launchway` is made |
+| `forge.public_url` | URL | none | The address clients clone from, used in the clone address of each repository |
+| `forge.default_owner` | text | `launchway` | The owner of a repository made without one |
+| `forge.allow_insecure_http` | boolean | `false` | Accept Basic credentials over plain HTTP from any address; otherwise only a loopback listener does |
+| `forge.max_repo_mib` | whole number | no limit | The most one repository's packs may total, in MiB |
+| `forge.max_push_mib` | whole number | `2048` | The largest push (request body and pack), in MiB |
+| `forge.max_per_owner` | whole number | no limit | The most repositories one owner may have |
+| `forge.creates_per_minute` | whole number | `60` | How fast repositories may be created, in all |
+| `forge.max_concurrent` | whole number | `32` | The most `git` processes serving Git requests at once; more requests wait, then are refused |
+| `forge.cache_gib` | whole number | no limit | How much the repository caches on this server may take, in GiB; the least recently used are removed |
+| `forge.maintain_every` | text | `15m` | How often packs are consolidated, collected and checked. At least `1m` |
+
 ## Findings
 
 Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` means the default.
@@ -373,7 +398,7 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 | `findings.max_per_project` | whole number | `500000` | Findings a project keeps, the oldest runs' removed first. At least `max_per_run` |
 | `findings.max_components_per_run` | whole number | `20000` | SBOM components one run keeps for searching |
 | `findings.max_components_per_project` | whole number | `1000000` | SBOM components a project keeps. At least `max_components_per_run` |
-| `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarise them. At most 1024 |
+| `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarize them. At most 1024 |
 
 ## Loops
 
@@ -402,6 +427,7 @@ steps are refused. Checked when the server starts.
 | `environments[].projects` | list of patterns | required | The projects that may deploy here, such as `web-*` |
 | `environments[].queue` | text | `newest` | `newest`: a run waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they deploy in turn |
 | `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its deploy gate, unless `approvals.allow_self` lets them approve their own runs |
+| `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
 ## Runner pools
 

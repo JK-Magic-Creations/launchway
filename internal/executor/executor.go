@@ -68,6 +68,9 @@ type ContainerSpec struct {
 	Memory  string            // promised, such as 2Gi
 	Service bool
 	Command []string
+	// Ready, for a service, says when it is ready; steps start after (nil:
+	// when it has started).
+	Ready *Ready
 
 	// What the server worked out from the steps' resources and the
 	// installation's defaults (see pipeline.Container); zero for a service.

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Runs `launchway validate` on every complete pipeline example in a reference page: each
-# ```yaml block preceded by a line <!-- validate --> (blank lines between are allowed).
+# ```yaml block preceded by a line <!-- validate --> (blank lines between are allowed). A block
+# marked <!-- try --> (the Learn pages' "Try it in the editor" examples) is checked the same way.
 # Template examples (<!-- validate-template -->) and fragments are not checked here; the Go
 # test internal/pipeline/docs_reference_test.go reads templates as well.
 #
@@ -25,7 +26,7 @@ trap 'rm -rf "$dir"' EXIT
 
 # Write each marked block to $dir/<n>-line<L>.yaml, where L is the block's first line.
 awk -v dir="$dir" '
-	/^<!-- validate -->[ \t]*$/ { want = 1; next }
+	/^<!-- (validate|try) -->[ \t]*$/ { want = 1; next }
 	want && /^[ \t]*$/ { next }
 	want && /^```yaml[ \t]*$/ { n++; file = sprintf("%s/%03d-line%d.yaml", dir, n, NR + 1); inblock = 1; want = 0; next }
 	want { printf "%s:%d: <!-- validate --> is not followed by a ```yaml block\n", FILENAME, NR > "/dev/stderr"; bad = 1; want = 0 }

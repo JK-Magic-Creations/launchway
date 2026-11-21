@@ -102,10 +102,10 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
             { value: "kubernetes", label: "Kubernetes", help: "Each run gets its own pod. The runner enrols when its pod starts, so the token needs a use for every pod start." },
           ]} />
         <div className="cf-grid">
-          <TextInput label="How many runners may enrol with it" type="number" value={String(uses)} onChange={(v) => setUses(Math.max(1, Math.min(10000, Number(v) || 1)))}
+          <TextInput label="How many runners may enroll with it" type="number" value={String(uses)} onChange={(v) => setUses(Math.max(1, Math.min(10000, Number(v) || 1)))}
             help={place === "kubernetes" ? "Every pod start uses one; give room for restarts and scaling." : "Usually one: a token per runner, so each is traceable to its token."} />
           <SelectInput label="The token is valid for" value={ttl} onChange={setTtl} options={TTLS}
-            help="After that, no runner can enrol with it; the runners it enrolled keep working." />
+            help="After that, no runner can enroll with it; the runners it enrolled keep working." />
           <ListInput label="Labels (optional)" value={labels} onChange={setLabels} placeholder="arm64, gpu"
             help="Pipelines can ask for runners with these labels, for steps that need special hardware." />
         </div>

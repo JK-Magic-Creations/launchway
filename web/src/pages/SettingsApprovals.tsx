@@ -7,6 +7,7 @@ import { ErrorBox } from "../components/ui";
 import { useLoad } from "../guided/useLoad";
 import { Button, PageHead, Sheet } from "../kit/layout";
 import { Icon } from "../kit/Icon";
+import { terms } from "../terms";
 
 type Choice = "unset" | "yes" | "no";
 
@@ -59,26 +60,26 @@ export function SettingsApprovalsPage() {
   const s = now.data;
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title="Approvals"
+      <PageHead eyebrow="Settings" title={terms().plural("clearance")}
         sentence={s === null ? "Loading." : s.allow_self
-          ? "The person who starts a run may approve it themselves."
-          : "The person who starts a run cannot approve it: someone else must."} />
+          ? `The person who starts a run may give ${terms().lower("clearance")} for it themselves.`
+            : `The person who starts a run cannot give ${terms().lower("clearance")} for it: someone else must.`} />
       <ErrorBox error={now.error} />
-      <Sheet title="Who may approve a run" pad>
+      <Sheet title={`Who may give ${terms().lower("clearance")} for a run`} pad>
         <div className="stack">
           <p>
-            An approval step stops a run until a person says it may go on. By default, <b>the person who started the run may not approve it</b> once people sign in,
-            so a second pair of eyes always looks at a change before it goes further. They may still reject it.
-            Without sign-in everyone is the same person, so approving your own run is allowed.
+            A step that needs {terms().lower("clearance")} stops a run until a person says {terms().label("go")}. By default, <b>the person who started the run may not give it</b> once people sign in,
+            so a second pair of eyes always looks at a change before it goes further. They may still say {terms().label("no_go")}.
+            Without sign-in everyone is the same person, so giving {terms().lower("clearance")} for your own run is allowed.
           </p>
           <p className="faint">
             This also decides who may promote or retry a deployment on a protected environment. In force now:{" "}
-            <b>{s === null ? "…" : s.allow_self ? "people may approve their own runs" : "people may not approve their own runs"}</b>{s && !s.sign_in ? " (sign-in is off)" : ""}.
+            <b>{s === null ? "…" : s.allow_self ? `people may give ${terms().lower("clearance")} for their own runs` : `people may not give ${terms().lower("clearance")} for their own runs`}</b>{s && !s.sign_in ? " (sign-in is off)" : ""}.
           </p>
           {admin ? (
             <fieldset className="decide-form" style={{ border: 0, padding: 0, margin: 0 }} disabled={!obj}>
               <legend className="eyebrow">Choose</legend>
-              {([["unset", "Use the default", "Yes without sign-in, no with sign-in."], ["no", "Someone else must approve", "The person who started a run cannot approve it."], ["yes", "People may approve their own runs", "Faster for small teams, with no second look."]] as [Choice, string, string][]).map(([v, t, d]) => (
+              {([["unset", "Use the default", "Yes without sign-in, no with sign-in."], ["no", "Someone else must give it", "The person who started a run cannot give it."], ["yes", "People may give it for their own runs", "Faster for small teams, with no second look."]] as [Choice, string, string][]).map(([v, t, d]) => (
                 <div key={v} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                   <input type="radio" id={`allow-${v}`} name="allow-self" checked={choice === v} onChange={() => { setChoice(v); setSaved(false); }} />
                   <label htmlFor={`allow-${v}`} style={{ fontWeight: 400, color: "var(--ink)" }}><b>{t}</b> <span className="faint">{d}</span></label>
@@ -86,10 +87,10 @@ export function SettingsApprovalsPage() {
               ))}
               <ErrorBox error={error} />
               <div className="acts"><Button kind="pri" icon="check" disabled={busy || !obj} onClick={save}>Save</Button></div>
-              {saved && <div className="note" role="status"><Icon name="check" />Saved. It applies within a few seconds and is in the history of the installation settings.</div>}
+              {saved && <div className="note" role="status"><Icon name="check" />Saved. It applies within a few seconds and is in the history of the {terms().lower("installation")} settings.</div>}
             </fieldset>
           ) : (
-            <div className="note"><Icon name="lock" />Only an administrator can change this. Ask one if you need to approve a run you started.</div>
+            <div className="note"><Icon name="lock" />Only an administrator can change this. Ask one if you need to give {terms().lower("clearance")} for a run you started.</div>
           )}
         </div>
       </Sheet>

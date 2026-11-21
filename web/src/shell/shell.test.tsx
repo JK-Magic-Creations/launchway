@@ -28,7 +28,7 @@ describe("the do bar's search", () => {
     expect(items.some((i) => i.id === "why-shop-web")).toBe(false);
   });
   it("finds every page of every area, the soon pages marked", () => {
-    const hits = searchItems(items, "freeze");
+    const hits = searchItems(items, "hold");
     expect(hits[0]).toMatchObject({ href: "/changes/freezes" });
     expect(hits[0].label).toContain("(soon)");
   });
@@ -114,7 +114,7 @@ describe("the launcher", () => {
     render(<Launcher ctx={ctx()} onClose={() => {}} />);
     expect(screen.getByRole("dialog", { name: "All areas" })).toBeInTheDocument();
     for (const s of SECTIONS) expect(screen.getByText(s.promise)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Freeze windows (soon)" })).toHaveAttribute("href", "/changes/freezes");
+    expect(screen.getByRole("link", { name: "Hold windows (soon)" })).toHaveAttribute("href", "/changes/freezes");
   });
 });
 
@@ -130,7 +130,7 @@ describe("the Guide's text", () => {
     for (const g of Object.values(GUIDE)) expect(g.text).not.toMatch(/\.ya?ml|edit the file/i);
   });
   it("only has entries for pages that exist", () => {
-    const patterns = new Set(["/", "/projects", "/projects/:name", "/pipelines", "/images", "/images/components", "/deployments", "/deployments/environments", "/activity", "/activity/approvals", "/runs/:id", "/library", "/settings", "/settings/runners", "/settings/audit", "/kit"]);
+    const patterns = new Set(["/learn", "/learn/:a", "/learn/:a/:b", "/", "/projects", "/projects/:name", "/pipelines", "/images", "/images/components", "/deployments", "/deployments/environments", "/activity", "/activity/approvals", "/runs/:id", "/library", "/settings", "/settings/runners", "/settings/audit", "/settings/words", "/kit"]);
     for (const k of Object.keys(GUIDE)) expect(patterns.has(k), k).toBe(true);
   });
 });

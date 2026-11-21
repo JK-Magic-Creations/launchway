@@ -76,4 +76,5 @@ func (s *StepState) applyReused(p Payload, ev Event) {
 	s.FinishedAt = ev.At
 	s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
 	s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
+	s.Approvals = p.Approvals
 }

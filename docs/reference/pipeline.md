@@ -291,6 +291,36 @@ are reserved.
 | `memory` | quantity | the runner's | A memory request on Kubernetes, such as `512Mi` or `2Gi` |
 | `service` | boolean | `false` | Run the container's own command for the whole run instead of running steps in it. Steps cannot use a service as their `container` |
 | `command` | one value or a list | the image's own | Services only: the command to run |
+| `ready` | mapping | ready once started | Services only: when the service is ready; see [Service readiness](#service-readiness) |
+
+### Service readiness
+
+Without `ready` a service is used as soon as it has started, so a test can race a database that is
+still initialising. With it, the first step starts only when the service is ready:
+
+<!-- keys: container-ready -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `run` | text | | A command run inside the service's container, with no extra privileges; ready when it exits 0. Exactly one of `run`, `tcp` or `http` |
+| `tcp` | port | | A port on `localhost` that accepts connections |
+| `http` | mapping | | `{ path: /health, port: 8080 }`: a GET on `localhost` that answers 2xx |
+| `every` | duration | `2s` | How often to check, at least `1s` |
+| `within` | duration | `60s` | How long to wait, at most `10m` |
+
+<!-- keys: container-ready-http -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `path` | text | `/` | Starts with `/`, with no spaces or shell characters |
+| `port` | port | required | The port on `localhost` |
+
+On Kubernetes the check is the container's `readinessProbe` (`exec`, `tcpSocket` or `httpGet`; the
+period is `every`, the failure threshold `within / every`) and the pod is waited for until it is
+ready. On Podman it is the container's health check (`--health-cmd`), run inside the service's
+container: a `run` check needs its command in the image, a `tcp` check needs `nc` or `bash`, and an
+`http` check needs `wget` or `curl`. The Docker and host executors do not support services; the
+error says to use Podman or Kubernetes. The step log says `Waiting for service postgres...` and
+`Service postgres ready after 6 s`. A service that is not ready within `within` fails the step as an
+infrastructure problem, with the check and the last lines of the service's output.
 
 <!-- validate -->
 ```yaml
@@ -325,7 +355,7 @@ steps:
 
 A step with `uses:` is replaced by a template's steps; it is not a kind, but it takes its own set of
 keys ([A step that uses a template](#a-step-that-uses-a-template)). The kinds `release`, `promote`,
-`input` and `analysis` are recognised and refused as not available yet.
+`input` and `analysis` are recognized and refused as not available yet.
 
 ### Step keys common to all kinds
 
@@ -359,6 +389,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `secrets` | mapping | none | Environment variables whose values a runner looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
+| `runner` | mapping | the run's runner | A runner and a workspace of this step's own; see [A runner for one step](#a-runner-for-one-step) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Artifacts](#artifacts) |
 | `fetch` | list | none | Artifacts of earlier steps to put in the workspace first; see [Fetch](#fetch) |
 | `cache` | list | none | Directories to restore before the script and save after it, so that a dependency install does not start from nothing every run; see [Cache](#cache) |
@@ -366,6 +397,8 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: how many members may be queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: once a member fails for good, cancel the others not started and stop those running |
+| `add` | list | none | With `for_each`: whole combinations to add outside the lists, one value for every key; see [For each](#for-each) |
+| `continue_for` | list | none | With `for_each`: members, matched like `exclude` entries, that may fail without failing the run (as `on_failure: continue`) |
 
 A step that fails keeps its last few lines of output with the step, so the reason shows where the
 run says it failed. Secret values are masked in logs and outputs; values shorter than 4 characters
@@ -382,6 +415,7 @@ by `for_each`. See [Deploy with an approval](../tutorials/deploy-with-approval.m
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `message` | text | required | The question to decide, one line of at most 500 characters |
+| `approvers` | mapping | anyone with the operator role, one approval | Who may decide and how many distinct people must approve; see [Approvers](#approvers) |
 | `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that environment. The approval must need the deploy step, directly or not, and takes no `when.upstream`. Not allowed in a template |
 
 <!-- validate -->
@@ -403,6 +437,33 @@ steps:
     run: ./deploy.sh
 ```
 
+#### Approvers
+
+`approvers` narrows who may decide an approval and asks for more than one approval:
+
+<!-- keys: approvers -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `groups` | list of names | none | Groups, as the sign-in provider gives them and bindings name them. A member of any may decide |
+| `users` | list of names | none | Users, as written in bindings. Any of them may decide |
+| `count` | whole number | `1` | How many distinct people must approve, 1 to 5. With `users` only, not more than the users listed |
+
+The caller must still have the operator role on the project (and on the environment, for an
+approval that names a deployment): `approvers` only narrows, never widens. It is judged by the
+server's engine for the web, the API, MCP and the command line alike, by name and groups at the
+time of the decision. Each approval is recorded (`step.approval_recorded`, with who, when and the
+comment) and the step goes on waiting until `count` different people have approved; the same
+person twice is refused, and the person who started the run does not count unless the server
+allows approving one's own runs. A rejection by anyone allowed ends the step at once; an expiry
+rejects it, whatever has been approved. A re-run reuses the decision with its people.
+
+An environment with `protected: true` can set `min_approvals` (1 to 5) in the server's
+configuration: for an approval that names a deployment there, the number needed is the larger of
+`count` and the environment's `min_approvals`, so editing a pipeline cannot weaken production. The
+approval shows the number and where it comes from. The run page, the approvals page, the API
+(`approvals`, `approvals_needed`), MCP (`list_approvals`, `decide_approval`) and
+`launchway approvals list` show "1 of 2 approved" with names.
+
 ### A step that uses a template
 
 A step with `uses` is replaced, when a run is created, by the steps of a template from one of the
@@ -418,6 +479,8 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: members queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: stop the other members once one fails |
+| `add` | list | none | With `for_each`: whole combinations to add outside the lists |
+| `continue_for` | list | none | With `for_each`: members that may fail without failing the run; the template's steps that run a script or build an image then behave as `on_failure: continue` |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
 `POST /api/v1/validate?project=NAME` expand it.
@@ -828,7 +891,7 @@ outputs and artifacts. It runs no script. The runner makes the call with a key f
 stores (`ai: true` in its configuration); the key never enters a step's container. The model's
 answer is untrusted text: it can become the step's outputs and an artifact, never run anything. The
 model must be one of the server's [`ai.models`](server-config.md#ai-models) that the project may
-use. `timeout` defaults to `10m`, from `10s` to `1h`. It cannot be in a template or in a loop, and
+use. `timeout` defaults to `10m`, from `10s` to `1h`. It may be in a template, where `model`, `instructions` and `prompt` may be `{ param: … }` and its inputs name steps of the same template; the model is checked against the server's registry after expansion. It cannot be in a loop, and
 takes no `run`, `image`, `env`, `secrets`, `artifacts`, `reports` or `fetch`. It needs a server that
 knows ai steps (schema 19). See [AI models](../guide/ai.md).
 
@@ -914,6 +977,44 @@ steps:
   train:
     image: python:3.13
     run: python train.py
+```
+
+### A runner for one step
+
+`runner` on a step gives that step a runner and a workspace of its own, so one run can build or
+test on different platforms. The step gets a fresh checkout of the run's commit on any runner
+that has the pool and labels (and the features the step needs), shared with no other step; files
+travel between such steps only through [`artifacts` and `fetch`](#fetch). Steps without `runner`
+keep the run's shared workspace and the top-level [`runner`](#runner), exactly as before,
+and a step with its own runner neither takes over the run's runner nor waits for it. Not on image,
+deploy, rollback, rollout, approval, verify, ai or `uses` steps (an ai step already runs on any
+runner that calls models).
+
+<!-- keys: step-runner -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `pool` | name | any pool that serves the project | A build pool that serves the project and the event. In a template it may be `{ param: name }` |
+| `labels` | list | none | Labels a runner must all have. In a looped step an item may be `{ each: key }` (with `format`); in a template the list may be `{ param: name }` |
+
+A retry of the step reuses its workspace; a step whose labels no runner has waits ("waiting for a
+runner with labels arm64") and does not hold back steps that do not need it. A pool that does not
+exist or does not serve the project makes the pipeline invalid when the run is created.
+
+<!-- validate -->
+```yaml
+pipeline: two-platforms
+steps:
+  build:
+    for_each: { arch: [amd64, arm64] }
+    runner: { labels: [ { each: arch } ] }
+    image: golang:1.25
+    run: go build -o out/app .
+    artifacts: [ { name: binary, paths: [out/app] } ]
+  package:
+    needs: build
+    image: alpine:3.22
+    run: ls dist
+    fetch: [ { from: build, name: binary, into: dist } ]
 ```
 
 ## Resources
@@ -1181,6 +1282,18 @@ step that needs the loop needs every member.
   digit. Put other text around a value with `format`.
 - `exclude` is a list of mappings from keys to values; a combination matching every key of an
   entry is left out. With every list written in place, an entry that matches nothing is an error.
+- `add` is a list of whole combinations (every key of the loop, values from the same alphabet,
+  allowed to lie outside the lists). They are appended after the cross product in the order
+  written, take part in `max_parallel` and `fail_fast` like any member, and count toward the
+  limit below. Members keep ids made of the loop keys only, so adding an entry never changes the
+  id of a member the lists make. An entry that is already a combination of the lists, is left out
+  by `exclude`, or is written twice is an error.
+- `continue_for` is a list of entries matched like `exclude` entries (one or more keys). A matching
+  member behaves as `on_failure: continue`: if it fails for good it ends as failed (allowed), the
+  steps that need the loop treat it as succeeded and it does not trigger `fail_fast`. An entry
+  that matches no member is an error. In a loop over a template, the template's steps that run a
+  script or build an image are tolerated; other kinds of step cannot tolerate a failure. Members
+  that `continue_for` does not select still stop the others.
 - A loop has at most 64 combinations unless the server allows more
   ([`loops.max_members`](server-config.md#loops), at most 500), and a run at most 500 steps.
   An expanded step name may be at most 200 bytes.
@@ -1214,6 +1327,8 @@ steps:
       python: ["3.11", "3.12", "3.13"]
       os: { input: systems }
     exclude: [ { python: "3.11", os: alpine } ]
+    add: [ { python: "3.14", os: debian } ]
+    continue_for: [ { python: "3.14" } ]
     max_parallel: 3
     fail_fast: false
     image: { each: python, format: "python:%s" }
@@ -1292,6 +1407,13 @@ the step's output. Used by a step's `secrets`, an image step's build secrets and
 | `store` | name | required | A store configured on the runner, such as `vault`. `^[a-z][a-z0-9_-]{0,62}$` |
 | `key` | text | required | The secret's name or path in that store |
 | `field` | text | none | A field within the secret, for stores that have them (required for `vault`) |
+
+In a template, `store`, `key` and `field` may be `{ param: name }` (with `format:` for text around
+it) of a parameter of type `string`, so a use chooses which secret a step is given; a list, a number
+or a boolean is refused there. The expanded steps hold plain values, so the runner and the server
+see exactly what they see for a pipeline written by hand, and `GET /api/v1/libraries/{library}/templates`
+(and MCP `list_templates`, and `launchway templates list`) mark each parameter used this way with
+`secret_reference`.
 
 Steps of [draft runs](../glossary.md#draft-run) and pull-request runs that ask for secrets fail
 before any runner sees them, unless the server's configuration allows it.
@@ -1374,12 +1496,23 @@ most 20 per step.
 <!-- keys: fetch -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `from` | step name | required | The step that keeps the artifact. The fetching step must need it, directly or not. Not a step that uses a template, nor a loop |
+| `from` | step or loop name | required | The step that keeps the artifact, or a `for_each` loop whose members each keep it (in a pipeline, a loop inside a template is written `use/loop`). The fetching step must need it, directly or not. Not a step that uses a template |
 | `name` | text | required | The artifact's name |
-| `into` | directory | the workspace | A directory relative to the workspace to put the files in, keeping their paths below it |
+| `into` | directory | the workspace | A directory relative to the workspace to put the files in, keeping their paths below it. Required when `from` is a loop and there is no `member` |
+| `member` | mapping | all members | With a loop: one member, named by a value for every key of the loop, such as `{ os: linux, arch: amd64 }`. Its files go directly in `into` |
 
 A step that runs only after a failure (`when.upstream: failed`) cannot fetch an artifact kept only
 on success.
+
+Fetching from a loop: `{ from: build, name: binary, into: dist }` puts every member's files in
+`dist/<member>/…`, `<member>` being the member's values joined by `_` in key order
+(`dist/linux_amd64/…`), so two members never share a path. `{ from: build, name: binary, member:
+{ os: linux, arch: amd64 }, into: out }` fetches one member directly into `out`. A member that was
+skipped, or that failed, was allowed to (`continue_for`) and kept nothing, is left out of the
+all-members form; a member that succeeded without keeping the artifact fails the step, as a
+missing artifact does for any step. The limit of 20 counts the entries written, not the members.
+`launchway validate` refuses a `member` with a missing or unknown key or a value the loop does not
+have, and the all-members form without `into`.
 
 <!-- validate -->
 ```yaml
@@ -1519,7 +1652,7 @@ Each entry of `outputs` maps an output name (`^[A-Za-z_][A-Za-z0-9_-]{0,62}$`) t
 ### Template steps
 
 Steps in a template take every key a pipeline's steps take, with these differences: they may not
-be deploy, rollback or rollout steps; an approval may not name a `deployment`; `{ input: ... }` and
+be deploy, rollback, rollout or verify steps; an approval may not name a `deployment`; `{ input: ... }` and
 `when.input` are refused (pass the input to a parameter instead); `uses` names a template of the
 same library by name alone; and they take one more key:
 

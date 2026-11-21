@@ -999,6 +999,10 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			}
 			if def := c.st.Pipeline.Step(cd.step); def == nil || def.IsDeployKind() {
 				return nil // for deploy runners only
+			} else if def.HasOwnRunner() && c.e.knows(schemaParity2) {
+				var err error
+				job, err = c.leaseOwn(r, cd, s, def)
+				return err
 			}
 			prev := c.st.Runner
 			if !c.runnerCan(r, cd.step) {
@@ -1008,26 +1012,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 				return nil // its pool does not serve the run (checked in SQL too)
 			}
 			if def := c.st.Pipeline.Step(cd.step); def.IsAI() && c.e.knows(schemaVerify) {
-				// An ai step needs no workspace: any runner that can call
-				// models takes it, and the run stays where it is.
-				aj, why := c.aiJob(def)
-				if why != "" {
-					if c.err != nil {
-						return c.err
-					}
-					c.failStep(cd.step, why)
-					c.advance()
-					return nil
-				}
-				leaseID := ids.New("lease")
-				if _, err := c.tx.Exec(`INSERT INTO leases(id, run_id, step_id, attempt, runner, expires_at) VALUES(?,?,?,?,?,?)`,
-					leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
-					return err
-				}
-				c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID, Inputs: c.inputs(cd.step)})
-				job = c.job(cd.step, leaseID)
-				job.AI = aj
-				return c.addArtifactsToJob(job)
+				var err error
+				job, err = c.leaseAI(r, cd, s, def)
+				return err
 			}
 			if prev != r.ID {
 				if ownOnly {
@@ -1759,6 +1746,8 @@ func (c *cmd) persist() error {
 		{schemaReruns, c.persistSchema8},
 		{schemaFlow, func() error { return c.persistFlow(changed) }},
 		{schemaFlow, c.persistLanes},
+		{schemaParity2, c.persistStepRunners},
+		{schemaParity2, func() error { return c.persistParity2(changed) }},
 		{schemaPullRequests, c.persistSchema9},
 		{schemaTests, c.persistSchema10},
 		{schemaDeploy, c.persistSchema11},
@@ -1936,7 +1925,7 @@ func (c *cmd) advance() {
 				}
 				changed = len(c.events) > before
 			case def.IsApproval():
-				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
+				c.emit(StepWaiting, c.approvalWait(id, def, s.Attempt+1))
 				changed = true
 			case def.IsImage() && (c.imageRefused(id, def) || c.gateImage(id, def)):
 				if c.err != nil {

@@ -324,3 +324,36 @@ func TestProjectsHoldNoPipelineContent(t *testing.T) {
 		t.Error("a library spec with templates was accepted")
 	}
 }
+
+// Git hosting is an installation setting: off until switched on, imported
+// from the file once, read back from the database, and not kept by the
+// bootstrap file.
+func TestGitHostingIsAnInstallationSetting(t *testing.T) {
+	none, _, err := Compose(&config.Config{}, storeRoundTrip(t, mustFromConfig(t, &config.Config{})))
+	if err != nil || none.Forge.Hosting {
+		t.Fatalf("hosting must be off by default: %+v %v", none.Forge, err)
+	}
+	file, _, err := config.ParseSections([]byte("forge:\n  hosting: true\n  default_owner: team\n  max_push_mib: 512\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys := strings.Join(movedKeys(file), ","); !strings.Contains(keys, "forge") {
+		t.Errorf("the file's forge section is not reported as moved: %s", keys)
+	}
+	got, _, err := Compose(&config.Config{}, storeRoundTrip(t, mustFromConfig(t, file)))
+	if err != nil || !got.Forge.Hosting || got.Forge.DefaultOwner != "team" || got.Forge.MaxPushMiB != 512 {
+		t.Fatalf("forge after the round trip: %+v %v", got.Forge, err)
+	}
+	if b := Bootstrap(file); b.Forge.Hosting || b.Forge.DefaultOwner != "" {
+		t.Errorf("the bootstrap still has it: %+v", b.Forge)
+	}
+}
+
+func mustFromConfig(t *testing.T, c *config.Config) []engine.ConfigObject {
+	t.Helper()
+	objs, err := FromConfig(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return objs
+}

@@ -22,7 +22,7 @@ compliance items provide controls and evidence.
 | Shared libraries | Templates and scripts in their own repository, pinned by tag, branch or commit, with typed parameters. ([more](guide/libraries.md)) |
 | Step resources | Each step is sized, with defaults per kind of step and a ceiling no step can pass, so one step cannot starve a cluster. ([more](reference/config-objects.md#step-resources)) |
 | Configuration in the database | Projects, runner pools, environments, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit. ([more](guide/configuration.md)) |
-| Four levels | Installation, organisation, unit and project, with names you choose and levels nobody uses kept out of sight. ([more](guide/configuration.md#levels)) |
+| Four levels | Base, Wing, Squadron and Project (or the plain Installation, Organization, Team and Project), with words you choose and levels nobody uses kept out of sight. ([more](guide/configuration.md#levels)) |
 | Guided setup wizards | First-run setup, connecting a repository, adding a runner, an environment, a policy or a verification step: plain questions, explained options, answers checked as you go. ([more](howto/setup-first-run.md)) |
 | A guided interface | A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a run page that says why each wait is happening. ([more](demo.md)) |
 | One capability, every interface | What the web UI does, the HTTP API, the command line and the agent endpoint do too, with a table in the build that fails when one falls behind. ([more](reference/interface-parity.md)) |
@@ -36,14 +36,14 @@ compliance items provide controls and evidence.
 | Policy gates | Rules pipelines cannot opt out of, at run start, before deploys and image pushes; report or enforce; audited, expiring waivers. ([more](guide/policies.md)) |
 | Sign-in and access | OpenID Connect sign-in with groups, roles per project and environment, scoped API tokens and an audit trail. ([more](guide/access.md)) |
 | Secrets that stay with runners | Pipelines hold references; runners read values from Vault, OpenBao, files or the environment, and mask them. ([more](guide/secrets.md)) |
-| Security findings and SBOMs | Secret, code, dependency, licence and image findings (SARIF), new and fixed across runs, and a component search. ([more](guide/security-findings.md)) |
+| Security findings and SBOMs | Secret, code, dependency, license and image findings (SARIF), new and fixed across runs, and a component search. ([more](guide/security-findings.md)) |
 | Secure step execution | Non-root step pods under strict pod security, a step pod removed when its run ends and leaked ones reaped, container and host executors, and runners that only connect outward. ([more](security/trust-model.md)) |
 | Runner identity and pools | Join tokens, a key per runner, pools scoped to projects, and allow-lists on the runner itself. ([more](guide/runner-identity.md)) |
 | Test, coverage and HTML reports | Thirteen test formats, coverage with thresholds, flaky-test detection, history, and the tools' own HTML reports in a sandbox. ([more](guide/test-reports.md)) |
 | Built-in artifact storage | Artifacts and hosted reports live in the database by default, so several servers need nothing else; S3 or a shared folder are optional. ([more](artifacts.md)) |
 | AI models in steps | Optional hosted or local models for steps and failure explanations, with per-model token limits; keys never enter a step's container. ([more](guide/ai.md)) |
 | An endpoint for agents | Agents validate pipelines, start and watch runs and diagnose failures with exactly the rights of the token they hold. ([more](guide/agents.md)) |
-| Open source | Free software under the AGPL-3.0, with a commercial licence for those who cannot use it, and this documentation site with its roadmap. ([more](https://github.com/JK-Magic-Creations/launchway/blob/main/LICENSING.md)) |
+| Open source | Free software under the AGPL-3.0, with a commercial license for those who cannot use it, and this documentation site with its roadmap. ([more](https://github.com/JK-Magic-Creations/launchway/blob/main/LICENSING.md)) |
 | A public documentation site and roadmap | Enterprise-level documentation with diagrams, security guidance, a graphical roadmap with drill-down pages, and a local demo. ([more](start/overview.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
@@ -70,7 +70,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Branch and tag manager](roadmap/milestone-1.md#branch-and-tag-manager) | Planned | List, rename, delete and restore branches, set the default, and delete merged branches automatically. |
 | [Large files](roadmap/milestone-1.md#large-files) | Planned | Store large binary files outside the normal history, with locks and quotas. |
 | [Forks and templates](roadmap/milestone-1.md#forks-and-templates) | Planned | Fork a repository to propose changes from your own copy, and start new repositories from templates. |
-| [Repository quotas and size limits](roadmap/milestone-1.md#repository-quotas-and-size-limits) | Planned | Limits on repository size, large-file storage and per-organisation usage, shared with artifact and log quotas. |
+| [Repository quotas and size limits](roadmap/milestone-1.md#repository-quotas-and-size-limits) | Planned | Limits on repository size, large-file storage and per-organization usage, shared with artifact and log quotas. |
 | [Activity, language and topic information](roadmap/milestone-1.md#activity-language-and-topic-information) | Planned | Contributor activity, commit graphs, languages, topics and a repository picture. |
 | [Webhooks to other tools](roadmap/milestone-1.md#webhooks-to-other-tools) | Planned | Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries. |
 | [Notifications and email](roadmap/milestone-1.md#notifications-and-email) | Planned | An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. |
@@ -110,7 +110,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Organisations, teams and collaborators](roadmap/milestone-1.md#organisations-teams-and-collaborators) | Planned | Teams with their own permissions on repositories, and invitations for people from outside. |
+| [Organizations, teams and collaborators](roadmap/milestone-1.md#organizations-teams-and-collaborators) | Planned | Teams with their own permissions on repositories, and invitations for people from outside. |
 | [Tokens and scoped access](roadmap/milestone-1.md#tokens-and-scoped-access) | Planned | Personal and service tokens limited to chosen repositories and actions. |
 | [Launchway as a sign-in provider](roadmap/milestone-1.md#launchway-as-a-sign-in-provider) | Planned | Let other tools sign in with accounts that live in Launchway. |
 | [Host administration screens](roadmap/milestone-1.md#host-administration-screens) | Planned | Users, repositories, queues, background tasks, a banner and a maintenance mode. |
@@ -152,7 +152,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Follow a change on its launch line](roadmap/milestone-1.md#follow-a-change-on-its-launch-line) | In progress | A single line that shows one change travelling from idea to running software, with each station opening its evidence. |
+| [Follow a change on its launch line](roadmap/milestone-1.md#follow-a-change-on-its-launch-line) | In progress | A single line that shows one change traveling from idea to running software, with each station opening its evidence. |
 | [A Home that tells you what to do next](roadmap/milestone-1.md#a-home-that-tells-you-what-to-do-next) | In progress | One sentence about what needs you, rows with one recommended action each, and a checklist that disappears as you finish it. |
 | [Six plainly named sections](roadmap/milestone-1.md#six-plainly-named-sections) | In progress | A short, plainly named set of sections, with the ones that have nothing to show kept out of sight, replaces a long flat menu. |
 | [Overview, then focus, then detail](roadmap/milestone-1.md#overview-then-focus-then-detail) | Planned | Every topic follows one pattern: a picture of what is going on, one thing in focus, then everything about it for engineers. |
@@ -359,7 +359,7 @@ One connected picture of code, dependencies, images and deployments, so you alwa
 | [What is deployed where](roadmap/milestone-5.md#what-is-deployed-where) | Planned | Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. |
 | [A continuous observer of what runs](roadmap/milestone-5.md#a-continuous-observer-of-what-runs) | Planned | Watch clusters and hosts for what is actually running, not only what was deployed. |
 | [Continuous scanning of what runs](roadmap/milestone-5.md#continuous-scanning-of-what-runs) | Planned | Scan deployed software for new vulnerabilities and best-practice gaps, not only at build time. |
-| [Advisories, exceptions and licences](roadmap/milestone-5.md#advisories-exceptions-and-licences) | Planned | Record which vulnerabilities apply, import vendor statements that they do not, and check licences. |
+| [Advisories, exceptions and licenses](roadmap/milestone-5.md#advisories-exceptions-and-licenses) | Planned | Record which vulnerabilities apply, import vendor statements that they do not, and check licenses. |
 | [Who owns what](roadmap/milestone-5.md#who-owns-what) | Planned | Each component, service and repository has an owner, and findings go to that owner. |
 | [Code search across repositories](roadmap/milestone-5.md#code-search-across-repositories) | Planned | Search symbols and text across every repository, hosted or connected, filtered by what you may see. |
 | [Code intelligence](roadmap/milestone-5.md#code-intelligence) | Planned | Definitions, references and call information, for people and for agents. |
@@ -420,7 +420,7 @@ Use Launchway without running it, on a plan that follows your choices, with the 
 | [Sandboxed hosted runners](roadmap/milestone-7.md#sandboxed-hosted-runners) | Planned | Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server. |
 | [Hosted capacity that can grow](roadmap/milestone-7.md#hosted-capacity-that-can-grow) | Planned | Everything is portable, so capacity can be added on any provider as demand justifies. |
 | [A public demo](roadmap/milestone-7.md#a-public-demo) | Planned | A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. ([docs](demo.md)) |
-| [Organisations](roadmap/milestone-7.md#organisations) | Planned | Several organisations on one installation, isolated from each other, with the level names you choose. |
+| [Organizations](roadmap/milestone-7.md#organizations) | Planned | Several organizations on one installation, isolated from each other, with the level names you choose. |
 
 ### Identity, audit and compliance
 

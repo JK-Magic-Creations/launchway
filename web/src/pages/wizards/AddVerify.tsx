@@ -123,7 +123,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
       fields: [{ path: "provider" }],
       render: (by) => (
         <>
-          <p>AI steps ask a model a question (summarise a failure, review a change); Launchway also uses one to explain failed steps. A model here is a name pipelines use, where it is, and who may use it.</p>
+          <p>AI steps ask a model a question (summarize a failure, review a change); Launchway also uses one to explain failed steps. A model here is a name pipelines use, where it is, and who may use it.</p>
           <Choices legend="Where is the model?" value={provider} onChange={(v) => { setProvider(v as typeof provider); setKey(null); }} problems={by.provider}
             options={[
               { value: "anthropic", label: "Claude, through the Anthropic API", help: "Hosted models. Needs an API key, kept in a secret store. Prices are known, so each call shows its cost." },

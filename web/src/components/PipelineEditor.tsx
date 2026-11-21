@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import type { Problem } from "../api";
+import { lineAt } from "../learn/links";
 
 export interface PipelineEditorHandle {
   /** Puts the cursor on a line and scrolls it into view. */
@@ -12,6 +13,8 @@ interface Props {
   problems?: Problem[];
   label: string;
   readOnly?: boolean;
+  /** Told the line the cursor is on, as it moves, so a page can point at the reference for the key there. */
+  onCursorLine?: (line: string) => void;
 }
 
 const LINE_HEIGHT = 13 * 1.6; // matches .editor textarea: 13px font, line-height 1.6
@@ -20,7 +23,7 @@ const LINE_HEIGHT = 13 * 1.6; // matches .editor textarea: 13px font, line-heigh
 // are marked in the gutter and behind the text, with the problem as a
 // tooltip, so the place to fix is visible while typing.
 export const PipelineEditor = forwardRef<PipelineEditorHandle, Props>(function PipelineEditor(
-  { text, onChange, problems, label, readOnly }, ref) {
+  { text, onChange, problems, label, readOnly, onCursorLine }, ref) {
   const area = useRef<HTMLTextAreaElement>(null);
   const gutter = useRef<HTMLDivElement>(null);
   const marks = useRef<HTMLDivElement>(null);
@@ -77,6 +80,7 @@ export const PipelineEditor = forwardRef<PipelineEditorHandle, Props>(function P
           autoCapitalize="off" autoComplete="off" autoCorrect="off"
           aria-invalid={byLine.size > 0 || undefined}
           onScroll={sync}
+          onSelect={(e) => { if (onCursorLine) onCursorLine(lineAt(e.currentTarget.value, e.currentTarget.selectionStart)); }}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             // Tab indents by two spaces; Escape then Tab leaves the editor.

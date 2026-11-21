@@ -214,6 +214,10 @@ func (cl *client) configOverview(args []string) error {
 			Singular string `json:"singular"`
 			Plural   string `json:"plural"`
 		} `json:"levels"`
+		Terms struct {
+			Set       string            `json:"set"`
+			Overrides map[string]string `json:"overrides"`
+		} `json:"terms"`
 		UnitsInUse bool `json:"units_in_use"`
 		Status     struct {
 			Revision int64  `json:"revision"`
@@ -239,6 +243,9 @@ func (cl *client) configOverview(args []string) error {
 			fmt.Fprintf(cl.out, " (no %s yet)", strings.ToLower(v.Levels["unit"].Plural))
 		}
 		fmt.Fprintln(cl.out)
+		if v.Terms.Set != "" {
+			fmt.Fprintf(cl.out, "Words: the %s set, %d renamed (display labels only; commands and paths keep their plain names)\n", v.Terms.Set, len(v.Terms.Overrides))
+		}
 		for _, k := range v.Kinds {
 			fmt.Fprintf(cl.out, "  %-16s %s\n", k.Path, k.Doc)
 		}

@@ -21,16 +21,16 @@ steps:
 ```
 
 An approval takes `needs`, `when`, `message` and `timeout`, and runs nothing, so it has no image or
-script. When its needs have succeeded it waits, and every pending approval is listed on the
-**Approvals** page. Approving lets the steps after it run. Rejecting, or nobody deciding before the
+script. When its needs have succeeded it waits, and every pending clearance is listed on the
+**Waiting for a decision** page. **Go** lets the steps after it run. **No-go**, or nobody deciding before the
 timeout, fails it: the steps after it are skipped, and resuming the run asks again. Each decision
 is kept with the run: who made it, when, and their comment.
 
-Decide in the web UI, or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
+In the web UI an approval is a **clearance**, answered with **Go** or **No-go** (the plain set says Approve and Reject; see [the words Launchway uses](words.md)). The pipeline key stays `kind: approval` and the API paths stay `approve` and `reject` in every set. Decide in the web UI, with the command line (below), or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
 `/reject`) and an optional `{"comment": "..."}`. `launchway run` asks in the terminal, and rejects
 the approval if there is no terminal to ask in.
 
-With sign-in on, the person who started a run may reject it but not approve it: someone else must.
+With sign-in on, the person who started a run may say No-go but not Go: someone else must.
 Without sign-in everyone is the same configured `user`, so they may. Either default can be changed:
 
 ```yaml
@@ -40,6 +40,27 @@ approvals:
 
 A run started by a push records the commit's author name, which anyone can set in Git; it is not
 checked against anyone's sign-in.
+
+### Who may decide, and how many must
+
+`approvers: { groups: [release-managers], users: [zoe], count: 2 }` on an approval limits who may
+decide (the operator role is still needed; `approvers` only narrows it) and asks for two distinct
+people to approve. The run page and the Approvals page show "1 of 2 approved" with names; the same
+person cannot approve twice, anyone allowed may reject, and a protected environment's
+`min_approvals` raises the count for an approval that guards a deployment there. See the
+[reference](../reference/pipeline.md#approvers).
+
+### From the command line
+
+```sh
+launchway approvals list [--project P] [--json]
+launchway approvals approve <run-id> <step> [--comment TEXT]
+launchway approvals reject <run-id> <step> [--comment TEXT]
+```
+
+`list` shows the run, step, question, who started it, when it has waited since and expires, and
+how many approvals it has. The server's refusals (you started the run, it expired, it is not
+waiting, you may not decide it) are printed as they are, and the exit code is 4.
 
 ## Re-running from a step, and what each step was given
 

@@ -3,6 +3,7 @@ import type { GraphGroup, StepStatus, StepView } from "../api";
 import { elapsed } from "../format";
 import { ImageIcon } from "./Images";
 import { shownStatus, StatusIcon, statusLabel, stepLabel, tone } from "./ui";
+import { terms } from "../terms";
 
 const PAD = 12;
 const SIZES = {
@@ -262,8 +263,8 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
                   : s.status === "pending" ? "waiting"
                   : s.status === "queued" ? "waiting for a runner"
                   : s.status === "waiting" ? phases?.[s.id] ?? lowerFirst(stepLabel(s))
-                  : s.kind === "approval" && s.status === "succeeded" ? `approved by ${s.decided_by}`
-                  : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `rejected by ${s.decided_by}` : "nobody decided")
+                  : s.kind === "approval" && s.status === "succeeded" ? `${terms().lower("go")} from ${s.decided_by}`
+                  : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `${terms().lower("no_go")} from ${s.decided_by}` : "nobody decided")
                   : t || statusLabel(s.status)}
               </span>
             </button>

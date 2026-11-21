@@ -3,6 +3,7 @@
 // its area's sentence.
 
 import type { IconName } from "../kit/Icon";
+import { terms } from "../terms";
 
 export interface GuideEntry {
   title: string;
@@ -63,8 +64,8 @@ export const GUIDE: Record<string, GuideEntry> = {
   },
   "/activity/approvals": {
     title: "Waiting for a decision",
-    text: "A run stops here when a rule needs a person to say go. Read what it will do, then approve or reject. Your choice is recorded with your name.",
-    does: [{ icon: "users", label: "See who may approve", href: "/settings/access" }],
+    text: "A run stops here when a rule needs {clearance} from a person. Read what it will do, then say {Go} or {No_go}. Your choice is recorded with your name.",
+    does: [{ icon: "users", label: "See who may give {clearance}", href: "/settings/access" }],
   },
   "/runs/:id": {
     title: "A run",
@@ -85,9 +86,25 @@ export const GUIDE: Record<string, GuideEntry> = {
     text: "Runners are the machines that do the work of your steps. Each says when it was last seen, so you know which are answering.",
     does: [{ icon: "plus", label: "Add a runner", href: "/config/wizard/add-runner" }],
   },
+  "/settings/words": {
+    title: "Words",
+    text: "Launchway's own words for its levels and parts: the {guide} and the {logbook}. Choose a set or rename any word; only the labels change.",
+  },
   "/settings/audit": {
-    title: "Audit trail",
+    title: "{Logbook}",
     text: "Every sign-in and every change, with who did it and when. Search for a person, an action or an object.",
+  },
+  "/learn": {
+    title: "Learn",
+    text: "The documentation of the release you are running, here in the product. Choose a path, or search. Nothing leaves this server.",
+  },
+  "/learn/:a": {
+    title: "Learn",
+    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
+  },
+  "/learn/:a/:b": {
+    title: "Learn",
+    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
   },
   "/kit": {
     title: "The design kit",
@@ -95,7 +112,9 @@ export const GUIDE: Record<string, GuideEntry> = {
   },
 };
 
-/** The entry for a page; the area's own sentence when the page has none. */
+/** The entry for a page; the area's own sentence when the page has none. The words in effect are filled in. */
 export function guideFor(pattern: string, fallbackTitle: string, fallbackText: string): GuideEntry {
-  return GUIDE[pattern] ?? { title: fallbackTitle, text: fallbackText };
+  const t = terms();
+  const e = GUIDE[pattern] ?? { title: fallbackTitle, text: fallbackText };
+  return { ...e, title: t.say(e.title), text: t.say(e.text), does: e.does?.map((d) => ({ ...d, label: t.say(d.label) })) };
 }

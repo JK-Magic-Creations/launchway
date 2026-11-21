@@ -79,6 +79,10 @@ type Environment struct {
 	// approve their own runs; anyone with the operator role here may abort
 	// it (schema 14).
 	Protected bool
+	// MinApprovals is the fewest distinct approvals an approval step that
+	// guards a deployment here needs (schema 27), whatever its pipeline's
+	// approvers.count says. It needs Protected; 0 and 1 mean no floor.
+	MinApprovals int
 }
 
 // Allows reports whether a project may deploy to the environment.
@@ -116,6 +120,9 @@ func checkEnvironments(envs []Environment) (map[string]Environment, error) {
 		case "newest", "all":
 		default:
 			return nil, fmt.Errorf("environment %s: queue %q: write newest or all", env.Name, env.Queue)
+		}
+		if err := checkMinApprovals(env); err != nil {
+			return nil, err
 		}
 		out[env.Name] = env
 	}

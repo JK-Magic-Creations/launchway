@@ -103,14 +103,19 @@ export function LoopPanel({ run, loop, selected, onSelect }: { run: RunDetail; l
       <button type="button" className={`loop-cell t-${tone(st)}` + (on ? " loop-cell-on" : "")} aria-pressed={on}
         aria-label={`${m.id}: ${statusLabel(st)}`} title={m.id} onClick={() => pick(m)}>
         <StatusIcon status={st} size={14} />{label}
+        {m.allowed_failure && <span className="badge-allowed" title="continue_for: this combination may fail without failing the run">allowed</span>}
       </button>
     );
   };
-  const values = (k: string) => [...new Set(loop.members.map((m) => m.each[k]))];
+  // Combinations added outside the lists (add) do not fit the axes: they
+  // are drawn as extra cells under the grid.
+  const base = loop.members.filter((m) => !m.extra);
+  const extra = loop.members.filter((m) => m.extra);
+  const values = (k: string) => [...new Set(base.map((m) => m.each[k]))];
   let grid;
   if (loop.keys.length === 2) {
     const [rk, ck] = loop.keys;
-    const find = (r: string, c: string) => loop.members.find((m) => m.each[rk] === r && m.each[ck] === c);
+    const find = (r: string, c: string) => base.find((m) => m.each[rk] === r && m.each[ck] === c);
     grid = (
       <table className="loop-grid">
         <thead><tr><th scope="col">{rk} \ {ck}</th>{values(ck).map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
@@ -120,19 +125,26 @@ export function LoopPanel({ run, loop, selected, onSelect }: { run: RunDetail; l
       </table>
     );
   } else {
-    grid = <div className="loop-list">{loop.members.map((m) => <span key={m.id}>{cell(m, loop.keys.map((k) => m.each[k]).join(" · "))}</span>)}</div>;
+    grid = <div className="loop-list">{base.map((m) => <span key={m.id}>{cell(m, loop.keys.map((k) => m.each[k]).join(" · "))}</span>)}</div>;
   }
+  const extras = extra.length > 0 && (
+    <div className="loop-list loop-extra" aria-label="Extra combinations">
+      <span className="loop-extra-label">extra</span>
+      {extra.map((m) => <span key={m.id}>{cell(m, loop.keys.map((k) => m.each[k]).join(" · "))}</span>)}
+    </div>
+  );
   return (
     <section className="card loop" aria-label={`Loop ${loop.id}`}>
       <div className="loop-head">
         <span className="loop-name">{loop.id}</span>{" "}
         <span className="loop-counts">
-          {loop.members.length} combinations of {loop.keys.join(", ")}:{" "}
+          {loop.members.length} combinations of {loop.keys.join(", ")}{extra.length ? ` (${extra.length} added)` : ""}:{" "}
           {[...counts].map(([st, n]) => `${n} ${statusLabel(st).toLowerCase()}`).join(", ")}
           {loop.max_parallel ? ` · at most ${loop.max_parallel} at once` : ""}{loop.fail_fast ? " · stops the others when one fails" : ""}
         </span>
       </div>
       {grid}
+      {extras}
     </section>
   );
 }

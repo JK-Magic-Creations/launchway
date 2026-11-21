@@ -3,10 +3,13 @@
 // choice cards wizards ask with, the wizard frame, and readable summaries
 // and diffs of specs.
 
+import { PageLearn } from "../learn/LearnLink";
 import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { configApi, type ChangeRequest, type ConfigOverview, type Spec } from "../configApi";
 import { navigate } from "../router";
+import { terms } from "../terms";
+import { sayField } from "../configKinds";
 
 // ---- spec paths ----
 
@@ -230,7 +233,8 @@ export function Choices({ legend, help, value, onChange, options, problems, name
 }
 
 /** One field of a spec, drawn by its definition. */
-export function SpecField({ f, spec, onChange, problems }: { f: FieldDef; spec: Spec; onChange: (s: Spec) => void; problems?: string[] }) {
+export function SpecField({ f: f0, spec, onChange, problems }: { f: FieldDef; spec: Spec; onChange: (s: Spec) => void; problems?: string[] }) {
+  const f = sayField(f0);
   const v = getPath(spec, f.path);
   const set = (x: unknown) => onChange(setPath(spec, f.path, x));
   switch (f.type) {
@@ -278,7 +282,7 @@ export function SpecForm({ fields, spec, onChange, problems }: { fields: FieldDe
   const shown = fields.filter((f) => !f.showIf || f.showIf(spec));
   const sections: { title: string; fields: FieldDef[] }[] = [];
   for (const f of shown) {
-    const t = f.section ?? "";
+    const t = terms().say(f.section ?? "");
     let s = sections.find((x) => x.title === t);
     if (!s) sections.push((s = { title: t, fields: [] }));
     s.fields.push(f);
@@ -580,6 +584,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
   return (
     <div className="page cf-wizard">
       <PageHead eyebrow="Settings · Set-up" title={title} sentence={intro} actions={<button type="button" className="btn btn-ghost" onClick={cancel}>Leave the set-up</button>} />
+      <PageLearn className="cf-learn" />
       <nav aria-label="Steps" className="cf-steps-nav">
         <ol className="cf-steps">
           {steps.map((s, i) => (

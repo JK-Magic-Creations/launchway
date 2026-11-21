@@ -118,7 +118,7 @@ Other options (`sh install.sh --help` lists them all):
 | `--proxy URL`, `--no-proxy LIST` | an HTTP proxy for the server, Git and secret stores |
 | `--ca-file FILE` | trust a private CA (or a proxy that inspects TLS) as well as the system's |
 | `--require-signature` | refuse to install unless the signature was checked |
-| `--public-key FILE` | check a release your organisation signed with a key (cosign or openssl) |
+| `--public-key FILE` | check a release your organization signed with a key (cosign or openssl) |
 | `--from-dir DIR` | install from a directory, such as an [air-gapped bundle](../security/verify-downloads.md#air-gapped-bundles), with no download |
 
 Running it again with the same options changes nothing; with other options it updates the settings

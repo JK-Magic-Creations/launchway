@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 25. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 27. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -342,8 +342,8 @@ Schema 23 brings configuration in the database (see `internal/engine/configstore
 unit, spec, version, who manages it, soft-delete marks), `config_changes` (the history, appended in
 the transaction of every change and never rewritten, with the object before and after), `config_imports`
 (one row per import, the first start's among them) and `config_revisions` (one counter that every change
-raises, which is what servers watch). Every table has an `org` column, `''` for the one organisation
-there is, and `org` is the first column of the keys and indexes: adding organisations later is a new
+raises, which is what servers watch). Every table has an `org` column, `''` for the one organization
+there is, and `org` is the first column of the keys and indexes: adding organizations later is a new
 value in that column, with no table rewritten. It is additive: nothing older code reads is added, no
 event type is added, and no run carries `requires: 23`.
 
@@ -461,6 +461,16 @@ of ended entries are removed by the pruner of any server of schema 25; a server 
 does not remove them, and they stay until a newer one runs. The startup check covers the three
 tables (`schemaMarkersCache`).
 
+Schema 26 brings forges (`internal/forge`), additive: four new tables and nothing else.
+`forge_connections` and `forge_repositories` hold a connection (a link to a Git host; the kind `plain`
+is today's watcher of a Git address) and its repositories, and every watched project becomes a
+repository on the connection `plain-git` when the server starts. `forge_events` keeps what each
+connection heard and decided, with a retention limit, and `forge_deliveries` remembers webhook
+deliveries per connection so a replay is ignored. A credential is stored as a reference (an environment
+variable name or a file path), never as a value. Older servers ignore the tables, and nothing about how
+a project is watched depends on them: if the rows cannot be written the watcher says so once and goes
+on. The migration lives in its own file because `db.go` is over the size limit.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
@@ -533,3 +543,12 @@ settings that live in the database is imported once and then ignored.
 
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.
+
+Schema 27 brings the second set of pipeline parity features. It is additive: `steps` gains
+`own_workspace`, `runner_pool` and `runner_labels` (a step that chooses its own runner). A
+pipeline that fetches from a loop (`fetch: [{ from: <loop>, ... }]`, with or without `member`), or
+uses any other key of schema 27, carries `"requires": 27` and `runs.min_schema` 27, so a server of
+schema 26 or older leaves the run alone (`TestOlderServerLeavesFetchFromLoopRunsAlone`): it would
+look for a step named after the loop. It follows the real schemas 25 (caches) and 26 (forges), and
+its file, `schema27.go`, is named so that its migration is appended after theirs. The startup check
+covers the new columns (`schemaMarkersParity2`).

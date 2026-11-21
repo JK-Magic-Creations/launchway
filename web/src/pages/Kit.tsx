@@ -30,7 +30,7 @@ export function KitPage() {
       <PageHead eyebrow="Design kit" title="The parts every screen is built from"
         sentence="Each part is shown here with example values, in the theme you have chosen. Switch light and dark with the moon button at the top." />
 
-      <Sheet title="Colour and state" pad>
+      <Sheet title="Color and state" pad>
         <div className="kit-sw">
           {["--bg", "--sheet", "--sheet-3", "--line-2", "--ink", "--ink-3", "--signal", "--done", "--ok", "--warn", "--bad", "--idle"].map((t) => (
             <div key={t}><span className="sw" style={{ background: `var(${t})` }} /><code className="mono small">{t}</code></div>
@@ -39,7 +39,7 @@ export function KitPage() {
         <p className="faint small">Neutral surfaces, one blue accent for things you can act on, and green only for health. A passed step is quiet slate, never green.</p>
       </Sheet>
 
-      <Sheet title="Status: shape, colour and a word" pad>
+      <Sheet title="Status: shape, color and a word" pad>
         <div className="row wrap" style={{ gap: 18 }}>
           {STATES.map((s) => <span key={s} className="row"><Status state={s} size="l" /><StateChip state={s} /></span>)}
         </div>

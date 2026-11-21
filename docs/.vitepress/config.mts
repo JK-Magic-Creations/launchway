@@ -89,6 +89,19 @@ export default defineConfig({
         }
         return linkOpen2(tokens, idx, options, env, self)
       }
+      // [text](app:/route) points at a page of the product itself. In the product's Learn area it
+      // is a link; on this site, where there is no product to open, it is the text with a hint.
+      const linkOpen3 = md.renderer.rules.link_open!
+      md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+        const href = tokens[idx].attrGet('href') || ''
+        if (href.startsWith('app:') && !process.env.LAUNCHWAY_LEARN) {
+          tokens[idx].tag = 'span'
+          tokens[idx].attrs = [['class', 'app-route'], ['title', 'In Launchway: ' + href.slice(4)]]
+          for (let j = idx + 1; j < tokens.length; j++) if (tokens[j].type === 'link_close') { tokens[j].tag = 'span'; break }
+          return self.renderToken(tokens, idx, options)
+        }
+        return linkOpen3(tokens, idx, options, env, self)
+      }
       const fence = md.renderer.rules.fence!
       md.renderer.rules.fence = (tokens, idx, options, env, self) => {
         const token = tokens[idx]
@@ -147,6 +160,21 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Concepts',
+        collapsed: false,
+        items: [
+          { text: 'Start here: a walkthrough', link: '/learn/start-here' },
+          { text: 'Overview', link: '/learn/concepts/' },
+          { text: 'The launch line', link: '/learn/concepts/launch-line' },
+          { text: 'Projects, pipelines, steps and runs', link: '/learn/concepts/pipelines-and-runs' },
+          { text: 'Templates, libraries and flight plans', link: '/learn/concepts/templates-and-libraries' },
+          { text: 'Variables', link: '/learn/concepts/variables' },
+          { text: 'Environments and deployments', link: '/learn/concepts/environments-and-deployments' },
+          { text: 'Approvals', link: '/learn/concepts/approvals' },
+          { text: 'High availability', link: '/learn/concepts/high-availability' },
+        ],
+      },
+      {
         text: 'Paths by role',
         collapsed: true,
         items: [
@@ -193,6 +221,7 @@ export default defineConfig({
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
+          { text: 'The words Launchway uses', link: '/guide/words' },
           { text: 'Sign-in and access', link: '/guide/access' },
           { text: 'Runners on other machines', link: '/guide/runner-identity' },
           { text: 'Agents (MCP)', link: '/guide/agents' },

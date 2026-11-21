@@ -62,6 +62,14 @@ var mcpPermissionTable = map[string]mcpRow{
 	"mark_verification": {map[string]any{"run_id": "{pay}", "step": "gate", "outcome": "passed", "reason": "checked by hand"}, true,
 		[5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"control_rollout": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "promote"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	// Hosted repositories, with Git hosting off in this server: every call that
+	// is offered answers feature_off (not found). Operators are offered the
+	// tools that change one, only an administrator the one that creates.
+	"list_repositories": {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_repository":    {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"update_repository": {map[string]any{"owner": "o", "name": "x", "visibility": "public"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"delete_repository": {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"create_repository": {map[string]any{"name": "x"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	// Build caches: viewers list, operators delete, only an administrator is
 	// offered the tool that changes the policy.
 	"list_caches":      {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},

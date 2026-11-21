@@ -9,6 +9,7 @@ import { ConfigNav, WIZARDS } from "../components/ConfigNav";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { levelWords } from "../configKinds";
 import "../config.css";
+import { terms } from "../terms";
 
 // ConfigHomePage is where an administrator starts: what is configured, the
 // guided set-ups, what things are called, and the latest changes.
@@ -95,7 +96,7 @@ export function ConfigHomePage() {
           {(
             <li><Link href="/config/wizard/first-run" className="cf-wizcard cf-wizcard-quiet">
               <span className="cf-wizcard-title">First-run setup</span>
-              <span className="cf-wizcard-text">Name the levels, choose sign-in, connect a repository: the questions a new installation starts with.</span>
+              <span className="cf-wizcard-text">Choose the words, choose sign-in, connect a repository: the questions a new {terms().lower("installation")} starts with.</span>
             </Link></li>
           )}
         </ul>
@@ -148,13 +149,13 @@ function Checklist({ overview, counts }: { overview: ConfigOverview; counts: Rec
   const [named, setNamed] = useState<boolean | null>(null);
   const [runner, setRunner] = useState<boolean | null>(null);
   useEffect(() => {
-    configApi.get("installation", "installation").then((o) => setNamed(!!(o.spec as { levels?: unknown }).levels || !!overview.organisation?.display_name))
+    configApi.get("installation", "installation").then((o) => setNamed(!!(o.spec as { levels?: unknown; terms?: unknown }).levels || !!(o.spec as { terms?: unknown }).terms || !!overview.organisation?.display_name))
       .catch(() => setNamed(!!overview.organisation?.display_name));
     api.runners(true).then((rs) => setRunner(rs.some((r) => !/\(built in\)/.test(r.name)))).catch(() => setRunner(false));
   }, [overview]);
   const lv = overview.levels;
   const items = [
-    { done: named, title: "Name things", text: `What your organisation, its groups and its ${lv.project.plural.toLowerCase()} are called, so the screens use your words.`, href: "/config/wizard/first-run?step=names" },
+    { done: named, title: "Choose the words", text: `Aviation words or plain business ones, and what your ${terms().lower("organization")}, its groups and its ${terms().pluralLower("project")} are called, so the screens use your words.`, href: "/config/wizard/first-run?step=words" },
     { done: me?.auth_mode === "oidc", title: "Choose how people sign in", text: "Your company's identity provider, so people use the accounts they have and groups decide what they may do.", href: "/config/wizard/first-run?step=signin" },
     { done: counts.project === undefined ? null : counts.project > 0, title: "Connect a repository", text: `Your first ${lv.project.singular.toLowerCase()}: its pushes start runs of its pipeline.`, href: "/config/wizard/connect-repository" },
     { done: runner, title: "Add a runner", text: "A machine, container or Kubernetes pod of your own that does the steps of runs (the server's built-in runner is for trying things out).", href: "/config/wizard/add-runner" },
@@ -189,14 +190,14 @@ function Levels({ overview }: { overview: ConfigOverview }) {
     <section className="card" aria-labelledby="cf-levels-h">
       <h2 id="cf-levels-h" className="cf-h">What things are called</h2>
       <dl className="kv cf-levels">
-        <dt>The whole installation</dt><dd>{lv.installation.singular}</dd>
-        <dt>Who owns the {lv.project.plural.toLowerCase()}</dt><dd>{lv.organisation.singular}{overview.organisation?.display_name ? `: ${overview.organisation.display_name}` : ""}</dd>
-        {overview.units_in_use && <><dt>Groups of {lv.project.plural.toLowerCase()}</dt><dd>{lv.unit.plural} ({overview.units?.length ?? 0})</dd></>}
+        <dt>The whole {terms().lower("installation")}</dt><dd>{terms().label("installation")}</dd>
+        <dt>Who owns the {terms().pluralLower("project")}</dt><dd>{terms().label("organization")}{overview.organisation?.display_name ? `: ${overview.organisation.display_name}` : ""}</dd>
+        {overview.units_in_use && <><dt>Groups of {terms().pluralLower("project")}</dt><dd>{terms().plural("unit")} ({overview.units?.length ?? 0})</dd></>}
         <dt>One repository</dt><dd>{lv.project.singular}</dd>
       </dl>
       <p className="cf-help">
         {overview.units_in_use ? null : <>Groups of {lv.project.plural.toLowerCase()} with shared settings are off: nobody has made one. </>}
-        <Link href="/config/installation">Rename the levels</Link>
+        <Link href="/settings/words">Choose the words</Link>
         {overview.units_in_use ? null : <> or <Link href="/config/units/new">make the first group</Link></>}.
       </p>
     </section>

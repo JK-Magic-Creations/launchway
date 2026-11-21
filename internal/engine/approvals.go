@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // MaxCommentLen bounds the comment a person may give with a decision.
@@ -19,63 +20,29 @@ const MaxCommentLen = 2000
 // deadline has passed: from then on only expiry decides, so a decision and
 // an expiry racing each other can never both happen.
 func (e *Engine) Decide(runID, stepID string, approve bool, actor, comment string) error {
-	actor, comment = strings.TrimSpace(actor), strings.TrimSpace(comment)
-	if actor == "" {
-		return fmt.Errorf("%w: a decision needs someone to make it", ErrInvalid)
+	_, err := e.DecideAs(runID, stepID, approve, Decider{Actor: actor}, comment)
+	return err
+}
+
+// markVerifyByPerson decides a verification waiting for a person (on_inconclusive:
+// pause) like an approval: approving marks it passed.
+func (c *cmd) markVerifyByPerson(stepID string, def *pipeline.Step, approve bool, actor, comment string) error {
+	s := c.st.Steps[stepID]
+	if s.Status != StepWaitingS || s.WaitKind != WaitVerify {
+		return fmt.Errorf("%w: %s is not waiting for a decision (it is %s)", ErrConflict, stepID, s.Status)
 	}
-	if utf8.RuneCountInString(comment) > MaxCommentLen {
-		return fmt.Errorf("%w: the comment is longer than %d characters", ErrInvalid, MaxCommentLen)
+	outcome := "failed"
+	if approve {
+		outcome = "passed"
 	}
-	return e.withRun(runID, func(c *cmd) error {
-		def := c.st.Pipeline.Step(stepID)
-		if def == nil {
-			return fmt.Errorf("%w: step %s", ErrNotFound, stepID)
-		}
-		if def.IsVerify() && c.e.knows(schemaVerify) {
-			// A verification waiting for a person (on_inconclusive: pause)
-			// is decided like an approval: approving marks it passed.
-			s := c.st.Steps[stepID]
-			if s.Status != StepWaitingS || s.WaitKind != WaitVerify {
-				return fmt.Errorf("%w: %s is not waiting for a decision (it is %s)", ErrConflict, stepID, s.Status)
-			}
-			outcome := "failed"
-			if approve {
-				outcome = "passed"
-			}
-			if err := c.overrideRefusal(def, actor, outcome); err != nil {
-				return err
-			}
-			reason := nonEmpty(comment, "decided on the approvals page")
-			c.emit(VerifyOverride, Payload{Step: stepID, Attempt: s.Attempt, Actor: actor, Comment: reason, Verify: &VerifyEvent{Outcome: outcome}})
-			c.applyVerdict(stepID, def, outcome, fmt.Sprintf("marked %s by %s: %s", outcome, actor, reason), actor)
-			c.advance()
-			return nil
-		}
-		if !def.IsApproval() {
-			return fmt.Errorf("%w: %s is not an approval step", ErrConflict, stepID)
-		}
-		s := c.st.Steps[stepID]
-		switch {
-		case s.Status != StepWaitingS:
-			return fmt.Errorf("%w: %s is not waiting for a decision (it is %s)", ErrConflict, stepID, s.Status)
-		case c.now >= s.Deadline:
-			return fmt.Errorf("%w: %s is no longer waiting: nobody decided within %s", ErrConflict, stepID, def.Timeout.Short())
-		case approve && !c.st.selfApproval(c.e) && actor == c.st.Trigger.Actor:
-			return fmt.Errorf("%w: %s started this run, so someone else must approve it (you may still reject it)", ErrForbidden, actor)
-		}
-		p := Payload{Step: stepID, Attempt: s.Attempt, Actor: actor, Comment: comment}
-		if approve {
-			c.emit(StepApproved, p)
-		} else {
-			p.Reason = "rejected by " + actor
-			if comment != "" {
-				p.Reason += ": " + comment
-			}
-			c.emit(StepRejected, p)
-		}
-		c.advance()
-		return nil
-	})
+	if err := c.overrideRefusal(def, actor, outcome); err != nil {
+		return err
+	}
+	reason := nonEmpty(comment, "decided on the approvals page")
+	c.emit(VerifyOverride, Payload{Step: stepID, Attempt: s.Attempt, Actor: actor, Comment: reason, Verify: &VerifyEvent{Outcome: outcome}})
+	c.applyVerdict(stepID, def, outcome, fmt.Sprintf("marked %s by %s: %s", outcome, actor, reason), actor)
+	c.advance()
+	return nil
 }
 
 // expireWaits ends the waits whose deadline has passed: it rejects
@@ -158,6 +125,13 @@ type Approval struct {
 	PullRequest   int    `json:"pull_request,omitempty"` // for a run of a pull request
 	WaitingSince  int64  `json:"waiting_since"`
 	Deadline      int64  `json:"deadline"`
+	// Approvals are the people who have approved so far and ApprovalsNeeded
+	// how many distinct approvals it asks for (schema 27); NeededFrom says
+	// where that number comes from when it is not the step's own.
+	Approvals           []ApprovalRecord    `json:"approvals"`
+	ApprovalsNeeded     int                 `json:"approvals_needed"`
+	ApprovalsNeededFrom string              `json:"approvals_needed_from,omitempty"`
+	Approvers           *pipeline.Approvers `json:"approvers,omitempty"`
 }
 
 // Approvals returns every approval waiting for a decision, across all runs,
@@ -171,8 +145,12 @@ func (e *Engine) Approvals() ([]Approval, error) {
 			onlyApprovals = ` AND s.wait_kind IN ('', '` + WaitVerify + `')`
 		}
 	}
+	progress := ``
+	if e.knows(schemaParity2) {
+		progress = `, s.approvals`
+	}
 	rows, err := e.db.Query(`SELECT s.run_id, r.project, r.number, s.step_id, r.actor, r.message, r.sha, r.branch, r.tag,
-			r.event, r.ref, s.queued_at, s.deadline
+			r.event, r.ref, s.queued_at, s.deadline`+progress+`
 		FROM steps s JOIN runs r ON r.id = s.run_id
 		WHERE s.status = ?`+onlyApprovals+`
 		ORDER BY s.queued_at DESC, s.run_id DESC, s.position`, StepWaitingS)
@@ -182,12 +160,17 @@ func (e *Engine) Approvals() ([]Approval, error) {
 	out := []Approval{}
 	for rows.Next() {
 		var a Approval
-		var sha, event, ref string
-		if err := rows.Scan(&a.RunID, &a.Project, &a.RunNumber, &a.StepID, &a.StartedBy, &a.CommitSubject, &sha,
-			&a.Branch, &a.Tag, &event, &ref, &a.WaitingSince, &a.Deadline); err != nil {
+		var sha, event, ref, progress string
+		dst := []any{&a.RunID, &a.Project, &a.RunNumber, &a.StepID, &a.StartedBy, &a.CommitSubject, &sha,
+			&a.Branch, &a.Tag, &event, &ref, &a.WaitingSince, &a.Deadline}
+		if e.knows(schemaParity2) {
+			dst = append(dst, &progress)
+		}
+		if err := rows.Scan(dst...); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		a.setProgress(progress)
 		a.PullRequest = pullRequestNumber(event, ref)
 		a.ShortSHA = sha[:min(len(sha), 8)]
 		out = append(out, a)
@@ -213,6 +196,7 @@ func (e *Engine) Approvals() ([]Approval, error) {
 	}
 	defer prow.Close()
 	messages := map[string]string{} // run/step → message
+	approvers := map[string]*pipeline.Approvers{}
 	for prow.Next() {
 		var runID, data string
 		if err := prow.Scan(&runID, &data); err != nil {
@@ -225,6 +209,7 @@ func (e *Engine) Approvals() ([]Approval, error) {
 		for _, s := range created.Pipeline.Steps {
 			if s.IsApproval() {
 				messages[runID+"/"+s.ID] = s.Message
+				approvers[runID+"/"+s.ID] = s.Approvers
 			}
 			if s.IsVerify() {
 				messages[runID+"/"+s.ID] = "The verification was inconclusive. Approve to mark it passed, reject to mark it failed."
@@ -236,6 +221,7 @@ func (e *Engine) Approvals() ([]Approval, error) {
 	}
 	for i := range out {
 		out[i].Message = messages[out[i].RunID+"/"+out[i].StepID]
+		out[i].Approvers = approvers[out[i].RunID+"/"+out[i].StepID]
 	}
 	return out, nil
 }

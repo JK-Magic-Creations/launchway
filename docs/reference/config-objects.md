@@ -20,7 +20,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
 - **History.** Every change is recorded with who made it, when, the action, the settings before and
   after, and an optional comment. History is never rewritten.
 - **Deleting is reversible.** A deleted object is kept and `restore` brings it back as it was. The
-  installation settings, the organisation and the step resources cannot be deleted; change them.
+  installation settings, the organization and the step resources cannot be deleted; change them.
 - **Managed by.** `managed_by` says who owns an object: `api` (the UI, the CLI, MCP or a direct
   call), `import`, `terraform` or `git` (a tool says which with the header `X-Launchway-Manager`, and
   only with an API token: a signed-in browser is always the web UI). The label is enforced, not
@@ -29,7 +29,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
   (`--take-ownership`, or the confirmation in the web UI): it makes them the owner and is recorded in
   the object's history and the audit trail. Sending the header alone never changes who owns an
   object; claiming one the UI manages needs `take_ownership` too.
-- **Units.** Objects that can be defined at a level carry a `unit`; empty is the organisation. A
+- **Units.** Objects that can be defined at a level carry a `unit`; empty is the organization. A
   project's `unit` is the unit it belongs to.
 
 ## The kinds
@@ -49,8 +49,10 @@ command line, the MCP server and the planned Terraform provider name them. For t
 | Secret store | `secret-stores` | The definition of a secret store pipelines may name: `type`, `projects`. Its address and credentials stay with the runners | `launchway_secret_store` |
 | Step resources | `step-resources` | The default CPU and memory by kind of step (`defaults`) and the most any step may ask for (`limits`). One object, named `step-resources` | `launchway_step_resources` |
 | Unit | `units` | A group of projects: `display_name`, `description` | `launchway_unit` |
-| Installation settings | `installation` | What the levels are called (`levels`), approvals, drafts, pull requests, schedules, loops, tests, findings, reports, artifact limits and where artifacts are kept (`artifacts`), the MCP endpoint (`mcp`), the role needed to manage runners (`runner_admin`), policy waivers, API token limits. One object, named `installation` | `launchway_installation` |
-| Organisation | `organisation` | `display_name` and `description`. One object, named `default` | `launchway_organisation` |
+| Installation settings | `installation` | The words Launchway uses (`terms`: a `set`, aviation or business, and `overrides`; labels only, see [the words](../guide/words.md)), what the levels are called (`levels`, the older way), approvals, drafts, pull requests, schedules, loops, tests, findings, reports, artifact limits and where artifacts are kept (`artifacts`), the MCP endpoint (`mcp`), the role needed to manage runners (`runner_admin`), policy waivers, API token limits. One object, named `installation` | `launchway_installation` |
+| Organization (the second level) | `organisation` | `display_name` and `description`. One object, named `default` | `launchway_organisation` |
+
+The kind names, keys and paths on this page are fixed plain forms: they never change with the words an installation chooses ([the words Launchway uses](../guide/words.md)). The second level is always the kind `organisation`, the third `unit`; the American spelling `organization` is accepted as an alias wherever a kind is named in the API or the CLI.
 
 Secrets are never values: an AI model's `key` and a pipeline's secrets are references (`store`, `key`,
 `field`) to a store the runner can read, and sign-in's client secret is read from an environment

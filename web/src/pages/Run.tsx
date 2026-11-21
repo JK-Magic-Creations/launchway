@@ -1,3 +1,5 @@
+import { EXPLAIN } from "../learn/links";
+import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
 import { RunLine } from "../components/RunLine";
 import { whyWaiting } from "../components/whyWaiting";
@@ -12,12 +14,13 @@ import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
-import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, freshness, phaseLabel, shortPhase, verdictLabel } from "../components/Deployment";
+import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, phaseLabel, verdictLabel } from "../components/Deployment";
 import { TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
 import { RunTrigger } from "../components/RunTrigger";
+import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
@@ -35,6 +38,8 @@ import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 import { CacheResults } from "../components/CacheResults";
 import { Excerpt } from "../components/Excerpt";
+import { terms } from "../terms";
+import { commandOf, deployOf, deployPhases, deployingPhase } from "./runDeploy";
 
 // Stands for the run until it is loaded, so hooks run in the same order.
 const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
@@ -295,7 +300,7 @@ export function RunPage({ id }: { id: string }) {
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
-          <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
+          <span><strong>{waitingStep.id}</strong> is waiting for {terms().lower("clearance")}: {waitingStep.message}</span>
           <button type="button" className="btn" onClick={() => select(waitingStep.id)}>{mayOperate ? "Decide" : "View"}</button>
         </div>
       )}
@@ -488,6 +493,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             )}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta only-everything">on {step.runner}</span>}
+            {(step as { workspace?: string }).workspace && <span className="meta only-everything" title="a fresh checkout shared with no other step">own workspace</span>}
+            {(step as { waiting_for?: string }).waiting_for && <span className="meta wait">{(step as { waiting_for?: string }).waiting_for}</span>}
             {step.container && !step.container.startsWith("image-") && <span className="meta only-everything">in <strong>{step.container}</strong></span>}
             {step.image && <span className="meta mono only-everything">{step.image}</span>}
           </div>
@@ -504,7 +511,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
-      {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text}</span></div>}
+      {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text} <LearnLink to={why.kind === "environment" ? EXPLAIN.lock : why.kind === "person" ? EXPLAIN.clearance : EXPLAIN.waits} /></span></div>}
       {reused && <ReusedNote run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
       {step.kind === "verify" && <VerificationPanel run={run} step={step} list={verifications.list} reload={verifications.reload} />}
@@ -631,7 +638,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={step.status} />
-            <span className="meta">approval</span>
+            <span className="meta">{terms().lower("clearance")}</span>
             {step.reused_from && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.attempt > 1 && <span className="meta">asked {step.attempt} times</span>}
           </div>
@@ -643,8 +650,14 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         {step.deployment && (
           <p className="sub approval-guards">
             {guarded
-              ? <>This approval guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
-              : <>This approval guards the deployment made by {step.deployment}: it is rejected by itself if the rollout is aborted.</>}
+              ? <>This {terms().lower("clearance")} guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
+              : <>This {terms().lower("clearance")} guards the deployment made by {step.deployment}: it is refused by itself ({terms().label("no_go")}) if the rollout is aborted.</>}
+          </p>
+        )}
+        {(progressText(step as ApprovalProgress) || whoMayDecide(step as ApprovalProgress)) && (
+          <p className="sub approval-progress">
+            {progressText(step as ApprovalProgress)}
+            {whoMayDecide(step as ApprovalProgress) && <> Only {whoMayDecide(step as ApprovalProgress)} may decide.</>}
           </p>
         )}
         <div className="run-meta">
@@ -674,14 +687,14 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             </label>
             <ErrorBox error={error} />
             <div className="approval-actions">
-              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)}>Approve</button>
-              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)}>Reject</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={`${terms().label("go")}: ${terms().lower("clearance")} is given and the run goes on`}>{terms().label("go")}</button>
+              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the run stops here`}>{terms().label("no_go")}</button>
             </div>
           </form>
         )}
         {step.status === "succeeded" && (
           <div className="callout callout-ok">
-            <strong>Approved by {step.decided_by}</strong>, {clock(step.decided_at)}
+            <strong>{terms().label("go")} from {step.decided_by}</strong>, {clock(step.decided_at)}
             {step.reused_from && <> in <Link href={`/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`}>run #{step.reused_from_number}</Link>. This re-run reused that decision; nobody was asked again.</>}
             {said}
           </div>
@@ -689,8 +702,8 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         {step.status === "failed" && (
           <div className="callout callout-bad">
             {step.decided_by
-              ? <><strong>Rejected by {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
-              : <><strong>{step.error}</strong>, so it was rejected at {clock(step.decided_at)}.</>}
+              ? <><strong>{terms().label("no_go")} from {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
+              : <><strong>{step.error}</strong>, so it was refused ({terms().label("no_go")}) at {clock(step.decided_at)}.</>}
             {run.status === "failed" && <div>Resuming the run asks again.</div>}
           </div>
         )}
@@ -718,8 +731,8 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "step.lost": (d) => `${d.step}: ${d.reason}`,
   "step.canceled": (d) => `${d.step}: canceled`,
   "step.reset": (d) => `${d.step}: reset to run again`,
-  "step.waiting": (d) => `${d.step}: waiting for approval until ${clock(d.deadline as number)}`,
-  "step.approved": (d) => `${d.step}: approved by ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
+  "step.waiting": (d) => `${d.step}: waiting for ${terms().lower("clearance")} until ${clock(d.deadline as number)}`,
+  "step.approved": (d) => `${d.step}: ${terms().label("go")} from ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
   "step.rejected": (d) => `${d.step}: ${d.reason}`,
   "deploy.waiting_lock": (d) => {
     const x = deployOf(d);
@@ -764,41 +777,6 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "deploy.command_withdrawn": (d) => `${d.step}: command withdrawn by ${commandOf(d).actor ?? "someone"}`,
   "step.reused": (d) => `${d.step}: reused from run #${(d.reused as { number?: number })?.number ?? "?"} (${d.outcome})`,
 };
-
-function deployOf(d: Record<string, unknown>): Record<string, unknown> {
-  return (d.deploy as Record<string, unknown> | undefined) ?? {};
-}
-
-function commandOf(d: Record<string, unknown>): Record<string, string | undefined> {
-  return (deployOf(d).command as Record<string, string | undefined> | undefined) ?? {};
-}
-
-// deployPhases says, for each deploy or rollback step at work, where its
-// deployment stands, in words. Out-of-date observations say so instead.
-function deployPhases(run: RunDetail): Record<string, string> {
-  const out: Record<string, string> = {};
-  const now = Date.now();
-  for (const s of run.step_list) {
-    if (s.status === "waiting" && s.wait_kind === "lock") { out[s.id] = "waiting for lock"; continue; }
-    if (s.status !== "waiting" || s.wait_kind !== "observe") continue;
-    const d: DeploymentView | undefined = deploymentOf(run, s);
-    if (!d) continue;
-    const f = freshness(d, now);
-    const where = s.kind === "rollback" ? "rollback" : s.kind === "rollout" ? "rollout" : environmentOf(run, s) || "deploy";
-    out[s.id] = `${where}: ${f.state === "never" ? "not observed" : f.state === "error" ? "cannot see it" : f.state === "stale" ? "out of date" : shortPhase(d.phase)}`;
-  }
-  return out;
-}
-
-// deployingPhase is where a deploy step's deployment stands, in words, only
-// if what was observed is current (the panel explains the other cases).
-function deployingPhase(run: RunDetail, s: StepView): string | undefined {
-  if (s.wait_kind !== "observe") return undefined;
-  const d = deploymentOf(run, s);
-  if (!d) return undefined;
-  const f = freshness(d, Date.now());
-  return f.state === "fresh" ? phaseLabel(d.phase) : undefined;
-}
 
 function EventsTab({ id, version }: { id: string; version: string }) {
   const [events, setEvents] = useState<RunEvent[] | null>(null);
@@ -935,7 +913,7 @@ function DefinitionTab({ run }: { run: RunDetail }) {
         )}
         {file?.draft && (
           <p className="sub">Not in Git: it was typed in the editor and is kept only with this run.
-            It is named <Mono>{file.hash}</Mono> in the audit trail. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
+            It is named <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
         )}
         {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
       </section>

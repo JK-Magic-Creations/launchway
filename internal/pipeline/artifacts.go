@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -74,7 +75,11 @@ type Fetch struct {
 	// in, keeping their paths below it; empty means the workspace itself,
 	// so the files are where the earlier step had them.
 	Into string `json:"into,omitempty"`
-	Line int    `json:"-"`
+	// Member, when From is a loop, names one member by every key of the loop
+	// (schema 27); without it every member's files are fetched, each in a
+	// directory of its own below Into.
+	Member map[string]string `json:"member,omitempty"`
+	Line   int               `json:"-"`
 }
 
 // SBOMArtifact is the name of the artifact that keeps a step's SBOM files
@@ -284,13 +289,15 @@ func (ps *parser) parseFetch(n *yaml.Node, at string) []*Fetch {
 			continue
 		}
 		f := &Fetch{Line: item.Line}
-		ps.eachKey(item, where, []string{"from", "name", "into"}, func(k, v *yaml.Node) {
+		ps.eachKey(item, where, []string{"from", "name", "into", "member"}, func(k, v *yaml.Node) {
 			w := where + "." + k.Value
 			switch k.Value {
 			case "from":
 				f.From = ps.str(v, w)
 			case "name":
 				f.Name = ps.artifactText(v, w)
+			case "member":
+				f.Member = ps.parseFetchMember(v, w)
 			case "into":
 				into, msg := CheckInto(ps.artifactText(v, w))
 				if msg != "" {
@@ -385,13 +392,16 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 			switch {
 			case f.From == s.ID:
 				problem = "a step cannot fetch its own artifacts; they are kept after it runs"
+			case from == nil && fromTemplateLoop(f.From, ids) != nil:
+				problem = templateLoopFetchProblem(f.From, upstream, ids)
 			case from == nil:
 				problem = "fetches from " + quoteText(f.From) + ", but there is no step with that name"
+			case f.Member != nil && from.ForEach == nil:
+				problem = "member goes with a loop, and " + f.From + " is not repeated by for_each"
 			case from.IsUse():
 				problem = f.From + " uses a template; fetching an artifact a template's step keeps is not supported yet"
-			case from.ForEach != nil:
-				problem = f.From + " is a loop: each of its members keeps its own artifacts, and fetching them is not supported yet; " +
-					"have a step after the loop gather what it needs, or fetch from a step that is not repeated"
+			case from.ForEach != nil && loopFetchProblem(f, from) != "":
+				problem = loopFetchProblem(f, from)
 			case !upstream[f.From]:
 				problem = "fetches from " + f.From + ", which this step does not need; add it to needs so it has run first"
 			case !keeps(from, f.Name):
@@ -399,13 +409,13 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 			case s.When.UpstreamRule() == UpstreamFailed && keptOnlyOnSuccess(from, f.Name):
 				problem = "this step runs only when a step it needs failed, but " + f.From + " keeps " + f.Name +
 					" only when it succeeds; keep it with when: failure or when: always"
-			case fetched[f.From+"\x00"+f.Name]:
+			case fetched[f.From+"\x00"+f.Name+"\x00"+fmt.Sprint(f.Member)]:
 				problem = f.From + "'s " + f.Name + " is fetched twice"
 			}
 			if problem != "" {
 				ps.problems = append(ps.problems, Problem{Line: f.Line, Path: at, Message: problem})
 			}
-			fetched[f.From+"\x00"+f.Name] = true
+			fetched[f.From+"\x00"+f.Name+"\x00"+fmt.Sprint(f.Member)] = true
 		}
 	}
 }

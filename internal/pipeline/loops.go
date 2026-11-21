@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -59,6 +60,10 @@ type ForEach struct {
 	// Exclude leaves out the combinations that match one of its entries:
 	// every key an entry names has that value.
 	Exclude []map[string]string `json:"exclude,omitempty"`
+	// Add appends whole combinations after the cross product; ContinueFor
+	// selects members that behave as on_failure: continue (loops_extra.go).
+	Add         []loopEntry `json:"-"`
+	ContinueFor []loopEntry `json:"-"`
 	// MaxParallel bounds how many members are queued or running at once; 0
 	// is no bound.
 	MaxParallel int `json:"max_parallel,omitempty"`
@@ -92,6 +97,10 @@ type Loop struct {
 type LoopMember struct {
 	ID   string            `json:"id"`
 	Each map[string]string `json:"each"`
+	// Extra says the combination was added by add, outside the lists;
+	// AllowedFailure, that continue_for lets it fail without failing the run.
+	Extra          bool `json:"extra,omitempty"`
+	AllowedFailure bool `json:"allowed_failure,omitempty"`
 }
 
 // Loop returns the loop with the given ID, or nil.
@@ -143,7 +152,7 @@ type eachRef struct {
 	line   int
 }
 
-var loopKeys = []string{"for_each", "exclude", "max_parallel", "fail_fast"}
+var loopKeys = []string{"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
 
 // parseForEach reads for_each: { key: list, ... }.
 func (ps *parser) parseForEach(n *yaml.Node, at string) *ForEach {
@@ -306,6 +315,7 @@ func (ps *parser) parseLoopSettings(s *Step, at string, keys map[string]*yaml.No
 	if s.IsApproval() {
 		ps.add(keys["for_each"], at+".for_each", "an approval cannot be repeated")
 	}
+	ps.parseLoopExtras(s, at, nodes)
 	for _, r := range s.eachRefs {
 		if !slices.Contains(f.Keys, r.key) {
 			ps.problems = append(ps.problems, Problem{Line: r.line, Path: at, Message: fmt.Sprintf("there is no list called %q under for_each; it has %s", clipText(r.key, 40), strings.Join(f.Keys, ", "))})
@@ -404,7 +414,12 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 			replace[s.ID] = s.Needs
 			continue
 		}
-		combos := product(f.Keys, lists, f.Exclude)
+		if !f.literal() {
+			for _, p := range f.extraProblems(lists) {
+				problems = append(problems, Problem{Line: p.line, Path: p.path(at[:strings.LastIndex(at, ".")]), Message: p.msg})
+			}
+		}
+		combos := f.combinations(lists)
 		switch {
 		case len(combos) == 0 && preview:
 			replace[s.ID] = s.Needs
@@ -438,15 +453,21 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 				break
 			}
 			envNames[env] = id
-			m := member(s, id, combo)
+			allowed := f.toleratesFailure(combo)
+			m := member(s, id, combo, allowed)
 			for _, ca := range m.Cache {
 				for _, msg := range CacheProblems(ca) {
 					problems = append(problems, Problem{Line: ca.Line, Path: "steps." + s.ID + ".cache", Message: "for " + id + ": " + msg})
 				}
 			}
+			if msg := m.stepRunnerProblems(); msg != "" {
+				problems = append(problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".runner", Message: id + ": " + msg})
+				break
+			}
 			out = append(out, m)
 			ids = append(ids, id)
-			loop.Members = append(loop.Members, LoopMember{ID: prefix + id, Each: combo})
+			loop.Members = append(loop.Members, LoopMember{ID: prefix + id, Each: combo,
+				Extra: len(f.Add) > 0 && f.isExtra(combo, lists), AllowedFailure: allowed})
 		}
 		replace[s.ID] = ids
 		loops = append(loops, loop)
@@ -492,7 +513,7 @@ func rewriteNeeds(needs []string, replace map[string][]string) []string {
 }
 
 // member makes one member of a looped step.
-func member(s *Step, id string, each map[string]string) *Step {
+func member(s *Step, id string, each map[string]string, allowed bool) *Step {
 	c := *s
 	c.ID, c.ForEach, c.Each = id, nil, each
 	c.Env = cloneMap(s.Env)
@@ -513,9 +534,15 @@ func member(s *Step, id string, each map[string]string) *Step {
 			c.With[r.name] = v
 		case cacheKeyDeferred:
 			setCacheValue(c.Cache, r.name, v)
+		case "runner":
+			idx, _ := strconv.Atoi(r.name)
+			c.eachRunner(idx, v)
 		}
 	}
 	c.eachRefs = nil
+	if allowed {
+		c.tolerate()
+	}
 	return &c
 }
 

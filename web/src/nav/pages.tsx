@@ -35,6 +35,7 @@ const ImagesPage = lz(() => import("../pages/Images"), "ImagesPage");
 const ComponentsPage = lz(() => import("../pages/Components"), "ComponentsPage");
 const ImageDetailPage = lz(() => import("../pages/ImageDetail"), "ImageDetailPage");
 const PipelinesPage = lz(() => import("../pages/PipelinesList"), "PipelinesPage");
+const LearnPage = lz(() => import("../learn/Learn"), "LearnRoot");
 const KitPage = lz(() => import("../pages/Kit"), "KitPage");
 const ComingPage = lz(() => import("../shell/Coming"), "ComingPage");
 const ImagesSwitch = lz(() => import("../pages/ImagesSwitch"), "ImagesSwitch");
@@ -44,6 +45,7 @@ const RunnersPage = lz(() => import("../pages/Runners"), "RunnersPage");
 const TokensPage = lz(() => import("../pages/Tokens"), "TokensPage");
 const AgentsPage = lz(() => import("../pages/Agents"), "AgentsPage");
 const PolicyPage = lz(() => import("../pages/Policy"), "PolicyPage");
+const SettingsWordsPage = lz(() => import("../pages/SettingsWords"), "SettingsWordsPage");
 const AuditPage = lz(() => import("../pages/Audit"), "AuditPage");
 const ConfigHomePage = lz(() => import("../pages/ConfigHome"), "ConfigHomePage");
 const ConfigListPage = lz(() => import("../pages/ConfigList"), "ConfigListPage");
@@ -81,6 +83,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/images/digest/:digest": return <ImageDetailPage key={p.digest} digest={p.digest} />;
     case "/pipelines": return <PipelinesPage />;
     case "/kit": return <KitPage />;
+    case "/learn": case "/learn/:a": case "/learn/:a/:b": return <LearnPage path={path} />;
     case "/code/:page": case "/images/:page": case "/traffic": case "/traffic/:page": case "/changes": case "/changes/:page":
     case "/deployments/hosts": case "/deployments/machine-images":
       return <ComingPage path={path.length > 1 ? path.replace(/\/+$/, "") : path} />;
@@ -92,6 +95,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/approvals": return <SettingsApprovalsPage />;
     case "/settings/rules": return <PolicyPage />;
     case "/settings/audit": return <AuditPage />;
+    case "/settings/words": return <SettingsWordsPage />;
     case "/config": return <ConfigHomePage />;
     case "/config/wizard/:id": return <WizardPage key={p.id} id={p.id} />;
     case "/config/:kind/new": return <ConfigObjectPage key={p.kind + "/new"} kind={p.kind} name="" />;

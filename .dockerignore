@@ -5,6 +5,11 @@
 !cmd/
 !internal/
 !web/
+!docs/
+!scripts/docs/
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 web/node_modules/
 web/dist/
 **/*_test.go
