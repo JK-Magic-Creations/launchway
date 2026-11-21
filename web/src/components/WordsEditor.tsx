@@ -2,6 +2,7 @@
 // the choice, rename any single word, and reset. It is shown on the first-run wizard's Words step and on
 // Settings → Words, and changes nothing by itself: the page that holds it saves.
 
+import "../config.css";
 import { Choices } from "./ConfigForm";
 import { Button, Decision } from "../kit/layout";
 import { Icon, type IconName } from "../kit/Icon";
