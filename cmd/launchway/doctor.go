@@ -16,12 +16,14 @@ import (
 
 const doctorUsage = `Usage:
   launchway doctor [database|git] [--config launchway.yaml] [--json]
+  launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
   git        the installed git, and whether it is new enough for Git hosting
   database   whether this installation would survive the loss of its database,
              and what would be lost
+  ssh        whether Git over SSH is reachable, and which host keys it presents
 `
 
 // exitOn ends the program for an error from a command.
@@ -76,6 +78,9 @@ func cmdDoctor(args []string) error {
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
 		fmt.Print(doctorUsage)
 		return nil
+	}
+	if len(args) > 0 && args[0] == "ssh" {
+		return doctorSSH(args[1:])
 	}
 	section := ""
 	if len(args) > 0 && (args[0] == "database" || args[0] == "git") {

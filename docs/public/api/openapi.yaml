@@ -1590,6 +1590,87 @@ paths:
             tags:
                 - config
             x-launchway-access: admin
+    /api/v1/connections:
+        get:
+            description: 'The connections to import from: name, kind, base_url, credential (where it is read from) and enabled.'
+            operationId: get_api_v1_connections
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The connections to import from: name, kind, base_url, credential (where it is read from) and enabled.'
+            tags:
+                - connections
+            x-launchway-access: admin
+        post:
+            description: '{"name", "kind", "base_url", "credential"}. 400 for another kind, an address that is internal and not allowed, or a credential that is a value.'
+            operationId: post_api_v1_connections
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"name", "kind", "base_url", "credential"}.'
+            tags:
+                - connections
+            x-launchway-access: admin
+            x-launchway-audit: connection.create
+    /api/v1/connections/{name}:
+        delete:
+            description: Removes a connection that no repository uses; Launchway's own is refused.
+            operationId: delete_api_v1_connections_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a connection that no repository uses; Launchway's own is refused.
+            tags:
+                - connections
+            x-launchway-access: admin
+            x-launchway-audit: connection.delete
     /api/v1/deployments:
         get:
             description: 'Deployments, newest first: ?environment=, ?project=, ?service=, ?limit=.'
@@ -1682,6 +1763,58 @@ paths:
             tags:
                 - images
             x-launchway-access: signed-in
+    /api/v1/imports:
+        post:
+            description: '{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}. owner limits the listing to one user or organization of the source, repository (owner/name) to one; without them it brings in everything the credential can see. dry_run lists what would be created and changes nothing. wait copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. mirror: false makes each an ordinary repository once copied and checked (needs wait). Answers {"dry_run", "items", "summary"}; each item has source, repository, url, visibility, action (create, resume, skip), state (planned, queued, verified, skipped, failed), reason, error (credentials removed), source_refs, hosted_refs, verified, differences and mirror_id. One repository failing does not stop the others.'
+            operationId: post_api_v1_imports
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}.'
+            tags:
+                - imports
+            x-launchway-access: admin
+            x-launchway-audit: repository.import
+    /api/v1/imports/verify:
+        post:
+            description: '{"connection", "urls", "owner", "repository", "target_owner"}. Proves, or fails to prove, that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has: {"equal", "items", "summary"}, each item equal, different (with the refs that differ), missing or error. It reads only.'
+            operationId: post_api_v1_imports_verify
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"connection", "urls", "owner", "repository", "target_owner"}.'
+            tags:
+                - imports
+            x-launchway-access: admin
+            x-launchway-audit: repository.verify
     /api/v1/info:
         get:
             description: The server's version and schema, and whether sign-in is on.
@@ -1802,6 +1935,284 @@ paths:
             tags:
                 - me
             x-launchway-access: signed-in
+    /api/v1/mirrors:
+        get:
+            description: Every mirror of the repositories the caller may read; ?behind=true lists only those that have fallen behind.
+            operationId: get_api_v1_mirrors
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Every mirror of the repositories the caller may read; ?behind=true lists only those that have fallen behind.
+            tags:
+                - mirrors
+            x-launchway-access: signed-in
+    /api/v1/owners/{owner}/hooks:
+        get:
+            description: As for a repository, for every repository of the owner.
+            operationId: get_api_v1_owners_owner_hooks
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: As for a repository, for every repository of the owner.
+            tags:
+                - owners
+            x-launchway-access: admin
+        post:
+            description: Handled by POST /api/v1/owners/{owner}/hooks; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_owners_owner_hooks
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/owners/{owner}/hooks; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+            x-launchway-audit: webhook.add
+    /api/v1/owners/{owner}/hooks/{id}:
+        delete:
+            description: Handled by DELETE /api/v1/owners/{owner}/hooks/{id}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: delete_api_v1_owners_owner_hooks_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by DELETE /api/v1/owners/{owner}/hooks/{id}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+            x-launchway-audit: webhook.delete
+        patch:
+            description: Handled by PATCH /api/v1/owners/{owner}/hooks/{id}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: patch_api_v1_owners_owner_hooks_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PATCH /api/v1/owners/{owner}/hooks/{id}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+            x-launchway-audit: webhook.update
+    /api/v1/owners/{owner}/hooks/{id}/deliveries:
+        get:
+            description: Handled by GET /api/v1/owners/{owner}/hooks/{id}/deliveries; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_owners_owner_hooks_id_deliveries
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/owners/{owner}/hooks/{id}/deliveries; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+    /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver:
+        post:
+            description: Handled by POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_owners_owner_hooks_id_deliveries_delivery_redeliver
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: delivery
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+            x-launchway-audit: webhook.redeliver
+    /api/v1/owners/{owner}/hooks/{id}/test:
+        post:
+            description: Handled by POST /api/v1/owners/{owner}/hooks/{id}/test; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_owners_owner_hooks_id_test
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/owners/{owner}/hooks/{id}/test; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - owners
+            x-launchway-access: admin
+            x-launchway-audit: webhook.test
     /api/v1/policies:
         get:
             description: The rule catalogue, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
@@ -2925,6 +3336,724 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.update
+    /api/v1/repositories/{owner}/{name}/deploy-keys:
+        get:
+            description: 'The repository''s deploy keys: {"items": [...]}.'
+            operationId: get_api_v1_repositories_owner_name_deploy_keys
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The repository''s deploy keys: {"items": [...]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+        post:
+            description: 'Adds one: {"name", "public_key", "write", "expires_at"}. Read-only unless write is true.'
+            operationId: post_api_v1_repositories_owner_name_deploy_keys
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Adds one: {"name", "public_key", "write", "expires_at"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: deploy_key.add
+    /api/v1/repositories/{owner}/{name}/deploy-keys/{id}:
+        delete:
+            description: Deletes a deploy key.
+            operationId: delete_api_v1_repositories_owner_name_deploy_keys_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes a deploy key.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: deploy_key.delete
+    /api/v1/repositories/{owner}/{name}/hooks:
+        get:
+            description: '{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}.'
+            operationId: get_api_v1_repositories_owner_name_hooks
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+        post:
+            description: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository (pull_request and pull_request_review are reserved). 201 with {"hook", "secret", "secret_note"}; 400 for an address that is not http(s)://, carries a password, or an unknown event.'
+            operationId: post_api_v1_repositories_owner_name_hooks
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository (pull_request and pull_request_review are reserved).'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: webhook.add
+    /api/v1/repositories/{owner}/{name}/hooks/{id}:
+        delete:
+            description: Deletes the hook and its log.
+            operationId: delete_api_v1_repositories_owner_name_hooks_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes the hook and its log.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: webhook.delete
+        patch:
+            description: Changes any of name, url, events, active, secret; turning a hook on clears its failure count and notice.
+            operationId: patch_api_v1_repositories_owner_name_hooks_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes any of name, url, events, active, secret; turning a hook on clears its failure count and notice.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: webhook.update
+    /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries:
+        get:
+            description: 'The newest 50 deliveries: event, state, attempts, status, duration_ms, error, response (the start of the answer) and payload (the request).'
+            operationId: get_api_v1_repositories_owner_name_hooks_id_deliveries
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The newest 50 deliveries: event, state, attempts, status, duration_ms, error, response (the start of the answer) and payload (the request).'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+    /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries/{delivery}/redeliver:
+        post:
+            description: Sends that delivery's request again, now, once, as a new delivery.
+            operationId: post_api_v1_repositories_owner_name_hooks_id_deliveries_delivery_redeliver
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: delivery
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sends that delivery's request again, now, once, as a new delivery.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: webhook.redeliver
+    /api/v1/repositories/{owner}/{name}/hooks/{id}/test:
+        post:
+            description: Sends a ping now, once, and answers with the delivery (state, status, error in words).
+            operationId: post_api_v1_repositories_owner_name_hooks_id_test
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sends a ping now, once, and answers with the delivery (state, status, error in words).
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: webhook.test
+    /api/v1/repositories/{owner}/{name}/mirrors:
+        get:
+            description: The repository's mirrors with their status.
+            operationId: get_api_v1_repositories_owner_name_mirrors
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The repository's mirrors with their status.
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        post:
+            description: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled"}. For a pull mirror the repository must have no branches or tags of its own (400: mirroring would replace them); posting again changes the existing pull mirror. The first sync starts at once. 409 when the repository already has that mirror.'
+            operationId: post_api_v1_repositories_owner_name_mirrors
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: mirror.create
+    /api/v1/repositories/{owner}/{name}/mirrors/{id}:
+        delete:
+            description: Removes a push mirror. A pull mirror is ended with stop-mirroring (400).
+            operationId: delete_api_v1_repositories_owner_name_mirrors_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a push mirror.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: mirror.delete
+        patch:
+            description: Pauses or resumes (enabled), changes interval_seconds or prune.
+            operationId: patch_api_v1_repositories_owner_name_mirrors_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Pauses or resumes (enabled), changes interval_seconds or prune.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: mirror.update
+    /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync:
+        post:
+            description: Runs the mirror now and answers with its status. 409 when it is already running; 502 with {"error", "mirror"} when the run failed (the mirror's last_error says why). A pull mirror whose source suddenly lists no branches or tags refuses to delete everything.
+            operationId: post_api_v1_repositories_owner_name_mirrors_id_sync
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Runs the mirror now and answers with its status.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: mirror.sync
+    /api/v1/repositories/{owner}/{name}/protected-branches:
+        get:
+            description: '{"patterns": [...]}: the branches that take a direct push only from the repository''s administrators and cannot be deleted.'
+            operationId: get_api_v1_repositories_owner_name_protected_branches
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"patterns": [...]}: the branches that take a direct push only from the repository''s administrators and cannot be deleted.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: 'Replaces the patterns: {"patterns": ["main", "release/*"]}; * matches anything but a slash; an empty list removes the protection.'
+            operationId: put_api_v1_repositories_owner_name_protected_branches
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Replaces the patterns: {"patterns": ["main", "release/*"]}; * matches anything but a slash; an empty list removes the protection.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: repository.protect
+    /api/v1/repositories/{owner}/{name}/stop-mirroring:
+        post:
+            description: 'Makes the repository the primary: the pull mirror is deleted and pushes are accepted. {"final_sync": true} runs the mirror once more first, and changes nothing if that fails. 409 when it is not a mirror.'
+            operationId: post_api_v1_repositories_owner_name_stop_mirroring
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes the repository the primary: the pull mirror is deleted and pushes are accepted.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: mirror.promote
     /api/v1/run-limits:
         get:
             description: '{"max_run_timeout", "updated_at", "updated_by"}. An empty max_run_timeout is not set: pipelines may ask for up to 720h.'
@@ -4484,6 +5613,29 @@ paths:
             tags:
                 - settings
             x-launchway-access: signed-in
+    /api/v1/ssh:
+        get:
+            description: '{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}: whether Git over SSH is on, the address clone addresses name, and the server''s host keys to verify.'
+            operationId: get_api_v1_ssh
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}: whether Git over SSH is on, the address clone addresses name, and the server''s host keys to verify.'
+            tags:
+                - ssh
+            x-launchway-access: signed-in
     /api/v1/step-resources:
         get:
             description: 'Everything: defaults (each with kind, cpu, cpu_limit, memory, memory_limit, updated_at, updated_by), limits (max_cpu, max_memory, memory_per_thread) and kinds, the step kinds that have defaults. A value that is empty is not set.'
@@ -4794,6 +5946,87 @@ paths:
                 - user
             x-launchway-access: admin
             x-launchway-audit: repository.create
+    /api/v1/user/ssh-keys:
+        get:
+            description: 'The caller''s keys: {"items": [...]}.'
+            operationId: get_api_v1_user_ssh_keys
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s keys: {"items": [...]}.'
+            tags:
+                - user
+            x-launchway-access: signed-in
+        post:
+            description: 'Adds one: {"name", "public_key", "expires_at"}; the expiry is RFC 3339 and optional, the name defaults to the key''s comment. 400 says why a key is refused (DSA, RSA under 3072 bits, a private key, options, a certificate, an expiry in the past), 409 for a key in use.'
+            operationId: post_api_v1_user_ssh_keys
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Adds one: {"name", "public_key", "expires_at"}; the expiry is RFC 3339 and optional, the name defaults to the key''s comment.'
+            tags:
+                - user
+            x-launchway-access: signed-in
+            x-launchway-audit: ssh_key.add
+    /api/v1/user/ssh-keys/{id}:
+        delete:
+            description: Deletes the caller's key; it stops working at once.
+            operationId: delete_api_v1_user_ssh_keys_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes the caller's key; it stops working at once.
+            tags:
+                - user
+            x-launchway-access: signed-in
+            x-launchway-audit: ssh_key.delete
     /api/v1/validate:
         post:
             description: Checks pipeline text without running it. With ?project=NAME it checks it for that project too, and a valid pipeline may come back with warnings (for example, a pull-request filter by target branch in a project with no forge connection).

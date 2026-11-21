@@ -15,14 +15,18 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
-	"github.com/jk-magic-creations/launchway/internal/forge/egress"
+	mirroregress "github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
+	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
+	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
+	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
@@ -50,7 +54,7 @@ type Options struct {
 	// (forge.mirror_allow); everything internal is refused otherwise. Guard,
 	// when set, replaces it (tests).
 	MirrorAllow []string
-	Guard       *egress.Guard
+	Guard       *mirroregress.Guard
 	// Mirror configures the mirror service (limits, timings).
 	Mirror mirror.Options
 	// Every is how often maintenance runs (default 15 minutes); CacheBytes is
@@ -59,6 +63,11 @@ type Options struct {
 	Every      time.Duration
 	CacheBytes int64
 	Log        *slog.Logger
+	// Egress judges the addresses webhooks are sent to (default egress.Default,
+	// which the installation's egress.allow configures). Hooks tunes
+	// retries and the delivery client; zero values are the defaults.
+	Egress *egress.Guard
+	Hooks  webhooks.Options
 }
 
 // Hosting is hosting, set up.
@@ -71,8 +80,13 @@ type Hosting struct {
 	Mirrors *mirror.Service
 	// RunTokens makes and checks the read-only tokens of runs.
 	RunTokens githttp.RunTokens
-	o         Options
-	log       *slog.Logger
+	// Keys is the SSH and deploy keys, Rules the protected branches.
+	Keys  *sshkeys.Store
+	Rules *refrules.Store
+	// Hooks sends the webhooks of repositories.
+	Hooks *webhooks.Service
+	o     Options
+	log   *slog.Logger
 }
 
 // New refuses (with the reason) when this server cannot host: git too old,
@@ -127,7 +141,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	}
 	guard := o.Guard
 	if guard == nil {
-		if guard, err = egress.New(o.MirrorAllow); err != nil {
+		if guard, err = mirroregress.New(o.MirrorAllow); err != nil {
 			return nil, fmt.Errorf("forge.mirror_allow: %w", err)
 		}
 	}
@@ -136,7 +150,27 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	ms := mirror.New(o.Engine.Database(), fs, sto, conn, mo)
 	prov := launchway.New(conn, fs, sto, po)
 	ms.SetCreator(prov.Repositories())
-	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt, o: o, log: o.Log}, nil
+	db := o.Engine.Database()
+	hk := o.Hooks
+	hk.DB, hk.Log = db, o.Log
+	if hk.Sealer == nil {
+		seal, err := o.Engine.SharedValue("webhook_secret_seal", auth.NewKey())
+		if err != nil {
+			return nil, fmt.Errorf("the key for webhook secrets: %w", err)
+		}
+		if hk.Sealer, err = auth.NewSealer(seal, "webhook-secret"); err != nil {
+			return nil, err
+		}
+	}
+	if hk.Client == nil {
+		g := o.Egress
+		if g == nil {
+			g = egress.Default
+		}
+		hk.Client = g.HTTPClient(10 * time.Second)
+	}
+	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt,
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.
@@ -149,6 +183,7 @@ func (h *Hosting) Resolve(ctx context.Context, path string) (forge.Repository, e
 // does its own; the storage's leases keep two from repacking one repository.
 func (h *Hosting) Start(ctx context.Context) {
 	h.Mirrors.Start(ctx)
+	go h.Hooks.Run(ctx)
 	every := h.o.Every
 	if every <= 0 {
 		every = 15 * time.Minute

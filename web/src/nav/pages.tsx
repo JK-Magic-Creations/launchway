@@ -10,6 +10,9 @@ type AnyPage = React.ComponentType<any>;
 const lz = (load: () => Promise<Record<string, unknown>>, name: string) =>
   lazy(() => load().then((m) => ({ default: m[name] as AnyPage })));
 
+const SshKeysPage = lz(() => import("../pages/SshKeys"), "SshKeysPage");
+const RepositoriesPage = lz(() => import("../pages/Repositories"), "RepositoriesPage");
+const OwnerPage = lz(() => import("../pages/Repositories"), "OwnerPage");
 const HomePage = lz(() => import("../pages/Home"), "HomePage");
 const ProjectsPage = lz(() => import("../pages/CodeList"), "CodeListPage");
 const ProjectPage = lz(() => import("../pages/RepoPage"), "RepoPage");
@@ -99,7 +102,10 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/runners": return <RunnersPage />;
     case "/settings/access": return <AccessPage />;
     case "/settings/access/keys": return <TokensPage />;
+    case "/settings/access/ssh-keys": return <SshKeysPage />;
     case "/settings/access/agents": return <AgentsPage />;
+    case "/repositories": return <RepositoriesPage />;
+    case "/owners/:owner": return <OwnerPage key={p.owner} owner={p.owner} />;
     case "/settings/approvals": return <SettingsApprovalsPage />;
     case "/settings/rules": return <PolicyPage />;
     case "/settings/audit": return <AuditPage />;

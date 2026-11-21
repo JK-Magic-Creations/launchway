@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ago } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
+import { RepositorySettings } from "./Repositories";
 
 function span(s: number): string {
   if (s <= 0) return "none";
@@ -23,7 +24,7 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
       <header className="page-head">
         <div>
           <h1>{path}</h1>
-          {repo && <p className="sub">{repo.visibility} repository{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</p>}
+          {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</p>}
         </div>
       </header>
       <nav className="tabs" aria-label="Repository">
@@ -31,14 +32,7 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
         <a href={`/repositories/${path}/mirrors`} className={"tab" + (tab === "mirrors" ? " tab-on" : "")} aria-current={tab === "mirrors" ? "page" : undefined}>Mirrors</a>
       </nav>
       <ErrorBox error={error} />
-      {repo && tab === "overview" && (
-        <section className="card">
-          <dl className="kv">
-            <dt>Clone</dt><dd><Mono>{repo.clone.https ?? "no address: set forge.public_url"}</Mono></dd>
-            <dt>Default branch</dt><dd>{repo.default_branch ?? "main"}</dd>
-          </dl>
-        </section>
-      )}
+      {repo && tab === "overview" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
       {repo && tab === "mirrors" && <MirrorsTab repo={repo} reload={load} />}
     </div>
   );

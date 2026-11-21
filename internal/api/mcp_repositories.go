@@ -37,6 +37,7 @@ func addRepositoryTools(srv *mcp.Server, c *mcpCall) {
 			Description: "Administrators only. Create an empty hosted repository: owner (default: the installation's default owner), name, default_branch (main) and visibility (private). Then push to the clone address with a token. Audited."},
 			mcpCallTimeout, createRepository)
 	}
+	addKeyTools(srv, c)
 }
 
 type repositoryOut struct {

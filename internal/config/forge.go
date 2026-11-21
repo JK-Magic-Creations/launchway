@@ -2,9 +2,13 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
+	"golang.org/x/crypto/ssh"
 )
 
 // ForgeConfig is the server's Git hosting. Hosting is off by default; turning
@@ -45,6 +49,90 @@ type ForgeConfig struct {
 	// is not listed, so that nobody who can set up a mirror can use the
 	// server to reach the network around it. Public addresses need no entry.
 	MirrorAllow []string `yaml:"mirror_allow"`
+
+	// SSH is Git over SSH (off until Listen is set).
+	SSH ForgeSSHConfig `yaml:"ssh"`
+}
+
+// ForgeSSHConfig is the built-in SSH server for Git. It is off by default; the
+// listen address turns it on.
+type ForgeSSHConfig struct {
+	// Listen is the address the server listens on, such as ":2222" (empty: off).
+	Listen string `yaml:"listen"`
+	// PublicHost and PublicPort are what clone addresses say (default: the host
+	// of forge.public_url, and the port of Listen).
+	PublicHost string `yaml:"public_host"`
+	PublicPort int    `yaml:"public_port"`
+	// UserCA is the public keys (authorized_keys format, one per line) of the
+	// certificate authorities whose user certificates are accepted. The first
+	// principal of a certificate is the person's name. Empty: certificates are
+	// not accepted.
+	UserCA string `yaml:"user_ca"`
+	// MaxConnections and MaxPerAddress cap connections (256 and 20);
+	// IdleTimeout ends a quiet connection (10m) and MaxDuration any (6h).
+	MaxConnections int    `yaml:"max_connections"`
+	MaxPerAddress  int    `yaml:"max_per_address"`
+	IdleTimeout    string `yaml:"idle_timeout"`
+	MaxDuration    string `yaml:"max_duration"`
+}
+
+// On reports whether SSH is turned on.
+func (c ForgeSSHConfig) On() bool { return strings.TrimSpace(c.Listen) != "" }
+
+// Port is the port clone addresses name.
+func (c ForgeSSHConfig) Port() int {
+	if c.PublicPort > 0 {
+		return c.PublicPort
+	}
+	_, p, err := net.SplitHostPort(c.Listen)
+	if n, e := strconv.Atoi(p); err == nil && e == nil {
+		return n
+	}
+	return 22
+}
+
+// CAs parses UserCA.
+func (c ForgeSSHConfig) CAs() ([]ssh.PublicKey, error) {
+	var out []ssh.PublicKey
+	for _, line := range strings.Split(c.UserCA, "\n") {
+		if line = strings.TrimSpace(line); line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, _, _, _, err := ssh.ParseAuthorizedKey([]byte(line))
+		if err != nil {
+			return nil, fmt.Errorf("forge.ssh.user_ca: %q is not a public key in the OpenSSH format", clipKey(line))
+		}
+		out = append(out, k)
+	}
+	return out, nil
+}
+
+func clipKey(s string) string {
+	if len(s) > 40 {
+		return s[:40] + "..."
+	}
+	return s
+}
+
+// Check validates the SSH settings.
+func (c ForgeSSHConfig) Check() error {
+	if c.MaxConnections < 0 || c.MaxPerAddress < 0 || c.PublicPort < 0 || c.PublicPort > 65535 {
+		return fmt.Errorf("forge.ssh: limits and ports cannot be negative or above 65535")
+	}
+	if c.On() {
+		if _, _, err := net.SplitHostPort(c.Listen); err != nil {
+			return fmt.Errorf("forge.ssh.listen must be an address with a port, such as :2222 or 0.0.0.0:2222")
+		}
+	}
+	for _, d := range []string{c.IdleTimeout, c.MaxDuration} {
+		if d != "" {
+			if v, err := time.ParseDuration(d); err != nil || v < time.Minute {
+				return fmt.Errorf("forge.ssh: idle_timeout and max_duration must be durations of at least 1m, such as 10m")
+			}
+		}
+	}
+	_, err := c.CAs()
+	return err
 }
 
 // Check validates the settings.
@@ -60,7 +148,7 @@ func (f ForgeConfig) Check() error {
 	if _, err := egress.New(f.MirrorAllow); err != nil {
 		return fmt.Errorf("forge.mirror_allow: %w", err)
 	}
-	return nil
+	return f.SSH.Check()
 }
 
 // MaintainInterval is MaintainEvery as a duration (0: the default).

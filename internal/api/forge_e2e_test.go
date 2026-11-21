@@ -47,13 +47,16 @@ func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Opti
 	if err != nil {
 		t.Fatal(err)
 	}
+	if ho.Hooks.OnDisabled == nil {
+		ho.Hooks.OnDisabled = e.api.WebhookDisabled
+	}
 	ho.Engine, ho.Blobs, ho.Data, ho.Server, ho.BaseURL, ho.Log = e.eng, blobs, t.TempDir(), "api-test", e.srv.URL, quiet()
 	h, err := hosting.New(t.Context(), ho)
 	if err != nil {
 		t.Fatal(err)
 	}
 	go_.Backend, go_.Log = h.Store, quiet()
-	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens, Mirrors: h.Mirrors}
+	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens, Mirrors: h.Mirrors, Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks}
 	return e, h
 }
 
