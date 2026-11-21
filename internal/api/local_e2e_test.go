@@ -458,6 +458,9 @@ func TestAuthenticatorSecretSealedAndRecoveryCodesHashed(t *testing.T) {
 			}
 		}
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	if n != 10 {
 		t.Fatalf("%d recovery hashes", n)
 	}

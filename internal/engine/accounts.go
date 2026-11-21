@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -44,8 +43,8 @@ const localAccountColumns = `username, display_name, email, role, password_hash,
 // import that package, so the server hands the box in (SetTOTPBox).
 type SecretBox interface {
 	Enabled() bool
-	Seal(ctx context.Context, row string, plain []byte) (string, error)
-	Open(ctx context.Context, row, stored string) ([]byte, error)
+	SealRow(row string, plain []byte) (string, error)
+	OpenRow(row, stored string) ([]byte, error)
 }
 
 // SetTOTPBox gives the engine the box that seals local_accounts.totp_secret.
@@ -75,7 +74,7 @@ func (e *Engine) sealTOTP(name, secret string) (string, error) {
 	if b == nil || !b.Enabled() {
 		return "", fmt.Errorf("a second factor stores a secret: %w", keyring.ErrNoRootKey)
 	}
-	return b.Seal(context.Background(), name, []byte(secret))
+	return b.SealRow(name, []byte(secret))
 }
 
 // openTOTP turns the stored form back into the secret, in place.
@@ -90,7 +89,7 @@ func (e *Engine) openTOTP(a *LocalAccount) error {
 		a.TOTPSecret = ""
 		return nil
 	}
-	plain, err := b.Open(context.Background(), a.Username, a.TOTPSecret)
+	plain, err := b.OpenRow(a.Username, a.TOTPSecret)
 	if err != nil {
 		return fmt.Errorf("opening the second factor of %s: %w", a.Username, err)
 	}

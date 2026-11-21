@@ -178,7 +178,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	cfg, cfgPath, log, live, authOpts := su.cfg, su.cfgPath, su.log, su.live, su.authOpts
+	cfg, cfgPath, log, live := su.cfg, su.cfgPath, su.log, su.live
 	eng, err := su.openEngine()
 	if err != nil {
 		return err

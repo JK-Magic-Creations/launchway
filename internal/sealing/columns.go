@@ -230,3 +230,15 @@ func (b *Box) Seal(ctx context.Context, row string, plain []byte) (string, error
 func (b *Box) Open(ctx context.Context, row, stored string) ([]byte, error) {
 	return b.s.openStored(ctx, b.c, row, stored)
 }
+
+// SealRow is Seal for callers that have no context to give (the engine's
+// account calls): it runs under one that is never cancelled, so that a request
+// that gave up cannot leave a half-sealed account behind.
+func (b *Box) SealRow(row string, plain []byte) (string, error) {
+	return b.Seal(context.Background(), row, plain)
+}
+
+// OpenRow is Open under the same rule.
+func (b *Box) OpenRow(row, stored string) ([]byte, error) {
+	return b.Open(context.Background(), row, stored)
+}
