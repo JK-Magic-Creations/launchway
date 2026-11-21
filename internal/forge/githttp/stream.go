@@ -11,6 +11,9 @@ import (
 // RefUpdate is one ref a push moves; Policy functions are given them.
 type RefUpdate = storage.RefUpdate
 
+// ReceiveResult is what a push came to (storage.ReceiveResult): its refs and push options.
+type ReceiveResult = storage.ReceiveResult
+
 // UploadArchive is the third service, served over SSH only.
 const UploadArchive = "git-upload-archive"
 

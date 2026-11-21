@@ -12,7 +12,6 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
-	"github.com/jk-magic-creations/launchway/internal/forge/storage"
 )
 
 // What a push says about pull requests, the same over HTTPS and SSH. After a
@@ -116,7 +115,7 @@ func (s *Server) pushNotice(c gitCaller, repo forge.Repository, r *http.Request)
 // pr.create, after the push has finished (the repository's files are not
 // readable while the push holds them). Anything that goes wrong is in the
 // audit log: the push itself is done and stays done.
-func (s *Server) openRequestedPulls(ctx context.Context, c gitCaller, repo forge.Repository, rr *storage.ReceiveResult) {
+func (s *Server) openRequestedPulls(ctx context.Context, c gitCaller, repo forge.Repository, rr *githttp.ReceiveResult) {
 	if rr == nil || !rr.Committed || s.Forge == nil || s.Forge.Pulls == nil || c.id == nil || c.user == "" || repo.Archived {
 		return
 	}
