@@ -118,7 +118,8 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
 	hits := []SearchHit{}
 	if q == "" {
-		writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits, "favorites": s.prefsOf(id.User).Favorites})
+		recent, _ := s.visibleActivity(id, 6, s.retentionDays())
+		writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits, "favorites": s.prefsOf(id.User).Favorites, "recent": recent})
 		return
 	}
 	add := func(kind, name, detail, path, href string, extra ...string) {

@@ -170,7 +170,7 @@ func (s *Server) mainRoutes() []route {
 		{"GET /api/v1/projects", signedIn, "", s.listProjects},
 		{"GET /api/v1/projects/{name}", projectRead, "", s.getProject},
 		{"GET /api/v1/projects/{name}/refs", projectRead, "", s.projectRefs},
-		{"POST /api/v1/projects/{name}/runs", projectOperate, "run.start", s.startRun},
+		{"POST /api/v1/projects/{name}/runs", projectOperate, "run.start", s.startRunTrail},
 		{"GET /api/v1/projects/{name}/pipeline", projectRead, "", s.readPipeline},
 		{"GET /api/v1/projects/{name}/tests", projectRead, "", s.projectTests},
 		{"GET /api/v1/projects/{name}/tests/history", projectRead, "", s.testHistory},

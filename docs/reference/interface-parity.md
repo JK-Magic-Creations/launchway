@@ -46,6 +46,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor/confirm` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/sign-out-everywhere` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `DELETE /api/v1/activity` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail |
+| `GET /api/v1/activity` | `recent` | `recent` | — | equal |
+| `PUT /api/v1/activity` | — | — | — | exempt: the pages note what a person opened, in the background; a token or agent has no pages |
+| `PUT /api/v1/activity/pause` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --pause); an agent must not switch the person's trail off |
 | `GET /api/v1/admin/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `DELETE /api/v1/admin/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/ai/models` | `list_config (kind models)` | `models` | `launchway_model` | equal |

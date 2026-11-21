@@ -205,8 +205,8 @@ function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; o
     <div>
       <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div>
       {cats.map((c) => {
-        // A category with something to look at, or one of only a few, opens by itself; a person's own choice wins.
-        const isOpen = openCats[c.id] ?? (c.needs > 0 || c.running > 0 || cats.length <= 2);
+        // Only a category with something that needs a look opens by itself; the others show one line of health; a person's own choice wins.
+        const isOpen = openCats[c.id] ?? c.needs > 0;
         const shut = !isOpen;
         const sorted = [...c.projects].sort((a, b) => b.needs - a.needs || Number(b.last === "failed") - Number(a.last === "failed") || b.running - a.running || a.name.localeCompare(b.name));
         const label = c.kind === "unit" ? `${terms().label("unit")} ${c.label}` : c.label;
@@ -219,8 +219,8 @@ function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; o
               {c.running > 0 && <span className="vchip run">{c.running} running</span>}
               {c.needs === 0 && c.failing === 0 && c.running === 0 && <span className="vchip ok">all passing</span>}
             </button></h3>
-            {!shut && <ul id={`cat-${c.id}`} className="hm-cards">{sorted.slice(0, 8).map((p) => <ProjectCard key={p.name} p={p} now={now} />)}
-              {sorted.length > 8 && <li className="hm-more"><a href="/pipelines" onClick={onLink}>and {sorted.length - 8} more in the explorer</a></li>}</ul>}
+            {!shut && <ul id={`cat-${c.id}`} className="hm-cards">{sorted.slice(0, 6).map((p) => <ProjectCard key={p.name} p={p} now={now} />)}
+              {sorted.length > 6 && <li className="hm-more"><a href="/pipelines" onClick={onLink}>show all {sorted.length} in the explorer</a></li>}</ul>}
           </div>
         );
       })}

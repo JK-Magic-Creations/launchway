@@ -355,6 +355,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `prefs.layout.reset_all` | `DELETE /api/v1/me/layouts`: Resets all of the caller's own arrangements (favorites stay) |
 | `prefs.favorite` | `POST /api/v1/me/favorites`: Adds or removes a favorite for the caller |
 | `layout.import` | `POST /api/v1/layouts-import`: Applies such a document: adds and updates what it names and never deletes what it leaves out |
+| `prefs.activity.clear` | `DELETE /api/v1/activity`: someone deleted their own trail of what they opened |
+| `prefs.activity.pause` | `PUT /api/v1/activity/pause`: someone paused or resumed their own trail |
 | `auth.local.password_changed` | `POST /api/v1/account/password`: someone changed their own password (their other sessions end) |
 | `auth.local.second_factor_begin` | `POST /api/v1/account/second-factor`: someone started adding an authenticator |
 | `auth.local.second_factor_added` | `POST /api/v1/account/second-factor/confirm`: the authenticator was proven with a code |

@@ -3,6 +3,10 @@ package parity
 // The rows were drafted from the route table and are kept by hand.
 
 var rows = []Row{
+	{Route: "GET /api/v1/activity", MCP: "recent", CLI: "recent", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "PUT /api/v1/activity", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the pages note what a person opened, in the background; a token or agent has no pages"},
+	{Route: "DELETE /api/v1/activity", MCP: "", CLI: "recent", Terraform: "", Status: Exempt, Reason: "a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail"},
+	{Route: "PUT /api/v1/activity/pause", MCP: "", CLI: "recent", Terraform: "", Status: Exempt, Reason: "a person's own privacy control (launchway recent --pause); an agent must not switch the person's trail off"},
 	{Route: "GET /api/v1/search", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the finder in the top bar: list_projects, list_runs and the repositories commands list and filter the same things for agents and scripts"},
 	{Route: "GET /api/v1/home", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "a read model for the Home page, worked out from the same rule as attention, plus runs and projects that list_runs and list_projects give in full"},
 	{Route: "GET /api/v1/attention", MCP: "attention", CLI: "attention", Terraform: "", Status: Equal, Reason: ""},

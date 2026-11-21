@@ -64,6 +64,7 @@ func addDocs(srv *mcp.Server, c *mcpCall) {
 	// The tools for what needs attention and for organizing lists are registered here too (mcp_attention.go, mcp_organize.go).
 	addAttentionTool(srv, c)
 	addOrganizeTool(srv, c)
+	addRecentTool(srv, c)
 	text := func(uri, mime, body string) mcp.ResourceHandler {
 		return func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{URI: uri, MIMEType: mime, Text: body}}}, nil

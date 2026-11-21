@@ -1075,6 +1075,104 @@ paths:
                 - account
             x-launchway-access: signed-in
             x-launchway-audit: auth.sign_out_everywhere
+    /api/v1/activity:
+        delete:
+            description: Deletes the caller's whole trail.
+            operationId: delete_api_v1_activity
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes the caller's whole trail.
+            tags:
+                - activity
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.activity.clear
+        get:
+            description: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days. It is the caller''s alone: no route takes another user''s name, so administrators cannot read it. Entries for projects the caller can no longer see are left out. ?limit= (100, at most 200).'
+            operationId: get_api_v1_activity
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+        put:
+            description: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the project.'
+            operationId: put_api_v1_activity
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+    /api/v1/activity/pause:
+        put:
+            description: 'Pauses or resumes writing the caller''s trail: {"paused": true}.'
+            operationId: put_api_v1_activity_pause
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Pauses or resumes writing the caller''s trail: {"paused": true}.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.activity.pause
     /api/v1/admin/tokens:
         get:
             description: Everyone's tokens.

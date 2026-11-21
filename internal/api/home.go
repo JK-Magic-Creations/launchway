@@ -28,8 +28,9 @@ func (s *Server) homeRoutes() []route {
 // userPrefs is a person's own state that is not layout: what they follow and
 // what they set aside. It is a personal preference only.
 type userPrefs struct {
-	Favorites []string         `json:"favorites"` // "project:name", "repository:name"
-	Dismissed map[string]int64 `json:"dismissed"` // attention key → until (Unix ms, 0 = until it changes)
+	Favorites   []string         `json:"favorites"`    // "project:name", "repository:name"
+	Dismissed   map[string]int64 `json:"dismissed"`    // attention key → until (Unix ms, 0 = until it changes)
+	TrailPaused bool             `json:"trail_paused"` // the trail of what the person opened is not being written
 }
 
 func (s *Server) prefsOf(user string) userPrefs {

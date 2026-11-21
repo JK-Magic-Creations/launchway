@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/jk-magic-creations/launchway/internal/auth"
 )
 
 func TestHomeNeverLeaksAnotherTeamsProjects(t *testing.T) {
@@ -252,4 +254,95 @@ func TestSearchOnlyReturnsWhatThePersonMaySee(t *testing.T) {
 	if !found {
 		t.Errorf("a Sortie is found by number: %+v", out.Hits)
 	}
+}
+
+func TestTrailIsPrivateAndFollowsPermission(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	vic, ada, dana := e.signIn(t, "vic"), e.signIn(t, "ada"), e.signIn(t, "dana")
+	run := e.startRun(t, "pay-api")
+	post := func(b *browser, body string) int { return b.do("PUT", e.srv.URL+"/api/v1/activity", body).status }
+	if post(vic, `{"kind":"run","obj":"`+run+`","project":"pay-api","title":"pay-api #1","href":"/runs/`+run+`","action":"viewed","state":"running"}`) != 204 {
+		t.Fatal("recording")
+	}
+	if post(vic, `{"kind":"project","obj":"web","project":"web","title":"web","href":"/projects/web"}`) != 204 {
+		t.Fatal("recording a project the person cannot see is quietly ignored")
+	}
+	type trail struct {
+		Recent   []activityView
+		Continue []activityView
+		Paused   bool
+	}
+	var mine trail
+	vic.get(e.srv.URL+"/api/v1/activity").json(t, &mine)
+	if len(mine.Recent) != 1 || mine.Recent[0].Obj != run {
+		t.Fatalf("vic's trail: %+v", mine.Recent)
+	}
+	// Nobody else reads it: not another person, and not an administrator.
+	for name, b := range map[string]*browser{"ada (an administrator)": ada, "dana": dana} {
+		r := b.get(e.srv.URL + "/api/v1/activity?user=vic")
+		var other trail
+		r.json(t, &other)
+		if len(other.Recent) != 0 || strings.Contains(string(r.body), run) {
+			t.Errorf("%s reads vic's trail: %s", name, r.body)
+		}
+	}
+	// What changed since: the run was running when vic looked; now it is waiting at its gate or has moved on.
+	if mine.Recent[0].NowState == "" {
+		t.Errorf("the entry does not say what the Sortie is now: %+v", mine.Recent[0])
+	}
+	// Losing permission hides the entry without deleting it.
+	e.api.Auth.Policy = testPolicyWithout(t, "vic")
+	vic.get(e.srv.URL+"/api/v1/activity").json(t, &mine)
+	if len(mine.Recent) != 0 {
+		t.Errorf("an entry for a project the person lost is shown: %+v", mine.Recent)
+	}
+	// Pause, then clear.
+	if vic.do("PUT", e.srv.URL+"/api/v1/activity/pause", `{"paused":true}`).status != 200 {
+		t.Fatal("pause")
+	}
+	if post(ada, `{"kind":"page","obj":"/x","title":"X","href":"/x"}`) != 204 {
+		t.Fatal("ada records")
+	}
+	var adas trail
+	ada.get(e.srv.URL+"/api/v1/activity").json(t, &adas)
+	if len(adas.Recent) != 1 {
+		t.Errorf("ada's own trail: %+v", adas.Recent)
+	}
+	if vic.do("DELETE", e.srv.URL+"/api/v1/activity", "").status != 200 {
+		t.Fatal("clear")
+	}
+	ada.get(e.srv.URL+"/api/v1/activity").json(t, &adas)
+	if len(adas.Recent) != 1 {
+		t.Errorf("vic clearing his trail touched ada's: %+v", adas.Recent)
+	}
+}
+
+func TestStartingASortieIsInTheTrailAndPausedTrailsWriteNothing(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	otto := e.signIn(t, "otto")
+	r := otto.do("POST", e.srv.URL+"/api/v1/projects/pay-api/runs", `{"ref":"main"}`)
+	if r.status != 201 {
+		t.Fatalf("start: %d %s", r.status, r.body)
+	}
+	var tr struct{ Continue []activityView }
+	otto.get(e.srv.URL+"/api/v1/activity").json(t, &tr)
+	if len(tr.Continue) != 1 || tr.Continue[0].Action != "started" || tr.Continue[0].Kind != "run" {
+		t.Fatalf("continue: %+v", tr.Continue)
+	}
+	otto.do("PUT", e.srv.URL+"/api/v1/activity/pause", `{"paused":true}`)
+	otto.do("POST", e.srv.URL+"/api/v1/projects/pay-api/runs", `{"ref":"main"}`)
+	var after struct{ Recent []activityView }
+	otto.get(e.srv.URL+"/api/v1/activity").json(t, &after)
+	if len(after.Recent) != 1 {
+		t.Errorf("a paused trail wrote: %+v", after.Recent)
+	}
+}
+
+// testPolicyWithout is the test policy after the groups that gave pay-* access were removed: only admins and dana remain.
+func testPolicyWithout(t testing.TB, _ string) *auth.Policy {
+	p, err := auth.NewPolicy([]auth.Binding{{Group: "admins", Role: auth.Admin}, {User: "dana", Role: auth.Operator, Projects: []string{"web"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
