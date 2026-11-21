@@ -9143,6 +9143,32 @@ paths:
             tags:
                 - work
             x-launchway-access: signed-in
+    /api/v1/work/health:
+        post:
+            description: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
+            operationId: post_api_v1_work_health
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.health
     /api/v1/work/home:
         get:
             description: 'What Home shows about work: yours, and what agents did for you and what waits for your review.'
@@ -9905,6 +9931,132 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.milestone_update
+    /api/v1/work/proposals:
+        get:
+            description: The groups of findings analyzers proposed at a scope (?scope=&state=), each with its state, severity, open count, item and occurrences.
+            operationId: get_api_v1_work_proposals
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The groups of findings analyzers proposed at a scope (?scope=&state=), each with its state, severity, open count, item and occurrences.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: 'An analyzer''s batch ({scope, source, run_id, report_url, complete, proposals}): grouped by group key, capped, and held for a review unless the level lets the source file without one. Not for agent tokens.'
+            operationId: post_api_v1_work_proposals
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'An analyzer''s batch ({scope, source, run_id, report_url, complete, proposals}): grouped by group key, capped, and held for a review unless the level lets the source file without one.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.propose
+    /api/v1/work/proposals/accept:
+        post:
+            description: Opens the items of proposed groups ({scope, source, groups, edits}), each with a checklist; edits changes a title, body or priority first.
+            operationId: post_api_v1_work_proposals_accept
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Opens the items of proposed groups ({scope, source, groups, edits}), each with a checklist; edits changes a title, body or priority first.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_accept
+    /api/v1/work/proposals/dismiss:
+        post:
+            description: Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again.
+            operationId: post_api_v1_work_proposals_dismiss
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_dismiss
+    /api/v1/work/proposals/merge:
+        post:
+            description: Joins proposed groups of one source into the group named in into.
+            operationId: post_api_v1_work_proposals_merge
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Joins proposed groups of one source into the group named in into.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_merge
     /api/v1/work/pull-reviews:
         get:
             description: The agents' reviews of a pull request (?repo=&pull=), each with whether it counts and, if not, why.
