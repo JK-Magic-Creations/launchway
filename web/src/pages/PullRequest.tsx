@@ -20,8 +20,8 @@ function stations(p: Pull): LineStation[] {
   const review = rd?.blockers.find((b) => b.code === "approvals" || b.code === "changes_requested");
   return [
     { key: "opened", label: "Opened", state: "ok", detail: `#${p.number}` },
-    { key: "checks", label: "Checks", state: p.state === "merged" ? "ok" : failed ? "bad" : running ? "run" : checks.length ? "ok" : "idle", detail: checks.length ? `${checks.filter((c) => c.status === "passed").length}/${checks.length}` : "none yet" },
-    { key: "review", label: "Review", state: p.state === "merged" ? "ok" : review ? "warn" : (rd?.approvals ?? 0) > 0 ? "ok" : "idle", detail: review ? review.why : `${rd?.approvals ?? 0} approval${rd?.approvals === 1 ? "" : "s"}` },
+    { key: "checks", label: "Checks", state: p.state === "merged" ? "ok" : failed ? "bad" : running ? "run" : checks.length ? "ok" : "idle", detail: p.state === "merged" ? "before the merge" : checks.length ? `${checks.filter((c) => c.status === "passed").length}/${checks.length}` : "none yet" },
+    { key: "review", label: "Review", state: p.state === "merged" ? "ok" : review ? "warn" : (rd?.approvals ?? 0) > 0 ? "ok" : "idle", detail: p.state === "merged" ? "before the merge" : review ? review.why : `${rd?.approvals ?? 0} approval${rd?.approvals === 1 ? "" : "s"}` },
     { key: "merge", label: p.state === "merged" ? "Merged" : "Merge", state: p.state === "merged" ? "ok" : rd?.can_merge ? "warn" : "idle", detail: p.state === "merged" ? p.merge_method : rd?.can_merge ? "ready" : "not yet" },
   ];
 }
@@ -144,6 +144,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
         <>
           <table className={"diff" + (mode === "split" ? " diff-split" : "")} aria-label={`Changes to ${f.path}`}>
             <caption className="sr-only">Changes to {f.path}</caption>
+            <colgroup>{mode === "split" ? <><col style={{ width: 48 }} /><col /><col style={{ width: 48 }} /><col /></> : <><col style={{ width: 48 }} /><col style={{ width: 48 }} /><col style={{ width: 20 }} /><col /></>}</colgroup>
             {mode === "split" ? split() : rows.map(lineRow)}
           </table>
           {patch.truncated && <p className="pr-note faint">The patch was cut at the size limit.</p>}
