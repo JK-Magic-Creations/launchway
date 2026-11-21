@@ -85,14 +85,15 @@ type Server struct {
 	MCP   *MCPOptions   // turns on the Model Context Protocol endpoint, /mcp; nil is off
 	Forge *ForgeHosting // Git hosting; nil is off
 
-	mux      *http.ServeMux // the routes, which MCP tools call in process
-	checks   checkLimiter
-	live     atomic.Pointer[Live]                                // see Reconfigure
-	draining atomic.Bool                                         // see Drain
-	dbState  func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
-	stopMu   sync.Mutex
-	stopped  chan struct{} // closed by Stop; see longLived
-	local    localRuntime  // built-in accounts: throttle and setup state (local_auth.go)
+	mux       *http.ServeMux // the routes, which MCP tools call in process
+	checks    checkLimiter
+	live      atomic.Pointer[Live]                                // see Reconfigure
+	draining  atomic.Bool                                         // see Drain
+	dbState   func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
+	stopMu    sync.Mutex
+	stopped   chan struct{} // closed by Stop; see longLived
+	local     localRuntime  // built-in accounts: throttle and setup state (local_auth.go)
+	homeCache homeCache     // each person's Home answer for a few seconds (home.go)
 }
 
 // Auth configures sign-in.
@@ -756,6 +757,10 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 	only, err := s.visibleProjects(identityFrom(r))
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	if a := q.Get("attention"); a == "needs" || a == "running" {
+		s.listRunsByAttention(w, r, a, only)
 		return
 	}
 	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Lane: q.Get("lane"), Limit: limit, OnlyProjects: only}

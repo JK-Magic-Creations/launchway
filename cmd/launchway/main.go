@@ -90,6 +90,8 @@ Usage:
   launchway deps     list|check|update|ignore   what a repository depends on, what is newer or vulnerable
   launchway updates  preview|run|settings   Launchway's own dependency updates, proposed as pull requests
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
+  launchway attention [--json]                          what needs you: the Home page's rule, for a script or an agent
+  launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -99,6 +101,8 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 // commands are the commands that take their arguments and nothing else, by name.
 var commands = map[string]func([]string) error{
 	"runs":           cmdRuns,
+	"attention":      cmdAttention,
+	"organize":       cmdOrganize,
 	"approvals":      cmdApprovals,
 	"notifications":  cmdNotifications,
 	"deployments":    cmdDeployments,

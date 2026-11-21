@@ -240,6 +240,8 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 // ---- reading ----
 
 func addReadTools(srv *mcp.Server, c *mcpCall) {
+	addAttentionTool(srv, c)
+	addOrganizeTool(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "list_projects", Annotations: readOnly("List projects"),
 		Description: "List the projects (Git repositories with a pipeline) this token may see, with each one's latest run and whether this token may start runs there. Start here."},
 		mcpCallTimeout, listProjects)

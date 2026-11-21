@@ -34,6 +34,8 @@ type mcpRow struct {
 // fails for a tool without one.
 var mcpPermissionTable = map[string]mcpRow{
 	"list_projects":          {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"attention":              {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"organize":               {map[string]any{"action": "list", "area": "pipelines"}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"get_project":            {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"list_runs":              {map[string]any{"project": "pay-api"}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"get_run":                {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
