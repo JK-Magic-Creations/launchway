@@ -415,6 +415,9 @@ type restPull struct {
 	Body         string `json:"body"`
 	State        string `json:"state"`
 	MergedBy     string `json:"merged_by"`
+	Mergeability struct {
+		Behind int `json:"behind"`
+	} `json:"mergeability"`
 }
 
 func (h *restHost) pullsIn(state, prefix string) ([]restPull, error) {
@@ -437,7 +440,7 @@ func (h *restHost) Open(_ context.Context, prefix string) ([]propose.PR, error) 
 	ps, err := h.pullsIn("open", prefix)
 	var out []propose.PR
 	for _, p := range ps {
-		out = append(out, propose.PR{Number: p.Number, Branch: p.SourceBranch, Title: p.Title, Body: p.Body})
+		out = append(out, propose.PR{Number: p.Number, Branch: p.SourceBranch, Title: p.Title, Body: p.Body, Behind: p.Mergeability.Behind > 0})
 	}
 	return out, err
 }

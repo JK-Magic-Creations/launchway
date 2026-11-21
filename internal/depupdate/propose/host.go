@@ -15,6 +15,8 @@ type PR struct {
 	Body   string
 	URL    string
 	Merged bool
+	// Behind says the base branch has moved on since this branch was made.
+	Behind bool
 	// Reason is, for a closed one, what the person who closed it said.
 	Reason string
 }
@@ -82,7 +84,7 @@ func majorOfTarget(v string) string {
 func OpenFrom(prs []PR) (open []OpenPR) {
 	for _, p := range prs {
 		if key, targets, ok := ParseMarker(p.Body); ok {
-			open = append(open, OpenPR{Key: key, Number: p.Number, Targets: targets})
+			open = append(open, OpenPR{Key: key, Number: p.Number, Targets: targets, Behind: p.Behind})
 		}
 	}
 	return open

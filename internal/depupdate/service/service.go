@@ -205,7 +205,7 @@ func (s *Service) pullState(ctx context.Context, repoID string, levels []plan.La
 	items, _, _ := s.Pulls.Store.List(ctx, repoID, pulls.Filter{State: "open", Limit: 200})
 	for _, p := range items {
 		if strings.HasPrefix(p.SourceBranch, prefix+"/") {
-			open = append(open, propose.PR{Number: p.Number, Branch: p.SourceBranch, Body: p.Body})
+			open = append(open, propose.PR{Number: p.Number, Branch: p.SourceBranch, Body: p.Body, Behind: p.Mergeability.Behind > 0})
 		}
 	}
 	items, _, _ = s.Pulls.Store.List(ctx, repoID, pulls.Filter{State: "closed", Limit: 200})
@@ -240,7 +240,7 @@ func stateKey(open []plan.Open, closed map[string]bool) string {
 			t = append(t, k+"="+v)
 		}
 		sort.Strings(t)
-		parts = append(parts, fmt.Sprintf("o%d:%s:%s", o.Number, o.Key, strings.Join(t, ",")))
+		parts = append(parts, fmt.Sprintf("o%d:%s:%s:%v", o.Number, o.Key, strings.Join(t, ","), o.Behind))
 	}
 	for k := range closed {
 		parts = append(parts, "c:"+k)

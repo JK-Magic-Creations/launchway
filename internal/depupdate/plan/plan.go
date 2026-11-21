@@ -45,6 +45,9 @@ type Open struct {
 	Key     string
 	Number  int
 	Targets map[string]string // dependency name to the version it moves to
+	// Behind says the default branch has moved on since the pull request's
+	// branch was made, so it is rebuilt on top of it.
+	Behind bool
 }
 
 // Input of Plan.
@@ -99,6 +102,8 @@ func Plan(in Input) []Decision {
 			d.Action, d.Why = ActionQueue, "Security updates are switched off."
 		case !pr.Security && !p.Routine:
 			d.Action, d.Why = ActionQueue, "Routine updates are switched off."
+		case isOpen && sameTargets(ex.Targets, pr) && ex.Behind:
+			d.Action, d.Why = ActionUpdate, "The default branch moved on; the pull request is rebuilt on top of it, in place."
 		case isOpen && sameTargets(ex.Targets, pr):
 			d.Action, d.Why = ActionKeep, "The open pull request already proposes exactly this."
 		case isOpen:

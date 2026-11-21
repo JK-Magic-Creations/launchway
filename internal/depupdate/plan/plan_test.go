@@ -355,6 +355,11 @@ func TestUpdateInPlaceAndClose(t *testing.T) {
 	if ds[0].Action != ActionKeep {
 		t.Errorf("%+v", ds[0])
 	}
+	// the default branch moved: the same pull request is rebuilt on top of it
+	ds = Plan(Input{Policy: p, Now: now, Immediate: true, Updates: []Update{u}, Open: []Open{{Key: "go-m", Number: 7, Targets: map[string]string{"m": "v1.2.0"}, Behind: true}}})
+	if ds[0].Action != ActionUpdate || !strings.Contains(ds[0].Why, "moved") {
+		t.Errorf("%+v", ds[0])
+	}
 }
 
 func TestSchedule(t *testing.T) {
