@@ -135,6 +135,12 @@ type Sync struct {
 	// Windows is wait or fail: what to do while Argo CD's sync windows do
 	// not allow the sync. Windows are never overridden.
 	Windows string `json:"windows"`
+	// Leftovers is fail (the default) or warn: what to do when objects an
+	// earlier render of the application made are still in the cluster
+	// because pruning is off, and some are security-relevant (network
+	// policies, roles and bindings, service accounts, ingress and route
+	// kinds, secrets). Others only ever warn. Nothing is deleted.
+	Leftovers string `json:"leftovers,omitempty"`
 }
 
 // Resource names one resource of an application.
@@ -277,7 +283,7 @@ var (
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
 	changeKeys   = []string{"file", "image", "tag", "digest", "format", "set", "value"}
-	syncKeys     = []string{"request", "resources", "prune", "windows"}
+	syncKeys     = []string{"request", "resources", "prune", "windows", "leftovers"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
 	rolloutKeys  = []string{"name", "namespace", "until", "pauses"}
 	// Keys of deploy steps that the design has and a later release brings.
@@ -723,6 +729,13 @@ func (ps *parser) parseSync(n *yaml.Node, at string, s *Sync) {
 				s.Windows = w
 			default:
 				ps.add(v, where, "write wait or fail: what to do while a sync window does not allow syncing (windows are never overridden)")
+			}
+		case "leftovers":
+			switch w := ps.scalar(v, where); w {
+			case "fail", "warn":
+				s.Leftovers = w
+			default:
+				ps.add(v, where, "write fail (the default) or warn: what to do when pruning is off and security-relevant objects from an earlier render are still in the cluster")
 			}
 		case "resources":
 			if v.Kind != yaml.SequenceNode {

@@ -33,6 +33,7 @@ func ReduceApplication(obj map[string]any, spec Spec, repoURL string, contains C
 	app.HealthMessage = str(mapAt(status, "health"), "message")
 	app.ReconciledAt = parseTime(str(status, "reconciledAt"))
 	if auto := mapAt(mapAt(mapAt(obj, "spec"), "syncPolicy"), "automated"); auto != nil {
+		app.AutoPrune, _ = auto["prune"].(bool)
 		// Argo CD 3 lets automated sync be written but switched off.
 		enabled, set := auto["enabled"].(bool)
 		app.Automated = !set || enabled
@@ -97,6 +98,17 @@ func ReduceApplication(obj map[string]any, spec Spec, repoURL string, contains C
 		app.Operation = op
 	}
 
+	outOfSync := 0
+	for _, x := range list(status, "resources") {
+		xm := asMap(x)
+		if pr, _ := xm["requiresPruning"].(bool); pr {
+			app.Leftovers = append(app.Leftovers, Leftover{Group: str(xm, "group"), Kind: str(xm, "kind"), Namespace: str(xm, "namespace"),
+				Name: str(xm, "name"), Security: securityKinds[str(xm, "kind")]})
+		} else if str(xm, "status") == "OutOfSync" {
+			outOfSync++
+		}
+	}
+	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && len(app.Leftovers) > 0
 	if spec.Health == "resources" {
 		for _, want := range spec.Resources {
 			r := Resource{Group: want.Group, Kind: want.Kind, Namespace: want.Namespace, Name: want.Name}

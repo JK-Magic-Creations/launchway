@@ -69,6 +69,14 @@ type App struct {
 	// them: those listed under sync.resources, else none (the application's
 	// own sync and health then decide).
 	Resources []Resource `json:"resources,omitempty"`
+	// Leftovers are objects an earlier render made that the release no
+	// longer renders and that are still in the cluster, because pruning is off
+	// (Argo CD reports them as requiring pruning). AutoPrune says the
+	// application prunes by itself; SyncedExceptLeftovers says they are the
+	// only thing keeping it OutOfSync.
+	Leftovers             []Leftover `json:"leftovers,omitempty"`
+	AutoPrune             bool       `json:"auto_prune,omitempty"`
+	SyncedExceptLeftovers bool       `json:"synced_except_leftovers,omitempty"`
 	// WindowBlocked, for an application that syncs by itself, says why its
 	// AppProject's sync windows do not let it sync now ("" if they do).
 	WindowBlocked string `json:"window_blocked,omitempty"`
@@ -233,4 +241,30 @@ type Spec struct {
 	Until    string `json:"until,omitempty"`
 	Pauses   string `json:"pauses,omitempty"`
 	PastStep *int   `json:"past_step,omitempty"`
+	// Leftovers is fail or warn (see pipeline.Sync); Prune says the step
+	// asks for pruning.
+	Leftovers string `json:"leftovers,omitempty"`
+	Prune     bool   `json:"prune,omitempty"`
 }
+
+// Leftover is an object from an earlier render that is still in the cluster.
+type Leftover struct {
+	Group     string `json:"group,omitempty"`
+	Kind      string `json:"kind"`
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name"`
+	// Security says the kind widens access if it stays (network policies,
+	// roles and bindings, service accounts, ingress and route kinds, secrets).
+	Security bool `json:"security,omitempty"`
+}
+
+// securityKinds are the kinds whose leftover objects can widen access.
+var securityKinds = map[string]bool{
+	"NetworkPolicy": true, "CiliumNetworkPolicy": true, "CiliumClusterwideNetworkPolicy": true,
+	"Role": true, "RoleBinding": true, "ClusterRole": true, "ClusterRoleBinding": true,
+	"ServiceAccount": true, "Ingress": true, "HTTPRoute": true, "GRPCRoute": true, "TCPRoute": true,
+	"TLSRoute": true, "Gateway": true, "IngressRoute": true, "Secret": true,
+}
+
+// String words a leftover as Kind/name.
+func (l Leftover) String() string { return l.Kind + "/" + l.Name }

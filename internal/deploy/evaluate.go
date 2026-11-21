@@ -29,6 +29,7 @@ const (
 	PhasePaused     = "rollout_paused"
 	PhaseAborted    = "rollout_aborted"
 	PhaseHealthy    = "healthy"
+	PhaseLeftovers  = "leftovers" // objects of an earlier render are still there and pruning is off
 )
 
 // Verdict is the result of evaluating one snapshot.
@@ -106,6 +107,11 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 	if ro := s.Rollout; spec.Kind == "rollback" && ro != nil && ro.Found && ro.Aborted {
 		return cont(PhaseAborted, "the rollout is aborted; waiting for it to return to the previous version%s", colon(ro.Message))
 	}
+	// Objects an earlier render made, still there because pruning is off.
+	lf, lfWarn := leftoverVerdict(spec, app)
+	if lf != nil {
+		return *lf
+	}
 	// Now the judged resources, or the application.
 	if spec.Health == "resources" && len(spec.Resources) > 0 {
 		for _, want := range spec.Resources {
@@ -124,7 +130,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		}
 	} else {
 		switch {
-		case app.Sync != "Synced":
+		case app.Sync != "Synced" && !app.SyncedExceptLeftovers:
 			return cont(PhaseSyncing, "the application is %s at %s", nonEmpty(app.Sync, "not synced"), short(app.Revision))
 		case app.Health == "Degraded":
 			if v, ok := rolloutFailure(s); ok {
@@ -145,7 +151,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		}
 	}
 	if spec.Rollout == nil {
-		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy, Detail: "synced at " + short(app.Revision) + " and healthy"}
+		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy, Detail: "synced at " + short(app.Revision) + " and healthy" + lfWarn}
 	}
 	ro := s.Rollout
 	if ro == nil || !ro.Found {
@@ -162,7 +168,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseRollout, "waiting for the rollout controller to see the new version")
 	case ro.Phase == "Healthy" && ro.CurrentPodHash != "" && ro.StableRS == ro.CurrentPodHash:
 		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy,
-			Detail: fmt.Sprintf("synced at %s; rollout healthy on %s (%d/%d ready)", short(app.Revision), ro.CurrentPodHash, ro.Ready, ro.Replicas)}
+			Detail: fmt.Sprintf("synced at %s; rollout healthy on %s (%d/%d ready)%s", short(app.Revision), ro.CurrentPodHash, ro.Ready, ro.Replicas, lfWarn)}
 	}
 	if v, ok := atPause(spec, s); ok {
 		return v
@@ -353,4 +359,37 @@ func FailingMessage(m Metric) string {
 		}
 	}
 	return ""
+}
+
+// leftoverVerdict judges the objects of an earlier render that are still in
+// the cluster. With pruning off they stay until someone removes them, and a
+// stale NetworkPolicy, role or route can widen access. A security-relevant
+// kind fails the deployment (unless the step says leftovers: warn); others
+// are only mentioned. Nothing is deleted. The second result is the sentence
+// for a deployment that passes with leftovers.
+func leftoverVerdict(spec Spec, app *App) (*Verdict, string) {
+	if len(app.Leftovers) == 0 || spec.Prune || app.AutoPrune {
+		return nil, ""
+	}
+	if op := app.Operation; op != nil && (op.Phase == "Running" || op.Phase == "Terminating") {
+		return nil, "" // a sync is still going; it may yet prune
+	}
+	var sec, other []string
+	for _, l := range app.Leftovers {
+		if l.Security {
+			sec = append(sec, l.String())
+		} else {
+			other = append(other, l.String())
+		}
+	}
+	words := func(n int, names []string) string {
+		return fmt.Sprintf("%d object(s) from an earlier render are still present and no longer part of the release: %s; pruning is off for this application, so they stay until removed",
+			n, strings.Join(names, ", "))
+	}
+	if len(sec) > 0 && spec.Leftovers != "warn" {
+		v := fail(PhaseLeftovers, "%s. Security-relevant leftovers can widen access. Remove them (kubectl delete), turn pruning on for the application, or set sync.leftovers: warn on the step to accept them", words(len(sec), sec))
+		return &v, ""
+	}
+	all := append(append([]string{}, sec...), other...)
+	return nil, "; warning: " + words(len(all), all)
 }
