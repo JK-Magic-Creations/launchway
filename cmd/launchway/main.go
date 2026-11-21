@@ -89,7 +89,7 @@ Usage:
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
   launchway doctor   [database|ssh|security]             would this installation survive losing its database? is Git over SSH reachable?
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
-  launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
+  launchway repos    connection|import|import-all|verify|mirror  bring repositories in from other servers, keep them in step
   launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway version
@@ -227,6 +227,7 @@ func cmdServer(args []string) error {
 	if store.Available() {
 		srv.Settings = store
 	}
+	api.SetCredentialDir(filepath.Join(cfg.Data, "credentials")) // tokens pasted in the setup guide
 	// Variables set at levels (schema 29): the manager binds pipelines to
 	// them, the server serves and changes them.
 	vars := store.Variables()

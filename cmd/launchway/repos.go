@@ -45,6 +45,8 @@ func cmdRepos(args []string) error {
 			return cl.reposConnection(args[1:])
 		case "import":
 			return cl.reposImport(args[1:])
+		case "import-all":
+			return cl.reposImportAll(args[1:])
 		case "verify":
 			return cl.reposVerify(args[1:])
 		case "list":
