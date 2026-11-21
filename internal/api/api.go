@@ -80,8 +80,8 @@ type Server struct {
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
 	reportKey []byte       // signs links to HTML reports
 
-	// MCP turns on the Model Context Protocol endpoint, /mcp; nil is off.
-	MCP *MCPOptions
+	MCP   *MCPOptions   // turns on the Model Context Protocol endpoint, /mcp; nil is off
+	Forge *ForgeHosting // Git hosting; nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter
@@ -129,7 +129,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...)
+	return append(append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...), s.forgeRoutes()...)
 }
 
 func (s *Server) mainRoutes() []route {
@@ -253,14 +253,14 @@ func (s *Server) Handler() http.Handler {
 	}
 	mux := http.NewServeMux()
 	for _, rt := range s.routes() {
-		mux.Handle(rt.pattern, s.guard(rt))
+		s.register(mux, rt)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
+	return s.recoverer(securityHeaders(s.splitOrigin(s.gitAlias(mux))))
 }
 
 // ---- shutting down ----

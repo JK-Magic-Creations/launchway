@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 25. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 26. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -460,6 +460,16 @@ such a step. On a rollback nothing is lost: the tables are ignored, and entries 
 of ended entries are removed by the pruner of any server of schema 25; a server of an older schema
 does not remove them, and they stay until a newer one runs. The startup check covers the three
 tables (`schemaMarkersCache`).
+
+Schema 26 brings forges (`internal/forge`), additive: four new tables and nothing else.
+`forge_connections` and `forge_repositories` hold a connection (a link to a Git host; the kind `plain`
+is today's watcher of a Git address) and its repositories, and every watched project becomes a
+repository on the connection `plain-git` when the server starts. `forge_events` keeps what each
+connection heard and decided, with a retention limit, and `forge_deliveries` remembers webhook
+deliveries per connection so a replay is ignored. A credential is stored as a reference (an environment
+variable name or a file path), never as a value. Older servers ignore the tables, and nothing about how
+a project is watched depends on them: if the rows cannot be written the watcher says so once and goes
+on. The migration lives in its own file because `db.go` is over the size limit.
 
 ## Writing a migration
 

@@ -25,6 +25,7 @@ launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
 launchway version
 ```
 
@@ -42,7 +43,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -748,6 +749,20 @@ launchway caches policy clear PROJECT [--json]
 | `policy clear` | Removes a project's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
+
+## launchway repos
+
+Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the installation setting `forge.hosting`, in Configuration under Installation settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a project's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the audit trail (`repository.create`, `repository.update`, `repository.delete`).
+
+```text
+launchway repos list [--json]
+launchway repos get OWNER/NAME [--json]
+launchway repos create NAME [--owner O] [--branch B] [--visibility private|internal|public] [--json]
+launchway repos update OWNER/NAME [--visibility V] [--branch B] [--archived=false] [--rename-to OWNER/NAME] [--json]
+launchway repos delete OWNER/NAME
+```
+
+The same operations are the routes under [Repositories](http-api.md#repositories-git-hosting) in the HTTP API, and the MCP tools `list_repositories`, `get_repository`, `create_repository`, `update_repository` and `delete_repository`. A Terraform resource `launchway_repository` is planned.
 
 ## launchway version
 

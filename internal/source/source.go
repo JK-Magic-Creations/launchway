@@ -9,13 +9,11 @@
 package source
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -28,6 +26,8 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
@@ -61,6 +61,11 @@ type Project struct {
 	// triggers must prove, by trigger name. A trigger without an entry
 	// cannot be called.
 	Triggers map[string]*TriggerAuth
+	// PullRefs is where the project's Git host publishes the head of each
+	// pull request as a ref. The forge provider of the project's connection
+	// supplies it (Provider.ProposalRefs); the zero value means the shape
+	// Launchway has always assumed, refs/pull/<n>/head.
+	PullRefs forge.RefLayout
 }
 
 // Ref is a branch or tag and the commit it points at, or a pull request's
@@ -72,15 +77,21 @@ type Ref struct {
 	Subject     string `json:"subject"`
 	Author      string `json:"author"`
 	CommittedAt int64  `json:"committed_at"`
+	// full is the ref as the repository names it, when it was read from one.
+	full string
 }
 
-// FullRef returns refs/heads/..., refs/tags/... or refs/pull/<n>/head.
+// FullRef returns refs/heads/..., refs/tags/..., or the pull request's ref as
+// its host publishes it (refs/pull/<n>/head by default).
 func (r Ref) FullRef() string {
+	if r.full != "" {
+		return r.full
+	}
 	switch r.Kind {
 	case "tag":
 		return "refs/tags/" + r.Name
 	case kindPull:
-		return "refs/pull/" + r.Name + "/head"
+		return forge.PullRefLayout.Prefix + "/" + r.Name + forge.PullRefLayout.Suffix
 	}
 	return "refs/heads/" + r.Name
 }
@@ -140,6 +151,9 @@ type Manager struct {
 	log     *slog.Logger
 	dataDir string
 	cat     atomic.Pointer[catalog]
+	// forge is the link to the forge's connection and repository rows (see
+	// forgelink.go); empty until Start has recorded the projects.
+	hosted forgeLink
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
@@ -282,6 +296,8 @@ func (m *Manager) Reconfigure(projects []Project, libraries []Library) error {
 
 // Start polls every project until ctx ends.
 func (m *Manager) Start(ctx context.Context) {
+	m.logGitVersion(ctx)
+	m.syncForge(ctx)
 	m.watchMu.Lock()
 	m.watchCtx = ctx
 	cat := m.c()
@@ -478,12 +494,14 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 				d.Outcome, d.Detail = "error", err.Error()
 			default:
 				m.log.Info("push started a run", "project", p.Name, "ref", r.FullRef(), "run", run.Number)
+				m.noteForge(ctx, p, change, "started", fmt.Sprintf("run %d", run.Number))
 				continue
 			}
 		}
 		if _, err := m.eng.RecordPush(p.Name, change, d); err != nil {
 			return err
 		}
+		m.noteForge(ctx, p, change, d.Outcome, d.Detail)
 	}
 	return nil
 }
@@ -600,6 +618,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 					d.Outcome, d.Detail = "error", err.Error()
 				default:
 					m.log.Info("pull request started a run", "project", p.Name, "pull_request", n, "run", run.Number)
+					m.noteForge(ctx, p, change, "started", fmt.Sprintf("run %d", run.Number))
 					continue
 				}
 			}
@@ -607,6 +626,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		if _, err := m.eng.RecordPush(p.Name, change, d); err != nil {
 			return err
 		}
+		m.noteForge(ctx, p, change, d.Outcome, d.Detail)
 	}
 	return nil
 }
@@ -715,11 +735,19 @@ func (p *project) refs(ctx context.Context) ([]Ref, error) {
 	return refs, nil
 }
 
-// pullRefs lists the heads of the repository's pull requests, as Git hosts
-// publish them (refs/pull/<n>/head), oldest pull request first. The mirror
+// layout is where the project's host publishes pull request heads.
+func (p *project) layout() forge.RefLayout {
+	if p.PullRefs.IsZero() {
+		return forge.PullRefLayout
+	}
+	return p.PullRefs
+}
+
+// pullRefs lists the heads of the repository's pull requests, as the host
+// publishes them (refs/pull/<n>/head by default), oldest pull request first. The mirror
 // fetches every ref, so they are there whenever the host has them.
 func (p *project) pullRefs(ctx context.Context) ([]Ref, error) {
-	refs, err := p.listRefs(ctx, "refs/pull")
+	refs, err := p.listRefs(ctx, p.layout().Prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +773,7 @@ func (p *project) listRefs(ctx context.Context, prefixes ...string) ([]Ref, erro
 		if len(f) != 9 {
 			continue
 		}
-		r := Ref{SHA: f[1], Author: f[5], Subject: f[7]}
+		r := Ref{SHA: f[1], Author: f[5], Subject: f[7], full: f[0]}
 		ts := f[3]
 		if f[2] != "" { // an annotated tag: describe the commit it points at
 			r.SHA, ts, r.Author, r.Subject = f[2], f[4], f[6], f[8]
@@ -757,9 +785,9 @@ func (p *project) listRefs(ctx context.Context, prefixes ...string) ([]Ref, erro
 			r.Kind, r.Name = "branch", strings.TrimPrefix(f[0], "refs/heads/")
 		case strings.HasPrefix(f[0], "refs/tags/"):
 			r.Kind, r.Name = "tag", strings.TrimPrefix(f[0], "refs/tags/")
-		case strings.HasPrefix(f[0], "refs/pull/"):
-			// Only heads: GitHub also publishes refs/pull/<n>/merge.
-			n, ok := engine.ParsePullRequestRef(f[0])
+		case strings.HasPrefix(f[0], p.layout().Prefix+"/"):
+			// Only heads: a host may also publish refs/pull/<n>/merge.
+			n, ok := p.layout().Parse(f[0])
 			if !ok {
 				continue
 			}
@@ -816,30 +844,27 @@ func gitOut(ctx context.Context, dir string, args ...string) (string, error) {
 	return out, nil
 }
 
-// gitRun runs git in dir with extra environment and stdin. It returns what
-// git wrote to stdout, even when it fails; the error is what it wrote to
-// stderr.
+// gitRun runs git in dir with extra environment and stdin through the one
+// hardened runner (internal/gitexec). It returns what git wrote to stdout,
+// even when it fails; the error is what it wrote to stderr.
 func gitRun(ctx context.Context, dir string, env []string, stdin string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	cmd.Env = append(append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C"), env...)
+	spec := gitexec.Spec{Dir: dir, Args: args, Env: env, Inherit: gitexec.Remote, Timeout: 2 * time.Minute}
 	if stdin != "" {
-		cmd.Stdin = strings.NewReader(stdin)
+		spec.Stdin = strings.NewReader(stdin)
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
+	res, err := gitexec.Run(ctx, spec)
+	if err != nil {
+		var ee *gitexec.ExitError
+		if errors.As(err, &ee) {
+			msg := strings.TrimSpace(ee.Stderr)
+			if msg == "" {
+				msg = "exit status " + strconv.Itoa(ee.Code)
+			}
+			return res.Stdout, errors.New(redact.URLs(msg))
 		}
-		return stdout.String(), errors.New(redact.URLs(msg))
+		return res.Stdout, err
 	}
-	return stdout.String(), nil
+	return res.Stdout, nil
 }
 
 func short(sha string) string {
@@ -847,4 +872,17 @@ func short(sha string) string {
 		return sha[:10]
 	}
 	return sha
+}
+
+// logGitVersion names the installed git once and says what it is too old for.
+func (m *Manager) logGitVersion(ctx context.Context) {
+	v, err := gitexec.Installed(ctx)
+	if err != nil {
+		m.log.Error("git is not usable; repositories cannot be watched", "error", err)
+		return
+	}
+	m.log.Info("git found", "version", v.String())
+	for _, missing := range v.Missing() {
+		m.log.Warn("git is older than later features need", "version", v.String(), "detail", missing)
+	}
 }

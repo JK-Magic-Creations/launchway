@@ -100,6 +100,9 @@ Every route belongs to one class. [The HTTP API reference](http-api.md) gives ea
 | `project-draft` | The role `drafts.allow` names on the project in the path. |
 | `run-viewer` | `viewer` or more on the run's project. |
 | `run-operator` | `operator` or more on the run's project. |
+| `repo-viewer` | `viewer` or more on the repository, named `<owner>/<name>` to the bindings. Git hosting must be on (`404 feature_off` otherwise). A repository the caller may not read is reported as not existing. |
+| `repo-operator` | `operator` or more on the repository: may push. |
+| `repo-admin` | `admin` on the repository: may rename, archive, change who reads it and delete it. |
 | `admin` | `admin` on every project. |
 
 ## Who may make which call

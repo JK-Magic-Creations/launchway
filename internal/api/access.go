@@ -113,35 +113,12 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 	now := s.Now()
 	if h := r.Header.Get("Authorization"); h != "" {
 		// A request that names a token is judged by the token alone.
-		tok, ok := strings.CutPrefix(h, "Bearer ")
+		tok, ok := apiToken(h)
 		if !ok || !strings.HasPrefix(tok, tokenPrefix) {
 			s.tokenDenied(r, touch, "", "", "the Authorization header holds no Launchway API token")
 			return nil, nil
 		}
-		t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
-		if errors.Is(err, engine.ErrNotFound) {
-			s.tokenDenied(r, touch, "", "", "an unknown or revoked token")
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if now.UnixMilli() >= t.ExpiresAt {
-			s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
-			return nil, nil
-		}
-		if touch {
-			if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
-				s.Log.Warn("recording that a token was used", "err", err)
-			}
-		}
-		id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
-		if t.Role != "" {
-			if id.capRole, err = auth.ParseRole(t.Role); err != nil {
-				return nil, nil // a role this server does not know: refuse rather than guess
-			}
-		}
-		return id, nil
+		return s.tokenIdentity(r, tok, touch)
 	}
 	c, err := r.Cookie(sessionCookie)
 	if err != nil || c.Value == "" {
@@ -288,6 +265,9 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 			return http.StatusNotFound, fmt.Errorf("%w: run %s", engine.ErrNotFound, r.PathValue("id")).Error()
 		}
 		return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error()
+	}
+	if a == repoRead || a == repoWrite || a == repoAdmin {
+		return s.checkRepoRequest(id, a, r)
 	}
 	switch a {
 	case signedIn:
@@ -566,3 +546,57 @@ func nonEmpty(a, b string) string {
 }
 
 func shortSHA(sha string) string { return sha[:min(len(sha), 8)] }
+
+// tokenIdentity is who an API token stands for: nil if it is unknown,
+// revoked or expired (counted as a failed attempt), with touch recording
+// that it was used.
+func (s *Server) tokenIdentity(r *http.Request, tok string, touch bool) (*identity, error) {
+	now := s.Now()
+	t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
+	if errors.Is(err, engine.ErrNotFound) {
+		s.tokenDenied(r, touch, "", "", "an unknown or revoked token")
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if now.UnixMilli() >= t.ExpiresAt {
+		s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
+		return nil, nil
+	}
+	if touch {
+		if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
+			s.Log.Warn("recording that a token was used", "err", err)
+		}
+	}
+	id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
+	if t.Role != "" {
+		if id.capRole, err = auth.ParseRole(t.Role); err != nil {
+			return nil, nil // a role this server does not know: refuse rather than guess
+		}
+	}
+	return id, nil
+}
+
+// apiToken reads a token from an Authorization header: "Bearer <token>", the
+// "token <token>" Gitea's clients send, or Basic where the password (or, with
+// no password, the user name) is the token.
+func apiToken(h string) (string, bool) {
+	scheme, rest, _ := strings.Cut(h, " ")
+	rest = strings.TrimSpace(rest)
+	switch strings.ToLower(scheme) {
+	case "bearer", "token":
+		return rest, rest != ""
+	case "basic":
+		req := &http.Request{Header: http.Header{"Authorization": {h}}}
+		user, pass, ok := req.BasicAuth()
+		if !ok {
+			return "", false
+		}
+		if pass == "" {
+			pass = user
+		}
+		return pass, pass != ""
+	}
+	return "", false
+}
