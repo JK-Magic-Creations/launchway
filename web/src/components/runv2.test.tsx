@@ -39,7 +39,7 @@ describe("every wait says why", () => {
     const w = whyWaiting(r, r.step_list[0], NOW)!;
     expect(w.kind).toBe("person");
     expect(w.text).toContain("Release 3.2?");
-    expect(w.text).toContain("Approve or reject (Go or No-go) before");
+    expect(w.text).toContain("Say Go or No-go before");
   });
   it("a deploy waiting for the lock says why a lock exists", () => {
     const r = detail([s("ship", { status: "waiting", kind: "deploy", wait_kind: "lock", environment: "prod" })], { deployments: [dep()] });

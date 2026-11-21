@@ -18,8 +18,8 @@ describe("the words editor", () => {
     render(<Host start={aviation} onValue={(n) => { seen.v = n; }} />);
     const preview = screen.getByRole("region", { name: "Preview with these words" });
     expect(within(preview).getByText("Logbook")).toBeInTheDocument();
-    expect(within(preview).getByRole("button", { name: "Approve" })).toBeInTheDocument();
-    expect(within(preview).getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    expect(within(preview).getByRole("button", { name: "Go" })).toBeInTheDocument();
+    expect(within(preview).getByRole("button", { name: "No-go" })).toBeInTheDocument();
     expect(within(preview).getByText("Wingman")).toBeInTheDocument();
     expect(within(preview).getByText("Squadron")).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /Plain business/ }));
