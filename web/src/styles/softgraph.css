@@ -1,0 +1,41 @@
+/* The software graph (pages/SoftwareGraph.tsx, softgraph/Canvas.tsx). */
+.sg .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sg .pad { padding: 0 16px 12px; }
+.sg-find { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; margin-bottom: 8px; }
+.sg-find .field { flex: 0 1 240px; margin: 0; }
+.sg-kinds { border: 0; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.sg-kinds legend { padding: 0; margin-bottom: 6px; color: var(--text-2); }
+.sg-kinds .check { display: inline-flex; align-items: center; gap: 6px; }
+.sg-scroll { overflow-x: auto; max-width: 100%; }
+.sg-table tbody th { text-transform: none; letter-spacing: normal; font-weight: 600; text-align: left; }
+.sg-table tbody th .mono { text-transform: none; }
+.sg-table tbody th small { display: block; font-weight: 400; text-transform: none; letter-spacing: normal; }
+.sg-table tr.on { background: var(--surface-2); }
+.sg-acts { white-space: nowrap; }
+.sg-acts .btn { margin-right: 6px; }
+.sg-results { margin-top: 10px; }
+.sg-results li { padding: 4px 0; }
+.sg-why { margin: 6px 0 0; padding-left: 22px; }
+.sg-why li { margin-bottom: 4px; overflow-wrap: anywhere; }
+.sg-levels { margin: 0; padding: 12px 16px 12px 36px; }
+.sg-levels li { margin-bottom: 6px; }
+.sg-impact li { padding: 8px 16px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.sg-kind { display: inline-block; min-width: 92px; color: var(--text-2); }
+.sg-overrides li { margin-bottom: 6px; }
+.sg-spec { max-height: 360px; overflow: auto; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 12px; }
+.sg-trunc { margin: 8px 16px; }
+.sg-canvas { overflow: hidden; }
+.sg-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.sg-svg { width: 100%; height: 420px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); touch-action: none; }
+.sg-edge { stroke: var(--border-strong); stroke-width: 1; opacity: .55; }
+.sg-edge.on { stroke: var(--accent); stroke-width: 2.5; opacity: 1; }
+.sg-node rect { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; cursor: pointer; }
+.sg-node text { fill: var(--text); font-size: 11px; pointer-events: none; }
+.sg-node.focus rect { stroke: var(--accent); stroke-width: 2.5; }
+.sg-node.on rect { fill: var(--surface); stroke: var(--accent); }
+.sg-node.sel rect { stroke: var(--signal); stroke-width: 2.5; }
+@media (max-width: 480px) {
+  .sg-find .field { flex: 1 1 100%; }
+  .sg-svg { height: 320px; }
+  .sg-kind { min-width: 0; display: block; }
+}

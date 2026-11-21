@@ -64,6 +64,8 @@ const PullRequestPage = lz(() => import("../pages/PullRequest"), "PullRequestPag
 const ImportRepositoriesPage = lz(() => import("../pages/ImportRepositories"), "ImportRepositoriesPage");
 const DependenciesPage = lz(() => import("../pages/Dependencies"), "DependenciesPage");
 const UpdatesPage = lz(() => import("../pages/Dependencies"), "UpdatesPage");
+const RepositoryGraphPage = lz(() => import("../pages/SoftwareGraph"), "RepositoryGraphPage");
+const GraphPage = lz(() => import("../pages/SoftwareGraph"), "GraphPage");
 const AgentsPage = lz(() => import("../pages/Agents"), "AgentsPage");
 const PolicyPage = lz(() => import("../pages/Policy"), "PolicyPage");
 const SettingsSecurityPage = lz(() => import("../pages/SettingsSecurity"), "SettingsSecurityPage");
@@ -104,6 +106,8 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/repositories/:owner/:name/pulls/:number": return <PullRequestPage key={p.owner + "/" + p.name + "#" + p.number} path={p.owner + "/" + p.name} number={Number(p.number)} />;
     case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
     case "/repositories/:owner/:name/dependencies": return <DependenciesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
+    case "/repositories/:owner/:name/graph": return <RepositoryGraphPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
+    case "/graph": return <GraphPage />;
     case "/repositories/:owner/:name/updates": return <UpdatesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/history": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="history" />;
     case "/playground": return <PlaygroundPage />;

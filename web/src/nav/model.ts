@@ -161,6 +161,9 @@ export interface PageInfo {
 
 const enc = encodeURIComponent;
 
+const repoName = (p: Record<string, string>) => p.owner + "/" + p.name;
+const repoCrumb = (p: Record<string, string>): Crumb => ({ label: repoName(p), href: `/repositories/${enc(p.owner)}/${enc(p.name)}` });
+
 /** What a configuration kind is called in a trail: the level words where the kind is a level. */
 function kindWord(kind: string): string {
   const t = terms();
@@ -211,6 +214,9 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Mirrors" }]),
   page("/repositories/:owner/:name/dependencies", "projects", undefined, (p) => `Dependencies of ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Dependencies" }]),
+  page("/repositories/:owner/:name/graph", "projects", undefined, (p) => `Graph of ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Graph" }]),
+  page("/graph", "projects", undefined, () => "Graph", () => [{ label: "Graph" }]),
   page("/repositories/:owner/:name/updates", "projects", undefined, (p) => terms().say(`{Dependency_updatess} of ${p.owner}/${p.name}`),
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: terms().say("{Dependency_updatess}") }]),
   page("/repositories/:owner/:name/history", "projects", undefined, (p) => `Imported history of ${p.owner}/${p.name}`,
