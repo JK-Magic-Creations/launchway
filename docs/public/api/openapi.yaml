@@ -3336,6 +3336,42 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.update
+    /api/v1/repositories/{owner}/{name}/compare:
+        get:
+            description: 'What a pull request from ?head= into ?base= (default: the default branch) would contain: commits, files, ahead and behind, mergeability, and the number of an open pull request between them.'
+            operationId: get_api_v1_repositories_owner_name_compare
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What a pull request from ?head= into ?base= (default: the default branch) would contain: commits, files, ahead and behind, mergeability, and the number of an open pull request between them.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/deploy-keys:
         get:
             description: 'The repository''s deploy keys: {"items": [...]}.'
@@ -3742,6 +3778,79 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: webhook.test
+    /api/v1/repositories/{owner}/{name}/merge-rules:
+        get:
+            description: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass.'
+            operationId: get_api_v1_repositories_owner_name_merge_rules
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: 'Sets rules: {"rules": [{"pattern", "required_approvals", "approval_role", "required_checks", ...}]}. A rule protects its branch pattern. Signed commits are reserved and refused.'
+            operationId: put_api_v1_repositories_owner_name_merge_rules
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets rules: {"rules": [{"pattern", "required_approvals", "approval_role", "required_checks", ...}]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: repository.merge_rules
     /api/v1/repositories/{owner}/{name}/mirrors:
         get:
             description: The repository's mirrors with their status.
@@ -4016,6 +4125,805 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.protect
+    /api/v1/repositories/{owner}/{name}/pull-settings:
+        get:
+            description: 'The repository''s merge settings: which methods are allowed, the default, delete the branch after a merge, dismiss stale approvals, the message templates.'
+            operationId: get_api_v1_repositories_owner_name_pull_settings
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The repository''s merge settings: which methods are allowed, the default, delete the branch after a merge, dismiss stale approvals, the message templates.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: Sets them; what the request leaves out stays. At least one method must stay allowed.
+            operationId: put_api_v1_repositories_owner_name_pull_settings
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sets them; what the request leaves out stays.
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: repository.pull_settings
+    /api/v1/repositories/{owner}/{name}/pulls:
+        get:
+            description: 'The repository''s pull requests, newest first: ?state= open (the default), closed, merged or all, author, assignee, reviewer (@me is the caller), label, source, target, q (title), limit, offset. {"items": [...], "total"}.'
+            operationId: get_api_v1_repositories_owner_name_pulls
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The repository''s pull requests, newest first: ?state= open (the default), closed, merged or all, author, assignee, reviewer (@me is the caller), label, source, target, q (title), limit, offset.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        post:
+            description: 'Opens a pull request from a branch of this repository: {"title", "body", "source_branch", "target_branch" (default: the default branch), "draft", "labels", "assignees", "requested_reviewers"}. Answers with the pull request view. Its head is kept as refs/pull/N/head.'
+            operationId: post_api_v1_repositories_owner_name_pulls
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Opens a pull request from a branch of this repository: {"title", "body", "source_branch", "target_branch" (default: the default branch), "draft", "labels", "assignees", "requested_reviewers"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.create
+    /api/v1/repositories/{owner}/{name}/pulls/{number}:
+        get:
+            description: 'One pull request with mergeability (clean, conflicts with the files, checking), readiness (whether it can merge, and why in one sentence, the blockers, the checks and approvals), and actions: what the caller may do now, each with the reason when it may not.'
+            operationId: get_api_v1_repositories_owner_name_pulls_number
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One pull request with mergeability (clean, conflicts with the files, checking), readiness (whether it can merge, and why in one sentence, the blockers, the checks and approvals), and actions: what the caller may do now, each with the reason when it may not.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        patch:
+            description: 'Changes a pull request: any of {"title", "body", "draft", "labels", "assignees", "target_branch", "state" (closed or open), "auto_merge" (merge, squash, rebase or "")}. The author or an operator.'
+            operationId: patch_api_v1_repositories_owner_name_pulls_number
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes a pull request: any of {"title", "body", "draft", "labels", "assignees", "target_branch", "state" (closed or open), "auto_merge" (merge, squash, rebase or "")}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: pull.update
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/comments:
+        post:
+            description: 'Comments: {"body"} for the conversation, or with {"path", "line", "start_line", "side", "commit"} on a line or range, or {"reply_to"} in a thread. A suggestion block is a suggested change. Markdown, kept as written.'
+            operationId: post_api_v1_repositories_owner_name_pulls_number_comments
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Comments: {"body"} for the conversation, or with {"path", "line", "start_line", "side", "commit"} on a line or range, or {"reply_to"} in a thread.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: pull.comment
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}:
+        delete:
+            description: Deletes a comment (its author or an administrator).
+            operationId: delete_api_v1_repositories_owner_name_pulls_number_comments_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes a comment (its author or an administrator).
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: pull.comment_delete
+        patch:
+            description: 'Edits a comment''s text (its author) or resolves or reopens its thread: {"body", "resolved"}.'
+            operationId: patch_api_v1_repositories_owner_name_pulls_number_comments_id
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Edits a comment''s text (its author) or resolves or reopens its thread: {"body", "resolved"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: pull.comment_update
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}/apply:
+        post:
+            description: Applies a suggestion as a commit on the source branch (someone with push access); fails, saying why, when the code under it changed or the branch moved.
+            operationId: post_api_v1_repositories_owner_name_pulls_number_comments_id_apply
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Applies a suggestion as a commit on the source branch (someone with push access); fails, saying why, when the code under it changed or the branch moved.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.suggestion_apply
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/commits:
+        get:
+            description: 'The commits of the pull request, oldest first: {"items": [...]}.'
+            operationId: get_api_v1_repositories_owner_name_pulls_number_commits
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The commits of the pull request, oldest first: {"items": [...]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/conversation:
+        get:
+            description: Conversation comments, review threads (anchored to a line, outdated or resolved), reviews and revisions.
+            operationId: get_api_v1_repositories_owner_name_pulls_number_conversation
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Conversation comments, review threads (anchored to a line, outdated or resolved), reviews and revisions.
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/files:
+        get:
+            description: The files changed (merge base to head) with status, additions, deletions, renames and binary flags, paged (offset, limit); ?since=N compares with the head of revision N (changes since a review); ?from=&to= compares two commits.
+            operationId: get_api_v1_repositories_owner_name_pulls_number_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The files changed (merge base to head) with status, additions, deletions, renames and binary flags, paged (offset, limit); ?since=N compares with the head of revision N (changes since a review); ?from=&to= compares two commits.
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/merge:
+        post:
+            description: 'Merges: {"method" (merge, squash, rebase), "message", "delete_branch", "expect_head", "bypass_reason"}. Made on the server through the ledger''s compare-and-swap, so a push that arrives meanwhile is never lost: the merge is made again on the new tip. 409 not_ready with the sentence when the rules are not met.'
+            operationId: post_api_v1_repositories_owner_name_pulls_number_merge
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Merges: {"method" (merge, squash, rebase), "message", "delete_branch", "expect_head", "bypass_reason"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.merge
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/patch:
+        get:
+            description: 'The unified patch: of one file (?path=, twice for a rename) or of everything, bounded; a file over the limits is held back until ?full=1 (load anyway). Takes the same since, from and to.'
+            operationId: get_api_v1_repositories_owner_name_pulls_number_patch
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The unified patch: of one file (?path=, twice for a rename) or of everything, bounded; a file over the limits is held back until ?full=1 (load anyway).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/revert:
+        post:
+            description: Opens a new pull request that undoes a merged one.
+            operationId: post_api_v1_repositories_owner_name_pulls_number_revert
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Opens a new pull request that undoes a merged one.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.revert
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests:
+        post:
+            description: 'Asks people to review: {"reviewers": [...]}.'
+            operationId: post_api_v1_repositories_owner_name_pulls_number_review_requests
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Asks people to review: {"reviewers": [...]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.review_request
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews:
+        post:
+            description: 'Submits a review: {"verdict": "comment", "approve" or "request_changes", "body", "comments": [...]}. The reviewer''s role is recorded with it; a rule may count only approvals of a role.'
+            operationId: post_api_v1_repositories_owner_name_pulls_number_reviews
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Submits a review: {"verdict": "comment", "approve" or "request_changes", "body", "comments": [...]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: pull.review
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss:
+        post:
+            description: 'Dismisses a review: {"reason"} is required.'
+            operationId: post_api_v1_repositories_owner_name_pulls_number_reviews_id_dismiss
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Dismisses a review: {"reason"} is required.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.review_dismiss
     /api/v1/repositories/{owner}/{name}/stop-mirroring:
         post:
             description: 'Makes the repository the primary: the pull mirror is deleted and pushes are accepted. {"final_sync": true} runs the mirror once more first, and changes nothing if that fails. 409 when it is not a mirror.'

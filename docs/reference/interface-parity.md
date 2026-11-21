@@ -121,6 +121,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `pr create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `delete_deploy_key` | `repos deploy-keys delete` | `planned: launchway_deploy_key` | equal |
@@ -131,6 +132,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/merge-rules` | `get_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/merge-rules` | `set_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/mirrors` | `set_mirror` | `repos mirror add` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `change_mirror` | `repos mirror remove` | — | equal |
@@ -138,6 +141,25 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync` | `sync_mirror` | `repos mirror sync` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pull-settings` | `get_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/pull-settings` | `set_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls` | `list_pull_requests` | `pr list` | `planned: launchway_pull_request` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls` | `create_pull_request` | `pr create` | `planned: launchway_pull_request` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |
+| `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}` | `update_pull_request` | `pr edit` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments` | `comment_on_pull_request` | `pr comment` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
+| `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}/apply` | `update_pull_comment` | `pr apply` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/commits` | `get_pull_request` | `pr view` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/conversation` | `get_pull_request` | `pr view` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/files` | `get_pull_request` | `pr diff` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge` | `merge_pull_request` | `pr merge` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/patch` | `get_pull_request` | `pr diff` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/revert` | `revert_pull_request` | `pr revert` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests` | `review_pull_request` | `pr review` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews` | `review_pull_request` | `pr review` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
