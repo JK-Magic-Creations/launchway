@@ -25,6 +25,7 @@ key and setting see the [reference](../reference/index.md).
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
 | [Webhooks and events](webhooks.md) | Repository and owner webhooks, signed deliveries, the delivery log, redelivery, turning off, pipelines on push |
 | [Secrets](secrets.md) | Secret references, stores, masking |
+| [Encryption at rest](encryption-at-rest.md) | The root key, what is sealed, backing the key up, rotating and replacing it |
 | [The words Launchway uses](words.md) | Base, Wing, Squadron, Wingman, Logbook and the rest, in plain terms, and how to change them |
 | [Sign-in and access](access.md) | OpenID Connect, roles, sessions, API tokens, audit trail |
 | [Runners on other machines](runner-identity.md) | Pools, join tokens, runner identities, the runner's own limits |

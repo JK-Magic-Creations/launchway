@@ -12,7 +12,7 @@ const PAGES = [
   "/pipelines", "/activity", "/activity/approvals", "/runs/run_7", "/deployments", "/deployments/environments",
   "/deployments/applications", "/images", "/images/components", "/library", "/library/templates", "/playground", "/kit",
   "/settings", "/settings/runners", "/settings/access", "/settings/access/keys", "/settings/access/ssh-keys", "/settings/access/agents", "/repositories", "/repositories/acme/shop", "/repositories/acme/shop/mirrors", "/owners/acme", "/settings/approvals",
-  "/settings/rules", "/settings/audit", "/settings/variables", "/settings/words", "/config", "/config/wizard/connect-repository",
+  "/settings/rules", "/settings/audit", "/settings/variables", "/settings/words", "/settings/security", "/config", "/config/wizard/connect-repository",
   "/traffic", "/changes", "/learn", "/learn/start-here", "/learn/concepts/launch-line", "/nothing-here",
 ];
 

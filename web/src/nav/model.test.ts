@@ -30,7 +30,7 @@ describe("sections", () => {
   it("hides what a person may not use", () => {
     const tabs = (m: ReturnType<typeof me>) => visibleTabs(section("settings"), { me: m, facts: facts() }).map((t) => t.id);
     expect(tabs(me({ admin: false, runners: false }))).toEqual(["overview", "access", "approvals", "variables"]);
-    expect(tabs(me())).toEqual(["overview", "runners", "access", "approvals", "rules", "variables", "words", "audit", "config"]);
+    expect(tabs(me())).toEqual(["overview", "runners", "access", "approvals", "rules", "variables", "words", "security", "audit", "config"]);
     // Importing repositories needs Git hosting on; without it the tab is not offered.
     expect(tabs(me({ hosting: true } as object))).toContain("import");
     expect(tabs(me({ hosting: false } as object))).not.toContain("import");

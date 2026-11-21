@@ -37,6 +37,10 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/policies": { catalogue: [], sources: [], recent: [], max_waiver_days: 30 },
     "/api/v1/waivers": { waivers: [], waive_projects: [], rules: {} },
     "/api/v1/config/history": { changes: [] },
+    "/api/v1/encryption": { encrypted: true, dump_alone_cannot_reveal_secrets: true, root_key_holder: { kind: "key_file", where: "/etc/launchway-keys/root.key", strength: "A copy of the database reveals no secret.", reachable: true },
+      keys: { current_key_encryption_key: 1, data_keys: [{}, {}], needs_rewrap: false, oldest_key_at: 1 }, columns: [{ table: "meta", column: "value", what: "the signing and sealing keys and the shared runner token", sealed: 5, remaining: 0 }],
+      secrets_sealed: 5, secrets_remaining: 0, migration: { state: "complete" }, stored_addresses_with_credentials: 0, warnings: [], advice: ["Keep a copy of the root key somewhere other than the database's backups."],
+      not_yet_encrypted: ["artifacts", "logs", "build caches", "hosted Git repository packs"], summary: "Encryption at rest is on: 5 stored secrets are sealed and none remain in the clear." },
     ...forgeFixtures(),
     ...overrides,
   };

@@ -123,6 +123,7 @@ export const SECTIONS: Section[] = [
       { id: "variables", label: "Variables", href: "/settings/variables", icon: "list" },
       { id: "import", label: "Import repositories", href: "/repositories/import", icon: "code", show: ({ me }) => me.admin && (me as Me & { hosting?: boolean }).hosting === true },
       { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
+      { id: "security", label: "Security", href: "/settings/security", icon: "shield", show: ({ me }) => me.admin },
       { id: "audit", get label() { return say("{Logbook}"); }, href: "/settings/audit", icon: "clock", aka: "Audit trail", show: ({ me }) => me.admin },
       { id: "config", label: "Configuration", href: "/config", icon: "globe", show: ({ me }) => me.admin },
     ],

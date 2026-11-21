@@ -110,9 +110,14 @@ sign-in has no groups; the person gets the rights bound to the name.
 
 Run as many Launchway servers as you like behind one address. **Host keys are made by the first server
 that needs them and stored, sealed with AES-256-GCM, in the database**, so every server presents the same
-keys and clients never see a warning when a different server answers. The sealing key is kept in its own
-database row, shared by the servers; losing it would make the host keys unreadable, so back up the
-database as a whole.
+keys and clients never see a warning when a different server answers. They are sealed under the
+installation's **root key, which is held outside the database** ([Encryption at rest](encryption-at-rest.md)),
+so a copy of the database alone gives no private host key. Losing the root key would make them unreadable:
+keep a copy of it apart from the database's backups.
+
+**SSH needs a root key.** On a server with no root key, Git over SSH refuses to start and says how to
+create one (`launchway encryption init`); an installation that already has host keys keeps using them,
+with a warning, until a key is created and they are sealed.
 
 Behind a load balancer, give the Service a TCP port for SSH; see the
 [Helm chart notes](../reference/helm-values.md#git-over-ssh) for a Gateway and a LoadBalancer example.

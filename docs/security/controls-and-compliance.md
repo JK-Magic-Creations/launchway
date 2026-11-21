@@ -35,6 +35,7 @@ data never reach Launchway:
 | Least privilege | Viewer, operator and admin roles per project, limited to environments where needed; API tokens limited to a role and projects | [Roles and permissions](../reference/roles.md) |
 | Session management | Idle timeout and maximum session lifetime; sign-out ends the session on every server | [Sign-in and access](../guide/access.md#sessions) |
 | Credential handling | Secrets resolved by runners only, masked in logs, never stored by the server; sessions and tokens stored as hashes; tokens always expire | [Secrets](../guide/secrets.md) |
+| Encryption of stored secrets | The server's own secrets (signing and sealing keys, the shared runner token, SSH host keys, webhook secrets) are sealed with AES-256-GCM under a root key held outside the database, each bound to its row; rotation and root key replacement online; a database dump alone is useless without the key. Artifacts, logs, caches and Git packs are not yet encrypted by Launchway | [Encryption at rest](../guide/encryption-at-rest.md) |
 | Change approval | Approval steps; with sign-in, the person who started a run cannot approve it by default | [Approvals and re-runs](../guide/approvals-and-reruns.md) |
 | Separation of duties for production | Protected environments: the starter cannot promote or waive the gate; operator rights limited per environment | [Deployments](../guide/deployments.md#controlling-a-rollout-promote-abort-retry) |
 | Testing before release | Policy rule `tests`: the steps before a deployment reported tests and none failed | [Policy rules](../reference/policy-rules.md) |
@@ -50,6 +51,7 @@ data never reach Launchway:
 
 ## Current limits that matter for an assessment
 
+- Encryption at rest covers the server's own secrets, not yet artifacts, logs, build caches and Git packs: encrypt the database volume and the artifact store. With no root key configured, an existing installation stores its own secrets in the clear (and says so).
 - The database is the store of record. Anyone who can write to it can change the audit trail; the
   trail is append-only by design, not protected cryptographically. Protect the database and copy
   the trail to a log archive you control.

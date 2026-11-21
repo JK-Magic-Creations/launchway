@@ -26,7 +26,8 @@ launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
 launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
-launchway doctor   [database|git|ssh]         would this installation survive losing its database? is git new enough? is Git over SSH reachable?
+launchway doctor   [database|git|ssh|encryption]  would this installation survive losing its database? is git new enough? is Git over SSH reachable? are its secrets encrypted at rest?
+launchway encryption init|status|rotate|rewrap   the root key for encryption at rest
 launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
 launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
 launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
@@ -808,6 +809,32 @@ Database availability: not highly available
 ```
 
 On PostgreSQL it also says whether WAL archiving is on and when the last segment was archived. `--json` prints the state and the assessment.
+
+### launchway doctor encryption
+
+```text
+launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
+```
+
+Says whether the secrets this installation stores are encrypted at rest, reading only: which holder keeps the root key (never the key), the key versions and the age of the oldest, how many stored secrets are sealed and how many are still in the clear, the progress of sealing, any addresses that carry a password, and **whether a database dump alone could reveal a secret** (yes only when a root key is in use and nothing is left in the clear). It names what is not yet encrypted (artifacts, logs, caches, Git packs) and that disk or volume encryption cannot be seen from here. Exit status 1 when a dump alone could reveal a secret, so a script can gate on it. A database that is encrypted, with no key configured, or with a key that does not open it, is refused with the plain message the server gives. `--restore-drill` also opens every sealed secret with the configured key, reading only, and exits 1 if one does not open: run it against a restored copy to prove the dump and the key belong together. The plain `launchway doctor` prints the one-sentence state. See [Encryption at rest](../guide/encryption-at-rest.md).
+
+## launchway encryption
+
+```text
+launchway encryption init   [--key-file PATH] [--config launchway.yaml]
+launchway encryption init   --passphrase [--keystore PATH] [--passphrase-file F] [--config launchway.yaml]
+launchway encryption status [--json]
+launchway encryption rotate [--data] [--config launchway.yaml] [--json]
+launchway encryption rewrap [--config launchway.yaml]
+```
+
+The root key for [encryption at rest](../guide/encryption-at-rest.md). `init`, `rotate` and `rewrap` run on a machine that has the root key (the same configuration file and environment as the server) and open the database directly, so they work while servers run; `status` asks a server and needs `launchway login` as an administrator.
+
+`init` makes a key file (32 random bytes in base64, mode `0600`; the default path is `encryption.key_file`, else `<data>/root.key`), or with `--passphrase` a keystore whose passphrase comes from `--passphrase-file` or is asked twice on the terminal. It never overwrites a file, never prints the key, and says what to do next: keep a copy somewhere other than the database's backups, and tell the servers where it is.
+
+`rotate` makes a new key-encryption key and re-wraps every data key under it; `--data` also makes new data keys and re-seals every stored value under them. Online: no restart, nothing blocked. `rewrap` replaces the root key: configure the new key as the root key and the old one as `encryption.previous_key_file`, run it, restart the servers with the new key alone. Both are recorded in the audit trail (`encryption.kek_rotated`, `encryption.dek_rotated`, `encryption.rewrap`).
+
+The same report as `status` is `GET /api/v1/encryption` in the [HTTP API](http-api.md) and the MCP tool `get_encryption_status`.
 
 ## launchway repos
 

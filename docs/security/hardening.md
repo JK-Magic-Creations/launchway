@@ -23,13 +23,33 @@ authors. For operators and platform engineers, and for developers who write pipe
   beyond one machine. **Protect the database and its backups**: it holds runs, logs and the audit
   trail. Anyone who can write to it can change who has done what.
 
+### Encryption at rest
+
+See [Encryption at rest](../guide/encryption-at-rest.md).
+
+- [ ] **Have a root key, held outside the database**: `encryption.key_file` (or the chart's generated or
+  existing Secret), a passphrase keystore, or Vault or OpenBao transit. `launchway doctor encryption`
+  must say "a database dump alone cannot reveal secrets: yes". Set `encryption.require: true` (the chart
+  does) so a server never starts without one.
+- [ ] **Keep the key file private** (`0600`; a mounted Secret `0440`) and off the volume that holds the
+  database. In Kubernetes, turn on etcd encryption at rest and limit who may read Secrets: the key is only
+  as strong as that.
+- [ ] **Back the root key up separately from the database's backups**, held by more than one person. A
+  backup without the key cannot be read, and the key cannot be recovered.
+- [ ] **Practice a restore once**: `launchway doctor encryption --restore-drill` against a restored copy.
+- [ ] **Rotate** (`launchway encryption rotate`) at least yearly and when someone who held the key leaves;
+  **replace the root key** (`rewrap`) after any exposure of it.
+- [ ] **Encrypt the database volume and the artifact store as well.** Artifacts, logs, build caches and Git
+  packs are not yet encrypted by Launchway.
+- [ ] **Watch the audit trail** for `encryption.unseal` with outcome `failed`.
+
 ### Runners
 
 - [ ] **Enrol runners with join tokens** instead of the shared runner token, give each pool only the
   projects it serves, and set `require_identity: true` on pools whose runners are all enrolled. A
   runner on the shared token has no identity; see the
   [trust model](trust-model.md#current-limits-and-what-is-changing).
-- [ ] **Keep the runner token and join tokens secret.** A token lets a machine take work, and with it
+- [ ] **Keep the runner token and join tokens secret.** The server stores the shared runner token sealed (see Encryption at rest above); the data directory's `runner-token` file holds it too, mode `0600`. A token lets a machine take work, and with it
   pipelines and the secret references they hold. Make join tokens short-lived and ephemeral, and
   revoke runners you no longer trust.
 - [ ] **Give each runner an `accept:` section** limiting the projects, repositories, images and
