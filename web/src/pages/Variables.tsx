@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { loadOverview, type UnitView } from "../configApi";
-import { VariablesPanel, levelWord } from "../components/Variables";
+import { VariablesPanel } from "../components/Variables";
 import { PageHead, Sheet } from "../kit/layout";
 import { useTerms } from "../terms";
 import { VAR_LEVELS, type VarLevel } from "../variablesApi";
@@ -41,7 +41,6 @@ export function SettingsVariablesPage() {
         {needsScope && choices.length === 0
           ? <p className="sub">There is no {word(level).toLowerCase()} yet. {level === "unit" ? "Create one in Configuration." : "Add a project first."}</p>
           : <VariablesPanel key={level + ":" + chosen} level={level} scope={needsScope ? chosen : undefined} />}
-        <p className="sub">Showing {levelWord(level, chosen)}.</p>
       </Sheet>
     </div>
   );

@@ -167,7 +167,7 @@ export function VariablesPanel({ level, scope, environment, compact, names, onCh
                 {!e.can_override && !e.set_here && <span className="vr-blocked">{e.blocked}</span>}
               </div>
             )}
-            {!compact && <div className="vr-reason">{e.why}</div>}
+            {!compact && e.can_override && <div className="vr-reason">{e.why}</div>}
           </li>
         ))}
       </ul>
