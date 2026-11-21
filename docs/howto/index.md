@@ -7,6 +7,7 @@ and what was not.
 
 | Guide | For |
 |---|---|
+| [Install in ten minutes](install-in-ten-minutes.md) | anyone: Helm or one binary, built-in accounts, no other service needed |
 | [Install on a laptop](install-laptop.md) | a developer's own machine |
 | [Install on one server](install-single-server.md) | a small team, one Linux machine |
 | [Install on Kubernetes (HA)](install-kubernetes.md) | a shared service with several servers |

@@ -117,6 +117,9 @@ func (s *Server) refuseUntilSetup(w http.ResponseWriter) bool {
 // the code if this call made it (so the caller can print it once), or "" if one
 // already exists or setup is done. A code from SetupCodeFile is used as given.
 func (s *Server) EnsureSetupCode() (string, error) {
+	if s.Now == nil {
+		s.Now = time.Now
+	}
 	if !s.localOn() || !s.Auth.Local.Required {
 		return "", nil
 	}

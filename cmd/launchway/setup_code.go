@@ -38,3 +38,16 @@ func startServices(ctx context.Context, eff, cfg *config.Config, eng *engine.Eng
 	}
 	return startHosting(ctx, eff, eng, log, srv)
 }
+
+// signInBanner says in a few words how people sign in, for the start-up message.
+func signInBanner(cfg *config.Config, signedIn bool) string {
+	switch {
+	case !signedIn:
+		return "no sign-in: anyone who can reach it has full access"
+	case cfg.Auth.Mode == config.AuthLocal:
+		return "sign-in with built-in accounts"
+	case cfg.Auth.LocalAccounts():
+		return "sign-in with " + cfg.Auth.OIDC.Issuer + " and built-in accounts"
+	}
+	return "sign-in with " + cfg.Auth.OIDC.Issuer
+}

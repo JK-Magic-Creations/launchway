@@ -109,3 +109,13 @@ The chart ships these on by default; check that you have not switched one off.
 
 - [Trust model](trust-model.md).
 - [Supply chain](supply-chain.md).
+
+## Sign-in (built-in accounts)
+
+- A server that listens beyond its own machine never starts without sign-in: it uses built-in accounts unless you
+  chose an identity provider. `auth.mode: none` is refused anywhere but loopback.
+- Keep a second factor required for administrators (`auth.local.require_second_factor: admins`, the default).
+- Keep the first administrator's recovery codes and a copy of the root key somewhere separate. Run
+  `launchway users list` now and then and remove accounts nobody uses.
+- With an identity provider, leave one built-in administrator as the break-glass account; remove it only after a
+  provider sign-in has worked. See [Built-in accounts](../guide/built-in-accounts.md).

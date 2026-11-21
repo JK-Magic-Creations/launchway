@@ -294,10 +294,7 @@ func cmdServer(args []string) error {
 	if os.Getenv("LAUNCHWAY_RUNNER_TOKEN") != "" {
 		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
 	}
-	signIn := "sign-in with " + cfg.Auth.OIDC.Issuer
-	if authOpts == nil {
-		signIn = "no sign-in: anyone who can reach it has full access"
-	}
+	signIn := signInBanner(cfg, authOpts != nil)
 	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
 		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 

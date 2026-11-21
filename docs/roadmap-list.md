@@ -478,7 +478,7 @@ Use Launchway without running it, on a plan that follows your choices, with the 
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Built-in accounts with MFA](roadmap/milestone-7.md#built-in-accounts-with-mfa) | Planned | Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. |
+| [Built-in accounts with MFA](roadmap/milestone-7.md#built-in-accounts-with-mfa) | In progress | Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. ([docs](guide/built-in-accounts.md)) |
 | [Directory groups and custom roles](roadmap/milestone-7.md#directory-groups-and-custom-roles) | Planned | LDAP and Active Directory groups mapped to roles at each level, leavers removed automatically, and a view of who can do what, and why. |
 | [Other single sign-on and provisioning](roadmap/milestone-7.md#other-single-sign-on-and-provisioning) | Planned | SAML sign-in and automatic user provisioning for larger companies. |
 | [Tamper-evident audit and SIEM export](roadmap/milestone-7.md#tamper-evident-audit-and-siem-export) | Planned | An audit trail nobody can quietly edit, streamed to your security tools. |

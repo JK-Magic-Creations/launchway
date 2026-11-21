@@ -207,6 +207,7 @@ export default defineConfig({
           { text: 'Pipelines', link: '/guide/pipelines' },
           { text: 'Triggers', link: '/guide/triggers' },
           { text: 'Editing pipelines', link: '/guide/editor' },
+          { text: 'Built-in accounts', link: '/guide/built-in-accounts' },
           { text: 'Shared libraries', link: '/guide/libraries' },
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },
           { text: 'Test reports', link: '/guide/test-reports' },
@@ -238,6 +239,7 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Overview', link: '/howto/' },
+          { text: 'Install in ten minutes', link: '/howto/install-in-ten-minutes' },
           { text: 'Install on a laptop', link: '/howto/install-laptop' },
           { text: 'Install on one server', link: '/howto/install-single-server' },
           { text: 'Install on Kubernetes (HA)', link: '/howto/install-kubernetes' },
