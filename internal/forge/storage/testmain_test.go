@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"io"
 	"log/slog"
 	"net"
@@ -30,6 +31,7 @@ import (
 const envServer = "STORAGE_TEST_SERVER"
 
 func TestMain(m *testing.M) {
+	testlib.NoPrompt()
 	gitexec.Reexec() // answers git's hooks, which are symlinks to this binary
 	if os.Getenv(envServer) != "" {
 		runTestServer()
