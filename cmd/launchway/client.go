@@ -204,7 +204,7 @@ func (cl *client) call(method, path string, body, v any) error {
 	} else if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := cl.http.Do(req)
+	resp, err := cl.http.Do(req) //nolint:gosec // G704: the CLI calls the Launchway server the user configured; that address is the point, not a tainted input
 	if err != nil {
 		return apiErr("cannot reach %s: %v", cl.c.Server, err)
 	}
