@@ -58,18 +58,18 @@ it, and their scripts), and `make demo` makes a repository of it with two releas
 ## One delivery definition for every service
 
 A template may hold the whole path from a tested commit to a running, verified version: an image
-step, an approval, a deploy step, a verify step and a rollback step. `examples/library` has the
+step, an approval, a deploy step, a verify step and a Return to base (rollback) step. `examples/library` has the
 pieces of such a library, and the thin pipeline files that use them under `pipelines/`:
 
 | Template | What it does |
 |---|---|
 | `service-ci` | Installs dependencies (cached), lints, runs tests, and scans a Python or Node service; declares the test, coverage and findings reports once for every repository that uses it. `working_directory` makes it usable once for each directory of a monorepo |
 | `service-ci-postgres` | The same with a PostgreSQL service beside the tests, whose address the tests get as `DATABASE_URL` |
-| `service-cd` | Builds, scans and pushes the image, optionally asks a person, deploys to one environment with GitOps, verifies, and rolls back on failure |
+| `service-cd` | Builds, scans and pushes the image, optionally asks a person, deploys to one Airfield (environment) with GitOps, verifies, and rolls back on failure |
 | `service-cd-rollout` | The same for a workload that is an Argo Rollouts rollout |
 
-The environment and the application are typed parameters (`type: environment`, `type: application`),
-so a mistyped name is refused where it is written. A service with two environments uses `service-cd`
+The Airfield and the application are typed parameters (`type: environment`, `type: application`),
+so a mistyped name is refused where it is written. A service with two Airfields uses `service-cd`
 twice, each use with a `when` on its branch, and a service of a different shape changes parameters,
 not the template. The repository's file stays short:
 
@@ -87,10 +87,10 @@ steps:
             health_query: 'min(probe_success{instance="http://shop.shop.svc:8080/health"})' }
 ```
 
-**A template authorizes nothing.** When a run is created the template's steps become ordinary
-steps and are checked as if the pipeline had written them: the environment must exist and list the
-project, the deploy runner's repository settings must allow the files, and policies see the
-deployment. A library cannot be used to reach an environment the project may not use. A library
+**A template authorizes nothing.** When a Sortie (run) is created the template's steps become ordinary
+steps and are checked as if the pipeline had written them: the Airfield must exist and list the
+project, the deploy Station's repository settings must allow the files, and policies see the
+deployment. A library cannot be used to reach an Airfield the project may not use. A library
 author checks a change with `examples/library/check-library.sh`, which also runs the tests that
 expand every example pipeline; a repository that has no pipeline file can get one of these
 templates as a [flight plan](../reference/config-objects.md#a-flight-plan-for-every-repository).
@@ -98,8 +98,8 @@ templates as a [flight plan](../reference/config-objects.md#a-flight-plan-for-ev
 **Which repositories may be libraries** is server configuration. A pipeline's `repo:` must name
 one of them; it can never be an address, so a pipeline cannot make the server fetch from anywhere
 with its credentials. Libraries are fetched exactly as projects are, with the same
-[credentials](editor.md) (in the URL, or `GIT_CONFIG_*` settings in the environment of
-the server and the runners):
+[credentials](editor.md) (in the URL, or `GIT_CONFIG_*` settings in the Airfield of
+the server and the Stations (runners)):
 
 ```yaml
 libraries:
@@ -107,20 +107,20 @@ libraries:
     repo: https://git.example.com/platform/ci-templates.git
 ```
 
-**Versions.** When a run is created, the server fetches its mirror of each library the pipeline
+**Versions.** When a Sortie is created, the server fetches its mirror of each library the pipeline
 names and resolves the version to a commit: a tag first, then a branch, then a full commit id (so
-a tag and a branch with the same name give the tag). Moving tags and branches is allowed; the run
+a tag and a branch with the same name give the tag). Moving tags and branches is allowed; the Sortie
 records the library, the version as written and the commit it pointed at, and its *run.created*
-event, the run page (*Libraries* in the header) and every runner use that commit. Resuming a run
+event, the Sortie page (*Libraries* in the header) and every Station use that commit. Resuming a Sortie
 never resolves anything again. A version that does not exist, or a library the server does not
 list, is reported at its line and starts nothing.
 
 **Expansion.** A step that `uses` a template becomes the template's steps, with ids
-`<step>/<template-step>` (`ci/lint`, `ci/test`), drawn on the run page as one group that can be
+`<step>/<template-step>` (`ci/lint`, `ci/test`), drawn on the Sortie page as one group that can be
 collapsed. Template steps that need nothing in the template need what the `uses` step needs; a
 step that needs the `uses` step waits for all of its steps, and is skipped if any of them fails,
 as usual. The `uses` step's `when`, `retry` and `timeout` apply to every step of the template that
-does not set its own. The template's containers are added to the run under new names
+does not set its own. The template's containers are added to the Sortie under new names
 (`ci-py`). A template can use templates of its own library, written by name alone
 (`uses: check`), from the same commit; using another library's templates from a template is not
 supported yet. A step whose `if` is false is left out, and what needed it needs what it needed.
@@ -128,8 +128,8 @@ supported yet. A step whose `if` is false is left out, and what needed it needs 
 **Parameters**, with no expression language. Each has a `type` (`string`, the default, `number`,
 `boolean` or `list`), an optional `default` (without one it is required), `options` and a `description`.
 `with:` values are checked against them, with line numbers; unknown names are refused. A
-parameter reaches a template in exactly three ways, all resolved when the run is created, so the
-graph a run keeps holds plain values only:
+parameter reaches a template in exactly three ways, all resolved when the Sortie is created, so the
+graph a Sortie keeps holds plain values only:
 
 1. every step of the template receives it as the variable `PARAM_<NAME>` (upper case, `-` as
    `_`); in a template, names starting with `PARAM_` are reserved for this;
@@ -144,19 +144,19 @@ graph a run keeps holds plain values only:
 not reach it. Inside a template, steps refer to each other by the names the template gives them,
 so `LAUNCHWAY_NEEDS_LINT_...` works there as anywhere.
 
-**Files at run time.** For every library a run uses, the runner puts the library's files at the
+**Files at run time.** For every library a Sortie uses, the Station puts the library's files at the
 recorded commit in the workspace, at `.launchway/lib/<name>/`, so they reach steps the same way in
 a container, a Kubernetes pod or on the host. A template's steps get `LAUNCHWAY_LIB`, the
 directory of their own library (`/workspace/.launchway/lib/<name>` in a container), and every
 step gets `LAUNCHWAY_LIB_<NAME>` for each library. The directory is listed in the checkout's
 `.git/info/exclude`, so `git status` in a step does not report it; it replaces anything the
-repository itself has at that path. A runner that takes a run over restores the same commit.
+repository itself has at that path. A Station that takes a Sortie over restores the same commit.
 
-**Trying a library change before releasing it.** Starting a run by hand (*Start a run →
+**Trying a library change before releasing it.** Starting a Sortie by hand (*Start a Sortie →
 Advanced*, or `POST /api/v1/projects/{name}/runs` with `{"ref": "main", "libraries":
 {"platform": "my-branch"}}`) and draft runs (the same `libraries` field, or *Advanced* in the
-editor) may use another version of any library the pipeline names. The run records both versions
-and is marked *Library override*. It needs only the right to start the run.
+editor) may use another version of any library the pipeline names. The Sortie records both versions
+and is marked *Library override*. It needs only the right to start the Sortie.
 
 **One pipeline for many repositories.** A project may get its pipeline from a library instead of
 a file in its repository:
@@ -176,7 +176,7 @@ projects:
 
 At a commit that has its own `.launchway/pipeline.yaml`, that file wins; otherwise the configured
 template is the pipeline, named after the project. The push decisions under *Recent pushes* and
-the run page say which was used, and the run keeps the configuration as the pipeline file it
+the Sortie page say which was used, and the Sortie keeps the configuration as the pipeline file it
 amounts to, shown on its *Pipeline* tab. The editor opens that text for such a repository, so
 saving it turns it into a file.
 
@@ -231,7 +231,7 @@ steps:
 
 A use that gives `workload: mcp-weather` gets `application: mcp-weather-dev` and `manifest:
 apps/mcp-weather-dev/base.yaml` unless it writes its own. With `verify: false` the verify step is
-left out, and the rollback step that needed it needs what it needed; `moving_tag: false` leaves the
+left out, and the Return to base (rollback) step that needed it needs what it needed; `moving_tag: false` leaves the
 second tag out. A default that derives from another parameter is checked where the template is used:
 if the result is not a valid value ("the default of mode, taken from name ("mcp-weather"), does not
 fit: mode is one of a, b…"), the message says which parameter to give a value for. Defaults derive

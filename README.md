@@ -10,7 +10,7 @@
 
 ## What works today
 
-- **Pipelines as a graph.** Steps that can run together are drawn side by side. A failed run says
+- **Pipelines as a graph.** Steps that can run together are drawn side by side. A failed Sortie (run) says
   which step failed and why, in plain words, and you can re-run from any step.
 - **Delivery you can check.** Deployments are verified, wait for approvals when you ask them to, and
   roll back.
@@ -21,9 +21,9 @@
   server do the same things.
 - **Accessible.** The web interface is built and tested for WCAG 2.2 level AA.
 
-| Home | A pull request | A failed run |
+| Home | A pull request | A failed Sortie |
 |---|---|---|
-| [![Home: what needs you and the changes on their way](docs/images/tour/home-light.png)](docs/demo.md) | [![A pull request that cannot merge yet, with its checks](docs/images/tour/pull-request-light.png)](docs/demo.md) | [![A failed run: what went wrong and how to continue](docs/images/tour/run-failed-light.png)](docs/demo.md) |
+| [![Home: what needs you and the changes on their way](docs/images/tour/home-light.png)](docs/demo.md) | [![A pull request that cannot merge yet, with its checks](docs/images/tour/pull-request-light.png)](docs/demo.md) | [![A failed Sortie: what went wrong and how to continue](docs/images/tour/run-failed-light.png)](docs/demo.md) |
 
 The pictures come from a demo server with made-up data; [see them all](docs/demo.md).
 

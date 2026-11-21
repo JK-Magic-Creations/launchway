@@ -73,6 +73,6 @@ describe("the registry page", () => {
       return real(input, init);
     }));
     open("/images/registry");
-    expect(await screen.findByText("The built-in registry is off", {}, { timeout: 8000 })).toBeTruthy();
+    expect(await screen.findByText("The built-in Depot is off", {}, { timeout: 8000 })).toBeTruthy();
   });
 });

@@ -8,6 +8,11 @@ import { RunHeader } from "./RunHeader";
 import { RunLine, stepStations } from "./RunLine";
 import { runSentence, whyWaiting } from "./whyWaiting";
 import { explainFailure } from "../guided/derive";
+import { setTerms, resetTerms } from "../terms";
+import { afterEach, beforeEach } from "vitest";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const NOW = 100_000;
 const detail = (steps: ReturnType<typeof step>[], over: Partial<RunDetail> = {}): RunDetail => ({
@@ -35,6 +40,7 @@ describe("every wait says why", () => {
     expect(whyWaiting(r, r.step_list[0], NOW)?.text).toContain("Trying again in 30s (attempt 2 of 4) after timeout");
   });
   it("an approval says what it asks and by when", () => {
+    setTerms({ set: "aviation" });
     const r = detail([s("gate", { status: "waiting", kind: "approval", message: "Release 3.2?", deadline: 5 })]);
     const w = whyWaiting(r, r.step_list[0], NOW)!;
     expect(w.kind).toBe("person");

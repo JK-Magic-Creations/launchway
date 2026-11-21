@@ -1,6 +1,6 @@
 # Notifications
 
-How Launchway tells people that an approval waits, or that a run, a deployment or a rollback went wrong.
+How Launchway tells people that an approval waits, or that a Sortie (run), a deployment or a Return to base (rollback) went wrong.
 
 An approval that waits silently is a delivery that stops. Launchway tells you: rules say which events
 go to which channels, the messages say in plain words what happened and link to the page where you can act,
@@ -12,11 +12,11 @@ and a delivery log shows what was sent, what waits for a retry and what could no
 |---|---|
 | `approval.requested` | A step waits for a person to approve it (or a paused verification waits to be marked passed or failed) |
 | `step.waiting_long` | An approval has waited longer than the rule's `after` (default an hour); told once |
-| `run.failed` | A run failed. Narrow it with `branches: [main]` to hear only about the branches that matter |
+| `run.failed` | A Sortie failed. Narrow it with `branches: [main]` to hear only about the branches that matter |
 | `deployment.succeeded` | A deployment is done and nothing rolled it back |
-| `deployment.failed` | A deployment failed, or its rollback failed too (then the message says the environment needs a person) |
-| `deployment.rolled_back` | A failed deployment was rolled back and the environment is healthy again |
-| `rollback.needs_review` | An emergency rollback was made and no approver has acknowledged it yet |
+| `deployment.failed` | A deployment failed, or its Return to base failed too (then the message says the Airfield (environment) needs a person) |
+| `deployment.rolled_back` | A failed deployment was returned to base and the Airfield is healthy again |
+| `rollback.needs_review` | An Abort (emergency Return to base (rollback)) was made and no approver has acknowledged it yet |
 
 ## Channels and rules
 
@@ -77,8 +77,8 @@ made once per channel, whichever server notices it first (several servers can sh
 
 ## In the product
 
-What waits for a person is on Home under "Waiting for you": approvals, paused verifications, failed runs and
-unhealthy applications. A rollback that needs review is not on that list yet; `rollback.needs_review` tells you
+What waits for a person is on Home under "Waiting for you": approvals, paused verifications, failed Sorties and
+unhealthy applications. A Return to base that needs review is not on that list yet; `rollback.needs_review` tells you
 about it.
 
 ## Not here yet

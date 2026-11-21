@@ -382,7 +382,7 @@ export function DefinedAt({ overview, value, onChange, project, problems }: {
   return (
     <SelectInput label={project ? `${lv.unit.singular} it is in` : "Defined at"} value={value} onChange={onChange} problems={problems}
       help={project
-        ? `The ${lv.unit.singular.toLowerCase()}'s roles, libraries, policies, environments, runner pools and secret stores apply to this ${lv.project.singular.toLowerCase()}.`
+        ? terms().say(`The ${lv.unit.singular.toLowerCase()}'s roles, libraries, policies, {environments}, {runner_groups} and secret stores apply to this ${lv.project.singular.toLowerCase()}.`)
         : `Defined at a ${lv.unit.singular.toLowerCase()}, it applies only to that ${lv.unit.singular.toLowerCase()}'s ${lv.project.plural.toLowerCase()}; at the ${lv.organisation.singular.toLowerCase()}, to all of them.`}
       options={[{ value: "", label: project ? `None (directly in ${org})` : `${lv.organisation.singular}: ${org}` },
         ...(overview.units ?? []).map((u) => ({ value: u.name, label: `${lv.unit.singular}: ${u.display_name || u.name}` }))]} />

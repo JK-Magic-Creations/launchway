@@ -1,6 +1,6 @@
 # Tests and reports
 
-Make Launchway read your test results, so each run shows which tests failed and why, which tests
+Make Launchway read your test results, so each Sortie (run) shows which tests failed and why, which tests
 are flaky, and how tests behave over time. For developers. Takes about 15 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, Podman
@@ -62,7 +62,7 @@ git commit -m "Add tests with a report"
 
 ## 3 Read the failure
 
-The run fails at `test`. Open it in the web UI:
+The Sortie fails at `test`. Open it in the web UI:
 
 - the failed step says which tests failed, and links to them;
 - the **Tests** tab shows the totals, a pass rate, and every result, failures first. Open
@@ -118,14 +118,14 @@ Let the step be tried once more after a failure, with `retry: 1`:
       tests: reports/*.xml
 ```
 
-Commit it. The run succeeds on the step's second attempt, and on the **Tests** tab
+Commit it. The Sortie succeeds on the step's second attempt, and on the **Tests** tab
 `test_sometimes_slow_service` is marked **flaky**. Filter by *flaky* to list such tests.
 
 ## 5 Watch tests over time
 
 Open **Projects → hello → Tests**. For the default branch it shows the totals and time of recent
 runs, the tests that fail most, the flaky tests, the slowest, and each test's recent results as a
-strip of links to their runs. A test that passed in the previous run of the branch and fails now
+strip of links to their Sorties. A test that passed in the previous run of the branch and fails now
 is marked as a **new failure**.
 
 ## Keep the step failing
@@ -147,10 +147,10 @@ and exit with it, so the step still fails:
 
 ## What you learned
 
-- `reports.tests` makes test results part of the run, for passing and failing steps.
+- `reports.tests` makes test results part of the Sortie, for passing and failing steps.
 - Failures, flaky tests and new failures are found for you, and kept as history per branch.
 
 ## What next
 
-- [Security scans](security-scans.md).
-- [Test reports guide](../guide/test-reports.md): formats, globs, limits and the API.
+- [Inspections (security scans)](security-scans.md).
+- [Debriefs (test reports) guide](../guide/test-reports.md): formats, globs, limits and the API.

@@ -6,12 +6,10 @@ import "../config.css";
 import { Choices } from "./ConfigForm";
 import { Button, Decision } from "../kit/layout";
 import { Icon, type IconName } from "../kit/Icon";
-import { SETS, TERM_META, isSetId, makeTerms, termProblem, type SetId, type Terms } from "../terms";
+import { SETS, isSetId, makeTerms, termProblem, vocabulary, vocabularyGroups, type SetId, type Terms } from "../terms";
 
 export interface WordsValue { set: SetId; overrides: Record<string, string> }
 
-/** The four level words have a plural that is asked for too. */
-const LEVELS = ["installation", "organization", "unit", "project"];
 
 export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: (v: WordsValue) => void }) {
   const t = makeTerms(value);
@@ -32,38 +30,43 @@ export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: 
 
       <fieldset className="cf-section words-list">
         <legend className="cf-section-title">Every word, one by one</legend>
-        <p className="cf-help">Leave a box empty to use the set's word. Words everyone knows (project, pipeline, step, run, environment, template, variable, branch, commit) are not listed: they are never renamed.</p>
-        <table className="table words-table">
-          <thead><tr><th>What it is</th><th>In this set</th><th>Your word</th>{<th className="words-pl">Several</th>}<th><span className="visually-hidden">Actions</span></th></tr></thead>
-          <tbody>
-            {TERM_META.map((m) => {
-              const own = value.overrides[m.key] ?? "";
-              const ownPl = value.overrides[m.key + "_plural"] ?? "";
-              const bad = own ? termProblem(own) : null;
-              const badPl = ownPl ? termProblem(ownPl) : null;
-              const level = LEVELS.includes(m.key);
-              return (
-                <tr key={m.key} data-term={m.key}>
-                  <td>{m.means}</td>
-                  <td><b>{base.label(m.key)}</b></td>
-                  <td>
-                    <input className="cf-input" aria-label={`Your word for ${m.key.replace(/_/g, " ")}`} value={own} placeholder={base.label(m.key)} maxLength={60}
-                      aria-invalid={bad ? true : undefined} onChange={(e) => setOne(m.key, e.target.value)} />
-                    {bad && <div className="cf-problem" role="alert">{bad}</div>}
-                  </td>
-                  <td className="words-pl">
-                    {level ? <>
-                      <input className="cf-input" aria-label={`Your plural for ${m.key}`} value={ownPl} placeholder={base.plural(m.key)} maxLength={60}
-                        aria-invalid={badPl ? true : undefined} onChange={(e) => setOne(m.key + "_plural", e.target.value)} />
-                      {badPl && <div className="cf-problem" role="alert">{badPl}</div>}
-                    </> : null}
-                  </td>
-                  <td>{(own || ownPl) && <Button sm onClick={() => { const n = { ...value.overrides }; delete n[m.key]; delete n[m.key + "_plural"]; onChange({ ...value, overrides: n }); }}>Reset</Button>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <p className="cf-help">Leave a box empty to use the set's word. A status keeps its plain word beside the themed one, so it cannot be renamed. Pipeline, step, alert, branch, pull request, commit, secret and variable are never themed, so they are not listed.</p>
+        {vocabularyGroups().map((g) => (
+          <section key={g.ID} className="words-group" aria-labelledby={"wg-" + g.ID}>
+            <h3 id={"wg-" + g.ID}>{g.Title}</h3>
+            <table className="table words-table">
+              <thead><tr><th>What it is</th><th>In this set</th><th>Plain word</th>{g.ID !== "statuses" && <><th>Your word</th><th className="words-pl">Several</th><th><span className="visually-hidden">Actions</span></th></>}</tr></thead>
+              <tbody>
+                {vocabulary().filter((m) => m.group === g.ID).map((m) => {
+                  const own = value.overrides[m.key] ?? "";
+                  const ownPl = value.overrides[m.key + "_plural"] ?? "";
+                  const bad = own ? termProblem(own) : null;
+                  const badPl = ownPl ? termProblem(ownPl) : null;
+                  return (
+                    <tr key={m.key} data-term={m.key}>
+                      <td className="words-mean">{m.meaning}</td>
+                      <td><b>{base.label(m.key)}</b></td>
+                      <td>{base.plain(m.key)}</td>
+                      {m.renameable ? <>
+                        <td>
+                          <input className="cf-input" aria-label={`Your word for ${m.key.replace(/_/g, " ")}`} value={own} placeholder={base.label(m.key)} maxLength={60}
+                            aria-invalid={bad ? true : undefined} onChange={(e) => setOne(m.key, e.target.value)} />
+                          {bad && <div className="cf-problem" role="alert">{bad}</div>}
+                        </td>
+                        <td className="words-pl">
+                          <input className="cf-input" aria-label={`Your plural for ${m.key.replace(/_/g, " ")}`} value={ownPl} placeholder={base.plural(m.key)} maxLength={60}
+                            aria-invalid={badPl ? true : undefined} onChange={(e) => setOne(m.key + "_plural", e.target.value)} />
+                          {badPl && <div className="cf-problem" role="alert">{badPl}</div>}
+                        </td>
+                        <td>{(own || ownPl) && <Button sm onClick={() => { const n = { ...value.overrides }; delete n[m.key]; delete n[m.key + "_plural"]; onChange({ ...value, overrides: n }); }}>Reset</Button>}</td>
+                      </> : g.ID !== "statuses" ? <td colSpan={3} /> : null}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        ))}
         <div className="cf-row">
           <Button disabled={renamed === 0 && value.set === "aviation"} onClick={() => onChange({ set: "aviation", overrides: {} })}>Reset to the defaults</Button>
           <span className="faint small">{renamed === 0 ? "No word is renamed." : `${renamed} ${renamed === 1 ? "word is" : "words are"} renamed.`}</span>
@@ -83,21 +86,27 @@ export function wordsProblems(v: WordsValue): string | null {
 }
 
 const NAV: { icon: IconName; label: (t: Terms) => string }[] = [
-  { icon: "home", label: () => "Home" },
+  { icon: "home", label: (t) => t.label("home") },
   { icon: "code", label: () => "Code" },
   { icon: "graph", label: () => "Pipelines" },
-  { icon: "deploy", label: () => "Deployments" },
+  { icon: "deploy", label: (t) => t.plural("deploy") },
   { icon: "activity", label: () => "Activity" },
   { icon: "calendar", label: (t) => `Changes: ${t.lower("hold")} windows` },
   { icon: "gate", label: (t) => t.plural("clearance") },
   { icon: "clock", label: (t) => t.label("logbook") },
 ];
 
+/** One sentence that uses the words, so a change of set or a rename is seen at once. */
+export function sampleSentence(t: Terms): string {
+  return t.say("A {run} on a {runner} will {deploy:do} to the {environment}, with a {canary} first and {rollback:do} if the {post_deploy_watch} sees a problem.");
+}
+
 /** The words in use: the navigation, a trail through the levels, and a sample decision, drawn with the chosen words. */
 export function WordsPreview({ t }: { t: Terms }) {
   return (
     <section className="words-preview" aria-label="Preview with these words" data-set={t.set}>
       <div className="eyebrow">Preview</div>
+      <p className="words-sample" data-testid="words-sample">{sampleSentence(t)}</p>
       <div className="wp-grid">
         <nav className="wp-nav" aria-label="Navigation preview">
           {NAV.map((n, i) => <span key={i} className={"wp-item" + (i === 1 ? " on" : "")}><Icon name={n.icon} size="s" />{n.label(t)}</span>)}

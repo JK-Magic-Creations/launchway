@@ -94,17 +94,17 @@ lists every variable a step receives.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `pipeline` | name | required | The pipeline's name. `^[a-z0-9][a-z0-9-]{0,62}$` |
-| `on` | mapping | none | The events that start a run; see [Triggers](#triggers). Without it, runs start only by hand |
-| `supersede` | boolean | `false` for pushes, `true` for pull requests | `supersede: true`: a new run started by a push or a pull request cancels the older runs of the same ref still going, if they too were started by a push or a pull request. Runs started by hand, draft runs and re-runs never supersede and are never superseded. A run holding an open [deployment](../glossary.md#deployment) is never cancelled. Pull-request runs supersede by default (the installation's `queues.supersede_pull_requests`); `supersede: false` keeps every run of this pipeline's pull requests |
+| `on` | mapping | none | The events that start a Sortie (run); see [Triggers](#triggers). Without it, runs start only by hand |
+| `supersede` | boolean | `false` for pushes, `true` for pull requests | `supersede: true`: a new Sortie started by a push or a pull request cancels the older Sorties of the same ref still going, if they too were started by a push or a pull request. Runs started by hand, draft runs and re-runs never supersede and are never superseded. A Sortie holding an open [deployment](../glossary.md#deployment) is never cancelled. Pull-request runs supersede by default (the installation's `queues.supersede_pull_requests`); `supersede: false` keeps every run of this pipeline's pull requests |
 | `inputs` | mapping | none | The [run inputs](#inputs): values a run is started with. At most 50 |
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
-| `defaults` | mapping | none | What every script step takes unless it says otherwise: image, environment, timeout, retry, caches; see [Defaults](#defaults) |
-| `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
-| `lane` | mapping | none | Makes runs of the project take turns, and says what a run that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
-| `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A run past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a run's end and its resume. Needs schema 24 |
+| `defaults` | mapping | none | What every script step takes unless it says otherwise: image, Airfield (environment), timeout, retry, caches; see [Defaults](#defaults) |
+| `runner` | mapping | none | Which Stations (runners) may run the pipeline's steps; see [Station](#runner) |
+| `lane` | mapping | none | Makes runs of the project take turns, and says what a Sortie that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
+| `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A Sortie past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a Sortie's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display. Not with `uses` |
-| `uses` | `library/template` | none | A file that is only a use of one Flight plan: `uses: launchway/go-service`. It stands for a pipeline named `ci` that runs on pushes to `main` and on pull requests (docs-only changes skipped), superseding older runs, with one step `ci`; what the file writes itself (`pipeline`, `on`, `supersede`, `containers`) is kept. See [Starters](../guide/starters.md) |
+| `uses` | `library/template` | none | A file that is only a use of one Flight plan: `uses: launchway/go-service`. It stands for a pipeline named `ci` that runs on pushes to `main` and on pull requests (docs-only changes skipped), superseding older Sorties, with one step `ci`; what the file writes itself (`pipeline`, `on`, `supersede`, `containers`) is kept. See [Starters](../guide/starters.md) |
 | `with` | mapping | none | With `uses`: the values of the Flight plan's parameters, as for [a step that uses a template](#a-step-that-uses-a-template) |
 | `skip` | list of stage names | none | With `uses`: stages of the Flight plan to leave out; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `extend` | list | none | With `uses`: steps to add before or after a stage |
@@ -130,7 +130,7 @@ own value always wins.
 | `retry` | number or mapping | none | The retry of steps that set none, as for a step |
 | `cache` | list | none | The [caches](#cache) of steps that set none |
 
-Only steps that run a script take them. Approvals, image, deploy, verify, rollback and AI steps, and
+Only steps that run a script take them. Approvals, image, launch (deploy), verify, Return to base (rollback) and AI steps, and
 steps that use a template, keep their own settings: a template is an interface, and what it runs is
 its own. A mistake in a default is reported in the same words as in a step, at the line of the
 default.
@@ -156,7 +156,7 @@ steps:
 
 ## Triggers
 
-`on` says which events start a run. A run can always be started by hand, from the UI, the API or
+`on` says which events start a Sortie. A run can always be started by hand, from the UI, the API or
 [`launchway runs start`](cli.md), whatever `on` says.
 
 <!-- keys: on -->
@@ -176,10 +176,10 @@ when the Git host calls the project's Git webhook.
 <!-- keys: on-push -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `branches` | pattern, one value or a list | none | Branch names that start a run, such as `main` or `release/*` |
-| `tags` | pattern, one value or a list | none | Tag names that start a run, such as `v*` |
+| `branches` | pattern, one value or a list | none | Branch names that start a Sortie, such as `main` or `release/*` |
+| `tags` | pattern, one value or a list | none | Tag names that start a Sortie, such as `v*` |
 | `paths` | [path patterns](#path-filters) | none | A push to a branch starts a run only if a changed file matches one |
-| `paths_ignore` | [path patterns](#path-filters) | none | A push to a branch starts a run unless every changed file matches one. Not together with `paths` |
+| `paths_ignore` | [path patterns](#path-filters) | none | A push to a branch starts a Sortie unless every changed file matches one. Not together with `paths` |
 
 At least one of `branches` or `tags` is required. `paths` and `paths_ignore` filter branch pushes
 only; a tag push always runs.
@@ -195,7 +195,7 @@ cannot turn pull-request runs on for itself. A pull request has no branch or tag
 <!-- keys: on-pull-request -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `into` | pattern, one value or a list | any branch | Run only for pull requests that target a branch matching one of the patterns, written as the `branches` of [`push`](#push). The step environment gets `LAUNCHWAY_PULL_REQUEST_INTO`. Needs schema 24 |
+| `into` | pattern, one value or a list | any branch | Run only for pull requests that target a branch matching one of the patterns, written as the `branches` of [`push`](#push). The step Airfield gets `LAUNCHWAY_PULL_REQUEST_INTO`. Needs schema 24 |
 | `paths` | [path patterns](#path-filters) | none | Run only if a file the pull request changed (since it left the target branch) matches one |
 | `paths_ignore` | [path patterns](#path-filters) | none | Run unless every file the pull request changed matches one. Not together with `paths` |
 
@@ -209,7 +209,7 @@ cannot be reached, the pull request is not run either (the server never runs unf
 decision says *waiting: forge unreachable*, and the next poll tries again for as long as the head
 is the newest. The target is read once for each head; when a pull request is retargeted and its
 head moves, it is read again and the decision says that the target changed. The target is kept on
-the run (`pull_request_into` in the run JSON) and shown with the pull request. `pull_request: {}`
+the Sortie (`pull_request_into` in the Sortie JSON) and shown with the pull request. `pull_request: {}`
 needs no forge and no newer server.
 
 <!-- validate -->
@@ -298,9 +298,9 @@ steps:
 
 What is compared: a **push** is compared with the branch's previous head (every file between the
 two, so a merge commit counts what it brings in); a **pull request** with the merge base of its
-target branch and its head. A run starts when the filter says so, and when it cannot tell: the
+target branch and its head. A Sortie starts when the filter says so, and when it cannot tell: the
 first push of a branch, a force-push that left the previous head out of the new history, more than
-1000 changed files, a tag push, or a git error all **run**. A run that does not start leaves a
+1000 changed files, a tag push, or a git error all **run**. A Sortie that does not start leaves a
 decision in the project's recent pushes (outcome `skipped_paths`) that says why, for example *no
 changed file matches paths (src/**, go.mod); changed: README.md, docs/a.md*. A pull request whose
 head was kept from running this way satisfies the required checks of its target branch's merge
@@ -339,7 +339,7 @@ An input is used in exactly these places: its variable; a step's
 ([`with: { name: { input: name } }`](#value-forms)); a loop's list
 ([`for_each: { key: { input: name } }`](#for-each)); and a deploy step's `version`, an image
 tag or a written value, and a deploy step's `environment` ([value forms](#value-forms)).
-Inputs are recorded with the run and shown to everyone who can see it: never use them for
+Inputs are recorded with the Sortie and shown to everyone who can see it: never use them for
 secrets.
 
 ## Libraries
@@ -358,7 +358,7 @@ See [Templates](#template-files) and [Reuse steps with library templates](../tut
 ## Containers
 
 `containers` names images once, so steps can use them by name, and declares services that run
-beside the steps for the whole run (a database for tests, say). All of a run's containers share the
+beside the steps for the whole Sortie (a database for tests, say). All of a Sortie's containers share the
 workspace; on Kubernetes they share one pod, so services are reachable at `localhost`.
 
 Names match `^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`. `workspace` and names starting with `image-`
@@ -369,9 +369,9 @@ are reserved.
 |---|---|---|---|
 | `image` | image reference | required | The container image |
 | `env` | mapping | none | Environment variables, name to value. Names match `^[A-Za-z_][A-Za-z0-9_]*$`; names starting with `LAUNCHWAY_` are reserved |
-| `cpu` | quantity | the runner's | A CPU request on Kubernetes, such as `500m` or `2` |
-| `memory` | quantity | the runner's | A memory request on Kubernetes, such as `512Mi` or `2Gi` |
-| `service` | boolean | `false` | Run the container's own command for the whole run instead of running steps in it. Steps cannot use a service as their `container` |
+| `cpu` | quantity | the Station's | A CPU request on Kubernetes, such as `500m` or `2` |
+| `memory` | quantity | the Station's | A memory request on Kubernetes, such as `512Mi` or `2Gi` |
+| `service` | boolean | `false` | Run the container's own command for the whole Sortie instead of running steps in it. Steps cannot use a service as their `container` |
 | `command` | one value or a list | the image's own | Services only: the command to run |
 | `ready` | mapping | ready once started | Services only: when the service is ready; see [Service readiness](#service-readiness) |
 
@@ -429,8 +429,8 @@ steps:
 | `step` (the default) | Runs a script in a container image | [Kind step](#kind-step) |
 | `approval` | Waits for a person to approve or reject | [Kind approval](#kind-approval) |
 | `image` | Builds, scans, signs and pushes a container image | [Kind image](#kind-image) |
-| `deploy` | Deploys a version to an environment with Argo CD | [Kind deploy](#kind-deploy) |
-| `rollback` | Reverts a deployment when a step guarding it did not succeed | [Kind rollback](#kind-rollback) |
+| `deploy` | Deploys a version to an Airfield with Argo CD | [Kind launch](#kind-deploy) |
+| `rollback` | Reverts a deployment when a step guarding it did not succeed | [Kind Return to base](#kind-rollback) |
 | `rollout` | Promotes, aborts or retries a deployment's Argo Rollouts rollout | [Kind rollout](#kind-rollout) |
 | `verify` | Watches a deployment's metrics and logs for a window of time and decides passed, failed or inconclusive | [Kind verify](#kind-verify) |
 | `ai` | Asks a model the operator configured one question, with inputs from earlier steps | [Kind ai](#kind-ai) |
@@ -452,7 +452,7 @@ The second column says which kinds take the key. `uses` stands for a step that u
 | `when` | `step` `approval` `uses` `image` `deploy` `verify` `ai` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
 | `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
 | `retry` | `step` `uses` `image` `ai` | whole number, or a mapping | `0` | Extra attempts after a failure, 0 to 10; the mapping also says how long to wait and for which causes (see [Retry](#retry)) |
-| `on_failure` | `step` `image` | `stop` or `continue` | `stop` | What a failure that is final (after its retries) does to the run. With `continue` the step ends `failed (allowed)`: the run's outcome ignores it, `fail_fast` ignores it, and the steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }`. A rollback step also counts it as a success: a tolerated failure does not roll a deployment back. A run that succeeded with such failures says so: its summary (`GET /api/v1/runs`, `runs show`, the run list and page) carries `allowed_failures` (a count) and `allowed_failure_steps` (their names), and a policy's `allowed_failures` rule can refuse to deploy after one. Not for deploy, rollback, rollout, verify, ai or approval steps (each has its own failure handling), and not on a step that uses a template: set it inside the template. Needs schema 24 |
+| `on_failure` | `step` `image` | `stop` or `continue` | `stop` | What a failure that is final (after its retries) does to the Sortie. With `continue` the step ends `failed (allowed)`: the Sortie's outcome ignores it, `fail_fast` ignores it, and the steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }`. A Return to base step also counts it as a success: a tolerated failure does not roll a deployment back. A Sortie that succeeded with such failures says so: its summary (`GET /api/v1/runs`, `runs show`, the Sortie list and page) carries `allowed_failures` (a count) and `allowed_failure_steps` (their names), and a policy's `allowed_failures` rule can refuse to launch after one. Not for launch, Return to base, rollout, verify, ai or approval steps (each has its own failure handling), and not on a step that uses a template: set it inside the template. Needs schema 24 |
 
 For a step that uses a template, `when`, `retry` and `timeout` apply to every step of the
 template that does not set its own.
@@ -464,23 +464,23 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 <!-- keys: kind-step -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `image` | image reference | one of `image` or `container` is required | The container image the step runs in. Each image used this way gets a container of its own in the run |
+| `image` | image reference | one of `image` or `container` is required | The container image the step runs in. Each image used this way gets a container of its own in the Sortie |
 | `container` | container name | | A container from [`containers`](#containers), instead of `image`. Not a service |
 | `run` | text | required | The shell script, run with `sh -e` in the workspace (the repository checkout) |
 | `env` | mapping | none | Environment variables, name to value. Names match `^[A-Za-z_][A-Za-z0-9_]*$`; `LAUNCHWAY_*` is reserved. In a looped step a value may be [`{ each: key }`](#value-forms) |
-| `secrets` | mapping | none | Environment variables whose values a runner looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
+| `secrets` | mapping | none | Environment variables whose values a Station looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
-| `runner` | mapping | the run's runner | A runner and a workspace of this step's own; see [A runner for one step](#a-runner-for-one-step) |
-| `artifacts` | list | none | Files the step keeps once it has run; see [Artifacts](#artifacts) |
-| `fetch` | list | none | Artifacts of earlier steps to put in the workspace first; see [Fetch](#fetch) |
-| `cache` | list | none | Directories to restore before the script and save after it, so that a dependency install does not start from nothing every run; see [Cache](#cache) |
+| `runner` | mapping | the Sortie's Station | A Station and a workspace of this step's own; see [A Station for one step](#a-runner-for-one-step) |
+| `artifacts` | list | none | Files the step keeps once it has run; see [Cargo (artifacts)](#artifacts) |
+| `fetch` | list | none | Cargo of earlier steps to put in the workspace first; see [Fetch](#fetch) |
+| `cache` | list | none | Directories to restore before the script and save after it, so that a dependency install does not start from nothing every Sortie; see [Cache](#cache) |
 | `for_each` | mapping | none | Repeat the step once for each combination of values; see [For each](#for-each) |
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: how many members may be queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: once a member fails for good, cancel the others not started and stop those running |
 | `add` | list | none | With `for_each`: whole combinations to add outside the lists, one value for every key; see [For each](#for-each) |
-| `continue_for` | list | none | With `for_each`: members, matched like `exclude` entries, that may fail without failing the run (as `on_failure: continue`) |
+| `continue_for` | list | none | With `for_each`: members, matched like `exclude` entries, that may fail without failing the Sortie (as `on_failure: continue`) |
 | `serial` | boolean | `false` | With `for_each`: each member waits for the one before it (see [For each](#for-each)) |
 
 A step that fails keeps its last few lines of output with the step, so the reason shows where the
@@ -492,14 +492,14 @@ are not masked, and the log says so. See [Manage secrets](../howto/secrets.md).
 An approval pauses the run until a person approves or rejects it. It runs nothing. `timeout` is
 how long to wait for a decision: default `24h`, from `1s` to `30d` (`720h`). Rejecting, or nobody
 deciding in time, fails the step and the steps after it are skipped. An approval cannot be repeated
-by `for_each`. See [Deploy with an approval](../tutorials/deploy-with-approval.md).
+by `for_each`. See [Launch with an approval](../tutorials/deploy-with-approval.md).
 
 <!-- keys: kind-approval -->
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `message` | text | required | The question to decide, one line of at most 500 characters |
 | `approvers` | mapping | anyone with the operator role, one approval | Who may decide and how many distinct people must approve; see [Approvers](#approvers) |
-| `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that environment. The approval must need the deploy step, directly or not, and takes no `when.upstream`. In a template, name a deploy step of the same template |
+| `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that Airfield. The approval must need the deploy step, directly or not, and takes no `when.upstream`. In a template, name a deploy step of the same template |
 
 <!-- validate -->
 ```yaml
@@ -531,7 +531,7 @@ steps:
 | `users` | list of names | none | Users, as written in bindings. Any of them may decide |
 | `count` | whole number | `1` | How many distinct people must approve, 1 to 5. With `users` only, not more than the users listed |
 
-The caller must still have the operator role on the project (and on the environment, for an
+The caller must still have the operator role on the project (and on the Airfield, for an
 approval that names a deployment): `approvers` only narrows, never widens. It is judged by the
 server's engine for the web, the API, MCP and the command line alike, by name and groups at the
 time of the decision. Each approval is recorded (`step.approval_recorded`, with who, when and the
@@ -540,10 +540,10 @@ person twice is refused, and the person who started the run does not count unles
 allows approving one's own runs. A rejection by anyone allowed ends the step at once; an expiry
 rejects it, whatever has been approved. A re-run reuses the decision with its people.
 
-An environment with `protected: true` can set `min_approvals` (1 to 5) in the server's
+An Airfield with `protected: true` can set `min_approvals` (1 to 5) in the server's
 configuration: for an approval that names a deployment there, the number needed is the larger of
-`count` and the environment's `min_approvals`, so editing a pipeline cannot weaken production. The
-approval shows the number and where it comes from. The run page, the approvals page, the API
+`count` and the Airfield's `min_approvals`, so editing a pipeline cannot weaken production. The
+approval shows the number and where it comes from. The Sortie page, the approvals page, the API
 (`approvals`, `approvals_needed`), MCP (`list_approvals`, `decide_approval`) and
 `launchway approvals list` show "1 of 2 approved" with names.
 
@@ -563,8 +563,8 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `max_parallel` | whole number | no bound | With `for_each`: members queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: stop the other members once one fails |
 | `add` | list | none | With `for_each`: whole combinations to add outside the lists |
-| `continue_for` | list | none | With `for_each`: members that may fail without failing the run; the template's steps that run a script or build an image then behave as `on_failure: continue` |
-| `serial` | boolean | `false` | With `for_each`: each member waits for the one before it, in the order of the lists, so a delivery goes through dev, then staging, then prod and a failure ends the line. A member's rollbacks are not waited for |
+| `continue_for` | list | none | With `for_each`: members that may fail without failing the Sortie; the template's steps that run a script or build an image then behave as `on_failure: continue` |
+| `serial` | boolean | `false` | With `for_each`: each member waits for the one before it, in the order of the lists, so a delivery goes through dev, then staging, then prod and a failure ends the line. A member's Returns to base are not waited for |
 | `skip` | list of stage names | none | Stages of the template to leave out; what needed one then needs what it needed. A name the template does not have is refused, with the stages it has |
 | `extend` | list | none | Steps to add next to a stage; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
@@ -581,7 +581,7 @@ A flight plan's steps are its **stages**. A use can switch stages off, add steps
 |---|---|---|---|
 | `after` | stage name | | Add the steps after this stage: they need it, and what needed it needs them too. One of `after` and `before` |
 | `before` | stage name | | Add the steps before this stage: they need what it needed, and it needs them |
-| `steps` | mapping | required | The steps to add, as a pipeline's steps (a plain step, an approval or a deploy; no `for_each`, no use of a template). Their names may not be a stage's |
+| `steps` | mapping | required | The steps to add, as a pipeline's steps (a plain step, an approval or a launch; no `for_each`, no use of a template). Their names may not be a stage's |
 
 ```yaml
 steps:
@@ -601,8 +601,8 @@ A replaced stage keeps its needs unless it gives its own, and stays off if its o
 ### Kind image
 
 An image step builds a container image from a Dockerfile in the workspace with a BuildKit daemon
-the runner's operator runs, and scans, signs and pushes it. It runs no script and has no
-container in the run. `timeout` defaults to `1h`, from `1m` to `24h`. It may be in a template, and
+the Station's operator runs, and scans, signs and pushes it. It runs no script and has no
+container in the Sortie. `timeout` defaults to `1h`, from `1m` to `24h`. It may be in a template, and
 cannot be repeated by `for_each` yet. See [Build and sign an image](../tutorials/build-and-sign-image.md).
 
 <!-- keys: kind-image -->
@@ -617,11 +617,11 @@ cannot be repeated by `for_each` yet. See [Build and sign an image](../tutorials
 | `tags` | list | required unless `push: false` | Names to push under; see [Image tags](#image-tags). At least 1, at most 20 |
 | `push` | boolean | `true` | Push the image. Pull-request and draft runs never push, whatever it says |
 | `cache` | mapping | none | A repository the build cache is read from and, on runs that push there, written to; see [Image cache](#image-cache) |
-| `sbom` | boolean | `false` | Make a CycloneDX SBOM of each platform's image, kept as the step's artifact `sbom` |
-| `provenance` | boolean | `true` | Record where the image came from, kept as the step's artifact `provenance` |
-| `sign` | boolean or mapping | none | `true` signs with the runner's own key; a mapping signs with a key from a secret store; see [Image signing](#image-signing) |
+| `sbom` | boolean | `false` | Make a CycloneDX SBOM of each platform's image, kept as the step's Cargo `sbom` |
+| `provenance` | boolean | `true` | Record where the image came from, kept as the step's Cargo `provenance` |
+| `sign` | boolean or mapping | none | `true` signs with the Station's own key; a mapping signs with a key from a secret store; see [Image signing](#image-signing) |
 | `scan` | boolean or mapping | none | `true` scans for known vulnerabilities and records them; a mapping sets the policy; see [Image scan](#image-scan) |
-| `fetch` | list | none | Artifacts of earlier steps to put in the workspace before the build; see [Fetch](#fetch) |
+| `fetch` | list | none | Cargo of earlier steps to put in the workspace before the build; see [Fetch](#fetch) |
 
 An image step's outputs are `digest`, `image` (`host/repository@sha256:...`, empty when nothing was
 pushed), `tags` (comma-separated) and `pushed` (`true` or `false`). Steps that need it receive them as
@@ -633,8 +633,8 @@ Other output names are refused.
 <!-- keys: image-tag -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `registry` | name | `launchway` in `tags` (required in `cache`) | A registry the runner's configuration names ([`images.registries`](runner-config.md#images)), in lower case; or `launchway`, the [built-in registry](../guide/registry.md), which needs no runner configuration: the step gets its address and a credential made for the run. A tag that names no registry uses it, and its `repository` may leave out the project (`api` in project `cart` is `cart/api`) |
-| `repository` | text | required | The repository in that registry, without the host, such as `team/app` |
+| `registry` | name | `launchway` in `tags` (required in `cache`) | A Depot (registry) the Station's configuration names ([`images.registries`](runner-config.md#images)), in lower case; or `launchway`, the [built-in Depot](../guide/registry.md), which needs no Station configuration: the step gets its address and a credential made for the Sortie. A tag that names no Depot uses it, and its `repository` may leave out the project (`api` in project `cart` is `cart/api`) |
+| `repository` | text | required | The repository in that Depot, without the host, such as `team/app` |
 | `tag` | [value](#value-forms) | required | The tag, such as `latest` or `{ run: short_sha }` |
 
 #### Image cache
@@ -642,14 +642,14 @@ Other output names are refused.
 <!-- keys: image-cache -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `registry` | name | required | A registry the runner's configuration names |
+| `registry` | name | required | A Depot the Station's configuration names |
 | `repository` | text | required | The cache repository, such as `team/cache/app` |
 
 The cache is kept per trust scope, as a script step's caches are: the tag `buildcache` is the
 protected cache, written only by a default-branch run that pushes; a branch, tag or pull request
 exports to `buildcache-<scope>` (`pull-<n>`, or `ref-` and a hash of the ref), imports its own and
 the protected one, and a fork's pull request imports only its own. A pull request or draft that may
-not read secrets has no registry credentials and only reads. The build log says what is imported and
+not read secrets has no Depot credentials and only reads. The build log says what is imported and
 exported, and that a failed export does not fail the build (`ignore-error`).
 
 #### Image build secrets
@@ -705,26 +705,26 @@ steps:
     scan: { fail_on: high, mode: enforce }
 ```
 
-### Kind deploy
+### Kind launch
 
 A deploy step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
 until the application (and its Argo Rollouts rollout, if one is named) is healthy on that version.
-A deploy runner serving the environment's target does the work. `timeout` covers the whole step:
+A launch Station serving the Airfield's target does the work. `timeout` covers the whole step:
 default `30m`, from `1m` to `24h`. Deploy steps cannot be repeated by `for_each`, take no `when.upstream`, and do not run in draft runs, pull-request runs or
-`launchway run`. See [Deploy with an approval](../tutorials/deploy-with-approval.md).
+`launchway run`. See [Launch with an approval](../tutorials/deploy-with-approval.md).
 
 <!-- keys: kind-deploy -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `environment` | name, or `{ input: name }` | required | One of the server's [environments](server-config.md#environments): it gives the lock and the record. `^[a-z0-9][a-z0-9-]{0,62}$`. `{ input: name }` takes it from a `choice` input whose options are all environment names |
+| `environment` | name, or `{ input: name }` | required | One of the server's [Airfields](server-config.md#environments): it gives the lock and the record. `^[a-z0-9][a-z0-9-]{0,62}$`. `{ input: name }` takes it from a `choice` input whose options are all Airfield names |
 | `service` | name | the project's name | What is deployed there. `^[a-z0-9][a-z0-9-]{0,62}$` |
-| `version` | [value](#value-forms) | `{ run: short_sha }` | What the environment's "current version" shows |
-| `argocd` | mapping | required | How to deploy with Argo CD; see [Argo CD](#argo-cd) |
+| `version` | [value](#value-forms) | `{ run: short_sha }` | What the Airfield's "current version" shows |
+| `argocd` | mapping | required | How to launch with Argo CD; see [Argo CD](#argo-cd) |
 | `rollout` | mapping | none | An Argo Rollouts rollout to wait for as well; see [Rollout](#rollout) |
 | `on_cancel` | text | `leave` | `leave`, or `abort`: when the run is cancelled by hand while the deployment is open, abort the rollout. `abort` needs `rollout` |
 
 The keys `revision` and `source` (syncing to a revision without a commit) are refused as not
-available yet. Two deploy steps of the same service and environment must be ordered by `needs`.
+available yet. Two deploy steps of the same service and Airfield must be ordered by `needs`.
 
 #### Argo CD
 
@@ -741,7 +741,7 @@ available yet. Two deploy steps of the same service and environment must be orde
 <!-- keys: write-back -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `repo` | name | required | A repository the deploy runner's configuration names ([`deploy.repos`](runner-config.md#deploy)). `^[a-z0-9][a-z0-9_-]{0,62}$` |
+| `repo` | name | required | A repository the launch Station's configuration names ([`deploy.repos`](runner-config.md#deploy)). `^[a-z0-9][a-z0-9_-]{0,62}$` |
 | `branch` | branch name | required | The branch to commit to |
 | `changes` | list | required | The edits to make, at least 1 and at most 50; see [Changes](#changes) |
 
@@ -757,7 +757,7 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `image` | image name | with `tag` or `digest` | The image whose references change, such as `team/shop`. A file with no reference to it is an error |
 | `tag` | [value](#value-forms) | | The new tag |
 | `digest` | [value](#value-forms) | | The new digest, such as `{ output: image.digest }`: references become `image@sha256:...`, which nobody can move. With a `tag` as well, they become `image:tag@sha256:...`: readable and pinned |
-| `format` | text | from the values given | `tag`, `digest` or `tag_and_digest`. Without it a tag alone writes the tag, a digest alone pins by digest, and both write `image:tag@sha256:...`. Rolling back restores the previous text exactly, both parts |
+| `format` | text | from the values given | `tag`, `digest` or `tag_and_digest`. Without it a tag alone writes the tag, a digest alone pins by digest, and both write `image:tag@sha256:...`. Returning to base restores the previous text exactly, both parts |
 | `set` | YAML path | with `value` | The scalar to change, such as `image.tag` |
 | `value` | [value](#value-forms) | | Its new value |
 
@@ -789,13 +789,13 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `name` | Kubernetes name | required | The rollout's name |
 | `namespace` | namespace | required | Its namespace |
 | `until` | text | `healthy` | `healthy`, or `paused`: end the step at the rollout's first indefinite pause. With `paused`, a [`kind: rollout`](#kind-rollout) step naming this deployment must carry it on |
-| `pauses` | text | `wait` | What to do at an indefinite pause on the way to healthy: `wait` (a person promotes from the run page), `promote` (promote each such pause once) or `fail`. Not with `until: paused` |
+| `pauses` | text | `wait` | What to do at an indefinite pause on the way to healthy: `wait` (a person promotes from the Sortie page), `promote` (promote each such pause once) or `fail`. Not with `until: paused` |
 
 The key `target` (a rollout on another target) is refused as not available yet.
 
-### Kind rollback
+### Kind Return to base {#kind-rollback}
 
-A rollback step reverts what its deploy step committed, asks Argo CD to sync if it must, and waits
+A Return to base step reverts what its deploy step committed, asks Argo CD to sync if it must, and waits
 until the previous version is healthy. It runs if and only if its deployment was made and one of
 the steps it needs did not succeed; otherwise it is skipped as not needed. `timeout` defaults to
 `15m`, from `1m` to `24h`. It takes no `when`.
@@ -803,11 +803,11 @@ the steps it needs did not succeed; otherwise it is skipped as not needed. `time
 <!-- keys: kind-rollback -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `deployment` | step name | required | The deploy step it rolls back. It must need that step, directly or not; a deploy step has at most one rollback step |
+| `deployment` | step name | required | The deploy step it rolls back. It must need that step, directly or not; a deploy step has at most one Return to base step |
 | `abort_first` | boolean | `false` | Abort the deployment's rollout first, then revert. Needs a `rollout` on the deploy step |
 
 `needs` is required: the steps that guard the deployment. None of them, directly or not, may run
-after failures (`when.upstream: failed` or `always`), and a rollback cannot need another rollback.
+after failures (`when.upstream: failed` or `always`), and a Return to base cannot need another Return to base.
 
 ### Kind rollout
 
@@ -823,7 +823,7 @@ succeeded, and none of them, directly or not, may run after failures.
 | `until` | text | `healthy` | `healthy`, or `paused`: watch until the next indefinite pause. Not for `abort` |
 | `pauses` | text | `wait` | As for a deploy step's [`rollout.pauses`](#rollout). Not for `abort`, nor with `until: paused` |
 
-`needs` is required. A rollout step cannot come after a rollback step.
+`needs` is required. A rollout step cannot come after a Return to base step.
 
 <!-- validate -->
 ```yaml
@@ -882,10 +882,10 @@ steps:
 
 ### Kind verify
 
-A verify step watches a deployment (or an environment) for a window of time, reads its metrics and
+A verify step watches a deployment (or an Airfield) for a window of time, reads its metrics and
 logs from [health sources](runner-config.md#health-sources) an operator configured, and decides
-**passed**, **failed** or **inconclusive** with built-in statistics. It runs no script: a deploy
-runner next to the monitoring systems reads the data. `timeout` defaults to the delay and the
+**passed**, **failed** or **inconclusive** with built-in statistics. It runs no script: a launch
+Station next to the monitoring systems reads the data. `timeout` defaults to the delay and the
 window plus an hour, and must leave room for the delay, the window and a minute more; at most
 `24h`. It may be in a template (see [Template steps](#template-steps)); it cannot be in a loop. It needs a server that knows verify steps (schema
 19). See [Verifying a deployment](../guide/verification.md) for how the verdict is reached.
@@ -893,17 +893,17 @@ window plus an hour, and must leave room for the delay, the window and a minute 
 <!-- keys: kind-verify -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `deployment` | step name | one of `deployment` or `environment` with `service` | The deploy step whose deployment to watch: its environment, service and pods |
-| `environment` | name | | Instead of `deployment`: the environment to watch, with `service` |
+| `deployment` | step name | one of `deployment` or `environment` with `service` | The deploy step whose deployment to watch: its Airfield, service and pods |
+| `environment` | name | | Instead of `deployment`: the Airfield to watch, with `service` |
 | `service` | name | | The service to watch, with `environment` |
 | `delay` | duration | `0s` | Before the first interval, to let the new version warm up. At most `1h` |
 | `duration` | duration | `10m` | The window to watch: a whole number of intervals, at most `6h` |
 | `interval` | duration | `1m` | How often readings are taken and judged, at least `10s`. At most 120 intervals fit in the window |
 | `sensitivity` | text | `medium` | `low`, `medium` or `high`: how large a deviation must be to fail (high fails on smaller ones) |
-| `baseline` | whole number or `false` | `3` | How many earlier passed verifications of the same environment and service to compare with, 0 to 10. `false` or `0` compares with none |
-| `on_fail` | text | `fail` | `fail` (the step fails, and a rollback step that needs it then runs), `abort` (also abort the deployment's rollout at once) or `rollback` (abort the rollout if there is one, and leave the revert to the deployment's rollback step, which must need this step) |
+| `baseline` | whole number or `false` | `3` | How many earlier passed verifications of the same Airfield and service to compare with, 0 to 10. `false` or `0` compares with none |
+| `on_fail` | text | `fail` | `fail` (the step fails, and a Return to base step that needs it then runs), `abort` (also abort the deployment's rollout at once) or `rollback` (abort the rollout if there is one, and leave the revert to the deployment's Return to base step, which must need this step) |
 | `on_inconclusive` | text | `fail` | `fail`, `pass` or `pause` (wait for a person to mark it passed or failed, like an approval) |
-| `params` | mapping | none | Typed values the queries use as `{{name}}`, at most 30: `{ run: sha }`, `{ input: name }`, `{ output: step.key }`, or `{ deployment: fact }` with a fact of the deployment (`canary_hash`, `stable_hash`, `namespace`, `rollout`, `application`, `version`, `previous_version`, `environment`, `service`). Names start with a lower-case letter and use letters, digits and `_`; `start` and `end` are filled in by the deploy runner |
+| `params` | mapping | none | Typed values the queries use as `{{name}}`, at most 30: `{ run: sha }`, `{ input: name }`, `{ output: step.key }`, or `{ deployment: fact }` with a fact of the deployment (`canary_hash`, `stable_hash`, `namespace`, `rollout`, `application`, `version`, `previous_version`, `environment`, `service`). Names start with a lower-case letter and use letters, digits and `_`; `start` and `end` are filled in by the launch Station |
 | `metrics` | list | none | At most 20 metrics to read and judge; see below. At least one of `metrics` and `logs` is required |
 | `logs` | list | none | At most 10 log queries to read, cluster and compare; see below |
 | `model` | text | none | A model of the server's `ai.models`, to explain the verdict. See [AI models](../guide/ai.md) |
@@ -924,7 +924,7 @@ Each metric in `metrics`:
 | `stable_query` | text | none | The same for the stable version, read in the same interval to compare with |
 | `statement` | text | | For ClickHouse, PostgreSQL and HTTP sources: the name of a statement the source's operator wrote |
 | `index` | text | | For Elasticsearch and OpenSearch: the index to search |
-| `check` | mapping | | Instead of `query`: a call the deploy runner makes itself to the service, see below. The metric is then the share of calls that answered as expected, which is lower-is-worse and must reach the check's `success`; `source` names a source of type `check` |
+| `check` | mapping | | Instead of `query`: a call the launch Station makes itself to the service, see below. The metric is then the share of calls that answered as expected, which is lower-is-worse and must reach the check's `success`; `source` names a source of type `check` |
 | `direction` | text | `higher-is-worse` | `higher-is-worse`, `lower-is-worse` (throughput, say) or `either` |
 | `max` | number | none | A fixed upper bound |
 | `min` | number | none | A fixed lower bound. Not above `max` |
@@ -935,10 +935,10 @@ Each metric in `metrics`:
 | `step` | duration | `30s` | The resolution of the readings, `5s` to `1h` |
 | `baseline` | boolean | `true` | `false` turns the comparison with earlier verifications off for this metric |
 
-A `check` is the built-in health proof. The deploy runner calls the address again and again while
+A `check` is the built-in health proof. The launch Station calls the address again and again while
 each interval runs (not afterwards) and records every call. Nothing has to scrape the service
 first. See [the health proof](../guide/verification.md#the-built-in-health-proof) for examples and
-the limits the deploy runner enforces.
+the limits the launch Station enforces.
 
 <!-- keys: verify-check -->
 | Key | Type | Default | Description |
@@ -950,12 +950,12 @@ the limits the deploy runner enforces.
 | `body_contains` | text | none | Text the first 64 KiB of the answer must contain |
 | `json` | mapping | none | `{ path, equals }`: the answer is JSON and the value at the dotted path (numbers index arrays) equals the text |
 | `headers` | mapping | none | Headers sent as written, at most 10. `Host` sets the request's host, for a service that routes by it. `Authorization` and `Cookie` are refused here |
-| `secret_headers` | mapping | none | Header name to a secret reference (`store`, `key`, `field`); the deploy runner reads the value for each interval and it is never shown or recorded |
+| `secret_headers` | mapping | none | Header name to a secret reference (`store`, `key`, `field`); the launch Station reads the value for each interval and it is never shown or recorded |
 | `timeout` | duration | `5s` | One call, 1s to 30s |
 | `every` | duration | `5s` | The time between calls, at least `1s`; an interval of `30s` makes six calls |
 | `success` | number | `1` | The share of calls in an interval that must be healthy, above 0 and at most 1. `0.95` allows one failure in twenty. It becomes the metric's `min` unless the metric sets its own bounds |
 | `server_name` | text | | The name to verify in the TLS certificate, when the address is not that name |
-| `insecure_tls` | boolean | `false` | Skip the certificate check. Refused unless the deploy runner's source sets `allow_insecure_tls` |
+| `insecure_tls` | boolean | `false` | Skip the certificate check. Refused unless the launch Station's source sets `allow_insecure_tls` |
 
 <!-- keys: verify-check-json -->
 | Key | Type | Default | Description |
@@ -1036,11 +1036,11 @@ steps:
 ### Kind ai
 
 An ai step asks a model one question: instructions, a prompt and inputs taken from earlier steps'
-outputs and artifacts. It runs no script. The runner makes the call with a key from its own secret
+outputs and Cargo. It runs no script. The Station makes the call with a key from its own secret
 stores (`ai: true` in its configuration); the key never enters a step's container. The model's
-answer is untrusted text: it can become the step's outputs and an artifact, never run anything. The
+answer is untrusted text: it can become the step's outputs and a Cargo, never run anything. The
 model must be one of the server's [`ai.models`](server-config.md#ai-models) that the project may
-use. `timeout` defaults to `10m`, from `10s` to `1h`. It may be in a template, where `model`, `instructions` and `prompt` may be `{ param: … }` and its inputs name steps of the same template; the model is checked against the server's registry after expansion. It cannot be in a loop, and
+use. `timeout` defaults to `10m`, from `10s` to `1h`. It may be in a template, where `model`, `instructions` and `prompt` may be `{ param: … }` and its inputs name steps of the same template; the model is checked against the server's Depot after expansion. It cannot be in a loop, and
 takes no `run`, `image`, `env`, `secrets`, `artifacts`, `reports` or `fetch`. It needs a server that
 knows ai steps (schema 19). See [AI models](../guide/ai.md).
 
@@ -1056,7 +1056,7 @@ knows ai steps (schema 19). See [AI models](../guide/ai.md).
 | `temperature` | number | the model's own | 0 to 2. Only for OpenAI-compatible models; Anthropic models refuse sampling settings |
 
 An ai step's outputs are `text`, `model`, `input_tokens` and `output_tokens`, and with a `schema` its
-properties. The whole answer is kept as the artifact `response` (`response.txt`, and
+properties. The whole answer is kept as the Cargo `response` (`response.txt`, and
 `response.json` with a schema). An answer that does not follow the schema fails the step.
 
 Each input in `inputs`:
@@ -1066,7 +1066,7 @@ Each input in `inputs`:
 |---|---|---|---|
 | `label` | text | the source's name | What the input is called in the prompt: letters, digits, spaces, `_`, `.` and `-`, at most 60 characters; unique in the step |
 | `output` | `step.key` | | An output of a step this one needs. One of `output` or `artifact` |
-| `artifact` | `step/name` | | An artifact a step this one needs kept |
+| `artifact` | `step/name` | | A Cargo a step this one needs kept |
 | `file` | path | every file | With `artifact`: one file of it, without `..` or a leading `/` |
 | `max_bytes` | whole number | `65536` | How much of it is sent, 1 to 1048576; more is cut, saying so |
 
@@ -1102,21 +1102,21 @@ steps:
     run: printf '%s\n' "$LAUNCHWAY_NEEDS_NOTES_NOTES" > RELEASE_NOTES.md
 ```
 
-## Runner
+## Station {#runner}
 
-`runner` says which runners may run the pipeline's steps. It is written once, for the whole
-pipeline, because a run's steps share the workspace of the runner that took its first step. It
-needs a server that knows runner pools; see
-[Runners on other machines and clusters](../guide/runner-identity.md). Name a pool, labels, or both.
+`runner` says which Stations may run the pipeline's steps. It is written once, for the whole
+pipeline, because a Sortie's steps share the workspace of the Station that took its first step. It
+needs a server that knows Flight lines (Station (runner) pools); see
+[Stations on other machines and clusters](../guide/runner-identity.md). Name a pool, labels, or both.
 
 <!-- keys: runner -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `pool` | name | any pool that serves the project | One of the server's [runner pools](server-config.md#runner-pools); it must serve the project. Lower-case letters, digits, `.`, `_` and `-` |
-| `labels` | list | none | Labels a runner must all have, from its join token and its own [`labels`](runner-config.md). At most 16, each written as a pool name is |
+| `pool` | name | any pool that serves the project | One of the server's [Flight lines](server-config.md#runner-pools); it must serve the project. Lower-case letters, digits, `.`, `_` and `-` |
+| `labels` | list | none | Labels a Station must all have, from its join token and its own [`labels`](runner-config.md). At most 16, each written as a pool name is |
 
-A run that no runner may take says why on its page: no pool serves the project, the pool it asks for
-does not, or none of the runners seen lately has the labels or accepts it.
+A Sortie that no Station may take says why on its page: no pool serves the project, the pool it asks for
+does not, or none of the Stations seen lately has the labels or accepts it.
 
 <!-- validate -->
 ```yaml
@@ -1128,25 +1128,25 @@ steps:
     run: python train.py
 ```
 
-### A runner for one step
+### A Station for one step {#a-runner-for-one-step}
 
-`runner` on a step gives that step a runner and a workspace of its own, so one run can build or
-test on different platforms. The step gets a fresh checkout of the run's commit on any runner
+`runner` on a step gives that step a Station and a workspace of its own, so one run can build or
+test on different platforms. The step gets a fresh checkout of the Sortie's commit on any Station
 that has the pool and labels (and the features the step needs), shared with no other step; files
 travel between such steps only through [`artifacts` and `fetch`](#fetch). Steps without `runner`
-keep the run's shared workspace and the top-level [`runner`](#runner), exactly as before,
-and a step with its own runner neither takes over the run's runner nor waits for it. Not on image,
-deploy, rollback, rollout, approval, verify, ai or `uses` steps (an ai step already runs on any
-runner that calls models).
+keep the Sortie's shared workspace and the top-level [`runner`](#runner), exactly as before,
+and a step with its own Station neither takes over the Sortie's Station nor waits for it. Not on image,
+launch, Return to base, rollout, approval, verify, ai or `uses` steps (an ai step already runs on any
+Station that calls models).
 
 <!-- keys: step-runner -->
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `pool` | name | any pool that serves the project | A build pool that serves the project and the event. In a template it may be `{ param: name }` |
-| `labels` | list | none | Labels a runner must all have. In a looped step an item may be `{ each: key }` (with `format`); in a template the list may be `{ param: name }` |
+| `labels` | list | none | Labels a Station must all have. In a looped step an item may be `{ each: key }` (with `format`); in a template the list may be `{ param: name }` |
 
-A retry of the step reuses its workspace; a step whose labels no runner has waits ("waiting for a
-runner with labels arm64") and does not hold back steps that do not need it. A pool that does not
+A retry of the step reuses its workspace; a step whose labels no Station has waits ("waiting for a
+Station with labels arm64") and does not hold back steps that do not need it. A pool that does not
 exist or does not serve the project makes the pipeline invalid when the run is created.
 
 <!-- validate -->
@@ -1173,8 +1173,8 @@ default for its kind, which an administrator keeps in the database (see
 [`launchway step-resources`](cli.md#launchway-step-resources) and `GET /api/v1/step-resources` in the
 [HTTP API](http-api.md)); the defaults that a new installation starts from are in the table below.
 Only a step that runs a script (kind `step`) takes it: an image step is built by the builder, whose
-memory is set where the builder is deployed, deploy, rollout, rollback, verify and ai steps run in
-the runner itself, and an approval runs nothing. A step that uses a template says nothing of its
+memory is set where the builder is deployed, launch, rollout, Return to base, verify and ai steps run in
+the Station itself, and an approval runs nothing. A step that uses a template says nothing of its
 own; the template's steps may.
 
 Each of CPU and memory has an amount the step is **promised** (`cpu`, `memory`: the scheduler keeps
@@ -1208,7 +1208,7 @@ steps:
 ```
 
 **Defaults.** A new installation starts with these for kind `step`, and an administrator changes
-them without a restart; a change applies to the next pod a run starts (a run's pod is made once, for
+them without a restart; a change applies to the next pod a Sortie starts (a Sortie's pod is made once, for
 its first step, and kept for its other steps). The values live in the database, so every server of
 an installation agrees.
 
@@ -1229,7 +1229,7 @@ upgraded one until someone changes it. The recommended values are:
 | `max_cpu`, `max_memory` | not set | The most any step may ask for, on the installation |
 | `memory_per_thread` | `1Gi` | The memory one parallel job is assumed to need (see below) |
 
-**Steps that share an image share a container.** A run's steps that use the same image run in one
+**Steps that share an image share a container.** A Sortie's steps that use the same image run in one
 container, so on Kubernetes the container gets the largest of what its steps ask for, and every
 step in it may use that much. A container written under `containers` with its own `cpu` or `memory`
 counts as asking for them.
@@ -1248,25 +1248,25 @@ starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well
 step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
 a step that writes `resources` there is refused with a message saying so. A step that does not
 (another step that uses the same image may) runs, the defaults are not applied, and its log has one
-line, "resources not enforced on the host executor", saying what it would have been given. The runner log says what each container was given.
+line, "resources not enforced on the host executor", saying what it would have been given. The Station log says what each container was given.
 
 **Checks.** `launchway validate` checks the quantities. A run is refused when it is created if a
 step asks for more than the installation's `max_cpu` or `max_memory`, the message naming the step,
 the value and the limit. On Kubernetes the executor checks again before it creates the pod, against
 the namespace's LimitRange (the container's and the pod's maximum) and ResourceQuota, and against
-the runner's own `kubernetes.max_cpu` and `kubernetes.max_memory`; the step then fails at once with
+the Station's own `kubernetes.max_cpu` and `kubernetes.max_memory`; the step then fails at once with
 a message naming which of them it exceeds. That applies to what the step, or the container under
 `containers`, asked for. A default that the installation chose never fails a step: if it is above
-what the runner or the namespace allows one container, the runner lowers it to the most allowed
-(the runner's `kubernetes.max_cpu` and `kubernetes.max_memory`, and each LimitRange's container
+what the Station or the namespace allows one container, the Station lowers it to the most allowed
+(the Station's `kubernetes.max_cpu` and `kubernetes.max_memory`, and each LimitRange's container
 maximum) and writes one line to the step's log saying what it lowered and why. A step that asks for
 memory only is held to its memory, and its CPU default is lowered if need be, and the other way
 round.
 
 ## Lane
 
-A lane makes runs take turns: at most one run of a lane goes at a time. A run that arrives while the
-lane is held waits its turn, replaces the run that holds it, or is skipped. A lane belongs to one
+A lane makes runs take turns: at most one run of a lane goes at a time. A Sortie that arrives while the
+lane is held waits its turn, replaces the Sortie that holds it, or is skipped. A lane belongs to one
 project; two pipelines of a project that give their lanes the same `name` (and `per`) share one.
 
 <!-- keys: lane -->
@@ -1274,22 +1274,22 @@ project; two pipelines of a project that give their lanes the same `name` (and `
 |---|---|---|---|
 | `name` | name | the pipeline's name | The lane's name: lower-case letters, digits, hyphens and underscores, as a step's |
 | `per` | list | none | What splits the name into separate lanes, so that runs of different branches do not wait for each other: `ref` (each branch, tag or pull-request ref), `pull_request` (each pull request) or `input:<name>` (each value of a `string` or `choice` [input](#inputs)) |
-| `when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does. `wait`: it is created and queued, with no step queued, and starts when the run before it ends. `cancel`: the run that holds the lane and every run waiting for it are canceled, saying `replaced in lane … by run #N`, and the new run goes; a holder with an open deployment finishes it first, and the new run waits. `skip`: the new run is created and canceled at once, saying `skipped: lane busy (run #N)`; it appears in lists and status posts and runs no step |
-| `queue` | `newest` or `all` | `newest` | For `wait`. `newest`: a newer run replaces an older one that is still waiting, which ends canceled saying `replaced in lane … by run #N`, so at most one run waits. `all`: every run waits, and they start in order |
+| `when_busy` | `wait`, `cancel` or `skip` | `wait` | What a Sortie that arrives while the lane is held does. `wait`: it is created and queued, with no step queued, and starts when the run before it ends. `cancel`: the Sortie that holds the lane and every Sortie waiting for it are canceled, saying `replaced in lane … by run #N`, and the new Sortie goes; a holder with an open deployment finishes it first, and the new Sortie waits. `skip`: the new run is created and canceled at once, saying `skipped: lane busy (run #N)`; it appears in lists and status posts and runs no step |
+| `queue` | `newest` or `all` | `newest` | For `wait`. `newest`: a newer run replaces an older one that is still waiting, which ends canceled saying `replaced in lane … by run #N`, so at most one Sortie waits. `all`: every Sortie waits, and they start in order |
 
 Runs started by a push, a pull request, a schedule, a webhook or by hand are all subject to the lane.
-A draft run never joins one, and a re-run does not either. A run that waits for its lane does not
+A draft run never joins one, and a re-run does not either. A Sortie that waits for its lane does not
 count that time against its [`timeout`](#top-level-keys). Cancel a waiting run with the cancel button
 (or `launchway runs cancel`): it leaves the line. Resuming a finished run of a lane is refused while
-another run holds it, and takes the lane otherwise. A lane is released whenever its holder ends, however
-it ends: a run that fails, is canceled or is lost to a server that died frees the lane, and a server that
+another Sortie holds it, and takes the lane otherwise. A lane is released whenever its holder ends, however
+it ends: a Sortie that fails, is canceled or is lost to a server that died frees the lane, and a server that
 finds a lane with runs waiting and no live holder starts the first of them.
 
-A run that waits for an approval still holds its lane, until the approval is decided or expires (its
-`timeout`, 72 hours by default), so runs behind it wait that long too. The run's own `timeout` does
+A Sortie that waits for an approval still holds its lane, until the approval is decided or expires (its
+`timeout`, 72 hours by default), so runs behind it wait that long too. The Sortie's own `timeout` does
 not count that wait (see `timeout` in [top-level keys](#top-level-keys)), so only the approval's `timeout` ends it. If that is too long
 for the lane, give the approval a shorter `timeout`, or put the approval in a pipeline of its own.
-There is no key that lets a run give its lane up while it waits; that is on the backlog.
+There is no key that lets a Sortie give its lane up while it waits; that is on the backlog.
 
 <!-- validate -->
 ```yaml
@@ -1317,11 +1317,11 @@ the causes worth retrying:
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `times` | whole number | required | Extra attempts after a failure, 0 to 10 |
-| `wait` | duration | none | The pause before the first retry, `1s` to `1h`. The step is queued but not handed to a runner until it is over; the run page says `retrying in 20s (attempt 2 of 4)` |
+| `wait` | duration | none | The pause before the first retry, `1s` to `1h`. The step is queued but not handed to a Station until it is over; the Sortie page says `retrying in 20s (attempt 2 of 4)` |
 | `backoff` | number | `1` | What the pause is multiplied by for each retry after the first, 1 to 10; no pause is longer than `1h`. Goes with `wait` |
-| `on` | list of causes | every cause | The causes that are retried: `exit` (the script ended non-zero, and any failure that is none of the others), `timeout` (the step ran past its `timeout`) and `infrastructure` (the machinery failed: the image could not be pulled, the workspace or the fetched artifacts could not be prepared, or, only when `infrastructure` is listed here, a runner refused the step). A cause not listed fails the step at once. A runner states the cause itself (an older one sends none, and the server then works it out from the error text). An attempt lost to a failure of the infrastructure (a pod that disappeared, a runner that stopped responding) follows the same policy: it is tried again unless `on` leaves out `infrastructure`, after `wait` and `backoff`, and at most the server's `max_lost` times (3 by default), whatever `times` says, because `times` counts the step's own failures |
+| `on` | list of causes | every cause | The causes that are retried: `exit` (the script ended non-zero, and any failure that is none of the others), `timeout` (the step ran past its `timeout`) and `infrastructure` (the machinery failed: the image could not be pulled, the workspace or the fetched Cargo could not be prepared, or, only when `infrastructure` is listed here, a Station refused the step). A cause not listed fails the step at once. A Station states the cause itself (an older one sends none, and the server then works it out from the error text). An attempt lost to a failure of the infrastructure (a pod that disappeared, a Station that stopped responding) follows the same policy: it is tried again unless `on` leaves out `infrastructure`, after `wait` and `backoff`, and at most the server's `max_lost` times (3 by default), whatever `times` says, because `times` counts the step's own failures |
 
-A step whose runner is lost, or whose secret store is unavailable, is run again whatever `retry` says,
+A step whose Station is lost, or whose secret store is unavailable, is run again whatever `retry` says,
 a bounded number of times, as before. A step that fails its coverage threshold, is refused by a
 policy or is rejected is never retried. In a template, `times`, `wait`, `backoff` and `on` may be
 `{ param: name }`, and a `retry` written on the step that uses the template applies to the
@@ -1347,13 +1347,13 @@ any listed value may match. It is a closed set of tests, not an expression langu
 <!-- keys: when -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `branch` | pattern, one value or a list | none | The run's branch matches one. A tag run, a pull-request run and a run with no branch never match |
-| `tag` | pattern, one value or a list | none | The run's tag matches one |
-| `event` | one value or a list | none | The run's event is one of `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` |
+| `branch` | pattern, one value or a list | none | The Sortie's branch matches one. A tag run, a pull-request run and a run with no branch never match |
+| `tag` | pattern, one value or a list | none | The Sortie's tag matches one |
+| `event` | one value or a list | none | The Sortie's event is one of `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` |
 | `input` | input name | none | The step runs only if this [input](#inputs)'s value is one of `equals`. A `boolean` input alone means `equals: true`. A `list` input cannot be tested. Not in a template |
 | `output` | `step.key` | none | The step runs only if this output of a step it needs (directly or through others) is one of `equals`. The step must be in `needs`, may not repeat (`for_each`) and may not be a step that uses a template. An output that was never written never matches, and the skip says which output was missing and what the step wrote instead: `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`. Needs schema 24 |
 | `equals` | one value or a list | `true` for a boolean `input` | The values `input` or `output` is compared with, as text: a boolean is written `true` or `false`. A condition tests an input or an output, not both |
-| `changed` | [path patterns](#path-filters) | none | The step runs only if a file the run's change touched matches one. When the change is not known (the first push of a branch, a force-push, a run started by hand, by a schedule or by a webhook, a draft, more than 1000 files) the step runs. A step skipped by this is shown as skipped with the reason, and counts as passed for a pull request's required checks |
+| `changed` | [path patterns](#path-filters) | none | The step runs only if a file the Sortie's change touched matches one. When the change is not known (the first push of a branch, a force-push, a Sortie started by hand, by a schedule or by a webhook, a draft, more than 1000 files) the step runs. A step skipped by this is shown as skipped with the reason, and counts as passed for a pull request's required checks |
 | `upstream` | text | `succeeded` | How the steps it needs must have ended: `succeeded` (all of them), `failed` (at least one failed, was cancelled, or was not run because of a failure) or `always` (whatever happened). The step then waits until every step it needs has ended |
 
 In a [draft run](../glossary.md#draft-run) a step with a `when` runs only if its `event` names
@@ -1418,8 +1418,8 @@ steps:
 
 `for_each` repeats a step, or a step that uses a template, once for each combination of values.
 It maps up to 5 keys to lists; key names match `^[a-z][a-z0-9_-]{0,39}$`. A list is written in
-place, comes from a run input of type `list` (`{ input: name }`), or in a template from a parameter
-of type `list` (`{ param: name }`). Lists produced by an earlier step while the run goes are not
+place, comes from a Sortie input of type `list` (`{ input: name }`), or in a template from a parameter
+of type `list` (`{ param: name }`). Lists produced by an earlier step while the Sortie goes are not
 available yet.
 
 When a run is created the step becomes one step per combination, named
@@ -1447,11 +1447,11 @@ step that needs the loop needs every member.
 - A loop has at most 64 combinations unless the server allows more
   ([`loops.max_members`](server-config.md#loops), at most 500), and a run at most 500 steps.
   An expanded step name may be at most 200 bytes.
-- `serial: true` makes each member wait for the member before it (not for its rollbacks, which are
+- `serial: true` makes each member wait for the member before it (not for its Returns to base, which are
   skipped when all went well), so the members go in the order of the lists and a failure ends the
-  line: how the starters deliver through a project's environments. A loop over a template may hold
-  approval, deploy, verify and rollback steps.
-- Approval, image, deploy, rollback and rollout steps cannot be repeated. Fetching from a loop's
+  line: how the starters deliver through a project's Airfields. A loop over a template may hold
+  approval, launch, verify and Return to base steps.
+- Approval, image, launch, Return to base and rollout steps cannot be repeated. Fetching from a loop's
   members is not available yet.
 
 The loop list forms are mappings with one key:
@@ -1459,7 +1459,7 @@ The loop list forms are mappings with one key:
 <!-- keys: loop-list-input -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `input` | input name | required | A run input of type `list`. Not in a template |
+| `input` | input name | required | A Sortie input of type `list`. Not in a template |
 
 <!-- keys: loop-list-param -->
 | Key | Type | Default | Description |
@@ -1507,24 +1507,24 @@ Used by a deploy step's `version`, a change's `tag`, `digest` and `value`, an im
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `output` | `step.key` | | An output of a step this step needs (directly, for a deploy step), such as `{ output: build.tag }` |
-| `run` | text | | A fact about the run: `sha`, `short_sha`, `branch`, `tag`, `number` or `commit_time` (the commit's committer time in UTC, such as `2026-11-20T06:12:56Z`; read when the run is created and kept for re-runs; a run with no commit has none, and a pipeline that uses it is refused) |
-| `input` | input name | | A run input of type `string`, `choice` or `number`. Not in a template |
+| `run` | text | | A fact about the Sortie: `sha`, `short_sha`, `branch`, `tag`, `number` or `commit_time` (the commit's committer time in UTC, such as `2026-11-20T06:12:56Z`; read when the run is created and kept for re-runs; a run with no commit has none, and a pipeline that uses it is refused) |
+| `input` | input name | | A Sortie input of type `string`, `choice` or `number`. Not in a template |
 
 A deploy step's `environment` may be a mapping with one key:
 
 <!-- keys: value-environment -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `input` | input name | required | A `choice` input whose options are all environment names |
+| `input` | input name | required | A `choice` input whose options are all Airfield names |
 
 ### Input values in with
 
-A value under `with` may come from a run input. Not in a template.
+A value under `with` may come from a Sortie input. Not in a template.
 
 <!-- keys: value-with-input -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `input` | input name | required | The run input, such as `{ input: environment }` |
+| `input` | input name | required | The Sortie input, such as `{ input: environment }` |
 | `format` | text | none | Text with exactly one `%s` where the value goes, and no other `%`. For `string` and `choice` inputs |
 
 ### Loop values
@@ -1540,7 +1540,7 @@ In a step with `for_each`, the `image`, an `env` value or a `with` value may be 
 ### Parameter values
 
 In a template, a value written in place (a container's or step's `image`, `env` values, `timeout`,
-`retry`, `when` lists, report and artifact globs, image step values, and the `with` of a template
+`retry`, `when` lists, report and Cargo globs, image step values, and the `with` of a template
 it uses) may be a parameter's value:
 
 <!-- keys: value-param -->
@@ -1551,26 +1551,26 @@ it uses) may be a parameter's value:
 
 ## Secret references
 
-A secret reference says where a value is kept; it never holds the value. The runner looks it up
+A secret reference says where a value is kept; it never holds the value. The Station looks it up
 just before the step runs, from its own [secret stores](runner-config.md#secrets), and masks it in
 the step's output. Used by a step's `secrets`, an image step's build secrets and signing keys.
 
 <!-- keys: secret-ref -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `store` | name | required | A store configured on the runner, such as `vault`. `^[a-z][a-z0-9_-]{0,62}$` |
+| `store` | name | required | A store configured on the Station, such as `vault`. `^[a-z][a-z0-9_-]{0,62}$` |
 | `key` | text | required | The secret's name or path in that store |
 | `field` | text | none | A field within the secret, for stores that have them (required for `vault`) |
 
 In a template, `store`, `key` and `field` may be `{ param: name }` (with `format:` for text around
 it) of a parameter of type `string`, so a use chooses which secret a step is given; a list, a number
-or a boolean is refused there. The expanded steps hold plain values, so the runner and the server
+or a boolean is refused there. The expanded steps hold plain values, so the Station and the server
 see exactly what they see for a pipeline written by hand, and `GET /api/v1/libraries/{library}/templates`
 (and MCP `list_templates`, and `launchway templates list`) mark each parameter used this way with
 `secret_reference`.
 
 Steps of [draft runs](../glossary.md#draft-run) and pull-request runs that ask for secrets fail
-before any runner sees them, unless the server's configuration allows it.
+before any Station sees them, unless the server's configuration allows it.
 
 ## Reports
 
@@ -1578,14 +1578,14 @@ before any runner sees them, unless the server's configuration allows it.
 failed. Each key takes one glob or a list of at most 20, relative to the workspace. A path part `**`
 matches any number of directories; absolute paths, `..` and empty globs are refused; a glob is at
 most 256 bytes. Reading reports never changes the step's outcome. See
-[Tests and reports](../tutorials/tests-and-reports.md) and [Security scans](../tutorials/security-scans.md).
+[Tests and reports](../tutorials/tests-and-reports.md) and [Inspections (security scans)](../tutorials/security-scans.md).
 
 <!-- keys: reports -->
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `tests` | glob, one value or a list; or a mapping | none | Test results in any of the [13 formats](../guide/test-reports.md#formats), such as JUnit XML, `go test -json`, Playwright or Cucumber JSON. A mapping adds attachments: see [`tests` as a mapping](#tests-as-a-mapping) |
 | `findings` | glob, one value or a list | none | Security scanner results in SARIF 2.1.0 |
-| `sbom` | glob, one value or a list | none | Software bills of materials in CycloneDX JSON, kept as the step's artifact `sbom` |
+| `sbom` | glob, one value or a list | none | Software bills of materials in CycloneDX JSON, kept as the step's Cargo `sbom` |
 | `coverage` | glob, one value or a list; or a mapping | none | Coverage reports: Cobertura XML, JaCoCo XML, LCOV or a Go coverprofile. A mapping adds a threshold: see [Coverage](#coverage) |
 | `html` | mapping, or a list of them | none | Directories of HTML reports the tools wrote, hosted sandboxed on the server: see [HTML reports](#html-reports). At most 10 per step |
 
@@ -1624,9 +1624,9 @@ most 256 bytes. Reading reports never changes the step's outcome. See
 | `index` | file | `index.html` | The page the report opens at, relative to `path` |
 
 Hosted reports are served sandboxed, behind a signed link that only people who may see the run are
-given; see [Test reports](../guide/test-reports.md#html-reports).
+given; see [Debriefs (test reports)](../guide/test-reports.md#html-reports).
 
-## Artifacts
+## Cargo {#artifacts}
 
 `artifacts` is a list of named sets of files a step keeps once it has run, for people to download
 and later steps to [fetch](#fetch). At most 10 per step.
@@ -1640,22 +1640,22 @@ and later steps to [fetch](#fetch). At most 10 per step.
 | `when` | text | `success` | After which outcomes the files are kept: `success`, `failure` (a failed attempt, including a timeout) or `always` |
 
 Names, paths and `into` are plain text: `{ input: ... }` and `{ each: ... }` are refused there. Secret
-values are not masked in artifacts.
+values are not masked in Cargo.
 
 ## Fetch
 
-`fetch` is a list of artifacts of earlier steps to put in the workspace before the step runs. At
+`fetch` is a list of Cargo of earlier steps to put in the workspace before the step runs. At
 most 20 per step.
 
 <!-- keys: fetch -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `from` | step or loop name | required | The step that keeps the artifact, or a `for_each` loop whose members each keep it (in a pipeline, a loop inside a template is written `use/loop`). The fetching step must need it, directly or not. Not a step that uses a template |
-| `name` | text | required | The artifact's name |
+| `from` | step or loop name | required | The step that keeps the Cargo, or a `for_each` loop whose members each keep it (in a pipeline, a loop inside a template is written `use/loop`). The fetching step must need it, directly or not. Not a step that uses a template |
+| `name` | text | required | The Cargo's name |
 | `into` | directory | the workspace | A directory relative to the workspace to put the files in, keeping their paths below it. Required when `from` is a loop and there is no `member` |
 | `member` | mapping | all members | With a loop: one member, named by a value for every key of the loop, such as `{ os: linux, arch: amd64 }`. Its files go directly in `into` |
 
-A step that runs only after a failure (`when.upstream: failed`) cannot fetch an artifact kept only
+A step that runs only after a failure (`when.upstream: failed`) cannot fetch a Cargo kept only
 on success.
 
 Fetching from a loop: `{ from: build, name: binary, into: dist }` puts every member's files in
@@ -1663,8 +1663,8 @@ Fetching from a loop: `{ from: build, name: binary, into: dist }` puts every mem
 (`dist/linux_amd64/…`), so two members never share a path. `{ from: build, name: binary, member:
 { os: linux, arch: amd64 }, into: out }` fetches one member directly into `out`. A member that was
 skipped, or that failed, was allowed to (`continue_for`) and kept nothing, is left out of the
-all-members form; a member that succeeded without keeping the artifact fails the step, as a
-missing artifact does for any step. The limit of 20 counts the entries written, not the members.
+all-members form; a member that succeeded without keeping the Cargo fails the step, as a
+missing Cargo does for any step. The limit of 20 counts the entries written, not the members.
 `launchway validate` refuses a `member` with a missing or unknown key or a value the loop does not
 have, and the all-members form without `into`.
 
@@ -1696,17 +1696,17 @@ steps:
 ## Cache
 
 `cache` is a list of directories a step keeps between runs. Before the script, after `fetch`, the
-runner works out each cache's key and restores the entry that has it; after the script, it saves the
+Station works out each cache's key and restores the entry that has it; after the script, it saves the
 paths under that key if there was none. At most 10 per step. A cache is an optimisation: when one
 cannot be restored or saved the step runs on, the reason is in the step's log, and its outcome never
-changes. Only a step that runs a script has `cache`; an image step's own `cache` key, a registry
+changes. Only a step that runs a script has `cache`; an image step's own `cache` key, a Depot
 that keeps build layers, is a different thing with a different shape.
 
 <!-- keys: cache -->
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `name` | text | required | `^[a-z0-9][a-z0-9._-]{0,63}$`, unique in the step. It groups the entries of one cache across keys. In a template it may be a [parameter](#parameter-values), in a looped step an [`{ each: key }`](#value-forms) |
-| `paths` | glob, one value or a list | required | Directories or files to keep, relative to the workspace, as for [artifacts](#artifacts): a directory keeps everything below it. At most 20. Only regular files are kept; symbolic links are left out and the log says how many |
+| `paths` | glob, one value or a list | required | Directories or files to keep, relative to the workspace, as for [Cargo](#artifacts): a directory keeps everything below it. At most 20. Only regular files are kept; symbolic links are left out and the log says how many |
 | `key` | mapping | required | What the entry's key is made of: the keys below |
 | `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read and that is younger than the maximum age. Set `max_age` with it |
 | `save` | text | `success` | After which outcomes the paths are saved: `success`, `always` (the step succeeded or failed) or `never` |
@@ -1728,20 +1728,20 @@ that keeps build layers, is a different thing with a different shape.
 | `file` | glob | none | A file whose SHA-256 is part of the key. Exactly one of `run` and `file` |
 
 A key needs `files`, `text` or both. Always part of the key, whatever the author wrote: the format of
-the entry, the runner's operating system and architecture (an entry saved on `linux/amd64` is never
+the entry, the Station's operating system and architecture (an entry saved on `linux/amd64` is never
 restored on `linux/arm64`), the cache's name, and **the step's image resolved to its digest**, so a
 tag that moves to another JDK, Node or Python is a different key, not an incompatible restore. A
 reference that carries a digest is used as it is; for others a container engine reports its own copy
-of the image and the Kubernetes executor asks the image's registry. If neither can say, the key uses
+of the image and the Kubernetes executor asks the image's Depot. If neither can say, the key uses
 the reference as written and the step's log says so: pin the image by digest, or name the tool's
-version under `versions`. The run page and `launchway runs show` list everything a key was made of.
+version under `versions`. The Sortie page and `launchway runs show` list everything a key was made of.
 Entries made before this was added have keys of the old shape and are never restored again; they
 age out under the cache policy.
 
 An entry is never changed once saved. A step that restored an entry and left different contents saves
 the next **generation** of the same key (a restore takes the newest; the older ends); one that left
 the paths as restored saves nothing; a changed lock file is a new key, so a new entry. An entry
-whose contents were started from scratch longer ago than `max_age` is not restored (the run says
+whose contents were started from scratch longer ago than `max_age` is not restored (the Sortie says
 `expired`), so a chain of refreshes or fallbacks is rebuilt from nothing. Restored files keep the
 modification time they were saved with, never later than the restore, so they are older than the
 sources of the fresh checkout. A cache that holds a file that looks like a credential is not saved.
@@ -1752,7 +1752,7 @@ and the pipeline editor; they do not stop the pipeline, and each carries a code 
 `cache-whole-tool-home`, `cache-key-without-lock`, `cache-fallback-without-max-age`,
 `cache-credential-path`, `cache-save-always`) for an installation's policy to treat as blocking
 later (no policy does today). See the [build caches guide](../guide/build-caches.md). What a run may read and write depends on how it started, and the
-server decides it, not the runner:
+server decides it, not the Station:
 
 | Run | Reads | Writes |
 |---|---|---|
@@ -1771,8 +1771,8 @@ administrator in the database; when a save would pass the quota the project's le
 entries are evicted (those of pull requests and branches before the default branch's), and with caching switched off for a project every lookup misses and nothing is
 saved, while the pipeline still validates. The step's log says what happened to each cache
 (`Cache pip: restored key 3f9c… (exact, 118 MB, 4 s)`, `Cache pip: no entry; the step runs without
-it`, `Cache pip: saved 120 MB as key 3f9c…`, `Cache pip: not saved: …`), and the same is in the run
-page, `launchway runs show` and the MCP tool `get_run`. Runners that know caches say so, and a step
+it`, `Cache pip: saved 120 MB as key 3f9c…`, `Cache pip: not saved: …`), and the same is in the Sortie
+page, `launchway runs show` and the MCP tool `get_run`. Stations that know caches say so, and a step
 with `cache` is only given to them.
 
 <!-- validate -->
@@ -1815,13 +1815,13 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 <!-- keys: template-param -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
+| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an Airfield's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the launch runs. Both take `options` and `format` as a string does |
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
 
-A default can also be worked out. These forms are for string, number, boolean, environment and application parameters:
+A default can also be worked out. These forms are for string, number, boolean, Airfield and application parameters:
 
 <!-- keys: template-derived-default -->
 | Key | Type | Default | Description |
@@ -1838,7 +1838,7 @@ A default can also be worked out. These forms are for string, number, boolean, e
 | `param` | list parameter name | required | The list, such as `overrides` |
 | `key` | text | required | The entry's key, with `{name}` filled in: `{environment}.application` |
 
-A parameter of type `output` takes a step's output from the file that uses the template: `with: { digest: { output: image.digest } }`. Starters also read what Launchway knows of the project through variables (`from: launchway_project`, `launchway_environments`, `launchway_protected`), which the run records like any variable it used.
+A parameter of type `output` takes a step's output from the file that uses the template: `with: { digest: { output: image.digest } }`. Starters also read what Launchway knows of the project through variables (`from: launchway_project`, `launchway_environments`, `launchway_protected`), which the Sortie records like any variable it used.
 
 A parameter reaches the template in exactly three ways, all resolved when the run is created:
 every step of the template receives it as `PARAM_<NAME>` (names starting with `PARAM_` are reserved
@@ -1856,17 +1856,17 @@ Each entry of `outputs` maps an output name (`^[A-Za-z_][A-Za-z0-9_-]{0,62}$`) t
 
 ### Template steps
 
-Steps in a template take every key a pipeline's steps take, deploy, rollback, rollout, verify and
+Steps in a template take every key a pipeline's steps take, launch, Return to base, rollout, verify and
 approval steps included, with these differences. A deploy step's text values (`environment`,
 `service`, `argocd.application`, the write-back `repo`, `branch`, `file` and `image`, the `sync`
 settings, resource and rollout names) may be [`{ param: name }`](#parameter-values), and so may a
-change's `tag`, `digest` and `value` and a verify step's `params`; give the environment and the
+change's `tag`, `digest` and `value` and a verify step's `params`; give the Airfield and the
 application the `environment` and `application` parameter types. The names a step gives other steps
 (`needs`, `deployment`, `{ output: step.key }`) are the template's own, and become
 `<uses-step>/<step>` when the run is created. A template authorizes nothing: once expanded, every
 step is checked as if the pipeline had written it, so a project cannot use a template to reach an
-environment it is not listed for ([`projects`](server-config.md#environments)), policies apply to
-the deployment, and problems name the step by its expanded name. A template reads no run inputs:
+Airfield it is not listed for ([`projects`](server-config.md#environments)), policies apply to
+the deployment, and problems name the step by its expanded name. A template reads no Sortie inputs:
 `{ input: ... }` and
 `when.input` are refused (pass the input to a parameter instead); `uses` names a template of the
 same library by name alone; and they take one more key:
@@ -1937,31 +1937,31 @@ steps:
 | Step `timeout` | `1s` to `24h` (default `1h`) |
 | Approval `timeout` | `1s` to `720h` (default `24h`) |
 | Image step `timeout` | `1m` to `24h` (default `1h`) |
-| Deploy, rollout `timeout` | `1m` to `24h` (default `30m`) |
-| Rollback `timeout` | `1m` to `24h` (default `15m`) |
+| Launch, rollout `timeout` | `1m` to `24h` (default `30m`) |
+| Return to base `timeout` | `1m` to `24h` (default `15m`) |
 | `description` | one line, 200 characters |
 | Approval `message` | one line, 500 characters |
 | Report globs | 20 per kind, 256 bytes each |
-| Artifacts, fetches per step | 10, 20 |
+| Cargo, fetches per step | 10, 20 |
 | Caches per step, paths per cache, key files per cache | 10, 20, 20 |
 | Loop keys, combinations | 5; 64 by default, at most 500 |
 | Steps in a run once expanded | 500 |
 | Template parameters, `with` values | 50, 4096 bytes each |
 | Template nesting | 4 levels |
-| Deploy `changes`, `sync.resources` | 50 each |
+| Launch `changes`, `sync.resources` | 50 each |
 | Image tags, platforms, build arguments, build secrets | 20, 8, 50, 20 |
 
 ## Schema versions
 
 Some keys need a server that knows them. A pipeline that uses them is refused, not misread, by an
-older server. Use them only once every server and runner is upgraded; see
+older server. Use them only once every server and Station is upgraded; see
 [Database migrations](../development/migrations.md).
 
 | Schema | Keys |
 |---|---|
 | 9 | `on.pull_request`, `supersede` |
 | 10 | `reports` |
-| 11 | deploy and rollback steps |
+| 11 | launch and Return to base steps |
 | 12 | `artifacts`, `fetch`, `reports.findings`, `reports.sbom` |
 | 13 | `inputs`, `when.input`, `when.upstream`, `for_each`, `on.schedule`, `on.webhook` |
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
@@ -1973,6 +1973,6 @@ older server. Use them only once every server and runner is upgraded; see
 ## What next
 
 - [Your first pipeline](../tutorials/first-pipeline.md) walks through writing and running one.
-- [Server configuration](server-config.md) and [runner configuration](runner-config.md) list what
-  operators set: environments, secret stores, registries and limits.
+- [Server configuration](server-config.md) and [Station configuration](runner-config.md) list what
+  operators set: Airfields, secret stores, Depots and limits.
 - [Environment variables](environment-variables.md) lists what each step receives.

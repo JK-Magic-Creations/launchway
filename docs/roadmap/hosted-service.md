@@ -1,4 +1,4 @@
-# The hosted service and sandboxed runners
+# The hosted service and sandboxed Stations (runners) {#the-hosted-service-and-sandboxed-runners}
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Hosted service · <a href="../roadmap-list.html">as a list</a></p>
 
@@ -14,7 +14,7 @@ flowchart TD
   Own["Runners on your machines"] -->|"outbound connection only"| Eng
 ```
 
-With runners on your own servers or clusters, code and secrets stay inside your network.
+With Stations on your own servers or clusters, code and secrets stay inside your network.
 
 ## What stays with you, and what never crosses
 
@@ -93,9 +93,9 @@ flowchart LR
   H <--> S
 ```
 
-Fully hosted needs nothing installed, and the service says plainly that it then stores your code and secrets, encrypted in your own Base. If you would rather keep your files, one command on your machine connects it outward to the service: nothing is opened and no tunnel is set up. In the smallest form, two people each run that command and both reach the files through Launchway over an end-to-end encrypted session; the relay in the middle carries only ciphertext, and the hosted side keeps only accounts, who is on the team, which machines are online and opaque identifiers. With two machines every repository has a full copy on each; protected branches have one home at a time, and a true disagreement is kept visible, never overwritten.
+Fully hosted needs nothing installed, and the service says plainly that it then stores your code and secrets, encrypted in your own Base. If you would rather keep your files, one command on your machine connects it outward to the service: nothing is opened and no tunnel is set up. In the smallest form, two people each Sortie (run) that command and both reach the files through Launchway over an end-to-end encrypted session; the relay in the middle carries only ciphertext, and the hosted side keeps only accounts, who is on the team, which machines are online and opaque identifiers. With two machines every repository has a full copy on each; protected branches have one home at a time, and a true disagreement is kept visible, never overwritten.
 
-Moving is one operation for one project or a whole Base, in either direction. It shows a preview first, mirrors the repositories while you keep working, verifies every reference, switches in seconds, keeps the old address redirecting and offers a rollback window before the source is deleted. Secret values travel re-sealed to the destination, never in the clear.
+Moving is one operation for one project or a whole Base, in either direction. It shows a preview first, mirrors the repositories while you keep working, verifies every reference, switches in seconds, keeps the old address redirecting and offers a Return to base (rollback) window before the source is deleted. Secret values travel re-sealed to the destination, never in the clear.
 
 ## Limits, and never a place to park files
 

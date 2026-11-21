@@ -11,36 +11,100 @@ The four levels have one permanent name in the API, flags and files, and a word 
 <!-- vocabulary:levels -->
 | Stable name (API, flags, files) | Default word | Plain word | What it is |
 |---|---|---|---|
-| `installation` | **Base** | Installation | the whole installation, the top level |
-| `organization (kind name today: organisation)` | **Wing** | Organization | owns the projects; the second level |
-| `unit` | **Squadron** | Team | an optional group of projects; the third level |
-| `project` | **Project** | Project | one repository and its pipeline; the fourth level |
+| `installation` | **Base** | Installation | The whole installation, and every customer's own walled-off space on the hosted service: the top level |
+| `organization (kind name today: organisation)` | **Wing** | Organization | The group that owns the projects: the second level |
+| `unit` | **Squadron** | Team | An optional group of projects with shared settings: the third level |
+| `project` | **Project** | Project | One repository and its pipeline: the fourth level |
 <!-- /vocabulary:levels -->
 
 ## The words
 
 <!-- vocabulary:terms -->
-| Default word | Plain word | Meaning | Renameable | Never call it |
-|---|---|---|---|---|
-| **Base** | Installation | The whole installation, and every customer's own walled-off space on the hosted service: the top level. | yes | tenant, workspace, account, instance, organization (for the top level) |
-| **Wing** | Organization | The group that owns the projects: the second level. | yes | org, organisation, company (in product text), tenant |
-| **Squadron** | Team | An optional group of projects with shared settings: the third level. | yes | group, namespace, workspace, team (when the default words are in effect) |
-| **Project** | Project | One repository and its pipeline: the fourth level. | yes | repo (as the level), app (that is an application, a deployed thing) |
-| **Wingman** | Guide | The helper panel beside every page: where you are and what you can do next. | yes | assistant, copilot, chatbot, bot |
-| **Preflight** | Checks | The checks made before a run, a merge or a deploy. | yes | pre-checks, gate checks |
-| **Checklist** | Checklist | The list of things that must be true before a change goes on. | yes | gate list |
-| **Clearance** | Approval | A person decides whether a change may go on, by saying Go or No-go. | yes | sign-off, gate (for the thing a person gives) |
-| **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. | yes | none |
-| **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. | yes | nogo, no go, NoGo |
-| **Hold** | Freeze | A time when changes may not go out. | yes | blackout, code freeze (use freeze in the plain set) |
-| **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate, starter pipeline (say Flight plan, or pipeline template as the plain word), step template (a Maneuver is a different thing) |
-| **Maneuver** | Step template | A reusable step, or a few steps, that a Flight plan or a pipeline uses: build an image, deliver to one environment. | yes | macro, snippet |
-| **Hangar** | Template library | The Flight plans and Maneuvers that ship inside Launchway, with their gallery. | yes | marketplace, store |
-| **Logbook** | Audit trail | The append-only record of who did what, and when. | yes | audit log |
-| **Payload** | Contents | What a change delivers. | yes | delivery contents, manifest (that is a file) |
-| **In flight** | In progress | A change on its way to production. | yes | none |
-| **Launch line** | Launch line | The path a change travels, from commit to production. Named after the product, so the same in both sets. | yes | pipeline view (a pipeline is the definition; the launch line is the path of one change) |
-| **Detachment** | Site agent (proposed) | The agent on the customer's side that does the work and holds the data, so the hosted service holds nothing sensitive. | yes | connector, delegate, relay |
+### Levels
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `installation` | **Base** | Installation | The whole installation, and every customer's own walled-off space on the hosted service: the top level. | yes | tenant, workspace, account, instance, organization (for the top level) |
+| `organization` | **Wing** | Organization | The group that owns the projects: the second level. | yes | org, organisation, company (in product text), tenant |
+| `unit` | **Squadron** | Team | An optional group of projects with shared settings: the third level. | yes | group, namespace, workspace, team (when the default words are in effect) |
+| `project` | **Project** | Project | One repository and its pipeline: the fourth level. | yes | repo (as the level), app (that is an application, a deployed thing) |
+
+### Work
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `runner` | **Station** | Runner | A machine or service that does the work of a pipeline's steps. | yes | agent (for a Station), worker, node |
+| `runner_group` | **Flight line** | Runner group | A group of runners that share a purpose, such as every runner that can build images. | yes | runner pool (in text a person reads), fleet |
+| `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. | yes | build (for any run), job (for a whole run), execution |
+| `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. | yes | backlog |
+| `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. | yes | console output |
+| `debrief` | **Debrief** | Run summary | The summary after a run: what passed, what failed and why, with the test report. | yes | post-mortem (for every run) |
+| `schedule` | **Patrol** | Scheduled run | A run that starts by itself at set times, such as every night. | yes | cron job (in text a person reads) |
+
+### Delivery
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `deploy` | **Launch / Launches** | Deploy | Put a version of your software into an environment, such as testing or production. | yes | release (for the act of putting live), push to production |
+| `environment` | **Airfield** | Environment | A place your software runs, such as development, testing or production. | yes | stage (for a place), target |
+| `rollback` | **Return to base / Returns to base** | Rollback | Go back to the previous working version after a deploy. | yes | revert (for a deployment), undo |
+| `emergency_rollback` | **Abort** | Emergency rollback | Go back at once, skipping the checks and waits, when production is hurt. | yes | panic button, kill (for a deployment) |
+| `canary` | **Pathfinder** | Canary | A small first share of traffic or machines that gets the new version before everyone, to catch problems early. | yes | test group |
+| `post_deploy_watch` | **Overwatch** | Post-deploy watch | The time after a deploy when Launchway keeps watching health signals and can go back by itself. | yes | soak (for the watch) |
+| `toggle` | **Switch** | Feature toggle | A setting that turns a feature on or off without a new deploy. | yes | feature flag (in text a person reads) |
+| `kill_switch` | **Master switch** | Kill switch | A switch that turns a feature off for everyone at once. | yes | kill (for the act) |
+| `release_unit` | **Formation** | Release group | Several things that are released together and move as one. | yes | bundle |
+| `preflight` | **Preflight** | Checks | The checks made before a run, a merge or a deploy. | yes | pre-checks, gate checks |
+| `checklist` | **Checklist** | Checklist | The list of things that must be true before a change goes on. | yes | gate list |
+| `clearance` | **Clearance** | Approval | A person decides whether a change may go on, by saying Go or No-go. | yes | sign-off, gate (for the thing a person gives) |
+| `go` | **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. | yes | none |
+| `no_go` | **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. | yes | nogo, no go, NoGo |
+| `hold` | **Hold** | Freeze | A time when changes may not go out. | yes | blackout, code freeze (use freeze in the plain set) |
+| `flight_plan` | **Flight plan** | Starter pipeline | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate, pipeline template (a step template is a different thing) |
+| `maneuver` | **Maneuver** | Step template | A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment. | yes | macro, action (that is another product's word), module |
+| `hangar` | **Hangar** | Template library | The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it. | yes | marketplace, store |
+| `payload` | **Payload** | Contents | What a change delivers. | yes | delivery contents, manifest (that is a file) |
+| `in_flight` | **In flight** | In progress | A change on its way to production. | yes | none |
+| `launch_line` | **Launch line** | Launch line | The path a change travels, from commit to production. Named after the product, so the same in both sets. | yes | pipeline view (a pipeline is the definition; the launch line is the path of one change) |
+
+### Platform
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `home` | **Tower** | Home | The first page: what needs you now, and a map of everything Launchway holds. | yes | dashboard (for the first page) |
+| `monitoring` | **Radar** | Monitoring / Monitoring | Health, metrics and the map of how services talk to each other. | yes | observability (in screens) |
+| `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. | yes | none |
+| `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. | yes | repository (for the store) |
+| `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. | yes | build output |
+| `standards` | **Standing orders / Standing orders** | Standards / Standards | The rules every project must meet: policies, required checks and approvals. | yes | compliance rules |
+| `scan` | **Inspection** | Security scan | A check of your code and images for known security problems. | yes | none |
+| `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. | yes | none |
+| `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. | yes | none |
+| `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. | yes | none |
+| `first_run` | **In-processing** | Setup | The guided setup the first time Launchway starts. | yes | none |
+| `guide` | **Wingman** | Guide | The helper panel beside every page: where you are and what you can do next. | yes | assistant, copilot, chatbot, bot |
+| `logbook` | **Logbook** | Audit trail | The append-only record of who did what, and when. | yes | audit log |
+
+### Roles
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `owner` | **Commander** | Owner | Can do everything, including who may do what. The stored role is owner. | yes | none |
+| `approver` | **Controller** | Approver | Decides whether a change may go on. The stored role is approver. | yes | none |
+| `developer` | **Pilot** | Developer | Writes code and starts runs. The stored role is developer. | yes | none |
+| `viewer` | **Observer** | Viewer | Can read everything and change nothing. The stored role is viewer. | yes | none |
+
+### Statuses
+
+| Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
+|---|---|---|---|---|---|
+| `queued` | **Holding** | Queued | Waiting for a runner or a free slot. | no | none |
+| `running` | **Airborne** | Running | Working right now. | no | none |
+| `succeeded` | **Mission complete** | Succeeded | Finished, and everything passed. | no | none |
+| `failed` | **Failed** | Failed | Finished, and something did not pass. | no | none |
+| `canceled` | **Scrubbed** | Canceled | Stopped on purpose before it finished. | no | none |
+| `rolled_back` | **Returned to base** | Rolled back | Went back to the previous version. | no | none |
+| `waiting` | **Waiting** | Waiting | Paused until a person decides or a condition is met. | no | none |
 <!-- /vocabulary:terms -->
 
 Every word above is a default that an installation can rename. Words everyone knows are never themed: project, pipeline, step, run, branch, commit, pull request, secret, environment, deploy, rollback, variable, template, library, runner.
@@ -50,11 +114,14 @@ Every word above is a default that an installation can rename. Words everyone kn
 <!-- vocabulary:rules -->
 - **people-read.** What a person reads (screens, documentation, command help and output, the `error` and `next` sentences, MCP descriptions, notices, chart comments) uses the product words. Screens and messages the server builds ask the terms system ({key}, terms().label) so a rename takes effect; documentation names the default word and, once per page that introduces a level, the plain word beside it. Never a hard-coded plain level name where the level is meant.
 - **identifiers.** Stable identifiers (API JSON fields and paths, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds, Go identifiers) cannot follow a renameable word. Each level has one neutral, permanent name: installation, organization, unit, project. They are documented as 'the API name of a Base' and are never themed.
-- **ordinary-words.** Where an industry word is the accepted term it stays ordinary: pipeline, step, run, branch, commit, pull request, secret, environment, deploy, rollback, variable, template, library, runner, artifact, registry.
-- **buttons.** Open decision, not applied: the owner chose Clearance with Go and No-go, so the decision buttons say Go and No-go. A proposal to put the ordinary verbs Approve and Reject on the buttons, and keep Go and No-go as the recorded answer, is the owner's to take.
-- **capitals.** Level words are the product's proper names for its levels: write Base, Wing, Squadron and Project capitalized when they mean the level (a lower-case 'base' or 'wing' reads as an ordinary word). Feature words are product nouns too: Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload. 'launch line' stays lower case. (The screens' terms helper lower-cases a word in the middle of a sentence; that is an open decision.)
+- **ordinary-words.** Where an industry word is the accepted term it stays ordinary: pipeline, step, alert, branch, pull request, commit, secret, variable, template, library. Everything else Launchway names itself (runner, run, queue, deploy, environment, rollback, canary, registry, artifact and the rest of the table) uses the product word, with the plain word beside it where the word is introduced.
+- **buttons.** A button for a delivery action uses the product verb: Launch (deploy), Return to base (rollback), Abort (emergency rollback). The plain word is in the button's accessible description and in the confirmation text. Elsewhere an ordinary verb on a button stays acceptable where a newcomer must understand it (Save, Cancel, Approve, Reject).
+- **capitals.** Product words are capitalized as names, in pages as well as documents: Sortie, Station, Airfield, Launch, Tower, Radar. Level words (Base, Wing, Squadron, Project) and feature words (Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload) too. The business set reads as ordinary English: its words are lower case in the middle of a sentence, except the level words. 'launch line' stays lower case.
 - **spelling.** American English: organization, color, behavior, license (noun and verb), initialize, customize.
 - **levels-in-prose.** Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.
+- **statuses.** A status is always shown with an icon and its plain word beside the themed one ('Airborne · running'); in the business set only the plain word. Never color alone.
+- **no-combat.** Flying and ground operations only. No strike, target, kill, weapon or attack words and no real program, unit or rank names are product words.
+- **stable-addresses.** Page addresses (URLs, routes), documentation file names, anchors, flags, API fields and enum values, JSON output, and stored role names never change with a word.
 <!-- /vocabulary:rules -->
 
 ## The two layers
@@ -75,7 +142,7 @@ Every word above is a default that an installation can rename. Words everyone kn
 | `detachment-synonym` | fails the check | Detachment |
 | `wingman-synonym` | fails the check | the guide ({guide}: Wingman) |
 | `assistant-in-screens` | fails the check | the guide ({guide}: Wingman); 'assistant' stays only for a third-party AI assistant that connects through MCP |
-| `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {maneuver}, {hangar}, {payload}, {no_go} |
+| `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go} |
 | `hardcoded-level-word` | review list | the terms system when the level is meant ({organization}, {installation}); ordinary use (an organization's identity provider; installing software) may stay and goes on the allow list |
 | `approval-for-clearance` | review list | clearance for the thing a person gives; approval stays for pull-request reviews and the step key |
 | `template-ambiguity` | review list | flight plan (a whole ready-made pipeline) or step template (a reusable part) |

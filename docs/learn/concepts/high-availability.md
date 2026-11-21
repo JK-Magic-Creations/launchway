@@ -1,7 +1,7 @@
 # High availability
 
 **High availability** means a failure of one part does not stop the whole. This page explains how Launchway
-behaves when a server, a runner or the database fails, and what you choose when you install it.
+behaves when a server, a Station (runner) or the database fails, and what you choose when you install it.
 
 ```mermaid
 flowchart TB
@@ -18,13 +18,13 @@ flowchart TB
 
 Launchway servers are all active at once and share one database. Any server can answer any request, so
 you can run two or three behind a load balancer, and a server can be restarted or replaced with no
-downtime. A server that stops does not lose a run: a run's state is rebuilt from its recorded events,
+downtime. A server that stops does not lose a Sortie (run): a Sortie's state is rebuilt from its recorded events,
 and another server carries on. See [Running several servers](../../guide/high-availability.md).
 
-## Runners
+## Stations {#runners}
 
-If a runner dies in the middle of a step, the step's lease runs out and the server hands the step to
-another runner. A step that must not be run twice should be written so that running it again is safe. A
+If a Station dies in the middle of a step, the step's lease runs out and the server hands the step to
+another Station. A step that must not be run twice should be written so that running it again is safe. A
 retry policy on the step decides how often to try.
 
 ## The database
@@ -40,7 +40,7 @@ a setting inside Launchway.
 | You have | You get | See |
 |---|---|---|
 | One server, local files | The simplest install. A failure means a pause, then a restore. | [Install on one server](../../howto/install-single-server.md) |
-| Several servers, one PostgreSQL | Servers and runners can fail without a stop. | [Install on Kubernetes](../../howto/install-kubernetes.md) |
+| Several servers, one PostgreSQL | Servers and Stations can fail without a stop. | [Install on Kubernetes](../../howto/install-kubernetes.md) |
 | Replicated PostgreSQL | A database failure does not lose acknowledged work. | [Backup, restore, upgrade](../../howto/backup-restore-upgrade.md) |
 
 Coming: a check in the product that says plainly whether this installation is highly available, and a

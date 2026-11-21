@@ -57,19 +57,6 @@ func TestKindByPathAcceptsTheAmericanSpelling(t *testing.T) {
 	}
 }
 
-// The web app holds the labels; every term the server accepts must be there.
-func TestEveryTermKeyHasALabelInTheWebApp(t *testing.T) {
-	b, err := os.ReadFile("../../web/src/terms.ts")
-	if err != nil {
-		t.Skip("web sources not present")
-	}
-	for _, k := range TermKeys {
-		if !strings.Contains(string(b), "  "+k+":") {
-			t.Errorf("web/src/terms.ts has no label for term %q", k)
-		}
-	}
-}
-
 func TestComposeReportsTheTermsAndTheLevelsTheyGive(t *testing.T) {
 	boot := &config.Config{}
 	mk := func(spec string) []engine.ConfigObject {

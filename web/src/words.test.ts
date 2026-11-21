@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SETS } from "./terms";
+import { makeTerms } from "./terms";
 
 // No screen spells one of Launchway's own words itself: they come from the terms module, so a set or a
 // rename reaches every place. This reads the source of every component and page (not the tests, the terms
@@ -38,7 +38,7 @@ describe("the words of the levels and parts", () => {
     expect(hit("organisation")).toBe(false); // the kind name, a plain form that stays
   });
   it("lists the words of both sets in the module itself", () => {
-    expect(SETS.aviation.words.unit).toEqual(["Squadron", "Squadrons"]);
-    expect(SETS.business.words.unit).toEqual(["Team", "Teams"]);
+    expect([makeTerms().label("unit"), makeTerms().plural("unit")]).toEqual(["Squadron", "Squadrons"]);
+    expect([makeTerms({ set: "business" }).label("unit"), makeTerms({ set: "business" }).plural("unit")]).toEqual(["Team", "Teams"]);
   });
 });

@@ -14,7 +14,7 @@ flowchart TB
 ## Project
 
 A **project** is one piece of software, kept in one Git repository. Launchway watches the repository
-for new commits and pull requests. Open a project to see its pipeline, its runs, and where it is
+for new commits and pull requests. Open a project to see its pipeline, its Sorties (runs), and where it is
 running. Add one with the [Connect a repository](app:/config/wizard/connect-repository) wizard.
 
 ## Pipeline
@@ -49,15 +49,15 @@ steps have a special kind: they build an image, wait for an approval, or deploy.
 ## Run
 
 A **run** is one go through the pipeline, for one commit. Runs are numbered per project (#1, #2, and
-so on). A run starts when its pipeline says it should, or when a person starts it. A run survives a
+so on). A Sortie starts when its pipeline says it should, or when a person starts it. A Sortie survives a
 server restart, and you can resume it from the step that failed instead of starting over. Watch runs in
 [Activity](app:/activity).
 
-## Runner
+## Station (runner) {#runner}
 
-A **runner** is the program that does the work of steps. It asks the server for work, runs each step in
+A **Station** is the program that does the work of steps. It asks the server for work, runs each step in
 a container (or a Kubernetes pod), streams the log back and reports the result. The server has one
-built in, and you can add more on other machines. See [Runners](app:/settings/runners).
+built in, and you can add more on other machines. See [Stations](app:/settings/runners).
 
 ## Next
 

@@ -43,7 +43,7 @@ export function Guide({ ctx, path, explainer, onClose, focusOnOpen }: { ctx: Ctx
       )}
       {!isLearn(path) && (
         <>
-          <div className="eyebrow rail-h">Learn</div>
+          <div className="eyebrow rail-h">{terms().say("{Learn}")}</div>
           <LearnLink to={(at && learnFor(at.info.pattern, path)) || { slug: "", label: "Open Learn, the documentation" }} />
         </>
       )}

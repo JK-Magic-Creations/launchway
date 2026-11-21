@@ -195,7 +195,7 @@ export function RunPage({ id }: { id: string }) {
     try { await fn(); } catch (e) { setActionErr(e); } finally { setBusy(false); }
   };
 
-  useCrumbLabel(run ? `Run #${run.number} of ${run.project}` : undefined);
+  useCrumbLabel(run ? terms().say(`{Run} #${run.number} of ${run.project}`) : undefined);
   if (error) {
     return <div className="page"><ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run does not exist." : error} /><Link href="/activity">Back to runs</Link></div>;
   }
@@ -228,12 +228,12 @@ export function RunPage({ id }: { id: string }) {
   const verifySteps = run.step_list.filter((s) => s.kind === "verify");
   const verifyFailed = verifySteps.filter((s) => s.status === "failed").length;
   const verifyWaiting = done ? undefined : verifySteps.find((s) => s.status === "waiting" && s.wait_kind === "verify");
-  const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"],
+  const tabs: [Tab, string][] = [["graph", terms().say("Steps and the {run_log}")], ["tests", terms().say("{Debrief}")],
     ...(declaresCoverage || tab === "coverage" ? [["coverage", "Coverage"] as [Tab, string]] : []),
     ...(declaresHTML || tab === "reports" ? [["reports", "Reports"] as [Tab, string]] : []),
     ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
     ...(verifySteps.length ? [["verification", "Verification"] as [Tab, string]] : []),
-    ["security", "Security"], ["artifacts", "Artifacts"], ...(run.policy ? [["policy", "Policy"] as [Tab, string]] : []),
+    ["security", "Security"], ["artifacts", terms().say("{Artifacts}")], ...(run.policy ? [["policy", "Policy"] as [Tab, string]] : []),
     ["events", "Event log"], ["definition", "Pipeline"]];
   const shownTab: Tab = (tab === "images" && !images.length) || (tab === "verification" && !verifySteps.length) ? "graph" : tab;
 
@@ -254,7 +254,7 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && !run.draft && <RerunFailedButton run={run} />}
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && run.resume?.allowed !== false && (
             <button type="button" className="btn btn-primary" disabled={busy}
-              title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
+              title={terms().say("Runs again, in this {run}, only the steps that did not succeed. To start a new {run} from a step of your choice, open the step and choose Re-run from this step.")}
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
               {firstFailed ? `Resume from ${firstFailed.id}` : "Resume"}
             </button>
@@ -277,26 +277,26 @@ export function RunPage({ id }: { id: string }) {
 
       {run.needs_newer_server && (
         <div className="callout callout-draft">
-          <strong>Needs a newer server.</strong> A newer version of Launchway wrote parts of this run that this server does not understand
+          <strong>Needs a newer server.</strong> {terms().say("A newer version of Launchway wrote parts of this {run} that this server does not understand")}
           {run.not_understood.length > 0 && <> ({run.not_understood.join("; ")})</>}. This server shows it but leaves it alone; a server of the newer version carries it on.
         </div>
       )}
 
       {run.runner_hint && (
         <div className="callout callout-draft" role="status">
-          <strong>Waiting for a runner that builds images.</strong> {run.runner_hint}
+          <strong>{terms().say("Waiting for a {runner} that builds images.")}</strong> {run.runner_hint}
         </div>
       )}
 
       {run.pool_hint && (
         <div className="callout callout-draft" role="status">
-          <strong>Waiting for a runner that may take this run.</strong> {run.pool_hint} <Link href="/settings/runners">Runners and pools</Link>
+          <strong>{terms().say("Waiting for a {runner} that may take this {run}.")}</strong> {run.pool_hint} <Link href="/settings/runners">{terms().say("{Runners} and pools")}</Link>
         </div>
       )}
 
       {run.cancel_requested && run.superseded_by && (
         <div className="callout callout-draft">
-          <strong>Superseded.</strong> Run <Link href={`/runs/${run.superseded_by}`}>#{run.superseded_by_number}</Link> of the same {run.pull_request ? "pull request" : "branch or tag"} started
+          <strong>Superseded.</strong> {terms().say("{Run}")} <Link href={`/runs/${run.superseded_by}`}>#{run.superseded_by_number}</Link> of the same {run.pull_request ? "pull request" : "branch or tag"} started
           {" "}with <Mono>supersede: true</Mono> in its pipeline, so this older run was canceled.
         </div>
       )}
@@ -319,7 +319,7 @@ export function RunPage({ id }: { id: string }) {
       {run.graph.origin?.detected && <NoPipelineFile run={run} onSee={() => setTab("definition")} />}
       {run.graph.origin && !run.graph.origin.detected && (
         <div className="callout callout-info">
-          The repository has no <Mono>.launchway/pipeline.yaml</Mono> at this commit, so the run used the pipeline configured for {run.project} on the server.
+          The repository has no <Mono>.launchway/pipeline.yaml</Mono> {terms().say("at this commit, so the {run} used the pipeline configured for")} {run.project} on the server.
           {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
         </div>
       )}
@@ -351,11 +351,11 @@ export function RunPage({ id }: { id: string }) {
       <RunFlowBanners run={run} done={done} onSelect={select} />
 
       {resumeBlocked && mayOperate && !run.needs_newer_server && run.rollback && (run.status === "failed" || run.status === "canceled") && (
-        <div className="callout callout-info callout-row" role="status"><span><strong>This run cannot be resumed or re-run.</strong> {run.resume?.reason}.</span></div>
+        <div className="callout callout-info callout-row" role="status"><span><strong>{terms().say("This {run} cannot be resumed or re-run.")}</strong> {run.resume?.reason}.</span></div>
       )}
       {resumeBlocked && mayOperate && !run.needs_newer_server && !run.rollback && (run.status === "failed" || run.status === "canceled") && (
         <div className="callout callout-info callout-row" role="status">
-          <span><strong>This run cannot be resumed.</strong> {run.resume?.reason}. Re-run from <Mono>{rerunTarget?.id ?? ""}</Mono> instead: it makes a new
+          <span><strong>{terms().say("This {run} cannot be resumed.")}</strong> {run.resume?.reason}. Re-run from <Mono>{rerunTarget?.id ?? ""}</Mono> instead: it makes a new
             deployment attempt of the same version and reuses every step before it, so nothing is rebuilt.</span>
           {run.status !== "failed" && rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary />}
         </div>
@@ -365,8 +365,8 @@ export function RunPage({ id }: { id: string }) {
         <FailurePanel failure={failure} actions={<>
           {mayOperate && !run.needs_newer_server && !resumeBlocked && (
             <button type="button" className="btn btn-primary" disabled={busy}
-              title="Runs again, in this same run, only the steps that did not succeed. The steps that passed are kept."
-              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Resume this run from the failed step</button>
+              title={terms().say("Runs again, in this same {run}, only the steps that did not succeed. The steps that passed are kept.")}
+              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>{terms().say("Resume this {run} from the failed step")}</button>
           )}
           {mayRerun && rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary={resumeBlocked} />}
           {mayRerun && <RerunPicker run={run} />}
@@ -405,7 +405,7 @@ export function RunPage({ id }: { id: string }) {
 
       {shownTab === "graph" && (
         <>
-          <section className="sheet runline-sheet" aria-label="The pipeline of this run">
+          <section className="sheet runline-sheet" aria-label={terms().say("The pipeline of this {run}")}>
             <div className="sh-h"><h2>The pipeline</h2><div className="r"><span className="faint small">Steps in the same column run at the same time. Choose a step to see it below</span></div></div>
             <div className="sh-b"><Graph steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} /></div>
           </section>
@@ -497,7 +497,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   const outputs = Object.entries(step.outputs ?? {});
   const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const empty = !loaded ? "Loading…"
-    : reused ? `Not run in this run: reused from #${step.reused_from_number}, where its log is.`
+    : reused ? terms().say(`Not run in this {run}: reused from #${step.reused_from_number}, where its log is.`)
     : step.status === "pending" || step.status === "queued" || step.status === "leased" ? why?.text ?? "Waiting."
     : step.status === "skipped" ? step.error || "Skipped."
     : deploys && step.status === "waiting" ? why?.text ?? "Waiting."
@@ -513,16 +513,16 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
-            {step.allowed_failure && <span className="badge-allowed" title="The step has on_failure: continue, so its failure does not fail the run and the steps that need it run as if it had succeeded">Allowed to fail</span>}
+            {step.allowed_failure && <span className="badge-allowed" title={terms().say("The step has on_failure: continue, so its failure does not fail the {run} and the steps that need it run as if it had succeeded")}>Allowed to fail</span>}
             {step.kind === "image" && <span className="meta step-kind"><ImageIcon />builds a container image</span>}
-            {step.kind === "verify" && <span className="meta">verifies {step.environment || environmentOf(run, step) || "an environment"}</span>}
+            {step.kind === "verify" && <span className="meta">verifies {step.environment || environmentOf(run, step) || terms().say("an {environment}")}</span>}
             {step.kind === "ai" && <span className="meta">asks a model</span>}
-            {deploys && <span className="meta">{step.kind === "rollback" ? step.deployment ? `rollback of ${step.deployment}` : `rolls ${env || step.environment || "the service"} back` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
+            {deploys && <span className="meta">{step.kind === "rollback" ? step.deployment ? terms().say(`{rollback} of ${step.deployment}`) : `rolls ${env || step.environment || "the service"} back` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : terms().say(`{deploy:do} to ${env}`)}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta" title={since < step.started_at ? `since the verification started; this attempt started ${clock(step.started_at)}` : undefined}>
               {elapsed(since, step.finished_at, now)}</span>}
             {step.status === "queued" && (step.not_before ?? 0) > now && (
-              <span className="meta wait" title={`It is handed to a runner at ${clock(step.not_before!)}`}>
+              <span className="meta wait" title={terms().say(`It is handed to a {runner} at ${clock(step.not_before!)}`)}>
                 retrying in {duration(step.not_before! - now)} (attempt {step.attempt} of {step.retry + 1})
                 {step.failure_cause && <>, after {step.failure_cause === "exit" ? "a failed exit" : step.failure_cause}</>}
               </span>
@@ -571,7 +571,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
       {step.caches && step.caches.length > 0 && <CacheResults project={run.project} caches={step.caches} />}
       {step.policy_blocked && (
         <div className="callout callout-bad pol-step-callout">
-          <span><strong>Blocked by policy.</strong> Nothing of this step reached a runner or the environment.</span>
+          <span><strong>Blocked by policy.</strong> {terms().say("Nothing of this step reached a {runner} or the {environment}.")}</span>
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
@@ -609,7 +609,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>
-          {!deploys && step.kind !== "verify" && step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
+          {!deploys && step.kind !== "verify" && step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} {terms().say("for a {runner}")}</dd></>}
           {outputs.length > 0 && <><dt>Outputs</dt><dd>{outputs.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <Mono>{v}</Mono></div>)}</dd></>}
         </dl>
         {!deploys && step.kind !== "verify" && <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />}
@@ -729,15 +729,15 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             </label>
             <ErrorBox error={error} />
             <div className="approval-actions">
-              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={`${terms().label("go")}: ${terms().lower("clearance")} is given and the run goes on`}>{terms().label("go")}</button>
-              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the run stops here`}>{terms().label("no_go")}</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={terms().say(`${terms().label("go")}: ${terms().lower("clearance")} is given and the {run} goes on`)}>{terms().label("go")}</button>
+              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={terms().say(`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the {run} stops here`)}>{terms().label("no_go")}</button>
             </div>
           </form>
         )}
         {step.status === "succeeded" && (
           <div className="callout callout-ok">
             <strong>{terms().label("go")} from {step.decided_by}</strong>, {clock(step.decided_at)}
-            {step.reused_from && <> in <Link href={`/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`}>run #{step.reused_from_number}</Link>. This re-run reused that decision; nobody was asked again.</>}
+            {step.reused_from && <> in <Link href={`/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`}>{terms().say("{run} #")}{step.reused_from_number}</Link>. This re-run reused that decision; nobody was asked again.</>}
             {said}
           </div>
         )}
@@ -746,13 +746,13 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             {step.decided_by
               ? <><strong>{terms().label("no_go")} from {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
               : <><strong>{step.error}</strong>, so it was refused ({terms().label("no_go")}) at {clock(step.decided_at)}.</>}
-            {run.status === "failed" && <div>Resuming the run asks again.</div>}
+            {run.status === "failed" && <div>{terms().say("Resuming the {run} asks again.")}</div>}
           </div>
         )}
         {step.status === "canceled" && <p className="sub">The run was canceled before anyone decided.</p>}
         {step.status === "skipped" && <p className="sub">{step.error || "Skipped."} Nobody was asked.</p>}
         {step.status === "pending" && (
-          <p className="sub">Asks once {step.needs?.length ? step.needs.join(", ") : "the run"} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>
+          <p className="sub">Asks once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>
         )}
       </div>
       {guarded && <DeploymentPanel run={run} step={step} />}
@@ -761,13 +761,13 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
 }
 
 const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
-  "run.created": (d) => `Run created (${(d.trigger as { event?: string })?.event ?? "manual"})`,
+  "run.created": (d) => terms().say(`{Run} created (${(d.trigger as { event?: string })?.event ?? "manual"})`),
   "run.cancel_requested": (d) => d.reason ? `Canceled: ${d.reason}` : `Cancel requested by ${d.actor ?? "someone"}`,
   "run.resumed": (d) => `Resumed by ${d.actor ?? "someone"}`,
-  "run.finished": (d) => `Run ${d.status}`,
+  "run.finished": (d) => terms().say(`{Run} ${d.status}`),
   "step.queued": (d) => `${d.step}: queued, attempt ${d.attempt}${d.reason ? ` (${d.reason})` : ""}`,
   "step.skipped": (d) => `${d.step}: skipped, ${d.reason}`,
-  "step.leased": (d) => `${d.step}: taken by runner ${d.runner}`,
+  "step.leased": (d) => terms().say(`${d.step}: taken by {runner} ${d.runner}`),
   "step.started": (d) => `${d.step}: started`,
   "step.finished": (d) => `${d.step}: ${d.outcome}${d.reason ? `, ${d.reason}` : ""}`,
   "step.lost": (d) => `${d.step}: ${d.reason}`,
@@ -784,13 +784,13 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "deploy.opened": (d) => {
     const x = deployOf(d);
     const prev = x.previous as { version?: string } | undefined;
-    return `${d.step}: took ${x.environment}'s lock and started deploying ${x.service} ${x.version}${prev?.version ? ` (it ran ${prev.version})` : ""}`;
+    return terms().say(`${d.step}: took ${x.environment}'s lock and started {deploy:doing} ${x.service} ${x.version}${prev?.version ? ` (it ran ${prev.version})` : ""}`);
   },
   "deploy.action_done": (d) => {
     const x = deployOf(d);
     const f = (x.facts ?? {}) as { repo?: string; branch?: string; commit?: string; changed?: boolean; revert?: string; reverted?: boolean; sync?: string };
     const sync = f.sync ? `; sync: ${f.sync}` : "";
-    if (x.outcome !== "succeeded") return `${d.step}: the deploy runner could not ${x.action === "revert" ? "revert the commit" : "commit the version"}`;
+    if (x.outcome !== "succeeded") return terms().say(`${d.step}: the {deploy:do} {runner} could not ${x.action === "revert" ? "revert the commit" : "commit the version"}`);
     if (x.action === "revert") return f.reverted ? `${d.step}: reverted with commit ${shortSha(f.revert ?? "")} on ${f.branch}${sync}` : `${d.step}: there was nothing to revert${sync}`;
     return f.changed ? `${d.step}: committed ${shortSha(f.commit ?? "")} to ${f.repo} on ${f.branch}${sync}` : `${d.step}: ${f.repo} on ${f.branch} already held this version${sync}`;
   },
@@ -805,12 +805,12 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "deploy.closed": (d) => `${d.step}: deployment over, ${verdictLabel(String(deployOf(d).verdict ?? "")).toLowerCase()}; the lock is released`,
   "deploy.command": (d) => {
     const c = commandOf(d);
-    const who = c.origin === "step" ? `step ${d.step}` : c.origin === "pauses" ? `step ${d.step} (pauses: promote)` : c.origin === "on_cancel" ? "canceling the run (on_cancel: abort)" : String(c.actor ?? "someone");
+    const who = c.origin === "step" ? `step ${d.step}` : c.origin === "pauses" ? `step ${d.step} (pauses: promote)` : c.origin === "on_cancel" ? terms().say("canceling the {run} (on_cancel: abort)") : String(c.actor ?? "someone");
     return `${d.step}: ${c.action === "promote-full" ? "full promotion" : c.action} asked for by ${who}${c.comment ? `: ${c.comment}` : ""}`;
   },
   "deploy.command_taken": (d) => {
     const c = commandOf(d);
-    return c.take ? `${d.step}: command taken by ${c.runner ?? "a deploy runner"}` : `${d.step}: command handed back${c.detail ? `: ${c.detail}` : ""}`;
+    return c.take ? `${d.step}: command taken by ${c.runner ?? terms().say("a {deploy:do} {runner}")}` : `${d.step}: command handed back${c.detail ? `: ${c.detail}` : ""}`;
   },
   "deploy.command_done": (d) => {
     const c = commandOf(d);
@@ -829,7 +829,7 @@ function EventsTab({ id, version }: { id: string; version: string }) {
   useEffect(() => { api.events(id).then(setEvents).catch(setError); }, [id, version]);
   return (
     <section className="card">
-      <p className="sub">This is the run's permanent record. Everything else on this page is worked out from it, which is also why a run can be resumed after the server restarts.</p>
+      <p className="sub">{terms().say("This is the {run}'s permanent record. Everything else on this page is worked out from it, which is also why a run can be resumed after the server restarts.")}</p>
       <ErrorBox error={error} />
       {events && (
         <ol className="events">
@@ -878,7 +878,7 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
     return (
       <section className="inputs">
         <h3 className="h-sm">Inputs</h3>
-        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
+        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? terms().say("Recorded when a {runner} takes the step.") : "Not recorded for this attempt (it ran on an older server)."}</p>
       </section>
     );
   }
@@ -944,27 +944,25 @@ function DefinitionTab({ run }: { run: RunDetail }) {
       <section className="card">
         <div className="card-head">
           <h2 className="h-sm">
-            {file?.draft ? "The draft text this run ran"
+            {file?.draft ? terms().say("The draft text this {run} ran")
               : file?.origin === "server" ? `The pipeline configured for ${run.project} on the server`
-              : `.launchway/pipeline.yaml at ${shortSha(run.sha) || "this run"}`}
+              : `.launchway/pipeline.yaml at ${shortSha(run.sha) || terms().say("this {run}")}`}
           </h2>
           {run.source.kind === "git" && branch && (file?.draft
             ? <button type="button" className="btn btn-sm" onClick={() => openInEditor(run.project, branch, run.sha, file.text)}>Edit this draft</button>
             : <Link href={editHref} className="btn btn-sm">Edit this pipeline</Link>)}
         </div>
         {file?.origin === "server" && (
-          <p className="sub">The repository had no pipeline file at <Mono>{shortSha(run.sha)}</Mono>, so this is what ran: the project's configuration, kept with the run.
-            A <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.</p>
+          <p className="sub">The repository had no pipeline file at <Mono>{shortSha(run.sha)}</Mono>{terms().say(", so this is what ran: the project's configuration, kept with the {run}. A")} <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.</p>
         )}
         {file?.draft && (
-          <p className="sub">Not in Git: it was typed in the editor and is kept only with this run.
-            It is named <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
+          <p className="sub">{terms().say("Not in Git: it was typed in the editor and is kept only with this {run}. It is named")} <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
         )}
         {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
       </section>
       <section className="card">
         <h2 className="h-sm">The graph it produced</h2>
-        <p className="sub">What the engine actually runs. Kept with the run, so it can be shown and resumed even if the repository changes.</p>
+        <p className="sub">{terms().say("What the engine actually runs. Kept with the {run}, so it can be shown and resumed even if the repository changes.")}</p>
         <pre className="code">{graph}</pre>
       </section>
     </div>

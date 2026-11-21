@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type HostedReport, type RunDetail, type RunReports } from "../api";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { bytes } from "../components/Security";
+import { terms } from "../terms";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 /** Links to reports work for four hours; ask for new ones well before. */
@@ -140,7 +141,7 @@ function ReportIcon() {
 export function HTMLHowTo() {
   return (
     <div className="howto">
-      <p>Name the directory a tool writes its HTML report to, and Launchway keeps it with the run and shows it here, sandboxed:</p>
+      <p>{terms().say("Name the directory a tool writes its HTML report to, and Launchway keeps it with the {run} and shows it here, sandboxed:")}</p>
       <pre className="code">{`steps:
   e2e:
     image: mcr.microsoft.com/playwright:v1.56.0

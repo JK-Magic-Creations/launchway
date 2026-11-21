@@ -1,8 +1,8 @@
-# The built-in registry
+# The built-in Depot (registry) {#the-built-in-registry}
 
-<p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Registry · <a href="../roadmap-list.html">as a list</a></p>
+<p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Depot · <a href="../roadmap-list.html">as a list</a></p>
 
-A registry for container images, Helm charts and other OCI artifacts, inside the same product as your code and pipelines. **Status:** in progress, in [Milestone 4](milestone-4.md). The first slice is built: the OCI protocol, private by default with the project's own roles, run credentials for pipelines, quotas, immutable tags, retention with a preview, garbage collection and an Images tab (see [the guide](../guide/registry.md)). Not built yet: the official conformance run, encryption of blobs at rest, the pull-through cache, replication, promotion by digest, policy on push and more package formats. Pushing to any other registry works and stays first-class.
+A Depot for container images, Helm charts and other OCI Cargo (artifacts), inside the same product as your code and pipelines. **Status:** in progress, in [Milestone 4](milestone-4.md). The first slice is built: the OCI protocol, private by default with the project's own roles, run credentials for pipelines, quotas, immutable tags, retention with a preview, garbage collection and an Images tab (see [the guide](../guide/registry.md)). Not built yet: the official conformance run, encryption of blobs at rest, the pull-through cache, replication, promotion by digest, policy on push and more package formats. Pushing to any other registry works and stays first-class.
 
 ## From build to running
 
@@ -17,7 +17,7 @@ flowchart TD
   Run -.->|"where it runs"| Reg
 ```
 
-An image page tells the whole story: where it runs now, its tags and layers, vulnerabilities with fixes, contents, signature, provenance, and the run and commit that built it.
+An image page tells the whole story: where it runs now, its tags and layers, vulnerabilities with fixes, contents, signature, provenance, and the Sortie (run) and commit that built it.
 
 ## Keeping, caching and guarding
 
@@ -31,6 +31,6 @@ flowchart TB
   Guard --> Reg
 ```
 
-Retention knows what is deployed because the registry and the deployments are one model. The image guard keeps unchecked images away from sandboxed builds.
+Retention knows what is deployed because the Depot and the deployments are one model. The image guard keeps unchecked images away from sandboxed builds.
 
 Capabilities: [Milestone 4](milestone-4.md#g-the-registry). Go back to the [Roadmap](../public/roadmap.html).

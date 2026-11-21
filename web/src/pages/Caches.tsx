@@ -78,16 +78,16 @@ export function ProjectCachesPage({ name }: { name: string }) {
     setBusy(true); setError(null); setSaid("");
     try {
       const r = await what();
-      setSaid(`Ended ${r.ended === 1 ? "1 entry" : `${r.ended} entries`}, ${bytes(r.bytes)}. The next run that wanted ${r.ended === 1 ? "it" : "them"} starts without and saves again.`);
+      setSaid(terms().say(`Ended ${r.ended === 1 ? "1 entry" : `${r.ended} entries`}, ${bytes(r.bytes)}. The next {run} that wanted ${r.ended === 1 ? "it" : "them"} starts without and saves again.`));
       load(true);
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   const deleteEntry = (e: CacheEntry) => {
-    if (!window.confirm(`End the ${e.name} entry ${shortKey(e.key)}… (${e.scope}, ${bytes(e.bytes)})?\n\nThe next run that wanted it starts without it, and saves it again.`)) return;
+    if (!window.confirm(terms().say(`End the ${e.name} entry ${shortKey(e.key)}… (${e.scope}, ${bytes(e.bytes)})?\n\nThe next {run} that wanted it starts without it, and saves it again.`))) return;
     act(() => cacheApi.deleteEntry(name, e.id));
   };
   const deleteName = (n: string, count: number) => {
-    if (!window.confirm(`End all ${count} ${count === 1 ? "entry" : "entries"} of the cache ${n}, in every scope and key?\n\nThe next run that wanted one starts without it, and saves it again.`)) return;
+    if (!window.confirm(terms().say(`End all ${count} ${count === 1 ? "entry" : "entries"} of the cache ${n}, in every scope and key?\n\nThe next {run} that wanted one starts without it, and saves it again.`))) return;
     act(() => cacheApi.deleteCachesNamed(name, n));
   };
   const sortBy = (col: Column) => setSort((s) => (s.col === col ? { col, desc: !s.desc } : { col, desc: col !== "name" && col !== "scope" && col !== "platform" }));
@@ -131,7 +131,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
 
       {list && list.entries.length === 0 && (
         <Empty title="Nothing is cached yet">
-          A step keeps a directory between runs with a <Mono>cache</Mono> key; the first run saves it and the next restores it.
+          A step keeps a directory between runs with a <Mono>cache</Mono> {terms().say("key; the first {run} saves it and the next restores it.")}
           <pre className="code">{`cache:
   - name: pip
     paths: [.cache/pip]

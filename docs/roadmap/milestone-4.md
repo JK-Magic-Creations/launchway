@@ -6,11 +6,11 @@
 
 <p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 6 in progress · 9 planned · 16 capabilities</p>
 
-Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.
+Images, Helm charts and other OCI Cargo stored beside the code, under the same permissions and policies.
 
 ## What it is, and who it is for
 
-Milestone 4 adds a registry to the binary. Images, charts and other artifacts are stored in the same database and blob store as everything else, promoted by digest, cleaned up without ever deleting what is deployed, and checked by policy on the way in and on the way out. Any other registry stays equally supported.
+Milestone 4 adds a Depot to the binary. Images, charts and other Cargo are stored in the same database and blob store as everything else, promoted by digest, cleaned up without ever deleting what is deployed, and checked by policy on the way in and on the way out. Any other registry stays equally supported.
 
 **Who it is for.** Teams that want images and charts stored beside the code, with the same permissions, policy and audit and nothing else to run.
 
@@ -26,7 +26,7 @@ Milestone 4 adds a registry to the binary. Images, charts and other artifacts ar
 ```mermaid
 flowchart TD
   Build["Build"] -->|push| Gate["Policy on push"]
-  Gate --> Store["Registry<br/>database + blob store"]
+  Gate --> Store["Depot<br/>database + blob store"]
   Store --> Scan["Scan, sign, record"]
   Scan --> Promote["Promote by digest"]
   Promote --> Deploy["Policy on deploy"]
@@ -50,15 +50,15 @@ flowchart TD
 
 ### The registry {#g-the-registry}
 
-Images, charts and other artifacts stored beside the code, under the same permissions.
+Images, charts and other Cargo stored beside the code, under the same permissions.
 
 #### A built-in OCI registry {#a-built-in-oci-registry}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Store container images, Helm charts and other OCI artifacts in Launchway, with nothing else to run. First slice built: the Distribution API under /v2/ (chunked and resumable uploads that work across servers, cross-repository mounts, Range reads, referrers, multi-platform indexes), private by default, in the same database and blob store as everything else. Tested with podman, skopeo, helm and a registry client library, on SQLite and PostgreSQL. Still to do before it can claim conformance: run the official OCI conformance suite (it could not be fetched offline), encrypt blobs at rest (they are not encrypted by Launchway yet) and settle S3-backed stores with a real bucket.
+Store container images, Helm charts and other OCI Cargo in Launchway, with nothing else to run. First slice built: the Distribution API under /v2/ (chunked and resumable uploads that work across servers, cross-repository mounts, Range reads, referrers, multi-platform indexes), private by default, in the same database and blob store as everything else. Tested with podman, skopeo, helm and a Depot client library, on SQLite and PostgreSQL. Still to do before it can claim conformance: run the official OCI conformance suite (it could not be fetched offline), encrypt blobs at rest (they are not encrypted by Launchway yet) and settle S3-backed stores with a real bucket.
 
-**Depends on:** Built-in artifact storage.
+**Depends on:** Built-in Cargo storage.
 
 [Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
@@ -66,7 +66,7 @@ Store container images, Helm charts and other OCI artifacts in Launchway, with n
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. Charts and any OCI artifact are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.
+Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. Charts and any OCI Cargo are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.
 
 **Depends on:** A built-in OCI registry.
 
@@ -76,7 +76,7 @@ Charts, signatures, bills of materials, attestations, operating-system images an
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it. The Registry tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.
+Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the Sortie and commit that built it. The Depot tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.
 
 **Depends on:** A built-in OCI registry.
 
@@ -86,7 +86,7 @@ Where an image runs now, tags, layers, vulnerabilities with fixes, contents, sig
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move an image from one environment to the next without copying or rebuilding it. What was tested is exactly what ships.
+Move an image from one Airfield to the next without copying or rebuilding it. What was tested is exactly what ships.
 
 **Depends on:** A built-in OCI registry.
 
@@ -96,7 +96,7 @@ Move an image from one environment to the next without copying or rebuilding it.
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an environment runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
+Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -106,7 +106,7 @@ Clean up old images without ever deleting one that is deployed. Retention rules 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same policy engine checks an image when it is pushed to the built-in registry, as it already does for a push from a pipeline and for a deploy. Unsigned, unscanned or vulnerable images can be refused at either point.
+The same policy engine checks an image when it is pushed to the built-in Depot, as it already does for a push from a pipeline and for a deploy. Unsigned, unscanned or vulnerable images can be refused at either point.
 
 **Depends on:** Policy gates.
 
@@ -146,7 +146,7 @@ Copy images to and from other registries on a rule. Useful for a disaster-recove
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A packages tab in each project that is a filtered view of the registry, with per-package access. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Registry tab shows a project's repositories. Per-package access inside a project is not built.
+A packages tab in each project that is a filtered view of the Depot, with per-package access. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -184,7 +184,7 @@ Pushing to any OCI registry works today and stays first class beside the built-i
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available. The run page says what was published and who uses it.
+Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available. The Sortie page says what was published and who uses it.
 
 [Area page](dependency-order.md)
 
@@ -212,7 +212,7 @@ This milestone is done when all of these are true.
 - Docker, container runtimes and Helm work against it with no special setup.
 - Retention never deletes an image that is deployed, proven by a test.
 - Promotion by digest moves no bytes.
-- A registry operation is available in the API, the command line, the agent endpoint and Terraform.
+- A Depot operation is available in the API, the command line, the agent endpoint and Terraform.
 
 ## What is deliberately not in it
 

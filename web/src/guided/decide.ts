@@ -29,7 +29,7 @@ export function approvalRefusal(a: Pick<Approval, "project" | "started_by">, me:
   const starter = a.started_by !== "" && a.started_by === me.user;
   if (starter && s && !s.allow_self) {
     return {
-      text: terms().say(`You started this run. On this {installation} the person who starts a run cannot give {clearance} for it, so someone else must. You may still say {No_go}. An administrator can change this in Settings → {Clearances}.`),
+      text: terms().say(`You started this {run}. On this {installation} the person who starts a {run} cannot give {clearance} for it, so someone else must. You may still say {No_go}. An administrator can change this in Settings → {Clearances}.`),
       link: { href: "/settings/approvals", label: terms().say("Settings → {Clearances}") }, mayReject: true,
     };
   }
@@ -47,8 +47,8 @@ export function consequences(run: RunDetail | null, stepId: string): { approve: 
   const after = run ? run.step_list.filter((s) => s.needs?.includes(stepId)).map((s) => s.id) : [];
   const approve = after.length > 0
     ? `${list(after)} ${after.length === 1 ? "goes" : "go"} ahead.`
-    : "The run goes on.";
-  return { approve, reject: "The run fails here and the steps after it are skipped. Resuming the run asks again." };
+    : terms().say("The {run} goes on.");
+  return { approve, reject: terms().say("The {run} fails here and the steps after it are skipped. Resuming the {run} asks again.") };
 }
 
 function list(xs: string[]): string {
@@ -94,7 +94,7 @@ export function runSentence(r: Pick<RunSummary, "status" | "steps" | "waiting" |
     case "succeeded": return dur ? `Passed in ${dur}.` : "Passed.";
     case "failed": return failed ? `Stopped at ${failed.id}${dur ? ` after ${dur}` : ""}.` : "Failed.";
     case "canceled": return r.cancel_reason ? `Canceled: ${r.cancel_reason}.` : "Canceled before it finished.";
-    case "queued": return "Waiting for a runner to pick it up.";
+    case "queued": return terms().say("Waiting for a {runner} to pick it up.");
     default: {
       if (r.cancel_requested) return "Stopping: cancel was asked for.";
       if ((r.waiting?.length ?? 0) > 0) return `Waiting for a person to decide: ${r.waiting.join(", ")}.`;

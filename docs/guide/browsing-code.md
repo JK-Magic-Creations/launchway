@@ -20,7 +20,7 @@ Raw files are never able to run in the product: they are always a download, neve
 
 ## History, commits and blame
 
-**Commits** lists a branch's history, or the history of one path; a file's history follows it through renames. A commit page shows the message, author, parents, the runs started for that commit and the changed files with their diffs. **Blame** shows who last changed each line, a range of 1000 lines at a time, with **Blame before this change** to follow a line back through earlier commits. Blame is limited to 120 requests a minute for each person.
+**Commits** lists a branch's history, or the history of one path; a file's history follows it through renames. A commit page shows the message, author, parents, the Sorties (runs) started for that commit and the changed files with their diffs. **Blame** shows who last changed each line, a range of 1000 lines at a time, with **Blame before this change** to follow a line back through earlier commits. Blame is limited to 120 requests a minute for each person.
 
 ## Comparing, branches and tags
 

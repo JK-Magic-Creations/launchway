@@ -102,6 +102,7 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 		lay.Units = append(lay.Units, *u)
 	}
 	lay.UnitsInUse = len(lay.Units) > 0
+	SetCurrentTerms(lay.Terms)
 	return c, lay, nil
 }
 

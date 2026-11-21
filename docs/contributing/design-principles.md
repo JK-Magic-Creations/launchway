@@ -52,7 +52,7 @@ Nothing essential is in an animation: a running step is a shape and a word, and 
 
 ## Plain language
 
-Say what happened and what to do, in short sentences and the words in the glossary. No jargon in an error. A button says what it does ("Start a run", not "OK"). A date or a time is written so a screen reader reads it well.
+Say what happened and what to do, in short sentences and the words in the glossary. No jargon in an error. A button says what it does ("Start a Sortie (run)", not "OK"). A date or a time is written so a screen reader reads it well.
 
 ## The scans
 

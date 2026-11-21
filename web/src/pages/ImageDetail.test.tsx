@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import { MeContext } from "../auth";
 import { InstallationProvider } from "../guided/facts";
 import { me } from "../test/fixtures";
@@ -13,6 +13,10 @@ vi.mock("../configApi", async (orig) => ({ ...(await orig<typeof import("../conf
 
 import { api } from "../api";
 import { ImageDetailPage } from "./ImageDetail";
+import { setTerms, resetTerms } from "../terms";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const D = "sha256:" + "a".repeat(64);
 function show() {

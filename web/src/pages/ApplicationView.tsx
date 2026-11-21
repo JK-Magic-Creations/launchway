@@ -18,6 +18,7 @@ import { Icon } from "../kit/Icon";
 import { Chip, type Tone } from "../kit/Status";
 import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
+import { terms } from "../terms";
 
 const TONE: Record<string, Tone | undefined> = { ok: "ok", warn: "warn", bad: "bad", run: "run", idle: undefined };
 
@@ -39,7 +40,7 @@ export function ApplicationViewPage({ name }: { name: string }) {
       <div className="page">
         <PageHead eyebrow="Deployments · Applications" title={name} />
         <Sheet><EmptyState title="Launchway has not seen this application" action={<LinkButton href="/deployments/applications" icon="arrow">See the applications</LinkButton>}>
-          An application appears once a pipeline has deployed it and a deploy runner has looked at it. Applications that Argo CD runs without a pipeline are not listed, because no runner has been asked to watch them.
+          {terms().say("An application appears once a pipeline has {deploy:did} it and a {deploy:do} {runner} has looked at it. Applications that Argo CD runs without a pipeline are not listed, because no {runner} has been asked to watch them.")}
           {" "}<OpenInArgo application={name} sm />
         </EmptyState></Sheet>
       </div>
@@ -74,7 +75,7 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
       <Diagnose dg={dg} d={d} run={run.data} app={app.name} />
 
       {unit.rollback && (
-        <Sheet title="Roll back" actions={<span className="faint small">after a deployment succeeded</span>}>
+        <Sheet title={terms().say("{Rollback:do}")} actions={<span className="faint small">after a deployment succeeded</span>}>
           <div className="sh-b"><RollbackControl action={unit.rollback} unit={{ project: unit.project, service: unit.service, environment: app.environment }} /></div>
         </Sheet>
       )}
@@ -106,12 +107,12 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
       {d && run.data && !d.verdict && <Sheet title="Actions on the rollout"><div className="sh-b"><Controls run={run.data} d={d} now={now} /></div></Sheet>}
 
       <div className="grid g2">
-        <Sheet title="Now"><DeployFacts d={current ?? (d?.verdict === "deployed" ? d : undefined)} unit={unit} now={now} empty="What runs now is not known: nothing Launchway deployed is known to run here." /></Sheet>
+        <Sheet title="Now"><DeployFacts d={current ?? (d?.verdict === "deployed" ? d : undefined)} unit={unit} now={now} empty={terms().say("What runs now is not known: nothing Launchway {deploy:did} is known to run here.")} /></Sheet>
         <Sheet title="Before"><DeployFacts d={prev} unit={unit} now={now} empty={d?.previous_version ? `The previous version was ${d.previous_version}; its deployment is not in the history.` : "What ran before is not known."} /></Sheet>
       </div>
 
       <Sheet title="Parts" actions={<span className="faint small">{resources.length} {resources.length === 1 ? "resource" : "resources"} Argo CD manages</span>}>
-        {resources.length === 0 ? <p className="sh-b faint">The deploy runner has not listed the parts of this application.</p> : (
+        {resources.length === 0 ? <p className="sh-b faint">{terms().say("The {deploy:do} {runner} has not listed the parts of this application.")}</p> : (
           <ul className="rowlist">
             {resources.map((r) => (
               <li key={`${r.kind}/${r.namespace}/${r.name}`} className={!r.found || (r.health && r.health !== "Healthy") ? "warn" : ""}>
@@ -132,7 +133,7 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
             {hist.data.map((x) => (
               <li key={x.id}>
                 <div className="main"><div className="nm mono">{x.version}</div>
-                  <div className="sb"><EntityLink kind="run" name={`run #${x.run_number}`} id={x.run_id} />{x.commit ? ` · ${shortSha(x.commit)}` : ""} · {x.environment}{x.detail ? ` · ${x.detail}` : ""}</div><HistoryNote d={x} /></div>
+                  <div className="sb"><EntityLink kind="run" name={terms().say(`{run} #${x.run_number}`)} id={x.run_id} />{x.commit ? ` · ${shortSha(x.commit)}` : ""} · {x.environment}{x.detail ? ` · ${x.detail}` : ""}</div><HistoryNote d={x} /></div>
                 <DeployStatePill d={x} now={now} />
                 <span className="faint small" title={clock(x.opened_at)}>{ago(x.opened_at, now)}</span>
               </li>
@@ -149,7 +150,7 @@ function DeployFacts({ d, unit, now, empty }: { d?: DeploymentView; unit: UnitVi
   return (
     <dl className="kvlist">
       <dt>Version</dt><dd><Mono>{d.version}</Mono></dd>
-      <dt>Deployed by</dt><dd><EntityLink kind="run" name={`run #${d.run_number}`} id={d.run_id} /> of <EntityLink kind="project" name={unit.project} /></dd>
+      <dt>{terms().say("{Deploy:did} by")}</dt><dd><EntityLink kind="run" name={terms().say(`{run} #${d.run_number}`)} id={d.run_id} /> of <EntityLink kind="project" name={unit.project} /></dd>
       {d.commit && <><dt>Commit</dt><dd><Mono>{shortSha(d.commit)}</Mono>{d.branch ? <> on <Mono>{d.branch}</Mono></> : null}</dd></>}
       <dt>When</dt><dd title={clock(d.deployed_at ?? d.opened_at)}>{ago(d.deployed_at ?? d.opened_at, now)}</dd>
       <dt>Result</dt><dd><DeployStatePill d={d} now={now} /></dd>
@@ -171,7 +172,7 @@ export function Diagnose({ dg, d, run, app }: { dg: Diagnosis; d?: DeploymentVie
         <div>
           <div className="eyebrow">What Launchway saw</div>
           {dg.evidence.length === 0
-            ? <p className="faint">{dg.known ? "Nothing to report." : "Nothing the deploy runner reported explains it."}</p>
+            ? <p className="faint">{dg.known ? "Nothing to report." : terms().say("Nothing the {deploy:do} {runner} reported explains it.")}</p>
             : <ol className="evlist">{dg.evidence.map((e, i) => <li key={i}><div>{e.text}{e.at ? <div className="at">{clock(e.at)}</div> : null}</div></li>)}</ol>}
         </div>
         <div>
@@ -204,7 +205,7 @@ function Recommendation({ rec, d, run, app }: { rec: Recommend | null; d?: Deplo
   return (
     <div className="stack" style={{ gap: 10 }}>
       <p style={{ margin: 0 }}><b>{rec.label}.</b> {rec.why}</p>
-      {sent ? <div className="note" role="status"><Icon name="check" />Asked. A deploy runner carries it out and the page shows the result.</div> : (
+      {sent ? <div className="note" role="status"><Icon name="check" />{terms().say("Asked. A {deploy:do} {runner} carries it out and the page shows the result.")}</div> : (
         <div><Button kind="pri" disabled={busy || !may} onClick={give} title={may ? undefined : c?.reason ?? "Not available now"}>{rec.label}</Button></div>
       )}
       {!sent && c && !may && c.reason && <p className="faint small" style={{ margin: 0 }}>{c.reason.replace(/^./, (x) => x.toUpperCase())}{/[.!?)]$/.test(c.reason) ? "" : "."}</p>}

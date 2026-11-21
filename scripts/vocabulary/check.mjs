@@ -5,22 +5,42 @@
 //   node scripts/vocabulary/check.mjs --update-baseline   lower the baseline (it never grows)
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { loadVocabulary, listFiles, compileChecks, fileFindings, loadList } from './lib.mjs'
+import { loadVocabulary, listFiles, compileChecks, fileFindings, loadList, captionLabels } from './lib.mjs'
 
 const root = process.cwd()
 const args = process.argv.slice(2)
 const vocab = loadVocabulary(root)
 const checks = compileChecks(vocab)
+const labels = captionLabels(vocab)
 const allow = loadList(root, 'quality/vocabulary-allow.json')?.allow ?? []
 const baseline = loadList(root, 'quality/vocabulary-baseline.json') ?? { counts: {} }
 
-const allowed = (f, line) => allow.some((a) => (f.path === a.path || (a.path.endsWith('/') && f.path.startsWith(a.path))) && (!a.rule || a.rule === f.rule) && (!a.contains || line.includes(a.contains)))
+// A roadmap name or title is also the address of its anchor, and addresses are stable identifiers.
+const allowed = (f, line) => (f.kind === 'json' && /^\s*"(name|title|short)"\s*:/.test(line)) || allow.some((a) => (f.path === a.path || (a.path.endsWith('/') && f.path.startsWith(a.path))) && (!a.rule || a.rule === f.rule) && (!a.contains || line.includes(a.contains)))
+
+// The table itself: every word has a plain meaning, no combat word or real program, unit or rank name is a
+// product word, and every themed word has a guard entry (so a new word cannot be added without its old form being watched).
+const tableProblems = []
+{
+  const g = vocab.guard || {}
+  const deny = new RegExp('\\b(' + (g.denyAsProductWords || []).join('|') + ')\\b', 'i')
+  const real = new RegExp('\\b(' + (g.realNames || []).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b')
+  const guarded = new Set([...(vocab.superseded || []).map((x) => x.key), ...(g.guardedByChecks || [])])
+  for (const w of vocab.words.words) {
+    if (!w.meaning || w.meaning.trim().length < 8) tableProblems.push(`${w.key}: has no plain meaning`)
+    const shown = [w.aviation.one, w.aviation.many, w.aviation.do, w.aviation.did, w.aviation.doing].filter(Boolean).join(' / ')
+    if (deny.test(shown)) tableProblems.push(`${w.key}: "${shown}" is a combat word; the theme is flying and ground operations only`)
+    if (real.test(shown)) tableProblems.push(`${w.key}: "${shown}" is a real program, unit or rank name`)
+    if (w.aviation.one !== w.plain.one && !guarded.has(w.key) && w.group !== 'levels' && w.group !== 'statuses') tableProblems.push(`${w.key}: add an entry to "superseded" in docs/vocabulary.json so its plain word is watched`)
+  }
+  for (const s of vocab.superseded || []) if (!vocab.words.words.some((w) => w.key === s.key)) tableProblems.push(`superseded entry "${s.key}" is not a word in the table`)
+}
 
 const all = []
 for (const { path, kind } of listFiles(root, vocab)) {
   const text = readFileSync(join(root, path), 'utf8')
   const lines = text.split('\n')
-  for (const f of fileFindings(path, kind, text, checks)) if (!allowed(f, lines[f.line - 1])) all.push({ ...f, text: lines[f.line - 1].trim().slice(0, 140) })
+  for (const f of fileFindings(path, kind, text, checks, labels)) if (!allowed(f, lines[f.line - 1])) all.push({ ...f, text: lines[f.line - 1].trim().slice(0, 140) })
 }
 const errors = all.filter((f) => f.severity === 'error')
 const counts = {}
@@ -45,6 +65,7 @@ if (args.includes('--update-baseline')) {
   process.exit(0)
 }
 let bad = 0
+for (const p of tableProblems) { bad++; console.error('vocabulary: table: ' + p) }
 for (const [k, n] of Object.entries(counts)) {
   const allowedN = baseline.counts[k] ?? 0
   if (n > allowedN) {

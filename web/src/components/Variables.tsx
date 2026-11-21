@@ -24,7 +24,7 @@ export function levelWord(level: VarLevel, scope?: string): string {
 /** Where a value comes from, in words. */
 export function sourceWord(s: VarSource): string {
   switch (s.kind) {
-    case "run": return "given when the run started";
+    case "run": return terms().say("given when the {run} started");
     case "file": return "the pipeline file's with:";
     case "default": return "the template's own default";
   }
@@ -36,7 +36,7 @@ function Value({ v }: { v: Pick<VarResolved, "type" | "display"> }) {
   return (
     <span className="vr-val">
       <Mono>{v.display === "" ? "(empty)" : v.display}</Mono>
-      {v.type === "secret" && <span className="vr-ref" title="A secret is only ever a reference; a runner looks it up when a step starts">reference</span>}
+      {v.type === "secret" && <span className="vr-ref" title={terms().say("A secret is only ever a reference; a {runner} looks it up when a step starts")}>reference</span>}
     </span>
   );
 }
@@ -75,7 +75,7 @@ function FirstUse({ level, scope }: { level: VarLevel; scope?: string }) {
   return (
     <div className="vr-first">
       <strong>No variables here yet.</strong>
-      <p>A variable is a named setting, such as a registry or a number of replicas. Set one at {here} and everything below it gets it;
+      <p>{terms().say("A variable is a named setting, such as a {registry} or a number of replicas. Set one at")} {here} and everything below it gets it;
         a nearer level can set the same name to override it, and a lock keeps it from being overridden. You need none of this to run a pipeline.</p>
     </div>
   );
@@ -214,8 +214,8 @@ function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLeve
             ? <select value={text || "true"} onChange={(e) => setText(e.target.value)}><option value="true">Yes</option><option value="false">No</option></select>
             : <input value={text} onChange={(e) => setText(e.target.value)} placeholder={type === "secret" ? "vault:apps/registry#token" : ""} required />}
         </label>
-        {type === "secret" && <p className="sub">Only the reference is kept. The secret itself stays in your secret store, and a runner looks it up when a step starts.</p>}
-        <label>Only for an environment (optional)<input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="production" /></label>
+        {type === "secret" && <p className="sub">{terms().say("Only the reference is kept. The secret itself stays in your secret store, and a {runner} looks it up when a step starts.")}</p>}
+        <label>{terms().say("Only for an {environment} (optional)")}<input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="production" /></label>
         <label>What it is for (optional)<input value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={200} /></label>
         <ErrorBox error={error} />
         <div className="dialog-actions">
@@ -237,7 +237,7 @@ function LockDialog({ entry, onClose, onLock }: { entry: VarEntry; onClose: () =
     <Dialog label={`Lock ${entry.name}`} onClose={onClose}>
       <form className="vr-form" onSubmit={(e) => { e.preventDefault(); onLock(reason); }}>
         <h2>Lock {entry.name}</h2>
-        <p className="sub">Nobody below this level can change it, a pipeline file or a run included. Settings below it are kept but ignored, and count again if you unlock it.</p>
+        <p className="sub">{terms().say("Nobody below this level can change it, a pipeline file or a {run} included. Settings below it are kept but ignored, and count again if you unlock it.")}</p>
         <label>Why (shown to everyone it stops)<input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} required data-autofocus /></label>
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
@@ -259,7 +259,7 @@ export function RunVariables({ runId }: { runId: string }) {
   return (
     <section className="card vr vr-compact" aria-labelledby="runvars-title">
       <h2 id="runvars-title">Variables in effect</h2>
-      <p className="sub">What this run used, as recorded when it was created. Changing a variable later does not change it.</p>
+      <p className="sub">{terms().say("What this {run} used, as recorded when it was created. Changing a variable later does not change it.")}</p>
       {rec.rerun_of && <p className="sub">A re-run: it used the variables of the run it repeats, as recorded.</p>}
       <ul className="vr-list">
         {rec.variables.map((e) => (

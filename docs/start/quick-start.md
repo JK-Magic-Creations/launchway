@@ -44,26 +44,26 @@ nowhere else: a server without sign-in refuses to listen on any other address.
 
 ## Things to try
 
-- **Projects → demo-app → Start a run.** The branch list is read from the repository as you open it.
-- **Watch the run live.** The steps appear as a graph and the logs stream in.
-- **Resume a failed run.** The demo's `smoke-test` fails on its first attempt on purpose while a
+- **Projects → demo-app → Start a Sortie (run).** The branch list is read from the repository as you open it.
+- **Watch the Sortie live.** The steps appear as a graph and the logs stream in.
+- **Resume a failed Sortie.** The demo's `smoke-test` fails on its first attempt on purpose while a
   file called `FLAKY` exists. Press *Resume from smoke-test*. Only that step and the ones after it
   run again; the earlier results are kept.
-- **Re-run from a step.** On a finished run, open any step and press *Re-run from this step*. A new
+- **Re-run from a step.** On a finished Sortie, open any step and press *Re-run from this step*. A new
   run starts at the same commit: that step and the ones after it run again, and the steps before
   it are reused with their outputs. Each step's *Inputs* say what it was given, and from where.
 - **Approve a deployment.** On `main`, the demo waits for approval before `deploy-dev`. Open
-  **Waiting for a decision** to find it, then say **Go** or **No-go** (clear or refuse it) on the run.
-- **Push to trigger a run.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A run
+  **Waiting for a decision** to find it, then say **Go** or **No-go** (clear or refuse it) on the Sortie.
+- **Push to trigger a Sortie.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A Sortie
   starts within a few seconds, and *Recent pushes* on the project explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is
-  run again, and nothing that had finished runs twice.
+  run again, and nothing that had finished Sorties twice.
 - **Edit a pipeline.** *Projects → demo-app → Edit pipeline* opens the file from a branch. Change
   it, press *Run this draft* to try the change without saving it, then *Save…* to commit it (the
   example configuration lets the demo be saved; see [Editing pipelines](../guide/editor.md)).
 - **Open the Playground.** Write a pipeline and watch it validate and draw as you type.
 - **Use a shared library.** *demo-lib-app* runs the library's `release` template at tag `v1`:
-  its steps are framed as one group on the graph, and the run says which commit `v1` was. Start a
+  its steps are framed as one group on the graph, and the Sortie says which commit `v1` was. Start a
   run with *Advanced → library override* `platform` = `main` to try the library's unreleased work.
   *demo-plain* has no pipeline file at all; the server runs the library's `check` template for it.
 - **Run locally.** In any repository with a `.launchway/pipeline.yaml`, run `bin/launchway run`. It

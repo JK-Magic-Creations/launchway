@@ -1,23 +1,23 @@
 # Install Launchway on Kubernetes
 
 This guide runs Launchway as a highly available service on Kubernetes with the Helm chart in
-`deploy/helm/launchway`: several servers sharing one PostgreSQL database, runners whose steps run
+`deploy/helm/launchway`: several servers sharing one PostgreSQL database, Stations (runners) whose steps run
 as pods in a namespace of their own, and the UI behind an Ingress or a Gateway. It is for
 operators. For EKS and GKE specifics, see [Install on Amazon EKS](install-eks.md) and
 [Install on Google GKE](install-gke.md).
 
 > **Verified** on 2026-11-19 against commit f717337: `make image` (Podman) from a clean clone; the
 > image loaded into a kind cluster (Kubernetes 1.37, kind 0.33 on rootless Podman, Helm 4.3);
-> `helm install` with three servers, two runners and the bundled database; step pods in a
+> `helm install` with three servers, two Stations and the bundled database; step pods in a
 > namespace enforcing Pod Security `restricted`; the UI and API through `kubectl port-forward`; a
 > pipeline whose two steps ran in one pod and shared a file; a server pod deleted while a
-> 90-second step ran (the run finished, every step on attempt 1); `helm upgrade` to four servers
+> 90-second step ran (the Sortie (run) finished, every step on attempt 1); `helm upgrade` to four servers
 > with a configuration change while a pod requested `/readyz` five times a second (no failures)
-> and a run went on; `helm rollback`; the "no database" refusal. The namespaces used were
+> and a Sortie went on; `helm rollback`; the "no database" refusal. The namespaces used were
 > `docsk8s-ha` and `docsk8s-steps` rather than `launchway` and `launchway-steps`. **Not verified:**
 > an external PostgreSQL (the chart was only run with its development database here; external
 > PostgreSQL was used outside Kubernetes), an Ingress controller or Gateway serving the UI, sign-in
-> through a real OpenID Connect provider on Kubernetes, pushing the image to a registry, Docker
+> through a real OpenID Connect provider on Kubernetes, pushing the image to a Depot (registry), Docker
 > instead of Podman.
 
 ## What you need
@@ -29,15 +29,15 @@ operators. For EKS and GKE specifics, see [Install on Amazon EKS](install-eks.md
   into the cluster instead.
 - For real use: a PostgreSQL database (a managed service or one run by an operator), and an
   OpenID Connect provider for sign-in. See [Sign-in with OpenID Connect and roles](oidc-and-roles.md).
-- A Git repository with a `.launchway/pipeline.yaml` that the servers and the runners can clone.
+- A Git repository with a `.launchway/pipeline.yaml` that the servers and the Stations can clone.
 
 ## How it fits together
 
 The chart deploys two Deployments in the release namespace. **Servers** run the API, the web UI
-and the run engine; they share one PostgreSQL database and keep nothing that matters on disk, so
-any of them can be lost at any time. **Runners** run `launchway runner` with the Kubernetes
-[executor](../glossary.md#executor): each run gets a pod in the step namespace, and the run's steps
-execute inside it. Runners only make outbound connections: to the servers, to the Kubernetes API
+and the Sortie engine; they share one PostgreSQL database and keep nothing that matters on disk, so
+any of them can be lost at any time. **Stations** run `launchway runner` with the Kubernetes
+[executor](../glossary.md#executor): each Sortie gets a pod in the step namespace, and the Sortie's steps
+execute inside it. Stations only make outbound connections: to the servers, to the Kubernetes API
 and to your Git host.
 
 ```mermaid
@@ -62,8 +62,8 @@ flowchart LR
   end
 ```
 
-All of a run's steps go to the runner that took its first step, because they share the workspace in
-that run's pod. If that runner goes away, another runner takes the run over in a fresh pod.
+All of a Sortie's steps go to the Station that took its first step, because they share the workspace in
+that run's pod. If that Station goes away, another Station takes the run over in a fresh pod.
 
 ## Build the image
 
@@ -82,10 +82,10 @@ make image IMAGE=localhost/launchway:dev
 ```
 
 `make image` uses Podman; add `CONTAINER=docker` for Docker. The image holds one static binary
-(server and runner), Git and CA certificates, and nothing else: no shell and no package manager. It
+(server and Station), Git and CA certificates, and nothing else: no shell and no package manager. It
 runs as user 65532.
 
-For a real cluster, tag and push it to your registry, and set `image.repository` and `image.tag`
+For a real cluster, tag and push it to your Depot, and set `image.repository` and `image.tag`
 (or `image.digest`) to match:
 
 ```sh
@@ -129,7 +129,7 @@ workloads out of it.
 
 ## A Git repository the cluster can reach
 
-Every project's `repo` must be a URL that both the servers and the runners can clone, such as
+Every project's `repo` must be a URL that both the servers and the Stations can clone, such as
 `https://git.example.com/team/payments.git`. For a quick trial without a Git host, the repository's
 test setup serves a small repository inside the cluster. It needs Podman on your machine to build
 the repository:
@@ -170,7 +170,7 @@ runner:
 
 Sign-in is required from the first moment: the chart's default is built-in accounts, and a one-time
 setup code makes the first administrator (below). Nothing else needs setting; projects, Git hosting
-and runners are set up in the browser.
+and Stations are set up in the browser.
 
 Install the chart:
 
@@ -191,7 +191,7 @@ launchway-server-67bff96d4d-xkdbm       1/1     Running   0          64s
 ```
 
 Before the servers start, a hook Job (`launchway bootstrap-secrets`) makes the Secrets the installation
-needs, only if they do not exist: the root key, the runner token, the database password and the setup
+needs, only if they do not exist: the root key, the Station token, the database password and the setup
 code. It never changes an existing one, so `helm upgrade`, `helm template` and a GitOps controller
 that renders the chart leave them alone. Read the setup code to create the first administrator:
 
@@ -202,7 +202,7 @@ kubectl -n launchway get secret launchway-launchway-setup-code -o jsonpath='{.da
 > [!IMPORTANT]
 > The chart applies default-deny NetworkPolicies. They take effect where your cluster's network
 > plugin enforces them. The servers may reach DNS and the database only; add your Git hosts and
-> identity provider to `networkPolicy.server.extraEgress`, and Git hosts the runners clone to
+> identity provider to `networkPolicy.server.extraEgress`, and Git hosts the Stations clone to
 > `networkPolicy.runner.extraEgress`. Step pods may reach the Launchway server and the internet
 > over HTTP and HTTPS, never the database, the Kubernetes API or the cloud metadata service.
 > See [network policies](../reference/helm-values.md#network-policies).
@@ -211,14 +211,14 @@ The servers wait for the database while it starts (each try is logged), so they 
 With the bundled database switched off (`postgresql.enabled=false`) and none of your own named, the
 install is refused with an explanation, because each server would otherwise keep its own SQLite file.
 
-## Open the UI and check the runners
+## Open the UI and check the Stations {#open-the-ui-and-check-the-runners}
 
 ```sh
 kubectl -n launchway port-forward service/launchway 8080:8080
 ```
 
 Browse to <http://127.0.0.1:8080/>. In another terminal, check that the servers are ready and the
-runners have connected:
+Stations have connected:
 
 ```sh
 curl -s http://127.0.0.1:8080/readyz
@@ -231,12 +231,12 @@ curl -s http://127.0.0.1:8080/api/v1/runners
  {"id":"runner-launchway-runner-68b4f8f7bd-m25hz",...,"online":true}]
 ```
 
-With sign-in turned on, `/api/v1/runners` needs a signed-in user or an API token; the **Runners**
+With sign-in turned on, `/api/v1/runners` needs a signed-in user or an API token; the **Stations**
 page in the UI shows the same list.
 
 ## Run a pipeline as pods
 
-Open **Projects → demo → Start a run** in the UI, or start one over the API. Without sign-in, a
+Open **Projects → demo → Start a Sortie** in the UI, or start one over the API. Without sign-in, a
 request that changes something must carry the header `X-Launchway-CSRF: 1`:
 
 ```sh
@@ -250,7 +250,7 @@ NAME                                            READY   STATUS    RESTARTS   AGE
 launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50   2/2     Running   0          5s
 ```
 
-The run's pod holds a helper container with the workspace and the step's container. The second
+The Sortie's pod holds a helper container with the workspace and the step's container. The second
 step's log shows that it ran in the same pod and read the file the first step wrote:
 
 ```text
@@ -261,16 +261,16 @@ written by hello in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
 output and file received; running in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
 ```
 
-The pod is removed when the run ends, whether it succeeded, failed (at any step, including an image
+The pod is removed when the Sortie ends, whether it succeeded, failed (at any step, including an image
 step), was canceled or timed out, because a running pod holds the step namespace's quota. A resume
-makes a new pod from the runner's checkout of the run; see
-[What happens to a run's pod](../reference/runner-config.md#what-happens-to-a-runs-pod).
+makes a new pod from the Station's checkout of the Sortie; see
+[What happens to a Sortie's pod](../reference/runner-config.md#what-happens-to-a-runs-pod).
 
 > [!NOTE]
 > The command line (`launchway runs start`) needs an API token, and tokens can only be made by
 > someone signed in. On a server without sign-in, use the UI or `curl` as above.
 
-## Lose a server while a run goes on
+## Lose a server while a Sortie goes on {#lose-a-server-while-a-run-goes-on}
 
 Start a run of the `slow` branch, and while its long step runs, delete a server pod:
 
@@ -281,8 +281,8 @@ kubectl -n launchway delete pod "$(kubectl -n launchway get pods \
   -l app.kubernetes.io/component=server -o name | head -1 | cut -d/ -f2)"
 ```
 
-The run carries on and succeeds, with every step on its first attempt: the runner holding the step
-simply talks to another server, and the run's state is in the database, not in the server that was
+The Sortie carries on and succeeds, with every step on its first attempt: the Station holding the step
+simply talks to another server, and the Sortie's state is in the database, not in the server that was
 lost. A new server pod replaces the deleted one.
 
 `kubectl port-forward` to a Service connects to one pod and stops when that pod goes away
@@ -299,7 +299,7 @@ helm upgrade launchway deploy/helm/launchway -n launchway -f try.yaml --set serv
 
 Servers have no leader and no state of their own, so any number can run. Two is the least for high
 availability; spread them across zones with `server.topologySpreadConstraints` (see
-`deploy/helm/launchway/examples/ha.yaml`). Runners scale the same way with `runner.replicas`, and
+`deploy/helm/launchway/examples/ha.yaml`). Stations scale the same way with `runner.replicas`, and
 each runs `runner.concurrency` steps at once.
 
 ## Use your own PostgreSQL
@@ -324,11 +324,11 @@ Set only one of `database.existingSecret` and `database.url`. The
 database user needs to create tables in the database, because servers apply schema migrations when
 they start (see [Back up, restore and upgrade](backup-restore-upgrade.md#upgrades)). The
 `deploy/helm/launchway/examples/ha.yaml` file is a production-shaped starting point: three servers
-across zones, an external database, runners in their own namespace and an Ingress with TLS.
+across zones, an external database, Stations in their own namespace and an Ingress with TLS.
 
-Artifacts need nothing more with PostgreSQL: unset, `config.artifacts.store` makes the servers keep
+Cargo (artifacts) need nothing more with PostgreSQL: unset, `config.artifacts.store` makes the servers keep
 them in the database, in chunks every server reads, so any number of servers share them (see
-[Where artifacts are kept](../artifacts.md), including when to move to S3). For very large or busy
+[Where Cargo are kept](../artifacts.md), including when to move to S3). For very large or busy
 installations, keep them in an S3-compatible store instead:
 
 ```yaml
@@ -383,7 +383,7 @@ client's address and the scheme from the proxy. Do not expose Launchway before s
 The chart's default is built-in accounts (`auth.mode: local`), with the first administrator made
 from the one-time setup code. To use your OpenID Connect provider instead, or to connect it later
 from the first-run guide in the browser, set `mode: oidc`. When an Ingress or HTTPRoute is enabled the
-chart already sets `server.trust_proxy`. Sign-in uses your OpenID Connect provider. The client secret reaches the servers as an environment
+chart already sets `server.trust_proxy`. Sign-in uses your OpenID Connect provider. The client secret reaches the servers as an Airfield (environment)
 variable from a Secret; the rest goes in `config.extraConfig`:
 
 ```sh
@@ -418,10 +418,10 @@ servers refuse to start. A server starts even if the provider cannot be reached 
 `502` and logs why until it can. Roles and bindings are explained in
 [Sign-in with OpenID Connect and roles](oidc-and-roles.md).
 
-## Runners and step pods
+## Stations and step pods {#runners-and-step-pods}
 
-The runners' settings are under `runner.*` and are rendered into
-`/etc/launchway-runner/runner.yaml` in each runner pod. The ones you are most likely to change:
+The Stations' settings are under `runner.*` and are rendered into
+`/etc/launchway-runner/runner.yaml` in each Station pod. The ones you are most likely to change:
 
 ```yaml
 runner:
@@ -443,7 +443,7 @@ runner:
       keys: ["ci/*"]
 ```
 
-The chart gives the runners' ServiceAccount a Role in the step namespace only: `pods` (create, get,
+The chart gives the Stations' ServiceAccount a Role in the step namespace only: `pods` (create, get,
 list, delete, patch), `pods/exec` (create, get) and `pods/log` (get). Step pods get no ServiceAccount
 token unless you name one in `runner.kubernetes.serviceAccount`.
 
@@ -454,15 +454,15 @@ pods take no tolerations, so a node pool for builds is chosen with `nodeSelector
 be tainted.
 
 Image steps (`kind: image`) need BuildKit daemons deployed apart from the step pods; see
-`deploy/buildkit/README.md` and `runner.images` in the values. Runners elsewhere (another cluster or
-a machine) connect with a join token or the runner token; in another cluster, install only runners
+`deploy/buildkit/README.md` and `runner.images` in the values. Stations elsewhere (another cluster or
+a machine) connect with a join token or the Station token; in another cluster, install only Stations
 with the runner-only chart `deploy/helm/launchway-runner` (released as
-`launchway-runner-VERSION.tgz`). See [Connect a runner](connect-runner.md).
+`launchway-runner-VERSION.tgz`). See [Connect a Station](connect-runner.md).
 
-## Deploy runner
+## Deploy Station {#deploy-runner}
 
-Deploy steps (`kind: deploy`) are done by a [deploy runner](../glossary.md#deploy-runner) with a
-runner pool token of its own, never by the build runners. The chart can run one in the cluster that
+Deploy steps (`kind: deploy`) are done by a [deploy Station](../glossary.md#deploy-runner) with a
+Flight line (Station (runner) pool) token of its own, never by the build Stations. The chart can run one in the cluster that
 Argo CD manages:
 
 ```yaml
@@ -485,17 +485,17 @@ delivery:
       vault: { type: vault, address: https://vault.example.com:8200, role: launchway-deploy }
 ```
 
-The chart generates the pool token and gives it to the servers, and grants the deploy runner only
+The chart generates the pool token and gives it to the servers, and grants the deploy Station only
 what it needs on the named Applications and rollouts. Set these values only once every server and
-runner runs a release that knows them. The [deploy tutorial](../tutorials/deploy-with-approval.md)
+Station runs a release that knows them. The [deploy tutorial](../tutorials/deploy-with-approval.md)
 walks through a deployment, and [Helm values](../reference/helm-values.md) lists every value.
 
 ## Upgrades
 
 `helm upgrade` replaces servers one at a time: a new server must be ready before an old one stops,
 and a stopping server keeps serving for a few seconds after it leaves the Service. A run in progress
-is not affected by servers being replaced. Runners being replaced hand their steps back, and the
-steps run again from the start on another runner.
+is not affected by servers being replaced. Stations being replaced hand their steps back, and the
+steps run again from the start on another Station.
 
 ```sh
 helm upgrade launchway deploy/helm/launchway -n launchway -f try.yaml --set image.tag=0.2.0 --wait
@@ -505,7 +505,7 @@ helm rollback launchway 1 -n launchway --wait
 
 Servers apply database migrations as they start, one server at a time. Read
 [Back up, restore and upgrade](backup-restore-upgrade.md#upgrades) before upgrading: it covers
-schema versions, rolling back, and the settings to add only once every server is upgraded. Take a
+schema versions, returning to base, and the settings to add only once every server is upgraded. Take a
 database backup before every upgrade.
 
 ## Remove it
@@ -516,7 +516,7 @@ kubectl delete namespace launchway launchway-steps
 ```
 
 `helm uninstall` deletes the bundled database's volume with it. It does **not** delete the Secrets the
-install hook Job made: the root key (`launchway-launchway-root-key`), the runner token, the database
+install hook Job made: the root key (`launchway-launchway-root-key`), the Station token, the database
 password and the setup code are not owned by Helm, on purpose, because the root key is the only way
 to read the installation's secrets again. Copy the root key somewhere safe, and delete these Secrets
 only when you mean to destroy the installation's data:
@@ -529,7 +529,7 @@ kubectl -n launchway delete serviceaccount,role,rolebinding,networkpolicy -l app
 
 ## What next
 
-- [Connect a runner](connect-runner.md) on another machine or in another cluster.
+- [Connect a Station](connect-runner.md) on another machine or in another cluster.
 - [Back up, restore and upgrade](backup-restore-upgrade.md).
 - [Sign-in with OpenID Connect and roles](oidc-and-roles.md) and [Secrets](secrets.md).
 - [Helm values](../reference/helm-values.md) for every setting, and `deploy/README.md` for network

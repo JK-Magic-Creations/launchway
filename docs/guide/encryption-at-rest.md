@@ -10,24 +10,24 @@ or replace it. It is for operators.
 | Protected now | How |
 |---|---|
 | The signing and sealing keys every server shares (sign-in state, links to hosted reports, Git run tokens) | Sealed in the `meta` table |
-| The shared runner token | Sealed in the `meta` table. The server must hand it to its own runner and to the data directory's `runner-token` file, so it cannot be a one-way hash (the file is `0600` and is not in the database) |
+| The shared Station (runner) token | Sealed in the `meta` table. The server must hand it to its own Station and to the data directory's `runner-token` file, so it cannot be a one-way hash (the file is `0600` and is not in the database) |
 | The private host keys of Git over SSH | Sealed in `ssh_host_keys`, bound to the algorithm |
 | Webhook secrets | Sealed in `repo_webhooks`, bound to the hook |
 | Webhook addresses | Sealed in `repo_webhooks.url`, bound to the hook, because a chat service's incoming webhook carries its token in the path. After they are added, the address is shown with the host only (`https://hooks.example/...`); to change it, enter the whole address again. The answer a receiver gave to a delivery is stored redacted (token-like strings and Authorization or Cookie values removed, and the address's own path) |
 | Addresses with a password or token in them (mirrors, webhooks, connections) | Refused when written, so none is stored; `launchway doctor encryption` counts any that an older release stored |
-| Sessions, API tokens, runner join and access tokens | Already stored only as SHA-256 hashes of 256 random bits, which cannot be reversed even with every key |
+| Sessions, API tokens, Station join and access tokens | Already stored only as SHA-256 hashes of 256 random bits, which cannot be reversed even with every key |
 
 | **Not yet encrypted by Launchway** | Until the next slice, do this |
 |---|---|
-| Artifacts, test attachments and reports | Encrypt the volume or the database, and the S3 bucket (server-side encryption) |
+| Cargo (artifacts), test attachments and reports | Encrypt the volume or the database, and the S3 bucket (server-side encryption) |
 | Logs and run records | The same |
 | Build caches | The same. The cached archives are not encrypted, and cache entries are not signed; see [build caches](build-caches.md#what-a-cache-entry-is-not-yet) |
 | Hosted Git repository packs | The same |
-| Registry images, charts and other OCI artifacts (the [built-in registry](registry.md)) | The same. Layers, configs and manifests are stored as pushed; `launchway doctor registry` says so |
+| Depot (registry) images, charts and other OCI Cargo (the [built-in Depot](registry.md)) | The same. Layers, configs and manifests are stored as pushed; `launchway doctor registry` says so |
 | Run metadata, project names, states, counts, the Logbook | These are searched, so they stay readable; use database and volume encryption |
 
-The next slice adds per-object encryption of artifacts, logs, caches, Git packs and registry blobs under the same
-keys. Until then, **encrypt the database volume and the artifact store as well**: Launchway cannot see
+The next slice adds per-object encryption of Cargo, logs, caches, Git packs and Depot blobs under the same
+keys. Until then, **encrypt the database volume and the Cargo store as well**: Launchway cannot see
 whether you have. A dump of the database today reveals build outputs and source history, though not
 the secrets above.
 
@@ -60,7 +60,7 @@ table or Wing does not open; neither does one made for another installation. A t
 There is one place that seals and opens (`internal/sealing`), and a list of the columns that hold
 secrets. A test walks the database schema and fails on a column that looks like it holds a secret and
 is neither on that list nor explained; another fails on code that writes a listed column without
-sealing; the canary test makes every kind of secret with a recognizable value, dumps the whole database
+sealing; the Pathfinder (canary) test makes every kind of secret with a recognizable value, dumps the whole database
 (the SQLite file and its log, or every text and binary column on PostgreSQL) and fails if the value
 appears in any encoding.
 
@@ -108,7 +108,7 @@ before the upgrade afterwards: see [Upgrading](upgrading.md).
 | Holder | You install | What it protects against | Notes |
 |---|---|---|---|
 | **Key file** (default) | nothing | A stolen database, backup or snapshot | 32 random bytes in base64, mode `0600` (a mounted Secret's `0440` also passes). A file that other users can read is refused. In Kubernetes the key is a Secret: **only as strong as the cluster's own secret encryption** (etcd encryption at rest and who may read Secrets), which Launchway cannot see. It defeats a stolen database dump, not a cluster administrator |
-| **Environment** (`LAUNCHWAY_ROOT_KEY`) | nothing | The same | For containers and tests. The environment is visible to whoever can inspect the process |
+| **Airfield (environment)** (`LAUNCHWAY_ROOT_KEY`) | nothing | The same | For containers and tests. The Airfield is visible to whoever can inspect the process |
 | **Passphrase keystore** | nothing | The same, and the key is not stored in the clear on disk | `launchway encryption init --passphrase`. The server needs the passphrase at every start: from `encryption.passphrase_file`, or asked on a terminal. Argon2id (64 MiB, 3 passes) turns the passphrase into a key that unlocks a random root key kept in the file, so the passphrase can change without re-keying. For one server; unattended restarts need the passphrase file |
 | **Vault or OpenBao transit** | an existing Vault or OpenBao | The root key never leaves the service; every unwrap is logged there; revoking access makes every secret unreadable at once | Uses the vault client and login methods of the secret stores (token variable, token file, or Kubernetes auth). The server needs `encrypt` and `decrypt` on one transit key only |
 
@@ -229,7 +229,7 @@ found in the clear in a sealed place is **refused**, not believed, so a downgrad
 On SQLite the pass zeroes freed content as it goes and empties the write-ahead log, so the old plaintext
 does not linger in the file. PostgreSQL keeps old row versions until they are vacuumed: run `VACUUM FULL` on
 `meta`, `ssh_host_keys` and `repo_webhooks` after sealing, and remember that backups and replicas made
-**before** sealing still hold the old plaintext: rotate those secrets (a new runner token, a new webhook
+**before** sealing still hold the old plaintext: rotate those secrets (a new Station token, a new webhook
 secret) if that matters to you.
 
 ## Commands, API and settings

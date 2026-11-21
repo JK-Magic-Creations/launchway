@@ -3,7 +3,7 @@ import { api } from "../api";
 import { loadOverview, type UnitView } from "../configApi";
 import { VariablesPanel } from "../components/Variables";
 import { PageHead, Sheet } from "../kit/layout";
-import { useTerms } from "../terms";
+import { useTerms, terms } from "../terms";
 import { VAR_LEVELS, type VarLevel } from "../variablesApi";
 import { ProjectHead } from "./PipelineChrome";
 
@@ -56,7 +56,7 @@ export function ProjectVariablesPage({ name }: { name: string }) {
         sentence="Everything that reaches this project from above, and what it sets itself. Set a variable here to override the one from a wider level, unless a lock stops it." />
       <Sheet pad>
         <form className="vr-tabs" onSubmit={(e) => { e.preventDefault(); setApplied(env.trim()); }}>
-          <label>For an environment <input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="all (general)" aria-label="Environment" /></label>
+          <label>{terms().say("For an {environment}")} <input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="all (general)" aria-label={terms().say("{Environment}")} /></label>
           <button className="btn btn-sm" type="submit">Show</button>
         </form>
         <VariablesPanel key={applied} level="project" scope={name} environment={applied || undefined} />

@@ -16,8 +16,8 @@ const done = (s: StepView | undefined) => !s || s.status === "succeeded" || s.st
 export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | null {
   switch (step.status) {
     case "pending": {
-      if (run.queue?.held) return { kind: "step", short: "Waiting in the queue", text: `${run.queue.reason ?? "Waiting for room"}.` };
-      if (run.lane?.state === "waiting") return { kind: "step", short: "Waiting for its lane", text: run.lane.reason || `The whole run waits its turn in the lane ${run.lane.label}.` };
+      if (run.queue?.held) return { kind: "step", short: terms().say("Waiting in the {queue}"), text: `${run.queue.reason ?? "Waiting for room"}.` };
+      if (run.lane?.state === "waiting") return { kind: "step", short: "Waiting for its lane", text: run.lane.reason || terms().say(`The whole {run} waits its turn in the lane ${run.lane.label}.`) };
       const open = (step.needs ?? []).filter((n) => !done(run.step_list.find((s) => s.id === n)));
       if (open.length > 0) return { kind: "step", short: `After ${open.join(" and ")}`, text: `Waiting for ${open.join(" and ")} to finish first.` };
       return { kind: "step", short: "Waiting for its turn", text: "Waiting for its turn: the steps before it have not finished." };
@@ -28,10 +28,10 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
         return { kind: "timer", short: `Retrying in ${duration(step.not_before! - now)}`, text: `Trying again in ${duration(step.not_before! - now)} (attempt ${step.attempt} of ${step.retry + 1})${cause}. The wait is the step's own retry delay.` };
       }
       // The server says what a queued step waits for (room in the step namespace, a free runner, ...).
-      if (step.waiting_for) return { kind: "runner", short: step.waiting_code === "no_runner" || step.waiting_code === "runners_busy" ? "Waiting for a runner" : "Waiting for room", text: `${step.waiting_for}.` };
+      if (step.waiting_for) return { kind: "runner", short: step.waiting_code === "no_runner" || step.waiting_code === "runners_busy" ? terms().say("Waiting for a {runner}") : "Waiting for room", text: `${step.waiting_for}.` };
       const hint = run.pool_hint || run.runner_hint;
       const for_ = step.queued_at > 0 ? ` It has waited ${duration(Math.max(0, now - step.queued_at))}.` : "";
-      return { kind: "runner", short: "Waiting for a runner", text: hint ? `${hint}${for_}` : `Waiting for a runner to take it.${for_}` };
+      return { kind: "runner", short: terms().say("Waiting for a {runner}"), text: hint ? `${hint}${for_}` : terms().say(`Waiting for a {runner} to take it.${for_}`) };
     }
     case "leased":
       return { kind: "runner", short: "Starting", text: `${step.runner ? step.runner : "A runner"} has taken it and is starting it.` };
@@ -54,19 +54,19 @@ function waitingWhy(run: RunDetail, step: StepView): Why {
   const d = deploymentOf(run, step);
   if (step.wait_kind === "lock") {
     const holder = d?.holding ? "" : " Another deployment holds it; this one goes when that one is done.";
-    return { kind: "environment", short: `Waiting for ${env || "the"} lock`, text: `Waiting for ${env || "the environment"}'s lock, so two deployments never run at once.${holder}` };
+    return { kind: "environment", short: `Waiting for ${env || "the"} lock`, text: `Waiting for ${env || terms().say("the {environment}")}'s lock, so two deployments never run at once.${holder}` };
   }
   if (d?.detail) return { kind: "engine", short: d.detail.length > 40 ? d.detail.slice(0, 38) + "…" : d.detail, text: d.detail };
   if (!d || d.phase === "unobserved" || d.phase === "") {
     const target = d?.target ? ` for ${d.target}` : "";
-    return { kind: "engine", short: "No deploy runner yet", text: `The step is done on its side. No deploy runner has reported yet on what happened${target}, so Launchway cannot tell whether it worked. Check that a deploy runner serves this environment.` };
+    return { kind: "engine", short: terms().say("No {deploy:do} {runner} yet"), text: terms().say(`The step is done on its side. No {deploy:do} {runner} has reported yet on what happened${target}, so Launchway cannot tell whether it worked. Check that a {deploy:do} {runner} serves this {environment}.`) };
   }
   return { kind: "engine", short: "Settling", text: `Waiting for the deployment to settle (${d.phase.replace(/_/g, " ")}).` };
 }
 
 /** One sentence for the whole run: where it is, and what it waits for if it waits. */
 export function runSentence(run: RunDetail, now: number): string {
-  const n = `Run #${run.number}`;
+  const n = terms().say(`{Run} #${run.number}`);
   if (run.status === "canceled") return `${n} was canceled${run.cancel_reason ? `: ${run.cancel_reason}` : ""}.`;
   if (run.status === "failed") {
     const f = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);

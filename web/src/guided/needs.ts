@@ -6,6 +6,7 @@ import type { LaunchLineView } from "../api/launch";
 import { ago } from "../format";
 import type { IconName } from "../kit/Icon";
 import { attention, type Attention, type AttentionInput } from "./derive";
+import { terms } from "../terms";
 
 export interface Need extends Attention { icon: IconName }
 
@@ -21,7 +22,7 @@ export function needsYou(input: AttentionInput, lines: LaunchLineView[], now: nu
       const line = byRun.get(a.key.slice(4));
       const at = line?.stations.find((s) => s.state === "failed");
       if (line && at) {
-        need.title = `Run #${line.number} of ${line.project} stopped at ${at.label.toLowerCase()}`;
+        need.title = terms().say(`{Run} #${line.number} of ${line.project} stopped at ${at.label.toLowerCase()}`);
         need.detail = `${at.detail}. ${ago(line.finished_at || line.created_at, now)}.`;
       }
     }

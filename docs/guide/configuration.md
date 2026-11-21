@@ -27,7 +27,7 @@ configuration as objects in its database instead:
 ## What is not in the database: pipelines
 
 Pipelines, templates, shared libraries and custom step code are code, and **stay in Git**, the
-single place they exist. Launchway reads a pipeline from the repository at the commit a run is for, so a
+single place they exist. Launchway reads a pipeline from the repository at the commit a Sortie (run) is for, so a
 feature branch runs its own version of it and a pull request shows the pipeline change beside the code
 change. The database holds only *settings about* them: a project's configuration is the reference to its
 repository (address, default branch, how runs start) and, for a project that uses a template, which
@@ -48,9 +48,9 @@ The file a server starts with holds only what it needs before it can read the da
 - what runs on the server's own machine (`runner`), who actions are recorded as without sign-in
   (`user`), and `reports.origin`, the address the server is reached at.
 
-Everything else lives in the database: projects, libraries, environments, runner pools, role
+Everything else lives in the database: projects, libraries, Airfields (environments), Flight lines (Station (runner) pools), role
 bindings, policies, health sources, AI models, secret-store definitions, limits and retention, the
-MCP endpoint, and where artifacts are kept. The [server configuration reference](../reference/server-config.md)
+MCP endpoint, and where Cargo (artifacts) are kept. The [server configuration reference](../reference/server-config.md)
 marks each setting.
 
 Sign-in stays in the file for a reason: a server cannot ask the database "who may sign in" before
@@ -102,7 +102,7 @@ Launchway has four levels, from the whole installation down to one repository. T
 | **Project** | One repository and its pipeline | always |
 
 Objects that can be defined at a level apply to the projects below it. A **role binding**, a
-**library**, a **policy**, an **environment**, a **runner pool**, a **health source**, an **AI model**
+**library**, a **policy**, an **Airfield**, a **Flight line**, a **health source**, an **AI model**
 or a **secret store** defined at a Squadron applies to the Squadron's projects; defined at the Wing it
 applies to every project. A project can add to what it inherits, or, where a setting allows it,
 change it. The project page shows where each effective value comes from (`launchway config effective
@@ -119,7 +119,7 @@ several wings can be added later without rewriting them; nothing isolates
 wings from each other yet, and this release does not claim to.
 The limit is in the code, not the tables: the configuration store reads and writes only the one Wing, the `organisation` kind accepts only the name `default`, and project names, runs, repositories and tokens are unique across the installation. To organize many repositories, use one Wing and [Squadrons](#levels): any number of Squadrons (never nested), each holding the projects of one team or product line.
 
-## Upgrading and rolling back
+## Upgrading and returning to base {#upgrading-and-rolling-back}
 
 See [Backup, restore, upgrade](../howto/backup-restore-upgrade.md#configuration-in-the-database).
 In short: servers of the release before keep using their own file until they are replaced, the import
@@ -134,7 +134,7 @@ it all at once or not at all:
 
 - [First-run setup](../howto/setup-first-run.md)
 - [Connect a repository](../howto/connect-repository.md)
-- [Add a runner](../howto/add-runner.md)
-- [Add an environment](../howto/add-environment.md)
+- [Add a Station (runner)](../howto/add-runner.md)
+- [Add an Airfield](../howto/add-environment.md)
 - [Add a policy](../howto/add-policy.md)
 - [Add a health source](../howto/add-health-source.md) and [add an AI model](../howto/add-ai-model.md)

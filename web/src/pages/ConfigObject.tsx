@@ -114,11 +114,11 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
     const by = obj?.managed_by;
     if (by !== "terraform" && by !== "git") return false;
     const who = by === "terraform" ? "Terraform" : "Git";
-    return window.confirm(`${who} manages this. A change made here would be set back by its next run, so changing it here means taking it over from ${who}: it is then managed here, and the change is recorded. Take it over and save?`) ? true : null;
+    return window.confirm(terms().say(`${who} manages this. A change made here would be set back by its next {run}, so changing it here means taking it over from ${who}: it is then managed here, and the change is recorded. Take it over and save?`)) ? true : null;
   };
   const remove = async () => {
     if (!obj) return;
-    const what = k.name === "project" ? " Its runs and history are kept; it stops being watched." : "";
+    const what = k.name === "project" ? terms().say(" Its {runs} and history are kept; it stops being watched.") : "";
     if (!window.confirm(`Delete ${one.toLowerCase()} ${name}? It stops applying at once.${what} You can restore it from this page.`)) return;
     setBusy(true); setError(null);
     const take = await takeOwnership();

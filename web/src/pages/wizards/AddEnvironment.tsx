@@ -47,13 +47,13 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
     {
       id: "where", title: "Name and target",
       fields: [{ path: "name", match: ["name", "names", "exists", "already"], value: name }, { path: "target", value: target }],
-      local: () => !name.trim() ? "Give the environment a name." : !target.trim() ? "Give its target." : null,
+      local: () => !name.trim() ? terms().say("Give the {environment} a name.") : !target.trim() ? "Give its target." : null,
       render: (by) => (
         <>
-          <p>An environment is a place deploy steps deploy to, such as staging or production. Pipelines name it in their deploy steps.</p>
+          <p>{terms().say("An {environment} is a place deploy steps {deploy:do} to, such as staging or production. Pipelines name it in their deploy steps.")}</p>
           <div className="cf-grid">
             <TextInput label="Name" value={name} onChange={setName} mono required focusOnMount placeholder="staging" problems={by.name}
-              help="As pipelines will write it: environment: staging. Letters, digits, dots, hyphens and underscores." />
+              help={terms().say("As pipelines will write it: {environment}: staging. Letters, digits, dots, hyphens and underscores.")} />
             <Field2 target={target} setTarget={setTarget} known={knownTargets} problems={by.target} />
             <DefinedAt overview={overview} value={unit} onChange={setUnit} />
           </div>
@@ -61,11 +61,11 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
       ),
     },
     {
-      id: "who", title: "Who may deploy there",
+      id: "who", title: terms().say("Who may {deploy:do} there"),
       fields: [{ path: "projects", value: projects }],
-      local: () => !projects.length ? `Choose at least one ${proj.singular.toLowerCase()} (or * for all); otherwise nothing could deploy here.` : null,
+      local: () => !projects.length ? terms().say(`Choose at least one ${proj.singular.toLowerCase()} (or * for all); otherwise nothing could {deploy:do} here.`) : null,
       render: (by) => (
-        <PickNames legend={`${proj.plural} that may deploy here`} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.projects}
+        <PickNames legend={terms().say(`${proj.plural} that may {deploy:do} here`)} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.projects}
           help={`A deploy step of a ${proj.singular.toLowerCase()} not listed fails at once, before anything changes. * allows every ${proj.singular.toLowerCase()}; a pattern such as web-* allows a family.`} />
       ),
     },
@@ -76,37 +76,37 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
         <>
           <Choices legend="Is it protected?" value={prot} onChange={(v) => setProtChoice(v as "no" | "yes")} problems={by.protected}
             options={[
-              { value: "no", label: "No", help: `Whoever may operate the ${proj.singular.toLowerCase()} may promote or retry its deployments here, including the person who started the run. Usual for test and staging environments.` },
+              { value: "no", label: "No", help: terms().say(`Whoever may operate the ${proj.singular.toLowerCase()} may promote or retry its deployments here, including the person who started the {run}. Usual for test and staging {environments}.`) },
               { value: "yes", label: "Yes, protected", help: "The person who started a run may not promote or retry its deployment here: someone else with the operator role must. Anyone with the operator role may still abort. The usual choice for production." },
             ]} />
-          <Choices legend="When several runs wait to deploy the same service here" value={queue} onChange={(v) => setQueue(v as "newest" | "all")} problems={by.queue}
+          <Choices legend={terms().say("When several {runs} wait to {deploy:do} the same service here")} value={queue} onChange={(v) => setQueue(v as "newest" | "all")} problems={by.queue}
             options={[
-              { value: "newest", label: "Only the newest deploys", badge: "the default", help: "A run waiting for the environment is skipped when a newer run of the same service starts waiting, so the latest version arrives soonest." },
-              { value: "all", label: "Every run deploys, in turn", help: "Each waiting run deploys in order. Slower, but every version passes through the environment (useful when each must be tested there)." },
+              { value: "newest", label: terms().say("Only the newest {deploy:does}"), badge: "the default", help: terms().say("A {run} waiting for the {environment} is skipped when a newer run of the same service starts waiting, so the latest version arrives soonest.") },
+              { value: "all", label: terms().say("Every {run} {deploy:does}, in turn"), help: terms().say("Each waiting run {deploy:does} in order. Slower, but every version passes through the {environment} (useful when each must be tested there).") },
             ]} />
           <div className="callout callout-info">
             <strong>{terms().label("clearance")} and {terms().lower("preflight")}.</strong> To have someone give {terms().lower("clearance")} before a deployment here, either add an approval step (kind <span className="mono">approval</span>) before the deploy step in the pipeline,
-            or <Link href="/config/wizard/add-policy">add a policy</Link> with the <span className="mono">approvals</span> rule for this environment, which every pipeline must then meet in its {terms().lower("preflight")}.
+            or <Link href="/config/wizard/add-policy">add a policy</Link> with the <span className="mono">approvals</span> {terms().say("rule for this {environment}, which every pipeline must then meet in its")} {terms().lower("preflight")}.
           </div>
         </>
       ),
     },
     {
-      id: "pool", title: "Deploy runners",
+      id: "pool", title: terms().say("{Deploy:do} {runners}"),
       fields: [{ path: "pool", match: ["runner_pools", "pool"], value: poolChoice === "new" ? poolName : "" }],
       render: (by) => (
         <>
-          <p>Deployments here are done by deploy runners that serve target <span className="mono">{target || "…"}</span>. Until one does, deploy steps to this environment wait.</p>
-          <Choices legend="Which runners deploy here?" value={poolChoice} onChange={(v) => setPoolPick(v as "existing" | "new" | "later")}
+          <p>{terms().say("Deployments here are done by {deploy:do} {runners} that serve target")} <span className="mono">{target || "…"}</span>{terms().say(". Until one does, deploy steps to this {environment} wait.")}</p>
+          <Choices legend={terms().say("Which {runners} {deploy:do} here?")} value={poolChoice} onChange={(v) => setPoolPick(v as "existing" | "new" | "later")}
             options={[
-              ...(serving.length ? [{ value: "existing", label: `The pool that already serves ${target}: ${serving.map((p) => p.name).join(", ")}`, help: "Nothing to add: its runners will take this environment's deployments." }] : []),
-              { value: "new", label: "A new deploy pool for this target", help: "Made with the environment. Then add a runner to it: the next wizard gives you the command." },
-              { value: "later", label: "Decide later", help: "The environment works as soon as a deploy pool lists its target." },
+              ...(serving.length ? [{ value: "existing", label: `The pool that already serves ${target}: ${serving.map((p) => p.name).join(", ")}`, help: terms().say("Nothing to add: its {runners} will take this {environment}'s deployments.") }] : []),
+              { value: "new", label: terms().say("A new {deploy:do} pool for this target"), help: terms().say("Made with the {environment}. Then add a {runner} to it: the next wizard gives you the command.") },
+              { value: "later", label: "Decide later", help: terms().say("The {environment} works as soon as a {deploy:do} pool lists its target.") },
             ]} />
           {poolChoice === "new" && (
             <div className="cf-grid">
               <TextInput label="Name of the pool" value={poolName} onChange={setPoolNameEdit} mono problems={by.pool}
-                help="It takes only runners enrolled with a join token for it, so no shared token can deploy here." />
+                help={terms().say("It takes only {runners} enrolled with a join token for it, so no shared token can {deploy:do} here.")} />
             </div>
           )}
         </>
@@ -115,17 +115,17 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
   ];
 
   return (
-    <WizardRunner title="Add an environment" overview={overview}
-      intro="A place to deploy to. Nothing is created until you confirm at the end."
+    <WizardRunner title={terms().say("Add an {environment}")} overview={overview}
+      intro={terms().say("A place to {deploy:do} to. Nothing is created until you confirm at the end.")}
       steps={steps} changes={changes}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
           <h3 className="h-sm">Next</h3>
           <ul className="cf-next">
-            {poolChoice === "new" && <li><Link href={`/config/wizard/add-runner?pool=${encodeURIComponent(poolName.trim())}`}>Add a runner to pool {poolName.trim()}</Link></li>}
-            <li><Link href="/environments">See the environments</Link></li>
-            <li>Deploy there from a pipeline: a step with <span className="mono">kind: deploy</span> and <span className="mono">environment: {name.trim()}</span></li>
+            {poolChoice === "new" && <li><Link href={`/config/wizard/add-runner?pool=${encodeURIComponent(poolName.trim())}`}>{terms().say("Add a {runner} to pool")} {poolName.trim()}</Link></li>}
+            <li><Link href="/environments">{terms().say("See the {environments}")}</Link></li>
+            <li>{terms().say("{Deploy:do} there from a pipeline: a step with")} <span className="mono">kind: deploy</span> and <span className="mono">environment: {name.trim()}</span></li>
           </ul>
         </>
       )} />
@@ -137,7 +137,7 @@ function Field2({ target, setTarget, known, problems }: { target: string; setTar
   return (
     <>
       <TextInput label="Target" value={target} onChange={setTarget} mono required placeholder="prod-cluster" problems={problems}
-        help={`What deploy runners serve to reach it: in practice, its cluster. Environments in one cluster share a target.${known.length ? ` In use: ${known.join(", ")}.` : ""}`} />
+        help={terms().say(`What {deploy:do} {runners} serve to reach it: in practice, its cluster. {Environments} in one cluster share a target.${known.length ? ` In use: ${known.join(", ")}.` : ""}`)} />
     </>
   );
 }

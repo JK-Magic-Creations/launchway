@@ -16,7 +16,7 @@ secrets away from code that anyone could have written. For developers. Takes abo
 
 Launchway has no Git host integration to install: it polls. Git hosts such as GitHub, Gitea and
 Forgejo publish each pull request's head commit as the ref `refs/pull/<number>/head`. The server's
-mirror fetches those refs, and a run starts when one appears or moves. A webhook from the Git host
+mirror fetches those refs, and a Sortie (run) starts when one appears or moves. A webhook from the Git host
 only makes the server look at once; see [Triggers](../guide/triggers.md#webhooks).
 
 ```mermaid
@@ -95,7 +95,7 @@ pull request 1 would get version 1.0.11
 ```
 
 and `publish` is skipped. *Recent pushes* on the project page says why each ref did or did not
-start a run:
+start a Sortie:
 
 ```text
 refs/pull/1/head             started run #11
@@ -109,7 +109,7 @@ refs/heads/feature/greeting  the pipeline's push trigger does not match refs/hea
 ## 3 See secrets refused
 
 A pull request's code may come from anyone who can open one. By default, a step of a
-pull-request run that declares `secrets` fails before any runner sees it. Add a step that asks
+pull-request run that declares `secrets` fails before any Station (runner) sees it. Add a step that asks
 for a secret, on the pull request's branch:
 
 ```sh
@@ -154,4 +154,4 @@ configuration, if only trusted people can open pull requests there.
 
 - [Templates from a library](library-templates.md).
 - [Triggers guide](../guide/triggers.md): schedules and webhooks too.
-- Reporting a run's result back to the pull request as a commit status is not available yet.
+- Reporting a Sortie's result back to the pull request as a commit status is not available yet.

@@ -1,0 +1,743 @@
+{
+  "groups": [
+    {
+      "ID": "levels",
+      "Title": "Levels"
+    },
+    {
+      "ID": "work",
+      "Title": "Work"
+    },
+    {
+      "ID": "delivery",
+      "Title": "Delivery"
+    },
+    {
+      "ID": "platform",
+      "Title": "Platform"
+    },
+    {
+      "ID": "roles",
+      "Title": "Roles"
+    },
+    {
+      "ID": "statuses",
+      "Title": "Statuses"
+    }
+  ],
+  "words": [
+    {
+      "key": "installation",
+      "group": "levels",
+      "aviation": {
+        "one": "Base",
+        "many": "Bases"
+      },
+      "plain": {
+        "one": "Installation",
+        "many": "Installations"
+      },
+      "meaning": "The whole installation, and every customer's own walled-off space on the hosted service: the top level.",
+      "renameable": true
+    },
+    {
+      "key": "organization",
+      "group": "levels",
+      "aviation": {
+        "one": "Wing",
+        "many": "Wings"
+      },
+      "plain": {
+        "one": "Organization",
+        "many": "Organizations"
+      },
+      "meaning": "The group that owns the projects: the second level.",
+      "renameable": true
+    },
+    {
+      "key": "unit",
+      "group": "levels",
+      "aviation": {
+        "one": "Squadron",
+        "many": "Squadrons"
+      },
+      "plain": {
+        "one": "Team",
+        "many": "Teams"
+      },
+      "meaning": "An optional group of projects with shared settings: the third level.",
+      "renameable": true
+    },
+    {
+      "key": "project",
+      "group": "levels",
+      "aviation": {
+        "one": "Project",
+        "many": "Projects"
+      },
+      "plain": {
+        "one": "Project",
+        "many": "Projects"
+      },
+      "meaning": "One repository and its pipeline: the fourth level.",
+      "renameable": true
+    },
+    {
+      "key": "runner",
+      "group": "work",
+      "aviation": {
+        "one": "Station"
+      },
+      "plain": {
+        "one": "Runner"
+      },
+      "meaning": "A machine or service that does the work of a pipeline's steps.",
+      "renameable": true
+    },
+    {
+      "key": "runner_group",
+      "group": "work",
+      "aviation": {
+        "one": "Flight line"
+      },
+      "plain": {
+        "one": "Runner group"
+      },
+      "meaning": "A group of runners that share a purpose, such as every runner that can build images.",
+      "renameable": true
+    },
+    {
+      "key": "run",
+      "group": "work",
+      "aviation": {
+        "one": "Sortie",
+        "many": "Sorties"
+      },
+      "plain": {
+        "one": "Run"
+      },
+      "meaning": "One execution of a pipeline, from the first step to the last.",
+      "renameable": true
+    },
+    {
+      "key": "queue",
+      "group": "work",
+      "aviation": {
+        "one": "Holding pattern"
+      },
+      "plain": {
+        "one": "Queue"
+      },
+      "meaning": "Where runs wait until a runner or a slot is free, and the reason each one is waiting.",
+      "renameable": true
+    },
+    {
+      "key": "run_log",
+      "group": "work",
+      "aviation": {
+        "one": "Flight recorder"
+      },
+      "plain": {
+        "one": "Run log"
+      },
+      "meaning": "The recorded output of every step of a run, kept so you can read what happened.",
+      "renameable": true
+    },
+    {
+      "key": "debrief",
+      "group": "work",
+      "aviation": {
+        "one": "Debrief"
+      },
+      "plain": {
+        "one": "Run summary"
+      },
+      "meaning": "The summary after a run: what passed, what failed and why, with the test report.",
+      "renameable": true
+    },
+    {
+      "key": "schedule",
+      "group": "work",
+      "aviation": {
+        "one": "Patrol"
+      },
+      "plain": {
+        "one": "Scheduled run"
+      },
+      "meaning": "A run that starts by itself at set times, such as every night.",
+      "renameable": true
+    },
+    {
+      "key": "deploy",
+      "group": "delivery",
+      "aviation": {
+        "one": "Launch",
+        "many": "Launches",
+        "do": "launch",
+        "did": "launched",
+        "doing": "launching"
+      },
+      "plain": {
+        "one": "Deploy",
+        "many": "Deploys",
+        "do": "deploy",
+        "did": "deployed",
+        "doing": "deploying"
+      },
+      "meaning": "Put a version of your software into an environment, such as testing or production.",
+      "renameable": true
+    },
+    {
+      "key": "environment",
+      "group": "delivery",
+      "aviation": {
+        "one": "Airfield"
+      },
+      "plain": {
+        "one": "Environment"
+      },
+      "meaning": "A place your software runs, such as development, testing or production.",
+      "renameable": true
+    },
+    {
+      "key": "rollback",
+      "group": "delivery",
+      "aviation": {
+        "one": "Return to base",
+        "many": "Returns to base",
+        "do": "return to base",
+        "did": "returned to base",
+        "doing": "returning to base"
+      },
+      "plain": {
+        "one": "Rollback",
+        "many": "Rollbacks",
+        "do": "roll back",
+        "did": "rolled back",
+        "doing": "rolling back"
+      },
+      "meaning": "Go back to the previous working version after a deploy.",
+      "renameable": true
+    },
+    {
+      "key": "emergency_rollback",
+      "group": "delivery",
+      "aviation": {
+        "one": "Abort",
+        "many": "Aborts",
+        "do": "abort",
+        "did": "aborted",
+        "doing": "aborting"
+      },
+      "plain": {
+        "one": "Emergency rollback",
+        "many": "Emergency rollbacks",
+        "do": "roll back immediately",
+        "did": "rolled back immediately",
+        "doing": "rolling back immediately"
+      },
+      "meaning": "Go back at once, skipping the checks and waits, when production is hurt.",
+      "renameable": true
+    },
+    {
+      "key": "canary",
+      "group": "delivery",
+      "aviation": {
+        "one": "Pathfinder"
+      },
+      "plain": {
+        "one": "Canary"
+      },
+      "meaning": "A small first share of traffic or machines that gets the new version before everyone, to catch problems early.",
+      "renameable": true
+    },
+    {
+      "key": "post_deploy_watch",
+      "group": "delivery",
+      "aviation": {
+        "one": "Overwatch"
+      },
+      "plain": {
+        "one": "Post-deploy watch"
+      },
+      "meaning": "The time after a deploy when Launchway keeps watching health signals and can go back by itself.",
+      "renameable": true
+    },
+    {
+      "key": "toggle",
+      "group": "delivery",
+      "aviation": {
+        "one": "Switch"
+      },
+      "plain": {
+        "one": "Feature toggle"
+      },
+      "meaning": "A setting that turns a feature on or off without a new deploy.",
+      "renameable": true
+    },
+    {
+      "key": "kill_switch",
+      "group": "delivery",
+      "aviation": {
+        "one": "Master switch"
+      },
+      "plain": {
+        "one": "Kill switch"
+      },
+      "meaning": "A switch that turns a feature off for everyone at once.",
+      "renameable": true
+    },
+    {
+      "key": "release_unit",
+      "group": "delivery",
+      "aviation": {
+        "one": "Formation"
+      },
+      "plain": {
+        "one": "Release group"
+      },
+      "meaning": "Several things that are released together and move as one.",
+      "renameable": true
+    },
+    {
+      "key": "preflight",
+      "group": "delivery",
+      "aviation": {
+        "one": "Preflight"
+      },
+      "plain": {
+        "one": "Checks"
+      },
+      "meaning": "The checks made before a run, a merge or a deploy.",
+      "renameable": true
+    },
+    {
+      "key": "checklist",
+      "group": "delivery",
+      "aviation": {
+        "one": "Checklist"
+      },
+      "plain": {
+        "one": "Checklist"
+      },
+      "meaning": "The list of things that must be true before a change goes on.",
+      "renameable": true
+    },
+    {
+      "key": "clearance",
+      "group": "delivery",
+      "aviation": {
+        "one": "Clearance"
+      },
+      "plain": {
+        "one": "Approval"
+      },
+      "meaning": "A person decides whether a change may go on, by saying Go or No-go.",
+      "renameable": true
+    },
+    {
+      "key": "go",
+      "group": "delivery",
+      "aviation": {
+        "one": "Go"
+      },
+      "plain": {
+        "one": "Approve"
+      },
+      "meaning": "The recorded answer that lets the run continue. The button says Approve in both sets.",
+      "renameable": true
+    },
+    {
+      "key": "no_go",
+      "group": "delivery",
+      "aviation": {
+        "one": "No-go"
+      },
+      "plain": {
+        "one": "Reject"
+      },
+      "meaning": "The recorded answer that fails the step. The button says Reject in both sets.",
+      "renameable": true
+    },
+    {
+      "key": "hold",
+      "group": "delivery",
+      "aviation": {
+        "one": "Hold"
+      },
+      "plain": {
+        "one": "Freeze"
+      },
+      "meaning": "A time when changes may not go out.",
+      "renameable": true
+    },
+    {
+      "key": "flight_plan",
+      "group": "delivery",
+      "aviation": {
+        "one": "Flight plan"
+      },
+      "plain": {
+        "one": "Starter pipeline"
+      },
+      "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
+      "renameable": true
+    },
+    {
+      "key": "maneuver",
+      "group": "delivery",
+      "aviation": {
+        "one": "Maneuver"
+      },
+      "plain": {
+        "one": "Step template"
+      },
+      "meaning": "A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment.",
+      "renameable": true
+    },
+    {
+      "key": "hangar",
+      "group": "delivery",
+      "aviation": {
+        "one": "Hangar"
+      },
+      "plain": {
+        "one": "Template library"
+      },
+      "meaning": "The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it.",
+      "renameable": true
+    },
+    {
+      "key": "payload",
+      "group": "delivery",
+      "aviation": {
+        "one": "Payload"
+      },
+      "plain": {
+        "one": "Contents"
+      },
+      "meaning": "What a change delivers.",
+      "renameable": true
+    },
+    {
+      "key": "in_flight",
+      "group": "delivery",
+      "aviation": {
+        "one": "In flight"
+      },
+      "plain": {
+        "one": "In progress"
+      },
+      "meaning": "A change on its way to production.",
+      "renameable": true
+    },
+    {
+      "key": "launch_line",
+      "group": "delivery",
+      "aviation": {
+        "one": "Launch line"
+      },
+      "plain": {
+        "one": "Launch line"
+      },
+      "meaning": "The path a change travels, from commit to production. Named after the product, so the same in both sets.",
+      "renameable": true
+    },
+    {
+      "key": "home",
+      "group": "platform",
+      "aviation": {
+        "one": "Tower"
+      },
+      "plain": {
+        "one": "Home"
+      },
+      "meaning": "The first page: what needs you now, and a map of everything Launchway holds.",
+      "renameable": true
+    },
+    {
+      "key": "monitoring",
+      "group": "platform",
+      "aviation": {
+        "one": "Radar"
+      },
+      "plain": {
+        "one": "Monitoring",
+        "many": "Monitoring"
+      },
+      "meaning": "Health, metrics and the map of how services talk to each other.",
+      "renameable": true
+    },
+    {
+      "key": "notifications",
+      "group": "platform",
+      "aviation": {
+        "one": "Comms",
+        "many": "Comms"
+      },
+      "plain": {
+        "one": "Notifications",
+        "many": "Notifications"
+      },
+      "meaning": "Messages Launchway sends when something needs attention, and where they go.",
+      "renameable": true
+    },
+    {
+      "key": "registry",
+      "group": "platform",
+      "aviation": {
+        "one": "Depot"
+      },
+      "plain": {
+        "one": "Registry"
+      },
+      "meaning": "Launchway's built-in store for container images and charts.",
+      "renameable": true
+    },
+    {
+      "key": "artifact",
+      "group": "platform",
+      "aviation": {
+        "one": "Cargo",
+        "many": "Cargo"
+      },
+      "plain": {
+        "one": "Artifact"
+      },
+      "meaning": "A file or image a pipeline builds and keeps, such as a package or container image.",
+      "renameable": true
+    },
+    {
+      "key": "standards",
+      "group": "platform",
+      "aviation": {
+        "one": "Standing orders",
+        "many": "Standing orders"
+      },
+      "plain": {
+        "one": "Standards",
+        "many": "Standards"
+      },
+      "meaning": "The rules every project must meet: policies, required checks and approvals.",
+      "renameable": true
+    },
+    {
+      "key": "scan",
+      "group": "platform",
+      "aviation": {
+        "one": "Inspection"
+      },
+      "plain": {
+        "one": "Security scan"
+      },
+      "meaning": "A check of your code and images for known security problems.",
+      "renameable": true
+    },
+    {
+      "key": "dependency_updates",
+      "group": "platform",
+      "aviation": {
+        "one": "Maintenance",
+        "many": "Maintenance"
+      },
+      "plain": {
+        "one": "Dependency updates",
+        "many": "Dependency updates"
+      },
+      "meaning": "Proposed updates to the libraries a project uses, opened as pull requests.",
+      "renameable": true
+    },
+    {
+      "key": "chaos_test",
+      "group": "platform",
+      "aviation": {
+        "one": "Drill"
+      },
+      "plain": {
+        "one": "Chaos test"
+      },
+      "meaning": "A planned failure, such as stopping a service, to prove the system recovers.",
+      "renameable": true
+    },
+    {
+      "key": "learn",
+      "group": "platform",
+      "aviation": {
+        "one": "Flight school"
+      },
+      "plain": {
+        "one": "Learn"
+      },
+      "meaning": "Short lessons that teach Launchway by doing.",
+      "renameable": true
+    },
+    {
+      "key": "first_run",
+      "group": "platform",
+      "aviation": {
+        "one": "In-processing"
+      },
+      "plain": {
+        "one": "Setup"
+      },
+      "meaning": "The guided setup the first time Launchway starts.",
+      "renameable": true
+    },
+    {
+      "key": "guide",
+      "group": "platform",
+      "aviation": {
+        "one": "Wingman"
+      },
+      "plain": {
+        "one": "Guide"
+      },
+      "meaning": "The helper panel beside every page: where you are and what you can do next.",
+      "renameable": true
+    },
+    {
+      "key": "logbook",
+      "group": "platform",
+      "aviation": {
+        "one": "Logbook"
+      },
+      "plain": {
+        "one": "Audit trail"
+      },
+      "meaning": "The append-only record of who did what, and when.",
+      "renameable": true
+    },
+    {
+      "key": "owner",
+      "group": "roles",
+      "aviation": {
+        "one": "Commander"
+      },
+      "plain": {
+        "one": "Owner"
+      },
+      "meaning": "Can do everything, including who may do what. The stored role is owner.",
+      "renameable": true
+    },
+    {
+      "key": "approver",
+      "group": "roles",
+      "aviation": {
+        "one": "Controller"
+      },
+      "plain": {
+        "one": "Approver"
+      },
+      "meaning": "Decides whether a change may go on. The stored role is approver.",
+      "renameable": true
+    },
+    {
+      "key": "developer",
+      "group": "roles",
+      "aviation": {
+        "one": "Pilot"
+      },
+      "plain": {
+        "one": "Developer"
+      },
+      "meaning": "Writes code and starts runs. The stored role is developer.",
+      "renameable": true
+    },
+    {
+      "key": "viewer",
+      "group": "roles",
+      "aviation": {
+        "one": "Observer"
+      },
+      "plain": {
+        "one": "Viewer"
+      },
+      "meaning": "Can read everything and change nothing. The stored role is viewer.",
+      "renameable": true
+    },
+    {
+      "key": "queued",
+      "group": "statuses",
+      "aviation": {
+        "one": "Holding"
+      },
+      "plain": {
+        "one": "Queued"
+      },
+      "meaning": "Waiting for a runner or a free slot.",
+      "renameable": false
+    },
+    {
+      "key": "running",
+      "group": "statuses",
+      "aviation": {
+        "one": "Airborne"
+      },
+      "plain": {
+        "one": "Running"
+      },
+      "meaning": "Working right now.",
+      "renameable": false
+    },
+    {
+      "key": "succeeded",
+      "group": "statuses",
+      "aviation": {
+        "one": "Mission complete"
+      },
+      "plain": {
+        "one": "Succeeded"
+      },
+      "meaning": "Finished, and everything passed.",
+      "renameable": false
+    },
+    {
+      "key": "failed",
+      "group": "statuses",
+      "aviation": {
+        "one": "Failed"
+      },
+      "plain": {
+        "one": "Failed"
+      },
+      "meaning": "Finished, and something did not pass.",
+      "renameable": false
+    },
+    {
+      "key": "canceled",
+      "group": "statuses",
+      "aviation": {
+        "one": "Scrubbed"
+      },
+      "plain": {
+        "one": "Canceled"
+      },
+      "meaning": "Stopped on purpose before it finished.",
+      "renameable": false
+    },
+    {
+      "key": "rolled_back",
+      "group": "statuses",
+      "aviation": {
+        "one": "Returned to base"
+      },
+      "plain": {
+        "one": "Rolled back"
+      },
+      "meaning": "Went back to the previous version.",
+      "renameable": false
+    },
+    {
+      "key": "waiting",
+      "group": "statuses",
+      "aviation": {
+        "one": "Waiting"
+      },
+      "plain": {
+        "one": "Waiting"
+      },
+      "meaning": "Paused until a person decides or a condition is met.",
+      "renameable": false
+    }
+  ]
+}

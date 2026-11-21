@@ -58,11 +58,11 @@ export function Home({ me, projects, runs, runners, environments, applications, 
   return (
     <div className="page home">
       <PageHead eyebrow={me.user ? `Hello, ${me.user}` : undefined} title={fresh ? "Welcome" : h.title}
-        sentence={fresh ? "Launchway builds, tests and deploys your software. Let us get you started." : h.sentence}
+        sentence={fresh ? terms().say("Launchway builds, tests and {deploy:does} your software. Let us get you started.") : h.sentence}
         actions={me.admin && projects.length > 0 ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined} />
 
       {next.item && <NextStepCard item={next.item} done={next.done} total={next.total} />}
-      {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> Projects, a runner, a first run and an environment are in place.</div>}
+      {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("Projects, a {runner}, a first {run} and an {environment} are in place.")}</div>}
 
       <NeedsSheet list={needs} />
 
@@ -145,7 +145,7 @@ export function ChangesOnTheirWay({ lines, runs, now }: { lines: LaunchLineView[
     <Sheet title="Changes on their way" actions={<span className="faint small">Each dot is a place a change has to pass</span>}>
       {lines.map((l) => (
         <a key={l.run} href={`/runs/${l.run}`} onClick={onLink} className={`brow ${l.tone === "bad" ? "bad" : l.tone === "wait" ? "wait" : ""}`}>
-          <div className="ct"><b>{l.message || `Run #${l.number}`}</b><span>{l.project} · run #{l.number}{l.actor ? ` · ${l.actor}` : ""} · {ago(l.created_at, now)}</span></div>
+          <div className="ct"><b>{l.message || terms().say(`{Run} #${l.number}`)}</b><span>{l.project} · run #{l.number}{l.actor ? ` · ${l.actor}` : ""} · {ago(l.created_at, now)}</span></div>
           <LaunchLine stations={toStations(l.stations)} compact />
           <div className="now"><Status state={TONE[l.tone] ?? "skip"} /><span>{l.now}</span></div>
         </a>
@@ -159,7 +159,7 @@ export function LatestRuns({ runs, now }: { runs: RunSummary[]; now: number }): 
   return (
     <section className="card" aria-labelledby="latest-h">
       <div className="card-head">
-        <h2 id="latest-h" className="h-sm">Latest runs</h2>
+        <h2 id="latest-h" className="h-sm">{terms().say("Latest {runs}")}</h2>
         <Link href="/activity">All activity</Link>
       </div>
       <ul className="guided-list">

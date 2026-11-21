@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Software graph · <a href="../roadmap-list.html">as a list</a></p>
 
-Launchway already records the facts needed to answer what is running, where, built from what, containing what, and is any of it vulnerable. The graph keys those facts by image digest and by deployment so one question can span code, packages, images and deployments. **Status:** findings and bills of materials per run are available today; the graph and patching are planned in [Milestone 5](milestone-5.md).
+Launchway already records the facts needed to answer what is running, where, built from what, containing what, and is any of it vulnerable. The graph keys those facts by image digest and by deployment so one question can span code, packages, images and deployments. **Status:** findings and bills of materials per Sortie (run) are available today; the graph and patching are planned in [Milestone 5](milestone-5.md).
 
 ## What is connected
 

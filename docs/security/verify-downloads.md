@@ -16,16 +16,16 @@ Every release (`https://github.com/JK-Magic-Creations/launchway/releases`) holds
 
 | File | What it is |
 |---|---|
-| `launchway-VERSION-OS-ARCH` | the static binary (server, runner and command line) for linux and darwin, amd64 and arm64 |
-| `launchway-runner_VERSION-1_ARCH.deb`, `launchway-runner-VERSION-1.ARCH.rpm` | the runner as a systemd service |
-| `install.sh` | the runner installer for Linux with systemd |
+| `launchway-VERSION-OS-ARCH` | the static binary (server, Station (runner) and command line) for linux and darwin, amd64 and arm64 |
+| `launchway-runner_VERSION-1_ARCH.deb`, `launchway-runner-VERSION-1.ARCH.rpm` | the Station as a systemd service |
+| `install.sh` | the Station installer for Linux with systemd |
 | `launchway-VERSION.tgz`, `launchway-runner-VERSION.tgz` | the server chart and the runner-only chart |
 | `*.cdx.json` | a CycloneDX SBOM next to each binary, package and chart |
 | `SHA256SUMS` | the SHA-256 of every file above |
 | `SHA256SUMS.sigstore.json` | a Sigstore signature on `SHA256SUMS`, made by the release workflow |
-| `images.txt` | the server and runner images, by digest |
+| `images.txt` | the server and Station images, by digest |
 
-There is no Windows build: the runner's host executor uses Unix process groups and signals.
+There is no Windows build: the Station's host executor uses Unix process groups and signals.
 
 ## Check the files
 
@@ -86,7 +86,7 @@ skopeo inspect "docker://$img" | jq '.Labels'
 `install.sh` does these checks itself before it installs anything: it refuses a binary whose
 checksum does not match `SHA256SUMS`, and it checks the signature on `SHA256SUMS` with cosign when
 cosign is installed. Without cosign it says that only the checksum was checked;
-`--require-signature` turns that into an error. See [Connect a runner](../howto/connect-runner.md).
+`--require-signature` turns that into an error. See [Connect a Station](../howto/connect-runner.md).
 
 The installer itself is a plain file in the release. To check it before running it, download it
 with `SHA256SUMS` and its signature, and run the commands under [Check the files](#check-the-files).
@@ -127,4 +127,4 @@ are built, and their SBOMs list the versions.
 `make bundle` packs a release, its images (as OCI layouts with their signatures and attestations)
 and both charts into one archive with `BUNDLE-SHA256SUMS` and its signature, and an offline install
 guide. Verify the bundle's checksums and signature first, as above, then load the images into your
-own registry.
+own Depot (registry).

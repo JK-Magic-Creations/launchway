@@ -13,7 +13,7 @@ model steps may ask, who may use it and what it may cost.
 3. **Where is the key?** Keys are never typed here. Choose the secret store and the key in it
    (a reference such as `vault`, `ai/anthropic`, `key`); a local model may need none.
 4. **Which projects may use it?** Names or patterns; none by default.
-5. **Limits.** The most output per call, calls per run and tokens per project per day, so a loop in a
+5. **Limits.** The most output per call, calls per Sortie (run) and tokens per project per day, so a loop in a
    pipeline cannot spend without bound.
 
 ## What it creates

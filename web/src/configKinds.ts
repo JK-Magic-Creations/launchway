@@ -339,7 +339,7 @@ export const RULES: Record<string, { scalar?: "duration"; templates?: true; fiel
 /** When a rule is judged, in words. */
 export const POINT: Record<string, string> = {
   run: "at run start",
-  get deploy() { return terms().say("before deploying ({preflight})"); },
+  get deploy() { return terms().say("before {deploy:doing} ({preflight})"); },
   image: "before an image push",
 };
 

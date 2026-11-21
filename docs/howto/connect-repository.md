@@ -1,7 +1,7 @@
 # Connect a repository
 
 The wizard turns a repository into a project: Launchway watches it, starts runs when you say, and
-shows each run. Pipelines stay in Git: the wizard stores a reference to your repository, never a copy of
+shows each Sortie (run). Pipelines stay in Git: the wizard stores a reference to your repository, never a copy of
 a pipeline.
 
 ## What it asks
@@ -21,16 +21,16 @@ a pipeline.
    how often Launchway looks for new commits.
 5. **Where does the pipeline come from?** Either the repository's own pipeline file (the default), or a
    *template* from a shared library: choose the library, the template and the version to pin it at (a
-   tag, a branch or a commit; a tag is resolved to a commit and recorded on each run). If the repository
+   tag, a branch or a commit; a tag is resolved to a commit and recorded on each Sortie). If the repository
    has no pipeline file yet, the wizard shows a small starter pipeline to copy into it, or you can write
    one in the editor, whose Save is a Git commit on a new branch.
-6. **Cancel superseded runs?** Whether a new run of the same branch or pull request cancels older runs
+6. **Cancel superseded runs?** Whether a new run of the same branch or pull request cancels older Sorties
    still going.
 
 ## What it creates
 
 A summary lists the project exactly as it will be created. After you confirm it is created, and the
-wizard offers to start a first run and shows it.
+wizard offers to start a first Sortie and shows it.
 
 If the repository is on your own network (a Git server at a private address) the server refuses to
 contact it by default, so that nobody who can reach the server can use it to probe that network; the

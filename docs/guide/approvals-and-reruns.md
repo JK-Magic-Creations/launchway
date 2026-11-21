@@ -1,10 +1,10 @@
 # Approvals and re-runs
 
-Pausing a run for a person to decide, re-running from any step, and the record of what each step was given.
+Pausing a Sortie (run) for a person to decide, re-running from any step, and the record of what each step was given.
 
 ## Approvals
 
-An approval step pauses the run until a person decides:
+An approval step pauses the Sortie until a person decides:
 
 ```yaml
 steps:
@@ -23,14 +23,14 @@ steps:
 An approval takes `needs`, `when`, `message` and `timeout`, and runs nothing, so it has no image or
 script. When its needs have succeeded it waits, and every pending clearance is listed on the
 **Waiting for a decision** page. **Go** lets the steps after it run. **No-go**, or nobody deciding before the
-timeout, fails it: the steps after it are skipped, and resuming the run asks again. Each decision
-is kept with the run: who made it, when, and their comment.
+timeout, fails it: the steps after it are skipped, and resuming the Sortie asks again. Each decision
+is kept with the Sortie: who made it, when, and their comment.
 
 In the web UI an approval is a **clearance**, answered with **Go** or **No-go** (the plain set says Approve and Reject; see [the words Launchway uses](words.md)). The pipeline key stays `kind: approval` and the API paths stay `approve` and `reject` in every set. Decide in the web UI, with the command line (below), or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
 `/reject`) and an optional `{"comment": "..."}`. `launchway run` asks in the terminal, and rejects
 the approval if there is no terminal to ask in.
 
-With sign-in on, the person who started a run may say No-go but not Go: someone else must.
+With sign-in on, the person who started a Sortie may say No-go but not Go: someone else must.
 Without sign-in everyone is the same configured `user`, so they may. Either default can be changed:
 
 ```yaml
@@ -38,15 +38,15 @@ approvals:
   allow_self: false   # true lets people approve runs they started
 ```
 
-A run started by a push records the commit's author name, which anyone can set in Git; it is not
+A Sortie started by a push records the commit's author name, which anyone can set in Git; it is not
 checked against anyone's sign-in.
 
 ### Who may decide, and how many must
 
 `approvers: { groups: [release-managers], users: [zoe], count: 2 }` on an approval limits who may
 decide (the operator role is still needed; `approvers` only narrows it) and asks for two distinct
-people to approve. The run page and the Approvals page show "1 of 2 approved" with names; the same
-person cannot approve twice, anyone allowed may reject, and a protected environment's
+people to approve. The Sortie page and the Approvals page show "1 of 2 approved" with names; the same
+person cannot approve twice, anyone allowed may reject, and a protected Airfield's
 `min_approvals` raises the count for an approval that guards a deployment there. See the
 [reference](../reference/pipeline.md#approvers).
 
@@ -58,30 +58,30 @@ launchway approvals approve <run-id> <step> [--comment TEXT]
 launchway approvals reject <run-id> <step> [--comment TEXT]
 ```
 
-`list` shows the run, step, question, who started it, when it has waited since and expires, and
-how many approvals it has. The server's refusals (you started the run, it expired, it is not
+`list` shows the Sortie, step, question, who started it, when it has waited since and expires, and
+how many approvals it has. The server's refusals (you started the Sortie, it expired, it is not
 waiting, you may not decide it) are printed as they are, and the exit code is 4.
 
 ## Re-running from a step, and what each step was given
 
-Every attempt of every step records what it was given when a runner took it: its environment, with
+Every attempt of every step records what it was given when a Station (runner) took it: its Airfield (environment), with
 where each value came from (the step's own `env`, its container's, a template parameter, the
 standard `LAUNCHWAY_*` values, or an output of a step it needs, named as `build · image`), its image
 and container, its script, the commit of the library it came from, and which secrets it asked for.
 Secrets are recorded by reference (`vault:ci/registry#token`), never by value: the server never sees
 values. Very long values are shortened in the record (4 KiB a value, 16 KiB of script, 64 KiB an
-attempt), and marked so; the step itself receives them in full. The run page shows them under
+attempt), and marked so; the step itself receives them in full. The Sortie page shows them under
 *Inputs* beside a step's outputs, attempt by attempt, and the API returns them with each step
 (`inputs`).
 
-A finished run can be **re-run from any step**: `POST /api/v1/runs/{id}/rerun` with
+A finished Sortie can be **re-run from any step**: `POST /api/v1/runs/{id}/rerun` with
 `{"from": "deploy"}`, or *Re-run from this step* in the UI, which first lists what will run and what
-will be reused. The re-run is a new run, linked to the original (`rerun_of`, `rerun_from`), at the
+will be reused. The re-run is a new Sortie, linked to the original (`rerun_of`, `rerun_from`), at the
 same commit, with the same pipeline, the same library commits (even if a tag has moved since) and
 the same trigger, started by whoever asked for it. The chosen step and every step after it run
 again. Every other step is **reused**: it is recorded in the new run with the outcome and outputs
 it had, marked as reused from the original, and is never run, so the steps after it receive exactly
-the values they would have. Its log stays in the run where it ran, which the UI links to.
+the values they would have. Its log stays in the Sortie where it ran, which the UI links to.
 
 - Only steps that succeeded, or were skipped by their `when` condition, can be reused. If a step the
   chosen one needs did not succeed, re-run from an earlier step, or resume.
@@ -95,13 +95,13 @@ the values they would have. Its log stays in the run where it ran, which the UI 
   to the workspace are not there. Outputs are kept; steps that need files an earlier step made
   should be included in the re-run (re-run from that earlier step).
 
-**From several steps at once.** Two independent branches of a run may both have failed. A re-run
-takes several starting steps, `{"from": ["lint", "unit"]}`, and the steps that run again are those
+**From several steps at once.** Two independent branches of a Sortie may both have failed. A re-run
+takes several starting steps, `{"from": ["lint", "unit"]}`, and the steps that Sortie again are those
 after any of them; or `{"failed": true}`, the smallest set of steps that covers every step that
 failed or was canceled (a failure the pipeline allows with `on_failure: continue` is not one). The
-UI offers *Re-run failed steps* on a failed run when that can be done, with the same dialog that
+UI offers *Re-run failed steps* on a failed Sortie when that can be done, with the same dialog that
 lists what runs and what is reused; `GET …/rerun?from=a&from=b` or `?failed=true` answers the plan
-without making a run. From the command line:
+without making a Sortie. From the command line:
 
 ```sh
 launchway runs rerun RUN --failed --plan      # what would run, and what would be reused
@@ -111,7 +111,7 @@ launchway runs resume RUN --wait
 ```
 
 The rules for what is reused do not change: a step outside every starting step's followers that did
-not succeed still refuses the re-run, saying which. The new run records all its starting steps
+not succeed still refuses the re-run, saying which. The new Sortie records all its starting steps
 (`rerun_froms`; `rerun_from` is the first), and a server that does not know the list leaves such a
 run alone.
 
@@ -119,17 +119,17 @@ run alone.
 
 | | Resume | Re-run |
 |---|---|---|
-| Makes | no new run: the same run goes on | a new run, linked to the original |
+| Makes | no new Sortie: the same Sortie goes on | a new Sortie, linked to the original |
 | Runs again | the steps that failed, were canceled, or were not run because of them | the steps you name (or the failed ones) and everything after them |
 | Reuses | every step that succeeded stays as it is | every other step, recorded as reused, with its outcome and outputs |
-| Workspace files | the run's workspace on its runner is kept, for up to a day | a fresh checkout: files earlier steps wrote are gone |
+| Workspace files | the Sortie's workspace on its Station is kept, for up to a day | a fresh checkout: files earlier steps wrote are gone |
 | Deployments | refused once a deployment opened: a half-done deployment is never continued, and the refusal names the re-run that works | a deploy step that runs again makes a new deployment of the same version; one that succeeded earlier is reused when nothing of its deployment runs again |
-| Use it | after a failure that has been put right | to go again from a chosen step, to redeploy what a run built, or when a fresh checkout is wanted |
+| Use it | after a failure that has been put right | to go again from a chosen step, to redeploy what a Sortie built, or when a fresh checkout is wanted |
 
 On a failed run the page offers **Re-run from** the failed step (the earlier steps are reused with their
 outputs, so nothing is rebuilt and the image digest is the same), **Re-run from...** (any step, with the
 list of what is reused and what runs again) and **Re-run everything**. Resume is offered only when it can
-work: a run that made a deployment shows the re-run as a button instead, and the run's `actions` list says
+work: a Sortie that made a deployment shows the re-run as a button instead, and the Sortie's `actions` list says
 the same to the API, MCP and the command line. An approval before the chosen step still counts when nothing
 before it changed: the list says "approved by NAME at TIME for this same build". An approval after it asks again.
 

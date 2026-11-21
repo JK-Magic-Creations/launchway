@@ -5,7 +5,7 @@ repository, release it with a Git tag, and use it from a pipeline. For developer
 teams. Takes about 20 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, a
-> runner on the same machine and Podman. **Not verified:** a library on a Git host behind
+> Station (runner) on the same machine and Podman. **Not verified:** a library on a Git host behind
 > credentials (it is fetched exactly as projects are).
 
 ## What you need
@@ -29,7 +29,7 @@ flowchart LR
 ```
 
 A library is an ordinary Git repository. The server's configuration lists which repositories may
-be libraries; a pipeline names one of them and a version (tag, branch or commit). When a run is
+be libraries; a pipeline names one of them and a version (tag, branch or commit). When a Sortie (run) is
 created, the version is resolved to a commit and recorded, and the template and its scripts both
 come from that commit.
 
@@ -147,7 +147,7 @@ git add -A
 git commit -m "Use the platform team's python-check template"
 ```
 
-## 4 Look at the run
+## 4 Look at the Sortie {#4-look-at-the-run}
 
 The `test` step became `test/lint` and `test/test`, drawn as one group on the graph. The log of
 `test/lint` shows the parameter at work:
@@ -157,8 +157,8 @@ Image python:3.12-slim
 linting with Python 3.12.16
 ```
 
-The run's header lists the libraries it used and the commit `v1` pointed to. Every runner uses
-that commit, and resuming or re-running the run never resolves the tag again.
+The Sortie's header lists the libraries it used and the commit `v1` pointed to. Every Station uses
+that commit, and resuming or re-running the Sortie never resolves the tag again.
 
 ## 5 Try an unreleased library change
 
@@ -170,7 +170,7 @@ sed -i 's/options: \["3.12", "3.13"\]/options: ["3.12", "3.13", "3.14"]/' templa
 git commit -am "Allow Python 3.14"
 ```
 
-Start a run of `hello` with **Start a run → Advanced → library override** `platform` = `main`, or:
+Start a run of `hello` with **Start a Sortie → Advanced → library override** `platform` = `main`, or:
 
 ```sh
 curl -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
@@ -178,7 +178,7 @@ curl -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
   http://127.0.0.1:8080/api/v1/projects/hello/runs
 ```
 
-The run is marked *Library override* and records both versions. When the change is good, tag it
+The Sortie is marked *Library override* and records both versions. When the change is good, tag it
 `v2` and move pipelines to `version: v2`.
 
 > [!WARNING]
@@ -189,8 +189,8 @@ The run is marked *Library override* and records both versions. When the change 
 ## What you learned
 
 - A template and its scripts live in one Git repository and are versioned with tags.
-- Pipelines use a template like a step, with typed parameters; each run records the exact commit.
-- A run can try an unreleased version with an override.
+- Pipelines use a template like a step, with typed parameters; each Sortie records the exact commit.
+- A Sortie can try an unreleased version with an override.
 
 ## What next
 

@@ -1,6 +1,6 @@
 # Toggle SDKs
 
-Small libraries that read [feature toggles](feature-toggles.md). The servers evaluate locally: a toggle costs no
+Small libraries that read [Switches (feature toggles)](feature-toggles.md). The servers evaluate locally: a toggle costs no
 network call, keeps working when Launchway cannot be reached, and nothing about your users leaves the application.
 Both libraries pass the same [test vectors](../reference/toggles-protocol.md) as the server. They are in the
 repository (`sdk/go/toggles`, `sdk/js`); nothing is published to a package registry yet, so use them from a checkout

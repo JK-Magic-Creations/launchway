@@ -9,6 +9,7 @@ import { useNow } from "../live";
 import { togglesApi, type Guards, type KeyInfo } from "../togglesApi";
 import { ProjectHead } from "./PipelineChrome";
 import "../toggles.css";
+import { terms } from "../terms";
 
 /** Safeguards, SDK keys and scheduled changes of a project's toggles. */
 export function ToggleSettingsPage({ name }: { name: string }) {
@@ -32,11 +33,11 @@ export function ToggleSettingsPage({ name }: { name: string }) {
         actions={<LinkButton href={`/projects/${encodeURIComponent(name)}/toggles`} icon="arrow">The toggles</LinkButton>} />
       <ErrorBox error={error} />
       <Sheet title="Safeguards">
-        <p className="sub">On by default, and the team in charge. A reason is asked for every change; an approval by someone else in a protected environment. Turning one down needs a reason and is recorded; a level above can lock one.</p>
-        {envs.length === 0 ? <p className="sub">No environments yet.</p> : (
+        <p className="sub">{terms().say("On by default, and the team in charge. A reason is asked for every change; an approval by someone else in a protected {environment}. Turning one down needs a reason and is recorded; a level above can lock one.")}</p>
+        {envs.length === 0 ? <p className="sub">{terms().say("No {environments} yet.")}</p> : (
           <table className="tg-table">
-            <caption className="sr-only">Safeguards in each environment</caption>
-            <thead><tr><th scope="col">Environment</th><th scope="col">Reason required</th><th scope="col">Approval required</th><th scope="col">People</th><th scope="col">Watch after a change</th><th scope="col"><span className="sr-only">Change</span></th></tr></thead>
+            <caption className="sr-only">{terms().say("Safeguards in each {environment}")}</caption>
+            <thead><tr><th scope="col">{terms().say("{Environment}")}</th><th scope="col">Reason required</th><th scope="col">Approval required</th><th scope="col">People</th><th scope="col">Watch after a change</th><th scope="col"><span className="sr-only">Change</span></th></tr></thead>
             <tbody>{envs.map(([env, x]) => (
               <tr key={env}>
                 <th scope="row">{env}</th>
@@ -52,7 +53,7 @@ export function ToggleSettingsPage({ name }: { name: string }) {
         {!admin && <p className="tg-callout">Changing safeguards needs the admin role on {name}.</p>}
       </Sheet>
       <Sheet title="SDK keys" actions={admin ? <Button sm kind="pri" onClick={() => setMaking(true)}>Make a key</Button> : undefined}>
-        <p className="sub">A server key is a secret: it reads every rule, for one environment. A client key is public and can only ask for values of the toggles you made visible. Neither can change anything.</p>
+        <p className="sub">{terms().say("A server key is a secret: it reads every rule, for one {environment}. A client key is public and can only ask for values of the toggles you made visible. Neither can change anything.")}</p>
         {!can ? <p className="sub">Listing keys needs the operator role.</p> : (k.data?.keys ?? []).length === 0 ? <EmptyState title="No keys yet">Make a server key for a service that reads toggles, or a client key for a web page.</EmptyState> : (
           <ul className="tg-keys">
             {k.data!.keys.map((x: KeyInfo) => (
@@ -109,7 +110,7 @@ function MakeKey({ project, onClose, onMade }: { project: string; onClose: () =>
     <Dialog label="Make a key" onClose={onClose}>
       <form className="tg-form" onSubmit={(e) => { e.preventDefault(); void go(); }}>
         <h2>Make a key</h2>
-        <label>Environment <select value={env || names[0] || ""} onChange={(e) => setEnv(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
+        <label>{terms().say("{Environment}")} <select value={env || names[0] || ""} onChange={(e) => setEnv(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
         <label>Kind <select value={kind} onChange={(e) => setKind(e.target.value)}><option value="server">server (a secret; reads rules)</option><option value="client">client (public; reads values)</option></select></label>
         <label>Name <input value={name} onChange={(e) => setName(e.target.value)} placeholder="what it is for" /></label>
         {kind === "client" && <label>Websites allowed to use it (addresses, separated by spaces) <input value={origins} onChange={(e) => setOrigins(e.target.value)} placeholder="https://shop.example.com" /></label>}
@@ -140,7 +141,7 @@ function Guard({ project, env, g, onClose, onDone }: { project: string; env: str
         <label className="tg-check"><input type="checkbox" checked={reasonOn} onChange={(e) => setReasonOn(e.target.checked)} /> A reason is required for every change</label>
         <label className="tg-check"><input type="checkbox" checked={approvalOn} onChange={(e) => setApprovalOn(e.target.checked)} /> A change waits for another person's approval</label>
         <label>People who must approve <input type="number" min={1} max={10} value={people} onChange={(e) => setPeople(Number(e.target.value))} /></label>
-        <label>Mark the environment as watched for this many minutes after a change <input type="number" min={0} max={1440} value={watch} onChange={(e) => setWatch(Number(e.target.value))} /></label>
+        <label>{terms().say("Mark the {environment} as watched for this many minutes after a change")} <input type="number" min={0} max={1440} value={watch} onChange={(e) => setWatch(Number(e.target.value))} /></label>
         <label className="tg-check"><input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} /> Lock these settings for everything below this level</label>
         <label>Why {relaxing ? "(required: you are turning a safeguard down)" : "(optional)"} <input value={reason} onChange={(e) => setReason(e.target.value)} required={relaxing} /></label>
         <ErrorBox error={error} />

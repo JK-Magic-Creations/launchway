@@ -12,3 +12,18 @@
 .words-table td { vertical-align: top; }
 .words-table .cf-input { min-height: 36px; }
 @media (max-width: 860px) { .wp-grid { grid-template-columns: 1fr; } .wp-guide { border-left: 0; padding-left: 0; } .words-pl { display: none; } }
+
+/* A product word with its plain meaning (components/Term.tsx): dotted underline, tooltip on hover and focus. */
+.term { position: relative; display: inline-block; }
+.term-w { border: 0; border-bottom: 1px dotted currentColor; background: none; color: inherit; font: inherit; padding: 0; cursor: help; }
+.term-w:focus-visible { outline: 2px solid var(--signal-ink, currentColor); outline-offset: 2px; border-radius: 2px; }
+.term-tip { position: absolute; z-index: 30; left: 0; top: 100%; margin-top: 4px; width: max-content; max-width: min(320px, 80vw); padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--r1); background: var(--sheet); color: var(--ink); box-shadow: var(--shadow-2, 0 4px 14px rgb(0 0 0 / 0.18));
+  font-size: var(--fs-small); font-weight: 400; line-height: 1.4; text-align: left; white-space: normal;
+  visibility: hidden; opacity: 0; transition: opacity 0.1s; }
+.term:hover .term-tip, .term:focus-within .term-tip, .term.pinned .term-tip { visibility: visible; opacity: 1; }
+.term.dismissed .term-tip { visibility: hidden; opacity: 0; }
+.pill-plain { font-weight: 400; opacity: 0.85; margin-left: 2px; }
+.words-group h3 { margin: 18px 0 6px; font-size: var(--fs-body); }
+.words-sample { margin: 8px 0 0; font-size: var(--fs-body); }
+.words-mean { color: var(--ink-2); font-size: var(--fs-small); }

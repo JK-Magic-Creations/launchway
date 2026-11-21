@@ -27,13 +27,13 @@ evidence that can support an organization's own compliance. See
 
 ## Does the server see my secrets
 
-No. Pipelines hold references; runners look values up in your secret stores and mask them in
+No. Pipelines hold references; Stations (runners) look values up in your secret stores and mask them in
 logs. See [Secrets](guide/secrets.md).
 
-## Do runners need inbound network access
+## Do Stations need inbound network access {#do-runners-need-inbound-network-access}
 
-No. Runners only connect out to the server, over HTTP or HTTPS. See
-[Connect a runner](howto/connect-runner.md).
+No. Stations only connect out to the server, over HTTP or HTTPS. See
+[Connect a Station](howto/connect-runner.md).
 
 ## Which Git hosts work
 
@@ -43,7 +43,7 @@ Gitea, Forgejo and GitLab. See [Triggers](guide/triggers.md).
 
 ## Can it deploy without Argo CD
 
-Not yet. Deploy steps work through Argo CD and, for canaries, Argo Rollouts. Other deploy targets
+Not yet. Deploy steps work through Argo CD and, for Pathfinders (canaries), Argo Rollouts. Other deploy targets
 are on the [roadmap](roadmap-list.md). A plain step can still run any deployment script you write.
 
 ## Is there an expression language in pipelines

@@ -12,13 +12,13 @@ does not have. Keep each list in its own section, in that form.
 
 # Run events and audit trail
 
-This page lists what Launchway records about runs and about people's actions: the run event log,
+This page lists what Launchway records about runs and about people's actions: the Sortie (run) event log,
 the messages of the live stream the web UI listens to, and the Logbook. It is for people who
 read these records through the API, build tools on them, or review them for evidence.
 
 > **Verified** on 2026-11-19 against commit f717337: a server started with `launchway server` on
 > 127.0.0.1 without sign-in, running the demo project from `make demo`; a run was started, resumed
-> after a failure and approved, and its event log, the live stream (all runs and one run) and the
+> after a failure and approved, and its event log, the live stream (all Sorties and one Sortie) and the
 > audit trail were read with `curl`; refused calls to an unconfigured webhook and Git hook were made
 > to see their audit entries; then a server with OpenID Connect sign-in (a test provider) recorded
 > `auth.sign_in`, `auth.sign_out`, `token.create`, a refused `token.use`, and allowed, denied and
@@ -26,25 +26,25 @@ read these records through the API, build tools on them, or review them for evid
 > `deployment` stream message, which need Argo CD; `step.lost`, `step.reused`, `run.cancel_requested` and
 > `step.rejected` were not produced in this session. Their descriptions come from the code.
 >
-> The verification events and the runner and explain audit actions were added when those features
+> The verification events and the Station (runner) and explain audit actions were added when those features
 > were merged; their descriptions come from the code and its tests, and were not produced by a live run.
 
 ## Run events
 
-Every run has an append-only log of events. Nothing changes or deletes an event: a run's state is
+Every run has an append-only log of events. Nothing changes or deletes an event: a Sortie's state is
 whatever its events add up to, and every server works it out the same way. Each event has these
 fields:
 
 | Field | Meaning |
 |---|---|
-| `seq` | the event's number, increasing across the whole database (not per run) |
-| `run_id` | the run, such as `run_06gzdc7n5e965qfptm1g` |
+| `seq` | the event's number, increasing across the whole database (not per Sortie) |
+| `run_id` | the Sortie, such as `run_06gzdc7n5e965qfptm1g` |
 | `type` | one of the types below |
 | `at` | when it was written, in Unix milliseconds |
 | `data` | the payload; each type uses a few of its fields, and leaves the others out |
 
 Each event type came with a database schema version (the **Schema** column). A server understands
-the events of the schemas it knows; it leaves alone a run that has an event it does not know (see
+the events of the schemas it knows; it leaves alone a Sortie that has an event it does not know (see
 [database migrations](../development/migrations.md)). An event may also carry `requires`, the
 oldest schema whose servers understand it.
 
@@ -53,29 +53,29 @@ oldest schema whose servers understand it.
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
 | `run.created` | 1 | a run is created: by a push, a pull request, a schedule, a webhook, a person, a draft or a re-run | `project`, `number`, `pipeline` (the whole expanded pipeline), `trigger` (`event`, `ref`, `branch`, `tag`, `sha`, `actor`, `message`, `author`, `pull_request`, `pull_request_into`, `inputs`, `schedule`, `scheduled_for`, `webhook`), `source` (`kind` git or dir, `url`, `libraries` with their commits), `draft` (`text`, `hash`, `secrets`) for a draft run, `rerun` (`of`, `of_number`, `from`, and `froms` when it starts from several steps; then the event carries `requires` 24) for a re-run, `pull_request_secrets` for a pull-request run |
-| `run.cancel_requested` | 1 | someone asks to cancel the run, or a newer run supersedes it | `actor`; or `reason` (such as `superseded by run #12`) and `superseded_by` (`run`, `number`) |
+| `run.cancel_requested` | 1 | someone asks to cancel the Sortie, or a newer run supersedes it | `actor`; or `reason` (such as `superseded by run #12`) and `superseded_by` (`run`, `number`) |
 | `run.resumed` | 1 | someone resumes a failed or cancelled run | `actor`; `draft_secrets` for a draft run (whether its steps may read secrets from now on) |
 | `run.finished` | 1 | every step has ended | `status`: `succeeded`, `failed` or `canceled` |
-| `run.reviewed` | 32 | an approver acknowledges an emergency rollback that needed review (see [rollback after success](../guide/rollback-after-success.md)) | `actor`, `comment` |
+| `run.reviewed` | 32 | an approver acknowledges an Abort (emergency Return to base (rollback)) that needed review (see [Return to base (rollback) after success](../guide/rollback-after-success.md)) | `actor`, `comment` |
 | `run.trusted` | 38 | a maintainer approved a restricted run (a pull request from an automation account or a fork): "Run with secrets" | `actor`, `comment` |
-| `run.held` | 38 | a limit on concurrent runs (or an operator) holds the run back when it is created, or an operator holds it: no step is queued | `queue` (`code`, `reason`, and `manual` for a hold an operator put on), `actor` |
+| `run.held` | 38 | a limit on concurrent Sorties (or an operator) holds the Sortie back when it is created, or an operator holds it: no step is queued | `queue` (`code`, `reason`, and `manual` for a hold an operator put on), `actor` |
 | `run.admitted` | 38 | a held run may go: its lane is joined and its steps are queued; the time it waited does not count against its timeout | `actor` (set when an operator released or moved it) |
-| `run.bumped` | 38 | an operator moved a held run to the front of the queue (`reason` `release` when a person's hold was lifted instead) | `actor`, `reason` |
-| `run.lane_waiting` | 24 | a run of a pipeline with a [lane](pipeline.md#lane) arrives while another run holds the lane and waits its turn: no step is queued | `lane` (`name`, `key`, `label`, and `run`, `number` of the run it waits behind) |
-| `run.lane_started` | 24 | the run took a free lane, or the lane was handed to it when the run before it ended (in the same transaction), or it took the lane again on a resume | `lane` (`name`, `key`, `label`) |
-| `run.lane_replaced` | 24 | a newer run took this run's place: a waiting run under `queue: newest`, or the holder and waiting runs under `when_busy: cancel`; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the newer run) |
+| `run.bumped` | 38 | an operator moved a held run to the front of the Holding pattern (`reason` `release` when a person's hold was lifted instead) | `actor`, `reason` |
+| `run.lane_waiting` | 24 | a run of a pipeline with a [lane](pipeline.md#lane) arrives while another Sortie holds the lane and waits its turn: no step is queued | `lane` (`name`, `key`, `label`, and `run`, `number` of the run it waits behind) |
+| `run.lane_started` | 24 | the Sortie took a free lane, or the lane was handed to it when the run before it ended (in the same transaction), or it took the lane again on a resume | `lane` (`name`, `key`, `label`) |
+| `run.lane_replaced` | 24 | a newer run took this Sortie's place: a waiting run under `queue: newest`, or the holder and waiting runs under `when_busy: cancel`; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the newer run) |
 | `run.lane_skipped` | 24 | the lane was busy and says `when_busy: skip`: the run is canceled at once; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the holder) |
 
 ### Step events
 
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
-| `step.queued` | 1 | a step is ready and waits for a runner; again for each retry, after a lost runner, or when a lease is handed back | `step`, `attempt`, `not_before` (a retry that waits: when a runner may be given it, Unix ms), `reason` (`retry`, `retry in 20s`, `requeued after: ...`, `handed back before it started`); for a deploy or rollback step `deploy` (`id`, `action` apply or revert) |
-| `step.skipped` | 1 | a step will not run | `step`, `skip_kind` (`condition`: its `when` did not match; `upstream`: a step it needs failed; `not_needed` or `superseded` for deploy and rollback steps), `reason` |
-| `step.leased` | 1 | a runner takes the step | `step`, `attempt`, `lease`, `runner`, and `inputs`: what the attempt was given apart from secret values (image, container, script, library commit, environment with where each value came from, template parameters, secret references) |
-| `step.started` | 1 | the runner begins running it | `step`, `attempt`, `lease` |
+| `step.queued` | 1 | a step is ready and waits for a Station; again for each retry, after a lost Station, or when a lease is handed back | `step`, `attempt`, `not_before` (a retry that waits: when a Station may be given it, Unix ms), `reason` (`retry`, `retry in 20s`, `requeued after: ...`, `handed back before it started`); for a deploy or Return to base step `deploy` (`id`, `action` apply or revert) |
+| `step.skipped` | 1 | a step will not run | `step`, `skip_kind` (`condition`: its `when` did not match; `upstream`: a step it needs failed; `not_needed` or `superseded` for deploy and Return to base steps), `reason` |
+| `step.leased` | 1 | a Station takes the step | `step`, `attempt`, `lease`, `runner`, and `inputs`: what the attempt was given apart from secret values (image, container, script, library commit, Airfield (environment) with where each value came from, template parameters, secret references) |
+| `step.started` | 1 | the Station begins running it | `step`, `attempt`, `lease` |
 | `step.finished` | 1 | the attempt ended | `step`, `attempt`, `lease`, `outcome` (`succeeded` or `failed`), `exit_code`, `outputs`, `reason`, `excerpt` (the last lines of output, masked) and `cause` (`exit`, `timeout` or `infrastructure`) when it failed, and `allowed` when its pipeline tolerates the failure (`on_failure: continue`); summaries of what it reported: `tests`, `findings`, `sbom`, `artifacts`, `caches` (for each cache of a step with `cache:`: `name`, `key`, `result` of `hit`, `fallback`, `miss`, `saved` or `not_saved`, `restored`, `bytes`, `scope`, `reason`, `seconds`), and `image` for an image step |
-| `step.lost` | 1 | the runner holding the step stopped answering and its lease expired | `step`, `attempt`, `reason`; it is then queued again, cancelled, or failed after too many tries |
+| `step.lost` | 1 | the Station holding the step stopped answering and its lease expired | `step`, `attempt`, `reason`; it is then queued again, cancelled, or failed after too many tries |
 | `step.canceled` | 1 | the run was cancelled while the step was waiting or running | `step`, `attempt`, `reason`; may carry the same report summaries as `step.finished` |
 | `step.reset` | 1 | a resume makes a failed, cancelled or upstream-skipped step pending again | `step` |
 | `step.reused` | 8 | a re-run does not run the step again, but takes its outcome and outputs from an earlier run | `step`, `outcome` (`succeeded` or `skipped`), `outputs`, `reused` (`run`, `number`, `attempt`, `decided_at`); for an approval also `actor` and `comment` |
@@ -85,33 +85,33 @@ oldest schema whose servers understand it.
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
 | `step.waiting` | 4 | an approval step starts waiting for a person | `step`, `attempt`, `deadline` (when it is rejected if nobody decides, Unix milliseconds) |
-| `step.approval_recorded` | 27 | one of several people approves an approval that asks for more than one approval (`approvers.count`, or an environment's `min_approvals`); the step goes on waiting until enough have | `step`, `attempt`, `actor`, `comment` |
+| `step.approval_recorded` | 27 | one of several people approves an approval that asks for more than one approval (`approvers.count`, or an Airfield's `min_approvals`); the step goes on waiting until enough have | `step`, `attempt`, `actor`, `comment` |
 | `step.approved` | 4 | a person approves it; the step succeeds | `step`, `attempt`, `actor`, `comment` |
 | `step.rejected` | 4 | a person rejects it, nobody decides in time, or the deployment it names failed | `step`, `attempt`, `actor` (`launchway` when the server rejected it), `comment`, `reason` (such as `nobody decided within 24h`) |
 
 ### Deployment events
 
-All of these are step events: `step` names the deploy, rollback or rollout step they belong to,
+All of these are step events: `step` names the deploy, Return to base or rollout step they belong to,
 and `deploy` holds the details. None of them holds a credential.
 
 | Type | Schema | Written when | Main fields in `data.deploy` |
 |---|---|---|---|
-| `deploy.waiting_lock` | 11 | a deploy step waits for its environment's lock | `environment`, `service`, `holder` (the deployment holding the lock: `deployment`, `run`, `number`, `step`, `version`) |
+| `deploy.waiting_lock` | 11 | a deploy step waits for its Airfield's lock | `environment`, `service`, `holder` (the deployment holding the lock: `deployment`, `run`, `number`, `step`, `version`) |
 | `deploy.opened` | 11 | a deploy step takes the lock and opens a deployment | `id` (`dep_...`), `environment`, `service`, `target`, `application`, `mode`, `version`, `previous`, `deadline` |
-| `deploy.action_done` | 11 | a deploy runner finished an action: commit and sync, or revert | `action` (`apply` or `revert`), `outcome`, `facts` (`repo`, `branch`, `commit`, `changed`, `files`, `revert`, `reverted`, `sync`, `abort`) |
-| `deploy.observing` | 11 | the step waits for what deploy runners observe | `until` (such as `healthy`), `commit`, `deadline` |
+| `deploy.action_done` | 11 | a deploy Station finished an action: commit and sync, or revert | `action` (`apply` or `revert`), `outcome`, `facts` (`repo`, `branch`, `commit`, `changed`, `files`, `revert`, `reverted`, `sync`, `abort`) |
+| `deploy.observing` | 11 | the step waits for what deploy Stations observe | `until` (such as `healthy`), `commit`, `deadline` |
 | `deploy.phase` | 11 | what is observed moved to another phase | `phase`, `detail` |
 | `deploy.closed` | 11 | every step of the deployment is done and the lock is released | `id`, `verdict`: `deployed`, `failed`, `rolled_back`, `rollback_failed` or `abandoned` |
 | `deploy.command` | 14 | someone (or a step) asks for promote, promote-full, abort or retry on a rollout | `command` (`id`, `deployment`, `action`, `actor`, `comment`, `origin`, `expect`) |
-| `deploy.command_withdrawn` | 14 | the command is withdrawn before a deploy runner took it | `command` (`id`, `actor`, `detail`) |
-| `deploy.command_taken` | 14 | a deploy runner takes the command, until a time | `command` (`id`, `take`, `runner`, `until`); `runner` on the event |
+| `deploy.command_withdrawn` | 14 | the command is withdrawn before a deploy Station took it | `command` (`id`, `actor`, `detail`) |
+| `deploy.command_taken` | 14 | a deploy Station takes the command, until a time | `command` (`id`, `take`, `runner`, `until`); `runner` on the event |
 | `deploy.command_done` | 14 | the command was applied, was already applied, was not applied, or failed | `command` (`id`, `result`: `applied`, `already_applied`, `not_applied` or `failed`, `detail`) |
 
 ### Policy events
 
 | Type | Schema | Written when | Main fields in `data.policy` |
 |---|---|---|---|
-| `policy.evaluated` | 16 | policies are judged: at the run's start (also on a re-run or resume), before a deploy or rollout step acts, and before an image step that pushes is handed to a runner | `point` (`run`, `deploy` or `image`), `step`, `action`, `environment`, `at`, `verdict` (`pass`, `warn` or `block`), `policies` (each with the policy as judged, its verdict and its `rules`: `rule`, `verdict`, `found`, `want`, `evidence`, `waiver`), `input` (the facts judged), `waivers` (those considered) |
+| `policy.evaluated` | 16 | policies are judged: at the Sortie's start (also on a re-run or resume), before a deploy or rollout step acts, and before an image step that pushes is handed to a Station | `point` (`run`, `deploy` or `image`), `step`, `action`, `environment`, `at`, `verdict` (`pass`, `warn` or `block`), `policies` (each with the policy as judged, its verdict and its `rules`: `rule`, `verdict`, `found`, `want`, `evidence`, `waiver`), `input` (the facts judged), `waivers` (those considered) |
 
 ### Verification events
 
@@ -121,7 +121,7 @@ The step's `data.verify` holds the fields below.
 | Type | Schema | Written when | Main fields in `data.verify` |
 |---|---|---|---|
 | `verify.started` | 19 | the verification's window begins | `environment`, `service`, `target`, `deployment`, `version`, `start`, `deadline`, `spec` (what is checked), `params` (as resolved), `baseline` (what it is judged against) |
-| `verify.interval` | 19 | a deploy runner read one interval's metrics and logs | `interval`: each metric's readings and the log clusters seen |
+| `verify.interval` | 19 | a deploy Station read one interval's metrics and logs | `interval`: each metric's readings and the log clusters seen |
 | `verify.verdict` | 19 | the verification is decided: passed, failed or inconclusive | `verdict` (with the reason for each check), `explanation` (a model's, if one was asked; untrusted text), `pause` (it now waits for a person) |
 | `verify.override` | 19 | a person marked a running or paused verification passed or failed | `outcome` (`passed` or `failed`); the person and the reason are the payload's `actor` and `comment` |
 
@@ -129,16 +129,16 @@ Every interval's data and the verdict are events, so any server derives the same
 log alone.
 
 The decision is written in the same database transaction as what it allows, so it can be
-reproduced from the log alone. `launchway policy run <run-id>` prints a run's decisions; the
+reproduced from the log alone. `launchway policy run <run-id>` prints a Sortie's decisions; the
 [policy rules](policy-rules.md) page explains the rules.
 
 ### Reading the event log
 
-`GET /api/v1/runs/{id}/events` returns a run's whole log as a JSON array, oldest first, with no
+`GET /api/v1/runs/{id}/events` returns a Sortie's whole log as a JSON array, oldest first, with no
 paging. Anyone who may see the run may read it (see [roles](roles.md)). Before sending it, the
 server takes out what the UI shows elsewhere or what must not leave it:
 
-- `pipeline` is removed from `run.created` (read the run's graph with `GET /api/v1/runs/{id}`);
+- `pipeline` is removed from `run.created` (read the Sortie's graph with `GET /api/v1/runs/{id}`);
 - a draft run's `draft.text` is removed, leaving `hash` and `secrets` (the text is at
   `GET /api/v1/runs/{id}/pipeline-file`);
 - `inputs` is removed from `step.leased` (the step view of `GET /api/v1/runs/{id}` has them);
@@ -177,7 +177,7 @@ lines shortened):
 ]
 ```
 
-`seq` has gaps within a run because it counts every run's events. Step output is not in the event
+`seq` has gaps within a run because it counts every Sortie's events. Step output is not in the event
 log: read it with `GET /api/v1/runs/{id}/steps/{step}/logs`, or follow it on the live stream.
 
 ## Live stream
@@ -187,15 +187,15 @@ The web UI uses it to update pages without polling. It needs the same access as 
 API: a session or an API token when sign-in is on.
 
 - Without parameters it sends `run` messages for every run of the projects you may see.
-- With `?run=<run-id>` it sends every message about that one run: `run`, `step`, `log` and
-  `deployment`. A run you may not see answers `404`.
+- With `?run=<run-id>` it sends every message about that one Sortie: `run`, `step`, `log` and
+  `deployment`. A Sortie you may not see answers `404`.
 
 The stream starts with a reconnect delay and a comment, sends a `: ping` comment every 15 seconds,
 and one `event:`/`data:` pair per message, the data being JSON:
 
 | Type | Sent when | `data` |
 |---|---|---|
-| `run` | a run or any of its steps changed | the run summary, as in `GET /api/v1/runs`: `id`, `project`, `number`, `status`, `event`, `ref`, `branch`, `tag`, `sha`, `actor`, `created_at`, `started_at`, `finished_at`, `steps` (`id` and `status` each), `waiting` (approval steps waiting), and more |
+| `run` | a Sortie or any of its steps changed | the Debrief (run summary), as in `GET /api/v1/runs`: `id`, `project`, `number`, `status`, `event`, `ref`, `branch`, `tag`, `sha`, `actor`, `created_at`, `started_at`, `finished_at`, `steps` (`id` and `status` each), `waiting` (approval steps waiting), and more |
 | `step` | a step changed | the step view, as in `step_list` of `GET /api/v1/runs/{id}`: `run_id`, `id`, `status`, `attempt`, `exit_code`, `error`, `outputs`, `excerpt`, `inputs` and the step's definition |
 | `log` | a step wrote output | `step`, `attempt`, `lines` (each `seq`, `at`, `stream` (`stdout`, `stderr` or `system`), `text`, already masked) |
 | `deployment` | a deployment changed | the deployment, as in `GET /api/v1/deployments`: `id`, `run_id`, `step`, `environment`, `service`, `version`, `phase`, `verdict`, and more |
@@ -244,7 +244,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.cancel` | `POST /api/v1/runs/{id}/cancel` |
 | `run.resume` | `POST /api/v1/runs/{id}/resume` |
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
-| `run.queue` | `POST /api/v1/runs/{id}/queue`: run next, hold or release a run that waits in a queue (the action is in the detail) |
+| `run.queue` | `POST /api/v1/runs/{id}/queue`: run next, hold or release a Sortie that waits in a Holding pattern (the action is in the detail) |
 | `run.trust` | `POST /api/v1/runs/{id}/trust`: a maintainer approving a restricted run, *Run with secrets* (the comment is in the detail) |
 | `approval.approve` | `POST /api/v1/runs/{id}/steps/{step}/approve` |
 | `approval.reject` | `POST /api/v1/runs/{id}/steps/{step}/reject` |
@@ -252,9 +252,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.promote_full` | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` |
 | `deployment.abort` | `POST /api/v1/runs/{id}/deployments/{dep}/abort` |
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
-| `deployment.command_outcome` | what a deploy runner did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the runner |
+| `deployment.command_outcome` | what a deploy Station did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the Station |
 | `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
-| `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an emergency rollback, with the comment |
+| `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an Abort, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |
@@ -274,7 +274,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `cache.delete` | `DELETE /api/v1/projects/{name}/caches/{id}` and `DELETE /api/v1/projects/{name}/caches?name=` (also `launchway caches delete`); the target is the entry or the cache name and the detail says how much was ended |
 | `cache_policy.set` | `PUT /api/v1/cache-policy` (also `launchway caches policy set`); the detail holds the policy before and after |
 | `cache_policy.set_project` | `PUT /api/v1/projects/{name}/cache-policy`; the detail holds the policy before and after |
-| `variable.set` | `PUT /api/v1/variables/{name}` (also `launchway variables set`); the target names the level, scope, name and environment. The variable's own history (who, old to new, a secret only as its reference) is kept apart from this trail |
+| `variable.set` | `PUT /api/v1/variables/{name}` (also `launchway variables set`); the target names the level, scope, name and Airfield. The variable's own history (who, old to new, a secret only as its reference) is kept apart from this trail |
 | `variable.delete` | `DELETE /api/v1/variables/{name}` (also `launchway variables delete`) |
 | `variable.lock` | `PUT /api/v1/variables/{name}/lock` (also `launchway variables lock`); the detail is the reason |
 | `variable.unlock` | `DELETE /api/v1/variables/{name}/lock` (also `launchway variables unlock`) |
@@ -283,30 +283,30 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `toggle.create` | A toggle made; the detail is the reason |
 | `toggle.delete` | A toggle removed (it can be restored by reverting the change) |
 | `toggle.evaluate` | A context tried against a toggle; the context is not recorded |
-| `toggle.key_create` | An SDK key made; the target names the environment and the detail the kind and name, never the key |
+| `toggle.key_create` | An SDK key made; the target names the Airfield and the detail the kind and name, never the key |
 | `toggle.key_revoke` | An SDK key revoked |
 | `toggle.key_rotate` | An SDK key rotated; the old one works until its expiry |
 | `toggle.lock` | A shared toggle locked at its level |
 | `toggle.plan` | A toggles file compared with the live state |
 | `toggle.reject` | A waiting change turned down |
 | `toggle.revert` | A change reverted |
-| `toggle.revert_since` | The toggle changes of an environment since a time reverted together, as when a rollback is asked to take them back |
+| `toggle.revert_since` | The toggle changes of an Airfield since a time reverted together, as when a Return to base is asked to take them back |
 | `toggle.safeguards_set` | The safeguards changed at a level; turning one down is recorded with its reason |
 | `toggle.schedule_cancel` | A scheduled change canceled |
 | `toggle.segment_delete` | A segment removed |
 | `toggle.segment_set` | A segment made or replaced |
-| `toggle.set` | A toggle changed in an environment (made, or held for approval); the detail is the reason. The toggle's own history holds before and after |
+| `toggle.set` | A toggle changed in an Airfield (made, or held for approval); the detail is the reason. The toggle's own history holds before and after |
 | `toggle.unlock` | A lock removed |
 | `toggle.update` | A toggle's definition changed |
 | `toggle.withdraw` | A waiting change taken back by the person who asked |
 | `cache_policy.clear_project` | `DELETE /api/v1/projects/{name}/cache-policy` |
-| `registry.push` | a manifest was pushed to the built-in registry over `/v2/` (the target is `repository:tag` or `repository@digest`, the detail names the run when a step pushed it); a push refused for lack of the operator role is recorded with outcome `denied` |
+| `registry.push` | a manifest was pushed to the built-in Depot (registry) over `/v2/` (the target is `repository:tag` or `repository@digest`, the detail names the run when a step pushed it); a push refused for lack of the operator role is recorded with outcome `denied` |
 | `registry.pull` | a pull or read refused over `/v2/` (outcome `denied`); allowed pulls are not recorded one by one |
 | `registry.delete` | an image was deleted (over `/v2/`, the API, the CLI or an MCP tool); the detail says how many manifests went with it (signatures, SBOMs); a refused delete is recorded with outcome `denied` |
 | `registry.untag` | a tag was deleted and the image stays |
-| `registry.retention` | a retention rule deleted images (the actor is the person who ran it, or `retention` for the scheduled run) |
+| `registry.retention` | a retention rule deleted images (the actor is the person who ran it, or `retention` for the Patrol (scheduled run)) |
 | `registry.gc` | garbage collection removed blobs; the detail has the counts and bytes |
-| `registry.quota` | a push was refused because the project or organization is over its quota (outcome `denied`) |
+| `registry.quota` | a push was refused because the project or Wing is over its quota (outcome `denied`) |
 | `registry.gc_run` | `POST /api/v1/registry/gc` (also `launchway registry gc`); the detail says dry run or collection |
 | `registry.policy` | `PUT /api/v1/registry/policy` and `PUT /api/v1/projects/{name}/registry/policy` (also `launchway registry policy set`); the target is the level and its name |
 | `registry.image_delete` | `DELETE /api/v1/projects/{name}/registry/image` (also `launchway registry delete`); the target is `repository@reference` |
@@ -362,18 +362,18 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |
-| `webhook.run` | `POST /api/v1/projects/{name}/webhooks/{trigger}`: a webhook trigger's call that started a run (`ok`), failed, or was refused |
+| `webhook.run` | `POST /api/v1/projects/{name}/webhooks/{trigger}`: a webhook trigger's call that started a Sortie (`ok`), failed, or was refused |
 | `step.explain` | `POST /api/v1/runs/{id}/steps/{step}/explain`: asking a model to explain a failed step; the detail names the model |
 | `verification.override` | `POST /api/v1/runs/{id}/steps/{step}/verify/override`: marking a verification passed or failed, with the reason |
 | `runner.join_token.create` | `POST /api/v1/runner-join-tokens`: making a join token (the detail says the pool, the uses and the expiry; the value is never recorded) |
 | `runner.join_token.revoke` | `POST /api/v1/runner-join-tokens/{id}/revoke` |
-| `runner.join` | `POST /api/runner/v2/join`: a runner enrolled with a join token |
-| `runner.rotate` | a runner moved to a new key (`POST /api/runner/v2/rotate`, or `POST /api/v1/runners/{id}/rotate` asking it to) |
-| `runner.revoke` | `POST /api/v1/runners/{id}/revoke`, or an ephemeral runner that left |
-| `runner.refused` | a runner refused a step before running it, because its own `accept:` section does not allow it; the detail says why |
-| `runner.lease_refused` | a runner asked for a lease it does not hold: the logs, results, artifacts or heartbeat of a step taken by another runner |
-| `runner.auth` | a runner's request refused: an unknown, revoked or expired token or identity; the target and detail say which and why |
-| `runner.identity_refused` | a runner with the shared or a pool token said it is an enrolled runner; only that runner, with its own identity, may say so. The request is refused with 403 and the detail names the claimed runner and the path |
+| `runner.join` | `POST /api/runner/v2/join`: a Station enrolled with a join token |
+| `runner.rotate` | a Station moved to a new key (`POST /api/runner/v2/rotate`, or `POST /api/v1/runners/{id}/rotate` asking it to) |
+| `runner.revoke` | `POST /api/v1/runners/{id}/revoke`, or an ephemeral Station that left |
+| `runner.refused` | a Station refused a step before running it, because its own `accept:` section does not allow it; the detail says why |
+| `runner.lease_refused` | a Station asked for a lease it does not hold: the logs, results, Cargo (artifacts) or heartbeat of a step taken by another Station |
+| `runner.auth` | a Station's request refused: an unknown, revoked or expired token or identity; the target and detail say which and why |
+| `runner.identity_refused` | a Station with the shared or a pool token said it is an enrolled Station; only that Station, with its own identity, may say so. The request is refused with 403 and the detail names the claimed Station and the path |
 | `auth.sign_in` | `GET /auth/callback`: a sign-in that succeeded (with the groups the provider gave) or failed (with why) |
 | `auth.sign_out` | `POST /auth/logout`, for a session that existed |
 | `auth.setup_now` | `POST /api/v1/auth/setup-now`: sign-in was asked for on an installation that ran with none; the servers' next start uses built-in accounts |
@@ -399,7 +399,7 @@ Each entry has these fields:
 | `source` | the client's address (behind a reverse proxy, the one the proxy saw, with `server.trust_proxy: true`) |
 | `action` | one of the actions above |
 | `project` | the project, or empty |
-| `target` | what was acted on: a run ID, `run/step`, a token's name, a waiver, or a webhook delivery |
+| `target` | what was acted on: a Sortie ID, `run/step`, a token's name, a waiver, or a webhook delivery |
 | `outcome` | `ok`; `denied` when the permission check or the handler refused it with `403`; `failed` when the call was allowed but did not succeed |
 | `detail` | a short description, at most 1000 bytes, such as `run #2 of main at fa0b04cb, inputs scan=quick`, or why it was refused or failed |
 
@@ -452,7 +452,7 @@ off. The stream carries the same entries as the Logbook, in the same order, and 
 | `actor_kind` | `person`, `runner` or `system` |
 | `organization` | the Wing the entry belongs to (`default`) |
 | `project` | the project, or an empty string |
-| `target` | what was acted on: a run, a token name, a repository path |
+| `target` | what was acted on: a Sortie, a token name, a repository path |
 | `outcome` | `ok`, `denied` or `failed` |
 | `detail` | a short note |
 | `source_addr` | the client's address |

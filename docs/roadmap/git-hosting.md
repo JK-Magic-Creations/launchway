@@ -55,7 +55,7 @@ flowchart TD
   Merge --> Next["Pipeline for the main branch"]
 ```
 
-The change page shows the run, tests, coverage change, findings, policy verdict, preview environment and deployment together. A connected Git host gets the same result as a status on its own pull request, or as a comment and an approval where the host has no status feature.
+The change page shows the Sortie (run), tests, coverage change, findings, policy verdict, preview Airfield (environment) and deployment together. A connected Git host gets the same result as a status on its own pull request, or as a comment and an approval where the host has no status feature.
 
 ## The groups of capability
 

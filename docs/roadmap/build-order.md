@@ -21,14 +21,14 @@ Each phase uses the one before it. Delivery comes before the network and cluster
 
 ## The order we are building in
 
-After what is already in flight (the release with encryption at rest, built-in sign-in and the cache fixes, the guided installer, queueing and limits, the delivery gaps and dependency updates), the order is:
+After what is already in flight (the release with encryption at rest, built-in sign-in and the cache fixes, the guided installer, queueing and limits, the delivery gaps and Maintenance (dependency updates)), the order is:
 
 1. One combined, tested build, and moving the repositories onto Launchway itself.
 2. Standards for every repository, on by default.
-3. Polished test reports as web pages and PDF.
+3. Polished Debriefs (test reports) as web pages and PDF.
 4. Adapters for the tools teams already use.
 5. The model gateway.
-6. Runner placement: load-aware runners on personal machines first, then a build’s parallel steps spread across machines, size hints and fairness.
+6. Station (runner) placement: load-aware Stations on personal machines first, then a build’s parallel steps spread across machines, size hints and fairness.
 7. The track towards the first outside user: the files-on-your-machines mode and the wall between Bases, then the opening stages.
 
 ## Why this order

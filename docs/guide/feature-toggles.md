@@ -1,4 +1,4 @@
-# Feature toggles
+# Switches (feature toggles) {#feature-toggles}
 
 A **toggle** is a value your application reads while it runs, so that a feature can be turned on, off or
 rolled out to a share of your users without a deployment. Launchway keeps toggles, changes them under
@@ -8,7 +8,7 @@ You need none of this to run a pipeline. This page describes what is built today
 
 ## The model
 
-A toggle belongs to a project (or is shared from a unit, the organization or the installation, the same
+A toggle belongs to a project (or is shared from a Squadron, the Wing or the installation, the same
 levels [variables](variables.md) have: a nearer level overrides, a lock keeps it from being overridden).
 It has:
 
@@ -16,14 +16,14 @@ It has:
 |---|---|
 | **Key** | Lower-case letters, digits and `- _ .`, such as `checkout-v2`. Unique in a project. |
 | **Type** | `boolean`, `string`, `number` or `json`. Every value a toggle serves has its type. |
-| **Kind** | `release`, `kill` (a kill switch, with a safe value), `experiment`, `operational` or `permission`. |
-| **Default** | What it serves while it is off. A toggle starts off in every environment. |
+| **Kind** | `release`, `kill` (a Master switch (kill switch), with a safe value), `experiment`, `operational` or `permission`. |
+| **Default** | What it serves while it is off. A toggle starts off in every Airfield (environment). |
 | **Per-environment state** | On or off, prerequisites, rules in order, and what everyone else gets. |
 | **Lifecycle** | An owner, an expected removal date, the change that made it, and notes when it may be finished with. |
 
 ### Rules
 
-In an environment where a toggle is on, a context (a **key** that names who or what is asking, and
+In an Airfield where a toggle is on, a context (a **key** that names who or what is asking, and
 attributes such as `plan` or `app_version`) is decided like this:
 
 1. If the toggle is off, it serves its off value.
@@ -54,22 +54,22 @@ nothing in the interface does that. Use text for keys: a number is hashed as its
 | Safeguard | Default | What it does |
 |---|---|---|
 | **A reason** | on, everywhere | A change needs a sentence saying why. |
-| **An approval** | on in a **protected** environment | A change waits until someone other than the person who asked approves it. The environment's reviewers, if it names some, decide who; `approvals.allow_self` lets a person approve their own. A number of approvals may be asked. |
-| **A watch** | off | For some minutes after a change the environment is marked as watched, on the toggle's page, the timeline and the rollback page. |
+| **An approval** | on in a **protected** Airfield | A change waits until someone other than the person who asked approves it. The Airfield's reviewers, if it names some, decide who; `approvals.allow_self` lets a person approve their own. A number of approvals may be asked. |
+| **A watch** | off | For some minutes after a change the Airfield is marked as watched, on the toggle's page, the timeline and the Return to base (rollback) page. |
 
-A change that waits has not happened: the toggle serves what it served. A **kill switch** turned to its safe
+A change that waits has not happened: the toggle serves what it served. A **Master switch** turned to its safe
 value is never held for an approval, and neither is any **revert**: going back is not gated (it still needs a
 reason, and is recorded).
 
-A team can **turn a safeguard down** at its level, for one environment or all; that needs a reason and is
-recorded in the toggle history and the audit trail. A level above can **lock** a safeguard, and that is the
+A team can **turn a safeguard down** at its level, for one Airfield or all; that needs a reason and is
+recorded in the toggle history and the Logbook. A level above can **lock** a safeguard, and that is the
 only way a team loses the choice. The settings page of a project's toggles shows each safeguard and which
 level set it. Launchway never rewrites your application: where it has advice, it advises.
 
 ## History and revert
 
 Every change records who, when, why, how (web page, CLI, MCP tool, API, a pipeline, a file, a schedule, a
-rollback), what it was before and after, and the approvals. **Revert** on any change puts the environment (or
+Return to base), what it was before and after, and the approvals. **Revert** on any change puts the Airfield (or
 the definition, or a deleted toggle) back as it was before that change; it is a new change and can itself be
 reverted. If later changes were made meanwhile, the answer says how many the revert also undid.
 
@@ -81,23 +81,23 @@ and the schedule says so.
 
 ## What changed before it broke
 
-Every toggle change in an environment is on that environment's page, **beside its deployments**, newest first.
-The **rollback** page lists the toggle changes made in the environment since the version it would restore
-went live. A rollback restores the version only; so the confirmation offers to **revert those toggle changes with
-it** (unchecked by default: that is your decision), and the environment page can revert them on their own. The
-toggles are reverted after the rollback has been accepted; if one cannot be reverted, the answer names it and the
+Every toggle change in an Airfield is on that Airfield's page, **beside its deployments**, newest first.
+The **Return to base** page lists the toggle changes made in the Airfield since the version it would restore
+went live. A Return to base restores the version only; so the confirmation offers to **revert those toggle changes with
+it** (unchecked by default: that is your decision), and the Airfield page can revert them on their own. The
+toggles are reverted after the Return to base has been accepted; if one cannot be reverted, the answer names it and the
 rest go on.
 
 ## Stale toggles: a nudge, never an action
 
-A toggle that has served one value to everyone in every environment for 30 days, has not been evaluated for 30
+A toggle that has served one value to everyone in every Airfield for 30 days, has not been evaluated for 30
 days by any application that reports, or is past its expected removal date, is mentioned on its page and in the
 list. Nothing is removed, turned off or changed by it. The way to finish with a toggle is to remove the check
 from your code and then delete the toggle (the deletion can be reverted).
 
 ## Keys for applications
 
-An application reads toggles with an **SDK key** of one environment of one project, which can only read:
+An application reads toggles with an **SDK key** of one Airfield of one project, which can only read:
 
 | Key | Looks like | Use | Can |
 |---|---|---|---|
@@ -117,7 +117,7 @@ Rate limits: per key, and an address that sends many keys that are not valid is 
 Evaluating a toggle **in your application** sends nothing about the context anywhere. The SDKs report, once a
 minute, **counts**: how many times each toggle served each value, with the reason. Remote evaluation (a client
 key, or the toggle page's "try a context") sends the context to your own Launchway server, over TLS, which
-**does not store, log or audit it**. What is stored is a count per toggle, environment, day, value and reason:
+**does not store, log or audit it**. What is stored is a count per toggle, Airfield, day, value and reason:
 no key, no attribute, no address. A segment that lists keys stores those keys: they can be personal data, so
 prefer rules on attributes.
 
@@ -127,7 +127,7 @@ prefer rules on attributes.
 model as the API, in YAML); you review changes to it in a pull request. `launchway toggles plan PROJECT -f FILE`
 shows how the file and the live toggles differ: what to add, what to change, and what exists only live.
 `launchway toggles apply PROJECT -f FILE --reason "..."` makes the live toggles match the file, through the
-same safeguards (a toggle that needs approval waits). It **never removes** a toggle, an environment or a
+same safeguards (a toggle that needs approval waits). It **never removes** a toggle, an Airfield or a
 segment the file leaves out: those are listed as *only live*. Nothing applies by itself. The web page of a
 project's toggles has the same three steps in "The toggles file".
 
@@ -169,14 +169,14 @@ own (limited to the project and the operator role) from a secret store, and the 
     run: launchway toggles set shop checkout-v2 production --percent 10 --reason "after verify of run $LAUNCHWAY_RUN"
 ```
 
-The safeguards apply to it like to anyone: in a protected environment it waits for an approval.
+The safeguards apply to it like to anyone: in a protected Airfield it waits for an approval.
 
 ## Where it is, and who may do what
 
 | | Who |
 |---|---|
 | See toggles, history, usage | a viewer of the project |
-| Make, change, delete a toggle; change its state; revert; approve | an operator of the project (in the environment, for a state change); a shared toggle needs the level's administrator |
+| Make, change, delete a toggle; change its state; revert; approve | an operator of the project (in the Airfield, for a state change); a shared toggle needs the level's administrator |
 | Safeguards, SDK keys | an administrator of the project (of the level, above it) |
 
 Every action is in the [audit trail](../reference/events.md) (`toggle.*`); the toggle's own history keeps before
@@ -187,8 +187,8 @@ under a project's **Toggles** tab. A Terraform resource is planned (see [interfa
 ## Not built yet
 
 - A pipeline keyword, and a plan with steps and proofs between them ("5% at ten, 25% at eleven if the proofs pass").
-- Turning a toggle back by itself when metrics worsen after a change (the *watch* marks the environment, it does not act).
+- Turning a toggle back by itself when metrics worsen after a change (the *watch* marks the Airfield, it does not act).
 - Reading the toggles file from your repository and opening the pull request that removes a finished toggle.
-- Webhook events for toggle changes (webhooks are tied to repositories today); the audit trail and the history have them.
+- Webhook events for toggle changes (webhooks are tied to repositories today); the Logbook and the history have them.
 - Toggles that are not OpenFeature: OpenFeature providers exist for Go and TypeScript; Java, Python and .NET are coming.
 - A streaming protocol other than this one (for example flagd's), and a relay in a zone.

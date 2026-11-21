@@ -169,9 +169,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
         )}
         <details className="cf-explain" open={check.result?.ok === false}>
           <summary>How Launchway gets access to the repository</summary>
-          <p>Launchway reads repositories with the <strong>server's own Git access</strong>, exactly as <span className="mono">git clone</span> would on the server:
-            a public repository needs nothing; for a private one, give the servers an SSH key (mounted where Git looks for it, with the host in
-            known_hosts), or Git settings in the servers' environment, such as <span className="mono">GIT_CONFIG_COUNT=1</span>,{" "}
+          <p>Launchway reads repositories with the <strong>server's own Git access</strong>, exactly as <span className="mono">git clone</span> {terms().say("would on the server: a public repository needs nothing; for a private one, give the servers an SSH key (mounted where Git looks for it, with the host in known_hosts), or Git settings in the servers' {environment}, such as")} <span className="mono">GIT_CONFIG_COUNT=1</span>,{" "}
             <span className="mono">GIT_CONFIG_KEY_0=http.https://git.example.com/.extraHeader</span> and{" "}
             <span className="mono">GIT_CONFIG_VALUE_0=Authorization: Bearer …</span>. No password or token is typed into Launchway, and none is stored with the {proj}.
             That one Git access covers every repository the server may read: there is nothing to connect per repository.
@@ -285,14 +283,14 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
   };
 
   const triggerStep: StepDef = {
-    id: "triggers", title: "What starts a run",
+    id: "triggers", title: terms().say("What starts a {run}"),
     fields: [{ path: "poll", value: poll }, { path: "push", match: ["on.push", "push", "branches", "tags"] }, { path: "pull_request", match: ["pull_request"] }, { path: "supersede" }],
     render: (by) => (
       <>
         <p>Besides starting a run by hand, which events should start one?</p>
         <div className="cf-grid">
           <CheckInput label="Pushes" checked={onPush} onChange={setOnPush} problems={by.push}
-            help="A run starts for each new commit pushed. Without it, runs start only by hand (or on the schedule)." />
+            help={terms().say("A {run} starts for each new commit pushed. Without it, runs start only by hand (or on the schedule).")} />
           {onPush && <ListInput label="Only these branches" value={pushBranches} onChange={setPushBranches} placeholder={`${effBranch}, release/*`}
             help="Names or patterns. Empty: every branch. Most teams run pushes to their main branch and release branches." />}
           {onPush && <ListInput label="Tags" value={pushTags} onChange={setPushTags} placeholder="v*"
@@ -307,7 +305,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
             <TextInput label="When (cron, UTC)" value={cron} onChange={setCron} mono help="Minute, hour, day of the month, month, day of the week. 0 3 * * * is every night at 03:00; @daily and @hourly work too." />
           )}
           {(onPush || onPR) && <CheckInput label="A newer run cancels older ones" checked={supersede} onChange={setSupersede} problems={by.supersede}
-            help="When you push again while a run of the same branch or pull request is still going, the older run is canceled, so runners work on the latest commit only. A run that is deploying is never cancelled." />}
+            help={terms().say("When you push again while a run of the same branch or pull request is still going, the older run is canceled, so {runners} work on the latest commit only. A {run} that is {deploy:doing} is never cancelled.")} />}
         </div>
         {source === "template" && <p className="cf-help">A schedule needs a pipeline file in the repository; a {proj} that runs a library template can be started by pushes, pull requests or by hand.</p>}
         {source !== "template" && <p className="cf-help">With a pipeline file, these triggers are written in the file's <span className="mono">on:</span> section: the summary shows the lines to put there.</p>}
@@ -338,7 +336,7 @@ function RepoCheckLine({ check, repo }: { check: { state: string; result?: RepoC
 function PipelineFileState({ check, branch }: { check: RepoCheck; branch: string }) {
   const short = (c?: string) => (c ? c.slice(0, 7) : "");
   const file = check.pipeline_file || ".launchway/pipeline.yaml";
-  if (!check.has_pipeline_file) return <span>Not found on {branch} yet: commit {file} there before the first run.</span>;
+  if (!check.has_pipeline_file) return <span>Not found on {branch} yet: commit {file} {terms().say("there before the first {run}.")}</span>;
   return (
     <span>
       Found {file}{check.commit ? ` at commit ${short(check.commit)}` : ""} on {branch}.{" "}
@@ -386,9 +384,9 @@ export function RunItNow({ name, branch }: { name: string; branch: string }) {
   return (
     <div className="cf-row">
       {state.run ? (
-        <span className="cf-ok" role="status">Run #{state.run.number} started. <Link href={`/runs/${state.run.id}`}>Watch it</Link>.</span>
+        <span className="cf-ok" role="status">{terms().say("{Run} #")}{state.run.number} started. <Link href={`/runs/${state.run.id}`}>Watch it</Link>.</span>
       ) : (
-        <button type="button" className="btn btn-primary" disabled={state.busy} onClick={start}>{state.busy ? "Starting…" : `Start its first run (${branch})`}</button>
+        <button type="button" className="btn btn-primary" disabled={state.busy} onClick={start}>{state.busy ? "Starting…" : terms().say(`Start its first {run} (${branch})`)}</button>
       )}
       {state.error && <span className="cf-problem" role="alert">The run did not start: {state.error}</span>}
     </div>
@@ -412,7 +410,7 @@ export function ConnectRepoWizard({ overview }: { overview: ConfigOverview }) {
           <ul className="cf-next">
             <li><Link href={`/config/projects/${encodeURIComponent(flow.name)}`}>See and change the {proj}'s settings</Link></li>
             <li><Link href="/projects">See it with the other {overview.levels.project.plural.toLowerCase()}</Link></li>
-            <li><Link href="/config/wizard/add-runner">Add a runner</Link>, if no runner takes its steps yet</li>
+            <li><Link href="/config/wizard/add-runner">{terms().say("Add a {runner}")}</Link>{terms().say(", if no {runner} takes its steps yet")}</li>
             <li><a href="/config/wizard/connect-repository" onClick={(e) => { e.preventDefault(); navigate("/config"); window.setTimeout(() => navigate("/config/wizard/connect-repository"), 0); }}>Connect another repository</a></li>
           </ul>
         </>

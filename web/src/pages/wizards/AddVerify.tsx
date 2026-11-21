@@ -9,6 +9,7 @@ import { HEALTH_TYPES } from "../../configKinds";
 import { Choices, CopyBlock, DefinedAt, SecretRefInput, TextInput, type SecretRef } from "../../components/ConfigForm";
 import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, type StepDef } from "./Wizards";
+import { terms } from "../../terms";
 
 const URL_HINT: Record<string, string> = {
   prometheus: "http://prometheus-operated.monitoring.svc:9090", loki: "http://loki-gateway.monitoring.svc", clickhouse: "http://clickhouse.logging.svc:8123",
@@ -28,7 +29,7 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
 
   const spec: Spec = { type, ...(projects.length ? { projects } : {}) };
   const changes: ChangeRequest[] = name.trim() ? [{ kind: "health-source", name: name.trim(), unit: unit || undefined, spec, version: -1 }] : [];
-  const runnerYAML = `# runner.yaml of the deploy runners that serve the environments\nhealth_sources:\n  ${name.trim() || "name"}:\n    type: ${type}\n    url: ${url || URL_HINT[type]}\n` +
+  const runnerYAML = terms().say(`# runner.yaml of the {deploy:do} {runners} that serve the {environments}\nhealth_sources:\n  ${name.trim() || "name"}:\n    type: ${type}\n    url: ${url || URL_HINT[type]}\n`) +
     (secret ? `    auth: { type: bearer, secret: { store: ${secret.store}, key: ${secret.key}${secret.field ? `, field: ${secret.field}` : ""} } }\n` : "") +
     `    projects: [${projects.map((p) => JSON.stringify(p)).join(", ")}]\n`;
 
@@ -64,15 +65,15 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
       render: () => (
         <>
           <div className="callout callout-info">
-            <strong>The address and credentials stay with the deploy runners</strong>, not on the server: they are next to your monitoring and run no one's scripts.
+            <strong>{terms().say("The address and credentials stay with the {deploy:do} {runners}")}</strong>, not on the server: they are next to your monitoring and run no one's scripts.
             Launchway's server keeps only the name, the type and who may use it. Nothing typed here is stored; it only fills in the lines below for you to copy.
           </div>
           <div className="cf-grid">
-            <TextInput label="Its address, as the deploy runners reach it" value={url} onChange={setUrl} mono wide placeholder={URL_HINT[type]} />
+            <TextInput label={terms().say("Its address, as the {deploy:do} {runners} reach it")} value={url} onChange={setUrl} mono wide placeholder={URL_HINT[type]} />
             <SecretRefInput label="Its credentials, if it needs any (a reference)" value={secret} onChange={setSecret}
-              help="The secret store, key and field on the runners where the token or password is kept. Never the secret itself." />
+              help={terms().say("The secret store, key and field on the {runners} where the token or password is kept. Never the secret itself.")} />
           </div>
-          <CopyBlock title="For the deploy runners' runner.yaml" text={runnerYAML} note="Add these lines to every deploy runner serving the environments where verify steps will read it, then restart those runners." />
+          <CopyBlock title={terms().say("For the {deploy:do} {runners}' runner.yaml")} text={runnerYAML} note={terms().say("Add these lines to every {deploy:do} {runner} serving the {environments} where verify steps will read it, then restart those {runners}.")} />
         </>
       ),
     },
@@ -82,12 +83,12 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
     <WizardRunner title="Add a health source" overview={overview}
       intro="Metrics or logs that verify steps read to judge a deployment. Nothing is created until you confirm at the end."
       steps={steps} changes={changes}
-      summaryExtra={<CopyBlock title="Still to do on the deploy runners: runner.yaml" text={runnerYAML} />}
+      summaryExtra={<CopyBlock title={terms().say("Still to do on the {deploy:do} {runners}: runner.yaml")} text={runnerYAML} />}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
-          <CopyBlock title="On the deploy runners: runner.yaml" text={runnerYAML} note="Pipelines can name the source now; queries work once the deploy runners have these lines." />
-          <ul className="cf-next"><li><Link href="/runners">See the health sources each runner serves</Link></li></ul>
+          <CopyBlock title={terms().say("On the {deploy:do} {runners}: runner.yaml")} text={runnerYAML} note={terms().say("Pipelines can name the source now; queries work once the {deploy:do} {runners} have these lines.")} />
+          <ul className="cf-next"><li><Link href="/runners">{terms().say("See the health sources each {runner} serves")}</Link></li></ul>
         </>
       )} />
   );
@@ -149,7 +150,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
             <DefinedAt overview={overview} value={unit} onChange={setUnit} />
           </div>
           <SecretRefInput label={provider === "openai-local" ? "API key (a reference; leave empty if it needs none)" : "API key (a reference)"} value={key} onChange={setKey} problems={by.key}
-            help="Where the key is kept: a secret store the runners (and the server, to explain failures) have, and the key's name and field there. The key itself is never typed into Launchway." />
+            help={terms().say("Where the key is kept: a secret store the {runners} (and the server, to explain failures) have, and the key's name and field there. The key itself is never typed into Launchway.")} />
         </>
       ),
     },
@@ -163,7 +164,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
             help="Each call costs money or capacity and sends the step's text to the model: list only those that should." />
           <div className="cf-grid">
             <TextInput label="Output tokens per call" type="number" value={maxTokens} onChange={setMaxTokens} placeholder="4096" problems={by.max_tokens} help="The longest answer. Default 4096." />
-            <TextInput label="Calls per run" type="number" value={callsPerRun} onChange={setCallsPerRun} placeholder="20" problems={by.calls_per_run} help="Stops a runaway loop. Default 20." />
+            <TextInput label={terms().say("Calls per {run}")} type="number" value={callsPerRun} onChange={setCallsPerRun} placeholder="20" problems={by.calls_per_run} help="Stops a runaway loop. Default 20." />
             <TextInput label="Tokens per project per day" type="number" value={tokensPerDay} onChange={setTokensPerDay} placeholder="no limit" problems={by.tokens_per_day} help="A daily budget, input plus output. Empty: no limit." />
           </div>
         </>
@@ -171,7 +172,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
     },
   ];
 
-  const runnerNote = key?.store ? `# runner.yaml of the runners that run AI steps\nai: true\n# and a secret store named "${key.store}" in its secrets: section that holds ${key.key}${key.field ? "#" + key.field : ""}\n` : "# runner.yaml of the runners that run AI steps\nai: true\n";
+  const runnerNote = key?.store ? terms().say(`# runner.yaml of the {runners} that run AI steps\nai: true\n# and a secret store named "${key.store}" in its secrets: section that holds ${key.key}${key.field ? "#" + key.field : ""}\n`) : terms().say("# runner.yaml of the {runners} that run AI steps\nai: true\n");
   return (
     <WizardRunner title="Add an AI model" overview={overview}
       intro="A model AI steps may ask. Nothing is created until you confirm at the end."
@@ -179,8 +180,8 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
-          <CopyBlock title="On the runners" text={runnerNote} note="Runners call models only when their runner.yaml says ai: true, and read the key from their own secret stores." />
-          <ul className="cf-next"><li><Link href="/runners">See which runners call models</Link></li></ul>
+          <CopyBlock title={terms().say("On the {runners}")} text={runnerNote} note={terms().say("{Runners} call models only when their runner.yaml says ai: true, and read the key from their own secret stores.")} />
+          <ul className="cf-next"><li><Link href="/runners">{terms().say("See which {runners} call models")}</Link></li></ul>
         </>
       )} />
   );

@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { OPERATORS, showValue, valueOf, type Clause, type Rule, type Serve, type ToggleState, type ToggleType } from "../togglesApi";
 import { Button } from "../kit/layout";
 import "../toggles.css";
+import { terms } from "../terms";
 
 // The editor of what a toggle does in one environment: on or off, what it serves while off, prerequisites,
 // rules in order (conditions on the context, then a value or a percentage), and what everyone else gets. Every
@@ -106,7 +107,7 @@ export function ToggleRules({ type, state, onChange, segments, otherToggles }: {
   const setRules = (rs: Rule[]) => onChange({ ...state, rules: rs });
   return (
     <div className="tg-editor">
-      <label className="tg-check"><input type="checkbox" checked={state.on} onChange={(e) => onChange({ ...state, on: e.target.checked })} /> On in this environment</label>
+      <label className="tg-check"><input type="checkbox" checked={state.on} onChange={(e) => onChange({ ...state, on: e.target.checked })} /> {terms().say("On in this {environment}")}</label>
       <div className="tg-row"><span>While off, serve</span><ValueInput type={type} label="The value while off" value={state.off_value} onChange={(v) => onChange({ ...state, off_value: v })} /></div>
       {prereqs.length > 0 && <h3>Only when these toggles serve</h3>}
       <ul className="tg-clauses">

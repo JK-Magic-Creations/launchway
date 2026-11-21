@@ -60,7 +60,7 @@ This is only printed. Save it with: launchway init --write
 
 The file is a few lines of your own: `uses:` names the Flight plan, and `with:` carries what was read from
 `go.mod`. A file can be shorter still: `uses: launchway/go-service` alone is a whole pipeline, and where the
-project has environments the same Flight plan delivers to them in order (see [Starters](../guide/starters.md#delivery)).
+project has Airfields (environments) the same Flight plan delivers to them in order (see [Starters](../guide/starters.md#delivery)).
 Any stage can be left out with `skip:`, extended with `extend:` or taken over with `replace:`. Save it, and see exactly what it does:
 
 ```sh
@@ -90,7 +90,7 @@ git add -A && git commit -m "Hello"
 launchway run
 ```
 
-The test report and the coverage profile are written where the **Tests** and **Coverage** tabs of a server read them. Every
+The Debrief (test report) and the coverage profile are written where the **Tests** and **Coverage** tabs of a server read them. Every
 input has a default and every default can be changed: a different test command is `with: { test_command: "make test" }`, two Go
 versions are `test_versions: ["1.23", "1.24"]` (a **matrix**: each version is a step of its own, `test[go=1.23]`), and an image
 that is built and pushed is `push: true` with an `image_repository`.
@@ -251,7 +251,7 @@ launchway server --config launchway.yaml
   1 project(s), data in /home/you/launchway-server/data, SQLite database /home/you/launchway-server/data/launchway.db
 ```
 
-Open **http://127.0.0.1:8080** and choose **Projects → hello**. There are no runs yet: when a
+Open **http://127.0.0.1:8080** and choose **Projects → hello**. There are no Sorties (runs) yet: when a
 server first sees a repository, it records the commits already there and runs none of them.
 
 In another terminal, make a commit:
@@ -262,8 +262,8 @@ echo "More text" >> README.md
 git commit -am "Second commit"
 ```
 
-Within a few seconds a run starts. Open it: the steps are drawn as a graph, and choosing a step
-shows its log, live. *Recent pushes* on the project page says why the run started (or why not).
+Within a few seconds a Sortie starts. Open it: the steps are drawn as a graph, and choosing a step
+shows its log, live. *Recent pushes* on the project page says why the Sortie started (or why not).
 
 > [!TIP]
 > A repository on a Git host works the same way: put its address in `repo:`, for example
@@ -272,7 +272,7 @@ shows its log, live. *Recent pushes* on the project page says why the run starte
 
 ## 7 Start a run by hand
 
-In the web UI, press **Start a run** on the project page and choose `main`.
+In the web UI, press **Start a Sortie** on the project page and choose `main`.
 
 Over the API, a server without sign-in needs the header that proves the request is not from
 another web site:
@@ -297,6 +297,6 @@ On a server with sign-in, use the command line instead: `launchway login --serve
 ## What next
 
 - [Starters](../guide/starters.md): every Flight plan and step template, and the gallery.
-- [Tests and reports](tests-and-reports.md): show test results on the run.
+- [Tests and reports](tests-and-reports.md): show test results on the Sortie.
 - [Pipelines](../guide/pipelines.md): containers, services, inputs and loops.
 - [Pipeline reference](../reference/pipeline.md): every key.

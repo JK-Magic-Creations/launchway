@@ -1,4 +1,5 @@
 import type { RunSummary } from "../api";
+import { terms } from "../terms";
 
 /**
  * "1 allowed failure": a run that went on past steps that failed and were
@@ -12,7 +13,7 @@ export function AllowedFailureBadge({ run, onSelect }: { run: Pick<RunSummary, "
   if (n === 0) return null;
   const steps = run.allowed_failure_steps ?? [];
   const text = `${n} allowed failure${n === 1 ? "" : "s"}`;
-  const title = `${steps.join(", ") || "A step"} failed, and the pipeline allows that (on_failure: continue): the run went on as if it had succeeded`;
+  const title = terms().say(`${steps.join(", ") || "A step"} failed, and the pipeline allows that (on_failure: continue): the {run} went on as if it had succeeded`);
   if (!onSelect || steps.length === 0) return <span className="badge-allowed" title={title}>{text}</span>;
   return (
     <button type="button" className="badge-allowed badge-button" title={title} onClick={() => onSelect(steps[0])}>{text}</button>

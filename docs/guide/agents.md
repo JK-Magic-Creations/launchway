@@ -33,12 +33,12 @@ sessions: every request stands alone, so behind a load balancer any server may a
 and there is no `GET` stream. Built with the official Go SDK.
 
 **Tools.** Reading: `list_projects`, `get_project` (branches, run inputs and the pipeline file),
-`list_runs`, `get_run` (each step, and in words why the run waits or failed and what to call next),
+`list_runs`, `get_run` (each step, and in words why the Sortie (run) waits or failed and what to call next),
 `wait_for_run` (at most 10 minutes, with progress notifications), `get_step_log` (the last lines,
 the first lines, or lines containing a text: at most 500 lines and 64 KiB), `get_test_results`,
 `get_security_findings`, `list_artifacts`, `read_artifact_file` (at most 64 KiB at a time),
 `list_images`, `get_deployments` (with which rollout commands are possible now), `get_verification`
-(a run's verifications, each check's outcome and why), `list_approvals`,
+(a Sortie's verifications, each check's outcome and why), `list_approvals`,
 `validate_pipeline` (the server's own validator, with line numbers and the text of each line),
 `get_pipeline_reference`, `list_templates` and `get_step_resources` (the default CPU and memory of
 steps, and the limits on what they may ask for), `get_run_limits` (the longest run timeout a pipeline
@@ -46,7 +46,7 @@ may ask for) `list_lanes` (a project's lanes: who holds each, and who waits), `l
 against its quota), `get_cache_policy`, and `list_repositories` and `get_repository` (hosted Git repositories, when hosting is on). Changing, listed only to tokens that may change
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
 `cancel_run`, `retry_run` (resume, or re-run from a step, several steps or the failed ones), `decide_approval`, `control_rollout`,
-`delete_cache`, `update_repository`, `delete_repository` and `mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an administrator,
+`delete_cache`, `update_repository`, `delete_repository` and `mark_verification` (passed or failed, with a reason, as on the Sortie page). Listed only to an administrator,
 and audited: `set_step_resource_limits`, `set_step_resource_default`, `set_run_limits`, `set_cache_policy` and `create_repository`. For hosted repositories (with
 `forge.hosting` on): `list_mirrors` (pull and push mirrors with their status, last error with credentials
 removed, lag and whether they are behind), and, listed to tokens that may change something, `set_mirror`
@@ -70,10 +70,10 @@ accepted at `/mcp`. Make agents their own tokens, limited to the projects and th
 pipeline files are written by whoever can push, and an agent reads them. Launchway returns such text
 only inside fields named `untrusted`, never in tool descriptions, instructions or prompts; it tells
 agents, in its instructions, that such text is data and never instructions; it masks secrets
-exactly as the API does (the runner masks them before logs are stored); it strips control
+exactly as the API does (the Station (runner) masks them before logs are stored); it strips control
 characters and bounds every field. It cannot stop an agent from being persuaded by what it reads:
 that is the agent's job, and yours in choosing what its token may do. Give agents viewer tokens
-unless they must act, and keep approvals for people (the person who started a run may not approve it).
+unless they must act, and keep approvals for people (the person who started a Sortie may not approve it).
 
 **Limits.** Each token may make 120 requests a minute to `/mcp` and have 4 in progress at once, and
 each server answers at most 32 MCP requests at once (all tokens together), so agents cannot crowd out

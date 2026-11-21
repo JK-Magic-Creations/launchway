@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-const runnersUsage = `Usage:
-  launchway runners list [--json]                   runners, their pools and what they hold
+var runnersUsage = themed(`Usage:
+  launchway runners list [--json]                   {runners}, their pools and what they hold
   launchway runners join-token --pool NAME          make a join token for a pool, shown once
                      [--uses N] [--ttl 1h] [--labels a,b] [--ephemeral] [--description TEXT]
-  launchway runners revoke-token ID                 stop a join token from enrolling runners
-  launchway runners revoke RUNNER [--reason TEXT]   revoke an enrolled runner at once
-  launchway runners rotate RUNNER                   ask an enrolled runner to move to a new key
+  launchway runners revoke-token ID                 stop a join token from enrolling {runners}
+  launchway runners revoke RUNNER [--reason TEXT]   revoke an enrolled {runner} at once
+  launchway runners rotate RUNNER                   ask an enrolled {runner} to move to a new key
 
 Making join tokens, revoking and rotating need the role runner_admin names
 (admin by default) on every project.
-`
+`)
 
 func cmdRunners(args []string) error {
 	return runClient(func() error {
@@ -41,7 +41,7 @@ func cmdRunners(args []string) error {
 		case "revoke":
 			return cl.revokeRunner(args[1:])
 		case "rotate":
-			return cl.oneID(args[1:], "rotate", "/api/v1/runners/%s/rotate", "Runner %s will move to a new key when it next gets an access token.")
+			return cl.oneID(args[1:], "rotate", "/api/v1/runners/%s/rotate", cl.say("{Runner} %s will move to a new key when it next gets an access token."))
 		}
 		return usageErr("unknown command runners %s\n\n%s", args[0], runnersUsage)
 	})
@@ -75,7 +75,7 @@ func (cl *client) runnersList(args []string) error {
 	}
 	return cl.print(list, *asJSON, func() {
 		if len(list) == 0 {
-			fmt.Fprintln(cl.out, "No runners.")
+			fmt.Fprintln(cl.out, cl.say("No {runners}."))
 		}
 		for _, r := range list {
 			state := "offline"
@@ -137,7 +137,7 @@ func (cl *client) joinToken(args []string) error {
 		t := out.JoinToken
 		fmt.Fprintf(cl.out, "Join token %s for pool %s, %d use(s), until %s. It is shown only now:\n\n  %s\n\n",
 			t.ID, t.Pool, t.MaxUses, time.UnixMilli(t.ExpiresAt).Format("2006-01-02 15:04"), out.Token)
-		fmt.Fprintf(cl.out, "On the runner's machine:\n\n  launchway runner --server %s --join %s\n", cl.c.Server, out.Token)
+		fmt.Fprintf(cl.out, cl.say("On the {runner}'s machine:\n\n  launchway runner --server %s --join %s\n"), cl.c.Server, out.Token)
 	})
 }
 
@@ -173,6 +173,6 @@ func (cl *client) revokeRunner(args []string) error {
 	if err := cl.call("POST", "/api/v1/runners/"+pos[0]+"/revoke", map[string]string{"reason": *reason}, &out); err != nil {
 		return err
 	}
-	fmt.Fprintf(cl.out, "Runner %s revoked; %d step(s) it held were queued again.\n", pos[0], out.Released)
+	fmt.Fprintf(cl.out, cl.say("{Runner} %s revoked; %d step(s) it held were queued again.\n"), pos[0], out.Released)
 	return nil
 }

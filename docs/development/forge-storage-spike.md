@@ -38,7 +38,7 @@ replication limits, which is a separate component to run, and "one binary and a 
 
 Everything runs real git (receive-pack, upload-pack, index-pack, pack-objects) through `internal/gitexec`,
 with the hooks installed as symlinks to the test binary. Failures are injected inside those real processes,
-by name, through the environment: `kill -9` of the whole push at each of eleven points (before the upload,
+by name, through the Airfield (environment): `kill -9` of the whole push at each of eleven points (before the upload,
 after the upload, after registering the pack, with git's locks held, between the statements of the commit
 transaction, after the commit, after git moved its ref, after `post-receive`), the database connection
 dropping before and after the commit, the blob store down, slow, failing a part, storing a pack cut short or
@@ -76,7 +76,7 @@ whole reference installation is 45 MB.
 | the blob store stores a pack with one byte wrong, same size, and says yes | n/a | **fails without read-back verification**: the push is acknowledged and a cold server cannot be built (shown on purpose); passes with it |
 
 The injection campaign (every point above chosen at random, retries on either server, caches wiped and
-repacks mixed in) ran as two runs of 600 rounds on candidate B with the filesystem blob store (seeds 1 and 2): 1,070 of the
+repacks mixed in) ran as two Sorties (runs) of 600 rounds on candidate B with the filesystem blob store (seeds 1 and 2): 1,070 of the
 1,200 rounds had a failure injected, 1,200 pushes were acknowledged in the end after retries, and every
 property held at the end and every 40 rounds, with no acknowledged push lost. Candidate A, 600 rounds
 (543 injected): every property held too (the node-loss case is separate, above). The database blob store

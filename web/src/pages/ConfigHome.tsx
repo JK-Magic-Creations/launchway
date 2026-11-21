@@ -158,8 +158,8 @@ function Checklist({ overview, counts }: { overview: ConfigOverview; counts: Rec
     { done: named, title: "Choose the words", text: `Aviation words or plain business ones, and what your ${terms().lower("organization")}, its groups and its ${terms().pluralLower("project")} are called, so the screens use your words.`, href: "/config/wizard/first-run?step=words" },
     { done: me?.auth_mode === "oidc", title: "Choose how people sign in", text: "Your company's identity provider, so people use the accounts they have and groups decide what they may do.", href: "/config/wizard/first-run?step=signin" },
     { done: counts.project === undefined ? null : counts.project > 0, title: "Connect a repository", text: `Your first ${lv.project.singular.toLowerCase()}: its pushes start runs of its pipeline.`, href: "/config/wizard/connect-repository" },
-    { done: runner, title: "Add a runner", text: "A machine, container or Kubernetes pod of your own that does the steps of runs (the server's built-in runner is for trying things out).", href: "/config/wizard/add-runner" },
-    { done: counts.environment === undefined ? null : counts.environment > 0, title: "Add an environment", text: "A place runs deploy to, such as staging or prod.", href: "/config/wizard/add-environment" },
+    { done: runner, title: terms().say("Add a {runner}"), text: terms().say("A machine, container or Kubernetes pod of your own that does the steps of {runs} (the server's built-in {runner} is for trying things out)."), href: "/config/wizard/add-runner" },
+    { done: counts.environment === undefined ? null : counts.environment > 0, title: terms().say("Add an {environment}"), text: terms().say("A place runs {deploy:do} to, such as staging or prod."), href: "/config/wizard/add-environment" },
   ];
   const left = items.filter((i) => i.done === false).length;
   const all = items.every((i) => i.done);

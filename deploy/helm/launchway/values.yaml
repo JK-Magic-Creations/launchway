@@ -7,7 +7,7 @@
 # Everything else has a safe default: sign-in required (built-in accounts, first administrator
 # made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on an 8Gi
 # volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
-# runner token, the database password and the setup code ITSELF, once, and keeps them across
+# Station token, the database password and the setup code ITSELF, once, and keeps them across
 # upgrades, `helm template` and GitOps syncs (a pre-install/pre-upgrade hook Job; see
 # docs/reference/helm-values.md). Nothing here needs Vault, an operator or an identity provider.
 #
@@ -61,7 +61,7 @@ postgresql:
   # (the default), the hook Job makes a random one once and keeps it across upgrades.
   password: ""
   persistence:
-    # -- The volume. With artifacts kept in the database (the default), the chart caps them well
+    # -- The volume. With Cargo kept in the database (the default), the chart caps them well
     # below this (half) and refuses a larger config.artifacts.database.maxTotalGiB.
     size: 8Gi
     # -- The StorageClass for the volume (default: the cluster's default).
@@ -113,7 +113,7 @@ fullnameOverride: ""
 commonLabels: {}
 
 image:
-  # -- The Launchway image; servers and runners use the same one.
+  # -- The Launchway image; servers and Stations use the same one.
   repository: ghcr.io/jk-magic-creations/launchway
   # -- The image tag. Defaults to the chart's appVersion.
   tag: ""
@@ -128,20 +128,20 @@ imagePullSecrets: []
 # The server configuration file.
 #
 # SINCE SCHEMA 23 THE FILE IS BOOTSTRAP ONLY. Everything an administrator manages (projects,
-# libraries, environments, runner pools, role bindings, policies, health sources, models, secret
-# stores, limits, the MCP endpoint, where artifacts are kept) lives in the database, with history
+# libraries, Airfields, Flight lines, role bindings, policies, health sources, models, secret
+# stores, limits, the MCP endpoint, where Cargo are kept) lives in the database, with history
 # and an API, the web UI, the CLI and the MCP server. What the values below set for those is
 # IMPORTED ONCE, by the first server of a new installation to start, and ignored afterwards: each
 # server logs which keys it ignores and names the import. After that, change them in the UI,
 # `launchway config`, the API or Terraform, not here; `launchway config export` writes them as
 # text for backup or Git. The chart writes these keys only when you set them, so with the
-# default values the file holds only listen, data and the runner switch. docs/reference/server-config.md
+# default values the file holds only listen, data and the Station switch. docs/reference/server-config.md
 # lists what stays in the file (docs/concepts: configuration).
 #
 # The chart renders the file into a ConfigMap mounted at
 # /etc/launchway/launchway.yaml; changing it restarts the servers. The database URL and the
-# runner token are never written here: they reach the servers as environment variables from
-# Secrets. Servers always run with their built-in runner disabled; steps run on the runners
+# Station token are never written here: they reach the servers as environment variables from
+# Secrets. Servers always run with their built-in Station disabled; steps run on the Stations
 # below.
 # ---------------------------------------------------------------------------------------------
 # A NOTE ON DEFAULTS. Settings that newer versions added are left unset here and take the
@@ -151,11 +151,11 @@ imagePullSecrets: []
 config:
   # -- Address the servers listen on, inside the pod. The port is also the container port.
   listen: 0.0.0.0:8080
-  # -- Repositories to watch. Each needs a URL the servers and runners can clone
+  # -- Repositories to watch. Each needs a URL the servers and Stations can clone
   # (https://... or ssh://...). Example:
   #   - name: payments
   #     repo: https://git.example.com/team/payments.git
-  #     branch: main     # default branch for manual runs
+  #     branch: main     # default branch for manual Sorties
   #     poll: 30s        # how often to look for pushes
   #     # Optional: let the pipeline editor commit to the repository, with the servers'
   #     # Git credentials (in the URL, or GIT_CONFIG_* variables in server.extraEnv).
@@ -176,27 +176,27 @@ config:
   #     webhooks:
   #       deploy-request: { hmac_secret_env: PAYMENTS_DEPLOY_HMAC }
   projects: []
-  # -- What the servers keep of the test reports steps declare (reports.tests in a pipeline).
-  # Each step attempt's summary is kept with the run's events; individual results go in a table
+  # -- What the servers keep of the Debriefs steps declare (reports.tests in a pipeline).
+  # Each step attempt's summary is kept with the Sortie's events; individual results go in a table
   # of their own, within these limits.
   tests:
-    # -- MiB of report files a server accepts for one step attempt. Runners are told, and
+    # -- MiB of report files a server accepts for one step attempt. Stations are told, and
     # collect no more; a result larger than this is refused and reported without its files.
     # Unset: the built-in default, 24.
     maxUploadMiB:
-    # -- Individual test results one run keeps; beyond this only the totals are kept.
+    # -- Individual test results one Sortie keeps; beyond this only the totals are kept.
     # Unset: the built-in default, 50000.
     maxCasesPerRun:
-    # -- Individual test results a project keeps over all its runs. When there are more, the
+    # -- Individual test results a project keeps over all its Sorties. When there are more, the
     # oldest runs' results are removed first (their totals stay). At least maxCasesPerRun.
     # Unset: the built-in default, 1000000.
     maxCasesPerProject:
-  # -- Where the files steps keep (artifacts: in a pipeline, and SBOMs) are stored, and limits on
+  # -- Where the files steps keep (Cargo: in a pipeline, and SBOMs) are stored, and limits on
   # them. Every setting is unset by default, and only written to the configuration when set (a
   # server of the version before does not know them; see docs/development/migrations.md).
-  # Unset, with PostgreSQL (postgresql.enabled or an external database), artifacts are kept in the
+  # Unset, with PostgreSQL (postgresql.enabled or an external database), Cargo are kept in the
   # database itself, in chunks, shared by every server: nothing else to run (docs/artifacts.md).
-  # With SQLite they go in the pod's data directory. An installation that kept artifacts on the
+  # With SQLite they go in the pod's data directory. An installation that kept Cargo on the
   # filesystem before the database store existed keeps doing so, and the servers' log says how to
   # copy them into the database (launchway blobs copy). For very large or busy installations set
   # store: s3 and point it at a bucket all servers share.
@@ -226,26 +226,26 @@ config:
       # AWS_SESSION_TOKEN), given to the servers as environment variables. Credentials are never in
       # the ConfigMap.
       existingSecret:
-    # -- The largest file an artifact may hold, in MiB. Unset: 1024.
+    # -- The largest file a Cargo may hold, in MiB. Unset: 1024.
     maxFileMiB:
     # -- How much one run may keep, in MiB. Unset: 4096.
     maxRunMiB:
-    # -- How much a project may keep over all its runs, in GiB. Unset: 50.
+    # -- How much a project may keep over all its Sorties, in GiB. Unset: 50.
     maxProjectGiB:
-    # -- How long artifacts are kept when the pipeline does not say (30d, 2w, 12h). Unset: 30d.
+    # -- How long Cargo are kept when the pipeline does not say (30d, 2w, 12h). Unset: 30d.
     retain:
-    # -- The longest any artifact is kept, whatever the pipeline says. Unset: 90d.
+    # -- The longest any Cargo is kept, whatever the pipeline says. Unset: 90d.
     maxRetain:
   # -- What the servers keep of security findings (reports.findings, SARIF) and SBOMs
   # (reports.sbom). Unset values take the built-in defaults shown.
   findings:
     # -- MiB of SARIF files a server accepts for one step attempt. Unset: 32.
     maxUploadMiB:
-    # -- Findings one run keeps; beyond this only the counts. Unset: 20000.
+    # -- Findings one Sortie keeps; beyond this only the counts. Unset: 20000.
     maxPerRun:
-    # -- Findings a project keeps over all its runs, oldest runs' removed first. Unset: 500000.
+    # -- Findings a project keeps over all its Sorties, oldest runs' removed first. Unset: 500000.
     maxPerProject:
-    # -- SBOM components one run keeps for searching. Unset: 20000.
+    # -- SBOM components one Sortie keeps for searching. Unset: 20000.
     maxComponentsPerRun:
     # -- SBOM components a project keeps. Unset: 1000000.
     maxComponentsPerProject:
@@ -266,7 +266,7 @@ config:
     maxHtmlMiB:
     # -- MiB of coverage reports a server accepts for one step attempt. Unset: 24.
     maxCoverageUploadMiB:
-    # -- Source files' coverage one run keeps; beyond it only the totals. Unset: 20000.
+    # -- Source files' coverage one Sortie keeps; beyond it only the totals. Unset: 20000.
     maxCoverageFilesPerRun:
     # -- Source files' coverage a project keeps; the oldest runs' go first. Unset: 2000000.
     maxCoverageFilesPerProject:
@@ -276,7 +276,7 @@ config:
     origin:
   # -- Loops in pipelines (for_each).
   loops:
-    # -- Combinations one loop may have; a run whose loop has more is refused.
+    # -- Combinations one loop may have; a Sortie whose loop has more is refused.
     # Unset: the built-in default, 64 (at most 500).
     maxMembers:
   # -- Schedules in pipelines (on.schedule).
@@ -292,7 +292,7 @@ config:
     maxDays:
   # -- Delivery policies (schema 16): rules pipelines cannot opt out of. Written to the
   # configuration only when set, as policy: (see the README's Policies section). Set it only
-  # once every server runs a release that knows policies, and take it out before rolling back.
+  # once every server runs a release that knows policies, and take it out before returning to base.
   # Unset: no policies. For example:
   #   policy:
   #     waivers: { allow: admin, maxDays: 30 }      # the built-in defaults
@@ -301,7 +301,7 @@ config:
   #     policies:
   #       - name: prod-evidence
   #         mode: enforce
-  #         scope: { environments: [prod] }
+  #         scope: { Airfields: [prod] }
   #         rules: { tests: { min: 1 }, approvals: { min: 1 } }
   policy:
   # -- The MCP endpoint (/mcp), through which agents use Launchway with API tokens. It is on by
@@ -326,19 +326,19 @@ config:
     oauth:
       resource:
       scopes: []
-  # -- Runner pools (schemas 20 and 21), written as runner_pools: in the configuration's own
-  # keys, after the deploy pool delivery.* makes. Unset: none; every build runner is in the
-  # default pool, which serves every project. Set it only once every server and runner runs a
-  # release that knows it, and take it out before rolling back. For example:
+  # -- Flight lines (schemas 20 and 21), written as runner_pools: in the configuration's own
+  # keys, after the launch pool delivery.* makes. Unset: none; every build Station is in the
+  # default pool, which serves every project. Set it only once every server and Station runs a
+  # release that knows it, and take it out before returning to base. For example:
   #   runnerPools:
   #     - { name: web, kind: build, projects: ["web-*"] }
   #     - { name: default, kind: build, projects: ["*"], require_identity: true }
   runnerPools:
-  # -- The role needed on every project to make join tokens and to revoke or rotate runners:
+  # -- The role needed on every project to make join tokens and to revoke or rotate Stations:
   # admin, operator or none. Written as runner_admin only when set. Unset: admin.
   runnerAdmin:
   # -- Queues and limits (the guide "Queues and limits"): how long a step waits for room before it
-  # fails, and how many runs go at once. Written only when set. Every number: 0 is no limit at
+  # fails, and how many Sorties go at once. Written only when set. Every number: 0 is no limit at
   # all, unset is the built-in default (shown). Pushes to protected branches are never held.
   # They are installation settings, imported once; change them later in the web interface,
   # `launchway config`, the API or Terraform.
@@ -359,13 +359,13 @@ config:
     # -- A new commit on a pull request cancels its older run. Default true.
     supersedePullRequests:
   # -- Accounts that are automation (dependency bots, release tools, the dependency updater): their
-  # runs are counted apart in the queue and their pull requests run restricted. Unset: the built-in
+  # runs are counted apart in the Holding pattern and their pull requests run restricted. Unset: the built-in
   # list (*[bot], dependabot*, renovate*, github-actions*, release-please*, launchway-updater*);
   # an empty list [] names none.
   automation:
     accounts:
   # -- Trust of pull requests (the guide "Pull-request trust"). untrusted is restrict (default:
-  # pull requests from automation accounts and forks run without secrets, deploys or cache writes
+  # pull requests from automation accounts and forks run without secrets, launches or cache writes
   # until a maintainer approves) or allow.
   pullRequests:
     untrusted: ""
@@ -390,7 +390,7 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts, reports,
+  # starting (the pod logs say which key). listen, data, database, projects, tests, Cargo, reports,
   # findings, loops, schedules, policy, mcp, verification (delivery.verification) and ai (ai.*) are
   # set by the chart and may not appear here; runner.enabled may not be true.
   # The chart's default makes sign-in required, with built-in accounts: the first administrator
@@ -402,9 +402,9 @@ config:
 
 # ---------------------------------------------------------------------------------------------
 # Encryption at rest: where the root key is held. Every secret the server stores (its signing and
-# sealing keys, the shared runner token, SSH host keys, webhook secrets) is sealed under a root
+# sealing keys, the shared Station token, SSH host keys, webhook secrets) is sealed under a root
 # key that is NOT in the database, so a database dump or backup alone reveals none of them.
-# See docs/guide/encryption-at-rest.md. The chart passes these to the servers as environment
+# See docs/guide/encryption-at-rest.md. The chart passes these to the servers as Airfield
 # variables, so the configuration file does not change (a version before this one can still
 # read it).
 #
@@ -440,7 +440,7 @@ encryption:
     existingSecretKey: root.key
   env:
     # -- holder: env. A Secret whose key holds the root key itself (base64). Visible to anyone who
-    # can read the pod's environment; prefer keyFile or transit.
+    # can read the pod's Airfield; prefer keyFile or transit.
     existingSecret: ""
     existingSecretKey: root.key
   passphrase:
@@ -473,7 +473,7 @@ encryption:
     existingSecretKey: root.key
 
 # ---------------------------------------------------------------------------------------------
-# The token runners present to servers. Servers and runners read it from the same Secret.
+# The token Stations present to servers. Servers and Stations read it from the same Secret.
 # ---------------------------------------------------------------------------------------------
 runnerToken:
   # -- The name of an existing Secret holding the token. If empty, the install hook Job makes a
@@ -483,7 +483,7 @@ runnerToken:
   existingSecretKey: token
 
 # ---------------------------------------------------------------------------------------------
-# Servers: the API, the web UI and the run engine. They keep nothing that matters on disk;
+# Servers: the API, the web UI and the Sortie engine. They keep nothing that matters on disk;
 # any number can run against the same database.
 # ---------------------------------------------------------------------------------------------
 server:
@@ -584,37 +584,37 @@ ssh:
     annotations: {}
 
 # ---------------------------------------------------------------------------------------------
-# Runners: `launchway runner` with the Kubernetes executor. Each run gets one pod in
-# runner.kubernetes.namespace, held by one runner: all of a run's steps go to that runner while
-# it is alive, so a run's parallel steps share one runner's concurrency. Runners only make
+# Stations: `launchway Station` with the Kubernetes executor. Each Sortie gets one pod in
+# runner.kubernetes.namespace, held by one Station: all of a Sortie's steps go to that Station while
+# it is alive, so a Sortie's parallel steps share one Station's concurrency. Stations only make
 # outbound connections, to the servers and to the Kubernetes API. The chart renders their
 # settings into a file, /etc/launchway-runner/runner.yaml, passed with --config.
 # ---------------------------------------------------------------------------------------------
 runner:
-  # -- Deploy runners. Turn off if your runners live elsewhere (they then need the runner
+  # -- Launch Stations. Turn off if your Stations live elsewhere (they then need the Station
   # token and a URL that reaches the servers).
   enabled: true
-  # -- Number of runner pods. A run whose runner is lost has its step run again by another.
+  # -- Number of Station pods. A Sortie whose Station is lost has its step run again by another.
   replicas: 2
-  # -- Steps each runner executes at once.
+  # -- Steps each Station executes at once.
   concurrency: 2
-  # -- The server URL runners connect to. Default: the chart's Service.
+  # -- The server URL Stations connect to. Default: the chart's Service.
   serverURL: ""
-  # -- Enrol each runner pod with a join token instead of using the shared runner token
-  # (schema 20): a Secret holding a join token made in the UI (Runners, Add a runner) with
-  # enough uses for every pod start, ideally ephemeral. Unset: the shared runner token.
+  # -- Enrol each Station pod with a join token instead of using the shared Station token
+  # (schema 20): a Secret holding a join token made in the UI (Stations, Add a Station) with
+  # enough uses for every pod start, ideally ephemeral. Unset: the shared Station token.
   #   join: { existingSecret: launchway-runner-join, existingSecretKey: token }
   join:
-  # -- Labels the runners have, for pipelines that ask for them (runner: { labels }). Written
+  # -- Labels the Stations have, for pipelines that ask for them (Station: { labels }). Written
   # only when set. Unset: none.
   labels:
-  # -- The runners' own limits on the work they take (accept: in runner.yaml), checked on the
-  # runner before anything runs. Written only when set; see docs/guide/runner-identity.md
-  # ("What a runner trusts the server with"). Unset: no limits. For example:
+  # -- The Stations' own limits on the work they take (accept: in runner.yaml), checked on the
+  # Station before anything runs. Written only when set; see docs/guide/runner-identity.md
+  # ("What a Station trusts the server with"). Unset: no limits. For example:
   #   accept: { projects: [shop], images: ["registry.example.com/*"], pull_requests: false }
   accept:
   kubernetes:
-    # -- The namespace step pods run in. Default: the release namespace. Runners are granted
+    # -- The namespace step pods run in. Default: the release namespace. Stations are granted
     # access to pods in this namespace only. It must exist unless createNamespace is true.
     namespace: ""
     # -- Create the step namespace with the chart (deleted again on uninstall, with any step
@@ -630,7 +630,7 @@ runner:
     # -- The ServiceAccount step pods run as, in the step namespace. Default: none, and no
     # token is mounted into step pods.
     serviceAccount: ""
-    # -- Node selector for step pods (runner.nodeSelector is for the runner pods).
+    # -- Node selector for step pods (runner.nodeSelector is for the Station pods).
     nodeSelector: {}
     # -- CPU request of each container in a step pod, unless the pipeline asks for its own.
     # Default 50m.
@@ -652,12 +652,12 @@ runner:
     # -- Secrets in the step namespace for pulling step images, by name.
     imagePullSecrets: []
     # -- A grace period before a failed or canceled run's pod is removed (a Go duration such as
-    # 10m). Default 0: the pod goes as soon as the run ends, because a running pod holds
-    # namespace quota; a resume refills a new pod from the runner's checkout. See the runner
-    # configuration reference, "What happens to a run's pod".
+    # 10m). Default 0: the pod goes as soon as the Sortie ends, because a running pod holds
+    # namespace quota; a resume refills a new pod from the Station's checkout. See the Station
+    # configuration reference, "What happens to a Sortie's pod".
     keepFailed: ""
-    # -- The longest any step pod lives, whatever the server says about its run, unless a step
-    # of it is executing on that runner: the reaper's bound for pods that a crashed runner or a
+    # -- The longest any step pod lives, whatever the server says about its Sortie, unless a step
+    # of it is executing on that Station: the reaper's bound for pods that a crashed Station or a
     # forgotten run left behind. Default 24h; 0 turns the bound off.
     maxPodAge: ""
     # -- How long to wait for a step pod's images to be pulled and its containers to start.
@@ -677,7 +677,7 @@ runner:
     # -- The group step containers run as when restricted; it also owns the pod's volumes.
     # Unset: the built-in default, 1000.
     runAsGroup:
-  # -- The port runners serve /healthz (process up) and /readyz (the server answered within two
+  # -- The port Stations serve /healthz (process up) and /readyz (the server answered within two
   # minutes) on, for the probes below. It is not exposed outside the pod.
   healthPort: 8081
   livenessProbe:
@@ -685,22 +685,22 @@ runner:
     periodSeconds: 10
     timeoutSeconds: 3
     failureThreshold: 3
-  # -- A runner that cannot reach the servers is not ready, which holds back a rollout that
-  # would replace working runners with ones that cannot work.
+  # -- A Station that cannot reach the servers is not ready, which holds back a rollout that
+  # would replace working Stations with ones that cannot work.
   readinessProbe:
     httpGet: { path: /readyz, port: health }
     periodSeconds: 10
     timeoutSeconds: 3
     failureThreshold: 3
-  # -- Extra arguments for `launchway runner`. Flags override the settings in the rendered
+  # -- Extra arguments for `launchway Station`. Flags override the settings in the rendered
   # file.
   extraArgs: []
-  # -- Secret stores runners may read, the same map as runner.secrets in the server
-  # configuration (see the main README); rendered into the runners' file. Mount any token or
-  # certificate files they refer to with extraVolumes/extraVolumeMounts. Runners have only the
+  # -- Secret stores Stations may read, the same map as runner.secrets in the server
+  # configuration (see the main README); rendered into the Stations' file. Mount any token or
+  # certificate files they refer to with extraVolumes/extraVolumeMounts. Stations have only the
   # stores defined here: there is no "env" store unless you define one.
   secretStores: {}
-  # -- Limits on the report files (test results) runners collect from a step pod after each
+  # -- Limits on the report files (test results) Stations collect from a step pod after each
   # step. A step's log says when a file was cut short or left out.
   reports:
     # -- Files per step attempt.
@@ -713,28 +713,28 @@ runner:
     # accept: config.tests.maxUploadMiB).
     # Unset: the built-in default, 20.
     maxTotalMiB:
-  # -- Image steps (kind: image). Runners build images on BuildKit daemons you run apart from
+  # -- Image steps (kind: image). Stations build images on BuildKit daemons you run apart from
   # the step pods (deploy/buildkit/buildkitd.yaml: rootless BuildKit cannot run under Pod
-  # Security "restricted"), push them to the registries named here, and sign them. Unset (no
-  # builders), runners take no image steps and the runners' file has no images section, so the
-  # release before this one can read it. Set it only once every runner is upgraded.
+  # Security "restricted"), push them to the Depots named here, and sign them. Unset (no
+  # builders), Stations take no image steps and the Stations' file has no images section, so the
+  # release before this one can read it. Set it only once every Station is upgraded.
   images:
     # -- The BuildKit daemons, each { name, address: tcp://host:1234, serverName, platforms,
-    # projects }. The runners' client certificate and the daemons' CA come from tlsSecret.
+    # projects }. The Stations' client certificate and the daemons' CA come from tlsSecret.
     builders: []
     # -- A Secret with ca.crt (the CA that signed the daemons' certificates), tls.crt and
-    # tls.key (the runners' client certificate), mounted at /var/run/launchway/buildkit.
+    # tls.key (the Stations' client certificate), mounted at /var/run/launchway/buildkit.
     tlsSecret: ""
-    # -- Registries by the name pipelines use: { host, credentials: { username, password: {
+    # -- Depots by the name pipelines use: { host, credentials: { username, password: {
     # store, key, field } }, pullCredentials, caFile, insecure, push: [ { projects,
     # repositories } ], pullProjects: [ ... ] }. Credentials are secret references read from
     # runner.secretStores. pullCredentials go to the builds of the projects in pullProjects (empty:
     # every project), and to pull requests only when they may read secrets.
     # Mount a CA file with extraVolumes and name its path in caFile.
     registries: {}
-    # -- A Secret with the runners' own cosign key (cosign.key, and cosign.password if it is
+    # -- A Secret with the Stations' own cosign key (cosign.key, and cosign.password if it is
     # encrypted), for steps that say sign: true. Mounted at /var/run/launchway/signing, which
-    # step pods never see. Unset: sign: true fails, saying the runner has no key.
+    # step pods never see. Unset: sign: true fails, saying the Station has no key.
     signingSecret: ""
     # -- The scanner image (pinned by digest) and where it downloads its databases from.
     # Unset: the built-in Trivy, from its public database repositories.
@@ -744,11 +744,11 @@ runner:
       javaDBRepository: ""
     # -- MiB of build context a step may send. Unset: the built-in default, 2048.
     maxContextMiB:
-    # -- MiB of image the runner accepts back from a builder. Unset: the built-in default, 20480.
+    # -- MiB of image the Station accepts back from a builder. Unset: the built-in default, 20480.
     maxImageMiB:
-  # -- Let runners take ai steps, calling the models in ai.models. A model's key is read from
-  # runner.secretStores. Written to the runners' file only when true; needs ai.models.
-  # Unset: the built-in default, false (runners call no model).
+  # -- Let Stations take ai steps, calling the models in ai.models. A model's key is read from
+  # runner.secretStores. Written to the Stations' file only when true; needs ai.models.
+  # Unset: the built-in default, false (Stations call no model).
   ai:
   resources:
     requests:
@@ -759,16 +759,16 @@ runner:
       memory: 1Gi
       # -- Keep it above dataVolume.sizeLimit.
       ephemeral-storage: 12Gi
-  # -- Runners clone each run's commit into this volume and copy it into the step pod.
+  # -- Stations clone each Sortie's commit into this volume and copy it into the step pod.
   dataVolume:
     sizeLimit: 10Gi
-  # -- Time allowed for a runner to stop. On SIGTERM it stops its steps (10s grace each) and
+  # -- Time allowed for a Station to stop. On SIGTERM it stops its steps (10s grace each) and
   # hands them back to be run again.
   terminationGracePeriodSeconds: 60
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  # -- Spread runners across nodes when the scheduler can (soft).
+  # -- Spread Stations across nodes when the scheduler can (soft).
   spreadAcrossNodes: true
   topologySpreadConstraints: []
   priorityClassName: ""
@@ -781,18 +781,18 @@ runner:
     enabled: true
     maxUnavailable: 1
   serviceAccount:
-    # -- Create the runners' ServiceAccount. It is bound to a Role in the step namespace.
+    # -- Create the Stations' ServiceAccount. It is bound to a Role in the step namespace.
     create: true
     # -- The name of the ServiceAccount to use (default: <fullname>-runner).
     name: ""
     annotations: {}
   rbac:
-    # -- Create the Role and RoleBinding that let runners manage step pods: pods (create, get,
+    # -- Create the Role and RoleBinding that let Stations manage step pods: pods (create, get,
     # list, delete, patch), pods/exec (create, get) and pods/log (get), in the step namespace
     # only.
     create: true
 
-# Security settings shared by servers and runners. The image runs as user 65532.
+# Security settings shared by servers and Stations. The image runs as user 65532.
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 65532
@@ -810,10 +810,10 @@ securityContext:
 # NetworkPolicies: default deny, then exactly what each part needs. On by default (they take
 # effect only where the cluster's network plugin enforces them; if yours does not, they are
 # harmless). Each policy selects its pods by label, so nothing else in the namespace is affected.
-#   server       in: runners, step pods, deploy runner, and (with an Ingress or HTTPRoute) the
+#   server       in: Stations, step pods, launch Station, and (with an Ingress or HTTPRoute) the
 #                proxy (ingressFrom). out: DNS, the database, and what extraEgress adds
 #                (Git hosts, an identity provider, webhooks, an S3 endpoint). NOT the Kubernetes API.
-#   runners      in: nothing. out: DNS, the server, the Kubernetes API (to start step pods), extraEgress.
+#   Stations      in: nothing. out: DNS, the server, the Kubernetes API (to start step pods), extraEgress.
 #   step pods    in: nothing. out: DNS, the Launchway server, and the internet over HTTP/HTTPS
 #                EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
 #                cluster: never the database, the Kubernetes API or the metadata service.
@@ -833,7 +833,7 @@ networkPolicy:
     # -- Who may reach the server port: a list of NetworkPolicyPeer objects (the namespace of
     # your ingress controller or Gateway, for example). Empty: with an Ingress or HTTPRoute
     # enabled, any source may reach the port (the proxy's namespace is not known to the chart);
-    # without one, only runners, step pods and the deploy runner can (port-forward still works).
+    # without one, only Stations, step pods and the launch Station can (port-forward still works).
     ingressFrom: []
     # -- HTTPS to PUBLIC addresses, which the servers need for the dependency updater's version
     # sources and vulnerability data (package registries, the Go proxy, an OSV service), for the
@@ -848,7 +848,7 @@ networkPolicy:
       exceptCIDRs: []
       allowIPv6: false
     # -- More egress rules for the servers (NetworkPolicyEgressRule objects) WITHOUT turning the
-    # policy off: a receiver or registry mirror inside the cluster or on a private network, an
+    # policy off: a receiver or Depot mirror inside the cluster or on a private network, an
     # identity provider, an S3 endpoint, the monitoring stores.
     extraEgress: []
   database:
@@ -858,25 +858,25 @@ networkPolicy:
     # -- Addresses of an external database (CIDRs). Empty: any address on the port.
     cidrs: []
   runner:
-    # -- The Kubernetes API, which runners use to start and exec into step pods. Empty cidrs: any
+    # -- The Kubernetes API, which Stations use to start and exec into step pods. Empty cidrs: any
     # address on the ports. The API server is often not a pod: use the addresses of
     # `kubectl get endpoints kubernetes`.
     kubernetesAPI:
       cidrs: []
       ports: [443, 6443]
-    # -- More egress rules for the runner pods: Git hosts, secret stores, BuildKit, registries.
+    # -- More egress rules for the Station pods: Git hosts, secret stores, BuildKit, Depots.
     extraEgress: []
   deployRunner:
-    # -- More egress rules for the deploy runner pods (Argo CD, GitOps repositories, metrics, and
+    # -- More egress rules for the launch Station pods (Argo CD, GitOps repositories, metrics, and
     # health checks of hosts that are names, not addresses). Health checks (a verification source
     # of type check) are admitted by default for the namespaces and address ranges the source
     # lists, and nothing else.
     extraEgress: []
   steps:
-    # -- Policy for step pods (the pods runners start for each run, in runner.kubernetes.namespace).
+    # -- Policy for step pods (the pods Stations start for each Sortie, in runner.kubernetes.namespace).
     enabled: true
     # -- Allow step pods to reach the internet (package registries, Git hosts, container
-    # registries) on `ports`, except the ranges below and `exceptCIDRs`. false: only DNS and the
+    # Depots) on `ports`, except the ranges below and `exceptCIDRs`. false: only DNS and the
     # Launchway server, plus extraEgress.
     internet: true
     ports: [80, 443]
@@ -887,13 +887,13 @@ networkPolicy:
     # -- Allow IPv6 internet access (everything except unique-local and link-local).
     allowIPv6: false
     # -- More egress rules for step pods (NetworkPolicyEgressRule objects): an internal Git
-    # server, a package mirror, a registry in the cluster.
+    # server, a package mirror, a Depot in the cluster.
     extraEgress: []
 
 # ---------------------------------------------------------------------------------------------
 # The install hook Job. A pre-install and pre-upgrade hook runs `launchway bootstrap-secrets` with
-# the Launchway image and makes, only if absent, the root key, the runner token, the bundled
-# database's password, the setup code and (with the deploy runner) its pool token. It can only get
+# the Launchway image and makes, only if absent, the root key, the Station token, the bundled
+# database's password, the setup code and (with the launch Station) its pool token. It can only get
 # and create Secrets, and only gets the named ones. Never modifies an existing Secret.
 # ---------------------------------------------------------------------------------------------
 bootstrap:
@@ -911,15 +911,15 @@ bootstrap:
   tolerations: []
 
 # ---------------------------------------------------------------------------------------------
-# Delivery: deploy and rollback steps (pipelines with kind: deploy). Off unless set. A deploy
+# Delivery: launch and Return to base steps (pipelines with kind: launch). Off unless set. A launch
 # step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
-# until the application (and its Argo Rollouts rollout) is healthy. The deploy runner below
+# until the application (and its Argo Rollouts rollout) is healthy. The launch Station below
 # does that work with its own Kubernetes identity; the servers hold no cluster credentials.
-# Set these only once every server and runner runs a release that knows them, and take them
-# out again before rolling back to one that does not.
+# Set these only once every server and Station runs a release that knows them, and take them
+# out again before returning to base to one that does not.
 # ---------------------------------------------------------------------------------------------
 delivery:
-  # -- Environments deploy steps may deploy to, written into the servers' configuration only
+  # -- Airfields launch steps may deploy to, written into the servers' configuration only
   # when set. Default: none, and deploy steps are refused. Example:
   #   - name: prod
   #     target: homelab          # the cluster: deployRunner.target serves it
@@ -929,8 +929,8 @@ delivery:
   environments: null
   # -- Health sources: where verify steps read metrics and logs to judge a deployment. Each entry
   # is split: name, type and projects go to the servers' verification.sources, and the whole
-  # entry to the deploy runner's health_sources, by name. Needs deployRunner.enabled: the deploy
-  # runner does the queries. Credentials are only secret references, read from
+  # entry to the launch Station's health_sources, by name. Needs deployRunner.enabled: the launch
+  # Station does the queries. Credentials are only secret references, read from
   # deployRunner.secretStores. Default (unset): none, and verify steps are refused.
   #
   # Each source: { name, type, url, projects, and optionally auth, headers, caFile, timeout,
@@ -948,8 +948,8 @@ delivery:
   #     { kind: metric|logs, sql, path, method, body, value, params, projects }.
   #   indices, timeField, messageField: (elasticsearch) the indices pipelines may search, and the
   #     documents' time and message fields (default @timestamp and message).
-  # Sources in the cluster need no RBAC. The chart renders no NetworkPolicy; if the deploy
-  # runner's namespace denies egress by default, allow it to reach each source's host and port.
+  # Sources in the cluster need no RBAC. The chart renders no NetworkPolicy; if the launch
+  # Station's namespace denies egress by default, allow it to reach each source's host and port.
   # Example:
   #   sources:
   #     - name: prometheus
@@ -979,7 +979,7 @@ delivery:
   verification:
     sources: null
   deployRunner:
-    # -- Run a deploy runner in this cluster, with a runner pool token of its own. It serves
+    # -- Run a launch Station in this cluster, with a Flight line token of its own. It serves
     # deployRunner.target, which must be this cluster.
     enabled: false
     # -- The target this cluster is, as delivery.environments names it.
@@ -987,32 +987,32 @@ delivery:
     replicas: 1
     # -- Where the Argo CD Applications are.
     argocdNamespace: argocd
-    # -- Which projects may deploy which applications. Names must be written out (no
+    # -- Which projects may launch which applications. Names must be written out (no
     # patterns): the RBAC rules name each application.
     #   - { projects: [shop], names: [shop] }
     applications: []
     # -- Namespaces whose Argo Rollouts rollouts deploy steps may watch.
     rolloutNamespaces: []
     # -- GitOps repositories deploy steps may commit to, by name: the same map as deploy.repos
-    # in a deploy runner's file (url, argocd_url, credentials, username, paths, author).
+    # in a launch Station's file (url, argocd_url, credentials, username, paths, author).
     # Credentials name a secret in secretStores, never a value.
     repos: {}
-    # -- Secret stores the deploy runner may read (as runner.secretStores).
+    # -- Secret stores the launch Station may read (as runner.secretStores).
     secretStores: {}
     # -- Ask Argo CD to look at the repository at once after a commit (the refresh
     # annotation). Default (unset): true.
     refresh: null
-    # -- Let the deploy runner call the models in ai.models to explain its verdicts, with keys
+    # -- Let the launch Station call the models in ai.models to explain its verdicts, with keys
     # read from deployRunner.secretStores. Written to its file only when true; needs ai.models.
     # Unset: the built-in default, false.
     ai: null
-    # -- The deploy runner's own limits on the work it takes (accept: in its runner.yaml), checked
-    # on the runner before anything runs: which projects it serves and which environments it
-    # deploys to. Written only when set. For example:
-    #   accept: { projects: [launchway], environments: [launchway-dev, launchway-sandbox], executors: [deploy] }
+    # -- The launch Station's own limits on the work it takes (accept: in its runner.yaml), checked
+    # on the Station before anything runs: which projects it serves and which Airfields it
+    # launches to. Written only when set. For example:
+    #   accept: { projects: [launchway], Airfields: [launchway-dev, launchway-sandbox], executors: [launch] }
     accept: null
     rbac:
-      # -- Create the Roles below and bind them to the deploy runner.
+      # -- Create the Roles below and bind them to the launch Station.
       create: true
       # -- Grant patch on the named Applications, needed to request syncs and refreshes. With
       # automated sync and a Git webhook it may be turned off (deploy steps then need
@@ -1027,14 +1027,14 @@ delivery:
       # run page can show the end of a failed analysis job's log and the pods of a rollout. Off
       # by default: logs can hold anything a job prints.
       readPods: false
-      # -- Rollouts the deploy runner may promote, abort and retry (rollout steps, the run
+      # -- Rollouts the launch Station may promote, abort and retry (rollout steps, the Sortie
       # page's buttons, abort_first, on_cancel: abort), by namespace; each namespace must be in
       # rolloutNamespaces. Grants patch on rollouts/status for exactly these names; the
       # admission policy keeps the patch to the fields those commands set. Default (unset):
-      # none, and commands are not applied (the runner reports that it may not).
+      # none, and commands are not applied (the Station reports that it may not).
       #   shop: [shop]
       controlRollouts: null
-    # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change
+    # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the launch Station change
     # only an Application's operation and refresh annotation, never its spec.
     admissionPolicy:
       enabled: true
@@ -1060,12 +1060,12 @@ delivery:
 # ---------------------------------------------------------------------------------------------
 # AI: the models steps may ask (ai steps, and explanations of failed steps and verdicts). Off
 # unless set: with no model, nothing is ever sent to one and every other feature works. Set these
-# only once every server and runner runs a release that knows them, and take them out again
-# before rolling back to one that does not. Runners and the deploy runner call models only with
+# only once every server and Station runs a release that knows them, and take them out again
+# before returning to base to one that does not. Stations and the launch Station call models only with
 # runner.ai or delivery.deployRunner.ai.
 # ---------------------------------------------------------------------------------------------
 ai:
-  # -- The model registry, written into the servers' configuration as ai.models exactly as given,
+  # -- The model Depot, written into the servers' configuration as ai.models exactly as given,
   # so its keys are the configuration's own (snake_case): name, provider (anthropic, or openai for
   # any OpenAI-compatible server), endpoint, model, key: { store, key, field }, projects,
   # max_tokens, max_input_bytes, calls_per_run, tokens_per_day, price: { input_per_mtok,

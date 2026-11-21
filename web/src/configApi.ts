@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError, call } from "./api";
-import { setTerms, terms } from "./terms";
+import { setTerms, setVocabulary, terms, type WordDef } from "./terms";
 
 export interface LevelName { singular: string; plural: string }
 export interface Levels { installation: LevelName; organisation: LevelName; unit: LevelName; project: LevelName }
@@ -31,6 +31,8 @@ export interface ConfigOverview {
   levels: Levels;
   /** The chosen set of words and the renamed ones (display labels only). */
   terms?: { set: string; overrides: Record<string, string> };
+  /** Every word of the vocabulary: the one table the server owns. */
+  vocabulary?: WordDef[];
   organisation?: { display_name?: string; description?: string };
   units?: UnitView[];
   units_in_use?: boolean;
@@ -173,6 +175,7 @@ export function loadOverview(force = false): Promise<ConfigOverview> {
   if (!force && overviewWait) return overviewWait;
   overviewWait = configApi.overview().then((o) => {
     overviewCache = o; overviewWait = null;
+    if (o.vocabulary?.length) setVocabulary(o.vocabulary);
     setTerms({ set: o.terms?.set, overrides: o.terms?.overrides ?? {}, levels: o.levels });
     listeners.forEach((l) => l(o));
     return o;

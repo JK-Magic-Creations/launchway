@@ -17,7 +17,7 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
   "/pipelines": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline/edit": t("Read about editing pipelines", "guide/editor"),
-  "/projects/:name/tests": t("Learn more about test reports", "guide/test-reports"),
+  "/projects/:name/tests": t("Learn more about {debriefs}", "guide/test-reports"),
   "/projects/:name/security": t("Learn more about security findings", "guide/security-findings"),
   "/projects/:name/caches": t("Learn more about build caches", "guide/build-caches"),
   "/projects/:name/variables": t("Learn more about variables", "concepts/variables", "variables-set-at-a-level"),
@@ -25,10 +25,10 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
   "/playground": t("Read about writing pipelines", "guide/pipelines"),
   "/activity": t("Learn more about runs", "concepts/pipelines-and-runs", "run"),
   "/activity/approvals": t("Learn more about approvals", "concepts/approvals"),
-  "/runs/:id": t("Learn why a run waits", "concepts/launch-line", "when-a-change-waits"),
-  "/deployments": t("Learn more about environments and deployments", "concepts/environments-and-deployments"),
-  "/deployments/environments": t("Learn more about environments", "concepts/environments-and-deployments", "what-an-environment-holds"),
-  "/deployments/environments/:name": t("Learn more about environments", "concepts/environments-and-deployments", "what-an-environment-holds"),
+  "/runs/:id": t("Learn why a {run} waits", "concepts/launch-line", "when-a-change-waits"),
+  "/deployments": t("Learn more about {environments} and deployments", "concepts/environments-and-deployments"),
+  "/deployments/environments": t("Learn more about {environments}", "concepts/environments-and-deployments", "what-an-environment-holds"),
+  "/deployments/environments/:name": t("Learn more about {environments}", "concepts/environments-and-deployments", "what-an-environment-holds"),
   "/deployments/applications": t("Learn more about deployments", "guide/deployments"),
   "/deployments/applications/:name": t("Learn more about deployments", "guide/deployments"),
   "/library": t("Learn more about templates and libraries", "concepts/templates-and-libraries"),
@@ -39,7 +39,7 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
   "/images/components": t("Learn more about security findings and software bills of materials", "guide/security-findings"),
   "/images/digest/:digest": t("Learn more about container images", "guide/images"),
   "/settings": t("Start with first-run setup", "howto/setup-first-run"),
-  "/settings/runners": t("Learn more about runners", "guide/runner-identity"),
+  "/settings/runners": t("Learn more about {runners}", "guide/runner-identity"),
   "/settings/access": t("Learn more about sign-in and access", "guide/access"),
   "/settings/access/keys": t("Learn more about sign-in and access", "guide/access"),
   "/settings/access/agents": t("Learn more about connecting an agent", "guide/agents"),
@@ -57,8 +57,8 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
 export const WIZARD_LEARN: Record<string, LearnTarget> = {
   "first-run": t("Learn more about setting up", "howto/setup-first-run"),
   "connect-repository": t("Learn more about projects and pipelines", "concepts/pipelines-and-runs", "project"),
-  "add-runner": t("Learn more about runners", "concepts/pipelines-and-runs", "runner"),
-  "add-environment": t("Learn more about environments", "concepts/environments-and-deployments"),
+  "add-runner": t("Learn more about {runners}", "concepts/pipelines-and-runs", "runner"),
+  "add-environment": t("Learn more about {environments}", "concepts/environments-and-deployments"),
   "add-policy": t("Learn more about approvals and rules", "concepts/approvals", "rules-not-only-people"),
   "add-health-source": t("Learn more about verifying a deployment", "guide/verification"),
   "add-model": t("Learn more about AI models", "guide/ai"),
@@ -66,9 +66,9 @@ export const WIZARD_LEARN: Record<string, LearnTarget> = {
 
 /** Pages that explain a message the product shows. */
 export const EXPLAIN: Record<string, LearnTarget> = {
-  waits: t("Why a run waits", "concepts/launch-line", "when-a-change-waits"),
+  waits: t("Why a {run} waits", "concepts/launch-line", "when-a-change-waits"),
   lock: t("Why deployments wait for a lock", "concepts/environments-and-deployments", "one-at-a-time"),
-  stopped: t("What to do when a run stops", "howto/troubleshooting"),
+  stopped: t("What to do when a {run} stops", "howto/troubleshooting"),
   clearance: t("How approvals work", "concepts/approvals", "how-it-works"),
 };
 

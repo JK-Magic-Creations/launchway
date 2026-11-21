@@ -3,6 +3,7 @@ import { api, ApiError, type CasePage, type CaseSort, type CompareCase, type Fac
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing, formatLabel, isBrowser, passRate, testDuration, testStatusLabel, BrowserIcon } from "../components/Tests";
 import { CaseDetail } from "../components/TestCase";
+import { terms } from "../terms";
 
 type Filter = "" | "failed" | "passed" | "skipped" | "flaky";
 type Grouping = "none" | "step" | "suite" | "variant";
@@ -59,7 +60,7 @@ export function TestsTab({ run, version, step, onStep }: {
         <Empty title={running.length ? "No test results yet" : "No test results"}>
           {running.length
             ? <>Results appear when {running.map((s) => s.id).join(", ")} {running.length > 1 ? "end" : "ends"}.</>
-            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} test reports, but none were collected. The step's log says why, for example a glob that matched no files.</>}
+            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} {terms().say("{debriefs}, but none were collected. The step's log says why, for example a glob that matched no files.")}</>}
         </Empty>
       );
     }
@@ -348,7 +349,7 @@ function CompareStrip({ run, version, openCase }: { run: RunDetail; version: str
           <CompareGroup kind="fixed" title="Fixed" items={cmp.fixed} count={n.fixed} run={run} openCase={openCase}
             none="Nothing that failed before passes now." />
           <CompareGroup kind="still" title="Still failing" items={cmp.still_failing} count={n.still_failing} run={run} openCase={openCase}
-            none="Nothing failed in both runs." />
+            none={terms().say("Nothing failed in both {runs}.")} />
         </div>
       )}
     </section>
@@ -479,7 +480,7 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
           </li>
         ))}
       </ul>
-      {run.reruns.length > 0 && <p className="sub small">Re-runs of this run show these results for the steps they reuse.</p>}
+      {run.reruns.length > 0 && <p className="sub small">{terms().say("Re-runs of this {run} show these results for the steps they reuse.")}</p>}
     </details>
   );
 }

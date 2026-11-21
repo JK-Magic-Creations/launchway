@@ -14,6 +14,7 @@ import { Band, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Status, stateOf } from "../kit/Status";
 import { TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
+import { terms } from "../terms";
 
 /** Code: every project as a repository, with where it lives and how its last pipeline run went. */
 export function CodeListPage() {
@@ -40,7 +41,7 @@ export function CodeListPage() {
         <Band cells={[
           { key: "n", label: "Repositories", value: rows.length, foot: "connected from Git" },
           { key: "bad", label: "Cannot be reached", value: unreachable, foot: unreachable ? "look at the red rows" : "none", loud: unreachable ? "bad" : undefined },
-          { key: "fail", label: "Last run failed", value: rows.filter((p) => p.last_run?.status === "failed").length, foot: "see Pipelines" },
+          { key: "fail", label: terms().say("Last {run} failed"), value: rows.filter((p) => p.last_run?.status === "failed").length, foot: "see Pipelines" },
         ]} />
       )}
       {rows.length === 0 ? (
@@ -61,7 +62,7 @@ export function CodeListPage() {
                   </div>
                   <div className="cell"><span className="faint">default</span> <b className="mono">{p.default_branch}</b></div>
                   <div className="cell" style={{ minWidth: 190 }}>
-                    {r ? <><Status state={stateOf(r.status)} /><span><EntityLink kind="run" name={`#${r.number}`} id={r.id} /> {ago(r.created_at, now)}</span></> : <span className="faint">No runs yet</span>}
+                    {r ? <><Status state={stateOf(r.status)} /><span><EntityLink kind="run" name={`#${r.number}`} id={r.id} /> {ago(r.created_at, now)}</span></> : <span className="faint">{terms().say("No {runs} yet")}</span>}
                   </div>
                   <div className="cell"><TrendStrip trend={trendOf(by.get(p.name) ?? [])} label={`The last runs of ${p.name}`} /></div>
                 </li>

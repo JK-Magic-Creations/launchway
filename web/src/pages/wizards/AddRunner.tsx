@@ -8,6 +8,7 @@ import { type ChangeRequest, type ConfigOverview, type Spec } from "../../config
 import { Choices, CheckInput, CopyBlock, ListInput, SelectInput, TextInput } from "../../components/ConfigForm";
 import { Link } from "../../components/ui";
 import { PickNames, WizardRunner, useNames, useObjects, type StepDef } from "./Wizards";
+import { terms } from "../../terms";
 
 type Place = "vm" | "container" | "kubernetes";
 
@@ -54,36 +55,36 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
     local: () => !choice ? "Choose a pool." : isNew && !newName.trim() ? "Give the new pool a name." : null,
     render: (by) => (
       <>
-        <p>A runner belongs to a pool. The pool decides what work its runners take: a <strong>build pool</strong> runs the steps of the {proj.plural.toLowerCase()} it serves; a <strong>deploy pool</strong> does deploy and rollback steps for the targets it serves, and nothing else, so it can sit next to a production cluster without ever running anyone's build.</p>
+        <p>{terms().say("A {runner} belongs to a pool. The pool decides what work its {runners} take: a")} <strong>build pool</strong> runs the steps of the {proj.plural.toLowerCase()} it serves; a <strong>{terms().say("{deploy:do} pool")}</strong> {terms().say("does {deploy:do} and {rollback} steps for the targets it serves, and nothing else, so it can sit next to a production cluster without ever running anyone's build.")}</p>
         {poolsError && <p className="cf-problem">The pools could not be listed: {poolsError}</p>}
-        <Choices legend="Which pool will the runner join?" value={choice} onChange={setChoice}
+        <Choices legend={terms().say("Which pool will the {runner} join?")} value={choice} onChange={setChoice}
           options={[
             ...(pools ?? []).map((p) => ({
               value: "existing:" + p.name, label: `${p.name} (${p.kind} pool)`,
-              help: p.kind === "deploy" ? `Deploys to ${p.targets.join(", ") || "no target yet"}.` : `Runs the steps of ${p.projects.length ? p.projects.join(", ") : "every " + proj.singular.toLowerCase()}${p.events.length ? `, for ${p.events.join(", ")} runs` : ""}.`,
+              help: p.kind === "deploy" ? terms().say(`{Deploy:does} to ${p.targets.join(", ") || "no target yet"}.`) : `Runs the steps of ${p.projects.length ? p.projects.join(", ") : "every " + proj.singular.toLowerCase()}${p.events.length ? `, for ${p.events.join(", ")} runs` : ""}.`,
               badge: p.require_identity ? undefined : "accepts shared tokens",
             })),
-            { value: "new-build", label: "A new build pool", help: `For a team or a kind of machine (arm64, GPUs): runners that run the steps of the ${proj.plural.toLowerCase()} you choose.` },
-            { value: "new-deploy", label: "A new deploy pool", help: "Runners that deploy to a target (a cluster), close to it. They hold no one's build steps." },
+            { value: "new-build", label: "A new build pool", help: terms().say(`For a team or a kind of machine (arm64, GPUs): {runners} that run the steps of the ${proj.plural.toLowerCase()} you choose.`) },
+            { value: "new-deploy", label: terms().say("A new {deploy:do} pool"), help: terms().say("{Runners} that {deploy:do} to a target (a cluster), close to it. They hold no one's build steps.") },
           ]} />
         {isNew && (
           <div className="cf-sub">
             <div className="cf-grid">
               <TextInput label="Name of the new pool" value={newName} onChange={setNewName} mono required problems={by.name} placeholder={newKind === "build" ? "linux-builders" : "deploy-prod"}
-                help="Letters, digits, dots, hyphens and underscores. Pipelines and the runners page show it." />
+                help={terms().say("Letters, digits, dots, hyphens and underscores. Pipelines and the {runners} page show it.")} />
             </div>
             {newKind === "build" ? (
               <PickNames legend={`${proj.plural} it serves`} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.projects}
-                help={`Tick * for every ${proj.singular.toLowerCase()}, or the ones whose steps these runners should take.`} />
+                help={terms().say(`Tick * for every ${proj.singular.toLowerCase()}, or the ones whose steps these {runners} should take.`)} />
             ) : (
-              <PickNames legend="Targets it deploys to" names={envTargets} value={targets} onChange={setTargets} problems={by.targets} placeholder="prod-cluster"
-                help={envTargets.length ? "The targets of your environments. A deploy step waits until a runner of a pool serving its environment's target takes it." : "No environment has a target yet. Add an environment first, or type the target its environments will have."} />
+              <PickNames legend={terms().say("Targets it {deploy:does} to")} names={envTargets} value={targets} onChange={setTargets} problems={by.targets} placeholder="prod-cluster"
+                help={envTargets.length ? terms().say("The targets of your environments. A deploy step waits until a {runner} of a pool serving its {environment}'s target takes it.") : terms().say("No {environment} has a target yet. Add an {environment} first, or type the target its {environments} will have.")} />
             )}
             {newKind === "build" && (
-              <CheckInput label="Only runners enrolled with a join token" checked={requireIdentity} onChange={setRequireIdentity} problems={by.require_identity}
-                help="Recommended. Each runner then has its own key and identity that can be revoked on its own; the shared runner token cannot take this pool's work." />
+              <CheckInput label={terms().say("Only {runners} enrolled with a join token")} checked={requireIdentity} onChange={setRequireIdentity} problems={by.require_identity}
+                help={terms().say("Recommended. Each {runner} then has its own key and identity that can be revoked on its own; the shared {runner} token cannot take this pool's work.")} />
             )}
-            {newKind === "deploy" && <p className="cf-help">A new deploy pool takes only runners enrolled with a join token, so no shared token can deploy.</p>}
+            {newKind === "deploy" && <p className="cf-help">{terms().say("A new {deploy:do} pool takes only {runners} enrolled with a join token, so no shared token can {deploy:do}.")}</p>}
           </div>
         )}
       </>
@@ -94,31 +95,31 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
     id: "place", title: "Where it runs",
     render: () => (
       <>
-        <Choices legend="Where will the runner run?" value={place} onChange={(v) => { setPlace(v as Place); if (v === "kubernetes") setUses((n) => Math.max(n, 5)); }}
-          help="A runner only makes outbound connections to this server: nothing needs to reach it."
+        <Choices legend={terms().say("Where will the {runner} run?")} value={place} onChange={(v) => { setPlace(v as Place); if (v === "kubernetes") setUses((n) => Math.max(n, 5)); }}
+          help={terms().say("A {runner} only makes outbound connections to this server: nothing needs to reach it.")}
           options={[
             { value: "vm", label: "A machine (a server or a virtual machine)", help: "The launchway program runs as a service. Steps run in containers with Podman or Docker if the machine has them. Good for builds that need the machine's own tools or hardware." },
-            { value: "container", label: "A container (Podman or Docker)", help: "The runner itself runs in a container, and runs steps inside it. The quickest to try; steps are less isolated from each other than with a container per step." },
-            { value: "kubernetes", label: "Kubernetes", help: "Each run gets its own pod. The runner enrols when its pod starts, so the token needs a use for every pod start." },
+            { value: "container", label: "A container (Podman or Docker)", help: terms().say("The {runner} itself runs in a container, and runs steps inside it. The quickest to try; steps are less isolated from each other than with a container per step.") },
+            { value: "kubernetes", label: "Kubernetes", help: terms().say("Each {run} gets its own pod. The {runner} enrols when its pod starts, so the token needs a use for every pod start.") },
           ]} />
         <div className="cf-grid">
-          <TextInput label="How many runners may enroll with it" type="number" value={String(uses)} onChange={(v) => setUses(Math.max(1, Math.min(10000, Number(v) || 1)))}
-            help={place === "kubernetes" ? "Every pod start uses one; give room for restarts and scaling." : "Usually one: a token per runner, so each is traceable to its token."} />
+          <TextInput label={terms().say("How many {runners} may enroll with it")} type="number" value={String(uses)} onChange={(v) => setUses(Math.max(1, Math.min(10000, Number(v) || 1)))}
+            help={place === "kubernetes" ? "Every pod start uses one; give room for restarts and scaling." : terms().say("Usually one: a token per {runner}, so each is traceable to its token.")} />
           <SelectInput label="The token is valid for" value={ttl} onChange={setTtl} options={TTLS}
-            help="After that, no runner can enroll with it; the runners it enrolled keep working." />
+            help={terms().say("After that, no {runner} can enroll with it; the {runners} it enrolled keep working.")} />
           <ListInput label="Labels (optional)" value={labels} onChange={setLabels} placeholder="arm64, gpu"
-            help="Pipelines can ask for runners with these labels, for steps that need special hardware." />
+            help={terms().say("Pipelines can ask for {runners} with these labels, for steps that need special hardware.")} />
         </div>
       </>
     ),
   };
 
   return (
-    <WizardRunner title="Add a runner" overview={overview}
-      intro="Runners do the work of runs. A few questions decide which work this one takes and where it runs; then you get a join token and the exact command."
+    <WizardRunner title={terms().say("Add a {runner}")} overview={overview}
+      intro={terms().say("{Runners} do the work of {runs}. A few questions decide which work this one takes and where it runs; then you get a join token and the exact command.")}
       steps={[poolStep, placeStep]} changes={changes}
       createLabel={isNew ? "Create the pool and the join token" : "Make the join token"}
-      summaryExtra={<p>{isNew ? "Then" : "Create"} makes a join token for pool <span className="mono">{poolName}</span>: for {uses === 1 ? "one runner" : `${uses} runners`}, valid for {TTLS.find((t) => t.value === ttl)?.label}{labels.length ? `, with labels ${labels.join(", ")}` : ""}{place === "kubernetes" ? ", ephemeral (each pod's identity is revoked when it leaves)" : ""}. It is shown once.</p>}
+      summaryExtra={<p>{isNew ? "Then" : "Create"} makes a join token for pool <span className="mono">{poolName}</span>: for {uses === 1 ? terms().say("one {runner}") : `${uses} runners`}, valid for {TTLS.find((t) => t.value === ttl)?.label}{labels.length ? `, with labels ${labels.join(", ")}` : ""}{place === "kubernetes" ? ", ephemeral (each pod's identity is revoked when it leaves)" : ""}. It is shown once.</p>}
       done={() => <JoinAndWait pool={poolName} kind={poolKind} uses={uses} ttl={ttl} labels={labels} place={place} ephemeral={place === "kubernetes"} isNew={isNew} />}  />
   );
 }
@@ -137,7 +138,7 @@ function JoinAndWait({ pool, kind, uses, ttl, labels, place, ephemeral, isNew }:
       // A new pool reaches every server within seconds; until it has, the server does not know it.
       for (let i = 0; i < 12 && !stop; i++) {
         try {
-          const r = await api.createJoinToken({ pool, max_uses: uses, ttl, labels: labels.length ? labels : undefined, ephemeral, description: "made by the Add a runner wizard" });
+          const r = await api.createJoinToken({ pool, max_uses: uses, ttl, labels: labels.length ? labels : undefined, ephemeral, description: terms().say("made by the Add a {runner} wizard") });
           if (!stop) setMade({ token: r.token, t: r.join_token });
           return;
         } catch (e) {
@@ -161,20 +162,20 @@ function JoinAndWait({ pool, kind, uses, ttl, labels, place, ephemeral, isNew }:
     return () => window.clearInterval(t);
   }, [made, runner, pool]);
 
-  if (error) return <div className="callout callout-bad" role="alert"><strong>The join token was not made:</strong> {error}{isNew ? ` The pool ${pool} was created; make a token on the Runners page.` : ""}</div>;
+  if (error) return <div className="callout callout-bad" role="alert"><strong>The join token was not made:</strong> {error}{isNew ? terms().say(` The pool ${pool} was created; make a token on the {Runners} page.`) : ""}</div>;
   if (!made) return <p className="faint" aria-live="polite">Making the join token…</p>;
   const origin = location.origin;
   const cmds = commands(origin, made.token, place, kind, labels);
   return (
     <div className="cf-joinwait">
-      <div className="callout callout-draft" role="note"><strong>Copy the join token now: it is shown only once</strong> and stored only as a hash. It lets {made.t.max_uses === 1 ? "one runner" : `${made.t.max_uses} runners`} join pool <span className="mono">{pool}</span> until {new Date(made.t.expires_at).toLocaleString()}.</div>
+      <div className="callout callout-draft" role="note"><strong>Copy the join token now: it is shown only once</strong> and stored only as a hash. It lets {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`} join pool <span className="mono">{pool}</span> until {new Date(made.t.expires_at).toLocaleString()}.</div>
       <CopyBlock title="The join token" text={made.token} />
       {cmds.map((c) => <CopyBlock key={c.title} title={c.title} text={c.text} note={c.note} />)}
       <div className={"cf-waiting" + (runner ? " cf-waiting-ok" : "")} role="status" aria-live="polite">
         {runner ? (
-          <><span className="online online-on" aria-hidden="true" /><span><strong>Runner connected:</strong> <span className="mono">{runner.name}</span> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">See it on the Runners page</Link>.</span></>
+          <><span className="online online-on" aria-hidden="true" /><span><strong>{terms().say("{Runner} connected:")}</strong> <span className="mono">{runner.name}</span> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">{terms().say("See it on the {Runners} page")}</Link>.</span></>
         ) : (
-          <><span className="cf-spinner" aria-hidden="true" /><span>Waiting for the runner to connect… This page notices it by itself; it can take a minute after the command starts.</span></>
+          <><span className="cf-spinner" aria-hidden="true" /><span>{terms().say("Waiting for the {runner} to connect… This page notices it by itself; it can take a minute after the command starts.")}</span></>
         )}
       </div>
     </div>
@@ -191,17 +192,17 @@ function commands(origin: string, token: string, place: Place, kind: string, lab
     return [
       { title: "On the machine, with the launchway program installed", text: `launchway runner --server ${origin} --join ${token}${lab} --data /var/lib/launchway-runner`,
         note: "It enrols once: it makes a key that never leaves the machine and from then on starts without the token. Run the same command (without --join) from a service manager such as systemd to keep it running." },
-      ...(kind === "deploy" ? [{ title: "A deploy runner also needs its deploy: section", text: `# /etc/launchway/runner.yaml\nserver: ${origin}\ndeploy:\n  # the targets, Applications and GitOps repositories: see the runner configuration reference`,
+      ...(kind === "deploy" ? [{ title: terms().say("A {deploy:do} {runner} also needs its {deploy:do}: section"), text: terms().say(`# /etc/launchway/runner.yaml\nserver: ${origin}\ndeploy:\n  # the targets, Applications and GitOps repositories: see the {runner} configuration reference`),
         note: "Add --config /etc/launchway/runner.yaml to the command." }] : []),
     ];
   }
   if (place === "container") {
-    return [{ title: "Start the runner in a container", text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ghcr.io/jk-magic-creations/launchway \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host${lab}`,
+    return [{ title: terms().say("Start the {runner} in a container"), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ghcr.io/jk-magic-creations/launchway \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host${lab}`,
       note: "docker run works the same way. The volume keeps the runner's key, so it stays the same runner when the container is replaced." }];
   }
   return [
     { title: "1. The join token, as a Secret", text: `kubectl -n launchway create secret generic launchway-runner-join --from-literal=token=${token}` },
-    { title: "2. If Launchway runs in this cluster with its Helm chart: runner-join.yaml", text: `runner:\n  join: { existingSecret: launchway-runner-join }${labels.length ? `\n  labels: [${labels.join(", ")}]` : ""}`,
+    { title: "2. If Launchway runs in this cluster with its Helm chart: runner-join.yaml", text: terms().say(`{runner}:\n  join: { existingSecret: launchway-runner-join }${labels.length ? `\n  labels: [${labels.join(", ")}]` : ""}`),
       note: "Then upgrade the release you installed Launchway with, keeping its values: helm upgrade launchway <the chart you installed with> -n launchway --reuse-values -f runner-join.yaml" },
     { title: "Or from any machine that can reach the cluster", text: `launchway runner --server ${origin} --join ${token} --executor kubernetes \\\n  --k8s-context <context> --k8s-namespace launchway-steps${lab}`,
       note: "Step pods run in that namespace, with the machine's kubeconfig." },

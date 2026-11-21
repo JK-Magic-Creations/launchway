@@ -38,8 +38,7 @@ export function PolicyPage() {
   const failing = o.sources.filter((s) => s.error);
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title={<>Policy</>} sentence={<>Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the run
-            it judged, with the evidence; <strong>enforce</strong> stops a run or a step, <strong>report</strong> only records.</>} actions={<>{o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}</>} />
+      <PageHead eyebrow="Settings" title={<>Policy</>} sentence={<>{terms().say("Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the {run} it judged, with the evidence;")} <strong>enforce</strong> {terms().say("stops a {run} or a step,")} <strong>report</strong> only records.</>} actions={<>{o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}</>} />
       <ErrorBox error={error} />
 
       {failing.map((s) => (
@@ -50,7 +49,7 @@ export function PolicyPage() {
 
       {!o.sources.length && (
         <WizardEmpty title="No policies" wizard="add-policy" label="Add a policy"
-          text={`A policy is a set of rules every run must meet before it deploys or finishes, such as tests passing or a second person's ${terms().lower("clearance")}; pipelines cannot switch it off.`} />
+          text={terms().say(`A policy is a set of rules every run must meet before it {deploy:does} or finishes, such as tests passing or a second person's ${terms().lower("clearance")}; pipelines cannot switch it off.`)} />
       )}
 
       {o.sources.map((s) => (
@@ -83,8 +82,7 @@ export function PolicyPage() {
             <button type="button" className={"chip" + (!active ? " chip-on" : "")} aria-pressed={!active} onClick={() => setActive(false)}>All</button>
           </div>
         </div>
-        <p className="sub small">A waiver lets one rule of one policy pass for a project (or one run, environment or finding) until it expires.
-          Every waiver is in the {terms().lower("logbook")} and shown wherever the verdict it changed is.</p>
+        <p className="sub small">{terms().say("A waiver lets one rule of one policy pass for a project (or one {run}, {environment} or finding) until it expires. Every waiver is in the")} {terms().lower("logbook")} and shown wherever the verdict it changed is.</p>
         {waivers.waivers.length
           ? <WaiverList waivers={waivers.waivers} mayRevoke={(w) => waivers.waive_projects.includes(w.project)} onChange={load} />
           : <p className="faint">{active ? "No waiver is in force." : "No waivers."}</p>}
@@ -129,7 +127,7 @@ function PolicyItem({ p, recent, now }: { p: PolicyDef; recent: PolicyVerdictRow
       </details>
       <div className="pol-recent" aria-label={`Recent verdicts of ${p.name}`}>
         <span className="faint small">Recent:</span>
-        {recent.length === 0 && <span className="faint small">no run judged yet</span>}
+        {recent.length === 0 && <span className="faint small">{terms().say("no {run} judged yet")}</span>}
         {recent.map((r) => (
           <Link key={r.run_id + r.at + (r.step ?? "")} href={`/runs/${r.run_id}?tab=policy`} className="pol-recent-item">
             <ResultBadge verdict={r.verdict} mode={r.mode} />

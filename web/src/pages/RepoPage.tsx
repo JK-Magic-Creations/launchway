@@ -17,6 +17,7 @@ import { Tabs } from "../kit/Tabs";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
+import { terms } from "../terms";
 
 /** One repository: where it lives, its branches with the last pipeline result on each, its tags, and what starts
  * runs. Files open in the code browser; reviews are not built yet and say so. */
@@ -47,7 +48,7 @@ export function RepoPage({ name }: { name: string }) {
       <PageHead eyebrow="Code" title={<>{p.name} <Chip icon="code">{host ? `on ${host}` : "local repository"}</Chip></>}
         sentence={p.error ? <><b>Launchway cannot reach this repository.</b> {p.error}</> : <>A repository Launchway reads from Git, on the branch <Mono>{p.default_branch}</Mono>. Checked every {p.poll_seconds}s{p.last_fetch > 0 ? `, last ${ago(p.last_fetch, now)}` : ""}.</>}
         actions={<>
-          {canOperate(me, p.name) && <Button kind="pri" icon="play" onClick={() => setStarting(true)}>Start a run</Button>}
+          {canOperate(me, p.name) && <Button kind="pri" icon="play" onClick={() => setStarting(true)}>{terms().say("Start a {run}")}</Button>}
           {base && <a className="btn" href={base} target="_blank" rel="noreferrer noopener">Open on {host}</a>}
           <LinkButton href={`/projects/${enc}/pipeline`} icon="graph">Pipeline</LinkButton>
         </>} />
@@ -68,7 +69,7 @@ export function RepoPage({ name }: { name: string }) {
               <dl className="kvlist">
                 <dt>Repository</dt><dd className="mono">{p.url}</dd>
                 <dt>Pipeline</dt><dd>{p.pipeline ? <>The template <Mono>{p.pipeline.template}</Mono> of the library <Mono>{p.pipeline.library}@{p.pipeline.version}</Mono>, unless the repository has its own file.</> : "A file in the repository, reviewed and versioned like code."}</dd>
-                <dt>Deployed to</dt><dd>{envs.length > 0 ? envs.map((e, i) => <span key={e.name}>{i > 0 && ", "}<EntityLink kind="environment" name={e.name} /></span>) : "Nowhere yet."}</dd>
+                <dt>{terms().say("{Deploy:did} to")}</dt><dd>{envs.length > 0 ? envs.map((e, i) => <span key={e.name}>{i > 0 && ", "}<EntityLink kind="environment" name={e.name} /></span>) : "Nowhere yet."}</dd>
                 <dt>Also</dt><dd className="row wrap"><LinkButton href={`/projects/${enc}/tests`} sm>Tests and coverage</LinkButton><LinkButton href={`/projects/${enc}/security`} sm>Security</LinkButton><LinkButton href={`/projects/${enc}/caches`} sm>Build caches</LinkButton>{me?.admin && <LinkButton href={`/config/projects/${enc}`} sm>Change its settings</LinkButton>}</dd>
               </dl>
             </Sheet>

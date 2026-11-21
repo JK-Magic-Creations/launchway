@@ -3,6 +3,7 @@ import { call } from "../api";
 import { ErrorBox } from "../components/ui";
 import { useLoad } from "../guided/useLoad";
 import { Sheet } from "../kit/layout";
+import { terms } from "../terms";
 
 interface Action { name: string; available: boolean; reason?: string }
 interface Entry { run: string; number: number; project: string; position: number; code: string; reason: string; actions: Action[] }
@@ -17,12 +18,12 @@ export default function QueuePanel({ project }: { project: string }) {
   const act = (run: string, action: string) => call("POST", `/api/v1/runs/${run}/queue`, { action }).then(() => { setErr(null); q.reload(); }).catch(setErr);
   if (!Array.isArray(q.data) || q.data.length === 0) return null;
   return (
-    <Sheet title="Waiting for room" actions={<span className="faint small">In the order they will go. A limit holds a run back; running steps are never stopped for it.</span>}>
+    <Sheet title="Waiting for room" actions={<span className="faint small">{terms().say("In the order they will go. A limit holds a {run} back; running steps are never stopped for it.")}</span>}>
       <ErrorBox error={err} />
       <ol className="sh-b">
         {q.data.map((e) => (
           <li key={e.run} data-code={e.code}>
-            <a href={`/runs/${e.run}`}>{e.project} run #{e.number}</a>: {e.reason}{" "}
+            <a href={`/runs/${e.run}`}>{e.project} {terms().say("{run} #")}{e.number}</a>: {e.reason}{" "}
             {e.actions.filter((a) => a.available).map((a) => <button key={a.name} className="btn small" onClick={() => act(e.run, a.name)}>{WORDS[a.name] ?? a.name}</button>)}
           </li>
         ))}

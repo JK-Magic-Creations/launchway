@@ -14,7 +14,7 @@ flowchart TD
   Watcher["Operator"] -.->|"promotes a copy<br/>if the primary dies"| Copy1
 ```
 
-Launchway keeps one writer at a time because several decisions need one agreed order: which run takes a lane, what number a run gets, who holds a lease. When the primary dies a copy is promoted without a person, and Launchway waits, retries and buffers meanwhile.
+Launchway keeps one writer at a time because several decisions need one agreed order: which Sortie (run) takes a lane, what number a Sortie gets, who holds a lease. When the primary dies a copy is promoted without a person, and Launchway waits, retries and buffers meanwhile.
 
 ## A database change as a plan
 
@@ -27,6 +27,6 @@ flowchart TD
   E --> F["Promote"]
 ```
 
-A change set is checked before it runs: what it will run, what it will lock, and whether it removes something a running version still uses. Liquibase is the first supported tool. Rollback for data means rolling forward, a compensating change, or a restore, and Launchway never claims a rollback it cannot do.
+A change set is checked before it runs: what it will run, what it will lock, and whether it removes something a running version still uses. Liquibase is the first supported tool. Return to base (rollback) for data means rolling forward, a compensating change, or a restore, and Launchway never claims a Return to base it cannot do.
 
 Go back to the [Roadmap](../public/roadmap.html).

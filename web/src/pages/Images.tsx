@@ -6,6 +6,7 @@ import { navigate } from "../router";
 import { Empty, ErrorBox, Link, StatusPill } from "../components/ui";
 import { CopyValue } from "../components/Security";
 import { DIGEST_KEEP, shortDigest } from "../components/Images";
+import { terms } from "../terms";
 
 type By = "digest" | "repository" | "project";
 
@@ -102,7 +103,7 @@ export function ImagesPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow="Images" title="Images" sentence="Find the container images your runs built: which run built a digest, the latest image of a repository, or every image of a project." />
+      <PageHead eyebrow="Images" title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a project.")} />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
         <div className="imgform-by">
@@ -136,14 +137,14 @@ export function ImagesPage() {
 
       <ErrorBox error={error} />
       {!asked.value && !error && (
-        <Empty title="Search the images your runs built">
-          Paste a digest to find the run that built it, or give a repository to see its latest image.
+        <Empty title={terms().say("Search the images your {runs} built")}>
+          {terms().say("Paste a digest to find the {run} that built it, or give a repository to see its latest image.")}
         </Empty>
       )}
       {hits && hits.length === 0 && (
         <Empty title="Not found">
-          {asked.by === "digest" ? <>No run built an image with the digest <span className="mono imgref">{shortDigest(asked.value)}</span>.</>
-            : asked.by === "repository" ? <>No run built an image for <span className="mono imgref">{asked.value}{asked.tag ? `:${asked.tag}` : ""}</span>. The repository must match exactly, registry host included.</>
+          {asked.by === "digest" ? <>{terms().say("No {run} built an image with the digest")} <span className="mono imgref">{shortDigest(asked.value)}</span>.</>
+            : asked.by === "repository" ? <>{terms().say("No {run} built an image for")} <span className="mono imgref">{asked.value}{asked.tag ? `:${asked.tag}` : ""}</span>{terms().say(". The repository must match exactly, {registry} host included.")}</>
             : <>The project <strong>{asked.value}</strong> has built no images, or does not exist.</>}
         </Empty>
       )}
@@ -162,7 +163,7 @@ export function ImagesPage() {
           <section aria-label="Images found">
             <div className="table-scroll card card-flush">
               <table className="inputs-table comptable imgtable">
-                <thead><tr><th>Project</th><th>Run</th><th>Step</th><th>Branch</th><th>Image</th><th>Digest</th><th>State</th><th>When</th></tr></thead>
+                <thead><tr><th>Project</th><th>{terms().say("{Run}")}</th><th>Step</th><th>Branch</th><th>Image</th><th>Digest</th><th>State</th><th>When</th></tr></thead>
                 <tbody>
                   {hits.map((h, i) => (
                     <tr key={h.run_id + h.step + h.kind + (h.tag ?? "") + (h.platform ?? "") + i}>
@@ -207,7 +208,7 @@ function DigestSummary({ hits }: { hits: ImageHit[] }) {
   return (
     <section className="card" aria-label="Who built it">
       <h2 className="h-sm">
-        {runs.length === 1 ? "Built by one run" : `Built by ${runs.length} runs`}
+        {runs.length === 1 ? terms().say("Built by one {run}") : `Built by ${runs.length} runs`}
         {platform ? <>, as the <span className="mono">{platform.platform}</span> part of an image</> : null}
       </h2>
       <p className="sub">

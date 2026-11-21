@@ -147,13 +147,13 @@ When a push commits, over HTTPS or SSH, Launchway makes every project whose addr
 poll at once. The poll finds the moved ref and starts the pipeline through the same path as every other Git
 host, so everything that applies to a push applies here:
 
-- **Exactly one run** per push, whichever servers are running; the run records the branch, the commit, the
+- **Exactly one Sortie (run)** per push, whichever servers are running; the Sortie records the branch, the commit, the
   author and the commit time.
-- `supersede: true` cancels the older runs of the same branch.
+- `supersede: true` cancels the older Sorties of the same branch.
 - The pipeline's `on: push` filter by branch or tag decides whether to run; a push it ignores is recorded
   with the reason.
 - A commit whose subject contains `[skip ci]` (also `[ci skip]`, `[no ci]`, `[skip pipeline]` or
-  `[skip launchway]`, in any case) starts no run, and the decision says so. Start one by hand if you want it.
+  `[skip launchway]`, in any case) starts no Sortie, and the decision says so. Start one by hand if you want it.
 
 The trigger language has path filters (`paths` and `paths_ignore`) and a step can say `when: { changed }`; see [Queues, limits and path filters](queues.md).
 
@@ -165,7 +165,7 @@ which address) and `webhook.disable` (by `system`) are in the Logbook. The secre
 ## Telling Argo CD about a commit at once
 
 Argo CD polls Git every three minutes unless it is told. A deploy step that writes to the GitOps
-repository already asks Argo CD to refresh the application it deployed (the refresh annotation, on by
+repository already asks Argo CD to refresh the application it launched (deployed) (the refresh annotation, on by
 default; it needs the right to patch that Application). For changes made by anyone else (a person
 pushing to the GitOps repository), add a webhook to the repository that sends **push** events to
 `https://<argocd>/api/webhook`, with the secret you set as `webhook.github.secret` in Argo CD's `argocd-secret`.

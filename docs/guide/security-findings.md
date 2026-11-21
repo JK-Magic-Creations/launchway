@@ -30,31 +30,31 @@ steps:
   finding about a secret is replaced by its rule's description, and every message is cleared of
   anything shaped like a key or token. SARIF files themselves are not kept.
 - **New, still there, fixed.** Each finding gets a fingerprint (its tool, rule and file, with the
-  scanner's own fingerprints when it gives real ones, else the line and message), and a run's
+  scanner's own fingerprints when it gives real ones, else the line and message), and a Sortie's
   findings are compared with the previous run of the same branch: new, still there, or fixed.
   Only scanners that ran both times are compared. A finding whose code moved up or down a file
   shows as fixed and new again, unless its scanner gives line-independent fingerprints, as
   CodeQL does.
-- **The Security tab** of a run shows a bar of counts by severity, then every finding, the most
+- **The Security tab** of a Sortie (run) shows a bar of counts by severity, then every finding, the most
   severe first, with filters by severity, tool and status and a search box; each opens to the
   rule, its description, the location and a link to the rule's documentation. Run lists show the
-  counts. **A project's Security page** shows the counts over a branch's recent runs, and the
-  findings still open, each with the run where it was first seen.
-- **SBOMs** are kept whole as the step's artifact `sbom` and summarized: the number of components
+  counts. **A project's Security page** shows the counts over a branch's recent Sorties, and the
+  findings still open, each with the Sortie where it was first seen.
+- **SBOMs** are kept whole as the step's Cargo (artifact) `sbom` and summarized: the number of components
   and the licenses. **Components** can be searched across projects (`/components` in the UI): which
   runs and projects contain a package, at a version.
-- **API** (anyone who may see the run or project):
+- **API** (anyone who may see the Sortie or project):
   `GET /api/v1/runs/{id}/findings?severity=&tool=&status=new|existing|fixed&q=&step=&limit=&offset=`,
   `GET /api/v1/projects/{name}/security?ref=&runs=`,
-  `GET /api/v1/components?name=&version=&limit=` (only projects the caller may see). Run summaries
+  `GET /api/v1/components?name=&version=&limit=` (only projects the caller may see). Debriefs (run summaries)
   carry `findings`, the counts by severity, for checks that later act on them.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `findings.max_upload_mib` | 32 | MiB of SARIF files accepted per step attempt; runners are told |
-| `findings.max_per_run` | 20000 | findings one run keeps; beyond it, only the counts |
+| `findings.max_upload_mib` | 32 | MiB of SARIF files accepted per step attempt; Stations (runners) are told |
+| `findings.max_per_run` | 20000 | findings one Sortie keeps; beyond it, only the counts |
 | `findings.max_per_project` | 500000 | findings a project keeps; the oldest runs' go first |
-| `findings.max_components_per_run` | 20000 | SBOM components one run keeps for searching |
+| `findings.max_components_per_run` | 20000 | SBOM components one Sortie keeps for searching |
 | `findings.max_components_per_project` | 1000000 | SBOM components a project keeps |
 | `findings.max_sbom_mib` | 64 | MiB of a step's SBOM files read to summarize them |
 

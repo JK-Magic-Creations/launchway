@@ -25,7 +25,7 @@ flowchart TD
 ## Rules that do not bend
 
 - Off until an administrator turns a purpose on.
-- A model's verdict never overrides a failing check. AI analysis can trigger a rollback only where a verification step allows it, and production can require a person.
+- A model's verdict never overrides a failing check. AI analysis can trigger a Return to base (rollback) only where a verification step allows it, and production can require a person.
 - Everything AI produced is labelled, and AI never approves or merges on its own.
 - Local models are first-class, for data that cannot leave the building.
 - Spending limits are in money, per model, project and purpose.

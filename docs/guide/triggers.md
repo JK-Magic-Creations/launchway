@@ -1,10 +1,10 @@
 # Triggers
 
-What starts a run besides a person: pushes and pull requests found by polling, schedules, and webhooks.
+What starts a Sortie (run) besides a person: pushes and pull requests found by polling, schedules, and webhooks.
 
 ## Path filters
 
-A documentation-only push does not need an image build and a deploy approval. Say which files
+A documentation-only push does not need an image build and a launch (deploy) approval. Say which files
 matter, in the trigger or per step:
 
 ```yaml
@@ -20,9 +20,9 @@ steps:
     when: { changed: [cmd/**, internal/**, go.mod, Dockerfile] }
 ```
 
-With `paths` or `paths_ignore` a push or pull request that touches no matching file starts no run,
-and *Recent pushes* says why in words. With `when: { changed }` the run starts, the steps that need
-not run are shown as **skipped by path rule**, and the run still ends green. A skipped step counts
+With `paths` or `paths_ignore` a push or pull request that touches no matching file starts no Sortie (run),
+and *Recent pushes* says why in words. With `when: { changed }` the Sortie starts, the steps that need
+not run are shown as **skipped by path rule**, and the Sortie still ends green. A skipped step counts
 as passed for a required check, and so does a pull request that started no run for this reason. The
 exact rules (`**`, `!`, case, renames, what is compared, and when it always runs because the change
 cannot be told) are in the [reference](../reference/pipeline.md#path-filters).
@@ -33,9 +33,9 @@ cannot be told) are in the [reference](../reference/pipeline.md#path-filters).
 as it does for pushes; a Git host's [webhook](#webhooks) makes it look at once instead of at
 the next poll. Git hosts such as GitHub, Gitea and Forgejo publish each
 pull request's head commit as the ref `refs/pull/<number>/head`; the server's mirror fetches it
-with everything else, and a run starts when one appears or moves.
+with everything else, and a Sortie starts when one appears or moves.
 
-- **What runs.** The pipeline at the pull request's head commit, at that commit. The run is
+- **What runs.** The pipeline at the pull request's head commit, at that commit. The Sortie is
   marked *pull request #12* wherever runs are shown, its event is `pull_request`, and its steps
   get `LAUNCHWAY_EVENT=pull_request`, `LAUNCHWAY_REF=refs/pull/12/head` and
   `LAUNCHWAY_PULL_REQUEST=12`. `LAUNCHWAY_BRANCH` is empty.
@@ -59,8 +59,8 @@ with everything else, and a run starts when one appears or moves.
   pull request it cannot ask about. Steps get the answer as `LAUNCHWAY_PULL_REQUEST_INTO`. See
   [Pull request](../reference/pipeline.md#pull-request) for what the decisions say.
 - **No secrets, by default.** A pull request's code may come from anyone who can open one, so a
-  step of a pull-request run that declares `secrets` fails before any runner sees it, unless the
-  project allows it. The setting is read when the run is created; resuming the run and re-running
+  step of a pull-request run that declares `secrets` fails before any Station (runner) sees it, unless the
+  project allows it. The setting is read when the Sortie is created; resuming the Sortie and re-running
   it keep that decision.
 
   ```yaml
@@ -72,7 +72,7 @@ with everything else, and a run starts when one appears or moves.
       pull_requests: { secrets: true }   # overrides, per project
   ```
 
-- **Not there yet:** reporting a run's outcome back to the pull request as a commit status. A Git
+- **Not there yet:** reporting a Sortie's outcome back to the pull request as a commit status. A Git
   host's [webhook](#webhooks) makes the server look at once instead of at its next poll.
 
 ## Schedules
@@ -88,15 +88,15 @@ A schedule is a five-field cron expression (minute, hour, day of the month, mont
 week; `@hourly`, `@daily`, `@weekly`, `@monthly` and `@yearly` work too) in a time zone (an IANA
 name; UTC if none). When the clocks go forward, a time that does not exist that day is skipped;
 when they go back, a time that happens twice fires once. `ref` is the branch or tag whose pipeline
-runs (the default branch if none) and `inputs` the run's values (the others take their defaults).
+runs (the default branch if none) and `inputs` the Sortie's values (the others take their defaults).
 Schedules are read only from the pipeline on the project's default branch, so a branch cannot
 schedule itself. Runs have event `schedule`.
 
-Each firing is claimed in the database, so however many servers are running, it starts one run.
+Each firing is claimed in the database, so however many servers are running, it starts one Sortie.
 A schedule never fires for a time before it was first seen (adding or changing one does not run it
 for the past). If no server was running when a schedule should have fired, the first server to
-look afterwards starts one run, for the latest time that was missed, and none for the earlier
-ones. A firing that cannot start a run (the branch is gone, the pipeline there has problems) is
+look afterwards starts one Sortie, for the latest time that was missed, and none for the earlier
+ones. A firing that cannot start a Sortie (the branch is gone, the pipeline there has problems) is
 recorded with why. The project page lists the schedules, when each fires next, and how its last
 firing went (`GET /api/v1/projects/{name}/schedules`).
 
@@ -128,7 +128,7 @@ projects:
 `X-Forgejo-Signature`), or `gitlab` (`X-Gitlab-Token`). Each delivery's ID is remembered for a
 week; a delivery seen before is answered and ignored.
 
-**A webhook trigger** lets another system start a run, with inputs taken from its request's JSON
+**A webhook trigger** lets another system start a Sortie, with inputs taken from its request's JSON
 body by a closed mapping (no expressions):
 
 ```yaml

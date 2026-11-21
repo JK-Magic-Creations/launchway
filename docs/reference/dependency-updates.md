@@ -1,6 +1,6 @@
-# Dependency updates: settings and file
+# Maintenance (dependency updates): settings and file {#dependency-updates-settings-and-file}
 
-How [dependency updates](../guide/dependency-updates.md) are configured. Settings come from layers, widest
+How [Maintenance](../guide/dependency-updates.md) are configured. Settings come from layers, widest
 first: the built-in defaults, the Base, the Wing, the project, the repository's settings, and the
 repository's own file `.launchway/updates.yaml`, read from the **default branch only** (a branch cannot loosen
 the settings). A level can **lock** a key: no narrower level and not the file may change it, and the file's
@@ -42,7 +42,7 @@ An unknown key is an error that names it. Every problem found is reported togeth
 | `schedule` | weekly, Monday, 06:00 UTC | `interval` (`daily`, `weekly`, `monthly`), `day`, `hour`, `timezone`. The schedule of the pipeline that runs `launchway updates run` |
 | `cooldown_days` | `3` | How long a version must have been public before a routine update proposes it (0 to 90). Not applied to security fixes |
 | `groups` | one `minor-and-patch` group | Updates collected into one pull request: `name`, `ecosystem`, `directory`, `patterns` (name globs), `kinds` (default patch and minor; list `major` to group majors). A major update not in such a group is its own pull request |
-| `limits` | 3 open, 3 per run | `max_open` (open update pull requests), `max_per_run`, `max_open_per_ecosystem` (0: none). `0` for the first two opens nothing |
+| `limits` | 3 open, 3 per Sortie (run) | `max_open` (open update pull requests), `max_per_run`, `max_open_per_ecosystem` (0: none). `0` for the first two opens nothing |
 | `allow` | everything | Only dependencies matching these name globs |
 | `ignore` | none | Rules `name` (glob), `versions` (range of target versions), `kinds`, `reason` |
 | `constraints` | none | Keep a dependency on a major (`major`) or inside a `range` |
@@ -65,7 +65,7 @@ Name globs are case-insensitive and `*` matches any run of characters, including
   `ignore this dependency`.
 - The updater never pushes to the default branch or to a protected branch, and replaces only its own branches.
 
-## Environment
+## Airfield (environment) {#environment}
 
 | Variable | Meaning |
 |---|---|
@@ -76,8 +76,8 @@ Name globs are case-insensitive and `*` matches any run of characters, including
 | `LAUNCHWAY_UPDATES_OCI_MIRRORS` | `registry=https://mirror,registry2=https://mirror2` |
 | `LAUNCHWAY_UPDATES_OSV_URL`, `LAUNCHWAY_UPDATES_OSV_DIR` | OSV service, or a directory of OSV records (wins) |
 | `LAUNCHWAY_UPDATES_OFFLINE` | `1`: use only the addresses above, never a public default |
-| `LAUNCHWAY_UPDATES_CACHE_TTL` | How long registry answers are kept (default `1h`; `0s` keeps none) |
-| `LAUNCHWAY_UPDATES_ENV_<NAME>` | On a runner: passed to the lock step as `<NAME>` (for example `GOSUMDB`) |
+| `LAUNCHWAY_UPDATES_CACHE_TTL` | How long Depot (registry) answers are kept (default `1h`; `0s` keeps none) |
+| `LAUNCHWAY_UPDATES_ENV_<NAME>` | On a Station (runner): passed to the lock step as `<NAME>` (for example `GOSUMDB`) |
 
 ## Interfaces
 

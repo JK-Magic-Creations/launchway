@@ -45,7 +45,7 @@ Ideas that grow naturally from one connected platform.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See what each service, team and environment costs to run, next to what it delivers. Includes the cost of runner pools.
+See what each service, team and Airfield costs to run, next to what it delivers. Includes the cost of Flight lines.
 
 **Depends on:** The software graph.
 
@@ -79,9 +79,9 @@ A forum for projects and shareable snippets. Optional and off by default.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Ready-made environments to work on a project from a browser. Reuses preview environments.
+Ready-made Airfields to work on a project from a browser. Reuses preview Airfields.
 
-**Depends on:** Preview environments.
+**Depends on:** Preview Airfields.
 
 
 #### Runtime and API protection {#runtime-and-api-protection}
@@ -120,7 +120,7 @@ This milestone is done when all of these are true.
 ## What is deliberately not in it
 
 - Anything earlier in the roadmap.
-- Chaos testing, which has moved into Milestone 8.
+- Drill, which has moved into Milestone 8.
 
 ---
 

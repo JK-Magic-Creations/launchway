@@ -1,7 +1,7 @@
-# Security scans
+# Inspections (security scans) {#security-scans}
 
-Run a secret scanner and a dependency scanner in your pipeline, see their findings on the run, and
-watch them become **fixed** in the next run. You also make a software bill of materials (SBOM)
+Run a secret scanner and a dependency scanner in your pipeline, see their findings on the Sortie (run), and
+watch them become **fixed** in the next Sortie. You also make a software bill of materials (SBOM)
 and search it. For developers. Takes about 15 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, Podman,
@@ -56,7 +56,7 @@ Add these steps to `.launchway/pipeline.yaml`, beside `test`:
 
 - `reports.findings` names SARIF 2.1.0 files. Launchway reads them whether the step passed or
   failed; a file that is not SARIF is reported as such and never fails the step.
-- `reports.sbom` names a CycloneDX JSON file. It is kept as the step's `sbom` artifact and summarized.
+- `reports.sbom` names a CycloneDX JSON file. It is kept as the step's `sbom` Cargo (artifact) and summarized.
 - `--exit-code 0` keeps the step green while you look at the results. To fail the pipeline on a
   finding, let the scanner fail, or use a [policy](policy-gates.md).
 
@@ -70,8 +70,8 @@ git commit -m "Scan for secrets and vulnerable dependencies"
 
 ## 3 Read the findings
 
-Open the run, then its **Security** tab: a bar of counts by severity, then each finding, most
-severe first, with filters by severity, tool and status. On this run:
+Open the Sortie, then its **Security** tab: a bar of counts by severity, then each finding, most
+severe first, with filters by severity, tool and status. On this Sortie:
 
 ```text
 critical  Trivy     CVE-2020-14343      requirements.txt   pyyaml 5.3
@@ -85,7 +85,7 @@ Notice what is **not** shown: the webhook address itself. Secrets that scanners 
 stored or shown, only where they are and which rule found them, and a finding about a secret is
 never below high.
 
-The run list shows the counts too, and so does the API:
+The Sortie list shows the counts too, and so does the API:
 
 ```sh
 curl -s "http://127.0.0.1:8080/api/v1/runs/<run-id>/findings?severity=critical"
@@ -93,7 +93,7 @@ curl -s "http://127.0.0.1:8080/api/v1/runs/<run-id>/findings?severity=critical"
 
 ## 4 Search the SBOM
 
-Open **Components** in the menu and search for `requests`. Every run and project that contains
+Open **Components** in the menu and search for `requests`. Every Sortie and project that contains
 the package is listed, with its version. This answers "where do we use this library?" when a new
 vulnerability is announced.
 
@@ -107,12 +107,12 @@ git commit -m "Remove the webhook, update dependencies"
 ```
 
 Each finding gets a fingerprint and is compared with the previous run of the same branch. On the
-new run's Security tab, filter by status **fixed**: the webhook and the old pyyaml and requests
+new Sortie's Security tab, filter by status **fixed**: the webhook and the old pyyaml and requests
 findings are there. Anything still found would be **existing**, and anything new, **new**. Only
 scanners that ran both times are compared.
 
-The project's **Security** page shows the counts over the branch's recent runs, and the findings
-still open, each with the run where it was first seen.
+The project's **Security** page shows the counts over the branch's recent Sorties, and the findings
+still open, each with the Sortie where it was first seen.
 
 ## What you learned
 

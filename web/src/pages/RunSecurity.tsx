@@ -3,6 +3,7 @@ import { api, type ArtifactView, type FindingStatus, type FindingView, type RunD
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { navigate } from "../router";
 import { CopyBlock } from "../components/Tests";
+import { terms } from "../terms";
 import {
   CopyValue, FindingStatusBadge, FindingsHowTo, LockIcon, SEVERITIES, SeverityBadge, SeverityBar, SeverityLegend,
   artifactFileURL, bytes, safeURL, serious, severityLabel, where,
@@ -162,7 +163,7 @@ export function SecurityTab({ run, version }: { run: RunDetail; version: string 
           </div>
           {status === "fixed" && data.previous && (
             <div className="tfilter-note">
-              Findings of <Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link> that this run no longer has.{" "}
+              Findings of <Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link> {terms().say("that this {run} no longer has.")}{" "}
               <button type="button" className="linkbtn" onClick={() => setStatus("")}>Show current findings</button>
             </div>
           )}
@@ -178,7 +179,7 @@ export function SecurityTab({ run, version }: { run: RunDetail; version: string 
             <div className="empty empty-sm">
               {query ? <>No findings match <strong>{query}</strong>.</>
                 : status === "fixed" ? "Nothing was fixed: every finding of the previous run is still here."
-                : status === "new" ? "Nothing new since the previous run."
+                : status === "new" ? terms().say("Nothing new since the previous {run}.")
                 : c.total === 0 ? "The scanners ran and found nothing." : "No findings match these filters."}
             </div>
           ) : (
@@ -303,7 +304,7 @@ export function FindingRow({ f, run, multiStep, open: openFirst, extra }: {
             {loc && <><dt>Location</dt><dd className="mono">{loc}{f.start_column ? `, column ${f.start_column}` : ""}</dd></>}
             <dt>Tool</dt><dd>{f.tool}</dd>
             <dt>Step</dt><dd>{f.step}{f.attempt > 1 ? `, attempt ${f.attempt}` : ""}{run && f.run_id !== run.id && f.status !== "fixed" ? " (reused from an earlier run)" : ""}</dd>
-            {f.first_seen && <><dt>Open since</dt><dd><Link href={`/runs/${f.first_seen.id}?tab=security`}>run #{f.first_seen.number}</Link></dd></>}
+            {f.first_seen && <><dt>Open since</dt><dd><Link href={`/runs/${f.first_seen.id}?tab=security`}>{terms().say("{run} #")}{f.first_seen.number}</Link></dd></>}
             {f.rule?.tags && f.rule.tags.length > 0 && <><dt>Tags</dt><dd>{f.rule.tags.join(", ")}</dd></>}
             <dt>Fingerprint</dt><dd className="small"><CopyValue value={f.fingerprint} label="fingerprint" keep={40} /></dd>
           </dl>

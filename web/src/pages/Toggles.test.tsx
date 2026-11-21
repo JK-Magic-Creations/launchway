@@ -122,14 +122,14 @@ describe("the toggles pages", () => {
   it("the rollback confirmation lists the toggle changes and reverts them only when asked", async () => {
     const user = userEvent.setup();
     await open("/deployments/environments/prod");
-    await user.click(await screen.findByRole("button", { name: /Roll back to 1\.3\.2/ }, { timeout: 8000 }));
+    await user.click(await screen.findByRole("button", { name: /Return to base: 1\.3\.2/ }, { timeout: 8000 }));
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText(/Toggle changes since 1\.3\.2 went live/)).toBeTruthy();
     const box = within(dialog).getByRole("checkbox", { name: /Also revert these toggle changes/ }) as HTMLInputElement;
     expect(box.checked).toBe(false);
     await user.type(within(dialog).getByRole("textbox"), "checkout is down");
     await user.click(box);
-    await user.click(within(dialog).getByRole("button", { name: /^Roll back to 1\.3\.2$/ }));
+    await user.click(within(dialog).getByRole("button", { name: /^Return to base: 1\.3\.2$/ }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path.endsWith("/rollbacks"))).toBe(true));
     expect(JSON.parse(calls.find((c) => c.method === "POST" && c.path.endsWith("/rollbacks"))!.body!).revert_toggles).toBe(true);
   });

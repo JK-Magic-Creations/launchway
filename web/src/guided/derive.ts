@@ -3,6 +3,7 @@
 
 import type { EntityRef } from "../entities";
 import type { Approval, StepCause, DeployApp, DeploymentView, EnvironmentView, Me, Project, RunSummary, Runner, StepView } from "../api";
+import { terms } from "../terms";
 
 // ---- the setup checklist ----
 
@@ -38,19 +39,19 @@ export function checklist(me: Me, s: Setup): CheckItem[] {
   if (me.runners) {
     items.push({
       id: "runner", title: "Choose who does the work",
-      why: "A runner is a computer that builds and tests. You can start with this server.",
-      done: s.runners.some((r) => r.online), href: "/config/wizard/add-runner", button: "Add a runner",
+      why: terms().say("A {runner} is a computer that builds and tests. You can start with this server."),
+      done: s.runners.some((r) => r.online), href: "/config/wizard/add-runner", button: terms().say("Add a {runner}"),
     });
   }
   items.push({
-    id: "run", title: "See your first run pass",
-    why: "Open a project and start a run. Nothing is deployed by it.",
+    id: "run", title: terms().say("See your first {run} pass"),
+    why: terms().say("Open a project and start a {run}. Nothing is {deploy:did} by it."),
     done: s.runs.some((r) => r.status === "succeeded"), href: firstProject ? `/projects/${encodeURIComponent(firstProject)}` : "/projects", button: "Open your project",
   });
   items.push({
-    id: "environment", title: "Create an environment",
+    id: "environment", title: terms().say("Create an {environment}"),
     why: "A place your software goes, like staging or production. It takes one minute.",
-    done: s.environments.length > 0, href: "/config/wizard/add-environment", button: "Add an environment",
+    done: s.environments.length > 0, href: "/config/wizard/add-environment", button: terms().say("Add an {environment}"),
   });
   if (me.admin) {
     items.push({
@@ -98,7 +99,7 @@ export function attention(i: AttentionInput): Attention[] {
   for (const p of i.projects) {
     const r = p.last_run;
     if (r && r.status === "failed") {
-      out.push({ key: `run:${r.id}`, tone: "bad", title: `Run #${r.number} of ${p.name} failed`, entities: [{ kind: "project", name: p.name }], detail: r.message || r.pipeline, href: `/runs/${r.id}`, button: "See what went wrong" });
+      out.push({ key: `run:${r.id}`, tone: "bad", title: terms().say(`{Run} #${r.number} of ${p.name} failed`), entities: [{ kind: "project", name: p.name }], detail: r.message || r.pipeline, href: `/runs/${r.id}`, button: "See what went wrong" });
     }
   }
   for (const a of i.applications) {
@@ -107,7 +108,7 @@ export function attention(i: AttentionInput): Attention[] {
     }
   }
   for (const a of i.approvals) {
-    out.push({ key: `approval:${a.run_id}/${a.step_id}`, tone: "warn", title: `Waiting for you: ${a.message || a.step_id}`, entities: [{ kind: "project", name: a.project }], detail: `Run #${a.run_number} of ${a.project}${a.started_by ? `, started by ${a.started_by}` : ""}`, detailEntities: [{ kind: "project", name: a.project }], href: `/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`, button: "Review" });
+    out.push({ key: `approval:${a.run_id}/${a.step_id}`, tone: "warn", title: `Waiting for you: ${a.message || a.step_id}`, entities: [{ kind: "project", name: a.project }], detail: terms().say(`{Run} #${a.run_number} of ${a.project}${a.started_by ? `, started by ${a.started_by}` : ""}`), detailEntities: [{ kind: "project", name: a.project }], href: `/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`, button: "Review" });
   }
   for (const a of i.applications) {
     if (a.sync === "OutOfSync" && a.health !== "Degraded" && a.health !== "Missing") {
@@ -116,7 +117,7 @@ export function attention(i: AttentionInput): Attention[] {
   }
   if (i.me.runners) {
     for (const r of i.runners) {
-      if (!r.online) out.push({ key: `runner:${r.id}`, tone: "warn", title: `${r.name} is not answering`, entities: [{ kind: "runner", name: r.name }], detail: "Steps sent to it will wait until it is back, or another runner takes them.", href: "/settings/runners", button: "Open runners" });
+      if (!r.online) out.push({ key: `runner:${r.id}`, tone: "warn", title: `${r.name} is not answering`, entities: [{ kind: "runner", name: r.name }], detail: terms().say("Steps sent to it will wait until it is back, or another {runner} takes them."), href: "/settings/runners", button: terms().say("Open {runners}") });
     }
   }
   return out;
@@ -239,7 +240,7 @@ export function explainFailure(steps: StepView[]): Failure | null {
   if (s.exit_code === 137) {
     return { ...base, kind: "killed", headline: `${s.id} was stopped from outside (exit code 137), most likely because it ran out of memory.`, advice: [
       "Give the step more memory, or make it use less.",
-      "If it was not a memory problem, the runner may have been stopped while the step ran: run it again.",
+      terms().say("If it was not a memory problem, the {runner} may have been stopped while the step ran: run it again."),
     ] };
   }
   if (s.exit_code !== null && s.exit_code !== undefined && s.exit_code !== 0) {
@@ -259,15 +260,15 @@ function causeAdvice(c: StepCause): string[] {
   switch (c.kind) {
     case "analysis_failed":
       return ["The new version failed a check the rollout makes before it takes all traffic, so it was not promoted.",
-        "Look at the evidence: which metric failed, when, and what it said. Fix the cause and re-run the deploy; the build is reused."];
+        terms().say("Look at the evidence: which metric failed, when, and what it said. Fix the cause and re-run the {deploy:do}; the build is reused.")];
     case "sync_failed":
-      return ["Argo CD could not bring the application to the new version, or the application did not become healthy.", "Open the application in Argo CD for the details, fix it, and re-run the deploy."];
+      return ["Argo CD could not bring the application to the new version, or the application did not become healthy.", terms().say("Open the application in Argo CD for the details, fix it, and re-run the {deploy:do}.")];
     case "rollout_failed":
-      return ["The rollout stopped before the new version was healthy.", "Look at the rollout's steps and pods; re-run the deploy when it is fixed."];
+      return ["The rollout stopped before the new version was healthy.", terms().say("Look at the rollout's steps and pods; re-run the {deploy:do} when it is fixed.")];
     case "timeout":
       return ["The step did not finish in time.", "Look at what was last observed; raise the step's timeout if it really needs longer."];
     case "runner_lost":
-      return ["The runner that was doing this stopped responding.", "Re-run it: nothing it was doing needs cleaning up by hand."];
+      return [terms().say("The {runner} that was doing this stopped responding."), "Re-run it: nothing it was doing needs cleaning up by hand."];
     case "command_failed":
       return ["A command given to the rollout was not applied.", "The reason is in the step; fix it (an administrator may need to grant a right) and try again."];
     default:

@@ -5,6 +5,7 @@ import { needsLook } from "../guided/derive";
 import { Icon, type IconName } from "../kit/Icon";
 import { Status } from "../kit/Status";
 import { onLink } from "../router";
+import { terms } from "../terms";
 
 export interface ExploreProps {
   projects: Project[];
@@ -27,10 +28,10 @@ export function exploreTiles(p: ExploreProps): Tile[] {
     { key: "code", icon: "code", label: "Code", n: p.projects.length, unit: p.projects.length === 1 ? "project" : "projects", href: "/projects",
       state: unreachable ? <><Status state="warn" /> {unreachable} cannot be reached</> : p.projects.length ? <><Status state="ok" /> All reachable</> : "None yet" },
     { key: "pipelines", icon: "graph", label: "Pipelines", n: p.projects.length, unit: p.projects.length === 1 ? "pipeline" : "pipelines", href: "/pipelines",
-      state: failing ? <><Status state="bad" /> {failing} stopped</> : p.projects.some((x) => x.last_run) ? <><Status state="ok" /> Last runs are fine</> : "No runs yet" },
+      state: failing ? <><Status state="bad" /> {failing} stopped</> : p.projects.some((x) => x.last_run) ? <><Status state="ok" /> Last runs are fine</> : terms().say("No {runs} yet") },
     { key: "images", icon: "package", label: "Images", n: p.images ?? "…", unit: p.images === 1 ? "image" : "images", href: "/images",
-      state: p.images === null ? "Counting" : p.images === 0 ? "Nothing built yet" : "Built by your runs" },
-    { key: "deployments", icon: "deploy", label: "Deployments", n: p.applications.length || p.environments.length, unit: p.applications.length ? (p.applications.length === 1 ? "application" : "applications") : (p.environments.length === 1 ? "environment" : "environments"), href: "/deployments",
+      state: p.images === null ? "Counting" : p.images === 0 ? "Nothing built yet" : terms().say("Built by your {runs}") },
+    { key: "deployments", icon: "deploy", label: terms().say("{Deploys}"), n: p.applications.length || p.environments.length, unit: p.applications.length ? (p.applications.length === 1 ? "application" : "applications") : terms().say(p.environments.length === 1 ? "{environment}" : "{environments}"), href: "/deployments",
       state: look ? <><Status state="warn" /> {look} need a look</> : p.environments.length ? <><Status state="ok" /> All clear</> : "No places yet" },
     { key: "waiting", icon: "gate", label: "Waiting", n: p.approvals.length, unit: p.approvals.length === 1 ? "decision" : "decisions", href: "/activity/approvals",
       state: p.approvals.length ? <><Status state="wait" /> For a person</> : "Nothing waits" },

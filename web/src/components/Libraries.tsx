@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import type { GraphGroup, GraphLibrary, LibraryOverrides } from "../api";
 import { shortSha } from "../format";
 import { Mono } from "./ui";
+import { terms } from "../terms";
 
 // LibraryList shows the libraries a pipeline used: name@version and the
 // commit it resolved to, and any override asked for when the run started.
@@ -58,8 +59,7 @@ export function OverridesEditor({ value, onChange, names }: {
   };
   return (
     <div className="overrides">
-      <p className="sub">Use another version of a library for this run only, to try a change before it is released:
-        a branch, a tag or a full commit id. The run records both versions.</p>
+      <p className="sub">{terms().say("Use another version of a library for this run only, to try a change before it is released: a branch, a tag or a full commit id. The {run} records both versions.")}</p>
       {names && names.length > 0 && <datalist id="override-names">{names.map((n) => <option key={n} value={n} />)}</datalist>}
       {rows.map(([k, v], i) => (
         <Fragment key={i}>

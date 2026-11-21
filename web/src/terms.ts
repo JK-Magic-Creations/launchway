@@ -1,91 +1,56 @@
 // The words Launchway uses for its own concepts: one source of labels. Every place the interface shows one of
 // these words asks this module, so an installation can choose the aviation set (the default) or the plain
-// business set, and rename any single word. They are display labels only: API paths, JSON fields, pipeline
-// keys, CLI commands, configuration kinds, audit actions and database columns keep their plain forms. Words
-// that are broadly accepted (project, pipeline, step, run, environment, template, library, variable, branch,
-// commit, pull request, secret) are not here: they are never themed.
+// business set, and rename any single word. They are display labels only: API paths, JSON fields, enum values,
+// pipeline keys, CLI commands and flags, configuration kinds, audit actions, stored role names, page addresses
+// and database columns keep their plain forms. Words that are broadly accepted (pipeline, step, alert, branch,
+// commit, pull request, secret, variable) are not in the table: they are never themed.
 //
-// The server (internal/settings/terms.go) stores the choice and the renames in the installation settings and
-// knows the same keys, to refuse a rename of a word that does not exist.
+// The table lives in ONE place, the server (internal/settings/vocabulary.go). The overview carries it
+// (loadOverview calls setVocabulary) and web/src/vocabulary.json is a generated mirror of it, loaded lazily at
+// start so the words never weigh on the first download (loadVocabulary).
 
 import { useSyncExternalStore } from "react";
 
 export type SetId = "aviation" | "business";
 
-/** Each word has a singular and an optional plural (otherwise it is made from the singular). */
-type Word = string | [string, string];
+/** The shapes of one word in one set. one and many are capitalized as a name; the verb forms are lower case. */
+export interface Forms { one: string; many?: string; do?: string; did?: string; doing?: string }
 
-/** The keys, in the order they are shown on the Words page, with what each one means in plain English. */
-export const TERM_META: { key: string; means: string }[] = [
-  { key: "installation", means: "The whole Launchway installation: the top level." },
-  { key: "organization", means: "The group of teams that owns projects: the second level." },
-  { key: "unit", means: "A group of projects inside an organization: the third level." },
-  { key: "project", means: "One piece of software with its pipelines: the fourth level." },
-  { key: "guide", means: "The helper and guide panel beside every page." },
-  { key: "preflight", means: "The checks made before a deploy." },
-  { key: "checklist", means: "The list of things that must be true before a change goes on." },
-  { key: "clearance", means: "An approval: a person decides whether a change may go on." },
-  { key: "go", means: "The button that approves a change." },
-  { key: "no_go", means: "The button that refuses a change." },
-  { key: "hold", means: "A freeze: a time when changes may not go out." },
-  { key: "flight_plan", means: "The ready-made pipeline for a kind of project." },
-  { key: "maneuver", means: "A reusable step, or a few steps, that a pipeline uses." },
-  { key: "hangar", means: "The library of Flight plans and Maneuvers that ships with Launchway." },
-  { key: "logbook", means: "The audit trail: who did what, and when." },
-  { key: "payload", means: "What a change delivers." },
-  { key: "in_flight", means: "How a change on its way to production is described." },
-  { key: "launch_line", means: "The line a change travels along, from commit to production." },
-];
+/** One concept: a stable key, its word in each set, and a plain meaning. */
+export interface WordDef {
+  key: string; group: string; aviation: Forms; plain: Forms; meaning: string; renameable?: boolean;
+}
+export interface Group { ID: string; Title: string }
 
-export const SETS: Record<SetId, { name: string; blurb: string; words: Record<string, Word> }> = {
-  aviation: {
-    name: "Aviation",
-    blurb: "Base, Wing, Squadron, Project. Wingman, Preflight, Clearance, Logbook. The default.",
-    words: {
-      installation: ["Base", "Bases"],
-      organization: ["Wing", "Wings"],
-      unit: ["Squadron", "Squadrons"],
-      project: ["Project", "Projects"],
-      guide: "Wingman",
-      preflight: "Preflight",
-      checklist: "Checklist",
-      clearance: "Clearance",
-      go: "Go",
-      no_go: "No-go",
-      hold: "Hold",
-      flight_plan: "Flight plan",
-      maneuver: "Maneuver",
-      hangar: "Hangar",
-      logbook: "Logbook",
-      payload: "Payload",
-      in_flight: "In flight",
-      launch_line: "Launch line",
-    },
-  },
-  business: {
-    name: "Plain business",
-    blurb: "Installation, Organization, Team, Project. Guide, Checks, Approval, Audit trail.",
-    words: {
-      installation: ["Installation", "Installations"],
-      organization: ["Organization", "Organizations"],
-      unit: ["Team", "Teams"],
-      project: ["Project", "Projects"],
-      guide: "Guide",
-      preflight: "Checks",
-      checklist: "Checklist",
-      clearance: "Approval",
-      go: "Approve",
-      no_go: "Reject",
-      hold: "Freeze",
-      flight_plan: "Pipeline template",
-      maneuver: "Step template",
-      hangar: "Template library",
-      logbook: "Audit trail",
-      payload: "Contents",
-      in_flight: "In progress",
-      launch_line: "Launch line",
-    },
-  },
+let TABLE: WordDef[] = [];
+let GROUPS: Group[] = [];
+let BY_KEY = new Map<string, WordDef>();
+
+/** The whole table, in the order of the Words page. */
+export function vocabulary(): readonly WordDef[] { return TABLE; }
+export function vocabularyGroups(): readonly Group[] { return GROUPS; }
+export function wordDef(key: string): WordDef | undefined { return BY_KEY.get(key); }
+/** The keys an installation may rename. */
+export function renameableKeys(): string[] { return TABLE.filter((w) => w.renameable).map((w) => w.key); }
+
+/** setVocabulary installs the table (from the overview or the generated file) and redraws the words. */
+export function setVocabulary(words: readonly WordDef[], groups?: readonly Group[]): void {
+  if (words === TABLE || !words.length) return;
+  TABLE = [...words];
+  if (groups) GROUPS = [...groups];
+  BY_KEY = new Map(TABLE.map((w) => [w.key, w]));
+  current = makeTerms(lastConfig); version++;
+  listeners.forEach((l) => l());
+}
+
+/** loadVocabulary reads the generated mirror (a separate chunk, so it is not part of the first download). */
+export function loadVocabulary(): Promise<void> {
+  return import("./vocabulary.json").then((m) => { const d = (m.default ?? m) as { groups: Group[]; words: WordDef[] }; setVocabulary(d.words, d.groups); });
+}
+
+export const SETS: Record<SetId, { name: string; blurb: string }> = {
+  aviation: { name: "Aviation", blurb: "Base, Wing, Squadron, Project. Tower, Sortie, Station, Launch. The default." },
+  business: { name: "Plain business", blurb: "Installation, Organization, Team, Project. Home, Run, Runner, Deploy. Ordinary words only." },
 };
 
 export const DEFAULT_SET: SetId = "aviation";
@@ -114,23 +79,40 @@ function pluralise(s: string): string {
   return s + "s";
 }
 
-/** Lower-case a label for the middle of a sentence, unless it has a capital inside (an acronym or a name). */
-function lowerWord(s: string): string {
-  return /[A-Z]/.test(s.slice(1)) ? s : s.charAt(0).toLowerCase() + s.slice(1);
+/** The same word in the middle of a sentence: a name keeps its capital; plain English is lower case. */
+function midWord(set: SetId, def: WordDef | undefined, s: string): string {
+  if (def && (set === "aviation" || def.group === "levels")) return s;
+  if (/[A-Z]/.test(s.slice(1))) return s;
+  return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 const LEVEL_KEYS: Record<string, string> = { installation: "installation", organisation: "organization", unit: "unit", project: "project" };
 
+export type VerbForm = "do" | "does" | "did" | "doing";
+
 export interface Terms {
   readonly set: SetId;
   readonly overrides: Readonly<Record<string, string>>;
-  /** The label, as written: "Flight plan". An unknown key gives its own name, readably. */
+  /** The word as a name, singular: "Sortie". An unknown key gives its own name, readably. */
   label(key: string): string;
-  /** The label in the middle of a sentence: "flight plan". */
+  /** The same (the helper's main call): t.word("run"). */
+  word(key: string): string;
+  /** The word in the middle of a sentence: a name keeps its capital in the aviation set; the plain set reads as plain English. */
   lower(key: string): string;
   plural(key: string): string;
+  /** The plural in the middle of a sentence. */
   pluralLower(key: string): string;
-  /** Replace {key}, {Key} and {keys} in a sentence: "Waiting for a {clearance}". */
+  /** A verb form, lower case: t.verb("deploy", "did") is "launched" (aviation) or "deployed" (business). */
+  verb(key: string, form?: VerbForm): string;
+  /** The word's verb as a button label: "Launch", "Return to base", "Abort". */
+  action(key: string): string;
+  /** The plain word of either set, whatever the set in use: for descriptions, confirmations and statuses. */
+  plain(key: string): string;
+  /** The plain meaning, for a tooltip. */
+  meaning(key: string): string;
+  /** Whether the word shown differs from its plain word (so a tooltip or a plain word beside it is worth showing). */
+  themed(key: string): boolean;
+  /** Replace {key}, {Key}, {keys}, {key:did}, {key:do}, {key:doing} and {key:plain} in a sentence. */
   say(text: string): string;
 }
 
@@ -139,59 +121,74 @@ export function makeTerms(cfg: TermsConfig = {}): Terms {
   const set: SetId = isSetId(cfg.set) ? cfg.set : DEFAULT_SET;
   const overrides: Record<string, string> = {};
   for (const [k, v] of Object.entries(cfg.overrides ?? {})) if (typeof v === "string" && v.trim() !== "") overrides[k] = v;
-  const base = SETS[set].words;
   const legacy: Record<string, { singular?: string; plural?: string }> = {};
   for (const [lk, v] of Object.entries(cfg.levels ?? {})) if (v && LEVEL_KEYS[lk]) legacy[LEVEL_KEYS[lk]] = v;
+  const forms = (key: string, s: SetId = set): Forms | undefined => { const d = BY_KEY.get(key); return d ? (s === "business" ? d.plain : d.aviation) : undefined; };
+  const readable = (key: string) => key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  const builtIn = (key: string, singular: string) => singular === "Organisation" || singular === "Unit" || (["aviation", "business"] as SetId[]).some((s) => forms(key, s)?.one === singular);
 
   const single = (key: string): string => {
     if (overrides[key]) return overrides[key];
     const l = legacy[key];
-    // The built-in default of the plain level names is what the server reports for an installation that never
-    // renamed anything; it must not hide the chosen set, so a legacy name counts only when it differs from the
-    // two sets' own words.
-    if (l?.singular && !isBuiltInLevel(key, l.singular)) return l.singular;
-    const w = base[key];
-    if (w === undefined) return key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
-    return Array.isArray(w) ? w[0] : w;
+    // A level name the server reports for an installation that never renamed anything must not hide the chosen
+    // set, so a legacy name counts only when it differs from the two sets' own words.
+    if (l?.singular && !builtIn(key, l.singular)) return l.singular;
+    return forms(key)?.one ?? readable(key);
   };
   const plural = (key: string): string => {
     if (overrides[key + "_plural"]) return overrides[key + "_plural"];
     if (overrides[key]) return pluralise(overrides[key]);
     const l = legacy[key];
-    if (l?.singular && !isBuiltInLevel(key, l.singular)) return l.plural || pluralise(l.singular);
-    const w = base[key];
-    if (Array.isArray(w)) return w[1];
-    return pluralise(single(key));
+    if (l?.singular && !builtIn(key, l.singular)) return l.plural || pluralise(l.singular);
+    const f = forms(key);
+    return f ? (f.many || pluralise(f.one)) : pluralise(single(key));
+  };
+  const mid = (key: string, s: string) => midWord(set, BY_KEY.get(key), s);
+  const verb = (key: string, form: VerbForm = "do"): string => {
+    const f = forms(key);
+    if (form === "does") { const b = verb(key, "do"); return /(s|x|ch|sh)$/.test(b) ? b + "es" : b + "s"; }
+    const v = !overrides[key] && f ? f[form] : undefined;
+    return v || single(key).toLowerCase();
   };
   const t: Terms = {
     set, overrides,
-    label: single,
-    lower: (k) => lowerWord(single(k)),
+    label: single, word: single,
+    lower: (k) => mid(k, single(k)),
     plural,
-    pluralLower: (k) => lowerWord(plural(k)),
+    pluralLower: (k) => mid(k, plural(k)),
+    verb,
+    action: (k) => { const v = verb(k, "do"); return v.charAt(0).toUpperCase() + v.slice(1); },
+    plain: (k) => BY_KEY.get(k)?.plain.one ?? single(k),
+    meaning: (k) => BY_KEY.get(k)?.meaning ?? "",
+    themed: (k) => single(k) !== (BY_KEY.get(k)?.plain.one ?? single(k)),
     say(text) {
-      return text.replace(/\{([A-Za-z_]+)\}/g, (all, raw: string) => {
-        const first = raw.charAt(0), cap = first !== first.toLowerCase();
+      const fill = (all: string, raw: string, mod?: string): string => {
+        const cap = raw.charAt(0) !== raw.charAt(0).toLowerCase();
         const k = raw.charAt(0).toLowerCase() + raw.slice(1);
-        const known = (x: string) => x in base;
-        if (known(k)) return cap ? single(k) : t.lower(k);
-        if (k.endsWith("s") && known(k.slice(0, -1))) return cap ? plural(k.slice(0, -1)) : t.pluralLower(k.slice(0, -1));
+        const known = (x: string) => BY_KEY.has(x);
+        if (known(k)) {
+          if (mod === "plain") return t.plain(k).toLowerCase();
+          if (mod) { const v = verb(k, mod as VerbForm); return cap ? v.charAt(0).toUpperCase() + v.slice(1) : v; }
+          return cap ? single(k) : t.lower(k);
+        }
+        if (!mod && k.endsWith("s") && known(k.slice(0, -1))) return cap ? plural(k.slice(0, -1)) : t.pluralLower(k.slice(0, -1));
         return all;
-      });
+      };
+      // "a {environment}" becomes "an Airfield" or "a Station": the article follows the word that is shown.
+      return text
+        .replace(/\b([Aa])n? (\{([A-Za-z_]+)(?::(do|does|did|doing|plain))?\})/g, (all, a: string, ph: string, raw: string, mod?: string) => {
+          const out = fill(ph, raw, mod);
+          return out === ph ? all : `${a}${/^[aeiou]/i.test(out) ? "n" : ""} ${out}`;
+        })
+        .replace(/\{([A-Za-z_]+)(?::(do|does|did|doing|plain))?\}/g, (all, raw: string, mod?: string) => fill(all, raw, mod));
     },
   };
   return t;
 }
 
-function isBuiltInLevel(key: string, singular: string): boolean {
-  return ["aviation", "business"].some((s) => {
-    const w = SETS[s as SetId].words[key];
-    return (Array.isArray(w) ? w[0] : w) === singular;
-  }) || singular === "Organisation" || singular === "Unit";
-}
-
 // ---- the words in effect ----
 
+let lastConfig: TermsConfig = {};
 let current: Terms = makeTerms();
 let version = 0;
 const listeners = new Set<() => void>();
@@ -199,8 +196,8 @@ const listeners = new Set<() => void>();
 /** setTerms is called when the installation settings are read or changed. It says nothing when the words are the same. */
 export function setTerms(cfg: TermsConfig): void {
   const next = makeTerms(cfg);
-  if (next.set === current.set && JSON.stringify(next.overrides) === JSON.stringify(current.overrides)
-    && SETS[next.set].words === SETS[current.set].words && sameLevels(next, current)) return;
+  lastConfig = cfg;
+  if (next.set === current.set && JSON.stringify(next.overrides) === JSON.stringify(current.overrides) && sameLevels(next, current)) return;
   current = next; version++;
   listeners.forEach((l) => l());
 }

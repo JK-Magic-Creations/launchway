@@ -60,7 +60,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
     <>
       <header className="phead run-phead">
         <div className="t">
-          <div className="eyebrow"><EntityLink kind="project" name={run.project} /> · run #{run.number}</div>
+          <div className="eyebrow"><EntityLink kind="project" name={run.project} /> · {terms().say("{run}")} #{run.number}</div>
           <h1>{run.message || run.pipeline}</h1>
           <div className="row wrap run-badges">
             {badge}
@@ -90,7 +90,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
             {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
             <span className="meta">{starterLabel(run)}</span>
-            {run.lane && <span className="meta" title="This run's pipeline has a lane: its runs take turns">lane {run.lane.label}</span>}
+            {run.lane && <span className="meta" title={terms().say("This {run}'s pipeline has a lane: its {runs} take turns")}>lane {run.lane.label}</span>}
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             {!done && !run.cancel_requested && (run.deadline_at ?? 0) > 0 && (
@@ -125,7 +125,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
           )}
         </section>
       )}
-      {!all && <p className="faint small density-note"><Icon name="eye" size="s" /> The summary hides the run's fields, the dependency graph and each step's settings. Choose Everything to see them.</p>}
+      {!all && <p className="faint small density-note"><Icon name="eye" size="s" /> {terms().say("The summary hides the {run}'s fields, the dependency graph and each step's settings. Choose Everything to see them.")}</p>}
     </>
   );
 }

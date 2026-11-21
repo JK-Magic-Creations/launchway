@@ -223,7 +223,7 @@ Rate limiting, signs of abuse and stability signals in the same view as the traf
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Inject delays and errors on one connection, with a bound and an automatic stop. It shares its safety rules with chaos experiments.
+Inject delays and errors on one connection, with a bound and an automatic stop. It shares its safety rules with Drills.
 
 **Depends on:** Chaos authorization and safety.
 
@@ -341,7 +341,7 @@ An assistant helps send only certain clients, headers or a mirror of traffic to 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Request metrics for each subset become proofs, so a canary for one group of clients is judged on that group. It uses the same proof verdicts as everywhere else.
+Request metrics for each subset become proofs, so a Pathfinder for one group of clients is judged on that group. It uses the same proof verdicts as everywhere else.
 
 **Depends on:** Route a subset of clients or requests.
 

@@ -1,5 +1,6 @@
 #!/bin/sh
 # Applies the safe vocabulary replacements and lists what needs a person. See docs/reference/vocabulary.md.
-# Run from the repository root: scripts/vocabulary-fix [--dry] [path-prefix ...]
+# Run from the repository root: scripts/vocabulary-fix [--dry] [--web] [path-prefix ...]
+# (--web turns the plain words in web/src strings into terms placeholders; without it the documentation is fixed)
 cd "$(dirname "$0")/.." || exit 1
 exec node scripts/vocabulary/fix.mjs "$@"

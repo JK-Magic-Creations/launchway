@@ -1,15 +1,15 @@
 # Build, scan, sign and push a container image
 
 Build a container image from a Dockerfile with a pipeline, scan it for known vulnerabilities, push
-it to a registry, sign it, and check the signature yourself with cosign. For developers who have
+it to a Depot (registry), sign it, and check the signature yourself with cosign. For developers who have
 run a [first pipeline](first-pipeline.md) and now want images their team can trust.
 
 > **Verified** on 2026-11-19 against commit f717337: every command below, in order, on Linux
 > (Fedora) with rootless Podman 5, from a fresh clone, with other port numbers. **Not verified:**
-> Docker instead of Podman, macOS and Windows, a registry with TLS, BuildKit on Kubernetes.
+> Docker instead of Podman, macOS and Windows, a Depot with TLS, BuildKit on Kubernetes.
 
-Everything runs on your own machine: a BuildKit daemon and a registry in containers, and a
-Launchway server with its built-in runner. It takes about 45 minutes, most of it reading.
+Everything runs on your own machine: a BuildKit daemon and a Depot in containers, and a
+Launchway server with its built-in Station (runner). It takes about 45 minutes, most of it reading.
 
 ```mermaid
 flowchart LR
@@ -30,12 +30,12 @@ flowchart LR
   This page assumes the binary is at `~/launchway/bin/launchway`.
 - `git`, `openssl` and `curl`. `htpasswd` (package `httpd-tools` or `apache2-utils`) is optional;
   step 4 shows a container instead.
-- Free local ports 8080 (Launchway), 1234 (BuildKit) and 5000 (the registry).
+- Free local ports 8080 (Launchway), 1234 (BuildKit) and 5000 (the Depot).
 - Internet access the first time: BuildKit pulls `alpine`, and the scanner downloads its
   vulnerability database (about 1 minute).
 
 New words: an **image step** is a step with `kind: image`; a **builder** is a BuildKit daemon the
-runner sends builds to; see the [glossary](../glossary.md).
+Station sends builds to; see the [glossary](../glossary.md).
 
 ```sh
 export PATH="$HOME/launchway/bin:$PATH"
@@ -76,9 +76,9 @@ cd ..
 
 ## 2 Make certificates for BuildKit
 
-The runner and the BuildKit daemon know each other by mutual TLS: the daemon accepts only clients
-with a certificate your CA signed, and the runner accepts only a daemon with one. Make a CA, a
-certificate for the daemon (valid for `127.0.0.1`) and one for the runner:
+The Station and the BuildKit daemon know each other by mutual TLS: the daemon accepts only clients
+with a certificate your CA signed, and the Station accepts only a daemon with one. Make a CA, a
+certificate for the daemon (valid for `127.0.0.1`) and one for the Station:
 
 ```sh
 mkdir -p buildkit
@@ -131,7 +131,7 @@ podman logs tutorial-buildkitd 2>&1 | grep 'running server'
 time="..." level=info msg="running server on 127.0.0.1:1234"
 ```
 
-`buildkitd.toml` tells the daemon that the registry at `127.0.0.1:5000` speaks plain HTTP, so it
+`buildkitd.toml` tells the daemon that the Depot at `127.0.0.1:5000` speaks plain HTTP, so it
 can pull base images from it:
 
 ```text
@@ -145,10 +145,10 @@ can pull base images from it:
 > relaxations rootless BuildKit needs. `chmod 644` on the daemon's key is acceptable for a
 > throwaway daemon on your laptop only.
 
-## 4 Start a registry with a password
+## 4 Start a Depot with a password {#4-start-a-registry-with-a-password}
 
-Launchway pushes only with credentials, so the registry asks for a user name and password. The
-password goes in a file that the runner reads as a secret:
+Launchway pushes only with credentials, so the Depot asks for a user name and password. The
+password goes in a file that the Station reads as a secret:
 
 ```sh
 mkdir -p secrets registry
@@ -171,7 +171,7 @@ Without `htpasswd`, make the line with a container:
 
 ## 5 Make a signing key
 
-The runner signs with a cosign key pair. If you have [cosign](https://github.com/sigstore/cosign)
+The Station signs with a cosign key pair. If you have [cosign](https://github.com/sigstore/cosign)
 installed, run `cosign generate-key-pair` in `cosign/`. Otherwise use its container image, as
 here:
 
@@ -191,11 +191,11 @@ Public key written to cosign.pub
 `cosign.key` is encrypted with the password in `cosign/password`. Keep both private; give
 `cosign.pub` to anyone who should check your images.
 
-## 6 Configure the runner for images
+## 6 Configure the Station for images {#6-configure-the-runner-for-images}
 
-`launchway.yaml` is the server's configuration. Its `runner:` section is for the built-in runner,
-and `images:` says which builders it uses, which registries it pushes to and who may push where,
-and its signing key. Pipelines name a registry (`local`); they never see an address, a password or
+`launchway.yaml` is the server's configuration. Its `runner:` section is for the built-in Station,
+and `images:` says which builders it uses, which Depots it pushes to and who may push where,
+and its signing key. Pipelines name a Depot (`local`); they never see an address, a password or
 the key.
 
 ```yaml
@@ -241,9 +241,9 @@ runner:
 - **Push rules.** Nothing is pushed without a rule naming the project and the repository. Here
   project `hello` may push to `tutorial/<anything>` and nowhere else.
 - **Credentials** are a reference to a secret store (`files`, a directory), never the value.
-- **`insecure: true`** allows plain HTTP. Use it only for a registry on the runner's own machine.
+- **`insecure: true`** allows plain HTTP. Use it only for a Depot on the Station's own machine.
 
-See [Runner configuration](../reference/runner-config.md) for every setting.
+See [Station configuration](../reference/runner-config.md) for every setting.
 
 ## 7 Read the pipeline
 
@@ -286,12 +286,12 @@ steps:
 
 | Key | What it does here |
 |---|---|
-| `kind: image` | The runner builds the image itself on a builder; the step has no script or container |
+| `kind: image` | The Station builds the image itself on a builder; the step has no script or container |
 | `build_args` | `VERSION` comes from the `test` step's output; build arguments are recorded in the provenance, so never put a secret in one |
-| `tags` | Two names to push under, each a registry from the runner's configuration, a repository and a tag |
-| `sbom: true` | Makes a CycloneDX SBOM (a list of the image's components), kept as an artifact |
+| `tags` | Two names to push under, each a Depot from the Station's configuration, a repository and a tag |
+| `sbom: true` | Makes a CycloneDX SBOM (a list of the image's components), kept as a Cargo (artifact) |
 | `provenance: true` | Records where the image came from, as signed in-toto statements (the default) |
-| `sign: true` | Signs the image, its provenance and SBOM with the runner's key |
+| `sign: true` | Signs the image, its provenance and SBOM with the Station's key |
 | `scan` | Scans with Trivy before anything is pushed; with `mode: enforce`, a vulnerability at `critical` or worse fails the step and nothing is pushed |
 
 The image step's outputs (`digest`, `image`, `tags`, `pushed`) reach later steps as
@@ -316,11 +316,11 @@ launchway server --config launchway.yaml
   1 project(s), data in /home/you/image-tutorial/data, SQLite database /home/you/image-tutorial/data/launchway.db
 ```
 
-Leave it running and open **http://127.0.0.1:8080**. Go to **Projects**, press **Start a run** on
+Leave it running and open **http://127.0.0.1:8080**. Go to **Projects**, press **Start a Sortie (run)** on
 `hello`, keep the branch `main` and press **Start run**. (From another terminal, `curl -s -X POST -H 'X-Launchway-CSRF: 1' -d
 '{"ref":"main"}' http://127.0.0.1:8080/api/v1/projects/hello/runs` does the same.)
 
-The run takes about 15 seconds once the base image and the scanner's database are downloaded.
+The Sortie takes about 15 seconds once the base image and the scanner's database are downloaded.
 Open the `image` step. Its log ends like this (digests and counts differ for you):
 
 ```text
@@ -348,22 +348,22 @@ tags:    127.0.0.1:5000/tutorial/hello:1.0.1,127.0.0.1:5000/tutorial/hello:lates
 ```
 
 Because the project polls `app` every 5 seconds, each commit you make on `main` from now on starts
-a run by itself.
+a Sortie by itself.
 
 ## 9 Read the Images tab
 
-Open the run's **Images** tab:
+Open the Sortie's **Images** tab:
 
-![The Images tab of a run: the image step succeeded, pushed and signed; its digest, image name and two tags; signed with the runner's key; provenance and SBOM with download links; one platform, linux/amd64; vulnerabilities passed the critical gate with one medium finding; built by the laptop builder from alpine 3.22](../images/tutorials/build-image-images-tab.png)
+![The Images tab of a Sortie: the image step succeeded, pushed and signed; its digest, image name and two tags; signed with the Station's key; provenance and SBOM with download links; one platform, linux/amd64; vulnerabilities passed the critical gate with one medium finding; built by the laptop builder from alpine 3.22](../images/tutorials/build-image-images-tab.png)
 
 It shows the digest and pushed names, which key signed it, links to the provenance and the SBOM,
 each platform, the scan's counts against its gate, and where the build came from (builder, cache,
 base images). The **Security** tab lists the vulnerability itself, and the **Images** page in the
-sidebar finds every run that built a digest or pushed to a repository.
+sidebar finds every Sortie that built a digest or pushed to a repository.
 
 ## 10 Verify the signature with cosign
 
-Anyone with `cosign.pub` can check that the image was signed by your runner's key. Take the
+Anyone with `cosign.pub` can check that the image was signed by your Station's key. Take the
 digest from the Images tab (**Copy**) and run:
 
 ```sh
@@ -403,7 +403,7 @@ jq -r .payload attestation.json | base64 -d | jq '{predicateType, builder: .pred
 }
 ```
 
-The builder is the runner that built the image: the built-in runner is named after your machine
+The builder is the Station that built the image: the built-in Station is named after your machine
 (`laptop` here).
 
 `--insecure-ignore-tlog` is needed because Launchway does not write to a public transparency log;
@@ -434,14 +434,14 @@ git commit -am "Fail on medium vulnerabilities"
 cd ..
 ```
 
-A run starts within seconds. Its `image` step fails before pushing:
+A Sortie starts within seconds. Its `image` step fails before pushing:
 
 ```text
 Vulnerabilities: 0 critical, 0 high, 1 medium, 0 low, 0 unknown
 Failed after 14.8s: the scan found 1 vulnerabilities at medium or worse (scan.fail_on: medium, mode: enforce); nothing was pushed
 ```
 
-If your image has no medium vulnerability, the run succeeds instead; try `fail_on: low`. Put
+If your image has no medium vulnerability, the Sortie succeeds instead; try `fail_on: low`. Put
 `critical` back (this starts one more run, which pushes again):
 
 ```sh
@@ -473,8 +473,8 @@ Succeeded in 10.9s
 ```
 
 > [!WARNING]
-> `launchway run` pushes and signs for real, under the same tags. Its run number always starts at
-> 1, so here it overwrote `tutorial/hello:1.0.1` and `latest`. Give local runs a registry or
+> `launchway run` pushes and signs for real, under the same tags. Its Sortie number always starts at
+> 1, so here it overwrote `tutorial/hello:1.0.1` and `latest`. Give local runs a Depot or
 > repository of their own.
 
 ## 13 Clean up
@@ -492,16 +492,16 @@ rm -rf ~/image-tutorial
 
 | Message | Cause and fix |
 |---|---|
-| `registry local has no credentials to push with (images.registries.local.credentials)` | The registry has no `credentials`. Launchway pushes only with credentials; add them as in step 6 |
+| `registry local has no credentials to push with (images.registries.local.credentials)` | The Depot has no `credentials`. Launchway pushes only with credentials; add them as in step 6 |
 | `failed to Lchown ... for UID 65534 ... (Hint: try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid)` | The base image has files owned by a user ID above the range rootless Podman can map (busybox's `nobody` is 65534). Use a base image without such files, such as `alpine`, or run BuildKit with more IDs (on Kubernetes, see [deploy/buildkit](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/buildkit/README.md)) |
-| `a tcp:// builder needs ca_file, cert_file and key_file` | The runner refuses a builder without mutual TLS. Give all three |
-| The step waits in *queued* | No runner has a builder for this project: check `images.builders[].projects` |
+| `a tcp:// builder needs ca_file, cert_file and key_file` | The Station refuses a builder without mutual TLS. Give all three |
+| The step waits in *queued* | No Station has a builder for this project: check `images.builders[].projects` |
 
 ## What you learned
 
-- Image steps are built by a BuildKit daemon apart from the steps, which the runner reaches over
+- Image steps are built by a BuildKit daemon apart from the steps, which the Station reaches over
   mutual TLS.
-- The runner's `images:` configuration, not the pipeline, decides builders, registries, credentials
+- The Station's `images:` configuration, not the pipeline, decides builders, Depots, credentials
   and who may push where.
 - An image step builds, scans (and can stop the push), pushes, signs, and records an SBOM and
   provenance, all shown on the Images tab.
@@ -509,7 +509,7 @@ rm -rf ~/image-tutorial
 
 ## What next
 
-- [Deploy with approval, rollout control and rollback](deploy-with-approval.md): deploy an image
+- [Deploy with approval, rollout control and Return to base (rollback)](deploy-with-approval.md): deploy an image
   by digest through Argo CD.
 - [Policy gates and waivers](policy-gates.md): require signed, scanned images before a deployment.
 - [Container images](../guide/images.md) in the guide: several platforms, build secrets, the cache.

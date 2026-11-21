@@ -32,7 +32,7 @@ function walk(root, dir, out) {
 /** The files to scan, each with its kind: docs, web, go, helm or json. */
 export function listFiles(root, vocab) {
   const all = []
-  for (const top of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'SUPPORT.md']) if (existsSync(join(root, top))) all.push(top)
+  for (const top of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'SUPPORT.md', 'deploy/README.md']) if (existsSync(join(root, top))) all.push(top)
   for (const d of ['docs', 'web/src', 'cmd', 'internal', 'deploy/helm']) if (existsSync(join(root, d))) walk(root, d, all)
   const kinds = []
   for (const [kind, globs] of Object.entries({ docs: vocab.scan.docs, web: vocab.scan.web, go: vocab.scan.go, helm: vocab.scan.helm, json: vocab.scan.json })) {
@@ -64,14 +64,14 @@ export function maskMarkdown(text) {
 }
 
 /** Mask all but the string literals of Go or TypeScript code that hold a phrase (they contain a space). */
-export function maskCode(text, lang, path = '') {
+export function maskCode(text, lang, path = '', labels = new Set(), ranges = null) {
   const out = text.replace(/[^\n]/g, ' ').split('')
   const n = text.length
   let i = 0
   const keep = (a, b) => {
     const s = text.slice(a, b)
     if (/className\s*[=:]\s*\{?\s*["'`]?$/.test(text.slice(Math.max(0, a - 24), a))) return // a CSS class list
-    if (!/[A-Za-z]{2,}\s+\S/.test(s)) return // a key, a path or a single word is not a sentence
+    if (!/[A-Za-z]{2,}\s+\S/.test(s) && !labels.has(s)) return // a key, a path or a single word is not a sentence, unless it is exactly a caption the vocabulary supersedes
     if (/^(\w+:"[^"]*"\s*)+$/.test(s.trim()) && !/jsonschema:/.test(s)) return // a struct tag
     if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|WITH|ALTER|DROP|PRAGMA)\b/i.test(s)) return // SQL
     if (/\b(FROM|WHERE|VALUES|SET)\b[^\n]*[=(?]/.test(s) && /\?/.test(s)) return // a SQL fragment
@@ -80,6 +80,7 @@ export function maskCode(text, lang, path = '') {
       if (m) { const a2 = a + m.index + 'jsonschema:"'.length; for (let k = a2; k < a2 + m[1].length; k++) out[k] = text[k]; }
       return
     }
+    if (ranges) ranges.push({ a, b, quote: text[a - 1], jsx: false })
     for (let k = a; k < b; k++) out[k] = text[k]
     for (let k = a; k < b - 1; k++) if (text[k] === '$' && text[k + 1] === '{') { let depth = 0, q = k + 1; for (; q < b; q++) { if (text[q] === '{') depth++; else if (text[q] === '}' && --depth === 0) break } for (let z = k; z <= q && z < b; z++) if (text[z] !== '\n') out[z] = ' '; k = q }
   }
@@ -96,7 +97,7 @@ export function maskCode(text, lang, path = '') {
     }
     if (lang === 'ts' && path.endsWith('.tsx') && c === '>' ) { // JSX text between tags
       const m = /^>([^<>{}\n]*[A-Za-z]{2,}[^<>{}\n]*)</.exec(text.slice(i, i + 400))
-      if (m && /\s/.test(m[1].trim()) && !/[=();:]/.test(m[1])) for (let k = 0; k < m[1].length; k++) out[i + 1 + k] = text[i + 1 + k]
+      if (m && (/\s/.test(m[1].trim()) || labels.has(m[1].trim())) && !/[=();:]/.test(m[1])) { if (ranges) ranges.push({ a: i + 1, b: i + 1 + m[1].length, quote: '', jsx: true }); for (let k = 0; k < m[1].length; k++) out[i + 1 + k] = text[i + 1 + k] }
     }
     i++
   }
@@ -114,18 +115,66 @@ export function maskJson(text) {
   })
 }
 
-export function readableText(kind, path, text) {
+export function readableText(kind, path, text, labels) {
   if (kind === 'docs') return maskMarkdown(text)
-  if (kind === 'web') return maskCode(text, 'ts', path)
-  if (kind === 'go') return maskCode(text, 'go')
+  if (kind === 'web') return maskCode(text, 'ts', path, labels)
+  if (kind === 'go') return maskCode(text, 'go', '', labels)
   if (kind === 'helm') return maskHelm(text)
   return maskJson(text)
 }
 
 const BRITISH_OK = /\b(license[ds]?|licensed|colors?|colored|coloring|behaviors?|favors?|favorite|cancelled|labelled|modelling|travelling|analyse[sd]?|catalogue[sd]?|centre[sd]?|defence|grey|artefacts?)\b/i
 
+const pluralize = (w) => (/[^aeiou]y$/i.test(w) ? w.slice(0, -1) + 'ies' : /(s|x|ch|sh)$/i.test(w) ? w + 'es' : w + 's')
+const thirdPerson = (v) => (/(s|x|ch|sh)$/.test(v) ? v + 'es' : v + 's')
+
+/** The themed word's forms (aviation set), from the table. */
+export function themedForms(vocab, key) {
+  const w = vocab.words.words.find((x) => x.key === key)
+  if (!w) return null
+  const f = w.aviation
+  return { one: f.one, many: f.many || pluralize(f.one), do: f.do, did: f.did, doing: f.doing, does: f.do ? thirdPerson(f.do) : undefined, plain: w.plain.one }
+}
+
+/** The caption words (single words a button or a heading shows) that the vocabulary supersedes. */
+export function captionLabels(vocab) {
+  return new Set((vocab.superseded || []).flatMap((s) => Object.keys(s.labels || {})))
+}
+
+/** A caption word and the placeholder the themifier puts in its place ("" when it has none and a person must choose). */
+export function captionPlaceholders(vocab) {
+  return Object.assign({}, ...(vocab.superseded || []).map((s) => s.labels || {}))
+}
+
 export function compileChecks(vocab) {
-  return vocab.checks.map((c) => ({ ...c, re: new RegExp(c.pattern, c.caseSensitive ? 'g' : 'gi') }))
+  const base = vocab.checks.map((c) => ({ ...c, re: new RegExp(c.pattern, c.caseSensitive ? 'g' : 'gi') }))
+  const words = []
+  for (const sup of vocab.superseded || []) {
+    const t = themedForms(vocab, sup.key)
+    sup.rules.forEach((r, i) => words.push({
+      id: 'word:' + sup.key + (sup.rules.length > 1 ? '/' + (i + 1) : ''), word: sup.key, severity: 'error', re: new RegExp('(?<![\\w\\-./{])(?:' + r.pattern + ')(?![\\w-]|\\.\\w|/)', 'gi'),
+      to: r.to, auto: !!r.auto, web: !!r.web, themed: t,
+      use: `the product word "${t.one}" through the terms helper ({${sup.key}}) or, in documentation, "${t.one}" with "(${t.plain.toLowerCase()})" where it is introduced`,
+    }))
+  }
+  return [...base, ...words]
+}
+
+/** The replacement for a word rule's match: the themed word in the form the rule names, keeping a verb's capital. */
+export function themedReplacement(f) {
+  const t = f.themed, w = f.match
+  const verb = (v) => (w[0] === w[0].toUpperCase() ? v[0].toUpperCase() + v.slice(1) : v)
+  switch (f.to) {
+    case 'one': return t.one
+    case 'many': return t.many
+    case 'number': return /s$/i.test(w) && !/(ss|us|is)$/i.test(w) ? t.many : t.one
+    case 'do': return t.do ? verb(t.do) : null
+    case 'does': return t.does ? verb(t.does) : null
+    case 'did': return t.did ? verb(t.did) : null
+    case 'doing': return t.doing ? verb(t.doing) : null
+    case 'does_rb': return t.do ? verb(/^rolls/i.test(w) ? thirdPerson(t.do) : t.do) : null
+  }
+  return null
 }
 
 // Which matches of the broad spelling pattern are British (the pattern also catches American words
@@ -135,8 +184,15 @@ function isBritish(w) {
   return /(organis|colour|behaviour|favour|licence|licenc|initialis|authoris|customis|summaris|recognis|normalis|synchronis|catalogue|centre|defence|artefact|^grey$|^analyse|cancelled|labelled|modelling|travelling)/.test(l)
 }
 
-export function fileFindings(path, kind, text, checks) {
-  const masked = readableText(kind, path, text)
+/** Documentation introduces a themed word with its plain word beside it: "Station (runner)". That is the one place the plain word belongs. */
+function introduced(text, at, t) {
+  const before = text.slice(Math.max(0, at - 60), at)
+  const forms = [t.one, t.many, t.do, t.did, t.doing, t.does].filter(Boolean).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  return new RegExp('(?:' + forms.join('|') + ')[^.\\n]{0,4}\\(\\s*(?:also |plain: |plain word: |a |an |the |called |formerly |the plain word )?$', 'i').test(before)
+}
+
+export function fileFindings(path, kind, text, checks, labels = new Set()) {
+  const masked = readableText(kind, path, text, labels)
   const lineStarts = [0]
   for (let i = 0; i < text.length; i++) if (text[i] === '\n') lineStarts.push(i + 1)
   const lineOf = (off) => { let lo = 0, hi = lineStarts.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (lineStarts[m] <= off) lo = m; else hi = m - 1 } return lo + 1 }
@@ -148,7 +204,8 @@ export function fileFindings(path, kind, text, checks) {
     while ((m = c.re.exec(masked))) {
       if (m[0] === '') { c.re.lastIndex++; continue }
       if (c.britishOnly && !isBritish(m[0])) continue
-      out.push({ pre: text.slice(Math.max(0, m.index - 12), m.index), rule: c.id, severity: c.severity, path, line: lineOf(m.index), start: m.index, end: m.index + m[0].length, match: m[0], fix: c.fix, use: c.use })
+      if (c.word && introduced(text, m.index, c.themed)) continue
+      out.push({ pre: text.slice(Math.max(0, m.index - 12), m.index), rule: c.id, word: c.word, to: c.to, auto: c.auto, themed: c.themed, severity: c.severity, path, kind, line: lineOf(m.index), start: m.index, end: m.index + m[0].length, match: m[0], fix: c.fix, use: c.use })
     }
   }
   return out
@@ -156,6 +213,7 @@ export function fileFindings(path, kind, text, checks) {
 
 /** What the fixer may replace mechanically. Returns the new word or null. */
 export function mechanicalFix(f) {
+  if (f.word) return f.auto && (f.kind === 'docs' || f.kind === 'json' || f.kind === 'helm') ? themedReplacement(f) : null
   const w = f.match
   const keepCase = (to) => (w[0] === w[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to)
   if (f.fix === 'lowercase') return w.toLowerCase()

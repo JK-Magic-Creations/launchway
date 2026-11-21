@@ -3,6 +3,7 @@ import { clock } from "../format";
 import { Mono } from "./ui";
 import type { RunWithTriggers } from "../triggers";
 import "../triggers.css";
+import { terms } from "../terms";
 
 // RunTrigger shows what a run was started with: the schedule or webhook
 // that started it, and its input values with what each input is.
@@ -50,8 +51,8 @@ export function RerunInputsNote({ run }: { run: RunDetail }) {
   if (!d?.inputs || Object.keys(d.inputs).length === 0) return null;
   return (
     <p className="sub">
-      The re-run keeps this run's inputs ({Object.entries(d.inputs).map(([k, v]) => `${k}=${v}`).join(", ")}): the steps it reuses ran with them.
-      {" "}To run with other values, start a new run.
+      {terms().say("The re-run keeps this {run}'s inputs (")}{Object.entries(d.inputs).map(([k, v]) => `${k}=${v}`).join(", ")}): the steps it reuses ran with them.
+      {" "}{terms().say("To run with other values, start a new {run}.")}
     </p>
   );
 }

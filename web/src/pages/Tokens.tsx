@@ -1,4 +1,5 @@
 import { PageHead } from "../kit/layout";
+import { roleName } from "../roles";
 import { useCallback, useEffect, useState } from "react";
 import type { Role } from "../api";
 import { ago, clock } from "../format";
@@ -6,6 +7,7 @@ import { useMe } from "../auth";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { triggersApi, type Token, type TokenLimits } from "../triggers";
 import "../triggers.css";
+import { terms } from "../terms";
 
 const EXPIRY = [7, 30, 90, 180, 365, 730, 3650];
 const ROLES: Role[] = ["viewer", "operator", "admin"];
@@ -96,7 +98,7 @@ export function TokensPage() {
               <span>Role</span>
               <select value={role} onChange={(e) => setRole(e.target.value as Role | "")}>
                 <option value="">Same as mine{limits?.your_role ? ` (${limits.your_role})` : ""}</option>
-                {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
               </select>
             </label>
             <label className="field">
@@ -140,13 +142,13 @@ function TokenTable({ tokens, owner, onRevoke }: { tokens: Token[]; owner?: bool
   return (
     <div className="card card-flush">
       <table className="table">
-        <thead><tr>{owner && <th>Owner</th>}<th>Name</th><th>Limited to</th><th>Made</th><th>Expires</th><th>Last used</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+        <thead><tr>{owner && <th>{terms().say("{Owner}")}</th>}<th>Name</th><th>Limited to</th><th>Made</th><th>Expires</th><th>Last used</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
           {tokens.map((t) => (
             <tr key={t.id}>
               {owner && <td>{t.user}</td>}
               <td>{t.name}<div className="faint small mono">{t.id}</div></td>
-              <td className="token-scope">{t.role ?? "owner's role"}{" · "}{t.projects?.length ? t.projects.join(", ") : "every project"}</td>
+              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.projects?.length ? t.projects.join(", ") : "every project"}</td>
               <td title={clock(t.created_at)}>{ago(t.created_at, now)}</td>
               <td>{t.expires_at <= now ? <span className="bad-ink">expired</span> : clock(t.expires_at)}</td>
               <td>{t.last_used ? <span title={clock(t.last_used)}>{ago(t.last_used, now)}{t.last_used_from && <span className="faint"> from {t.last_used_from}</span>}</span> : "never"}</td>

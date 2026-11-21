@@ -19,7 +19,7 @@ flowchart TD
   Control["Controls<br/>pause, go, stop"] -.-> Shifter
 ```
 
-A web shop on Kubernetes, a service on four virtual machines, a queue worker and a nightly job all use this picture. Only the shifter changes: a traffic split, a load balancer pool, which copies read the queue, or a function alias.
+A web shop on Kubernetes, a service on four virtual machines, a Holding pattern (queue) worker and a nightly job all use this picture. Only the shifter changes: a traffic split, a load balancer pool, which copies read the Holding pattern, or a function alias.
 
 ## The watch after a deployment
 

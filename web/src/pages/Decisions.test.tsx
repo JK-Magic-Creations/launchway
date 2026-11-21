@@ -29,7 +29,7 @@ afterEach(() => resetTerms());
 describe("the decision card", () => {
   it("tells the person who started the run exactly why they cannot approve, with the link", async () => {
     show({ user: "sam", roles: { "shop-web": "operator" } });
-    expect(await screen.findByText(/You started this run\. On this base the person who starts a run cannot give clearance for it/)).toBeInTheDocument();
+    expect(await screen.findByText(/You started this Sortie\. On this Base the person who starts a Sortie cannot give Clearance for it/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings → Clearances" })).toHaveAttribute("href", "/settings/approvals");
     expect(screen.getByRole("button", { name: "Go" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "No-go" })).toBeDisabled(); // a reason is needed first
@@ -37,7 +37,7 @@ describe("the decision card", () => {
   it("shows the evidence that exists and what each answer does", async () => {
     show({ user: "dana", roles: { "shop-web": "operator" } });
     expect(await screen.findByText("40 of 40")).toBeInTheDocument();
-    expect(screen.getByText("no scan in this run")).toBeInTheDocument();
+    expect(screen.getByText("no scan in this Sortie")).toBeInTheDocument();
     expect(screen.getByText("If you say Go")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Go" })).toBeEnabled();
   });

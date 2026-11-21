@@ -8,7 +8,7 @@ is. It is written for anyone, including readers who do not write code.
 Launchway is a build and delivery platform: it takes a change someone made to a program, builds
 it, tests it, checks it for security problems and, when the checks and the right people agree,
 puts it into service. It runs on your own computers, servers or Kubernetes clusters, so your code,
-your secrets and your records stay with you. It keeps a complete record of every run and every
+your secrets and your records stay with you. It keeps a complete record of every Sortie (run) and every
 decision, so you can always say what was delivered, how it was checked and who approved it.
 
 ## What problem it solves
@@ -34,30 +34,30 @@ called a [pipeline](../glossary.md#pipeline).
 
 - **High availability from the ground up.** Several servers share one PostgreSQL database with no
   leader. Nothing is held in a server's memory, so losing one loses no work.
-- **Durable runs.** Every change to a run is recorded as an event. A run survives crashes and
+- **Durable runs.** Every change to a Sortie is recorded as an event. A Sortie survives crashes and
   restarts, and resumes from the step that failed.
-- **Runners that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
+- **Stations (runners) that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
   pods or containers, with named toolbox containers and services sharing a workspace.
 - **Sign-in with your organization's OpenID Connect provider**, roles per project, API tokens for
   scripts, and an audit trail of every change.
-- **Secrets that never reach the server.** Pipelines hold references; the runner fetches values
+- **Secrets that never reach the server.** Pipelines hold references; the Station fetches values
   from Vault or OpenBao just before a step and masks them in output.
-- **A delivery model, not only builds:** approvals, environments with one deployment at a time,
-  GitOps deployments through Argo CD, canary rollouts that a person or a step can promote, abort
-  or retry, and rollback by reverting the change.
+- **A delivery model, not only builds:** approvals, Airfields (environments) with one deployment at a time,
+  GitOps deployments through Argo CD, Pathfinder (canary) rollouts that a person or a step can promote, abort
+  or retry, and Return to base (rollback) by reverting the change.
 - **Policies an organization sets for every pipeline**, such as "nothing reaches production
   without passing tests, a clean scan and a second person's approval", with waivers that expire.
 - **Verification after a deploy.** A step reads metrics and logs from Prometheus, Loki and other
   sources, judges them with built-in statistics, and can promote, abort or roll back. Optional AI
   models only explain; the statistics decide.
-- **Runners with identities.** Runners enrol with join tokens and their own keys, serve only the
+- **Stations with identities.** Stations enrol with join tokens and their own keys, serve only the
   projects of their pool, and set their own limits on what they accept.
-- **Artifacts and test reports that work out of the box.** Artifacts are kept in the database
-  with nothing else to run; test reports come in 13 formats, with coverage and hosted HTML reports.
+- **Cargo (artifacts) and Debriefs (test reports) that work out of the box.** Cargo are kept in the database
+  with nothing else to run; Debriefs come in 13 formats, with coverage and hosted HTML reports.
 - **An endpoint for AI agents** (MCP), with the same rights and audit trail as any token.
 - **Pipelines you can check and run anywhere**, with line-numbered errors before anything starts.
 - **Shared pipelines as Git repositories.** Templates and the scripts they run live in one
-  repository, released with Git tags; pipelines pin a tag, branch or commit, and every run records
+  repository, released with Git tags; pipelines pin a tag, branch or commit, and every Sortie records
   the commit it used.
 
 ## Who uses it
@@ -65,7 +65,7 @@ called a [pipeline](../glossary.md#pipeline).
 | Reader | What Launchway gives them | Start here |
 |---|---|---|
 | Developer | A pipeline file next to the code, runs that explain their failures, test and scan results in one place | [Developer path](../paths/developer.md) |
-| Operator or platform engineer | One service for many teams, on servers or Kubernetes, with runners anywhere and no single point of failure | [Operator path](../paths/operator.md) |
+| Operator or platform engineer | One service for many teams, on servers or Kubernetes, with Stations anywhere and no single point of failure | [Operator path](../paths/operator.md) |
 | Security reviewer | Secrets kept off the server, signed images, policies teams cannot switch off, an audit trail | [Security reviewer path](../paths/security-reviewer.md) |
 | Business or decision maker | Faster, safer releases with evidence of how each was checked | [Decision maker path](../paths/decision-maker.md) |
 

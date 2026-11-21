@@ -3,6 +3,7 @@ import { api, type EvidenceRef, type PolicyDef, type PolicyVerdict, type RuleRes
 import { clock } from "../format";
 import { ErrorBox, Link, Mono } from "./ui";
 import "../policy.css";
+import { terms } from "../terms";
 
 /** The words for an evaluation's verdict, and the tone it is drawn in. */
 export const VERDICT: Record<PolicyVerdict, { label: string; tone: string }> = {
@@ -40,7 +41,7 @@ export function ResultBadge({ verdict, mode }: { verdict: RuleVerdict | "pass" |
 
 export function ModeBadge({ mode }: { mode: string }) {
   return <span className={"pol-mode " + (mode === "enforce" ? "pol-mode-enforce" : "pol-mode-report")}
-    title={mode === "enforce" ? "A failure stops the step or the run" : "A failure is shown and recorded, and changes nothing"}>{mode}</span>;
+    title={mode === "enforce" ? terms().say("A failure stops the step or the {run}") : "A failure is shown and recorded, and changes nothing"}>{mode}</span>;
 }
 
 /** Scope in words: which projects, environments, branches and events. */
@@ -48,7 +49,7 @@ export function ScopeText({ p }: { p: PolicyDef }) {
   const s = p.scope ?? {};
   const parts: [string, string[] | undefined][] = [["projects", s.projects], ["environments", s.environments], ["branches", s.branches], ["events", s.events]];
   const set = parts.filter(([, v]) => v && v.length);
-  if (!set.length) return <span className="faint">every run</span>;
+  if (!set.length) return <span className="faint">{terms().say("every {run}")}</span>;
   return (
     <span className="pol-scope">
       {set.map(([k, v]) => <span key={k} className="pol-scope-item"><span className="faint">{k}</span> {v!.map((x) => <Mono key={x}>{x}</Mono>)}</span>)}
@@ -129,7 +130,7 @@ export function WaiverNote({ w }: { w: Waiver }) {
 /** waiverScope says what a waiver covers, in words. */
 export function waiverScope(w: Waiver): string {
   const parts = [w.project];
-  if (w.run) parts.push(w.run_number ? `run #${w.run_number}` : `run ${w.run}`);
+  if (w.run) parts.push(w.run_number ? terms().say(`{run} #${w.run_number}`) : terms().say(`{run} ${w.run}`));
   else parts.push("every run");
   if (w.environment) parts.push(`in ${w.environment}`);
   if (w.finding) parts.push(`finding ${w.finding}`);
@@ -190,7 +191,7 @@ export function WaiverForm({ draft, maxDays, onDone, onCancel }: {
         )}
         {draft.deployRule && !draft.environment && (
           <label className="field">
-            <span>Environment (optional; every one if empty)</span>
+            <span>{terms().say("{Environment} (optional; every one if empty)")}</span>
             <input value={envText} maxLength={63} placeholder="prod" onChange={(e) => setEnvText(e.target.value)} />
           </label>
         )}
@@ -204,7 +205,7 @@ export function WaiverForm({ draft, maxDays, onDone, onCancel }: {
           </label>
         )}
       </div>
-      {draft.deployRule && <p className="faint small">On a protected environment, a waiver granted by the person who started the run does not count.</p>}
+      {draft.deployRule && <p className="faint small">{terms().say("On a protected {environment}, a waiver granted by the person who started the run does not count.")}</p>}
       <ErrorBox error={error} />
       <div className="pol-waiver-actions">
         <button type="submit" className="btn btn-primary" disabled={busy || !reason.trim()}>{busy ? "Waiving…" : "Grant waiver"}</button>

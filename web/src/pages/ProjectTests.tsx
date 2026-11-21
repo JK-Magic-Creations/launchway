@@ -6,6 +6,7 @@ import { navigate, onLink } from "../router";
 import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
 import { CoverageTrendChart, Delta, MEASURES, measureLabel, pct, ratio } from "../components/Coverage";
 import { Badge, HistoryStrip, ReportsHowTo, TestCounts, TestIcon, failing, passRate, testDuration, testStatusLabel, VariantPill } from "../components/Tests";
+import { terms } from "../terms";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -88,7 +89,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
               <summary>Show as a table</summary>
               <div className="table-scroll">
                 <table className="inputs-table">
-                  <thead><tr><th>Run</th><th>Commit</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Time</th></tr></thead>
+                  <thead><tr><th>{terms().say("{Run}")}</th><th>Commit</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Time</th></tr></thead>
                   <tbody>{[...data.runs].reverse().map((r) => (
                     <tr key={r.id}>
                       <td><Link href={`/runs/${r.id}?tab=tests`}>#{r.number}</Link></td>
@@ -103,7 +104,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
           </section>
           {cov && cov.runs.length > 0 && <CoverageCard trend={cov} />}
           <div className="pgrid">
-            <StatList title="Failing most" empty="Nothing failed in these runs." stats={data.failing} name={name} go={go}
+            <StatList title="Failing most" empty={terms().say("Nothing failed in these {runs}.")} stats={data.failing} name={name} go={go}
               detail={(s) => <><strong>{s.failures}</strong> of {s.runs} runs{s.last_failed ? <>, last in #{s.last_failed}</> : null}</>} tone="bad" />
             <StatList title="Flaky" empty="No test both passed and failed on the same commit." stats={data.flaky} name={name} go={go}
               detail={(s) => <>{s.commits ? <>passed and failed on <strong>{s.commits}</strong> commit{s.commits > 1 ? "s" : ""}</> : null}
@@ -142,12 +143,12 @@ function CoverageCard({ trend }: { trend: CoverageTrend }) {
           ))}
         </dl>
       </div>
-      {runs.length > 1 ? <CoverageTrendChart trend={trend} /> : <p className="sub small">The chart appears once two runs have reported coverage.</p>}
+      {runs.length > 1 ? <CoverageTrendChart trend={trend} /> : <p className="sub small">{terms().say("The chart appears once two {runs} have reported coverage.")}</p>}
       <details className="ptable">
         <summary>Show as a table</summary>
         <div className="table-scroll">
           <table className="inputs-table">
-            <thead><tr><th>Run</th><th>Commit</th>{MEASURES.map((m) => <th key={m}>{measureLabel(m, t.unit)}</th>)}</tr></thead>
+            <thead><tr><th>{terms().say("{Run}")}</th><th>Commit</th>{MEASURES.map((m) => <th key={m}>{measureLabel(m, t.unit)}</th>)}</tr></thead>
             <tbody>{[...runs].reverse().map((r) => (
               <tr key={r.id}>
                 <td><Link href={`/runs/${r.id}?tab=coverage`}>#{r.number}</Link></td>
@@ -273,7 +274,7 @@ function barLink(l: Layout, r: OverviewRun, i: number, setTip: (t: Tip) => void,
   const x = barX(l, i);
   const show = () => setTip({ x: x + l.bar, run: r, text });
   return (
-    <a key={r.id} href={`/runs/${r.id}?tab=tests`} onClick={onLink as never} aria-label={`Run ${r.number}: ${text.join(", ")}`}
+    <a key={r.id} href={`/runs/${r.id}?tab=tests`} onClick={onLink as never} aria-label={terms().say(`{Run} ${r.number}: ${text.join(", ")}`)}
       onMouseEnter={show} onFocus={show} onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)} className="chart-bar">
       {/* A wide, invisible target, easier to hover than the bar. */}
       <rect x={PAD_L + i * l.step} y={0} width={l.step} height={H - PAD_B} className="chart-hit" />
@@ -298,8 +299,8 @@ function ResultsChart({ runs }: { runs: OverviewRun[] }) {
   const plot = H - PAD_B - PAD_T;
   return (
     <>
-      <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label="Tests per run: passed, failed and skipped" ticks={(v) => String(Math.round(v * 10) / 10)}
-        describe={`Tests per run, the last ${runs.length} runs, oldest first`}>
+      <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label={terms().say("Tests per {run}: passed, failed and skipped")} ticks={(v) => String(Math.round(v * 10) / 10)}
+        describe={terms().say(`Tests per {run}, the last ${runs.length} runs, oldest first`)}>
         {runs.map((r, i) => {
           const x = barX(l, i);
           const t = r.tests;
@@ -338,7 +339,7 @@ function DurationChart({ runs }: { runs: OverviewRun[] }) {
   const max = Math.max(...runs.map((r) => r.tests?.duration_ms ?? 0), 1);
   const plot = H - PAD_B - PAD_T;
   return (
-    <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label="Time the tests took per run" ticks={(v) => (v === 0 ? "0" : testDuration(v))}
+    <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label={terms().say("Time the tests took per {run}")} ticks={(v) => (v === 0 ? "0" : testDuration(v))}
       describe={`Time the tests took, the last ${runs.length} runs, oldest first`}>
       {runs.map((r, i) => {
         const x = barX(l, i);
@@ -389,7 +390,7 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
         </div>
       </div>
       {error ? <ErrorBox error={error instanceof ApiError && error.status === 404
-        ? (everyRef || !gref ? "This test has no results in the runs kept." : `This test has no results on ${refName(gref)}; try every branch.`) : error} />
+        ? (everyRef || !gref ? terms().say("This test has no results in the {runs} kept.") : `This test has no results on ${refName(gref)}; try every branch.`) : error} />
         : !h ? <div className="loading">Loading…</div> : (
           <>
             <HistoryStrip results={h.results} />
@@ -397,7 +398,7 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
               The last {h.results.length} runs{h.ref ? <> of {refName(h.ref)}</> : " on every branch"}, oldest on the left:{" "}
               {counts.passed} passed{h.results.some((r) => r.flaky) ? ` (${h.results.filter((r) => r.flaky).length} only on a retry)` : ""},
               {" "}{counts.failed + counts.errored} failed{counts.skipped ? `, ${counts.skipped} skipped` : ""}.
-              {" "}Each square opens its run.
+              {" "}{terms().say("Each square opens its {run}.")}
             </p>
             <ol className="phist-list">
               {h.results.slice(0, 10).map((r) => (

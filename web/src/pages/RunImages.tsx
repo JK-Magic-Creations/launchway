@@ -3,6 +3,7 @@ import { api, type ArtifactView, type ImageView, type RunDetail, type StepView }
 import { ago, clock } from "../format";
 import { Empty, ErrorBox, Mono, StatusPill } from "../components/ui";
 import { CopyValue, SeverityBar, SeverityLegend, bytes, copyText } from "../components/Security";
+import { terms } from "../terms";
 import {
   DIGEST_KEEP, ImageIcon, artifactDownload, findArtifact, keySourceText, levelWords, scanCounts, scanPolicy, shortImageRef,
 } from "../components/Images";
@@ -33,7 +34,7 @@ export function ImagesTab({ run, version, onStep, onShow }: {
   if (!images) return <div className="loading">Loading…</div>;
   const steps = imageSteps(run);
   if (steps.length === 0) {
-    return <Empty title="This run builds no images">No step of its pipeline is an image step.</Empty>;
+    return <Empty title={terms().say("This {run} builds no images")}>No step of its pipeline is an image step.</Empty>;
   }
   const pushed = images.filter((i) => i.pushed).length;
   return (
@@ -55,7 +56,7 @@ export function ImagesTab({ run, version, onStep, onShow }: {
 // NoImage stands for an image step that has no image (yet), and says why.
 function NoImage({ step, onStep }: { step: StepView; onStep: (s: string) => void }) {
   const why = step.status === "pending" ? `Builds once ${step.needs?.length ? step.needs.join(", ") : "the steps it needs"} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
-    : step.status === "queued" ? "Waiting for a runner."
+    : step.status === "queued" ? terms().say("Waiting for a {runner}.")
     : step.status === "running" || step.status === "leased" ? "Building now; the image shows here when the step ends."
     : step.status === "skipped" ? `${step.error || "Skipped"}: nothing was built.`
     : step.status === "canceled" ? "Canceled before an image was built."
@@ -110,7 +111,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
 
       {img.scan?.failed && (
         <div className="callout callout-bad">
-          <strong>The vulnerability scan failed the step.</strong> The image was built but has findings at {levelWords(img.scan.fail_on)}, and the scan is enforced.
+          <strong>{terms().say("The {scan} failed the step.")}</strong> The image was built but has findings at {levelWords(img.scan.fail_on)}, and the scan is enforced.
         </div>
       )}
 
@@ -128,7 +129,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
               {tags.map((t) => <li key={t}><span className="mono">{t}</span></li>)}
             </ul>
           ) : <span className="faint">none</span>}
-          {tags.length > 0 && !img.pushed && <div className="faint small">Not pushed, so no registry has these tags.</div>}
+          {tags.length > 0 && !img.pushed && <div className="faint small">{terms().say("Not pushed, so no {registry} has these tags.")}</div>}
         </dd>
         <dt>Size</dt><dd>{bytes(img.size)} compressed{platforms.length > 1 ? ", every platform together" : ""}</dd>
         <dt>Signature</dt>
@@ -145,8 +146,8 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
         </dd>
         <dt>Provenance</dt>
         <dd>
-          {img.provenance === "attached" ? "Signed and attached to the image, and kept as an artifact"
-            : img.provenance === "stored" ? "Kept as an artifact only"
+          {img.provenance === "attached" ? terms().say("Signed and attached to the image, and kept as an {artifact}")
+            : img.provenance === "stored" ? terms().say("Kept as an {artifact} only")
             : "None"}
           {img.provenance && <ArtifactLinks art={provArt} name={img.provenance_artifact} arts={arts} onShow={onShow} />}
         </dd>
@@ -233,10 +234,10 @@ function ScanSummary({ img, onShow }: { img: ImageView; onShow: Show }) {
 function ArtifactLinks({ art, name, arts, onShow }: { art?: ArtifactView; name?: string; arts: ArtifactView[] | null; onShow: Show }) {
   if (!name || !arts) return null;
   if (!art) return <span className="faint">, not kept</span>;
-  if (art.status !== "kept") return <span className="faint"> · the artifact is {art.status === "failed" ? "not kept" : art.status}</span>;
+  if (art.status !== "kept") return <span className="faint"> {terms().say("· the {artifact} is")} {art.status === "failed" ? "not kept" : art.status}</span>;
   return (
-    <> · <a href={artifactDownload(art)} download aria-label={`Download the ${name} artifact`}>Download</a>
-      {" "}· <button type="button" className="linkbtn" onClick={() => onShow("artifacts")}>See in Artifacts</button></>
+    <> · <a href={artifactDownload(art)} download aria-label={terms().say(`Download the ${name} {artifact}`)}>Download</a>
+      {" "}· <button type="button" className="linkbtn" onClick={() => onShow("artifacts")}>{terms().say("See in {Artifacts}")}</button></>
   );
 }
 

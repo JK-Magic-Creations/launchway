@@ -3,14 +3,14 @@
 The pipeline editor in the web UI: check a pipeline as you type, run unsaved text as a draft, and save to Git as yourself.
 
 Git is the only place a pipeline is kept. Launchway never holds a copy of its own: the editor
-(*Projects → Edit pipeline*, or *Edit this pipeline* on a run's *Pipeline* tab) reads
+(*Projects → Edit pipeline*, or *Edit this pipeline* on a Sortie's *Pipeline* tab) reads
 `.launchway/pipeline.yaml` from the tip of a branch, checks it as you type with the same parser
 the server uses, marks problems on their lines and draws the graph. It shows which branch and
 commit the text came from and whether you have changed it. Unsaved edits stay in that browser tab
 only. A branch without a pipeline opens with a starting point.
 
 **Run this draft** runs the edited text against the branch's current commit without saving it.
-The run is marked *Draft* everywhere; it records who started it and the SHA-256 of the text, and
+The Sortie (run) is marked *Draft* everywhere; it records who started it and the SHA-256 of the text, and
 keeps the text itself (which is in no commit) so that its *Pipeline* tab shows exactly what ran.
 A draft is its own trigger event, `draft`:
 
@@ -18,10 +18,10 @@ A draft is its own trigger event, `draft`:
 - a step with a `when` runs only if its `event` list names `draft`. `when: { branch: main }` or
   `when: { event: [push, manual] }` does not run in a draft of `main`, so a deployment guarded by
   `when` does not run from unsaved, unreviewed text;
-- a step that declares `secrets` fails before any runner sees it, unless the project allows
-  drafts to read secrets (below). Its runner never looks a secret up.
+- a step that declares `secrets` fails before any Station (runner) sees it, unless the project allows
+  drafts to read secrets (below). Its Station never looks a secret up.
 
-A draft lets someone run steps nobody has reviewed, with whatever the runners can reach, so who
+A draft lets someone run steps nobody has reviewed, with whatever the Stations can reach, so who
 may start one is a setting of its own, checked on the server with or without sign-in:
 
 ```yaml
@@ -57,7 +57,7 @@ projects:
 ```
 
 Pushing uses the server's Git credentials, exactly as fetching does: in the repository URL, or in
-Git settings in the server's environment, such as `GIT_CONFIG_COUNT=1`,
+Git settings in the server's Airfield (environment), such as `GIT_CONFIG_COUNT=1`,
 `GIT_CONFIG_KEY_0=http.https://git.example.com/.extraHeader` and
 `GIT_CONFIG_VALUE_0=Authorization: Bearer ...`. Give that credential only the rights it needs,
 and protect the branches that matter on the Git host: Launchway refuses direct saves outside

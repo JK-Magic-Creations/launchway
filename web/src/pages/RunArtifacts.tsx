@@ -4,6 +4,7 @@ import { ago, clock } from "../format";
 import { canOperate, useMe } from "../auth";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { ArtifactsHowTo, BoxIcon, CopyValue, artifactArchiveURL, artifactFileURL, bytes } from "../components/Security";
+import { terms } from "../terms";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 
@@ -24,9 +25,9 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
   if (!data) return <div className="loading">Loading…</div>;
   if (!data.available) {
     return (
-      <Empty title="This server does not keep artifacts">
-        <p>{data.problem ? data.problem.charAt(0).toUpperCase() + data.problem.slice(1).replace(/([^.])$/, "$1.") : "Artifacts are not set up on this server."}</p>
-        <p>With nothing configured, a server on PostgreSQL keeps artifacts in its database, shared by every server. The <Link href="/settings/runners">Runners</Link> page says where this one keeps them.</p>
+      <Empty title={terms().say("This server does not keep {artifacts}")}>
+        <p>{data.problem ? data.problem.charAt(0).toUpperCase() + data.problem.slice(1).replace(/([^.])$/, "$1.") : terms().say("{Artifacts} are not set up on this server.")}</p>
+        <p>{terms().say("With nothing configured, a server on PostgreSQL keeps {artifacts} in its database, shared by every server. The")} <Link href="/settings/runners">{terms().say("{Runners}")}</Link> page says where this one keeps them.</p>
       </Empty>
     );
   }
@@ -34,15 +35,15 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
     if (data.declared.length > 0) {
       const going = run.step_list.filter((s) => data.declared.includes(s.id) && !ENDED.includes(s.status));
       return (
-        <Empty title={going.length ? "No artifacts yet" : "No artifacts kept"}>
+        <Empty title={going.length ? terms().say("No {artifacts} yet") : terms().say("No {artifacts} kept")}>
           {going.length
             ? <>Files are kept when {going.map((s) => s.id).join(", ")} {going.length > 1 ? "end" : "ends"}.</>
-            : <>{data.declared.join(", ")} {data.declared.length > 1 ? "declare" : "declares"} artifacts, but none were kept. The step's log says why, for example a step that did not succeed or a glob that matched no files.</>}
+            : <>{data.declared.join(", ")} {data.declared.length > 1 ? "declare" : "declares"} {terms().say("{artifacts}, but none were kept. The step's log says why, for example a step that did not succeed or a glob that matched no files.")}</>}
         </Empty>
       );
     }
     return (
-      <Empty title="This run kept no artifacts">
+      <Empty title={terms().say("This {run} kept no {artifacts}")}>
         <ArtifactsHowTo />
       </Empty>
     );
@@ -65,13 +66,13 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
         const list = data.artifacts.filter((a) => a.step === step);
         const st = run.step_list.find((s) => s.id === step);
         return (
-          <section key={step} className="artstep" aria-label={`Artifacts of ${step}`}>
-            <h3 className="tgroup-head"><span>{step}</span><span className="faint">{list.length ? `${list.length} artifact${list.length > 1 ? "s" : ""}` : ""}</span></h3>
+          <section key={step} className="artstep" aria-label={terms().say(`{Artifacts} of ${step}`)}>
+            <h3 className="tgroup-head"><span>{step}</span><span className="faint">{list.length ? terms().say(`${list.length} {artifact}${list.length > 1 ? "s" : ""}`) : ""}</span></h3>
             {list.length === 0 ? (
               <div className="empty empty-sm">
                 {st && !ENDED.includes(st.status)
                   ? <>Files are kept when {step} ends.</>
-                  : <>{step} declares artifacts but kept none. The step's log says why.</>}
+                  : <>{step} {terms().say("declares {artifacts} but kept none. The step's log says why.")}</>}
               </div>
             ) : (
               <ul className="tlist">
@@ -81,7 +82,7 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
           </section>
         );
       })}
-      {data.max_retain_ms > 0 && <p className="sub small">This server keeps artifacts for at most {Math.round(data.max_retain_ms / 86_400_000)} days.</p>}
+      {data.max_retain_ms > 0 && <p className="sub small">{terms().say("This server keeps {artifacts} for at most")} {Math.round(data.max_retain_ms / 86_400_000)} days.</p>}
     </div>
   );
 }
@@ -115,7 +116,7 @@ function ArtifactRow({ a, run, onChange, open: openFirst }: { a: ArtifactView; r
           {a.note && <p className={a.status === "failed" ? "tfile-err" : "sub"}>{a.note}</p>}
           {a.status === "deleted" && <p className="sub">Deleted{a.ended_by ? ` by ${a.ended_by}` : ""}{a.ended_at ? `, ${ago(a.ended_at)}` : ""}. Its files are gone; the list shows what it held.</p>}
           {a.status === "expired" && <p className="sub">Its time ran out{a.ended_at ? ` ${ago(a.ended_at)}` : ""}, so its files were removed; the list shows what it held.</p>}
-          {a.reused && <p className="sub">Kept by <Link href={`/runs/${a.run_id}?tab=artifacts`}>run #{a.run_number}</Link>, whose step this re-run reused.</p>}
+          {a.reused && <p className="sub">Kept by <Link href={`/runs/${a.run_id}?tab=artifacts`}>{terms().say("{run} #")}{a.run_number}</Link>, whose step this re-run reused.</p>}
           <div className="table-scroll">
             <table className="inputs-table art-files">
               <thead><tr><th>File</th><th>Size</th><th>SHA-256</th>{kept && <th><span className="visually-hidden">Download</span></th>}</tr></thead>
@@ -192,7 +193,7 @@ function DeleteArtifact({ a, onDone }: { a: ArtifactView; onDone: () => void }) 
             <p className="sub">
               Its {a.file_count} file{a.file_count === 1 ? "" : "s"} ({bytes(a.bytes)}) are removed now and cannot be downloaded or fetched again.
               {a.reused && <> It belongs to run #{a.run_number}, so it goes from that run too.</>}
-              {" "}The run keeps a note of who deleted it.
+              {" "}{terms().say("The {run} keeps a note of who deleted it.")}
             </p>
             <ErrorBox error={error} />
             <div className="dialog-actions">

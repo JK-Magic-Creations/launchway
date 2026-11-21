@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import type { DeploymentView } from "../api";
 import { MeContext } from "../auth";
 import { InstallationProvider } from "../guided/facts";
@@ -39,6 +39,10 @@ import { DeploymentsOverviewPage as DeploymentsPage } from "./DeploymentsOvervie
 import { TemplatesPage } from "./Library";
 import { RepoPage as ProjectPage } from "./RepoPage";
 import { CodeListPage as ProjectsPage } from "./CodeList";
+import { setTerms, resetTerms } from "../terms";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const NAMES = ["shop-api", "shop-api-staging", "staging", "platform", "go-service", "build-1"];
 

@@ -79,7 +79,7 @@ describe("attention", () => {
       approvals: [approval()], runners: [runner({ online: false, name: "edge" })], applications: apps, me: me(),
     });
     expect(list.map((a) => a.key.split(":")[0])).toEqual(["run", "app", "approval", "runner"]);
-    expect(list[0]).toMatchObject({ title: "Run #412 of shop-api failed", button: "See what went wrong", href: "/runs/run_412" });
+    expect(list[0]).toMatchObject({ title: "Sortie #412 of shop-api failed", button: "See what went wrong", href: "/runs/run_412" });
     expect(list[0].entities).toEqual([{ kind: "project", name: "shop-api" }]);
   });
   it("does not mention runners to a person who cannot see them", () => {

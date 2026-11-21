@@ -5,6 +5,7 @@ import { clock, shortSha } from "../format";
 import { navigate } from "../router";
 import { ErrorBox, Mono } from "./ui";
 import { RerunInputsNote } from "./RunTrigger";
+import { terms } from "../terms";
 
 // RerunButton offers a new run of a finished run from the step shown, with
 // a preview of what runs again and what is reused.
@@ -32,7 +33,7 @@ export function RerunPicker({ run }: { run: RunDetail }) {
   return (
     <>
       <button type="button" className="btn" onClick={() => setChoosing(true)}
-        title="Choose any step: it and the steps after it run again in a new run; the steps before it are reused, nothing is rebuilt.">Re-run from…</button>
+        title={terms().say("Choose any step: it and the steps after it run again in a new {run}; the steps before it are reused, nothing is rebuilt.")}>Re-run from…</button>
       {choosing && !from && (
         <dialog className="dialog" ref={(d) => { if (d && !d.open) d.showModal(); }} onClose={() => setChoosing(false)} aria-labelledby="rerun-pick-title">
           <form method="dialog" onSubmit={(e) => { e.preventDefault(); setFrom({ from: [pick] }); }}>
@@ -67,7 +68,7 @@ export function RerunFailedButton({ run }: { run: RunDetail }) {
   return (
     <>
       <button type="button" className="btn" onClick={() => setOpen(true)}
-        title="A new run at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this run.">Re-run failed steps</button>
+        title={terms().say("A new run at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this {run}.")}>Re-run failed steps</button>
       {open && <RerunDialog run={run} from={FAILED_ONLY} onClose={() => setOpen(false)} />}
     </>
   );
@@ -110,7 +111,7 @@ function RerunDialog({ run, from, onClose }: { run: RunDetail; from: RerunFrom; 
         )}
         {plan && <PlanFacts plan={plan} run={run} />}
         <RerunInputsNote run={run} />
-        <p className="sub"><strong>Resume</strong> continues this same run, and is not offered once a deployment opened: a half-done deployment is never continued. A <strong>re-run</strong> is a new run from a fresh checkout: outputs of reused steps are kept, files they wrote are not, and a deploy step that runs again makes a new deployment of the same version.</p>
+        <p className="sub"><strong>Resume</strong> {terms().say("continues this same {run}, and is not offered once a deployment opened: a half-done deployment is never continued. A")} <strong>re-run</strong> {terms().say("is a new {run} from a fresh checkout: outputs of reused steps are kept, files they wrote are not, and a deploy step that runs again makes a new deployment of the same version.")}</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>

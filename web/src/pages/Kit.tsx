@@ -4,6 +4,7 @@ import { ICON_PATHS, type IconName } from "../kit/iconPaths";
 import { LaunchLine, type LineStation } from "../kit/LaunchLine";
 import { Band, Button, Decision, DetailPanel, EmptyState, EvidenceList, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Chip, Status, StateChip, type State } from "../kit/Status";
+import { terms } from "../terms";
 
 // The design kit: every component of the interface, drawn with fixed example values so a person
 // can see each in light and in dark. These are examples of the parts, not data of this installation.
@@ -47,7 +48,7 @@ export function KitPage() {
 
       <Sheet title="Buttons and chips" pad>
         <div className="row wrap">
-          <Button kind="pri" icon="play">Start a run</Button><Button>Run again</Button><Button kind="ok" icon="check">Approve and release</Button>
+          <Button kind="pri" icon="play">{terms().say("Start a {run}")}</Button><Button>Run again</Button><Button kind="ok" icon="check">Approve and release</Button>
           <Button kind="bad" icon="x">Reject</Button><Button kind="ghost">Quiet</Button><Button sm>Small</Button><Button disabled>Disabled</Button>
           <LinkButton href="/" icon="home">A link as a button</LinkButton>
         </div>

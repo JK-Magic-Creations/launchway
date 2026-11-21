@@ -38,7 +38,7 @@ describe.each(["light", "dark"])("toggle views, %s theme", (theme) => {
   }, 20000);
   it("the rollback confirmation lists the toggle changes", async () => {
     await open("/deployments/environments/prod");
-    fireEvent.click(await screen.findByRole("button", { name: /Roll back to 1\.3\.2/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole("button", { name: /Return to base: 1\.3\.2/ }, { timeout: 8000 }));
     await screen.findByRole("dialog", {}, { timeout: 8000 });
     await screen.findByText(/Toggle changes since 1\.3\.2 went live/, {}, { timeout: 8000 });
     await clean("rollback with toggle changes");

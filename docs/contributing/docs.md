@@ -84,7 +84,7 @@ are stale. The wording follows the originality rule: no other product is named f
 ## Screenshots
 
 `scripts/docs-screenshots.sh` builds Launchway, starts a throwaway server with demo data (a run with
-parallel steps, a failed run, a run waiting for approval, a hosted repository with a pull request),
+parallel steps, a failed Sortie (run), a Sortie waiting for approval, a hosted repository with a pull request),
 and captures the screenshots in `docs/images/tour/` and the ones the README and the landing page
 show in `docs/public/images/landing/`. Run it after UI changes, set `TMPDIR` to a folder with room
 for a build, and look at every picture before you commit. Details are in

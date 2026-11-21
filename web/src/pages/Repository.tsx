@@ -3,6 +3,7 @@ import { ago } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
 import { RepositorySettings } from "./Repositories";
+import { terms } from "../terms";
 
 // The imported history is a chunk of its own: it loads when its tab is opened.
 const ImportedHistory = lazy(() => import("./ImportedHistory"));
@@ -88,7 +89,7 @@ function MirrorsTab({ repo, reload }: { repo: Repository; reload: () => void }) 
             {m.behind && <strong> It has fallen behind.</strong>}
             {m.credential ? <> Credential read from <Mono>{m.credential}</Mono>.</> : " No credential."}
           </p>
-          {m.last_error && <div className="callout callout-err" role="alert">Last run failed ({m.failures} in a row): {m.last_error}</div>}
+          {m.last_error && <div className="callout callout-err" role="alert">{terms().say("Last {run} failed (")}{m.failures} in a row): {m.last_error}</div>}
           <div className="actions">
             <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "sync", () => mirrorsApi.sync(repo.path, m.id))}>{busy === m.id + "sync" ? "Syncing…" : "Sync now"}</button>
             <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "pause", () => mirrorsApi.pause(repo.path, m.id, !m.enabled))}>{m.enabled ? "Pause" : "Resume"}</button>

@@ -155,7 +155,7 @@ are different issuers.
 
 | Role | May |
 |---|---|
-| `viewer` | see projects, runs, logs, pipeline files, approvals and runners; use the Playground and the editor |
+| `viewer` | see projects, runs, logs, pipeline files, approvals and Stations (runners); use the Playground and the editor |
 | `operator` | also start, cancel, resume and re-run runs, approve and reject, save pipelines, and start draft runs if `drafts.allow` is `operator` |
 | `admin` | also read the Logbook, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` |
 
@@ -167,11 +167,11 @@ Each entry in `access` grants a `role` to one `group` or one `user`:
 - someone matching none can sign in, but sees nothing;
 - The Logbook and everyone's API tokens need `admin` from an entry without `projects`.
 
-### Limit a binding to environments
+### Limit a binding to Airfields (environments) {#limit-a-binding-to-environments}
 
 An entry may also list `environments`. It then grants its role on deployments (promote, abort,
-retry, and approvals that name a deployment) in those environments only; on its projects it grants
-as usual otherwise. An entry without `environments` covers every environment.
+retry, and approvals that name a deployment) in those Airfields only; on its projects it grants
+as usual otherwise. An entry without `environments` covers every Airfield.
 
 ```yaml
 auth:
@@ -223,7 +223,7 @@ configuration above:
 | Who | Request | Answer |
 |---|---|---|
 | bob (viewer on `app`) | start a run of `app` | `403` `{"error":"you need the operator role on app to do this"}` |
-| bob (operator on `payments-api`) | start a run of `payments-api` | `201` and the run |
+| bob (operator on `payments-api`) | start a run of `payments-api` | `201` and the Sortie (run) |
 | bob | `GET /api/v1/audit` | `403` `{"error":"only admins of every project may do this"}` |
 | carol (no binding) | `GET /api/v1/projects/app` | `404` `{"error":"not found: project app"}` |
 | nobody signed in | `GET /api/v1/projects` | `401` `{"error":"sign in first, or send a valid API token"}` |

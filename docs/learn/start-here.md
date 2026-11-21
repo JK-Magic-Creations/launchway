@@ -24,15 +24,15 @@ flowchart LR
 2. **Add a project.** A project is one piece of software, kept in one Git repository. The
    [Connect a repository](app:/config/wizard/connect-repository) wizard asks a few plain questions
    and checks your answers before it creates anything.
-3. **Try a pipeline without saving.** A pipeline is the list of steps that run for a change.
+3. **Try a pipeline without saving.** A pipeline is the list of steps that Sortie (run) for a change.
    [Try a pipeline](app:/playground) checks the text as you type and draws the steps. Nothing
    runs and nothing is saved.
-4. **Watch a run.** Every change starts a **run**. Open [Activity](app:/activity), choose a run, and
+4. **Watch a Sortie.** Every change starts a **run**. Open [Activity](app:/activity), choose a Sortie, and
    watch the line fill in from left to right. Choose a step to read its log.
-5. **Decide something.** When a rule needs a person, the run stops and waits. It appears under
+5. **Decide something.** When a rule needs a person, the Sortie stops and waits. It appears under
    [Waiting for a decision](app:/activity/approvals). Read what it will do, then approve or reject.
    See [approvals](concepts/approvals.md).
-6. **See where it runs.** [Deployments](app:/deployments) shows each environment and what version
+6. **See where it runs.** [Deployments](app:/deployments) shows each Airfield (environment) and what version
    is there.
 7. **Find your way around.** The top bar has ten areas, in the order a change travels. The
    **Wingman** panel on the right says, in plain words, where you are and what you can do next.
@@ -58,5 +58,5 @@ button to open it in the playground and change it.
 - You write pipelines: start with [Pipelines](../guide/pipelines.md) and the
   [pipeline reference](../reference/pipeline.md).
 - You deploy and look after running software: read
-  [environments and deployments](concepts/environments-and-deployments.md).
+  [Airfields and deployments](concepts/environments-and-deployments.md).
 - You set Launchway up for other people: read [First-run setup](../howto/setup-first-run.md).

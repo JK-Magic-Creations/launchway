@@ -9,16 +9,16 @@ hosts, with its branch protected.
 
 ## Several pipelines writing one file
 
-Many services often share one manifest (`apps/mcp-servers/base.yaml` holds eight). Deploys of
-different projects can then arrive at the same moment, so a deploy runner:
+Many services often share one manifest (`apps/mcp-servers/base.yaml` holds eight). Launches (deploys) of
+different projects can then arrive at the same moment, so a launch Station (runner):
 
 - **Edits only the value it was told to change.** It finds the image references in the YAML, rewrites
   those values in place and leaves every other byte alone, comments, quoting and order included.
   It never writes the file from a copy it read earlier, so it cannot put back an old value of
   another service.
-- **Serializes its own writers.** One deploy runner writes to one repository and branch at a time.
-- **Starts again on the new tip when the push is rejected.** If another pipeline, or another deploy
-  runner, pushed first, the branch has moved. The runner fetches the new tip, applies its edit on top
+- **Serializes its own writers.** One launch Station writes to one repository and branch at a time.
+- **Starts again on the new tip when the push is rejected.** If another pipeline, or another launch
+  Station, pushed first, the branch has moved. The Station fetches the new tip, applies its edit on top
   of it, and pushes again, waiting a little longer (and a little differently) after each rejection so
   that writers do not collide again. It never forces a push.
 - **Gives up in words.** After 12 tries it fails with: "main kept moving on the server: other
@@ -52,18 +52,18 @@ write_back:
 | `digest` | `registry/homelab/jkma@sha256:0123…` |
 | both (or `format: tag_and_digest`) | `registry/homelab/jkma:20261121-abcdef12@sha256:0123…` |
 
-The registry resolves a reference by its digest, so the pinned image is the one that was built, and
+The Depot (registry) resolves a reference by its digest, so the pinned image is the one that was built, and
 the tag is there for the people who read the file and the history. Every reference to the image in
-the file changes, whether written with a registry host, with a tag or without. A rollback is a `git
+the file changes, whether written with a Depot host, with a tag or without. A Return to base (rollback) is a `git
 revert` of the commit, so it restores both parts exactly. If your chart wants the tag and the
 digest in two separate keys, use two `set` changes (`set: image.tag`, `set: image.digest`).
 
 ## A repository hosted by Launchway
 
 When the GitOps repository is hosted by Launchway, the deploy step needs no stored token. The
-environment says how it writes (`write_back` in the [server configuration](../reference/server-config.md)),
-and the server makes a **credential for that one deployment** when it hands the step to a deploy
-runner. The credential:
+Airfield (environment) says how it writes (`write_back` in the [server configuration](../reference/server-config.md)),
+and the server makes a **credential for that one deployment** when it hands the step to a launch
+Station. The credential:
 
 - lasts an hour for pushing (and the step's own deadline for asking about its pull request);
 - is made by the server and kept by nobody: nothing is stored, nothing to rotate or leak for later;
@@ -92,8 +92,8 @@ deploy:
         - { projects: ["mcp-*"], files: ["apps/mcp-servers/base.yaml"] }
 ```
 
-A step that names a hosted repository fails, saying so, when the runner's repository is not marked
-`hosted` or the environment has no `write_back`: it never falls back to some other credential.
+A step that names a hosted repository fails, saying so, when the Station's repository is not marked
+`hosted` or the Airfield has no `write_back`: it never falls back to some other credential.
 
 ### Mode `direct`: a rule admits the pipeline
 
@@ -117,27 +117,27 @@ repository admits a pipeline of project shop to main…".
 
 The step pushes its change to a branch of its own, `launchway/deploy/<deployment>`, opens a pull
 request into the branch, and waits. The repository's merge rules apply as for anyone: required
-checks, approvals, and the rest. The environment chooses who merges:
+checks, approvals, and the rest. The Airfield chooses who merges:
 
 - `merge: auto` (the default): the pull request merges itself as soon as the rules are met, by the
   method of `write_back.method` or the repository's default.
 - `merge: person`: it waits for a person to merge it.
 
-The run page's step log shows the pull request's number and address, and, each time it changes,
+The Sortie (run) page's step log shows the pull request's number and address, and, each time it changes,
 what the step is waiting for ("needs 1 more approval; the check `test` has not passed", "a person to
 merge it"). The step goes on with the commit that landed, then asks Argo CD to sync it. A pull request
 closed without merging fails the step ("pull request #12 was closed without being merged, so main was
-not changed. Nothing was deployed…"), and so does the step's deadline ("was not merged in time; it
-waits for a person to merge it"). A rollback step in the same environment works the same way, in one
+not changed. Nothing was launched…"), and so does the step's deadline ("was not merged in time; it
+waits for a person to merge it"). A Return to base step in the same Airfield works the same way, in one
 pull request.
 
 The pipeline writer rule is needed in this mode as well: it limits which files the branch of the
 step may change, so a pull request cannot carry more than the step may write.
 
-Not done yet: a rollback of several deployments at once ("rollback after success") in `pull_request`
-mode fails with a sentence saying so; use mode `direct` for that environment.
+Not done yet: a Return to base of several deployments at once ("Return to base after success") in `pull_request`
+mode fails with a sentence saying so; use mode `direct` for that Airfield.
 
 ### A repository hosted elsewhere
 
-Without `write_back` and `hosted`, nothing changes: the deploy runner writes with the credentials of
+Without `write_back` and `hosted`, nothing changes: the launch Station writes with the credentials of
 its own configuration (`deploy.repos.<name>.credentials`), as before.

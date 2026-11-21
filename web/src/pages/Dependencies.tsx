@@ -3,6 +3,7 @@ import { ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import "../styles/deps.css";
 import { depsApi, type DependencyReport, type DepUpdate, type Decision } from "../depsApi";
+import { terms } from "../terms";
 
 const STATUS_WORDS: Record<string, string> = {
   "up-to-date": "Up to date", update: "Update available", security: "Security fix available", held: "Waiting for the release to age",
@@ -20,7 +21,7 @@ function Header({ path, current }: { path: string; current: "dependencies" | "up
   return (
     <>
       <PageHead eyebrow={<Link href={`/repositories/${path}`}>{path}</Link>}
-        title={current === "dependencies" ? "Dependencies" : "Dependency updates"}
+        title={current === "dependencies" ? "Dependencies" : terms().say("{Dependency_updatess}")}
         sentence={current === "dependencies"
           ? "What this repository's default branch depends on, what is newer, and what is known to be vulnerable. Launchway reads the manifests and lock files and changes nothing here."
           : "How Launchway keeps these dependencies current, and what it would open right now. Updates are proposed as pull requests; nothing is merged by itself."} />
@@ -136,7 +137,7 @@ export function UpdatesPage({ path }: { path: string }) {
               <dt>Updates</dt><dd>{p.enabled ? "on" : "off"}; security updates {p.security ? "on" : "off"}; routine updates {p.routine ? "on" : "off"}</dd>
               <dt>Schedule</dt><dd>{p.schedule.interval}{p.schedule.day ? ` on ${p.schedule.day}` : ""} at {String(p.schedule.hour).padStart(2, "0")}:00 {p.schedule.timezone ?? "UTC"}. Security fixes do not wait for it.</dd>
               <dt>Wait for new releases</dt><dd>{p.cooldown_days} days (not applied to security fixes)</dd>
-              <dt>Limits</dt><dd>{p.limits.max_open} open at most, {p.limits.max_per_run} opened per run{p.limits.max_open_per_ecosystem ? `, ${p.limits.max_open_per_ecosystem} per ecosystem` : ""}</dd>
+              <dt>Limits</dt><dd>{p.limits.max_open} open at most, {p.limits.max_per_run} {terms().say("opened per {run}")}{p.limits.max_open_per_ecosystem ? `, ${p.limits.max_open_per_ecosystem} per ecosystem` : ""}</dd>
               <dt>Merging</dt><dd>{p.auto_merge.enabled ? "automatic for the kinds the settings allow, once required checks pass" : "never automatic"}</dd>
               <dt>Ecosystems</dt><dd>{Object.entries(p.ecosystems).filter(([, v]) => v.enabled).map(([k]) => k).sort().join(", ")}</dd>
               {p.locked && Object.keys(p.locked).length > 0 && (<><dt>Locked</dt><dd>{Object.entries(p.locked).map(([k, v]) => `${k} (by the ${v} level)`).join(", ")}</dd></>)}
@@ -149,7 +150,7 @@ export function UpdatesPage({ path }: { path: string }) {
             {preview && report.decisions.length === 0 && <p className="faint">Nothing to do: everything is up to date or held back by the settings.</p>}
             {preview && report.decisions.length > 0 && <Decisions decisions={report.decisions} />}
           </Sheet>
-          <p className="sub">The updater runs as a pipeline step on a runner (<Mono>launchway updates run</Mono>); pull requests it opens are ordinary ones and the pipeline checks them like any other.</p>
+          <p className="sub">{terms().say("The updater runs as a pipeline step on a {runner} (")}<Mono>launchway updates run</Mono>); pull requests it opens are ordinary ones and the pipeline checks them like any other.</p>
         </>
       )}
     </div>

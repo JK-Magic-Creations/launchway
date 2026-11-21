@@ -26,7 +26,7 @@ make all
 ```
 
 `make all` builds the web UI (`web/dist`) and then the binary `bin/launchway`, which contains
-everything: server, runner, command line and UI. Nothing else needs installing.
+everything: server, Station (runner), command line and UI. Nothing else needs installing.
 
 ```sh
 ~/launchway/bin/launchway version
@@ -53,10 +53,10 @@ If `launchway --help` is not found, add `~/.local/bin` to `PATH` in your shell's
 
 ## Which executor runs the steps
 
-`launchway run` and the built-in runner choose with `executor: auto`: Podman if it is installed,
+`launchway run` and the built-in Station choose with `executor: auto`: Podman if it is installed,
 otherwise Docker, otherwise the host itself. On the host, steps run as your user without any
 container, and `image:` is ignored. Choose explicitly with `launchway run --executor podman` (or
-`docker`, `host`). See [Runner configuration](../reference/runner-config.md).
+`docker`, `host`). See [Station configuration](../reference/runner-config.md).
 
 > [!WARNING]
 > With the host executor, a step can do anything your user can. Run only pipelines you trust that way.

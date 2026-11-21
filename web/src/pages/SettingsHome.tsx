@@ -5,6 +5,7 @@ import { section, visibleTabs } from "../nav/model";
 import { onLink } from "../router";
 import { Icon } from "../kit/Icon";
 import { PageHead, Sheet } from "../kit/layout";
+import { terms } from "../terms";
 
 const BLURB: Record<string, string> = {
   runners: "The machines that run your steps. Add one, see who is online, or take one away.",
@@ -37,7 +38,7 @@ export function SettingsHomePage() {
           {me.admin && (
             <li>
               <Icon name="info" />
-              <div className="main"><div className="nm"><a href="/setup/guide" onClick={onLink}>Setup guide</a></div><div className="sb">The first-run walk-through: sign-in, the root key, a runner, Git hosting, importing repositories and a first pipeline. Skip any step and come back.</div></div>
+              <div className="main"><div className="nm"><a href="/setup/guide" onClick={onLink}>Setup guide</a></div><div className="sb">{terms().say("The first-run walk-through: sign-in, the root key, a {runner}, Git hosting, importing repositories and a first pipeline. Skip any step and come back.")}</div></div>
               <div className="cell" />
             </li>
           )}

@@ -8,6 +8,7 @@ import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { bytes } from "../components/Security";
 import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
+import { terms } from "../terms";
 
 // Where Launchway's releases are published (see packaging/README.md): every release holds
 // install.sh, the binaries and packages, both Helm charts as .tgz files, and SHA256SUMS with its
@@ -67,7 +68,7 @@ export function RunnersPage() {
     try { await what(); load(true); } catch (err) { setError(err); }
   };
   const revoke = (r: Runner) => {
-    const reason = window.prompt(`Revoke runner ${r.name} (${r.id})? It is refused at once, everywhere; the steps it holds run again elsewhere.\n\nWhy? (kept in the audit trail)`);
+    const reason = window.prompt(terms().say(`Revoke {runner} ${r.name} (${r.id})? It is refused at once, everywhere; the steps it holds run again elsewhere.\n\nWhy? (kept in the audit trail)`));
     if (reason === null) return;
     act(() => api.revokeRunner(r.id, reason));
   };
@@ -76,27 +77,25 @@ export function RunnersPage() {
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title={<>Runners</>} sentence={<>Machines that run steps. A runner only ever connects out to the server, so it can sit in any network.
-            Each belongs to a pool, which decides which projects' work it may take.</>} actions={<><WizardButton wizard="add-runner" label="Add a runner" /></>} />
+      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say("Machines that run steps. A {runner} only ever connects out to the server, so it can sit in any network. Each belongs to a pool, which decides which projects' work it may take.")}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
       <ErrorBox error={error} />
 
       {legacy.length > 0 && (
         <div className="callout callout-draft" role="status">
-          <strong>{legacy.length === 1 ? "1 runner uses" : `${legacy.length} runners use`} a shared token, which gives no per-runner identity.</strong>{" "}
-          The server cannot tell runners with the same token apart, so it trusts what each says about itself, and a leaked token lets
-          anyone take that pool's work. Enroll them with a join token instead{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
+          <strong>{legacy.length === 1 ? terms().say("1 {runner} uses") : terms().say(`${legacy.length} {runners} use`)} a shared token, which gives no per-runner identity.</strong>{" "}
+          {terms().say("The server cannot tell {runners} with the same token apart, so it trusts what each says about itself, and a leaked token lets anyone take that pool's work. Enroll them with a join token instead")}{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
         </div>
       )}
 
       {pools && <PoolsCard pools={pools.pools} runners={runners ?? []} />}
 
-      <h2 className="h-sm rn-h">Runners</h2>
-      {runners && runners.length === 0 && <WizardEmpty title="No runners have connected yet" wizard="add-runner" label="Add a runner"
-        text="A runner is a machine, container or Kubernetes pod that does the steps of runs: without one, runs wait." />}
+      <h2 className="h-sm rn-h">{terms().say("{Runners}")}</h2>
+      {runners && runners.length === 0 && <WizardEmpty title={terms().say("No {runners} have connected yet")} wizard="add-runner" label={terms().say("Add a {runner}")}
+        text={terms().say("A {runner} is a machine, container or Kubernetes pod that does the steps of {runs}: without one, runs wait.")} />}
       {runners && runners.length > 0 && (
         <div className="card card-flush table-scroll rn-scroll">
           <table className="table rn-table">
-            <thead><tr><th>Runner</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><span className="visually-hidden">Actions</span></th>}</tr></thead>
+            <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><span className="visually-hidden">Actions</span></th>}</tr></thead>
             <tbody>
               {runners.map((r) => {
                 const revoked = !!r.identity?.revoked_at;
@@ -106,7 +105,7 @@ export function RunnersPage() {
                       <span className={"online " + (r.online ? "online-on" : "")} role="img" aria-label={r.online ? "online" : "offline"} />{r.name}
                       <div className="faint small mono">{r.id}</div>
                       <div className="faint small">
-                        {r.executor === "deploy" ? "deploy runner" : r.executor}{r.version && <> · <Mono>{r.version}</Mono></>}
+                        {r.executor === "deploy" ? terms().say("{deploy:do} {runner}") : r.executor}{r.version && <> · <Mono>{r.version}</Mono></>}
                         {r.os && <> · {r.os}/{r.arch}</>}{r.images && <> · builds images</>}
                       </div>
                       {(r.labels?.length ?? 0) > 0 && <div className="rn-labels">{r.labels!.map((l) => <span key={l} className="rn-label">{l}</span>)}</div>}
@@ -128,7 +127,7 @@ export function RunnersPage() {
                         {r.identity && !revoked && (
                           <div className="rn-actions">
                             <button type="button" className="btn btn-sm" onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
-                              title="Ask the runner to make a new key at its next request">{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
+                              title={terms().say("Ask the {runner} to make a new key at its next request")}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
                             <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => revoke(r)}>Revoke</button>
                           </div>
                         )}
@@ -145,13 +144,13 @@ export function RunnersPage() {
       {pools && manage && pools.identities && <AddRunner pools={pools.pools} onMade={() => load(true)} onError={setError} />}
       {pools && manage && pools.identities && tokens && (
         <JoinTokens tokens={tokens} now={now} onRevoke={(t) => {
-          if (window.confirm(`Revoke join token ${t.id}? No more runners can enroll with it; those it enrolled keep working.`)) act(() => api.revokeJoinToken(t.id));
+          if (window.confirm(terms().say(`Revoke join token ${t.id}? No more {runners} can enroll with it; those it enrolled keep working.`))) act(() => api.revokeJoinToken(t.id));
         }} />
       )}
       {pools && !manage && (
         <section className="card">
-          <h2 className="h-sm">Add a runner on another machine</h2>
-          <p className="sub">Someone who manages runners (the role <Mono>runner_admin</Mono> names, admin by default, on every project)
+          <h2 className="h-sm">{terms().say("Add a {runner} on another machine")}</h2>
+          <p className="sub">{terms().say("Someone who manages {runners} (the role")} <Mono>runner_admin</Mono> names, admin by default, on every project)
             makes a join token for a pool here. With it, on the machine:</p>
           <pre className="code">{`launchway runner --server ${location.origin} --join <join token>`}</pre>
         </section>
@@ -177,14 +176,14 @@ function StoreCard() {
     const t = setInterval(() => load(true), 30000);
     return () => clearInterval(t);
   }, []);
-  if (error) return <section className="card"><h2 className="h-sm">Artifact storage</h2><ErrorBox error={error} /></section>;
+  if (error) return <section className="card"><h2 className="h-sm">{terms().say("{Artifact} storage")}</h2><ErrorBox error={error} /></section>;
   if (!st) return null;
   const u = st.usage;
   const share = u && u.limit_bytes > 0 ? Math.min(1, u.used_bytes / u.limit_bytes) : 0;
   return (
-    <section className="card store" aria-label="Artifact storage">
+    <section className="card store" aria-label={terms().say("{Artifact} storage")}>
       <div className="card-head">
-        <h2 className="h-sm">Artifact storage</h2>
+        <h2 className="h-sm">{terms().say("{Artifact} storage")}</h2>
         {st.available
           ? <span className="pill pill-ok">Kept in {STORE_NAMES[st.store] ?? st.store}</span>
           : <span className="pill pill-bad">Not kept on this server</span>}
@@ -192,7 +191,7 @@ function StoreCard() {
       {!st.available && st.problem && <div className="callout callout-bad">{st.problem}</div>}
       {st.available && st.why && <p className="sub">{st.why}</p>}
       {st.available && st.store === "database" && !st.why && (
-        <p className="sub">Artifacts, SBOMs and provenance are kept in the database, shared by every server. Nothing else to run.</p>
+        <p className="sub">{terms().say("{Artifacts}, SBOMs and provenance are kept in the database, shared by every server. Nothing else to run.")}</p>
       )}
       {u && (
         <div className="store-usage">
@@ -230,7 +229,7 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>{id.ephemeral && <span className="faint small"> ephemeral</span>}
-        <div className="faint small mono" title="The fingerprint of the runner's public key">{id.key_fingerprint}</div>
+        <div className="faint small mono" title={terms().say("The fingerprint of the {runner}'s public key")}>{id.key_fingerprint}</div>
         <div className="faint small" title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</div>
       </div>
     );
@@ -240,7 +239,7 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>
-        <div className="faint small">its key and enrolment are shown to those who manage runners</div>
+        <div className="faint small">{terms().say("its key and enrolment are shown to those who manage {runners}")}</div>
       </div>
     );
   }
@@ -275,7 +274,7 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
       <h2 className="h-sm rn-h">Pools</h2>
       <div className="card card-flush table-scroll rn-scroll">
         <table className="table">
-          <thead><tr><th>Pool</th><th>Serves</th><th>Runners may use</th><th>Online</th></tr></thead>
+          <thead><tr><th>Pool</th><th>Serves</th><th>{terms().say("{Runners} may use")}</th><th>Online</th></tr></thead>
           <tbody>
             {pools.map((p) => {
               const online = runners.filter((r) => r.online && (r.pool || "default") === p.name && !r.identity?.revoked_at).length;
@@ -289,9 +288,9 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
                     {p.events.length > 0 && <div className="faint small">only runs started by {p.events.join(", ")}</div>}
                   </td>
                   <td>
-                    {p.require_identity ? <span className="pill pill-ok">enrolled runners only</span>
+                    {p.require_identity ? <span className="pill pill-ok">{terms().say("enrolled {runners} only")}</span>
                       : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><div className="faint small">set require_identity to refuse the shared token</div></>
-                      : "enrolled runners"}
+                      : terms().say("enrolled {runners}")}
                   </td>
                   <td>{online}</td>
                 </tr>
@@ -337,9 +336,8 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
   const commands = made ? installCommands(origin, made.token, made.t, releaseVersion(serverVersion), p) : null;
   return (
     <section className="card rn-add">
-      <h2 className="h-sm">Add a runner</h2>
-      <p className="sub">Make a join token for a pool. A runner enrols with it once: it makes a key that never leaves it, and gets an
-        identity of its own that can be revoked on its own. The token is shown once, and stored only as a hash.</p>
+      <h2 className="h-sm">{terms().say("Add a {runner}")}</h2>
+      <p className="sub">{terms().say("Make a join token for a pool. A {runner} enrols with it once: it makes a key that never leaves it, and gets an identity of its own that can be revoked on its own. The token is shown once, and stored only as a hash.")}</p>
       <form onSubmit={create} className="inputs-form" aria-label="Make a join token">
         <div className="rn-form">
           <label className="field">
@@ -349,7 +347,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
             </select>
           </label>
           <label className="field">
-            <span>Runners it may enroll</span>
+            <span>{terms().say("{Runners} it may enroll")}</span>
             <input type="number" min={1} max={10000} value={uses} onChange={(e) => setUses(Math.max(1, Number(e.target.value) || 1))} />
           </label>
           <label className="field">
@@ -367,14 +365,14 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
         </div>
         <label className="rn-check">
           <input type="checkbox" checked={ephemeral} onChange={(e) => setEphemeral(e.target.checked)} />
-          <span>Ephemeral: each runner is revoked when it leaves (for pods that enroll when they start)</span>
+          <span>{terms().say("Ephemeral: each {runner} is revoked when it leaves (for pods that enroll when they start)")}</span>
         </label>
         <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make join token"}</button></div>
       </form>
 
       {made && commands && (
         <div className="callout callout-ok rn-made" role="status">
-          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? "one runner" : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}. Copy it now: it will not be shown again.</strong>
+          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}. Copy it now: it will not be shown again.</strong>
           <div className="tokenvalue">
             <input readOnly value={made.token} aria-label="The join token" onFocus={(e) => e.currentTarget.select()} className="mono" />
             <button type="button" className="btn" onClick={() => copy("token", made.token)}>{copied === "token" ? "Copied" : "Copy"}</button>
@@ -416,10 +414,10 @@ function installCommands(origin: string, token: string, t: JoinToken, version: s
         text: `curl -fsSLO ${installerURL(version)}\nsudo sh install.sh ${version ? `--version ${version} ` : ""}--server ${origin} --join ${token}`,
       },
       { title: "Or, with the launchway binary already on the machine", text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
-      { title: "/etc/launchway/runner.yaml: the runner's own limits (optional)", text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
+      { title: terms().say("/etc/launchway/runner.yaml: the {runner}'s own limits (optional)"), text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
     ],
     container: [
-      { title: "Run the runner in a container", text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
+      { title: terms().say("Run the {runner} in a container"), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
     ],
     kubernetes: [
       { title: "The join token, as a Secret", text: `kubectl create namespace launchway-runner\nkubectl -n launchway-runner create secret generic launchway-runner-join --from-literal=token=${token}` },

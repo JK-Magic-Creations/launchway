@@ -17,9 +17,9 @@ export function stepSub(s: StepView, now: number, phases?: Record<string, string
   switch (s.status) {
     case "skipped": return `Skipped: ${lowerFirst(stepLabel(s)).replace(/^skipped$/, "not needed")}`;
     case "pending": return "Not started";
-    case "queued": return "Waiting for a runner";
+    case "queued": return terms().say("Waiting for a {runner}");
     case "leased": return `Starting${t}`;
-    case "running": return `Running${t}`;
+    case "running": return `${statusLabel("running")}${t}`;
     case "succeeded":
       return s.kind === "approval" ? `${terms().say("{clearance}")} from ${s.decided_by}` : `Passed${t}`;
     case "failed":
@@ -88,11 +88,11 @@ export function GraphNode({ node, x, y, w, h, selected, tabbable, sub, label, se
         onClick={onChoose} onKeyDown={onKey} title={s.description || s.id}>
         <span className="pg-top">
           <StatusIcon status={shown} />
-          <span className="pg-name">{nodeName(node)}</span>{" "}
-          {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}{" "}
-          {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}{" "}
-          {s.kind === "verify" && <span className="node-kind" title="Watches an environment's metrics and logs">verify</span>}{" "}
-          {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}{" "}
+          <span className="pg-name">{nodeName(node)}</span>
+          {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}
+          {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}
+          {s.kind === "verify" && <span className="node-kind" title={terms().say("Watches an {environment}'s metrics and logs")}>verify</span>}
+          {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}
           {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
         </span>{" "}
         <span className="pg-sub">{sub}</span>{" "}

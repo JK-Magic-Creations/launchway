@@ -12,6 +12,7 @@ import { Status, stateOf, type State } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow, useStream } from "../live";
 import { onLink } from "../router";
+import { terms } from "../terms";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
 
@@ -61,14 +62,14 @@ export function ActivityPage() {
   const filtered = !!(status || project || lane);
   const trend = trendOf(trendRuns.data ?? []);
 
-  const sentence = list === null ? "Loading the runs." : list.length === 0 ? (filtered ? "No run matches these filters." : "Nothing has run yet.")
+  const sentence = list === null ? terms().say("Loading the {runs}.") : list.length === 0 ? (filtered ? terms().say("No {run} matches these filters.") : "Nothing has run yet.")
     : <>{counts.waiting > 0 && <><b>{counts.waiting} {counts.waiting === 1 ? "run is" : "runs are"} waiting for a person.</b> </>}
       {counts.failed > 0 ? <><b>{counts.failed} failed</b> in this list. </> : "No failures in this list. "}
       {counts.running > 0 ? `${counts.running} running now.` : "Nothing is running now."}</>;
 
   return (
     <div className="page">
-      <PageHead eyebrow="Activity" title="Runs" sentence={sentence}
+      <PageHead eyebrow="Activity" title={terms().say("{Runs}")} sentence={sentence}
         actions={<span className={"vchip " + (live ? "run" : "")}><span className={live ? "st run" : "st idle"} aria-hidden="true" style={{ width: 12, height: 12 }} />{live ? "Live" : "Connecting"}</span>} />
 
       <div className="toolbar2">
@@ -106,12 +107,12 @@ export function ActivityPage() {
       <ErrorBox error={runs.error} />
       {list === null && !runs.error && <div className="loading">Loading…</div>}
       {list && list.length === 0 && (
-        <Sheet><EmptyState title={filtered ? "No runs match" : "No runs yet"}>
+        <Sheet><EmptyState title={filtered ? terms().say("No {runs} match") : terms().say("No {runs} yet")}>
           {filtered ? "Try another filter." : <>Start one from <Link href="/projects">Code</Link>, push to a watched branch, or try <span className="mono">launchway run</span> in a repository.</>}
         </EmptyState></Sheet>
       )}
       {list && list.length > 0 && (
-        <Sheet title="Runs" actions={<span className="faint small">Newest first. Each dot is a place the change has to pass.</span>}>
+        <Sheet title={terms().say("{Runs}")} actions={<span className="faint small">Newest first. Each dot is a place the change has to pass.</span>}>
           {list.map((r) => <RunRow key={r.id} r={r} line={byRun.get(r.id)} now={now} />)}
         </Sheet>
       )}

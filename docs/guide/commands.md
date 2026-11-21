@@ -21,10 +21,10 @@ launchway waivers  list | grant | revoke      waivers of policy rules (see Polic
 server, and keeps the server and token in `credentials.json` in your configuration directory
 (`~/.config/launchway`, or `LAUNCHWAY_CONFIG_DIR`), readable by you alone. It refuses a plain
 `http://` address that is not on this machine unless given `--allow-http`. `LAUNCHWAY_SERVER` and
-`LAUNCHWAY_TOKEN` override what it stored, for scripts. `runs start --wait` follows the run and
+`LAUNCHWAY_TOKEN` override what it stored, for scripts. `runs start --wait` follows the Sortie (run) and
 exits with its outcome: `0` succeeded, `1` failed, `3` canceled; `2` means the command was written
 wrongly, `4` that the server refused (such as an input value that does not fit, named) or could
-not be reached, and `5` that `--timeout` passed (the run goes on). `launchway run -i name=value`
+not be reached, and `5` that `--timeout` passed (the Sortie goes on). `launchway run -i name=value`
 gives inputs to a pipeline run on this machine.
 
 `launchway runner --config FILE` reads the same settings as `runner:` in the server's

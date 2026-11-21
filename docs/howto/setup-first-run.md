@@ -56,7 +56,7 @@ words) and a link into Learn.
    of the root key: you type your password and a code from your authenticator again, choose a passphrase (typed
    twice), and receive a file in which the key is locked with that passphrase. Launchway records that a copy was
    taken and when, never the copy and never the passphrase.
-3. **A runner.** Whether one is connected, and how to add another.
+3. **A Station (runner).** Whether one is connected, and how to add another.
 4. **Git hosting.** Turn it on (a restart is needed, because the server reads the setting only when it starts)
    and what Git over SSH needs.
 5. **Bring in your repositories.** A server to import from (its address and token; the token is pasted once and

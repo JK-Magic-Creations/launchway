@@ -25,7 +25,7 @@ A handful of values starts a secure, working installation. The chart creates the
 
 ## The first-run wizard
 
-After the first sign-in, the browser walks through naming your organization, sign-in (keep the built-in accounts or connect a provider, tested before you switch), encryption status and a backup of the root key, a runner, Git hosting, importing repositories and a first pipeline.
+After the first sign-in, the browser walks through naming your organization, sign-in (keep the built-in accounts or connect a provider, tested before you switch), encryption status and a backup of the root key, a Station (runner), Git hosting, importing repositories and a first pipeline.
 
 ## What comes next
 

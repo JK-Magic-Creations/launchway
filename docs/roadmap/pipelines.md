@@ -2,9 +2,9 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Pipelines · <a href="../roadmap-list.html">as a list</a></p>
 
-Pipelines live in Git next to the code they build. Launchway reads the pipeline at the commit a run is for. Flow control, caches and many triggers are **available today** (see the [pipeline reference](../reference/pipeline.md)); custom steps, generated pipelines, expressions, matrices and visual design are planned in [Milestone 1](milestone-1.md#g-pipelines-that-match-what-teams-expect-from-hosted-ci) and [Milestone 2](milestone-2.md).
+Pipelines live in Git next to the code they build. Launchway reads the pipeline at the commit a Sortie (run) is for. Flow control, caches and many triggers are **available today** (see the [pipeline reference](../reference/pipeline.md)); custom steps, generated pipelines, expressions, matrices and visual design are planned in [Milestone 1](milestone-1.md#g-pipelines-that-match-what-teams-expect-from-hosted-ci) and [Milestone 2](milestone-2.md).
 
-## How a run is planned and ordered
+## How a Sortie is planned and ordered {#how-a-run-is-planned-and-ordered}
 
 ```mermaid
 flowchart TD
@@ -20,7 +20,7 @@ flowchart TD
   J --> R["Results, reports, artifacts"]
 ```
 
-Everything that can be checked is checked before the run, including generated steps and references to outputs. A run in a lane waits for the one ahead.
+Everything that can be checked is checked before the Sortie, including generated steps and references to outputs. A run in a lane waits for the one ahead.
 
 ## The life of a step
 

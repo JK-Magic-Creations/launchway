@@ -16,21 +16,21 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
-const deploymentsUsage = `Usage:
+var deploymentsUsage = themed(`Usage:
   launchway deployments options  --env E [--project P] [--service S] [--json]
-        what a service can be rolled back to in an environment, and what each choice does
+        what a service can go back to in an {environment}, and what each choice does
   launchway deployments rollback --env E [--project P] [--service S] [--to DEPLOYMENT|VERSION]
                                  --reason TEXT [--queue] [--revert-toggles] [--dry-run]
-        roll a service back to an earlier successful deployment (the previous one by default)
-  launchway deployments review list [--json]       emergency rollbacks waiting for a review
+        send a service back to an earlier successful deployment (the previous one by default): a {rollback}
+  launchway deployments review list [--json]       {emergency_rollbacks} waiting for a review
   launchway deployments review RUN-ID --comment TEXT   acknowledge one, saying what you checked
 
-A rollback never restores a database or configuration, and restores a version, not the feature
+A {rollback} never restores a database or configuration, and restores a version, not the feature
 toggles: the plan lists the toggle changes made here since that version went live, and
---revert-toggles reverts them with the rollback (or: launchway toggles revert-since).
+--revert-toggles reverts them with the {rollback} (or: launchway toggles revert-since).
 With --queue it waits behind
-a deployment that holds the environment's lock instead of being refused.
-`
+a deployment that holds the {environment}'s lock instead of being refused.
+`)
 
 func cmdDeployments(args []string) error {
 	return runClient(func() error {
@@ -122,14 +122,14 @@ func (cl *client) printPlan(plan *engine.RollbackPlan) {
 		fmt.Fprintf(cl.out, "%s runs %s (run #%d)\n", where, plan.Current.Version, plan.Current.Number)
 	}
 	if !a.Available && !a.Queueable {
-		fmt.Fprintf(cl.out, "Cannot roll back %s: %s\n", where, a.Reason)
+		fmt.Fprintf(cl.out, cl.say("Cannot {rollback:do} %s: %s\n"), where, a.Reason)
 		if a.WouldHelp != "" {
 			fmt.Fprintf(cl.out, "  would help: %s\n", a.WouldHelp)
 		}
 		return
 	}
 	if !a.Available {
-		fmt.Fprintf(cl.out, "Cannot roll back %s yet: %s\n  instead: %s\n", where, a.Reason, a.Instead)
+		fmt.Fprintf(cl.out, cl.say("Cannot {rollback:do} %s yet: %s\n  instead: %s\n"), where, a.Reason, a.Instead)
 	}
 	if a.Emergency {
 		fmt.Fprintln(cl.out, "This is an emergency action: the environment is protected, so no approval comes first and an approver reviews it afterwards.")
@@ -215,7 +215,7 @@ func (cl *client) rollback(args []string) error {
 	if err := cl.call("POST", "/api/v1/projects/"+url.PathEscape(project)+"/rollbacks", body, &sum); err != nil {
 		return err
 	}
-	fmt.Fprintf(cl.out, "\nStarted rollback run #%d (%s): %s\nFollow it with: launchway runs show %s\n", sum.Number, sum.ID, sum.Message, sum.ID)
+	fmt.Fprintf(cl.out, cl.say("\nStarted {rollback} {run} #%d (%s): %s\nFollow it with: launchway runs show %s\n"), sum.Number, sum.ID, sum.Message, sum.ID)
 	for _, r := range sum.ToggleReverts {
 		if r.Error != "" {
 			fmt.Fprintf(cl.out, "Toggle %s could not be reverted: %s\n", r.Toggle, r.Error)
@@ -245,7 +245,7 @@ func (cl *client) rollbackReview(args []string) error {
 			return nil
 		}
 		if len(list) == 0 {
-			fmt.Fprintln(cl.out, "No emergency rollback is waiting for review.")
+			fmt.Fprintln(cl.out, cl.say("No {emergency_rollback} is waiting for review."))
 			return nil
 		}
 		for _, it := range list {

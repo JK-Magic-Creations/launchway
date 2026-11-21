@@ -3,6 +3,7 @@ import { api, ApiError, attachmentURL, type HTTPExchange, type RunDetail, type T
 import { ErrorBox, Link } from "./ui";
 import { bytes } from "./Security";
 import { Badge, CopyBlock, HistoryStrip, Sparkline, TagPills, TestIcon, VariantPill, testDuration, testStatusLabel } from "./Tests";
+import { terms } from "../terms";
 
 // The whole of one test result: what it is, why it failed, the steps it
 // took (with the HTTP calls an API test made), what it attached, its
@@ -42,7 +43,7 @@ export function CaseDetail({ c, run, full, error, permalink }: {
         {x.tags && x.tags.length > 0 && <><dt>Tags</dt><dd><TagPills tags={x.tags} max={20} /></dd></>}
         <dt>Step</dt><dd>{x.step}{x.attempt > 1 ? `, attempt ${x.attempt}` : ""}{x.run_id !== run.id ? " (reused from an earlier run)" : ""}</dd>
         {x.report_file && <><dt>Report</dt><dd className="mono">{x.report_file}</dd></>}
-        {(x.retries ?? 0) > 0 && <><dt>Retries</dt><dd>Run {(x.retries ?? 0) + 1} times by the test tool{x.status === "passed" ? ", passed on the last" : ""}</dd></>}
+        {(x.retries ?? 0) > 0 && <><dt>Retries</dt><dd>{terms().say("{Run}")} {(x.retries ?? 0) + 1} times by the test tool{x.status === "passed" ? ", passed on the last" : ""}</dd></>}
       </dl>
 
       {x.properties && x.properties.length > 0 && <Properties props={x.properties} />}

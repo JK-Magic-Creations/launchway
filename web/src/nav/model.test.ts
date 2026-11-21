@@ -6,7 +6,7 @@ const facts = (over: Partial<Facts> = {}): Facts => ({ ...NO_FACTS, ...over });
 
 describe("sections", () => {
   it("has the ten areas, in the order of a change's journey", () => {
-    expect(SECTIONS.map((s) => s.label)).toEqual(["Home", "Code", "Pipelines", "Images", "Deployments", "Traffic", "Changes", "Activity", "Library", "Settings"]);
+    expect(SECTIONS.map((s) => s.label)).toEqual(["Tower", "Code", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
   });
   it("groups them: Home, then build, then run and watch, then elsewhere", () => {
     expect(SECTIONS.map((s) => s.group)).toEqual([0, 1, 1, 1, 2, 2, 2, 3, 3, 3]);

@@ -19,7 +19,7 @@ auth:
 `/readyz` (the database answers, and the server is not shutting down). A starting server waits up
 to `database_wait` (default `60s`) for the database. On SIGTERM a server reports not ready at
 once, keeps serving for `server.drain_delay` (default `0s`) so that load balancers checking
-`/readyz` move away, and then gives requests in flight up to 15 seconds. Runners may connect to
+`/readyz` move away, and then gives requests in flight up to 15 seconds. Stations (runners) may connect to
 any server. With no `database` setting a
 single server keeps its data in an embedded SQLite file, which suits development and small
 installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
@@ -35,10 +35,10 @@ growing pauses, in one place in its store layer, for up to `resilience.stall_bud
 Errors that would fail again (a constraint, a syntax error, a missing row) are not retried, and a
 statement that was cut off in the middle is never repeated unless repeating it is safe.
 
-Every write a runner makes is safe to repeat: log batches carry their position and the server keeps
+Every write a Station makes is safe to repeat: log batches carry their position and the server keeps
 what it has, the end of a step is applied once, and other writes carry an `Idempotency-Key`. While
-the server cannot be reached a runner keeps executing the step and keeps its logs and its result on
-its own disk (`spool` in the runner's settings), then delivers them in order; the step's log shows
+the server cannot be reached a Station keeps executing the step and keeps its logs and its result on
+its own disk (`spool` in the Station's settings), then delivers them in order; the step's log shows
 "The server could not be reached from 14:02:10 to 14:03:40; nothing was lost." After an outage
 the server gives running steps a fresh lease, as after a restart, and judges leases on the
 database's clock. When the connection that hears from other servers is back, the server also
@@ -50,7 +50,7 @@ database.
 ## Run it on Kubernetes
 
 `make image` builds a container image, and the Helm chart in `deploy/helm/launchway` runs
-several servers against your PostgreSQL database, with runners that execute steps in pods in a
+several servers against your PostgreSQL database, with Stations that execute steps in pods in a
 namespace of your choice:
 
 ```sh

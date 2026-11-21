@@ -4,6 +4,7 @@ import { shortDuration } from "../format";
 import { Graph } from "./Graph";
 import { LibraryList, TemplateFacts } from "./Libraries";
 import { ErrorBox, Mono } from "./ui";
+import { terms } from "../terms";
 
 interface Props {
   res: ValidateResult | null;
@@ -47,7 +48,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
               <p className="sub libs">Libraries: <LibraryList libraries={res.graph.libraries} /></p>
             )}
             {res.expanded && (res.graph.groups?.length ?? 0) > 0 && (
-              <p className="sub">Templates are expanded from the libraries' current versions, as a run started now would expand them.</p>
+              <p className="sub">{terms().say("Templates are expanded from the libraries' current versions, as a {run} started now would expand them.")}</p>
             )}
             {unexpanded > 0 && (
               <p className="sub">{unexpanded === 1 ? "One step uses a template; it is" : `${unexpanded} steps use templates; they are`} drawn
@@ -63,7 +64,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
           </section>
           {res.graph.containers && res.graph.containers.length > 0 && (
             <section className="card">
-              <h2 className="h-sm">Containers in each run</h2>
+              <h2 className="h-sm">{terms().say("Containers in each {run}")}</h2>
               <dl className="kv">
                 {res.graph.containers.map((c) => (
                   <Fragment key={c.name}>

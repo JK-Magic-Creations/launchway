@@ -234,7 +234,7 @@ type LevelName struct {
 
 // DefaultLevels are the built-in names: the aviation set, Base, Wing,
 // Squadron, Project.
-var DefaultLevels = termLevels["aviation"]
+var DefaultLevels = termLevels("aviation")
 
 func (l Levels) check() error {
 	for _, n := range []struct {

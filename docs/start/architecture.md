@@ -1,7 +1,7 @@
 # Architecture
 
-How Launchway is put together: its parts, how a run moves through them, how several servers share
-the work, how runners connect, how a deployment is carried out, and where the trust boundaries
+How Launchway is put together: its parts, how a Sortie (run) moves through them, how several servers share
+the work, how Stations (runners) connect, how a deployment is carried out, and where the trust boundaries
 are. For operators, security reviewers and curious developers.
 
 ## The parts
@@ -29,16 +29,16 @@ flowchart TB
 
 | Part | What it does |
 |---|---|
-| Server | One program, `launchway server`: the web UI, the HTTP API, the run engine, Git polling, schedules, the policy judge and, unless turned off, a built-in runner. |
+| Server | One program, `launchway server`: the web UI, the HTTP API, the Sortie engine, Git polling, schedules, the policy judge and, unless turned off, a built-in Station. |
 | Database | Holds everything durable: projects' state, runs as events, logs, test results, findings, approvals, sessions (as hashes), the Logbook. PostgreSQL for several servers; an embedded SQLite file for one. |
-| Artifact store | Files steps keep: a directory for one server, or S3-compatible object storage shared by several. |
-| Runner | `launchway runner`: takes steps from a server and runs them in Podman or Docker containers, Kubernetes pods, or on its own machine. Looks up secrets itself. |
-| Deploy runner | A runner with a `deploy:` section, in or near a cluster: writes to the GitOps repository and talks to Argo CD and Argo Rollouts with its own identity. Never runs a script. |
-| BuildKit daemon | Builds container images for image steps, rootless, in a namespace or machine of its own. The runner is its client over mutual TLS. |
+| Cargo (artifact) store | Files steps keep: a directory for one server, or S3-compatible object storage shared by several. |
+| Station | `launchway runner`: takes steps from a server and runs them in Podman or Docker containers, Kubernetes pods, or on its own machine. Looks up secrets itself. |
+| Deploy Station | A Station with a `deploy:` section, in or near a cluster: writes to the GitOps repository and talks to Argo CD and Argo Rollouts with its own identity. Never runs a script. |
+| BuildKit daemon | Builds container images for image steps, rootless, in a namespace or machine of its own. The Station is its client over mutual TLS. |
 
 The code is described package by package in [How Launchway is built](../contributing/codebase.md).
 
-## The life of a run
+## The life of a Sortie {#the-life-of-a-run}
 
 ```mermaid
 sequenceDiagram
@@ -61,17 +61,17 @@ sequenceDiagram
   S->>D: run.finished when nothing is left
 ```
 
-- A run records everything it was started with: the commit, the pipeline text, the library
+- A Sortie records everything it was started with: the commit, the pipeline text, the library
   commits, the inputs, and who or what started it.
-- A step whose runner stops sending heartbeats for the lease period (30 seconds by default) is
+- A step whose Station stops sending heartbeats for the lease period (30 seconds by default) is
   marked lost and queued again; a step is never recorded as finished twice.
-- All of a run's steps go to the runner that took its first step, because they share a workspace.
-  If that runner disappears for three lease periods, another runner takes the run over in a fresh
+- All of a Sortie's steps go to the Station that took its first step, because they share a workspace.
+  If that Station disappears for three lease periods, another Station takes the Sortie over in a fresh
   checkout.
 
 ## The event-sourced engine
 
-Launchway does not keep a run's state in memory. Every change is appended to the run's event log
+Launchway does not keep a Sortie's state in memory. Every change is appended to the Sortie's event log
 in the database, and the state is rebuilt from the events whenever it is needed.
 
 ```mermaid
@@ -90,9 +90,9 @@ flowchart TB
 What this gives you:
 
 - **Crash safety.** A server can stop at any moment. The next server to look reads the events and
-  carries on; nothing that finished runs twice.
-- **Resume and re-run.** A failed run can resume from the step that failed, keeping what
-  succeeded. A finished run can be re-run from any step, reusing earlier results.
+  carries on; nothing that finished Sorties twice.
+- **Resume and re-run.** A failed Sortie can resume from the step that failed, keeping what
+  succeeded. A finished Sortie can be re-run from any step, reusing earlier results.
 - **A record you can audit.** The events say what happened, in order, with times. Policy decisions
   are events too, with the facts they were based on, so a decision can be checked later.
 
@@ -123,21 +123,21 @@ flowchart TB
   R2 --> LB
 ```
 
-- **No leader.** Every server can do everything. Decisions that must happen once (starting a run
+- **No leader.** Every server can do everything. Decisions that must happen once (starting a Sortie
   for a push, firing a schedule, taking a lease, deciding an approval, a policy gate) are made in
   a database transaction, so exactly one server wins.
 - **Servers wake each other** with PostgreSQL `LISTEN/NOTIFY`: a step queued on one server wakes
-  runners waiting on another, and a browser connected to any server sees live updates.
+  Stations waiting on another, and a browser connected to any server sees live updates.
 - **Sessions and tokens live in the database**, so a browser or script can reach any server.
 - **Upgrades are rolling.** Two versions share the database during an upgrade, and the schema is
-  designed so that rolling back keeps working; see
+  designed so that returning to base keeps working; see
   [Writing a migration](../development/migrations.md) and
   [Backup, restore, upgrade](../howto/backup-restore-upgrade.md).
 
 Details: [Running several servers](../guide/high-availability.md) and
 [Install on Kubernetes](../howto/install-kubernetes.md).
 
-## How runners connect
+## How Stations connect {#how-runners-connect}
 
 ```mermaid
 flowchart LR
@@ -152,17 +152,17 @@ flowchart LR
   R -- "3 run steps" --> P
 ```
 
-- **Runners only connect outbound.** The server never opens a connection to a runner, so a runner
+- **Stations only connect outbound.** The server never opens a connection to a Station, so a Station
   can sit behind a firewall or NAT, in another cluster or another cloud.
 - **The server sends references, not secrets.** A step says `{ store: vault, key: ci/npm, field:
-  token }`; the runner reads the value in its own network, gives it to the step, and replaces it
+  token }`; the Station reads the value in its own network, gives it to the step, and replaces it
   with `***` in the log.
-- **Runners have identities.** A runner enrolled with a join token holds its own key, its steps'
+- **Stations have identities.** A Station enrolled with a join token holds its own key, its steps'
   leases are bound to it, and it takes only work of the projects its **pool** serves; its own
-  `accept:` section limits further what it will run. A runner still on the shared runner token has
-  no identity, so enrol runners and require identity on their pools. Deploy work needs a pool
+  `accept:` section limits further what it will run. A Station still on the shared Station token has
+  no identity, so enrol Stations and require identity on their pools. Deploy work needs a pool
   token and is limited to that pool's targets. See
-  [Runners on other machines and clusters](../guide/runner-identity.md) and the
+  [Stations on other machines and clusters](../guide/runner-identity.md) and the
   [trust model](../security/trust-model.md).
 
 ## Delivery with GitOps and rollout control
@@ -189,13 +189,13 @@ sequenceDiagram
   Note over S,DR: if a guarding step fails, the rollback step reverts the commit
 ```
 
-- Deployments are **GitOps**: the deploy runner commits the new version to a Git repository that
+- Deployments are **GitOps**: the deploy Station commits the new version to a Git repository that
   Argo CD watches. It never runs scripts, and the servers hold no cluster credentials.
 - **"Deployed" means observed healthy**: Argo CD synced the commit, the resources are healthy, and
   the rollout's stable version is the new one. Missing or stale observations never count as a pass.
-- **Promote, abort and retry** are commands a person gives on the run page, or a `kind: rollout`
+- **Promote, abort and retry** are commands a person gives on the Sortie page, or a `kind: rollout`
   step gives; each records what it expects, so a stale click does nothing.
-- **Rollback** reverts the deployment's commit (optionally aborting the rollout first) and waits
+- **Return to base (rollback)** reverts the deployment's commit (optionally aborting the rollout first) and waits
   until the previous version is healthy.
 
 Details: [Deployments](../guide/deployments.md) and the

@@ -5,6 +5,7 @@ import { encryptionApi, type EncryptionReport } from "../encryptionApi";
 import { Chip } from "../kit/Status";
 import { Icon } from "../kit/Icon";
 import { PageHead, Sheet } from "../kit/layout";
+import { terms } from "../terms";
 
 /** Settings → Security: whether what the server stores is encrypted at rest, said plainly. Read-only: the root key is
  * held outside the database and is rotated or replaced on the server host with `launchway encryption`. */
@@ -60,7 +61,7 @@ export function SettingsSecurityPage() {
                 </li>
               ))}
             </ul>
-            <div className="note"><Icon name="info" />Not yet encrypted by Launchway: {r.not_yet_encrypted.join(", ")}. Use volume or database encryption for the database and the artifact store until they are.</div>
+            <div className="note"><Icon name="info" />Not yet encrypted by Launchway: {r.not_yet_encrypted.join(", ")}{terms().say(". Use volume or database encryption for the database and the {artifact} store until they are.")}</div>
           </Sheet>
           <Sheet title="What to do" pad>
             <ul>{r.advice.map((a) => <li key={a}>{a}</li>)}</ul>

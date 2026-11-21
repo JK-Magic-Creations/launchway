@@ -5,14 +5,14 @@ pipeline with tests, scans and a deployment.
 
 1. [Concepts](../start/concepts.md): the ten words you need. 10 minutes.
 2. [First pipeline in 10 minutes](../tutorials/first-pipeline.md): write, check and run a pipeline.
-3. [Tests and reports](../tutorials/tests-and-reports.md): failures, flaky tests and history on the run.
-4. [Security scans](../tutorials/security-scans.md): findings and SBOMs, new and fixed.
+3. [Tests and reports](../tutorials/tests-and-reports.md): failures, flaky tests and history on the Sortie (run).
+4. [Inspections (security scans)](../tutorials/security-scans.md): findings and SBOMs, new and fixed.
 5. [Templates from a library](../tutorials/library-templates.md): reuse what your platform team publishes.
 6. [Pull-request runs](../tutorials/pull-requests.md): check changes before they are merged.
 7. [Build and sign an image](../tutorials/build-and-sign-image.md), then
-   [Deploy with approval and rollback](../tutorials/deploy-with-approval.md).
+   [Deploy with approval and Return to base (rollback)](../tutorials/deploy-with-approval.md).
 
-Then, as you need them: [Test reports](../guide/test-reports.md) in 13 formats with coverage and
+Then, as you need them: [Debriefs (test reports)](../guide/test-reports.md) in 13 formats with coverage and
 hosted HTML reports, [Verifying a deployment](../guide/verification.md), and
 [Agents (MCP)](../guide/agents.md) if an AI assistant writes or watches your pipelines.
 

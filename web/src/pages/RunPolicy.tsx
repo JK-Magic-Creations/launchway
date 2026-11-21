@@ -3,6 +3,7 @@ import { api, type PolicyDecision, type RunDetail, type RunPolicy } from "../api
 import { clock } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { ModeBadge, ResultBadge, RuleRow, VerdictPill, WaiverForm, WaiverList, type WaiverDraft } from "../components/Policy";
+import { terms } from "../terms";
 
 const POINT_WORDS: Record<string, string> = { run: "When the run started", deploy: "Before deploying", image: "Before pushing an image" };
 
@@ -32,10 +33,10 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
   const blocked = decisions.find((d) => d.verdict === "block");
   return (
     <div className="pol-tab">
-      {!decisions.length && <Empty title="No policy judged this run">No policy in force governs this project, branch and event.</Empty>}
+      {!decisions.length && <Empty title={terms().say("No policy judged this {run}")}>No policy in force governs this project, branch and event.</Empty>}
       {blocked && run.status === "failed" && (
         <div className="callout callout-bad">
-          <strong>Blocked by policy.</strong> Change what was found, or have someone who may grant a waiver do so, then resume the run
+          <strong>Blocked by policy.</strong> {terms().say("Change what was found, or have someone who may grant a waiver do so, then resume the {run}")}
           {blocked.point === "deploy" && blocked.step ? <> (or re-run it from <Mono>{blocked.step}</Mono>)</> : null}.
           {!data.can_waive && data.waive_refusal && <> You cannot waive: {data.waive_refusal}.</>}
         </div>
@@ -50,13 +51,13 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
           <div className="pol-decision-head">
             <div>
               <h3 className="h-sm">{pointTitle(d)}</h3>
-              <div className="faint small">{clock(d.at)} · decision {d.seq}{d.input.protected ? " · protected environment" : ""}
+              <div className="faint small">{clock(d.at)} · decision {d.seq}{d.input.protected ? terms().say(" · protected {environment}") : ""}
                 {d.input.starter ? ` · started by ${d.input.starter}` : ""}</div>
             </div>
             <VerdictPill verdict={d.verdict} />
           </div>
           {(!d.policies || d.policies.length === 0) && (
-            <p className="faint">Governed by policy, but no policy has rules at this point{d.point === "run" ? "; their rules are judged later (before deploying or pushing)" : ""}.</p>
+            <p className="faint">Governed by policy, but no policy has rules at this point{d.point === "run" ? terms().say("; their rules are judged later (before {deploy:doing} or pushing)") : ""}.</p>
           )}
           {(d.policies ?? []).map((p) => (
             <div key={p.policy.name} className="pol-policy">
@@ -82,10 +83,10 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
         </section>
       ))}
       <section className="card">
-        <h3 className="h-sm">Waivers for this run</h3>
+        <h3 className="h-sm">{terms().say("Waivers for this {run}")}</h3>
         {data.waivers.length
           ? <WaiverList waivers={data.waivers} mayRevoke={() => data.can_waive} onChange={() => load()} showProject={false} />
-          : <p className="faint">None. Waivers of {run.project}'s rules for every run, or for this one, are listed here. See also the <Link href="/settings/rules">Policy</Link> page.</p>}
+          : <p className="faint">None. Waivers of {run.project}{terms().say("'s rules for every {run}, or for this one, are listed here. See also the")} <Link href="/settings/rules">Policy</Link> page.</p>}
       </section>
     </div>
   );

@@ -26,6 +26,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 )
 
 // Exit codes of the client commands. With --wait, runs start exits with the
@@ -38,7 +39,7 @@ const (
 	exitTimeout     = 5 // --timeout passed before the run finished; it goes on
 )
 
-const clientUsage = `Usage:
+var clientUsage = themed(`Usage:
   launchway login --server URL              store an API token for the server (read from
                   [--allow-http]            LAUNCHWAY_TOKEN, or typed or piped in)
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
@@ -47,12 +48,12 @@ const clientUsage = `Usage:
   launchway runs logs <run-id> [--step S] [--service NAME] [--follow]   --service: a service container's output
   launchway runs cancel <run-id>
   launchway approvals list|approve|reject          see launchway approvals
-  launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
+  launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same {run} goes on, running its failed steps again
   launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
-                                                          a new run from those steps (or the failed ones), reusing the rest
+                                                          a new {run} from those steps (or the failed ones), reusing the rest
   launchway runs queue [project] [--json]          runs held back by limits, in order, with why; next|hold|release <run-id> moves one
   launchway runs trust <run-id> [--comment text]   approve a restricted run (a pull request from an automation account): Run with secrets
-  launchway runs lanes <project> [--json]          each lane: the run that holds it, and the runs waiting
+  launchway runs lanes <project> [--json]          each lane: the {run} that holds it, and the {runs} waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
   launchway runs reports <run-id> [--json]                links to its HTML reports
@@ -60,7 +61,7 @@ const clientUsage = `Usage:
 LAUNCHWAY_SERVER and LAUNCHWAY_TOKEN, if set, are used instead of what login
 stored. Exit codes: 0 success; 1 the run failed; 2 usage; 3 the run was
 canceled; 4 the server refused or could not be reached; 5 --timeout passed.
-`
+`)
 
 // credentials are what login stores.
 type credentials struct {
@@ -166,9 +167,31 @@ func runClient(fn func() error) error {
 // ---- talking to the server ----
 
 type client struct {
-	c    credentials
-	http *http.Client
-	out  io.Writer
+	c     credentials
+	http  *http.Client
+	out   io.Writer
+	words *settings.Words
+}
+
+// themed fills the words of the default set into fixed text such as the help, which is printed without
+// asking a server: {run}, {runner}, {rollback:do} (see internal/settings/vocabulary.go).
+func themed(s string) string { return settings.DefaultWords().Say(s) }
+
+// say fills the words in a sentence for the person reading: the set and the renames of the installation
+// this client talks to, read once from its configuration overview (the default words when it cannot be read).
+// Flags, commands and JSON fields never change with a set.
+func (cl *client) say(s string) string {
+	if cl.words == nil {
+		w := settings.DefaultWords()
+		var v struct {
+			Terms settings.Terms `json:"terms"`
+		}
+		if cl.call("GET", "/api/v1/config", nil, &v) == nil {
+			w = v.Terms.Words()
+		}
+		cl.words = &w
+	}
+	return cl.words.Say(s)
 }
 
 func newClient(c credentials, out io.Writer) *client {

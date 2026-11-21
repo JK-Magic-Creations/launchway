@@ -6,7 +6,7 @@ describe("approvalRefusal", () => {
   const a = approval({ project: "shop-web", started_by: "sam" });
   it("says exactly why a starter cannot approve, and where an administrator changes it", () => {
     const r = approvalRefusal(a, me({ user: "sam", roles: { "shop-web": "operator" } }), { allow_self: false, sign_in: true });
-    expect(r?.text).toBe("You started this run. On this base the person who starts a run cannot give clearance for it, so someone else must. You may still say No-go. An administrator can change this in Settings → Clearances.");
+    expect(r?.text).toBe("You started this Sortie. On this Base the person who starts a Sortie cannot give Clearance for it, so someone else must. You may still say No-go. An administrator can change this in Settings → Clearances.");
     expect(r?.link).toEqual({ href: "/settings/approvals", label: "Settings → Clearances" });
     expect(r?.mayReject).toBe(true);
   });
@@ -38,7 +38,7 @@ describe("consequences", () => {
   it("names what goes ahead", () => {
     const d = { step_list: [{ id: "ship", needs: ["gate"] }, { id: "notify", needs: ["gate"] }, { id: "x", needs: [] }] } as never;
     expect(consequences(d, "gate").approve).toBe("ship and notify go ahead.");
-    expect(consequences(null, "gate").approve).toBe("The run goes on.");
+    expect(consequences(null, "gate").approve).toBe("The Sortie goes on.");
   });
 });
 

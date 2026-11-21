@@ -32,20 +32,20 @@ export const COMING: Record<string, Coming> = {
   "/images/charts": {
     title: "Charts", area: "Images",
     does: "List the packaged deployment descriptions your pipelines build, with their settings and the applications that use each version.",
-    appears: "A chart appears here when a pipeline step packages one and pushes it to a registry that Launchway can read.",
+    appears: "A chart appears here when a pipeline step packages one and pushes it to a {registry} that Launchway can read.",
     action: { label: "See images", href: "/images" },
   },
   "/images/files": {
     title: "Files", area: "Images",
     does: "List the plain files your pipelines produce, such as installers and archives, with their size, who made them and where they were used.",
-    appears: "Files appear here when a step declares them as artifacts. Artifacts of a run can be read on the run's own page today.",
+    appears: "Files appear here when a step declares them as {artifacts}. {Artifacts} of a run can be read on the {run}'s own page today.",
     action: { label: "See runs", href: "/activity" },
   },
   "/deployments/hosts": {
     title: "Hosts", area: "Deployments",
     does: "Show your machines, which operating system image each runs, whether a new image is staged and waiting for a restart, and what each has run.",
-    appears: "A host appears here when it reports in to Launchway. Hosts that do the work of runs are listed today under Settings, Runners.",
-    action: { label: "Open runners", href: "/settings/runners" },
+    appears: "A host appears here when it reports in to Launchway. Hosts that do the work of {runs} are listed today under Settings, {Runners}.",
+    action: { label: "Open {runners}", href: "/settings/runners" },
   },
   "/deployments/machine-images": {
     title: "Machine images", area: "Deployments",
@@ -56,7 +56,7 @@ export const COMING: Record<string, Coming> = {
   "/traffic": {
     title: "Traffic map", area: "Traffic",
     does: "Draw what really talks to what: the services, the requests between them, how many fail and how slow they are, so a person can see where a problem starts.",
-    appears: "The map fills in from the numbers your signal sources hold. Add a source that holds request metrics, and the services you deploy will appear on it.",
+    appears: "The map fills in from the numbers your signal sources hold. Add a source that holds request metrics, and the services you {deploy:do} will appear on it.",
     action: { label: "Add a signal source", href: "/config/wizard/add-health-source" },
   },
   "/traffic/protection": {
@@ -72,14 +72,14 @@ export const COMING: Record<string, Coming> = {
     action: { label: "Add a signal source", href: "/config/wizard/add-health-source" },
   },
   "/traffic/toggles": {
-    title: "Toggles", area: "Traffic",
+    title: "{Toggles}", area: "Traffic",
     does: "List the switches that turn a feature on for some visitors, show where each is on and for whom, and let a person turn one off in seconds without a new release.",
     appears: "A toggle appears here when your applications report it. Nothing reports toggles to Launchway yet.",
   },
   "/changes": {
     title: "Calendar", area: "Changes",
     does: "Lay out what is changing and when: planned releases, {hold} windows and what already happened, so a team does not release into a bad hour.",
-    appears: "Changes appear on the calendar when a release is planned. Today the runs that deploy are listed under Activity and each deployment under Deployments.",
+    appears: "Changes appear on the calendar when a release is planned. Today the {runs} that {deploy:do} are listed under Activity and each deployment under Deployments.",
     action: { label: "See runs", href: "/activity" },
   },
   "/changes/records": {
@@ -90,13 +90,13 @@ export const COMING: Record<string, Coming> = {
   },
   "/changes/freezes": {
     title: "{Hold} windows", area: "Changes",
-    does: "Say when nothing may be released, such as month end or a holiday, and show the window on the calendar and on every deploy that it blocks.",
-    appears: "A window you add here blocks deploys to the places you choose. No {hold} windows are defined yet.",
+    does: "Say when nothing may be released, such as month end or a holiday, and show the window on the calendar and on every {deploy:do} that it blocks.",
+    appears: "A window you add here blocks {deploy:does} to the places you choose. No {hold} windows are defined yet.",
   },
   "/changes/rules": {
     title: "{Clearance} rules", area: "Changes",
     does: "Say which changes need whose {clearance}, by risk and by place, in plain sentences, and show a person exactly which rule applies to their change.",
-    appears: "A rule appears here when you write one. Steps that wait for {clearance} in a pipeline, and the rules that judge a run, work today.",
+    appears: "A rule appears here when you write one. Steps that wait for {clearance} in a pipeline, and the rules that judge a {run}, work today.",
     action: { label: "Open the rules", href: "/settings/rules" },
   },
   "/changes/tickets": {

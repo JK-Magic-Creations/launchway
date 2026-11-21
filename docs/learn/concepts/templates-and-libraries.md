@@ -32,8 +32,8 @@ steps:
 ```
 
 Because the library is pinned, an update to the library never changes a project until the project
-moves to the new version. Every run records the exact commit of the library it used, so you can always
-answer "what did this run use?". Browse the templates your installation knows in the
+moves to the new version. Every Sortie (run) records the exact commit of the library it used, so you can always
+answer "what did this Sortie use?". Browse the templates your installation knows in the
 [Library](app:/library/templates). The page of each template shows its inputs and outputs.
 
 Libraries are registered at a **level**. There are four: the Base (your installation), the Wing

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { applyStoredTheme } from "./shell/theme";
+import { loadVocabulary } from "./terms";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/shell.css";
@@ -23,8 +24,11 @@ import "./styles/words.css";
 import "./styles/a11y.css";
 
 applyStoredTheme();
-createRoot(document.getElementById("root")!).render(
+const start = () => createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+// The words come first (a small separate file), so no page is ever drawn with a placeholder; the overview
+// replaces them with the server's own table once it is read.
+loadVocabulary().catch(() => undefined).finally(start);

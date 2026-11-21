@@ -214,7 +214,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/runner/v1/artifacts/begin:
         post:
-            description: 'Starts uploading an artifact. A call carrying an Idempotency-Key header (as do the begin and commit calls of artifacts and caches, the finish call and deploy/command-done) that is made again with the same key gets the first answer, marked Idempotent-Replayed: true, and nothing is done twice; the answer is kept for seven days.'
+            description: 'Starts uploading a Cargo. A call carrying an Idempotency-Key header (as do the begin and commit calls of Cargo and caches, the finish call and deploy/command-done) that is made again with the same key gets the first answer, marked Idempotent-Replayed: true, and nothing is done twice; the answer is kept for seven days.'
             operationId: post_api_runner_v1_artifacts_begin
             responses:
                 "200":
@@ -233,7 +233,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: Starts uploading an artifact.
+            summary: Starts uploading a Cargo.
             tags:
                 - runner
             x-launchway-access: runner
@@ -264,7 +264,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/artifacts/commit:
         post:
-            description: Finishes an artifact upload.
+            description: Finishes a Cargo upload.
             operationId: post_api_runner_v1_artifacts_commit
             responses:
                 "200":
@@ -283,13 +283,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: Finishes an artifact upload.
+            summary: Finishes a Cargo upload.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/artifacts/download:
         post:
-            description: Fetches a file of an artifact for a step's fetch:.
+            description: Fetches a file of a Cargo for a step's fetch:.
             operationId: post_api_runner_v1_artifacts_download
             responses:
                 "200":
@@ -308,13 +308,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: Fetches a file of an artifact for a step's fetch:.
+            summary: Fetches a file of a Cargo for a step's fetch:.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/caches/begin:
         post:
-            description: 'Declares an entry to save (name, key, platform, size, SHA-256). {"exists": true} when an entry with that key is kept already (entries are never changed) or being saved by another run; 403 when the policy or the run''s scope forbids saving, 413 when the entry is over the limits or does not fit the project''s quota. The entry''s bytes count against the quota from here, ending the project''s least recently used entries to make room (those of pull requests and branches first) and reported as evicted.'
+            description: 'Declares an entry to save (name, key, platform, size, SHA-256). {"exists": true} when an entry with that key is kept already (entries are never changed) or being saved by another Sortie; 403 when the policy or the Sortie''s scope forbids saving, 413 when the entry is over the limits or does not fit the project''s quota. The entry''s bytes count against the quota from here, ending the project''s least recently used entries to make room (those of pull requests and branches first) and reported as evicted.'
             operationId: post_api_runner_v1_caches_begin
             responses:
                 "200":
@@ -339,7 +339,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/caches/chunk:
         put:
-            description: Uploads one chunk of an entry. It is its own route, not the artifacts', because an entry is one archive with rows and limits of its own.
+            description: Uploads one chunk of an entry. It is its own route, not the Cargo', because an entry is one archive with rows and limits of its own.
             operationId: put_api_runner_v1_caches_chunk
             responses:
                 "200":
@@ -389,7 +389,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/caches/discard:
         post:
-            description: Ends an entry the runner proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next run saves a good one. Entries are never changed, so without it a damaged one would fail every restore until it fell idle. Only an entry the step's own lookup may return.
+            description: Ends an entry the Station proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next Sortie saves a good one. Entries are never changed, so without it a damaged one would fail every restore until it fell idle. Only an entry the step's own lookup may return.
             operationId: post_api_runner_v1_caches_discard
             responses:
                 "200":
@@ -408,7 +408,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: Ends an entry the runner proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next run saves a good one.
+            summary: Ends an entry the Station proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next Sortie saves a good one.
             tags:
                 - runner
             x-launchway-access: runner
@@ -439,7 +439,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/caches/lookup:
         post:
-            description: 'Asks for the entry a step with a cache: should restore: the exact key in the run''s own scope and then the default scope, or with fallback: latest the newest entry of the name and platform. Answers {"entry"} or nothing, with a reason when caching is off.'
+            description: 'Asks for the entry a step with a cache: should restore: the exact key in the Sortie''s own scope and then the default scope, or with fallback: latest the newest entry of the name and platform. Answers {"entry"} or nothing, with a reason when caching is off.'
             operationId: post_api_runner_v1_caches_lookup
             responses:
                 "200":
@@ -458,13 +458,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: 'Asks for the entry a step with a cache: should restore: the exact key in the run''s own scope and then the default scope, or with fallback: latest the newest entry of the name and platform.'
+            summary: 'Asks for the entry a step with a cache: should restore: the exact key in the Sortie''s own scope and then the default scope, or with fallback: latest the newest entry of the name and platform.'
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/command-done:
         post:
-            description: A deploy runner reports how a command went.
+            description: A launch Station reports how a command went.
             operationId: post_api_runner_v1_deploy_command_done
             responses:
                 "200":
@@ -483,13 +483,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner reports how a command went.
+            summary: A launch Station reports how a command went.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/commands:
         post:
-            description: A deploy runner waits for people's deployment commands.
+            description: A launch Station waits for people's deployment commands.
             operationId: post_api_runner_v1_deploy_commands
             responses:
                 "200":
@@ -508,13 +508,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner waits for people's deployment commands.
+            summary: A launch Station waits for people's deployment commands.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/lease:
         post:
-            description: A deploy runner waits for deploy or rollback work for its targets.
+            description: A launch Station waits for launch or Return to base work for its targets.
             operationId: post_api_runner_v1_deploy_lease
             responses:
                 "200":
@@ -533,13 +533,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner waits for deploy or rollback work for its targets.
+            summary: A launch Station waits for launch or Return to base work for its targets.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/observe:
         post:
-            description: A deploy runner reports what it observes of them.
+            description: A launch Station reports what it observes of them.
             operationId: post_api_runner_v1_deploy_observe
             responses:
                 "200":
@@ -558,13 +558,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner reports what it observes of them.
+            summary: A launch Station reports what it observes of them.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/pull-request:
         post:
-            description: A deploy runner opens, or asks about, the pull request of a deployment that writes back by pull request, with the deploy credential the server gave it for that deployment.
+            description: A launch Station opens, or asks about, the pull request of a deployment that writes back by pull request, with the launch credential the server gave it for that deployment.
             operationId: post_api_runner_v1_deploy_pull_request
             responses:
                 "200":
@@ -583,13 +583,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner opens, or asks about, the pull request of a deployment that writes back by pull request, with the deploy credential the server gave it for that deployment.
+            summary: A launch Station opens, or asks about, the pull request of a deployment that writes back by pull request, with the launch credential the server gave it for that deployment.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/verify/interval:
         post:
-            description: A deploy runner reports one interval's readings of a verification; the answer says whether to go on.
+            description: A launch Station reports one interval's readings of a verification; the answer says whether to go on.
             operationId: post_api_runner_v1_deploy_verify_interval
             responses:
                 "200":
@@ -608,13 +608,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner reports one interval's readings of a verification; the answer says whether to go on.
+            summary: A launch Station reports one interval's readings of a verification; the answer says whether to go on.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/verify/lease:
         post:
-            description: A deploy runner waits for a verification of its targets to run.
+            description: A launch Station waits for a verification of its targets to run.
             operationId: post_api_runner_v1_deploy_verify_lease
             responses:
                 "200":
@@ -633,13 +633,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner waits for a verification of its targets to run.
+            summary: A launch Station waits for a verification of its targets to run.
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/watch:
         post:
-            description: A deploy runner learns which deployments to watch.
+            description: A launch Station learns which deployments to watch.
             operationId: post_api_runner_v1_deploy_watch
             responses:
                 "200":
@@ -658,7 +658,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner learns which deployments to watch.
+            summary: A launch Station learns which deployments to watch.
             tags:
                 - runner
             x-launchway-access: runner
@@ -739,7 +739,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/leave:
         post:
-            description: The runner is shutting down.
+            description: The Station is shutting down.
             operationId: post_api_runner_v1_leave
             responses:
                 "200":
@@ -758,7 +758,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: The runner is shutting down.
+            summary: The Station is shutting down.
             tags:
                 - runner
             x-launchway-access: runner
@@ -789,7 +789,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/runs:
         post:
-            description: The state of runs the runner holds work for (at most 5000 per call).
+            description: The state of runs the Station holds work for (at most 5000 per call).
             operationId: post_api_runner_v1_runs
             responses:
                 "200":
@@ -808,7 +808,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: The state of runs the runner holds work for (at most 5000 per call).
+            summary: The state of runs the Station holds work for (at most 5000 per call).
             tags:
                 - runner
             x-launchway-access: runner
@@ -839,7 +839,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v2/join:
         post:
-            description: 'A runner enrols with a join token: {"join_token", "public_key", "proof", "hostname", "facts"}. Answers its runner_id, pool, kind and labels. The join token is checked in the handler; refusals are audited as runner.refused.'
+            description: 'A Station enrols with a join token: {"join_token", "public_key", "proof", "hostname", "facts"}. Answers its runner_id, pool, kind and labels. The join token is checked in the handler; refusals are audited as runner.refused.'
             operationId: post_api_runner_v2_join
             responses:
                 "200":
@@ -853,13 +853,13 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             security: []
-            summary: 'A runner enrols with a join token: {"join_token", "public_key", "proof", "hostname", "facts"}.'
+            summary: 'A Station enrols with a join token: {"join_token", "public_key", "proof", "hostname", "facts"}.'
             tags:
                 - runner
             x-launchway-access: public
     /api/runner/v2/rotate:
         post:
-            description: An enrolled runner moves to a new key, proving it holds both.
+            description: An enrolled Station moves to a new key, proving it holds both.
             operationId: post_api_runner_v2_rotate
             responses:
                 "200":
@@ -873,13 +873,13 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             security: []
-            summary: An enrolled runner moves to a new key, proving it holds both.
+            summary: An enrolled Station moves to a new key, proving it holds both.
             tags:
                 - runner
             x-launchway-access: public
     /api/runner/v2/token:
         post:
-            description: 'An enrolled runner gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once). A revoked or unknown runner, or a bad assertion, answers 401; a skewed clock answers 401 with server_time and skew: true.'
+            description: 'An enrolled Station gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once). A revoked or unknown Station, or a bad assertion, answers 401; a skewed clock answers 401 with server_time and skew: true.'
             operationId: post_api_runner_v2_token
             responses:
                 "200":
@@ -893,7 +893,7 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             security: []
-            summary: An enrolled runner gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once).
+            summary: An enrolled Station gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once).
             tags:
                 - runner
             x-launchway-access: public
@@ -938,7 +938,7 @@ paths:
             x-launchway-access: public
     /api/sdk/v1/ruleset:
         get:
-            description: 'With a server key: the environment''s ruleset, with ETag; 304 for a matching If-None-Match. 401 for a key that is missing, unknown, revoked or expired, without saying which; 403 for a client key. Rate limited per key. See the [protocol](toggles-protocol.md).'
+            description: 'With a server key: the Airfield''s ruleset, with ETag; 304 for a matching If-None-Match. 401 for a key that is missing, unknown, revoked or expired, without saying which; 403 for a client key. Rate limited per key. See the [protocol](toggles-protocol.md).'
             operationId: get_api_sdk_v1_ruleset
             responses:
                 "200":
@@ -952,7 +952,7 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             security: []
-            summary: 'With a server key: the environment''s ruleset, with ETag; 304 for a matching If-None-Match.'
+            summary: 'With a server key: the Airfield''s ruleset, with ETag; 304 for a matching If-None-Match.'
             tags:
                 - v1
             x-launchway-access: public
@@ -1278,7 +1278,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/artifact-store:
         get:
-            description: Where this server keeps artifacts (database, filesystem or s3), why, and how full the store is.
+            description: Where this server keeps Cargo (database, filesystem or s3), why, and how full the store is.
             operationId: get_api_v1_artifact_store
             responses:
                 "200":
@@ -1295,7 +1295,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Where this server keeps artifacts (database, filesystem or s3), why, and how full the store is.
+            summary: Where this server keeps Cargo (database, filesystem or s3), why, and how full the store is.
             tags:
                 - artifact-store
             x-launchway-access: any-viewer
@@ -1498,7 +1498,7 @@ paths:
             x-launchway-audit: cache_policy.set
     /api/v1/components:
         get:
-            description: 'The runs whose SBOMs list a component: ?name= (exact, ignoring case), ?version=.'
+            description: 'The Sorties whose SBOMs list a component: ?name= (exact, ignoring case), ?version=.'
             operationId: get_api_v1_components
             responses:
                 "200":
@@ -1515,7 +1515,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The runs whose SBOMs list a component: ?name= (exact, ignoring case), ?version=.'
+            summary: 'The Sorties whose SBOMs list a component: ?name= (exact, ignoring case), ?version=.'
             tags:
                 - components
             x-launchway-access: signed-in
@@ -1607,7 +1607,7 @@ paths:
             x-launchway-audit: config.create
     /api/v1/config/{kind}/{obj}:
         delete:
-            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the Logbook) or if it would leave the configuration invalid'
+            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an Airfield or a Flight line (Station (runner) pool): the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the Logbook) or if it would leave the configuration invalid'
             operationId: delete_api_v1_config_kind_obj
             parameters:
                 - in: path
@@ -2101,7 +2101,7 @@ paths:
             x-launchway-audit: connection.delete
     /api/v1/connections/token:
         post:
-            description: '{"name", "kind", "base_url", "token"}. The setup guide''s way to give the token of another Git server once: it is kept sealed under the root key (a meta row, covered by the encryption registry), the connection refers to it as sealed:NAME, and removing the connection removes it; it is never returned or audited. 409 (unavailable) when this server has no root key: create one, or give an environment variable instead. Otherwise as POST /api/v1/connections.'
+            description: '{"name", "kind", "base_url", "token"}. The setup guide''s way to give the token of another Git server once: it is kept sealed under the root key (a meta row, covered by the encryption Depot), the connection refers to it as sealed:NAME, and removing the connection removes it; it is never returned or audited. 409 (unavailable) when this server has no root key: create one, or give an environment variable instead. Otherwise as POST /api/v1/connections.'
             operationId: post_api_v1_connections_token
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -2221,7 +2221,7 @@ paths:
             x-launchway-audit: encryption.root_key_copy
     /api/v1/environments:
         get:
-            description: The configured environments that list a project the caller may see, with what is deployed in each.
+            description: The configured Airfields that list a project the caller may see, with what is deployed in each.
             operationId: get_api_v1_environments
             responses:
                 "200":
@@ -2238,7 +2238,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The configured environments that list a project the caller may see, with what is deployed in each.
+            summary: The configured Airfields that list a project the caller may see, with what is deployed in each.
             tags:
                 - environments
             x-launchway-access: signed-in
@@ -2362,7 +2362,7 @@ paths:
             x-launchway-access: public
     /api/v1/launch-lines:
         get:
-            description: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one run (404 for a run of a project the caller may not see). Only projects the caller may see.'
+            description: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a project the caller may not see). Only projects the caller may see.'
             operationId: get_api_v1_launch_lines
             responses:
                 "200":
@@ -2379,7 +2379,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one run (404 for a run of a project the caller may not see).'
+            summary: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a project the caller may not see).'
             tags:
                 - launch-lines
             x-launchway-access: signed-in
@@ -2967,7 +2967,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: cache.delete
         get:
-            description: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            description: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             operationId: get_api_v1_projects_name_caches
             parameters:
                 - in: path
@@ -2992,13 +2992,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            summary: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/caches/{id}:
         delete:
-            description: Ends one entry; the next run that wanted it starts without it. Answers {"ended", "bytes"}; 404 for an entry that does not exist or is another project's.
+            description: Ends one entry; the next Sortie that wanted it starts without it. Answers {"ended", "bytes"}; 404 for an entry that does not exist or is another project's.
             operationId: delete_api_v1_projects_name_caches_id
             parameters:
                 - in: path
@@ -3029,7 +3029,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Ends one entry; the next run that wanted it starts without it.
+            summary: Ends one entry; the next Sortie that wanted it starts without it.
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -3159,7 +3159,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/lanes:
         get:
-            description: 'The project''s [lanes](pipeline.md#lane) that have a run going or runs waiting: for each, its name, key and label, the run that holds it (holder) and the runs waiting, in the order they start (waiting, each with its position). A run''s own place is its lane block in the run JSON: name, key, label, state (holding, waiting, replaced or skipped), position, and behind (the run it waits behind, or that replaced it). GET /api/v1/runs?lane=NAME lists only runs in that lane. A waiting run is canceled with the run''s cancel route.'
+            description: 'The project''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position). A Sortie''s own place is its lane block in the Sortie JSON: name, key, label, state (holding, waiting, replaced or skipped), position, and behind (the run it waits behind, or that replaced it). GET /api/v1/runs?lane=NAME lists only runs in that lane. A waiting run is canceled with the Sortie''s cancel route.'
             operationId: get_api_v1_projects_name_lanes
             parameters:
                 - in: path
@@ -3184,7 +3184,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s [lanes](pipeline.md#lane) that have a run going or runs waiting: for each, its name, key and label, the run that holds it (holder) and the runs waiting, in the order they start (waiting, each with its position).'
+            summary: 'The project''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position).'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -3568,7 +3568,7 @@ paths:
             x-launchway-audit: registry.tag_delete
     /api/v1/projects/{name}/rollback:
         get:
-            description: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the environment) the action says so and offers no targets. See [rollback after success](../guide/rollback-after-success.md).'
+            description: 'What a service can be returned to base to in an Airfield after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md).'
             operationId: get_api_v1_projects_name_rollback
             parameters:
                 - in: path
@@ -3593,13 +3593,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=.'
+            summary: 'What a service can be returned to base to in an Airfield after its deployment succeeded: ?environment= (required), ?service=.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/rollbacks:
         post:
-            description: 'Rolls a service back: {"environment", "service", "to", "reason", "queue"}. to is a deployment ID or a version (default the previous successful deployment); reason is required; queue waits behind a deployment that holds the environment''s lock. Answers 201 with the rollback run. Refused with the action''s own reason (409) when the action is not available. Needs the operator role on the environment too.'
+            description: 'Rolls a service back: {"environment", "service", "to", "reason", "queue"}. to is a deployment ID or a version (default the previous successful deployment); reason is required; queue waits behind a deployment that holds the Airfield''s lock. Answers 201 with the Return to base run. Refused with the action''s own reason (409) when the action is not available. Needs the operator role on the Airfield too.'
             operationId: post_api_v1_projects_name_rollbacks
             parameters:
                 - in: path
@@ -3632,7 +3632,7 @@ paths:
             x-launchway-audit: deployment.rollback
     /api/v1/projects/{name}/runs:
         post:
-            description: Starts a run. Answers 201 with the run.
+            description: Starts a Sortie. Answers 201 with the Sortie.
             operationId: post_api_v1_projects_name_runs
             parameters:
                 - in: path
@@ -3658,7 +3658,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Starts a run.
+            summary: Starts a Sortie.
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -3853,7 +3853,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/toggle-changes/{id}/approve:
         post:
-            description: 'Approves a waiting change: {comment}. Needs the operator role in its environment, and not to be the person who asked (unless approvals.allow_self); if the environment names reviewers, one of them. With enough approvals the change is made.'
+            description: 'Approves a waiting change: {comment}. Needs the operator role in its Airfield, and not to be the person who asked (unless approvals.allow_self); if the Airfield names reviewers, one of them. With enough approvals the change is made.'
             operationId: post_api_v1_projects_name_toggle_changes_id_approve
             parameters:
                 - in: path
@@ -4208,7 +4208,7 @@ paths:
             x-launchway-audit: toggle.plan
     /api/v1/projects/{name}/toggle-revert-since:
         post:
-            description: 'Reverts every toggle change made in an environment since a time: {environment, since, reason, dry_run}. What a rollback page offers.'
+            description: 'Reverts every toggle change made in an Airfield since a time: {environment, since, reason, dry_run}. What a Return to base page offers.'
             operationId: post_api_v1_projects_name_toggle_revert_since
             parameters:
                 - in: path
@@ -4234,14 +4234,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Reverts every toggle change made in an environment since a time: {environment, since, reason, dry_run}.'
+            summary: 'Reverts every toggle change made in an Airfield since a time: {environment, since, reason, dry_run}.'
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: toggle.revert_since
     /api/v1/projects/{name}/toggle-safeguards:
         get:
-            description: The safeguards in each environment and which level set each.
+            description: The safeguards in each Airfield and which level set each.
             operationId: get_api_v1_projects_name_toggle_safeguards
             parameters:
                 - in: path
@@ -4266,7 +4266,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The safeguards in each environment and which level set each.
+            summary: The safeguards in each Airfield and which level set each.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -4479,7 +4479,7 @@ paths:
             x-launchway-audit: toggle.segment_set
     /api/v1/projects/{name}/toggle-timeline:
         get:
-            description: The toggle changes of an environment (?environment= required; ?since= Unix ms), newest first, for the environment's page beside its deployments.
+            description: The toggle changes of an Airfield (?environment= required; ?since= Unix ms), newest first, for the Airfield's page beside its deployments.
             operationId: get_api_v1_projects_name_toggle_timeline
             parameters:
                 - in: path
@@ -4504,13 +4504,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The toggle changes of an environment (?environment= required; ?since= Unix ms), newest first, for the environment's page beside its deployments.
+            summary: The toggle changes of an Airfield (?environment= required; ?since= Unix ms), newest first, for the Airfield's page beside its deployments.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/toggles:
         get:
-            description: 'The project''s toggles with their state in each environment (environments), stale mentions and changes waiting (waiting). A toggle defined at a level above the project shows with inherited: true.'
+            description: 'The project''s toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting). A toggle defined at a level above the project shows with inherited: true.'
             operationId: get_api_v1_projects_name_toggles
             parameters:
                 - in: path
@@ -4535,12 +4535,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's toggles with their state in each environment (environments), stale mentions and changes waiting (waiting).
+            summary: The project's toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting).
             tags:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}. Types boolean, string, number, json. It starts off in every environment. At a level above the project it needs an administrator of that level. 409 if the key exists, or is locked above.'
+            description: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}. Types boolean, string, number, json. It starts off in every Airfield. At a level above the project it needs an administrator of that level. 409 if the key exists, or is locked above.'
             operationId: post_api_v1_projects_name_toggles
             parameters:
                 - in: path
@@ -4610,7 +4610,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: toggle.delete
         get:
-            description: 'One toggle: its definition, each environment''s state and rules, lock, stale mentions, when it was last evaluated.'
+            description: 'One toggle: its definition, each Airfield''s state and rules, lock, stale mentions, when it was last evaluated.'
             operationId: get_api_v1_projects_name_toggles_key
             parameters:
                 - in: path
@@ -4640,7 +4640,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'One toggle: its definition, each environment''s state and rules, lock, stale mentions, when it was last evaluated.'
+            summary: 'One toggle: its definition, each Airfield''s state and rules, lock, stale mentions, when it was last evaluated.'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -4683,7 +4683,7 @@ paths:
             x-launchway-audit: toggle.update
     /api/v1/projects/{name}/toggles/{key}/environments/{env}:
         put:
-            description: 'Sets what the toggle does in an environment: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}. Needs the operator role in the environment. 400 without a reason when the safeguard asks for one; 202 with waiting: true when it needs approval first; with at (RFC 3339) 202 with the scheduled change.'
+            description: 'Sets what the toggle does in an Airfield: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}. Needs the operator role in the Airfield. 400 without a reason when the safeguard asks for one; 202 with waiting: true when it needs approval first; with at (RFC 3339) 202 with the scheduled change.'
             operationId: put_api_v1_projects_name_toggles_key_environments_env
             parameters:
                 - in: path
@@ -4719,14 +4719,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Sets what the toggle does in an environment: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}.'
+            summary: 'Sets what the toggle does in an Airfield: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}.'
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: toggle.set
     /api/v1/projects/{name}/toggles/{key}/evaluate:
         post:
-            description: Tries {context, environment} against the toggle as it is now in each environment; nothing is counted or stored. The audit entry never holds the context.
+            description: Tries {context, environment} against the toggle as it is now in each Airfield; nothing is counted or stored. The audit entry never holds the context.
             operationId: post_api_v1_projects_name_toggles_key_evaluate
             parameters:
                 - in: path
@@ -4757,7 +4757,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Tries {context, environment} against the toggle as it is now in each environment; nothing is counted or stored.
+            summary: Tries {context, environment} against the toggle as it is now in each Airfield; nothing is counted or stored.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -4875,7 +4875,7 @@ paths:
             x-launchway-audit: toggle.lock
     /api/v1/projects/{name}/toggles/{key}/usage:
         get:
-            description: Evaluation counts per environment, per value, for the last ?days=, and when it was last evaluated. Counts only, never who.
+            description: Evaluation counts per Airfield, per value, for the last ?days=, and when it was last evaluated. Counts only, never who.
             operationId: get_api_v1_projects_name_toggles_key_usage
             parameters:
                 - in: path
@@ -4905,7 +4905,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Evaluation counts per environment, per value, for the last ?days=, and when it was last evaluated.
+            summary: Evaluation counts per Airfield, per value, for the last ?days=, and when it was last evaluated.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -5047,7 +5047,7 @@ paths:
             x-launchway-access: public
     /api/v1/queue:
         get:
-            description: 'The runs held back by a limit on concurrent runs, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions. See [Queues and limits](../guide/queues.md).'
+            description: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions. See [Queues and limits](../guide/queues.md).'
             operationId: get_api_v1_queue
             responses:
                 "200":
@@ -5064,13 +5064,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The runs held back by a limit on concurrent runs, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
+            summary: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
             tags:
                 - queue
             x-launchway-access: signed-in
     /api/v1/registry:
         get:
-            description: 'Whether the registry is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest. An administrator also gets last_gc.'
+            description: 'Whether the Depot is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest. An administrator also gets last_gc.'
             operationId: get_api_v1_registry
             responses:
                 "200":
@@ -5087,7 +5087,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Whether the registry is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest.'
+            summary: 'Whether the Depot is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest.'
             tags:
                 - registry
             x-launchway-access: signed-in
@@ -5141,7 +5141,7 @@ paths:
             x-launchway-audit: registry.gc_run
     /api/v1/registry/policy:
         get:
-            description: 'The installation''s policy, or with ?scope=organization&name= an organization''s: quota_bytes, retention, immutable_tags.'
+            description: 'The installation''s policy, or with ?scope=organization&name= a Wing''s: quota_bytes, retention, immutable_tags.'
             operationId: get_api_v1_registry_policy
             responses:
                 "200":
@@ -5158,7 +5158,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The installation''s policy, or with ?scope=organization&name= an organization''s: quota_bytes, retention, immutable_tags.'
+            summary: 'The installation''s policy, or with ?scope=organization&name= a Wing''s: quota_bytes, retention, immutable_tags.'
             tags:
                 - registry
             x-launchway-access: admin
@@ -5794,7 +5794,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/commits/{sha}:
         get:
-            description: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the runs are those of projects the caller may see that were started for this commit.'
+            description: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of projects the caller may see that were started for this commit.'
             operationId: get_api_v1_repositories_owner_name_commits_sha
             parameters:
                 - in: path
@@ -5829,7 +5829,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the runs are those of projects the caller may see that were started for this commit.'
+            summary: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of projects the caller may see that were started for this commit.'
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -5871,7 +5871,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/dependencies:
         get:
-            description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the registries or the vulnerability data cannot be reached.'
+            description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the Depots or the vulnerability data cannot be reached.'
             operationId: get_api_v1_repositories_owner_name_dependencies
             parameters:
                 - in: path
@@ -6726,7 +6726,7 @@ paths:
             x-launchway-audit: mirror.update
     /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync:
         post:
-            description: Runs the mirror now and answers with its status. 409 when it is already running; 502 with {"error", "mirror"} when the run failed (the mirror's last_error says why). A pull mirror whose source suddenly lists no branches or tags refuses to delete everything.
+            description: Runs the mirror now and answers with its status. 409 when it is already running; 502 with {"error", "mirror"} when the Sortie failed (the mirror's last_error says why). A pull mirror whose source suddenly lists no branches or tags refuses to delete everything.
             operationId: post_api_v1_repositories_owner_name_mirrors_id_sync
             parameters:
                 - in: path
@@ -7871,7 +7871,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/rollbacks/review:
         get:
-            description: 'Emergency rollbacks of protected environments that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only projects the caller may see.'
+            description: 'Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only projects the caller may see.'
             operationId: get_api_v1_rollbacks_review
             responses:
                 "200":
@@ -7888,7 +7888,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Emergency rollbacks of protected environments that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why.'
+            summary: 'Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why.'
             tags:
                 - rollbacks
             x-launchway-access: signed-in
@@ -8023,7 +8023,7 @@ paths:
             x-launchway-audit: runner.join_token.revoke
     /api/v1/runner-pools:
         get:
-            description: 'The runner pools (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
+            description: 'The Flight lines (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
             operationId: get_api_v1_runner_pools
             responses:
                 "200":
@@ -8040,13 +8040,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The runner pools (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
+            summary: 'The Flight lines (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
             tags:
                 - runner-pools
             x-launchway-access: any-viewer
     /api/v1/runners:
         get:
-            description: 'The runners that have contacted the server: id, name, executor, version, last_seen, online, their pool, labels and whether they are enrolled (with the key''s fingerprint and age), and for deploy runners their targets.'
+            description: 'The Stations that have contacted the server: id, name, executor, version, last_seen, online, their pool, labels and whether they are enrolled (with the key''s fingerprint and age), and for launch Stations their targets.'
             operationId: get_api_v1_runners
             responses:
                 "200":
@@ -8063,13 +8063,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The runners that have contacted the server: id, name, executor, version, last_seen, online, their pool, labels and whether they are enrolled (with the key''s fingerprint and age), and for deploy runners their targets.'
+            summary: 'The Stations that have contacted the server: id, name, executor, version, last_seen, online, their pool, labels and whether they are enrolled (with the key''s fingerprint and age), and for launch Stations their targets.'
             tags:
                 - runners
             x-launchway-access: any-viewer
     /api/v1/runners/{id}/revoke:
         post:
-            description: 'Revokes an enrolled runner: every server refuses it from then on, and the steps it held are queued again.'
+            description: 'Revokes an enrolled Station: every server refuses it from then on, and the steps it held are queued again.'
             operationId: post_api_v1_runners_id_revoke
             parameters:
                 - in: path
@@ -8095,14 +8095,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Revokes an enrolled runner: every server refuses it from then on, and the steps it held are queued again.'
+            summary: 'Revokes an enrolled Station: every server refuses it from then on, and the steps it held are queued again.'
             tags:
                 - runners
             x-launchway-access: signed-in
             x-launchway-audit: runner.revoke
     /api/v1/runners/{id}/rotate:
         post:
-            description: Asks an enrolled runner to move to a new key at its next request.
+            description: Asks an enrolled Station to move to a new key at its next request.
             operationId: post_api_v1_runners_id_rotate
             parameters:
                 - in: path
@@ -8128,7 +8128,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Asks an enrolled runner to move to a new key at its next request.
+            summary: Asks an enrolled Station to move to a new key at its next request.
             tags:
                 - runners
             x-launchway-access: signed-in
@@ -8189,7 +8189,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/artifacts:
         get:
-            description: The artifacts a run kept, with their files.
+            description: The Cargo a Sortie kept, with their files.
             operationId: get_api_v1_runs_id_artifacts
             parameters:
                 - in: path
@@ -8214,13 +8214,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The artifacts a run kept, with their files.
+            summary: The Cargo a Sortie kept, with their files.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/artifacts/{artifact}:
         delete:
-            description: Deletes a kept artifact. Answers with what was deleted.
+            description: Deletes a kept Cargo. Answers with what was deleted.
             operationId: delete_api_v1_runs_id_artifacts_artifact
             parameters:
                 - in: path
@@ -8251,14 +8251,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Deletes a kept artifact.
+            summary: Deletes a kept Cargo.
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: artifact.delete
     /api/v1/runs/{id}/artifacts/{artifact}/archive:
         get:
-            description: Downloads every file of the artifact as a zip archive.
+            description: Downloads every file of the Cargo as a zip archive.
             operationId: get_api_v1_runs_id_artifacts_artifact_archive
             parameters:
                 - in: path
@@ -8288,7 +8288,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Downloads every file of the artifact as a zip archive.
+            summary: Downloads every file of the Cargo as a zip archive.
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -8330,7 +8330,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/cancel:
         post:
-            description: Cancels the run.
+            description: Cancels the Sortie.
             operationId: post_api_v1_runs_id_cancel
             parameters:
                 - in: path
@@ -8356,14 +8356,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Cancels the run.
+            summary: Cancels the Sortie.
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.cancel
     /api/v1/runs/{id}/coverage:
         get:
-            description: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            description: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             operationId: get_api_v1_runs_id_coverage
             parameters:
                 - in: path
@@ -8388,13 +8388,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            summary: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/coverage/files:
         get:
-            description: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            description: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
             operationId: get_api_v1_runs_id_coverage_files
             parameters:
                 - in: path
@@ -8419,7 +8419,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            summary: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -8463,7 +8463,7 @@ paths:
             x-launchway-audit: deployment.abort
     /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw:
         post:
-            description: 'Withdraws a command that no deploy runner has taken yet. Answers {"ok": true}.'
+            description: 'Withdraws a command that no launch Station has taken yet. Answers {"ok": true}.'
             operationId: post_api_v1_runs_id_deployments_dep_commands_cmd_withdraw
             parameters:
                 - in: path
@@ -8499,7 +8499,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Withdraws a command that no deploy runner has taken yet.
+            summary: Withdraws a command that no launch Station has taken yet.
             tags:
                 - runs
             x-launchway-access: run-operator
@@ -8656,7 +8656,7 @@ paths:
             x-launchway-audit: deployment.retry
     /api/v1/runs/{id}/events:
         get:
-            description: The run's event log.
+            description: The Sortie's event log.
             operationId: get_api_v1_runs_id_events
             parameters:
                 - in: path
@@ -8681,13 +8681,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The run's event log.
+            summary: The Sortie's event log.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/findings:
         get:
-            description: A run's security findings.
+            description: A Sortie's security findings.
             operationId: get_api_v1_runs_id_findings
             parameters:
                 - in: path
@@ -8712,13 +8712,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's security findings.
+            summary: A Sortie's security findings.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/images:
         get:
-            description: 'What a run''s image steps built: digest, tags, platforms, signature, provenance, SBOM and scan. {"images": […]}'
+            description: 'What a Sortie''s image steps built: digest, tags, platforms, signature, provenance, SBOM and scan. {"images": […]}'
             operationId: get_api_v1_runs_id_images
             parameters:
                 - in: path
@@ -8743,13 +8743,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What a run''s image steps built: digest, tags, platforms, signature, provenance, SBOM and scan.'
+            summary: 'What a Sortie''s image steps built: digest, tags, platforms, signature, provenance, SBOM and scan.'
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/pipeline-file:
         get:
-            description: The pipeline text the run ran.
+            description: The pipeline text the Sortie ran.
             operationId: get_api_v1_runs_id_pipeline_file
             parameters:
                 - in: path
@@ -8774,13 +8774,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The pipeline text the run ran.
+            summary: The pipeline text the Sortie ran.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/policy:
         get:
-            description: A run's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive.
+            description: A Sortie's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive.
             operationId: get_api_v1_runs_id_policy
             parameters:
                 - in: path
@@ -8805,13 +8805,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive.
+            summary: A Sortie's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/queue:
         post:
-            description: 'Moves a run that waits in a queue: {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again. Refused with a reason for a run that already goes. A run that is held lists these in its actions.'
+            description: 'Moves a Sortie that waits in a Holding pattern (queue): {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again. Refused with a reason for a Sortie that already goes. A Sortie that is held lists these in its actions.'
             operationId: post_api_v1_runs_id_queue
             parameters:
                 - in: path
@@ -8837,14 +8837,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Moves a run that waits in a queue: {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again.'
+            summary: 'Moves a Sortie that waits in a Holding pattern (queue): {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again.'
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.queue
     /api/v1/runs/{id}/reports:
         get:
-            description: A run's hosted HTML reports, each with a fresh signed link.
+            description: A Sortie's hosted HTML reports, each with a fresh signed link.
             operationId: get_api_v1_runs_id_reports
             parameters:
                 - in: path
@@ -8869,7 +8869,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's hosted HTML reports, each with a fresh signed link.
+            summary: A Sortie's hosted HTML reports, each with a fresh signed link.
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -8905,7 +8905,7 @@ paths:
                 - runs
             x-launchway-access: run-viewer
         post:
-            description: Starts a new run that re-runs a finished one from a step, several steps or the failed ones. Answers 201 with the new run.
+            description: Starts a new Sortie that re-runs a finished one from a step, several steps or the failed ones. Answers 201 with the new Sortie.
             operationId: post_api_v1_runs_id_rerun
             parameters:
                 - in: path
@@ -8931,7 +8931,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Starts a new run that re-runs a finished one from a step, several steps or the failed ones.
+            summary: Starts a new Sortie that re-runs a finished one from a step, several steps or the failed ones.
             tags:
                 - runs
             x-launchway-access: run-operator
@@ -8971,7 +8971,7 @@ paths:
             x-launchway-audit: run.resume
     /api/v1/runs/{id}/review:
         post:
-            description: 'Acknowledges an emergency rollback: {"comment"} (required). Refused for the person who asked unless approvals.allow_self is true, and for anyone the environment''s reviewers leave out. Answers {"ok": true}.'
+            description: 'Acknowledges an Abort: {"comment"} (required). Refused for the person who asked unless approvals.allow_self is true, and for anyone the Airfield''s reviewers leave out. Answers {"ok": true}.'
             operationId: post_api_v1_runs_id_review
             parameters:
                 - in: path
@@ -8997,7 +8997,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Acknowledges an emergency rollback: {"comment"} (required).'
+            summary: 'Acknowledges an Abort: {"comment"} (required).'
             tags:
                 - runs
             x-launchway-access: run-operator
@@ -9226,7 +9226,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/steps/{step}/verify/override:
         post:
-            description: 'Marks a running or paused verification passed or failed, with a reason: {"outcome", "reason"} where outcome is passed or failed. On a protected environment the person who started the run may not mark it passed.'
+            description: 'Marks a running or paused verification passed or failed, with a reason: {"outcome", "reason"} where outcome is passed or failed. On a protected Airfield the person who started the run may not mark it passed.'
             operationId: post_api_v1_runs_id_steps_step_verify_override
             parameters:
                 - in: path
@@ -9264,7 +9264,7 @@ paths:
             x-launchway-audit: verification.override
     /api/v1/runs/{id}/tests:
         get:
-            description: A run's test totals, step by step, with what stands out.
+            description: A Sortie's test totals, step by step, with what stands out.
             operationId: get_api_v1_runs_id_tests
             parameters:
                 - in: path
@@ -9289,13 +9289,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's test totals, step by step, with what stands out.
+            summary: A Sortie's test totals, step by step, with what stands out.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/tests/cases:
         get:
-            description: A run's test results, failures first, then the slowest.
+            description: A Sortie's test results, failures first, then the slowest.
             operationId: get_api_v1_runs_id_tests_cases
             parameters:
                 - in: path
@@ -9320,7 +9320,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's test results, failures first, then the slowest.
+            summary: A Sortie's test results, failures first, then the slowest.
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -9403,7 +9403,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/tests/compare:
         get:
-            description: 'A run''s tests beside the previous run of the same ref: new failures, fixed tests and tests still failing.'
+            description: 'A Sortie''s tests beside the previous run of the same ref: new failures, fixed tests and tests still failing.'
             operationId: get_api_v1_runs_id_tests_compare
             parameters:
                 - in: path
@@ -9428,13 +9428,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A run''s tests beside the previous run of the same ref: new failures, fixed tests and tests still failing.'
+            summary: 'A Sortie''s tests beside the previous run of the same ref: new failures, fixed tests and tests still failing.'
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/trust:
         post:
-            description: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and deploy. Recorded in the run''s events and the Logbook. Refused for a run that is not restricted, or is over. The run''s restriction block says whether it is restricted and why, and its actions list run_with_secrets. See [Pull-request trust](../guide/pull-request-trust.md)'
+            description: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and launch. Recorded in the Sortie''s events and the Logbook. Refused for a Sortie that is not restricted, or is over. The Sortie''s restriction block says whether it is restricted and why, and its actions list run_with_secrets. See [Pull-request trust](../guide/pull-request-trust.md)'
             operationId: post_api_v1_runs_id_trust
             parameters:
                 - in: path
@@ -9460,14 +9460,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and deploy.'
+            summary: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and launch.'
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.trust
     /api/v1/runs/{id}/variables:
         get:
-            description: The variables the run used, as recorded when it was created; a re-run shows the original's
+            description: The variables the Sortie used, as recorded when it was created; a re-run shows the original's
             operationId: get_api_v1_runs_id_variables
             parameters:
                 - in: path
@@ -9492,13 +9492,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The variables the run used, as recorded when it was created; a re-run shows the original's
+            summary: The variables the Sortie used, as recorded when it was created; a re-run shows the original's
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/verifications:
         get:
-            description: 'A run''s verifications: each interval''s readings, the verdict and its reason in words, log clusters, and any explanation.'
+            description: 'A Sortie''s verifications: each interval''s readings, the verdict and its reason in words, log clusters, and any explanation.'
             operationId: get_api_v1_runs_id_verifications
             parameters:
                 - in: path
@@ -9523,7 +9523,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A run''s verifications: each interval''s readings, the verdict and its reason in words, log clusters, and any explanation.'
+            summary: 'A Sortie''s verifications: each interval''s readings, the verdict and its reason in words, log clusters, and any explanation.'
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -10711,7 +10711,7 @@ paths:
             x-launchway-access: public
     /hosted/{link}/{path...}:
         get:
-            description: 'A file of a hosted HTML report. It takes no session: the signed link, scoped to one report for a few hours and given only to people who may see the run, is the permission. Served with a sandboxing Content-Security-Policy, and from the separate origin reports.origin when one is configured.'
+            description: 'A file of a hosted HTML report. It takes no session: the signed link, scoped to one report for a few hours and given only to people who may see the Sortie, is the permission. Served with a sandboxing Content-Security-Policy, and from the separate origin reports.origin when one is configured.'
             operationId: get_hosted_link_path...
             parameters:
                 - in: path

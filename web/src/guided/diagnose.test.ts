@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { DeploymentView } from "../api";
 import { argoLink, normalizeArgoUrl } from "./argo";
 import { diagnose, logTail } from "./diagnose";
+import { setTerms, resetTerms } from "../terms";
+import { afterEach, beforeEach } from "vitest";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const dep = (over: Partial<DeploymentView> = {}): DeploymentView => ({
   id: "d1", run_id: "run_9", run_number: 9, project: "shop", step: "deploy", environment: "prod", service: "api", target: "argocd/x", application: "shop-prod",

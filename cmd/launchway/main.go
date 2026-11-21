@@ -45,24 +45,24 @@ import (
 
 var version = "dev"
 
-const usage = `Launchway: build and deliver software.
+var usage = themed(`Launchway: build and deliver software.
 
 Usage:
-  launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
-  launchway runner   --server URL --join J      enrol a runner with a join token, then take work
+  launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in {runner}
+  launchway runner   --server URL --join J      enrol a {runner} with a join token, then take work
                      [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
-  launchway runner   --server URL --token T     run a runner with the shared token (no identity)
+  launchway runner   --server URL --token T     run a {runner} with the shared token (no identity)
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
   launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
   launchway init     [--write] [--force]         propose the pipeline file for this repository from what it holds
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
-  launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
+  launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
                                                 (launchway runs, for more)
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
   launchway notifications [--limit N]           the log of notifications sent, retried or failed
-  launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
+  launchway deployments options|rollback|review  send a service back after a deployment succeeded ({rollback}); review {emergency_rollbacks}
   launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
@@ -72,7 +72,7 @@ Usage:
   launchway verifications list|show|mark        verifications on a server
                                                 (launchway verifications, for more)
   launchway health-sources | models             what verify and ai steps may name
-  launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
+  launchway runners  list|join-token|revoke|rotate  {runners}, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
   launchway encryption init|status|rotate|rewrap     the root key and encryption at rest (launchway encryption, for more)
   launchway config   list|get|set|create|delete|restore|history|export|import|apply ...
@@ -97,7 +97,7 @@ Usage:
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 --secrets-config FILE, the secret stores they may read.
-`
+`)
 
 // commands take their arguments and nothing else, by name (registry.go adds registry).
 var commands = map[string]func([]string) error{

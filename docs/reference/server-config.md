@@ -33,14 +33,14 @@ the database, and nothing an administrator manages day to day.
 | `server.trust_proxy`, `server.drain_delay` | How it sits behind a proxy or load balancer |
 | `auth.mode`, `auth.local`, `auth.oidc`, `auth.idle_timeout`, `auth.session_lifetime`, `auth.allow_anonymous` | Sign-in must work before anyone can change anything |
 | `auth.admins` | The first administrators, and the way back in if the role bindings lock everyone out |
-| `runner` (the built-in runner and its secret stores, the AI secret stores) | Process settings of the machine the server runs on |
+| `runner` (the built-in Station (runner) and its secret stores, the AI secret stores) | Process settings of the machine the server runs on |
 | `reports.origin` | The address the server is reached at |
 | `encryption` | Where the root key for encryption at rest is held: it must be known before the database is opened, and is never kept in the database whose secrets it protects |
 
 Everything else lives in the database: `projects`, `libraries`, `environments`, `runner_pools`,
 `runner_admin`, `auth.access` (role bindings), `auth.tokens`, `policy`, `verification`, `ai.models`,
 `approvals`, `drafts`, `pull_requests`, `queues`, `automation`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
-`origin`), `artifacts` (limits, retention and where artifacts are kept) and `mcp`. The sections below
+`origin`), `artifacts` (limits, retention and where Cargo (artifacts) are kept) and `mcp`. The sections below
 that describe them document the **keys of the import format**: the keys a first start imports, that
 `launchway config export` writes and `launchway config import` reads. A server that starts with a
 database that already holds configuration ignores them, says so for each key, and names the import.
@@ -57,14 +57,14 @@ See [Configuration and levels](../guide/configuration.md) and [Configuration obj
   file paths under [`runner`](runner-config.md).
 - **Secrets are never in the file.** Client secrets, pool tokens and webhook secrets are read
   from an environment variable or a file the setting names; secret values a step needs stay in
-  the runners' [secret stores](runner-config.md#secrets).
+  the Stations' [secret stores](runner-config.md#secrets).
 - **Every server that shares a database** must have the same `environments`, `runner_pools` and
   `policy`.
 
 Mistakes in the settings below are reported when the file is read, before the server listens,
 unless the table says otherwise.
 
-## Command line and environment
+## Command line and Airfield (environment) {#command-line-and-environment}
 
 | Flag or variable | Overrides | Description |
 |---|---|---|
@@ -72,8 +72,8 @@ unless the table says otherwise.
 | `--listen ADDR` | `listen` | The address to listen on |
 | `--data DIR` | `data` | The data directory |
 | `LAUNCHWAY_DATABASE` | `database` | The database: a SQLite file or a `postgres://` URL. Keeps a password out of the file |
-| `LAUNCHWAY_RUNNER_TOKEN` | the stored runner token | The token runners present. Without it, the first server creates a random token, keeps it in the database so every server shares it, and writes it to `<data>/runner-token` |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | | Credentials of the S3 artifact store. `AWS_ACCESS_KEY_ID_FILE` and `AWS_SECRET_ACCESS_KEY_FILE` name files instead |
+| `LAUNCHWAY_RUNNER_TOKEN` | the stored Station token | The token Stations present. Without it, the first server creates a random token, keeps it in the database so every server shares it, and writes it to `<data>/runner-token` |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | | Credentials of the S3 Cargo store. `AWS_ACCESS_KEY_ID_FILE` and `AWS_SECRET_ACCESS_KEY_FILE` name files instead |
 | `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>` | | Git settings for fetching and pushing, such as an `http.<url>.extraHeader` with a token |
 
 A flag wins over the file. The variables named by settings (`auth.oidc.client_secret_env`,
@@ -138,11 +138,11 @@ runner_pools:
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `listen` | address | `127.0.0.1:8080` | Where the server listens for the API, the web UI and runners. With `auth.mode: none` it must be a loopback address unless `auth.allow_anonymous` is true |
-| `data` | directory | `launchway-data` | Holds the repository mirrors, the built-in runner's workspaces, the default SQLite database and the default artifact store. Made absolute |
+| `listen` | address | `127.0.0.1:8080` | Where the server listens for the API, the web UI and Stations. With `auth.mode: none` it must be a loopback address unless `auth.allow_anonymous` is true |
+| `data` | directory | `launchway-data` | Holds the repository mirrors, the built-in Station's workspaces, the default SQLite database and the default Cargo store. Made absolute |
 | `database` | path or URL | `<data>/launchway.db` | A SQLite file for one server, or a `postgres://` URL that several servers share. `LAUNCHWAY_DATABASE` overrides it |
 | `database_wait` | duration | `60s` | How long a starting server keeps trying a database that does not answer. Checked when the server starts |
-| `resilience.stall_budget` | duration | `120s` | How long a request waits for a database that is briefly gone (a failover, a restart) before it is answered `503` with `Retry-After`. Transient errors (connection refused or reset, a failover in progress, a read-only standby, serialization failures, deadlocks, too many connections) are retried inside this budget in the store layer; constraint, syntax and not-found errors never are. A statement cut off in the middle is repeated only if it is a read or its whole transaction was rolled back; a cut-off commit is reported, never repeated blindly |
+| `resilience.stall_budget` | duration | `120s` | How long a request waits for a database that is briefly gone (a failover, a restart) before it is answered `503` with `Retry-After`. Transient errors (connection refused or reset, a failover in progress, a read-only standby, serialization failures, deadlocks, too many connections) are retried inside this budget in the store layer; constraint, syntax and not-found errors never are. A statement cut off in the middle is repeated only if it is a read or its whole transaction was returned to base; a cut-off commit is reported, never repeated blindly |
 | `audit.stdout` | boolean | `true` | Also write every audit entry as one JSON line to standard output ([the audit stream](events.md#audit-stream-on-standard-output)). The database record is kept either way. Set `false` to turn the stream off |
 | `user` | text | the operating system user, else `local` | Who every action is recorded as when sign-in is off (`auth.mode: none`) |
 
@@ -240,7 +240,7 @@ the highest role wins.
 | `auth.access[].user` | text | | A user, as `username_claim` gives it |
 | `auth.access[].role` | text | required | `viewer`, `operator` or `admin` |
 | `auth.access[].projects` | list of patterns | every project | The projects it grants the role on |
-| `auth.access[].environments` | list of patterns | every environment | Limits what it grants on deployments (rollout commands, approvals that name a deployment) to these environments |
+| `auth.access[].environments` | list of patterns | every Airfield | Limits what it grants on deployments (rollout commands, approvals that name a deployment) to these Airfields |
 
 ## Projects
 
@@ -250,8 +250,8 @@ the highest role wins.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `projects[].name` | name | required | `^[a-z0-9][a-z0-9-]{0,62}$`, unique |
-| `projects[].repo` | URL or path | required | What the servers and runners clone: `https://...`, `ssh://...`, or a local path. Credentials go in the URL or in `GIT_CONFIG_*` variables |
-| `projects[].branch` | branch | `main` | The default branch: manual runs start from it, and schedules, webhooks and the pull-request setting are read from its pipeline |
+| `projects[].repo` | URL or path | required | What the servers and Stations clone: `https://...`, `ssh://...`, or a local path. Credentials go in the URL or in `GIT_CONFIG_*` variables |
+| `projects[].branch` | branch | `main` | The default branch: manual Sorties (runs) start from it, and schedules, webhooks and the pull-request setting are read from its pipeline |
 | `projects[].poll` | duration | `30s` | How often to look for pushes and pull requests. At least `5s` (shorter is raised to 5s). Checked when the server starts |
 | `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this project |
 | `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this project |
@@ -296,7 +296,7 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 | `projects[].pipeline.supersede` | boolean | `false` | As a pipeline's [`supersede`](pipeline.md#top-level-keys) |
 | `projects[].pipeline.lane.name` | name | the project's name | The lane's name, as a pipeline's [`lane`](pipeline.md#lane): runs of the project take turns. Needs schema 24; not with `supersede` |
 | `projects[].pipeline.lane.per` | list | none | `ref`, `pull_request` or `input:<name>`: what splits the lane |
-| `projects[].pipeline.lane.when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does |
+| `projects[].pipeline.lane.when_busy` | `wait`, `cancel` or `skip` | `wait` | What a Sortie that arrives while the lane is held does |
 | `projects[].pipeline.lane.queue` | `newest` or `all` | `newest` | For `wait`: whether a newer waiting run replaces an older one |
 | `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
 | `projects[].default_pipeline.enabled` | boolean | `true` | `false`: the project runs no [flight plan](config-objects.md#a-flight-plan-for-every-repository). A repository file still runs |
@@ -313,27 +313,27 @@ read from. A pipeline names one of these by name; it can never give an address.
 | `libraries[].name` | name | required | `^[a-z][a-z0-9-]{0,39}$`, unique |
 | `libraries[].repo` | URL or path | required | Fetched with the same credentials as projects |
 
-## Runner
+## Station {#runner}
 
-The built-in runner runs steps inside the server process's machine. Its settings are the same as
-a separate runner's: see the [runner configuration reference](runner-config.md), where
+The built-in Station runs steps inside the server process's machine. Its settings are the same as
+a separate Station's: see the [Station configuration reference](runner-config.md), where
 `concurrency` is written here as `runner.concurrency`, `kubernetes.namespace` as
 `runner.kubernetes.namespace`, and so on.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `runner.enabled` | boolean | `true` | Start the built-in runner. Set `false` when steps run on separate runners |
-| `runner.concurrency` | whole number | `2` | Steps the built-in runner runs at once. See [runner settings](runner-config.md#runner-settings) |
-| `runner.ai` | boolean | `false` | Whether the built-in runner may call the AI models listed under [`ai`](#ai-models), for `ai` steps. See [runner settings](runner-config.md#runner-settings) |
+| `runner.enabled` | boolean | `true` | Start the built-in Station. Set `false` when steps run on separate Stations |
+| `runner.concurrency` | whole number | `2` | Steps the built-in Station runs at once. See [Station settings](runner-config.md#runner-settings) |
+| `runner.ai` | boolean | `false` | Whether the built-in Station may call the AI models listed under [`ai`](#ai-models), for `ai` steps. See [Station settings](runner-config.md#runner-settings) |
 
 ## Approvals
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `approvals.emergency_rollback` | `allow` or `require_approval` | `allow` | What happens when someone rolls back a protected environment after a successful deployment: `allow` goes ahead without an approval first and an approver reviews it afterwards; `require_approval` puts an approval step first. An environment's own `emergency_rollback` overrides it. See [rollback after success](../guide/rollback-after-success.md) |
-| `approvals.allow_self` | boolean | `true` with `auth.mode: none`, else `false` | Lets the person who started a run approve it, and promote or waive on a protected environment |
+| `approvals.emergency_rollback` | `allow` or `require_approval` | `allow` | What happens when someone rolls back a protected Airfield after a successful deployment: `allow` goes ahead without an approval first and an approver reviews it afterwards; `require_approval` puts an approval step first. An Airfield's own `emergency_rollback` overrides it. See [Return to base (rollback) after success](../guide/rollback-after-success.md) |
+| `approvals.allow_self` | boolean | `true` with `auth.mode: none`, else `false` | Lets the person who started a Sortie approve it, and promote or waive on a protected Airfield |
 
 ## Drafts and pull requests
 
@@ -347,7 +347,7 @@ these settings.
 | `drafts.allow` | text | `operator` | The role needed on a project to start a draft run there: `admin`, `operator` or `none` (nobody) |
 | `drafts.secrets` | boolean | `false` | Let steps of draft runs read secrets |
 | `pull_requests.secrets` | boolean | `false` | Let steps of pull-request runs read secrets, and image steps use pull credentials and build secrets |
-| `pull_requests.untrusted` | `restrict` or `allow` | `restrict` | What happens to a pull request from an [automation account](#automation-accounts): `restrict` runs it without secrets (even with `pull_requests.secrets: true`), deploy steps, saved caches or registry pushes, using the pipeline of the default branch, until a maintainer approves it with *Run with secrets*; `allow` treats it like any other pull request. See [Pull-request trust](../guide/pull-request-trust.md) |
+| `pull_requests.untrusted` | `restrict` or `allow` | `restrict` | What happens to a pull request from an [automation account](#automation-accounts): `restrict` runs it without secrets (even with `pull_requests.secrets: true`), deploy steps, saved caches or Depot (registry) pushes, using the pipeline of the default branch, until a maintainer approves it with *Run with secrets*; `allow` treats it like any other pull request. See [Pull-request trust](../guide/pull-request-trust.md) |
 
 ## Queues and limits
 
@@ -358,40 +358,40 @@ project may override these settings.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `queues.max_wait` | duration or `off` | `60m` | The longest a step waits for room (the step namespace's quota, a node with space) before it fails with the reason and what to change. `off` waits for ever |
-| `queues.runs` | whole number | `10` | How many runs of a project go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
-| `queues.pipeline_runs` | whole number | no limit | How many runs of one pipeline go at once |
+| `queues.runs` | whole number | `10` | How many Sorties of a project go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
+| `queues.pipeline_runs` | whole number | no limit | How many Sorties of one pipeline go at once |
 | `queues.pull_request_runs` | whole number | `4` | How many pull-request runs of a project go at once |
-| `queues.push_runs` | whole number | no limit | How many runs for pushes to branches that are not protected go at once |
-| `queues.schedule_runs` | whole number | no limit | How many scheduled runs go at once |
-| `queues.manual_runs` | whole number | no limit | How many runs started by hand, by a webhook or by a re-run go at once |
-| `queues.automation_runs` | whole number | `2` | How many runs started by [automation accounts](#automation-accounts) go at once: a burst of dependency updates runs this many at a time |
+| `queues.push_runs` | whole number | no limit | How many Sorties for pushes to branches that are not protected go at once |
+| `queues.schedule_runs` | whole number | no limit | How many Patrols (scheduled Sorties (runs)) go at once |
+| `queues.manual_runs` | whole number | no limit | How many Sorties started by hand, by a webhook or by a re-run go at once |
+| `queues.automation_runs` | whole number | `2` | How many Sorties started by [automation accounts](#automation-accounts) go at once: a burst of Maintenance (dependency updates) runs this many at a time |
 | `queues.supersede_pull_requests` | boolean | `true` | A new commit on a pull request cancels the older run of the same pull request, with the reason on the old run. A pipeline's `supersede: false` keeps every run of its own |
 
 ## Automation accounts
 
-Accounts that are bots: dependency updaters and release tools. Their runs are counted apart in the
+Accounts that are bots: dependency updaters and release tools. Their Sorties are counted apart in the
 queue (`queues.automation_runs`).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `automation.accounts` | list of patterns | `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*`, `launchway-updater*` | Account names, matched without regard to case against the commit's author and the person who started the run; `*` and `?` match. An empty list names none |
+| `automation.accounts` | list of patterns | `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*`, `launchway-updater*` | Account names, matched without regard to case against the commit's author and the person who started the Sortie; `*` and `?` match. An empty list names none |
 
 ## Tests
 
-Limits on what the server keeps of the test reports steps declare. `0` means the default.
+Limits on what the server keeps of the Debriefs (test reports) steps declare. `0` means the default.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; runners are told and send no more. At most 1024 |
-| `tests.max_cases_per_run` | whole number | `50000` | Individual results one run keeps; beyond it, only the totals |
-| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its runs, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; Stations are told and send no more. At most 1024 |
+| `tests.max_cases_per_run` | whole number | `50000` | Individual results one Sortie keeps; beyond it, only the totals |
+| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
 
 ## Reports
 
 Limits on test attachments, coverage and hosted HTML reports, and where hosted reports are served
-from. `0` means the default. See [Test reports](../guide/test-reports.md).
+from. `0` means the default. See [Debriefs](../guide/test-reports.md).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
@@ -401,22 +401,22 @@ from. `0` means the default. See [Test reports](../guide/test-reports.md).
 | `reports.max_html_files` | whole number | `5000` | Files of one hosted HTML report |
 | `reports.max_html_mib` | whole number | `256` | MiB of one hosted HTML report |
 | `reports.max_coverage_upload_mib` | whole number | `24` | MiB of coverage reports accepted per step attempt. At most 1024 |
-| `reports.max_coverage_files_per_run` | whole number | `20000` | Per-file coverage records one run keeps; beyond it, only the totals |
+| `reports.max_coverage_files_per_run` | whole number | `20000` | Per-file coverage records one Sortie keeps; beyond it, only the totals |
 | `reports.max_coverage_files_per_project` | whole number | `2000000` | Per-file coverage records a project keeps, the oldest runs' removed first |
 | `reports.origin` | URL | none | A separate origin, such as `https://reports.example.com`, that alone serves hosted HTML reports, on its own host name pointing at the same servers. Without it, reports are served from Launchway's own origin, sandboxed |
 
 The other sizes are at most 1048576. Limits are checked when the server starts.
 
-## Artifacts
+## Cargo {#artifacts}
 
 Where the files steps keep are stored, and limits on them. Several servers need one store they all
 share: the database (the default on PostgreSQL), `s3`, or a directory on a shared filesystem. See
-[Where artifacts are kept](../artifacts.md).
+[Where Cargo are kept](../artifacts.md).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `artifacts.store` | text | `database` on PostgreSQL, `filesystem` on SQLite | `database`, `filesystem` or `s3`. An installation that kept artifacts on the filesystem before the database store existed keeps doing so until they are copied with `launchway blobs copy` |
+| `artifacts.store` | text | `database` on PostgreSQL, `filesystem` on SQLite | `database`, `filesystem` or `s3`. An installation that kept Cargo on the filesystem before the database store existed keeps doing so until they are copied with `launchway blobs copy` |
 | `artifacts.database.max_total_gib` | whole number | `100` | How much the database store may hold in all, uploads in progress included, in GiB. Only with the database store |
 | `artifacts.database.max_blob_mib` | whole number | `2048` | The largest single file the database store keeps, in MiB. Only with the database store |
 | `artifacts.dir` | directory | `<data>/artifacts` | The filesystem store's directory. Not with `s3` |
@@ -426,18 +426,18 @@ share: the database (the default on PostgreSQL), `s3`, or a directory on a share
 | `artifacts.s3.prefix` | text | none | Prepended to every object's name, such as `launchway/` |
 | `artifacts.s3.path_style` | boolean | `true` | Path-style requests, which MinIO, Ceph and AWS accept; `false` for virtual-hosted style |
 | `artifacts.s3.ca_file` | path | none | An extra CA bundle (PEM) for a private endpoint |
-| `artifacts.max_file_mib` | whole number | `1024` | The largest file an artifact may hold, in MiB. At most 80000 |
+| `artifacts.max_file_mib` | whole number | `1024` | The largest file a Cargo may hold, in MiB. At most 80000 |
 | `artifacts.max_run_mib` | whole number | `4096` | How much one run may keep, in MiB. At least `max_file_mib` |
-| `artifacts.max_project_gib` | whole number | `50` | How much a project may keep over all its runs, in GiB. At least `max_run_mib` |
-| `artifacts.retain` | text | `30d` | How long artifacts are kept when the pipeline does not say: `30d`, `2w`, `12h`. From `1h` to `3650d` |
-| `artifacts.max_retain` | text | `90d` | The longest any artifact is kept, whatever the pipeline says. At least `retain` |
+| `artifacts.max_project_gib` | whole number | `50` | How much a project may keep over all its Sorties, in GiB. At least `max_run_mib` |
+| `artifacts.retain` | text | `30d` | How long Cargo are kept when the pipeline does not say: `30d`, `2w`, `12h`. From `1h` to `3650d` |
+| `artifacts.max_retain` | text | `90d` | The longest any Cargo is kept, whatever the pipeline says. At least `retain` |
 
 S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` variants),
 never from the file.
 
 ## Forge
 
-Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
+Launchway's own Git hosting: it keeps repositories in the database and the Cargo store and serves them
 over HTTPS and, when `forge.ssh.listen` is set, SSH (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.38 or newer on
 the server (older git: hosting refuses to turn on and says so; `launchway doctor git` shows the version) and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
 data. These are Base settings, kept in the database: an administrator sets them under
@@ -469,21 +469,21 @@ takes effect when each server next restarts.
 | `forge.ssh.idle_timeout` | text | `10m` | An SSH connection that moves no bytes is closed. At least `1m` |
 | `forge.ssh.max_duration` | text | `6h` | The longest any SSH connection lasts. At least `1m` |
 
-## Registry
+## Depot {#registry}
 
-Launchway's built-in OCI registry: container images, Helm charts and other OCI artifacts, served under `/v2/`
-beside the API (see [the registry guide](../guide/registry.md)). It keeps blobs in the artifact store
+Launchway's built-in OCI registry: container images, Helm charts and other OCI Cargo, served under `/v2/`
+beside the API (see [the Depot guide](../guide/registry.md)). It keeps blobs in the Cargo store
 (`artifacts.store`), so several servers need a store they all share, as Git hosting does. It is on by default
-wherever the server has an artifact store **and sign-in**: with sign-in off the registry answers `503`
-(`needs_sign_in`), because there is no anonymous registry. These settings are read from the file when the
+wherever the server has a Cargo store **and sign-in**: with sign-in off the Depot answers `503`
+(`needs_sign_in`), because there is no anonymous Depot. These settings are read from the file when the
 server starts. Quotas, retention and immutable tags are not here: they are policies kept in the database, set
 per installation, project or repository (`launchway registry policy set`).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `registry.enabled` | boolean | `true` | Turn the registry off with `false`. Nothing is deleted |
-| `registry.public_url` | URL | `forge.public_url`, then the address a request came in on | The address clients push and pull at, without a path (`https://registry.example.com`); also the address pipelines' image steps use when they name no registry |
+| `registry.enabled` | boolean | `true` | Turn the Depot off with `false`. Nothing is deleted |
+| `registry.public_url` | URL | `forge.public_url`, then the address a request came in on | The address clients push and pull at, without a path (`https://registry.example.com`); also the address pipelines' image steps use when they name no Depot |
 | `registry.allow_insecure_http` | boolean | `false` | Accept a password or token over plain HTTP from any address; otherwise only a loopback listener does |
 | `registry.max_blob_mib` | whole number | `10240` | The largest layer or blob accepted, in MiB |
 | `registry.max_manifest_kib` | whole number | `4096` | The largest manifest accepted, in KiB |
@@ -503,9 +503,9 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `findings.max_upload_mib` | whole number | `32` | MiB of SARIF files accepted per step attempt. At most 1024 |
-| `findings.max_per_run` | whole number | `20000` | Findings one run keeps; beyond it, only the counts |
+| `findings.max_per_run` | whole number | `20000` | Findings one Sortie keeps; beyond it, only the counts |
 | `findings.max_per_project` | whole number | `500000` | Findings a project keeps, the oldest runs' removed first. At least `max_per_run` |
-| `findings.max_components_per_run` | whole number | `20000` | SBOM components one run keeps for searching |
+| `findings.max_components_per_run` | whole number | `20000` | SBOM components one Sortie keeps for searching |
 | `findings.max_components_per_project` | whole number | `1000000` | SBOM components a project keeps. At least `max_components_per_run` |
 | `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarize them. At most 1024 |
 
@@ -523,36 +523,36 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 |---|---|---|---|
 | `schedules.enabled` | boolean | `true` | `false` turns every project's schedules off (a project's own setting wins). While off, firings are recorded as skipped and are not caught up later |
 
-## Environments
+## Airfields {#environments}
 
-`environments` lists where [deploy steps](pipeline.md#kind-deploy) may deploy. Without any, deploy
+`environments` lists where [launch (deploy) steps](pipeline.md#kind-launch) may deploy. Without any, deploy
 steps are refused. Checked when the server starts.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `environments[].name` | name | required | Lower-case letters, digits and hyphens, at most 63, unique |
-| `environments[].target` | name | required | What deploy runners serve to reach it, in practice its cluster. Same rules as `name` |
-| `environments[].projects` | list of patterns | required | The projects that may deploy here, such as `web-*` |
-| `environments[].queue` | text | `newest` | `newest`: a run waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they deploy in turn |
-| `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its deploy gate, unless `approvals.allow_self` lets them approve their own runs |
-| `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an emergency rollback of this environment; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
-| `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an emergency rollback of this environment |
-| `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this environment |
-| `environments[].write_back.repo` | `owner/name` | none | A GitOps repository hosted by this Launchway that the environment's deploy steps write to with a credential of their own (nothing stored). Without `write_back` they use the deploy runner's configured credentials. See [GitOps write-back](../guide/gitops-write-back.md) |
+| `environments[].target` | name | required | What launch Stations serve to reach it, in practice its cluster. Same rules as `name` |
+| `environments[].projects` | list of patterns | required | The projects that may launch here, such as `web-*` |
+| `environments[].queue` | text | `newest` | `newest`: a Sortie waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they launch in turn |
+| `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its launch gate, unless `approvals.allow_self` lets them approve their own runs |
+| `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an Abort (emergency Return to base (rollback)) of this Airfield; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
+| `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an Abort of this Airfield |
+| `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this Airfield |
+| `environments[].write_back.repo` | `owner/name` | none | A GitOps repository hosted by this Launchway that the Airfield's launch steps write to with a credential of their own (nothing stored). Without `write_back` they use the deploy Station's configured credentials. See [GitOps write-back](../guide/gitops-write-back.md) |
 | `environments[].write_back.mode` | `direct` or `pull_request` | required with `write_back` | `direct`: the step pushes to the branch, and a pipeline writer rule of the repository admits its project for exactly the files it may write. `pull_request`: the step pushes a branch of its own and opens a pull request |
 | `environments[].write_back.merge` | `auto` or `person` | `auto` | `pull_request` only: `auto` merges the pull request itself as soon as the repository's merge rules are met; `person` waits for a person to merge it |
 | `environments[].write_back.method` | `merge`, `squash` or `rebase` | the repository's default | `pull_request` only: how the pull request is merged |
 | `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
-## Runner pools
+## Flight lines (Station (runner) pools) {#runner-pools}
 
-`runner_pools` gives runners pools. A **deploy** pool has targets, and its runners take deploy work
+`runner_pools` gives Stations pools. A **launch** pool has targets, and its Stations take launch work
 for them, with the pool's own token or enrolled with a join token. A **build** pool serves projects
-(and optionally only some events), and its runners enrol with join tokens. The build pool named
-`default` is the pool of the shared runner token: without it listed, it serves every project that no
+(and optionally only some events), and its Stations enrol with join tokens. The build pool named
+`default` is the pool of the shared Station token: without it listed, it serves every project that no
 other build pool serves; list it to limit what it serves or to require identities. See
-[Runners on other machines and clusters](../guide/runner-identity.md). Checked when the server
+[Stations on other machines and clusters](../guide/runner-identity.md). Checked when the server
 starts.
 
 <!-- keys: server -->
@@ -560,25 +560,25 @@ starts.
 |---|---|---|---|
 | `runner_pools[].name` | text | required | Unique |
 | `runner_pools[].kind` | text | `deploy` | `deploy` (serves targets) or `build` (serves projects) |
-| `runner_pools[].token_env` | variable name | | A deploy pool's token, from an environment variable. Exactly one of `token_env` or `token_file`, unless `require_identity` is set (then neither). At least 32 characters, different from every other pool's and from the shared runner token. A build pool has none: its runners enrol with join tokens |
+| `runner_pools[].token_env` | variable name | | A launch pool's token, from an environment variable. Exactly one of `token_env` or `token_file`, unless `require_identity` is set (then neither). At least 32 characters, different from every other pool's and from the shared Station token. A build pool has none: its Stations enrol with join tokens |
 | `runner_pools[].token_file` | path | | Or from a file |
-| `runner_pools[].targets` | list | required for a deploy pool | Targets its runners may serve; each must be some environment's `target` |
-| `runner_pools[].projects` | list of patterns | required for a build pool (`["*"]` for all) | Projects a build pool's runners take work for. The pool named `default` may leave it out |
+| `runner_pools[].targets` | list | required for a launch pool | Targets its Stations may serve; each must be some Airfield's `target` |
+| `runner_pools[].projects` | list of patterns | required for a build pool (`["*"]` for all) | Projects a build pool's Stations take work for. The pool named `default` may leave it out |
 | `runner_pools[].events` | list | every event | A build pool: only runs started this way, such as `push` or `manual`, and not, say, pull requests |
-| `runner_pools[].require_identity` | boolean | `false` | Refuse shared tokens: only runners enrolled with a join token for the pool serve it. For the pool named `default` (the build pool of the shared runner token), refuse the shared token; turn the built-in runner off first |
+| `runner_pools[].require_identity` | boolean | `false` | Refuse shared tokens: only Stations enrolled with a join token for the pool serve it. For the pool named `default` (the build pool of the shared Station token), refuse the shared token; turn the built-in Station off first |
 
-## Runner administration
+## Station administration {#runner-administration}
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `runner_admin` | text | `admin` | The role needed on every project to manage runners: make join tokens, and revoke and rotate runners. `admin`, `operator` or `none` (managing runners over the API and the web UI is off) |
+| `runner_admin` | text | `admin` | The role needed on every project to manage Stations: make join tokens, and revoke and rotate Stations. `admin`, `operator` or `none` (managing Stations over the API and the web UI is off) |
 
 ## Verification
 
 `verification.sources` names the health sources that [verify steps](../guide/verification.md) may
-read. Every server lists the same ones. Where each is and its credentials are in the deploy runners'
-configuration (`health_sources`, see [runner configuration](runner-config.md#health-sources)).
+read. Every server lists the same ones. Where each is and its credentials are in the launch Stations'
+configuration (`health_sources`, see [Station configuration](runner-config.md#health-sources)).
 Unset, verify steps are refused.
 
 <!-- keys: server -->
@@ -590,7 +590,7 @@ Unset, verify steps are refused.
 
 ## AI models
 
-`ai` is the registry of models that `ai` steps, verifications and **Explain** may use. Nothing is
+`ai` is the Depot of models that `ai` steps, verifications and **Explain** may use. Nothing is
 sent to any model unless one is listed here. See [AI models](../guide/ai.md).
 
 <!-- keys: server -->
@@ -600,7 +600,7 @@ sent to any model unless one is listed here. See [AI models](../guide/ai.md).
 | `ai.models[].provider` | text | required | `anthropic` (the Messages API), or `openai` for any OpenAI-compatible chat completions server (Ollama, vLLM, LM Studio) |
 | `ai.models[].model` | text | required | The provider's model id, without spaces, such as `claude-sonnet-5-5` or `qwen3:8b` |
 | `ai.models[].endpoint` | URL | `https://api.anthropic.com` for `anthropic`; required for `openai` | The base URL, `http` or `https`, without a query or a user name |
-| `ai.models[].key.store` | name | | Where the API key is kept: a secret store of the runner that makes the call (and of `ai.secrets` on a server). A reference, never a value. Required for `api.anthropic.com`; a local server may need none |
+| `ai.models[].key.store` | name | | Where the API key is kept: a secret store of the Station that makes the call (and of `ai.secrets` on a server). A reference, never a value. Required for `api.anthropic.com`; a local server may need none |
 | `ai.models[].key.key` | text | | The key in the store |
 | `ai.models[].key.field` | text | | The field of the key |
 | `ai.models[].projects` | list of patterns | none | The projects that may use the model. Empty means none |
@@ -621,8 +621,8 @@ sent to any model unless one is listed here. See [AI models](../guide/ai.md).
 | `ai.models[].price.long_input_tokens` | whole number | `0` | Above this many input tokens in one call, the long prices apply to the whole call. `0` means no separate prices |
 | `ai.models[].price.long_input_per_mtok` | number | | The long-prompt input price |
 | `ai.models[].price.long_output_per_mtok` | number | | The long-prompt output price |
-| `ai.secrets.<name>.type` | text | required | The server's own secret stores, for the keys of models the server calls itself (only to explain a failed step); runners read keys from their own. Same types and settings as [`secrets`](runner-config.md#secrets): `env`, `file` or `vault`. Without them the server explains only with models that need no key |
-| `ai.secrets.<name>.projects` | list of patterns | every project | As for runner secret stores |
+| `ai.secrets.<name>.type` | text | required | The server's own secret stores, for the keys of models the server calls itself (only to explain a failed step); Stations read keys from their own. Same types and settings as [`secrets`](runner-config.md#secrets): `env`, `file` or `vault`. Without them the server explains only with models that need no key |
+| `ai.secrets.<name>.projects` | list of patterns | every project | As for Station secret stores |
 | `ai.secrets.<name>.keys` | list of patterns | every key | |
 | `ai.secrets.<name>.dir` | directory | required for `file` | |
 | `ai.secrets.<name>.address` | URL | required for `vault` | |
@@ -689,7 +689,7 @@ Unset, there are no policies.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `policy.policies` | list | none | Policies written in this file. Mistakes are reported with this file's line |
-| `policy.waivers.allow` | text | `admin` | The role needed on a project to waive one of its policies' rules (on the environment too, for a deploy rule): `admin`, `operator` or `none` |
+| `policy.waivers.allow` | text | `admin` | The role needed on a project to waive one of its policies' rules (on the Airfield too, for a launch rule): `admin`, `operator` or `none` |
 | `policy.waivers.max_days` | whole number | `30` | The longest a waiver may last, in days, 1 to 365. Checked when the server starts |
 | `policy.sources[].name` | name | required | Lower-case letters, digits and hyphens; unique, and not `config` |
 | `policy.sources[].library` | name | required | One of [`libraries`](#libraries) |
@@ -718,7 +718,7 @@ policy:
 
 ## What next
 
-- [Runner configuration](runner-config.md): executors, secret stores, image builders and deploy
+- [Station configuration](runner-config.md): executors, secret stores, image builders and launch
   targets.
 - [Helm values](helm-values.md): the same settings when Launchway runs on Kubernetes.
 - [Back up, restore and upgrade](../howto/backup-restore-upgrade.md).
@@ -741,6 +741,6 @@ Who is told when an approval waits or something went wrong, and where. See [Noti
 | `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long` |
 | `notifications.rules[].to` | list | required | The names of the channels that get them |
 | `notifications.rules[].projects` | list of patterns | all | Only events of these projects |
-| `notifications.rules[].environments` | list of patterns | all | Only events of these environments (deployments and rollbacks) |
+| `notifications.rules[].environments` | list of patterns | all | Only events of these Airfields (deployments and Returns to base) |
 | `notifications.rules[].branches` | list of patterns | all | Only runs made from these branches |
 | `notifications.rules[].after` | duration | `1h` | For `step.waiting_long`: how long a step waits before it is reported, at least `1m` |

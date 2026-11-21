@@ -62,7 +62,7 @@ One file (a tar of an OCI layout) holding this program, the chart (already insid
 the release needs (the Launchway image, the PostgreSQL image, and for a small Kubernetes the k3s air-gap
 images) and `SHA256SUMS`, signed like a release. `launchway install bundle --output FILE` pulls the images with
 `go-containerregistry` (Apache-2.0, already in the module graph) and writes the layout; `launchway install
---bundle FILE` verifies the sums and either pushes the images to a registry the person names (and points the
+--bundle FILE` verifies the sums and either pushes the images to a Depot (registry) the person names (and points the
 values file at it) or loads them into the node's container runtime. The command exists and says it is not built
 yet, rather than pretending.
 

@@ -21,16 +21,16 @@ describe("the pipeline graph", () => {
   it("shows every running step as running, in words as well as the picture", () => {
     draw();
     for (const name of ["test", "security-go"]) {
-      const node = screen.getByRole("button", { name: new RegExp("^" + name + " Running") });
+      const node = screen.getByRole("button", { name: new RegExp("^" + name + " Airborne \\(running\\)") });
       expect(node).toHaveClass("t-run");
-      expect(node).toHaveTextContent(/Running · 9m 55s/);
+      expect(node).toHaveTextContent(/Airborne \(running\) · 9m 55s/);
     }
     expect(screen.getByRole("button", { name: /^security-web Passed/ })).not.toHaveClass("t-run");
   });
 
   it("says what a step follows and what runs beside it", () => {
     draw();
-    expect(screen.getByRole("button", { name: /^test Running · 9m 55s after check-code\. runs together with security-go, security-web/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^test Airborne \(running\) · 9m 55s after check-code\. runs together with security-go, security-web/ })).toBeInTheDocument();
   });
 
   it("chooses a step by click and by keyboard, as before", () => {
@@ -63,7 +63,7 @@ describe("the pipeline graph", () => {
   it("draws a wide fan-out, a diamond and skipped dependents with distinct states", () => {
     draw(FAN_OUT);
     expect(screen.getByText("Stage 2 (runs together): shard-1, shard-2, shard-3, shard-4, shard-5, shard-6, shard-7, shard-8")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^shard-8 Waiting for a runner/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^shard-8 Waiting for a Station/ })).toBeInTheDocument();
     draw(DIAMOND);
     expect(screen.getByText("Stage 2 (runs together): unit, lint")).toBeInTheDocument();
     draw(FAILED_WITH_SKIPPED);
@@ -82,7 +82,7 @@ describe("the pipeline graph", () => {
     draw(MIXED, { groups: MIXED_GROUPS });
     expect(screen.getByRole("button", { name: /^compile / })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /build · template go\/build/ }));
-    const folded = screen.getByRole("button", { name: /^build Running · 1\/2/ });
+    const folded = screen.getByRole("button", { name: /^build Airborne \(running\) · 1\/2/ });
     expect(folded).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: /^compile / })).toBeNull();
     fireEvent.click(folded);

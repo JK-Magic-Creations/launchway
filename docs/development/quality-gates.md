@@ -132,16 +132,16 @@ make test-git-compat   # internal/forge/storage and internal/forge/storagespike 
 
 The target compiles the two packages in the Go image the pipeline uses, then runs them in an image
 that has only the minimum git, built from the release tarball by `scripts/git-compat/Dockerfile`
-(its checksum is pinned; the first run builds the image, a few minutes). It uses Podman or Docker
+(its checksum is pinned; the first Sortie (run) builds the image, a few minutes). It uses Podman or Docker
 (`CONTAINER=docker` to choose), and when neither is installed it says so and skips. It is not part
 of `make check` because of the time and the container; run it when you change anything in
-`internal/forge/storage`, and add it to a pipeline step on a runner that has a container tool.
+`internal/forge/storage`, and add it to a pipeline step on a Station (runner) that has a container tool.
 When you raise the minimum, change `MinGit`, `GIT_VERSION` and `GIT_SHA256` together.
 
 ## Before you push
 
 `make check` is fast, but it is not what the pipeline runs. Three pushes in a row once failed only in
-the pipeline, each for an environment reason: an older git in the build image, a generated file that
+the pipeline, each for an Airfield (environment) reason: an older git in the build image, a generated file that
 was stale because only part of the suite had been run, and a step user with no account entry.
 `make test-like-ci` closes that gap:
 
@@ -155,9 +155,9 @@ so the two cannot drift, and runs them in a container (Podman or Docker; `CONTAI
 that differs from a normal local run in exactly the ways that bit us:
 
 - the user is `1000:1000` with no entry in `/etc/passwd` (`podman --passwd=false`), and `HOME` is a
-  temporary directory; then the user is given an account entry exactly as the runner's step pods give
+  temporary directory; then the user is given an account entry exactly as the Station's step pods give
   one (`internal/executor/user_entry.sh`, the same script, in the same image), so the ssh tests run as
-  they do in the pipeline once the runner has that fix (`TEST_LIKE_CI_USER_ENTRY=0` leaves it out, to see
+  they do in the pipeline once the Station has that fix (`TEST_LIKE_CI_USER_ENTRY=0` leaves it out, to see
   what a step without it sees);
 - the tree is `git archive HEAD`, a copy of what is committed, so a file that is uncommitted, or
   generated and never committed, is missing exactly as it is in the pipeline (the copy is a throwaway
@@ -173,7 +173,7 @@ your work is committed, and not in a loop.
 
 ## Security gates
 
-`make check` stays fast. The security scans need the network (vulnerability databases, images) or
+`make check` stays fast. The Inspections (security scans) need the network (vulnerability databases, images) or
 take longer, so they have targets of their own: `make security` (govulncheck, osv-scanner and npm
 audit, the secret scan of the Git history, charts and Dockerfile, short fuzzing), `make image-scan`,
 `make web-csp`, `make dast` and `make sbom`. The product's pipeline and
@@ -199,7 +199,7 @@ A baseline moves in one direction.
 A change is done when all of the following are true.
 
 **Behavior is tested.** Every new behavior has a test that would fail without it: a unit test for
-logic, an integration test where it crosses a boundary (database, runner, HTTP, container). A bug
+logic, an integration test where it crosses a boundary (database, Station, HTTP, container). A bug
 fix starts with a test that reproduces the bug. Tests assert what a user or caller can observe, not
 how the code is built. Anything that touches the engine also shows what happens on failure,
 restart and retry.
@@ -241,8 +241,8 @@ versions share a database.
 `testdb.ThroughProxy` puts a TCP proxy in front of PostgreSQL that drops every connection or delays
 what passes; the engine tests have a wrapper that refuses or breaks SQLite connections, fails one
 statement or loses the answer to a commit; the API tests have a switch that makes the server answer
-503 or drop connections, a transport that sends every runner write twice, and a server that is
-restarted behind a fixed address. Writes a runner makes must be safe to repeat.
+503 or drop connections, a transport that sends every Station write twice, and a server that is
+restarted behind a fixed address. Writes a Station makes must be safe to repeat.
 
 **Dependencies.** A new module needs an approved license, a reason in the pull request, and passes
 `govulncheck`.

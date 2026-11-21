@@ -11,11 +11,11 @@ Run it with: go test ./internal/policy/ -run DocsReference
 
 # Policy rules
 
-This page lists every rule a Launchway policy can use, with its options, when it is judged and when it passes. It also covers scope, modes, waivers, policy sources in Git and the cases where policies fail closed. It is for platform and security teams who write policies, and for developers who need to know why a run was blocked.
+This page lists every rule a Launchway policy can use, with its options, when it is judged and when it passes. It also covers scope, modes, waivers, policy sources in Git and the cases where policies fail closed. It is for platform and security teams who write policies, and for developers who need to know why a Sortie (run) was blocked.
 
-> **Verified** on 2026-11-19 against commit f717337: every YAML example on this page was parsed with the server's own policy and configuration parsers (`policy.ParseFile` and `config.Load`, in a scratch test); a report-mode policy with `max_timeout`, `step_images` and `forbid_secrets` was judged on a local server (`launchway policy list`, `launchway policy run`); a waiver was granted, refused for a missing environment, an overlong expiry and a finding on another rule, and revoked, through `POST /api/v1/projects/{name}/waivers`. With OpenID Connect sign-in on, an operator's waiver was refused (`403`) and an admin's granted, from the command line. **Not verified:** the deploy and image-push rules against a real deployment or image push, environment-limited waiver checks, and policy sources loaded from Git.
+> **Verified** on 2026-11-19 against commit f717337: every YAML example on this page was parsed with the server's own policy and configuration parsers (`policy.ParseFile` and `config.Load`, in a scratch test); a report-mode policy with `max_timeout`, `step_images` and `forbid_secrets` was judged on a local server (`launchway policy list`, `launchway policy run`); a waiver was granted, refused for a missing Airfield (environment), an overlong expiry and a finding on another rule, and revoked, through `POST /api/v1/projects/{name}/waivers`. With OpenID Connect sign-in on, an operator's waiver was refused (`403`) and an admin's granted, from the command line. **Not verified:** the deploy and image-push rules against a real deployment or image push, environment-limited waiver checks, and policy sources loaded from Git.
 
-A policy is a name, a scope, a mode and rules taken from a fixed catalog. There is no policy language: each rule is a typed setting with a fixed meaning. Policies live in the server's configuration (`policy.policies`) or in a Git repository the server reads at a pinned tag (`policy.sources`), never in the pipeline file, so a pipeline's authors cannot switch them off. See the [glossary](../glossary.md) for terms such as run, step and environment.
+A policy is a name, a scope, a mode and rules taken from a fixed catalog. There is no policy language: each rule is a typed setting with a fixed meaning. Policies live in the server's configuration (`policy.policies`) or in a Git repository the server reads at a pinned tag (`policy.sources`), never in the pipeline file, so a pipeline's authors cannot switch them off. See the [glossary](../glossary.md) for terms such as run, step and Airfield.
 
 ## Where policies are judged
 
@@ -23,11 +23,11 @@ Each rule is judged at one point. The decision is stored in the same database tr
 
 | Point | Value in records | When | What a blocking decision does |
 |---|---|---|---|
-| Run start | `run` | a run is created, re-run or resumed | each step of the run fails as it would start, saying why; nothing reaches a runner |
-| Before deploying | `deploy` | a deploy step is about to take its environment's lock, or a rollout step is about to promote, promote fully or retry | the step fails before anything reaches the cluster or Git |
-| Before an image push | `image` | an image step that would push is about to be handed to a runner | the step fails before any runner sees it |
+| Run start | `run` | a Sortie is created, re-run or resumed | each step of the Sortie fails as it would start, saying why; nothing reaches a Station (runner) |
+| Before deploying | `deploy` | a deploy step is about to take its Airfield's lock, or a rollout step is about to promote, promote fully or retry | the step fails before anything reaches the cluster or Git |
+| Before an image push | `image` | an image step that would push is about to be handed to a Station | the step fails before any Station sees it |
 
-Rollback steps and aborts are never judged. A run that no policy governs runs exactly as it would without policies.
+Return to base (rollback) steps and aborts are never judged. A Sortie that no policy governs runs exactly as it would without policies.
 
 The decision for a step records its action: `deploy`, `promote`, `promote-full` or `retry` before deploying, and `push` before an image push.
 
@@ -51,7 +51,7 @@ flowchart TD
 <!-- rule-catalogue:start -->
 | Rule | Value | Judged | Passes when |
 |---|---|---|---|
-| `library_versions` | mapping | run start | every shared library the run uses, and every override, resolved to a tag or a full commit id; never a branch |
+| `library_versions` | mapping | run start | every shared library the Sortie uses, and every override, resolved to a tag or a full commit id; never a branch |
 | `required_templates` | list | run start | a step uses each listed template of each listed library, at an allowed version that is a tag or a commit |
 | `step_images` | mapping | run start | every image a step or container runs in is pinned by digest and/or comes from an allowed repository |
 | `max_timeout` | duration | run start | no step's timeout is longer than this; approval waits are not counted |
@@ -59,20 +59,20 @@ flowchart TD
 | `tests` | mapping | before deploying | the steps before the deploy step reported at least `min` test results, none failed or errored |
 | `findings` | mapping | before deploying | the steps before the deploy step reported findings, none worse than allowed, and every required scanner reported |
 | `sbom` | mapping | before deploying | a step before the deploy step made an SBOM of at least `min_components` components |
-| `deployed_images` | mapping | before deploying | every image the deployment writes is pinned by digest, built by this run, signed and scanned, as asked |
-| `approvals` | mapping | before deploying | at least `min` people other than the person who started the run approved an approval step before the deploy step |
+| `deployed_images` | mapping | before deploying | every image the deployment writes is pinned by digest, built by this Sortie, signed and scanned, as asked |
+| `approvals` | mapping | before deploying | at least `min` people other than the person who started the Sortie approved an approval step before the deploy step |
 | `allowed_failures` | mapping | before deploying | at most `max` (none by default) of the steps before the deploy step failed and were allowed to (`on_failure: continue`) |
-| `refs` | mapping | before deploying | the run is of a branch or tag that matches the patterns |
-| `image_push` | mapping | before an image push | an image step that pushes scans with `mode: enforce`, signs, makes an SBOM and provenance, and pushes only to allowed registries, as asked |
+| `refs` | mapping | before deploying | the Sortie is of a branch or tag that matches the patterns |
+| `image_push` | mapping | before an image push | an image step that pushes scans with `mode: enforce`, signs, makes an SBOM and provenance, and pushes only to allowed Depots (registries), as asked |
 <!-- rule-catalogue:end -->
 
 A rule that is written but empty is refused where the table below says it needs at least one option. A rule a server does not know is refused with the file and line, and the message lists the rules there are.
 
-**Evidence** is what the run's events say: the summaries kept with each step attempt (test totals, findings by severity and by tool, the SBOM, what an image step built and signed), approvals and who gave them, and the resolved values of the deploy step's changes. "The steps before the deploy step" means every step the deploy step needs, directly or not. A step that a re-run reused is judged by what it reported in the run where it ran. Evidence that is missing never passes a rule.
+**Evidence** is what the Sortie's events say: the summaries kept with each step attempt (test totals, findings by severity and by tool, the SBOM, what an image step built and signed), approvals and who gave them, and the resolved values of the deploy step's changes. "The steps before the deploy step" means every step the deploy step needs, directly or not. A step that a re-run reused is judged by what it reported in the Sortie where it ran. Evidence that is missing never passes a rule.
 
 ### Library versions
 
-`library_versions` checks how the run's shared libraries were pinned.
+`library_versions` checks how the Sortie's shared libraries were pinned.
 
 | Option | Type | Default | Values |
 |---|---|---|---|
@@ -156,7 +156,7 @@ policies:
 
 ### Tests
 
-`tests` needs test results from the steps before the deploy step. It fails if no such step reported test results, if any test failed or errored, or if there are fewer than `min`. A step that declares test reports but kept none is named in a note.
+`tests` needs test results from the steps before the deploy step. It fails if no such step reported test results, if any test failed or errored, or if there are fewer than `min`. A step that declares Debriefs (test reports) but kept none is named in a note.
 
 | Option | Type | Default | Values |
 |---|---|---|---|
@@ -214,7 +214,7 @@ policies:
 | Option | Type | Default | Passes when |
 |---|---|---|---|
 | `digest` | true or false | `false` | each reference is pinned by digest, not a tag |
-| `built_by_run` | true or false | `false` | an image step before the deploy step in this run built that digest (the image's digest or one of its platforms') |
+| `built_by_run` | true or false | `false` | an image step before the deploy step in this Sortie built that digest (the image's digest or one of its platforms') |
 | `signed` | true or false | `false` | the image step that built it signed it |
 | `scanned` | true or false | `false` | the image step scanned it and the scan did not fail it |
 
@@ -230,13 +230,13 @@ policies:
 
 ### Approvals
 
-`approvals` counts the distinct people who approved a succeeded approval step before the deploy step, leaving out the person who started the run.
+`approvals` counts the distinct people who approved a succeeded approval step before the deploy step, leaving out the person who started the Sortie.
 
 | Option | Type | Default | Values |
 |---|---|---|---|
 | `min` | whole number | `1` | 1 to 20 |
 
-A run started by a push records the commit's author as its starter, which anyone can set in Git.
+A Sortie started by a push records the commit's author as its starter, which anyone can set in Git.
 
 ```yaml
 policies:
@@ -248,7 +248,7 @@ policies:
 
 ### Allowed failures
 
-`allowed_failures` counts the steps before the deploy step that failed for good and whose pipeline tolerates that (`on_failure: continue`). Such a run shows as succeeded; this rule lets a protected environment refuse to deploy from one.
+`allowed_failures` counts the steps before the deploy step that failed for good and whose pipeline tolerates that (`on_failure: continue`). Such a Sortie shows as succeeded; this rule lets a protected Airfield refuse to deploy from one.
 
 | Option | Type | Default | Values |
 |---|---|---|---|
@@ -281,15 +281,15 @@ policies:
 
 ### Image push
 
-`image_push` judges an image step that would push, before it is handed to a runner. A step that pushes nothing passes. Give at least one option.
+`image_push` judges an image step that would push, before it is handed to a Station. A step that pushes nothing passes. Give at least one option.
 
 | Option | Type | Default | Passes when |
 |---|---|---|---|
 | `scan` | text: `low`, `medium`, `high` or `critical` | none | the step scans with `mode: enforce` and a `fail_on` at this severity or a less severe one (stricter) |
-| `sign` | text: `runner` or `any` | none | `runner`: the step signs with the runner's own key; `any`: it signs, with the runner's key or a key from a secret store |
+| `sign` | text: `runner` or `any` | none | `runner`: the step signs with the Station's own key; `any`: it signs, with the Station's key or a key from a secret store |
 | `sbom` | true or false | `false` | the step makes an SBOM |
 | `provenance` | true or false | `false` | the step records provenance |
-| `registries` | list of patterns | any | every registry the step pushes tags to, and its cache registry, matches; registries are named as the runner's `images.registries` names them |
+| `registries` | list of patterns | any | every Depot the step pushes tags to, and its cache Depot, matches; Depots are named as the Station's `images.registries` names them |
 
 ```yaml
 policies:
@@ -308,7 +308,7 @@ Each policy is a mapping with these keys. Unknown keys are refused.
 | `name` | text, required | none | lower-case letters, digits and hyphens, at most 63 characters; unique across the configuration and every source |
 | `description` | text | none | at most 500 characters |
 | `mode` | text, required | none | `enforce` or `report` |
-| `scope` | mapping | every run | see [Scope](#scope) |
+| `scope` | mapping | every Sortie | see [Scope](#scope) |
 | `rules` | mapping, required | none | at least one rule from the catalog |
 
 There may be at most 200 policies in one list, and at most 100 values in any list of patterns.
@@ -319,12 +319,12 @@ There may be at most 200 policies in one list, and at most 100 values in any lis
 
 | Key | Values | Matching |
 |---|---|---|
-| `projects` | patterns | the run's project |
-| `environments` | patterns | the deploy step's environment; only deploy rules may be scoped to environments |
-| `branches` | patterns | the run's branch; a run without a branch (a tag or a pull request) does not match |
-| `events` | `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` | the run's event |
+| `projects` | patterns | the Sortie's project |
+| `environments` | patterns | the deploy step's Airfield; only deploy rules may be scoped to Airfields |
+| `branches` | patterns | the Sortie's branch; a Sortie without a branch (a tag or a pull request) does not match |
+| `events` | `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` | the Sortie's event |
 
-Patterns use `*` (any characters but `/`), `?` (one character) and `[...]`. A policy scoped to environments may not have rules judged at run start or before an image push: write those in a policy of their own.
+Patterns use `*` (any characters but `/`), `?` (one character) and `[...]`. A policy scoped to Airfields may not have rules judged at run start or before an image push: write those in a policy of their own.
 
 ```yaml
 policies:
@@ -341,7 +341,7 @@ policies:
 
 | Mode | What a failing rule does |
 |---|---|
-| `enforce` | stops the step, or the run at run start; the decision's verdict is `block` |
+| `enforce` | stops the step, or the Sortie at run start; the decision's verdict is `block` |
 | `report` | is judged, recorded and shown the same way, as a warning; it never changes an outcome; the verdict is `warn` |
 
 A decision's verdict is `pass` when nothing failed or every failure was waived. Each policy's result is `pass`, `fail` or `waived`, and so is each rule's. Start new policies in `report` mode, watch their verdicts on the **Policy** page or with `launchway policy list`, then enforce them.
@@ -432,7 +432,7 @@ A waiver lets one failing rule of one policy pass for one project until it expir
 | `reason` | yes | at most 500 characters; shown wherever the verdict is |
 | `expires_in_hours` or `expires_at` | yes | hours from now, or Unix milliseconds; in the future and at most `policy.waivers.max_days` away |
 | `run` | no | only this run of the project |
-| `environment` | no | only this environment; deploy rules only; must be a configured environment |
+| `environment` | no | only this Airfield; deploy rules only; must be a configured Airfield |
 | `finding` | no | only this finding, by its fingerprint; the `findings` rule only |
 
 Grant one with `POST /api/v1/projects/{name}/waivers` and the fields above as JSON, and revoke one with `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` and an optional `{"reason": "..."}`. The answer is the waiver with its `id`, `granted_by`, `granted_at`, `expires_at` and `state` (`active`, `expired` or `revoked`):
@@ -457,18 +457,18 @@ launchway waivers revoke demo-app wvr_06gzdc7h6jffagj069w0 --reason "fixed"
 How waivers behave:
 
 - Waivers are a log of grants and revocations. Each is written to the Logbook as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
-- A waiver counts only while it is in force: a decision made after it expires does not count it, even in a run that started before. A decision notes waivers that would have applied but had expired.
-- A rule is judged again when the run is resumed or re-run, so the usual path is to grant a waiver, then resume the run.
-- Who may waive is `policy.waivers.allow` on the project. A deploy rule needs that role on the environment too; a waiver that names no environment needs it from an access binding not limited to environments. A limited API token never grants more than its limits. See [roles](roles.md).
-- On an environment with `protected: true`, the person who started a run may not waive its deploy rules, unless `approvals.allow_self` lets people approve their own runs: a waiver of theirs for that run is refused, and a project-wide waiver they granted is not applied to their runs there.
+- A waiver counts only while it is in force: a decision made after it expires does not count it, even in a Sortie that started before. A decision notes waivers that would have applied but had expired.
+- A rule is judged again when the Sortie is resumed or re-run, so the usual path is to grant a waiver, then resume the Sortie.
+- Who may waive is `policy.waivers.allow` on the project. A deploy rule needs that role on the Airfield too; a waiver that names no Airfield needs it from an access binding not limited to Airfields. A limited API token never grants more than its limits. See [roles](roles.md).
+- On an Airfield with `protected: true`, the person who started a Sortie may not waive its deploy rules, unless `approvals.allow_self` lets people approve their own runs: a waiver of theirs for that Sortie is refused, and a project-wide waiver they granted is not applied to their Sorties there.
 
 ## What is recorded
 
-Each decision is a `policy.evaluated` event in the run's event log (see [run events](events.md#run-events)). It holds the point, the step and action, the environment, the time, the verdict, every policy as judged with its source and version, each rule's verdict with what was found, what would satisfy it, the evidence and any waiver used, the facts judged and the waivers considered. A decision can therefore be reproduced from the log alone.
+Each decision is a `policy.evaluated` event in the Sortie's event log (see [run events](events.md#run-events)). It holds the point, the step and action, the Airfield, the time, the verdict, every policy as judged with its source and version, each rule's verdict with what was found, what would satisfy it, the evidence and any waiver used, the facts judged and the waivers considered. A decision can therefore be reproduced from the log alone.
 
 At run start a decision is recorded for every run of a governed project. Before deploying and before an image push, a decision is recorded only when some policy applies.
 
-Read them with `GET /api/v1/runs/{id}/policy`, on the run's **Policy** tab, or on the command line:
+Read them with `GET /api/v1/runs/{id}/policy`, on the Sortie's **Policy** tab, or on the command line:
 
 ```sh
 launchway policy run run_06gzdc4xkndxsbjw21eg
@@ -483,8 +483,8 @@ launchway policy run run_06gzdc4xkndxsbjw21eg
     forbid_secrets     pass   this is a manual run
 ```
 
-`GET /api/v1/policies` and `launchway policy list` show the catalog, the sources with their versions and errors, the policies in force and recent verdicts of the runs you may see. See the [HTTP API reference](http-api.md) for the request and response details.
+`GET /api/v1/policies` and `launchway policy list` show the catalog, the sources with their versions and errors, the policies in force and recent verdicts of the Sorties you may see. See the [HTTP API reference](http-api.md) for the request and response details.
 
 ## What policies do not protect against
 
-Policies judge what Launchway does. A person with access to the cluster, the GitOps repository or the registry can still change what runs without Launchway, and Argo CD can sync a commit Launchway did not make. Facts come from what steps report: a step that writes a test report claiming tests passed, or a scanner configured to find nothing, satisfies the rules as far as the report goes. Keep scanning steps in shared templates that `required_templates` asks for. Running steps unrestricted is the runner's setting, never the pipeline's, so it is not a rule.
+Policies judge what Launchway does. A person with access to the cluster, the GitOps repository or the Depot can still change what runs without Launchway, and Argo CD can sync a commit Launchway did not make. Facts come from what steps report: a step that writes a Debrief claiming tests passed, or a scanner configured to find nothing, satisfies the rules as far as the report goes. Keep scanning steps in shared templates that `required_templates` asks for. Running steps unrestricted is the Station's setting, never the pipeline's, so it is not a rule.

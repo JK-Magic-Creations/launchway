@@ -1,5 +1,6 @@
 import { call } from "./api";
 import type { RollbackTarget, ServerAction } from "./apiDeploy";
+import { terms } from "./terms";
 
 // Rolling back after a deployment succeeded: what the server reports a person may roll back to, asking for it,
 // and the review of emergency rollbacks. The server decides what is possible; the interface offers only that.
@@ -55,7 +56,7 @@ export interface RollbackRequest { environment: string; service?: string; to?: s
 
 export const rollbackApi = {
   plan: (project: string, environment: string, service?: string, to?: string) =>
-    call<RollbackPlan>("GET", `/api/v1/projects/${encodeURIComponent(project)}/rollback?environment=${encodeURIComponent(environment)}${service ? `&service=${encodeURIComponent(service)}` : ""}${to ? `&to=${encodeURIComponent(to)}` : ""}`),
+    call<RollbackPlan>("GET", terms().say(`/api/v1/projects/${encodeURIComponent(project)}/rollback?{environment}=${encodeURIComponent(environment)}${service ? `&service=${encodeURIComponent(service)}` : ""}${to ? `&to=${encodeURIComponent(to)}` : ""}`)),
   request: (project: string, body: RollbackRequest) =>
     call<{ id: string; number: number; message: string }>("POST", `/api/v1/projects/${encodeURIComponent(project)}/rollbacks`, body),
   reviews: (background = false) => call<ReviewItem[]>("GET", "/api/v1/rollbacks/review", undefined, { background }),

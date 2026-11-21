@@ -12,13 +12,13 @@ describe("the top route", () => {
   it("shows the ten areas, in order, with the current one marked", () => {
     render(<Route ctx={ctx()} on="projects" needs={0} />);
     expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(
-      ["Home", "Code", "Pipelines", "Images", "Deployments", "Traffic", "Changes", "Activity", "Library", "Settings"]);
+      ["Tower", "Code", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
     expect(screen.getByRole("link", { name: "Code" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Tower" })).not.toHaveAttribute("aria-current");
   });
   it("describes each area on hover and focus, and counts what needs a person on Home", () => {
     render(<Route ctx={ctx()} on="home" needs={3} />);
-    expect(screen.getByRole("link", { name: /Traffic/ })).toHaveAttribute("data-tip", "How requests flow between services, and what protects and watches them.");
+    expect(screen.getByRole("link", { name: /Radar/ })).toHaveAttribute("data-tip", "How requests flow between services, and what protects and watches them.");
     expect(screen.getByLabelText("3 things need you")).toBeInTheDocument();
   });
   it("separates the groups with a divider that screen readers skip", () => {
@@ -36,7 +36,7 @@ describe("the top route", () => {
 describe("the phone's bottom bar", () => {
   it("has five areas and All areas", () => {
     render(<TabBar ctx={ctx()} on="home" needs={0} onAreas={() => {}} />);
-    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Home", "Code", "Deployments", "Traffic", "Changes"]);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Tower", "Code", "Launches", "Radar", "Changes"]);
     expect(screen.getByRole("button", { name: "All areas" })).toBeInTheDocument();
   });
 });
@@ -44,12 +44,12 @@ describe("the phone's bottom bar", () => {
 describe("the left column", () => {
   it("shows an area's pages with the current one marked", () => {
     render(<SideNav ctx={ctx({ applications: 1 })} area="deployments" path="/deployments/applications/x" />);
-    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Overview", "Environments", "Applications", "Hostssoon", "Machine imagessoon"]);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Overview", "Airfields", "Applications", "Hostssoon", "Machine imagessoon"]);
     expect(screen.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page");
   });
   it("shows the pages that are not built yet as soon, not hidden", () => {
     render(<SideNav ctx={ctx()} area="traffic" path="/traffic/protection" />);
-    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Traffic mapsoon", "Protectionsoon", "Reliabilitysoon", "Togglessoon"]);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Traffic mapsoon", "Protectionsoon", "Reliabilitysoon", "Switchessoon"]);
   });
   it("counts what waits for a decision on Activity", () => {
     render(<SideNav ctx={ctx({ approvals: 2 })} area="activity" path="/activity" />);

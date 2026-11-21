@@ -81,13 +81,13 @@ kubectl -n launchway port-forward svc/launchway 8080:8080    # until your Ingres
 What the chart does by itself:
 
 - A small hook Job creates the secrets the installation needs, each only if it does not exist yet and
-  never changed afterwards: the root key that protects stored secrets, the runner token, the bundled
+  never changed afterwards: the root key that protects stored secrets, the Station (runner) token, the bundled
   database's password and the one-time setup code. Nothing is generated while the chart is rendered,
   so `helm template`, `helm upgrade` and a GitOps controller all produce the same result every time.
 - The bundled PostgreSQL gets a small volume (set `database.size`, or give an existing database with
   `database.url`).
 - Sign-in is on from the first moment (`auth.mode: local`), encryption at rest is on, and default-deny
-  network policies cover the servers, the runners and the step pods.
+  network policies cover the servers, the Stations and the step pods.
 
 Then open the address, enter the setup code, choose a name and a password of at least 12 characters,
 add the authenticator secret to an authenticator app, type the code it shows, and save the ten
@@ -139,5 +139,5 @@ To keep Launchway running, run it as a service under its own unprivileged user; 
   a throwaway machine yet, so the menu shows it as coming and does not let you choose it.
 - **An offline bundle** (`launchway install bundle --output FILE`, then `launchway install --bundle FILE`):
   one file with the program, the chart and every image, for a network with no internet. Designed in the same
-  notes; the command says it is not built yet. Until then, mirror the image into your own registry and set
+  notes; the command says it is not built yet. Until then, mirror the image into your own Depot (registry) and set
   `kubernetes.image` to it.

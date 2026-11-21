@@ -25,14 +25,14 @@ export function RollbackBanner({ run, onChanged }: { run: RunDetail; onChanged: 
   }, [waiting, run.id]);
   if (!r) return null;
   return (
-    <section className={"rb-banner" + (r.emergency ? "" : " plain")} aria-label="Rollback">
+    <section className={"rb-banner" + (r.emergency ? "" : " plain")} aria-label={terms().say("{Rollback}")}>
       <h2>{r.headline}</h2>
       <dl>
-        <dt>Restores</dt><dd><b>{r.to.version}</b>, deployed by <EntityLink kind="run" name={`run #${r.to.run_number}`} id={r.to.run} />{r.to.at ? ` ${ago(r.to.at, now)}` : ""}</dd>
-        <dt>Instead of</dt><dd><b>{r.from.version}</b>, from <EntityLink kind="run" name={`run #${r.from.run_number}`} id={r.from.run} /></dd>
+        <dt>Restores</dt><dd><b>{r.to.version}</b>{terms().say(", {deploy:did} by")} <EntityLink kind="run" name={terms().say(`{run} #${r.to.run_number}`)} id={r.to.run} />{r.to.at ? ` ${ago(r.to.at, now)}` : ""}</dd>
+        <dt>Instead of</dt><dd><b>{r.from.version}</b>, from <EntityLink kind="run" name={terms().say(`{run} #${r.from.run_number}`)} id={r.from.run} /></dd>
         <dt>Why</dt><dd>{r.reason} <span className="faint">(asked by {r.actor})</span></dd>
         <dt>Undoes</dt><dd>{r.reverts.length === 0 ? "No commit: the deployments after it changed nothing in Git."
-          : r.reverts.map((x, i) => <span key={x.deployment}>{i > 0 && ", "}{x.version} (<EntityLink kind="run" name={`run #${x.run_number}`} id={x.run} />)</span>)}
+          : r.reverts.map((x, i) => <span key={x.deployment}>{i > 0 && ", "}{x.version} (<EntityLink kind="run" name={terms().say(`{run} #${x.run_number}`)} id={x.run} />)</span>)}
           {r.reverts.length > 1 ? <span className="faint">, newest first</span> : null}</dd>
         {r.emergency && <><dt>Review</dt><dd><ReviewState r={r} run={run} mayReview={waiting && mayReview} now={now} onChanged={onChanged} /></dd></>}
       </dl>
@@ -47,7 +47,7 @@ function ReviewState({ r, run, mayReview, now, onChanged }: { r: RollbackRunView
   if (r.review) return <>Acknowledged by <b>{r.review.by}</b> {ago(r.review.at, now)} ({clock(r.review.at)}): {r.review.comment}</>;
   return (
     <>
-      <b>Needs review.</b> It went ahead as an emergency on a protected environment, without an approval first; an approver acknowledges it afterwards.
+      <b>Needs review.</b> {terms().say("It went ahead as an emergency on a protected {environment}, without an approval first; an approver acknowledges it afterwards.")}
       {mayReview && <> <Button sm onClick={() => setOpen(true)}>Acknowledge…</Button></>}
       {open && <ReviewDialog items={[{ run: run.id, number: run.number, project: run.project, environment: r.environment, service: r.service, from_version: r.from.version,
         to_version: r.to.version, reason: r.reason, actor: r.actor, at: run.created_at, acknowledge: { name: "acknowledge", available: true, who: "operator" } }]}
@@ -62,8 +62,7 @@ export function RolledBackLine({ run }: { run: RunDetail }) {
   if (by.length === 0) return null;
   return (
     <p className="rb-link" role="status">
-      <b>Rolled back later</b> by {by.map((b, i) => <span key={b.id}>{i > 0 && ", "}<EntityLink kind="run" name={`run #${b.number}`} id={b.id} />{b.actor ? ` (${b.actor}${b.reason ? `: ${b.reason}` : ""})` : ""}</span>)}.
-      This run itself is as it ended.
+      <b>{terms().say("{Rollback:did} later")}</b> by {by.map((b, i) => <span key={b.id}>{i > 0 && ", "}<EntityLink kind="run" name={terms().say(`{run} #${b.number}`)} id={b.id} />{b.actor ? ` (${b.actor}${b.reason ? `: ${b.reason}` : ""})` : ""}</span>)}{terms().say(". This {run} itself is as it ended.")}
     </p>
   );
 }
@@ -75,7 +74,7 @@ export function HistoryNote({ d }: { d: DeploymentView }) {
   return (
     <div className="rb-hist">
       {d.rollback && <>{d.rollback.headline}{d.rollback.needs_review ? " · needs review" : d.rollback.review ? ` · reviewed by ${d.rollback.review.by}` : ""}</>}
-      {by.length > 0 && <>rolled back later by {by.map((b, i) => <span key={b.id}>{i > 0 && ", "}<EntityLink kind="run" name={`run #${b.number}`} id={b.id} /></span>)}</>}
+      {by.length > 0 && <>{terms().say("{rollback:did} later by")} {by.map((b, i) => <span key={b.id}>{i > 0 && ", "}<EntityLink kind="run" name={terms().say(`{run} #${b.number}`)} id={b.id} /></span>)}</>}
     </div>
   );
 }
@@ -91,9 +90,9 @@ export function ReviewDialog({ items, onClose, onDone }: { items: ReviewItem[]; 
     try { await rollbackApi.review(it.run, comment.trim()); onDone(); } catch (e) { setError(e); setBusy(false); }
   };
   return (
-    <Dialog label={`Review the rollback of ${it.service} in ${it.environment}`} onClose={onClose}>
+    <Dialog label={terms().say(`Review the {rollback} of ${it.service} in ${it.environment}`)} onClose={onClose}>
       <form className="rb-form" onSubmit={(e) => { e.preventDefault(); if (comment.trim()) go(); }}>
-        <h2>Review the rollback of {it.service} in {it.environment}</h2>
+        <h2>{terms().say("Review the {rollback} of")} {it.service} in {it.environment}</h2>
         <p className="rb-then">{it.actor} rolled it back from {it.from_version} to {it.to_version} as an emergency: “{it.reason}”. It went ahead without an approval first.</p>
         <label className="field"><span>What did you check? (required, kept in the {terms().lower("logbook")})</span>
           <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} required data-autofocus placeholder="For example: the incident is real and the revert matches it" /></label>
@@ -115,13 +114,13 @@ export function NeedsReview({ items, environment, onChanged }: { items: ReviewIt
   const list = (items ?? []).filter((i) => !environment || i.environment === environment);
   if (list.length === 0) return null;
   return (
-    <Sheet title="Needs review" actions={<span className="faint small">{list.length} emergency {list.length === 1 ? "rollback" : "rollbacks"} without an approver's acknowledgment</span>}>
+    <Sheet title="Needs review" actions={<span className="faint small">{list.length} {terms().say(list.length === 1 ? "{emergency_rollback}" : "{emergency_rollbacks}")} without an approver's acknowledgment</span>}>
       {list.map((i) => (
         <div key={i.run} className="need warn">
           <div className="ico-tile warn"><span aria-hidden>!</span></div>
           <div className="tx">
-            <div className="ti">{i.service} in {i.environment}: rolled back from {i.from_version} to {i.to_version} by {i.actor}</div>
-            <div className="ds">“{i.reason}” · <EntityLink kind="run" name={`run #${i.number}`} id={i.run} /> of <EntityLink kind="project" name={i.project} /> · {ago(i.at, now)}
+            <div className="ti">{i.service} in {i.environment}{terms().say(": {rollback:did} from")} {i.from_version} to {i.to_version} by {i.actor}</div>
+            <div className="ds">“{i.reason}” · <EntityLink kind="run" name={terms().say(`{run} #${i.number}`)} id={i.run} /> of <EntityLink kind="project" name={i.project} /> · {ago(i.at, now)}
               {!i.acknowledge.available && i.acknowledge.reason ? <> · <span>you cannot acknowledge it: {i.acknowledge.reason}</span></> : null}</div>
           </div>
           {i.acknowledge.available && <div className="acts"><Button sm kind="pri" onClick={() => setOpen(i)}>Acknowledge…</Button></div>}

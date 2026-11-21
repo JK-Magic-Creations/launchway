@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Dependency order and releases · <a href="../roadmap-list.html">as a list</a></p>
 
-Build and release in the right order, and start each repository on the right branching pattern. **Status:** planned, in [Milestone 5](milestone-5.md), with the registry hand-off in [Milestone 4](milestone-4.md). Launchway works the order out from what your code says, and you can always correct it.
+Build and release in the right order, and start each repository on the right branching pattern. **Status:** planned, in [Milestone 5](milestone-5.md), with the Depot (registry) hand-off in [Milestone 4](milestone-4.md). Launchway works the order out from what your code says, and you can always correct it.
 
 ## A library changes
 
@@ -24,7 +24,7 @@ A Formation is a release unit: a database change, two services and a configurati
 
 ## Not everything deploys
 
-A library, command-line tool, image or chart is built, tested and published, and done means published and available. The built-in registry is the hand-off, with native endpoints for package clients, short-lived credentials and a pull-through cache.
+A library, command-line tool, image or chart is built, tested and published, and done means published and available. The built-in Depot is the hand-off, with native endpoints for package clients, short-lived credentials and a pull-through cache.
 
 ## Branching patterns
 

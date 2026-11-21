@@ -7,6 +7,7 @@ import { useInstallation } from "../guided/facts";
 import { Chip, Status, type State, type Tone } from "../kit/Status";
 import { EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useNow } from "../live";
+import { terms } from "../terms";
 
 const TONE: Record<string, Tone | undefined> = { ok: "ok", warn: "warn", bad: "bad", run: "run", idle: undefined };
 const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", quiet: "skip" };
@@ -22,12 +23,12 @@ export function ApplicationsListPage() {
   const look = inst.applications.filter(needsLook).length;
   return (
     <div className="page">
-      <PageHead eyebrow="Deployments" title="Applications"
-        sentence="Argo CD keeps your cluster the same as what is in Git; each application is one thing it keeps in step. These are the ones a deploy runner has looked at." />
+      <PageHead eyebrow={terms().say("{Deploys}")} title="Applications"
+        sentence={terms().say("Argo CD keeps your cluster the same as what is in Git; each application is one thing it keeps in step. These are the ones a {deploy:do} {runner} has looked at.")} />
       {!inst.loaded && <div className="loading">Loading…</div>}
       {inst.loaded && inst.applications.length === 0 && (
-        <Sheet><EmptyState title="No applications seen yet" action={<LinkButton href="/deployments/environments" icon="arrow">See the environments</LinkButton>}>
-          An application appears here once a pipeline has deployed it and a deploy runner has observed it. Add a deploy step to a pipeline, and make sure a deploy runner serves the environment's target.
+        <Sheet><EmptyState title="No applications seen yet" action={<LinkButton href="/deployments/environments" icon="arrow">{terms().say("See the {environments}")}</LinkButton>}>
+          {terms().say("An application appears here once a pipeline has {deploy:did} it and a {deploy:do} {runner} has observed it. Add a deploy step to a pipeline, and make sure a {deploy:do} {runner} serves the {environment}'s target.")}
         </EmptyState></Sheet>
       )}
       {inst.applications.length > 0 && (
@@ -51,7 +52,7 @@ export function ApplicationsListPage() {
                   <li key={a.name} className={dg.tone === "bad" ? "bad" : dg.tone === "wait" ? "warn" : ""}>
                     <div className="main">
                       <div className="nm"><EntityLink kind="application" name={a.name} /></div>
-                      <div className="sb">{dg.headline} · <EntityLink kind="environment" name={a.environment} /> · {a.run ? <>deployed by <EntityLink kind="project" name={a.project} /> <EntityLink kind="run" name={`#${a.run.number}`} id={a.run.id} /></> : "not by a pipeline"}</div>
+                      <div className="sb">{dg.headline} · <EntityLink kind="environment" name={a.environment} /> · {a.run ? <>{terms().say("{deploy:did} by")} <EntityLink kind="project" name={a.project} /> <EntityLink kind="run" name={`#${a.run.number}`} id={a.run.id} /></> : "not by a pipeline"}</div>
                     </div>
                     <div className="cell"><Status state={STATE[dg.tone]} /><Chip tone={TONE[sync.tone]}>{sync.label}</Chip><Chip tone={TONE[health.tone]}>{health.label}</Chip></div>
                     <div className="cell mono">{a.version}</div>
@@ -62,7 +63,7 @@ export function ApplicationsListPage() {
               {shown.length === 0 && <li className="faint">Nothing matches.</li>}
             </ul>
           </Sheet>
-          <p className="faint small">Applications Argo CD runs that no pipeline has deployed are not listed: no deploy runner has been asked to look at them.</p>
+          <p className="faint small">{terms().say("Applications Argo CD runs that no pipeline has {deploy:did} are not listed: no {deploy:do} {runner} has been asked to look at them.")}</p>
         </>
       )}
     </div>

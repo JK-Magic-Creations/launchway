@@ -298,6 +298,43 @@
       "rule": "level-installation",
       "contains": "Installation, Organization",
       "why": "The plain set named once where the words are introduced."
+    },
+    {
+      "path": "docs/reference/vocabulary.md",
+      "why": "The vocabulary page lists every plain word beside its themed word: that is its job."
+    },
+    {
+      "path": "docs/guide/words.md",
+      "why": "The words guide lists every plain word beside its themed word: that is its job."
+    },
+    {
+      "path": "docs/glossary.md",
+      "why": "The glossary defines each themed word by its plain word."
+    },
+    {
+      "path": "web/src/vocabulary.json",
+      "why": "Generated mirror of the vocabulary table."
+    },
+    {
+      "path": "web/src/components/ui.tsx",
+      "contains": "queued: \"Queued\"",
+      "why": "The plain status words the statuses fall back to; the themed word and the plain word are chosen from the table at display time."
+    },
+    {
+      "path": "internal/settings/vocabulary.go",
+      "why": "The vocabulary table itself holds every word of both sets."
+    },
+    {
+      "path": "cmd/launchway/",
+      "rule": "word:run/1",
+      "contains": "launchway run",
+      "why": "A command line example: the command name is a stable identifier."
+    },
+    {
+      "path": "web/src/components/Rollback.tsx",
+      "rule": "word:queue/3",
+      "contains": "Queue the",
+      "why": "'Queue' is the verb for holding an action behind a lock (the button says what it does), not the Holding pattern of runs."
     }
   ]
 }

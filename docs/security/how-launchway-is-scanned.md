@@ -71,7 +71,7 @@ installed system-wide. The versions are in `scripts/security/lib.sh` and the Mak
   and the GitOps file editor. A short run in CI finds shallow problems. A continuous fuzzing service
   such as OSS-Fuzz needs the project to have a significant user base and a committer contact
   ([OSS-Fuzz criteria](https://google.github.io/oss-fuzz/getting-started/accepting-new-projects/));
-  ClusterFuzzLite runs the same engines inside the public code host's workflow runner in the meantime.
+  ClusterFuzzLite runs the same engines inside the public code host's workflow Station (runner) in the meantime.
 - **DAST: OWASP ZAP baseline.** It is the OWASP flagship scanner, its baseline mode is passive plus
   a short spider and sends no attack payloads, and it runs from one container against a throwaway
   server. It is optional because it needs a container runtime and a built UI.
@@ -111,7 +111,7 @@ An exception is never silent. It lives in a file, with a reason and an end date:
 | kube-linter | 5 findings: PodDisruptionBudget without `unhealthyPodEvictionPolicy` | fixed in the charts (`AlwaysAllow`) |
 | Trivy config, charts | 1 HIGH: KSV-0053, the Kubernetes executor's Role in the step namespace allows `pods/exec` | exception with expiry 2027-05-21; the Role is limited to the step namespace; removal is a backlog item |
 | Trivy config, rootless BuildKit manifest | 2 (privilege escalation, writable root) that the manifest's README explains | exception with expiry |
-| hadolint | 3 warnings | `cd` in a RUN replaced by WORKDIR; two documented ignores |
+| hadolint | 3 warnings | `cd` in a Sortie (run) replaced by WORKDIR; two documented ignores |
 | Pod Security "restricted" | every pod of both charts passes | test added |
 | Fuzzing, 11 targets, 10 to 20 s each | 1 input found: a file path with trailing spaces in a security report was shown with them | fixed (`internal/findings/paths.go`); the input is kept as a regression test |
 | ZAP baseline | 64 passes, 4 warnings: cacheable static files, `style-src 'unsafe-inline'`, "modern web application", no COEP | each recorded in `quality/zap-rules.tsv` with a reason |
@@ -123,9 +123,9 @@ An exception is never silent. It lives in a file, with a reason and an end date:
 | Check | Score | Fix |
 |---|---|---|
 | Binary-Artifacts, Dangerous-Workflow, Fuzzing, License, Security-Policy, Token-Permissions | 10 | none |
-| Pinned-Dependencies | 8 | Dockerfile base images are pinned by tag; pin by digest, kept current by Launchway's own dependency updates once they are built |
+| Pinned-Dependencies | 8 | Dockerfile base images are pinned by tag; pin by digest, kept current by Launchway's own Maintenance (dependency updates) once they are built |
 | SAST | 0 | CodeQL workflow added |
-| Dependency-Update-Tool | 0 | Not met by a third party tool on purpose: dependency updates are Launchway's own feature. This repository's settings are in `.launchway/updates.yaml`; Launchway proposes the updates as pull requests, with the vulnerable ones first. The check looks for another vendor's tool, so the score stays low until it is told otherwise |
+| Dependency-Update-Tool | 0 | Not met by a third party tool on purpose: Maintenance are Launchway's own feature. This repository's settings are in `.launchway/updates.yaml`; Launchway proposes the updates as pull requests, with the vulnerable ones first. The check looks for another vendor's tool, so the score stays low until it is told otherwise |
 | Vulnerabilities | 0 (96 found on the published commit) | the docs-tools part is fixed here; re-run after the next push |
 | Branch-Protection | 0 | repository setting: protect `main`, require pull requests and status checks |
 | Code-Review | 0 | requires a second reviewer; not possible with one maintainer until a second person joins |
@@ -153,7 +153,7 @@ requirement and a documented assurance case; the plan is in the security assuran
 Releases are built twice and compared byte for byte, signed keylessly with cosign, carry CycloneDX
 SBOMs and signed provenance, and GitHub build-provenance attestations. That is SLSA Build level 2:
 a hosted build platform that signs the provenance ([SLSA levels](https://slsa.dev/spec/v1.0/levels)).
-Level 3 additionally needs the build isolated from other runs and the signing secrets out of reach
+Level 3 additionally needs the build isolated from other Sorties and the signing secrets out of reach
 of the build steps; moving the release job into a dedicated reusable workflow is the path, and
 until then Launchway claims level 2 and no more. See [Verifying downloads](verify-downloads.md).
 

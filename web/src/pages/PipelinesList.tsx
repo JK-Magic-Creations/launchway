@@ -11,6 +11,7 @@ import { Band, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Status, stateOf } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
+import { terms } from "../terms";
 
 /** What starts each project's pipeline, read from the pipeline file at the tip of its default branch. */
 function useStarts(projects: Project[]): Record<string, string> | null {
@@ -51,18 +52,18 @@ export function PipelinesPage() {
     <div className="page">
       <PageHead eyebrow="Pipelines" title="Pipelines"
         sentence={rows.length === 0 ? "A pipeline is a set of steps that runs when something happens. None exists yet." :
-          failing > 0 ? <><b>{failing} {failing === 1 ? "pipeline stopped" : "pipelines stopped"}</b> on its last run. The others are fine.</> : "Every pipeline's last run is fine or still going."}
+          failing > 0 ? <><b>{failing} {failing === 1 ? "pipeline stopped" : "pipelines stopped"}</b> {terms().say("on its last {run}. The others are fine.")}</> : "Every pipeline's last run is fine or still going."}
         actions={me?.runners ? <LinkButton href="/playground" icon="play">Try a pipeline without saving</LinkButton> : undefined} />
       {rows.length > 0 && (
         <Band cells={[
           { key: "n", label: "Pipelines", value: rows.length, foot: "one for each project" },
           { key: "run", label: "Running now", value: running, foot: running ? "work is moving" : "quiet" },
-          { key: "bad", label: "Stopped", value: failing, foot: failing ? "last run failed" : "none", loud: failing ? "bad" : undefined },
+          { key: "bad", label: "Stopped", value: failing, foot: failing ? terms().say("last {run} failed") : "none", loud: failing ? "bad" : undefined },
         ]} />
       )}
       {rows.length === 0 ? (
         <Sheet><EmptyState title="No pipelines yet" action={me?.admin ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined}>
-          Each project has a pipeline: its steps are read from the project's Git repository. Add a project and its pipeline appears here, with what starts it and every run's result.
+          {terms().say("Each project has a pipeline: its steps are read from the project's Git repository. Add a project and its pipeline appears here, with what starts it and every {run}'s result.")}
         </EmptyState></Sheet>
       ) : (
         <Sheet title="Every pipeline">

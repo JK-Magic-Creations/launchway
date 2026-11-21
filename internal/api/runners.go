@@ -84,13 +84,13 @@ func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		switch {
 		case pool != nil && !shared && pool.RequireIdentity:
-			writeErr(w, http.StatusForbidden, "runner pool "+pool.Name+" takes only enrolled runners (require_identity); enrol this runner with a join token")
+			writeErr(w, http.StatusForbidden, "{runner_group} "+pool.Name+" takes only enrolled {runners} (require_identity); enrol this {runner} with a join token")
 		case pool != nil && !shared:
 			next(w, r.WithContext(context.WithValue(r.Context(), poolKey{}, pool)))
 		case shared && pool == nil:
 			next(w, r)
 		default:
-			writeErr(w, http.StatusUnauthorized, "a valid runner token is required")
+			writeErr(w, http.StatusUnauthorized, "a valid {runner} token is required")
 		}
 	}
 }
@@ -160,7 +160,7 @@ func (s *Server) sharedRefused() string {
 // identities.
 func (s *Server) refusePools(w http.ResponseWriter, r *http.Request) bool {
 	if p := callerPool(r); p != nil {
-		writeErr(w, http.StatusForbidden, "this runner belongs to runner pool "+p.Name+", which takes deploy work only")
+		writeErr(w, http.StatusForbidden, "this {runner} belongs to {runner_group} "+p.Name+", which takes deploy work only")
 		return true
 	}
 	if callerIdentity(r) == nil {
@@ -225,7 +225,7 @@ func callerID(r *http.Request) string {
 func (s *Server) deployRunner(w http.ResponseWriter, r *http.Request, info *engine.RunnerInfo) ([]string, bool) {
 	pool := callerPool(r)
 	if pool == nil {
-		writeErr(w, http.StatusForbidden, "deploy work needs a runner of a deploy pool (runner_pools in the server's configuration): its token or a runner enrolled in it; the shared runner token cannot take it")
+		writeErr(w, http.StatusForbidden, "deploy work needs a {runner} of a deploy pool (runner_pools in the server's configuration): its token or a {runner} enrolled in it; the shared {runner} token cannot take it")
 		return nil, false
 	}
 	if s.claimsEnrolled(w, r, *info) {
@@ -233,7 +233,7 @@ func (s *Server) deployRunner(w http.ResponseWriter, r *http.Request, info *engi
 	}
 	*info = s.callerInfo(r, *info)
 	if info.ID == "" {
-		writeErr(w, http.StatusBadRequest, "the runner has no ID")
+		writeErr(w, http.StatusBadRequest, "the {runner} has no ID")
 		return nil, false
 	}
 	return poolTargets(pool, info.Targets), true
@@ -282,7 +282,7 @@ func (s *Server) runnerJoin(w http.ResponseWriter, r *http.Request) {
 		Facts: engine.RunnerInfo{Name: f.Name, OS: f.OS, Arch: f.Arch, Version: f.Version, Executor: f.Executor, Features: f.Features, Labels: f.Labels}})
 	if err != nil {
 		if errors.Is(err, engine.ErrNeedsNewer) {
-			writeErr(w, http.StatusNotFound, "this server does not enrol runners (it needs schema 20); use the shared runner token")
+			writeErr(w, http.StatusNotFound, "this server does not enrol {runners} (it needs schema 20); use the shared {runner} token")
 			return
 		}
 		if errors.Is(err, engine.ErrBadJoinToken) || errors.Is(err, engine.ErrForbidden) {
@@ -351,7 +351,7 @@ func (s *Server) assertionFailed(w http.ResponseWriter, r *http.Request, asserti
 	c, _ := runnerauth.Peek(assertion)
 	switch {
 	case errors.Is(err, engine.ErrNeedsNewer):
-		writeErr(w, http.StatusNotFound, "this server does not know runner identities (it needs schema 20)")
+		writeErr(w, http.StatusNotFound, "this server does not know {runner} identities (it needs schema 20)")
 	case errors.Is(err, runnerauth.ErrSkew):
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": err.Error(), "server_time": s.Now().Unix(), "skew": true})
 	case errors.Is(err, engine.ErrInvalid):

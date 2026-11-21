@@ -1,4 +1,5 @@
 import { Icon } from "../kit/Icon";
+import { terms } from "../terms";
 import { locate } from "../nav/model";
 import { onLink, usePath } from "../router";
 import { keyOnLine, learnFor, referenceFor, targetHref, type LearnTarget } from "./links";
@@ -7,7 +8,7 @@ import { keyOnLine, learnFor, referenceFor, targetHref, type LearnTarget } from 
 export function LearnLink({ to, className }: { to: LearnTarget; className?: string }) {
   return (
     <a className={"learn-link" + (className ? " " + className : "")} href={targetHref(to)} onClick={onLink} data-learn={to.slug}>
-      <Icon name="book" size="s" />{to.label}
+      <Icon name="book" size="s" />{terms().say(to.label)}
     </a>
   );
 }

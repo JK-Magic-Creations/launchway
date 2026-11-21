@@ -12,6 +12,7 @@ import { Chip } from "../kit/Status";
 import { Button, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { navigate, onLink } from "../router";
 import type { Me } from "../api";
+import { terms } from "../terms";
 
 // The Images tab of the built-in registry: a project's repositories, each repository's images (tags, digest, size,
 // platforms, who pushed it from which run, whether it is signed, has a bill of materials, what the scan found) with a
@@ -26,7 +27,7 @@ function quotaText(r: ProjectRegistry): string {
 
 /** The registry's start page: how to log in and push, and a way to a project's images. */
 export function RegistryPage({ project }: { project?: string }) {
-  useCrumbLabel(project ?? "Registry");
+  useCrumbLabel(project ?? terms().say("{Registry}"));
   const statusFn = useCallback(() => registryApi.status(), []);
   const status = useLoad(statusFn);
   const inst = useInstallation();
@@ -37,10 +38,10 @@ export function RegistryPage({ project }: { project?: string }) {
   if (off || (status.error && !status.data)) {
     return (
       <div className="page">
-        <PageHead eyebrow="Images" title="Registry" sentence="Launchway's own place for container images and Helm charts." />
+        <PageHead eyebrow="Images" title={terms().say("{Registry}")} sentence="Launchway's own place for container images and Helm charts." />
         {!off && <ErrorBox error={status.error} />}
-        <Sheet><EmptyState title="The built-in registry is off" action={<LinkButton href="/images" icon="arrow">Find images your runs built</LinkButton>}>
-          It needs sign-in and an artifact store, and <Mono>registry.enabled</Mono> must not be false. Run <Mono>launchway doctor registry</Mono> on the server to see what is missing. Pushing to any other registry keeps working.
+        <Sheet><EmptyState title={terms().say("The built-in {registry} is off")} action={<LinkButton href="/images" icon="arrow">{terms().say("Find images your {runs} built")}</LinkButton>}>
+          {terms().say("It needs sign-in and an {artifact} store, and")} <Mono>registry.enabled</Mono> must not be false. Run <Mono>launchway doctor registry</Mono> on the server to see what is missing. Pushing to any other registry keeps working.
         </EmptyState></Sheet>
       </div>
     );
@@ -48,20 +49,20 @@ export function RegistryPage({ project }: { project?: string }) {
   const s = status.data!;
   return (
     <div className="page">
-      <PageHead eyebrow="Images" title="Registry" sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>; people with a role on the project see it, and nobody else does.</>} />
+      <PageHead eyebrow="Images" title={terms().say("{Registry}")} sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>; people with a role on the project see it, and nobody else does.</>} />
       <div className="grid g2">
         <Sheet title="Push and pull">
           <dl className="kvlist">
-            <dt>Address</dt><dd><CopyValue value={s.host} label="the registry address" keep={40} /></dd>
+            <dt>Address</dt><dd><CopyValue value={s.host} label={terms().say("the {registry} address")} keep={40} /></dd>
             <dt>Log in</dt><dd><CopyValue value={s.login.split("   ")[0]} label="the login command" keep={48} /> <span className="faint small">with an API token as the password (<a href="/settings/access/keys" onClick={onLink}>make one</a>)</span></dd>
             <dt>Push</dt><dd><Mono>docker push {s.host}/{project ?? "project"}/image:tag</Mono></dd>
-            {s.insecure && <><dt>Plain HTTP</dt><dd>This registry is not behind HTTPS: clients need <Mono>--tls-verify=false</Mono> (podman, skopeo) or <Mono>--plain-http</Mono> (helm).</dd></>}
-            <dt>In a pipeline</dt><dd>An image step with no <Mono>registry</Mono> pushes here, with a credential made for the run.</dd>
+            {s.insecure && <><dt>Plain HTTP</dt><dd>{terms().say("This {registry} is not behind HTTPS: clients need")} <Mono>--tls-verify=false</Mono> (podman, skopeo) or <Mono>--plain-http</Mono> (helm).</dd></>}
+            <dt>In a pipeline</dt><dd>An image step with no <Mono>registry</Mono> {terms().say("pushes here, with a credential made for the {run}.")}</dd>
           </dl>
         </Sheet>
         <Sheet title="How it is kept">
           <dl className="kvlist">
-            <dt>Stored in</dt><dd>the artifact store ({s.store})</dd>
+            <dt>Stored in</dt><dd>{terms().say("the {artifact} store (")}{s.store})</dd>
             <dt>At rest</dt><dd><Chip tone={s.encryption.blobs_encrypted_by_launchway ? "ok" : "warn"}>{s.encryption.blobs_encrypted_by_launchway ? "Encrypted by Launchway" : "Not encrypted by Launchway"}</Chip> <span className="faint small">{s.encryption.note}</span></dd>
             <dt>Limits</dt><dd>a blob up to {bytes(s.limits.max_blob_bytes)}; a project {s.limits.default_quota_bytes < 0 ? "has no quota by default" : `may store ${bytes(s.limits.default_quota_bytes)} by default`}</dd>
           </dl>
@@ -94,7 +95,7 @@ function ProjectRegistryView({ project }: { project: string }) {
       {r && (
         <Sheet title={<>Repositories of {project}</>} actions={<span className="faint small">{quotaText(r)}</span>}>
           {r.quota_bytes > 0 && (
-            <div className="store-meter" role="meter" aria-label="Registry quota used" aria-valuemin={0} aria-valuemax={r.quota_bytes} aria-valuenow={r.used_bytes} aria-valuetext={quotaText(r)}>
+            <div className="store-meter" role="meter" aria-label={terms().say("{Registry} quota used")} aria-valuemin={0} aria-valuemax={r.quota_bytes} aria-valuenow={r.used_bytes} aria-valuetext={quotaText(r)}>
               <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, r.used_bytes > 0 ? 1 : 0))}%` }} />
             </div>
           )}
@@ -229,7 +230,7 @@ function PolicyView({ project, registry, admin, onChanged }: { project: string; 
         <div role="status">
           {preview.length === 0 ? <p>Nothing would be deleted: the rules keep every image.</p> : (
             <>
-              <p><strong>{preview.length}</strong> {preview.length === 1 ? "image" : "images"} would be deleted ({bytes(preview.reduce((n, c) => n + c.size, 0))}). Images an environment runs are never deleted.</p>
+              <p><strong>{preview.length}</strong> {preview.length === 1 ? "image" : "images"} would be deleted ({bytes(preview.reduce((n, c) => n + c.size, 0))}{terms().say("). Images an {environment} runs are never deleted.")}</p>
               <ul className="plain">{preview.map((c) => <li key={c.repository + c.digest}><Mono>{c.repository}</Mono> {c.tags.length ? c.tags.join(", ") : c.digest.slice(0, 19)} <span className="faint small">{c.reason}</span></li>)}</ul>
               {admin
                 ? <Button kind="bad" disabled={busy} onClick={() => { if (window.confirm(`Delete these ${preview.length} images? This cannot be undone.`)) run(async () => { const out = await registryApi.retentionRun(project); setDeleted(out.deleted.length); setPreview(null); onChanged(); }); }}>Delete these {preview.length}</Button>

@@ -15,10 +15,10 @@ flowchart TD
   M --> R
 ```
 
-A cache is a head start, never the answer. A build never silently uses an older copy of something it asked for the latest of, and deleting every cache must never change what a build produces, only how long it takes. Where Launchway cannot promise this for a path, the run says so and names the path and the reason.
+A cache is a head start, never the answer. A build never silently uses an older copy of something it asked for the latest of, and deleting every cache must never change what a build produces, only how long it takes. Where Launchway cannot promise this for a path, the Sortie (run) says so and names the path and the reason.
 
 ## Recipes, scopes and shared caches
 
-Recipes for Maven, Gradle, npm, pnpm, yarn, Go, Python and container images work out the cache key from the tool, its version, the platform and the lock file, so nobody writes keys by hand. What a pull request writes only that pull request reads, trusted branches share with their project, and forks are isolated. Where a tool has a build cache that verifies its inputs, Launchway hosts it. Android and iOS projects are built too, on runners that suit them.
+Recipes for Maven, Gradle, npm, pnpm, yarn, Go, Python and container images work out the cache key from the tool, its version, the platform and the lock file, so nobody writes keys by hand. What a pull request writes only that pull request reads, trusted branches share with their project, and forks are isolated. Where a tool has a build cache that verifies its inputs, Launchway hosts it. Android and iOS projects are built too, on Stations (runners) that suit them.
 
 Go back to the [Roadmap](../public/roadmap.html).

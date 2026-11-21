@@ -10,6 +10,7 @@ import { onLink } from "../router";
 import { togglesApi, type Change } from "../togglesApi";
 import { ErrorBox } from "./ui";
 import "../toggles.css";
+import { terms } from "../terms";
 
 type Item = { at: number; key: string; node: React.ReactNode };
 
@@ -35,7 +36,7 @@ export function EnvironmentChanges({ environment, projects, deployments }: { env
   if (!tl.data || changes.length === 0) return null;
   const items: Item[] = [
     ...deployments.map((d) => ({ at: d.opened_at, key: "d" + d.id, node: <><b>Deployed</b> <span className="mono">{d.version}</span> of {d.service}{d.mode === "rollback" ? " (a rollback)" : ""}</> })),
-    ...changes.map((c) => ({ at: c.at, key: "t" + c.id, node: <><b>Toggle</b> <a href={`/projects/${encodeURIComponent(c.project_name)}/toggles/${encodeURIComponent(c.toggle)}`} onClick={onLink}>{c.toggle}</a> {c.action === "state" ? "changed" : c.action}{c.status === "pending" ? " (waiting for approval)" : ""} by {c.actor}: {c.reason}</> })),
+    ...changes.map((c) => ({ at: c.at, key: "t" + c.id, node: <><b>{terms().say("{Toggle}")}</b> <a href={`/projects/${encodeURIComponent(c.project_name)}/toggles/${encodeURIComponent(c.toggle)}`} onClick={onLink}>{c.toggle}</a> {c.action === "state" ? "changed" : c.action}{c.status === "pending" ? " (waiting for approval)" : ""} by {c.actor}: {c.reason}</> })),
   ].sort((a, b) => b.at - a.at).slice(0, 25);
   const lastDeploy = Math.max(0, ...deployments.filter((d) => d.deployed_at).map((d) => d.deployed_at!));
   const since = changes.filter((c) => c.action === "state" && c.status === "applied" && !c.reverted_by && !c.reverts && c.at > lastDeploy);

@@ -29,18 +29,18 @@ groups the steps into stations it can name:
 |---|---|
 | **Commit** | The change itself. It is always passed: it is where the line begins. |
 | **Checks** | Steps that look at the code, such as linting. |
-| **Tests** | Steps that run tests and report them. |
+| **Tests** | Steps that Sortie (run) tests and report them. |
 | **Package** | Steps that build something to ship, such as a container image. |
 | **Approval** | A step where a person says go or no-go. |
-| **An environment** | A deployment to a place such as `staging` or `prod`. Each environment is its own station, named after it. |
+| **An Airfield (environment)** | A deployment to a place such as `staging` or `prod`. Each Airfield is its own station, named after it. |
 | **Release** | Steps that come after a gate, such as tagging a release. |
 | **Verified** | Launchway checks that what it deployed is healthy. |
 
-A pipeline without a deploy has no environment stations. The line only shows what applies.
+A pipeline without a deploy has no Airfield stations. The line only shows what applies.
 
 A station can stand for several steps. When it does, it shows a small stack with their number, and says how they are
-doing, such as "3 at once: 2 passed, 1 running"; hover over it to see each step. The full shape, with the steps that run
-together side by side, is the graph on the run page.
+doing, such as "3 at once: 2 passed, 1 running"; hover over it to see each step. The full shape, with the steps that Sortie
+together side by side, is the graph on the Sortie page.
 
 ## Reading the colors
 
@@ -57,14 +57,14 @@ Only the last station turns green, when the change has arrived and is healthy.
 ## Where you see it
 
 - On [Home](app:/), under "changes on their way", one line for each change in flight.
-- On every run page, where each station opens its steps and their logs.
-- In the list of [runs](app:/activity), as a small line beside each run.
+- On every Sortie page, where each station opens its steps and their logs.
+- In the list of [runs](app:/activity), as a small line beside each Sortie.
 
 ## When a change waits
 
 A change that stops is waiting for something, and Launchway always says what: a person to decide, a
-runner to pick the work up, another step to finish, an environment's lock (so two deployments never
-run at once), or a timer before a retry. The sentence is on the run page, under the station.
+Station (runner) to pick the work up, another step to finish, an Airfield's lock (so two deployments never
+run at once), or a timer before a retry. The sentence is on the Sortie page, under the station.
 
 ## Next
 

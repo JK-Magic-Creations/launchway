@@ -16,9 +16,9 @@ import (
 
 // VariableRule is the precedence rule, in the one sentence every page,
 // message and document uses. A test holds the documents to it.
-const VariableRule = "The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, " +
+const VariableRule = "The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, " +
 	"then the project, the Squadron, the Wing, the Base, then the template's own default; " +
-	"at the same level a variable set for the environment being deployed to beats the general one; " +
+	"at the same level a variable set for the Airfield (environment) being deployed to beats the general one; " +
 	"and a lock set at a level beats everything below it. Lists replace, never merge. Variables and locks never cross Wings."
 
 // Kinds of source of a value, from the nearest to a run to the farthest.
@@ -127,7 +127,7 @@ type ResolveInput struct {
 	// Names narrows the answer to these names (what a template takes);
 	// empty means every variable in effect.
 	Names []string
-	// Run and File are values given when a run starts and in the pipeline
+	// Run and File are values given when a Sortie (run) starts and in the pipeline
 	// file's with:; Defaults are templates' own defaults.
 	Run, File Given
 	Defaults  map[string]Default

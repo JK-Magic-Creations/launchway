@@ -91,7 +91,7 @@ func (s *Server) requestRollback(w http.ResponseWriter, r *http.Request) {
 	}
 	project := r.PathValue("name")
 	if in.Environment == "" {
-		writeErr(w, http.StatusBadRequest, "say which environment to roll back: {\"environment\": \"dev\", \"reason\": \"...\"}")
+		writeErr(w, http.StatusBadRequest, "say which {environment} to {rollback:do}: {\"environment\": \"dev\", \"reason\": \"...\"}")
 		return
 	}
 	setAudit(r, fmt.Sprintf("%s/%s", project, in.Environment), clip("requested: "+in.Reason, 300))

@@ -84,7 +84,7 @@ with the same sanitizer the rest of the product uses.
 ## Checks and rules
 
 A pipeline whose `on:` has `pull_request: {}` runs for a pull request of a hosted repository: when it is
-opened, when new commits arrive, and when it is reopened. The run carries the pull request number and the
+opened, when new commits arrive, and when it is reopened. The Sortie (run) carries the pull request number and the
 target branch, and its result is shown on the pull request: a check named after the pipeline (`ci`) and one
 per step (`ci/test`).
 

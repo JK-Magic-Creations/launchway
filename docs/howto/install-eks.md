@@ -1,7 +1,7 @@
 # Install Launchway on Amazon EKS
 
 This guide runs Launchway on Amazon EKS with the Helm chart: servers spread across availability
-zones, Amazon RDS or Aurora PostgreSQL as the shared database, artifacts in Amazon S3, the UI behind
+zones, Amazon RDS or Aurora PostgreSQL as the shared database, Cargo (artifacts) in Amazon S3, the UI behind
 an Application Load Balancer, and step pods on a node group of their own. It is for operators who
 have read [Install on Kubernetes](install-kubernetes.md), which explains the chart itself.
 
@@ -9,7 +9,7 @@ have read [Install on Kubernetes](install-kubernetes.md), which explains the cha
 > `deploy/helm/launchway/examples/eks.yaml` (the values file below), and `helm install` of the same
 > file on a local kind cluster with only what cannot exist there replaced (the image, the database
 > URL, the S3 endpoint pointed at MinIO, the step namespace, no node selector): three servers and
-> three runners became ready, the servers stored artifacts in the bucket under the prefix and a
+> three Stations (runners) became ready, the servers stored Cargo in the bucket under the prefix and a
 > pipeline fetched them back, and the API refused unauthenticated requests with sign-in on.
 > **Not verified:** nothing was run on AWS. Not tested: EKS itself, RDS or Aurora (including
 > `sslmode=verify-full` with the RDS certificate bundle), Amazon S3 itself, the ALB and its
@@ -23,7 +23,7 @@ have read [Install on Kubernetes](install-kubernetes.md), which explains the cha
   `launchway.example.com`.
 - An Amazon ECR repository for the Launchway image, and Podman or Docker to build it.
 - An RDS for PostgreSQL instance or Aurora PostgreSQL cluster that the cluster's nodes can reach.
-- An S3 bucket for artifacts, and an IAM user with an access key that may use it.
+- An S3 bucket for Cargo, and an IAM user with an access key that may use it.
 - An OpenID Connect provider for sign-in (see [Sign-in with OpenID Connect and roles](oidc-and-roles.md)).
 - Optional: a managed node group for step pods, and Vault or OpenBao for secrets.
 
@@ -41,7 +41,7 @@ flowchart LR
   runners --> vault["Vault"]
 ```
 
-Only the servers use the database and the bucket. Runners talk to the servers, the Kubernetes API,
+Only the servers use the database and the bucket. Stations talk to the servers, the Kubernetes API,
 your Git host and your secret stores, all outbound.
 
 ## Build and push the image
@@ -85,9 +85,9 @@ The values file mounts that ConfigMap at `/etc/launchway-db-ca` in the server po
 database up with RDS snapshots and point-in-time recovery; see
 [Back up, restore and upgrade](backup-restore-upgrade.md).
 
-## Artifact storage in S3
+## Cargo storage in S3 {#artifact-storage-in-s3}
 
-The servers keep artifacts and SBOMs in an S3-compatible store, signed with AWS Signature Version 4.
+The servers keep Cargo and SBOMs in an S3-compatible store, signed with AWS Signature Version 4.
 Create a bucket, and an IAM user whose policy allows `s3:PutObject`, `s3:GetObject`,
 `s3:DeleteObject` and `s3:AbortMultipartUpload` on
 `arn:aws:s3:::acme-launchway-artifacts/launchway/*`. Put its access key in a Secret:
@@ -98,7 +98,7 @@ kubectl -n launchway create secret generic launchway-s3 \
 ```
 
 > [!NOTE]
-> The S3 store reads a static access key (and optionally `AWS_SESSION_TOKEN`) from the environment
+> The S3 store reads a static access key (and optionally `AWS_SESSION_TOKEN`) from the Airfield (environment)
 > once, at start. It does not use IAM roles for service accounts or EKS Pod Identity, and it does not
 > refresh temporary credentials. Use an IAM user's access key and rotate it by updating the Secret
 > and restarting the servers.
@@ -133,12 +133,12 @@ for the node role (require IMDSv2 with a hop limit of 1 on the builds node group
 
 ## Secrets from Vault
 
-Runners log in to Vault or OpenBao with Kubernetes auth, using their own ServiceAccount token
+Stations log in to Vault or OpenBao with Kubernetes auth, using their own ServiceAccount token
 (`launchway-runner` in the release namespace). Configure Vault's Kubernetes auth method for the EKS
 cluster: its API server address, its CA certificate, and a role bound to the ServiceAccount
 `launchway-runner` in namespace `launchway`. This is Vault's own Kubernetes auth, not an AWS
 identity; Launchway does not use IAM roles for it. If Vault checks tokens with the client's own
-token rather than a reviewer token, the runners' ServiceAccount also needs the `system:auth-delegator`
+token rather than a reviewer token, the Stations' ServiceAccount also needs the `system:auth-delegator`
 ClusterRole. See [Secrets](secrets.md).
 
 ## The values file
@@ -277,14 +277,14 @@ kubectl -n launchway get ingress launchway
 ```
 
 Point `launchway.example.com` at the ALB's address (a CNAME, or an alias record in Route 53). Then
-open `https://launchway.example.com/` and sign in. Check the servers and runners:
+open `https://launchway.example.com/` and sign in. Check the servers and Stations:
 
 ```sh
 kubectl -n launchway logs deploy/launchway-server | grep -e 'store=s3' -e 'listening'
 kubectl -n launchway get pods -l app.kubernetes.io/component=runner
 ```
 
-A runner is ready only while the servers answer it, so ready runners mean they reached the servers.
+A Station is ready only while the servers answer it, so ready Stations mean they reached the servers.
 
 ## Check it before installing
 
@@ -297,7 +297,7 @@ helm template launchway deploy/helm/launchway -n launchway -f deploy/helm/launch
 
 ## What next
 
-- [Connect a runner](connect-runner.md) in another VPC or account.
+- [Connect a Station](connect-runner.md) in another VPC or account.
 - [Back up, restore and upgrade](backup-restore-upgrade.md).
-- [Install on Kubernetes](install-kubernetes.md) for scaling, the deploy runner and upgrades.
+- [Install on Kubernetes](install-kubernetes.md) for scaling, the deploy Station and upgrades.
 - [Helm values](../reference/helm-values.md) for every setting.

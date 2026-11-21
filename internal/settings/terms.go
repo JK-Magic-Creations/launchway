@@ -12,10 +12,9 @@ import (
 // audit actions and database columns keep their plain forms, so nothing a
 // script depends on is ever a label.
 //
-// The two built-in sets (aviation, the default, and business) and the label of
-// every term live in the web app (web/src/terms.ts); the server keeps the
-// names of the terms, to refuse a rename of one that does not exist, and the
-// four level words, to answer the level names in the overview.
+// The two built-in sets (aviation, the default, and business) and every word
+// live in ONE table, vocabulary.go; the web app receives it in the overview and
+// the command line and the sentences the server builds read it through Words.
 type Terms struct {
 	// Set is "aviation" (the default, also when empty) or "business".
 	Set string `yaml:"set" json:"set"`
@@ -28,23 +27,14 @@ type Terms struct {
 // TermSets are the built-in sets, the first being the default.
 var TermSets = []string{"aviation", "business"}
 
-// TermKeys are the terms an installation may rename.
-var TermKeys = []string{
-	"installation", "organization", "unit", "project",
-	"guide", "preflight", "checklist", "clearance", "go", "no_go", "hold",
-	"flight_plan", "maneuver", "hangar", "logbook", "payload", "in_flight", "launch_line",
-}
-
-// termLevels are the four level words of each set, singular and plural.
-var termLevels = map[string]Levels{
-	"aviation": {
-		Installation: LevelName{"Base", "Bases"}, Organisation: LevelName{"Wing", "Wings"},
-		Unit: LevelName{"Squadron", "Squadrons"}, Project: LevelName{"Project", "Projects"},
-	},
-	"business": {
-		Installation: LevelName{"Installation", "Installations"}, Organisation: LevelName{"Organization", "Organizations"},
-		Unit: LevelName{"Team", "Teams"}, Project: LevelName{"Project", "Projects"},
-	},
+// termLevels are the four level words of each set, singular and plural, read from the vocabulary table.
+func termLevels(set string) Levels {
+	lv := func(key string) LevelName {
+		w, _ := VocabularyWord(key)
+		f := w.forms(set)
+		return LevelName{f.One, f.plural()}
+	}
+	return Levels{Installation: lv("installation"), Organisation: lv("organization"), Unit: lv("unit"), Project: lv("project")}
 }
 
 // maxTermLen is the longest label.
@@ -73,7 +63,7 @@ func (t Terms) levelsFor(explicit Levels) Levels {
 	if set == "" {
 		set = TermSets[0]
 	}
-	d := termLevels[set]
+	d := termLevels(set)
 	pick := func(key string, ex, def LevelName) LevelName {
 		out := def
 		if ex.Singular != "" {

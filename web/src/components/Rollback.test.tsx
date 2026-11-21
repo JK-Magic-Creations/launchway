@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import type { RunDetail } from "../api";
 import type { ServerAction } from "../apiDeploy";
 
@@ -14,6 +14,10 @@ import { rollbackApi, type ReviewItem } from "../apiRollback";
 import { navigate } from "../router";
 import { RollbackControl } from "./Rollback";
 import { NeedsReview, RolledBackLine } from "./RollbackRun";
+import { setTerms, resetTerms } from "../terms";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const unit = { project: "shop", service: "shop", environment: "dev" };
 const target = (version: string, n: number, previous = false) => ({
@@ -31,12 +35,12 @@ describe("the rollback control follows what the server reports", () => {
   it("offers the previous version and a picker, and confirms with the consequence, suggestions and a required reason", async () => {
     render(<RollbackControl action={available} unit={unit} />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Roll back to 1\.3\.2/ }));
-    const dlg = screen.getByRole("dialog", { name: "Roll back shop in dev to 1.3.2" });
+    await user.click(screen.getByRole("button", { name: /Roll back: 1\.3\.2/ }));
+    const dlg = screen.getByRole("dialog", { name: "Roll back: shop in dev to 1.3.2" });
     expect(dlg.textContent).toMatch(/dev goes from 1\.4\.0 back to 1\.3\.2/);
     expect(dlg.textContent).toMatch(/never restores a database or configuration/);
     expect(dlg.textContent).toMatch(/database migration/);
-    const go = within(dlg).getByRole("button", { name: "Roll back to 1.3.2" });
+    const go = within(dlg).getByRole("button", { name: "Roll back: 1.3.2" });
     expect(go).toBeDisabled(); // the reason comes first
     await user.type(screen.getByRole("textbox"), "checkout fails");
     expect(go).toBeEnabled();
@@ -48,17 +52,17 @@ describe("the rollback control follows what the server reports", () => {
   it("lets an older deployment be chosen, with what choosing it reverts", async () => {
     render(<RollbackControl action={available} unit={unit} />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Roll back to…" }));
+    await user.click(screen.getByRole("button", { name: "Roll back: another version…" }));
     await user.click(screen.getByRole("radio", { name: /1\.3\.0/ }));
     expect(screen.getByRole("dialog").textContent).toMatch(/back to 1\.3\.0/);
     await user.type(screen.getByRole("textbox"), "older is better");
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Roll back to 1.3.0" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Roll back: 1.3.0" }));
     expect(rollbackApi.request).toHaveBeenCalledWith("shop", expect.objectContaining({ to: "dep_1.3.0" }));
   });
 
   it("shows an emergency on a protected environment as such", async () => {
     render(<RollbackControl action={{ ...available, emergency: true }} unit={unit} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: /Roll back to 1\.3\.2/ }));
+    await userEvent.setup().click(screen.getByRole("button", { name: /Roll back: 1\.3\.2/ }));
     expect(screen.getByRole("dialog").textContent).toMatch(/emergency action on a protected environment.*needs no approval first.*approver reviews it afterwards/);
   });
 
@@ -68,7 +72,7 @@ describe("the rollback control follows what the server reports", () => {
     expect(screen.getByRole("button", { name: "Roll back" })).toBeDisabled();
     expect(screen.getByText(/no deploy runner is serving target homelab/)).toBeInTheDocument();
     expect(screen.getByText(/[Ss]tart or repair the deploy runner/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Roll back to/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Roll back:/ })).not.toBeInTheDocument();
   });
 
   it("offers to queue behind a running deployment, as the server says it can", async () => {
@@ -78,7 +82,7 @@ describe("the rollback control follows what the server reports", () => {
     await user.click(screen.getByRole("button", { name: /Queue the rollback behind run #3/ }));
     expect(screen.getByRole("dialog").textContent).toMatch(/waits for it and then goes first/);
     await user.type(screen.getByRole("textbox"), "urgent");
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^Roll back to 1\.3\.2/ }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^Roll back: 1\.3\.2/ }));
     expect(rollbackApi.request).toHaveBeenCalledWith("shop", expect.objectContaining({ queue: true }));
   });
 });

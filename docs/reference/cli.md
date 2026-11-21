@@ -2,9 +2,9 @@
 
 This page describes every `launchway` command, subcommand and flag, with defaults, environment variables, exit codes and an example of each. It is for anyone who runs Launchway from a terminal or a script.
 
-> **Verified** on 2026-11-19 against commit f717337: every command was run from a binary built with `make web build`, against a local server on `127.0.0.1` started from a configuration like `examples/local.yaml` and the `make demo` repositories, first without sign-in and then with OpenID Connect sign-in (a test provider) and real API tokens; the help texts and exit codes below are copied from those runs. **Not verified:** the Kubernetes flags (`--k8s-*`), `--images-config`, `--secrets-config`, `--health-listen`, a deploy runner (`runner --config` with a `deploy:` section) and `login` reading a token typed at a terminal.
+> **Verified** on 2026-11-19 against commit f717337: every command was run from a binary built with `make web build`, against a local server on `127.0.0.1` started from a configuration like `examples/local.yaml` and the `make demo` repositories, first without sign-in and then with OpenID Connect sign-in (a test provider) and real API tokens; the help texts and exit codes below are copied from those Sorties (runs). **Not verified:** the Kubernetes flags (`--k8s-*`), `--images-config`, `--secrets-config`, `--health-listen`, a deploy Station (`runner --config` with a `deploy:` section) and `login` reading a token typed at a terminal.
 
-One binary does everything: the server, runners, local runs and the API client.
+One binary does everything: the server, Stations, local runs and the API client.
 
 ```text
 launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
@@ -46,12 +46,12 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 
 | Code | Meaning |
 |---|---|
-| `0` | Success. For `runs start --wait`, the run succeeded. For `run`, the local run succeeded. |
-| `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
+| `0` | Success. For `runs start --wait`, the Sortie succeeded. For `run`, the local run succeeded. |
+| `1` | The Sortie failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a Station that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
 | `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`, `registry`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
-| `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
+| `5` | `runs start --wait --timeout`: the time passed before the Sortie finished. The Sortie goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
 ## Credentials
@@ -74,7 +74,7 @@ API tokens are made in the web UI, on the **API tokens** page, and start with `l
 
 ## launchway server
 
-Runs the server, its web UI and, unless the configuration turns it off, a built-in runner.
+Runs the server, its web UI and, unless the configuration turns it off, a built-in Station.
 
 ```text
 launchway server [--config FILE] [--listen ADDR] [--data DIR] [--ignore-database-config]
@@ -90,7 +90,7 @@ launchway server [--config FILE] [--listen ADDR] [--data DIR] [--ignore-database
 | Variable | Meaning |
 |---|---|
 | `LAUNCHWAY_DATABASE` | The database (SQLite path or `postgres://` URL), instead of `database:`. |
-| `LAUNCHWAY_RUNNER_TOKEN` | The runner token, instead of the one kept in the database. |
+| `LAUNCHWAY_RUNNER_TOKEN` | The Station token, instead of the one kept in the database. |
 
 On start it applies database migrations, then prints where it listens:
 
@@ -110,30 +110,30 @@ A server without sign-in refuses to listen on an address other than a loopback o
 launchway: refusing to listen on 0.0.0.0:8080 without sign-in.
 ```
 
-On `SIGINT` or `SIGTERM` it stops gracefully: `/readyz` answers `503` at once, it waits `server.drain_delay`, stops the built-in runner, and gives requests in flight up to 15 seconds. Steps in progress run again when a server starts. See [the server configuration](server-config.md).
+On `SIGINT` or `SIGTERM` it stops gracefully: `/readyz` answers `503` at once, it waits `server.drain_delay`, stops the built-in Station, and gives requests in flight up to 15 seconds. Steps in progress run again when a server starts. See [the server configuration](server-config.md).
 
 > [!WARNING]
 > Because a missing configuration file is not an error, a typo in `--config` starts a server with the defaults (no projects, data in `./launchway-data`). Check the project count in the start-up message.
 
-## launchway runner
+## launchway Station {#launchway-runner}
 
-Runs a runner on another machine. It connects out to the server; nothing connects to it.
+Runs a Station on another machine. It connects out to the server; nothing connects to it.
 
 ```text
 launchway runner --server URL --join JOIN_TOKEN [flags]
 launchway runner --server URL --token TOKEN [flags]
 ```
 
-With `--join`, the runner enrols once: it makes a key that never leaves it (`<data>/identity/key`), registers the public half, and gets a runner ID from the server. From then on it starts with neither `--join` nor `--token`, using its identity; the join token is used up. With `--token` it uses the shared runner token (or a deploy pool's token) and has no identity of its own. See [Runners on other machines and clusters](../guide/runner-identity.md).
+With `--join`, the Station enrols once: it makes a key that never leaves it (`<data>/identity/key`), registers the public half, and gets a Station ID from the server. From then on it starts with neither `--join` nor `--token`, using its identity; the join token is used up. With `--token` it uses the shared Station token (or a deploy pool's token) and has no identity of its own. See [Stations on other machines and clusters](../guide/runner-identity.md).
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--server` | `LAUNCHWAY_SERVER`, then `server:` in `--config` | The server URL. Required. |
-| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared runner token, or a runner pool's token. Never read from the file. Give this or `--join`, not both; neither is needed once the runner is enrolled. |
-| `--join` | `LAUNCHWAY_JOIN` | A join token, to enrol this runner once and give it an identity of its own. Never read from the file. |
-| `--labels` | `labels:` in the file | Labels this runner has, separated by commas, such as `arm64,gpu`. |
-| `--config` | none | A YAML file of runner settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the runner is a deploy runner. |
-| `--name` | `name:` in the file, else the host name | The runner's name. Its ID is `runner-<name>`. |
+| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared Station token, or a Flight line's token. Never read from the file. Give this or `--join`, not both; neither is needed once the Station is enrolled. |
+| `--join` | `LAUNCHWAY_JOIN` | A join token, to enrol this Station once and give it an identity of its own. Never read from the file. |
+| `--labels` | `labels:` in the file | Labels this Station has, separated by commas, such as `arm64,gpu`. |
+| `--config` | none | A YAML file of Station settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the Station is a deploy Station. |
+| `--name` | `name:` in the file, else the host name | The Station's name. Its ID is `runner-<name>`. |
 | `--data` | `data:` in the file, else `launchway-runner` | The directory for workspaces. |
 | `--concurrency` | `concurrency:` in the file, else `2` | Steps to run at once. |
 | `--executor` | `executor:` in the file, else `auto` | `auto`, `container`, `podman`, `docker`, `host` or `kubernetes`. `auto` uses Podman or Docker if installed, otherwise the host. |
@@ -143,7 +143,7 @@ With `--join`, the runner enrols once: it makes a key that never leaves it (`<da
 | `--secrets-config` | none | A YAML file of secret stores, the same as `runner.secrets` in the server configuration. Replaces `secrets:` from `--config`. |
 | `--health-listen` | none | An address, such as `:8081`, to serve `/healthz` (the process is up) and `/readyz` (the server answered within the last two minutes) on. |
 
-A flag wins over the environment, which wins over the file, which wins over the default.
+A flag wins over the Airfield (environment), which wins over the file, which wins over the default.
 
 ```sh
 export LAUNCHWAY_RUNNER_TOKEN="$(cat runner-token)"
@@ -156,7 +156,7 @@ INFO runner started name=build-2 executor="container (podman)" concurrency=4 ser
 
 Without a server it exits with `1`: `launchway: a server URL (--server, LAUNCHWAY_SERVER or server: in --config) is required`. Without a join token or a token, and not yet enrolled, it exits with `1` too: `launchway: a join token (--join or LAUNCHWAY_JOIN) to enrol this runner, or a shared token (--token or LAUNCHWAY_RUNNER_TOKEN), is required`. Giving both is refused.
 
-A wrong token does not stop the runner: it logs `could not reach the server; retrying err="lease: a valid runner token is required (HTTP 401)"` and tries again, waiting up to 30 seconds between tries. On `SIGINT` or `SIGTERM` it tells the server it is leaving and exits with `0`. See [Connect a runner](../howto/connect-runner.md) and [the runner configuration](runner-config.md).
+A wrong token does not stop the Station: it logs `could not reach the server; retrying err="lease: a valid runner token is required (HTTP 401)"` and tries again, waiting up to 30 seconds between tries. On `SIGINT` or `SIGTERM` it tells the server it is leaving and exits with `0`. See [Connect a Station](../howto/connect-runner.md) and [the Station configuration](runner-config.md).
 
 ## launchway run
 
@@ -172,7 +172,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `--executor` | `auto` | `auto`, `container`, `podman`, `docker`, `host` or `kubernetes`. |
 | `-i` | none | An input value, `name=value`. Give it once for each input; the others take their defaults. |
 | `--secrets-config` | none | A YAML file of secret stores. An `env` store, which reads your own environment, is always added. |
-| `--images-config` | none | A file with an `images:` section (builders and registries), as in a runner's configuration. Required if a step builds an image. |
+| `--images-config` | none | A file with an `images:` section (builders and Depots (registries)), as in a Station's configuration. Required if a step builds an image. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 
 The run is recorded as project `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.
@@ -195,7 +195,7 @@ show[os=alpine] │ LAUNCHWAY_INPUT_TARGET=prod
 Succeeded in 400ms
 ```
 
-It exits with `0` if the run succeeded and `1` otherwise. The first Ctrl-C cancels the run; a second exits at once with `130`. See [Environment variables](environment-variables.md#variables-a-step-receives) for what each step receives.
+It exits with `0` if the Sortie succeeded and `1` otherwise. The first Ctrl-C cancels the Sortie; a second exits at once with `130`. See [Environment variables](environment-variables.md#variables-a-step-receives) for what each step receives.
 
 ## launchway validate
 
@@ -207,7 +207,7 @@ launchway validate [FILE] [--project NAME] [--library NAME=DIRECTORY ...] [--res
 
 `FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file, except that the [starters that ship with Launchway](../guide/starters.md) (`uses: launchway/go-service`) are always expanded and checked here, with no `--library`. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
 
-With `--library NAME=DIRECTORY`, once for each library the pipeline uses, the templates are expanded from those directories, with no server and no network. `NAME` is what the pipeline's `libraries:` section calls the library; `DIRECTORY` is the library's root, the directory that holds `templates/`. It is the same parse, binding and expansion a server runs when it checks a pipeline (a test compares the two on the example library), so the same problems come out, each with the file and line of the template it is in. Which libraries and environments a server allows, and its limits, are the server's to say: add `--project` against a server for that. `--resolved` prints the resolved pipeline (every step of every template, with its needs, containers and environment) as JSON, the graph `POST /api/v1/validate` returns; it needs `--library` for each library the pipeline uses. The library's own version is not looked at: the directory is what is read, so check out the tag you mean.
+With `--library NAME=DIRECTORY`, once for each library the pipeline uses, the templates are expanded from those directories, with no server and no network. `NAME` is what the pipeline's `libraries:` section calls the library; `DIRECTORY` is the library's root, the directory that holds `templates/`. It is the same parse, binding and expansion a server runs when it checks a pipeline (a test compares the two on the example library), so the same problems come out, each with the file and line of the template it is in. Which libraries and Airfields a server allows, and its limits, are the server's to say: add `--project` against a server for that. `--resolved` prints the resolved pipeline (every step of every template, with its needs, containers and Airfield) as JSON, the graph `POST /api/v1/validate` returns; it needs `--library` for each library the pipeline uses. The library's own version is not looked at: the directory is what is read, so check out the tag you mean.
 
 ```sh
 launchway validate .launchway/pipeline.yaml --library platform=../pipeline-library
@@ -320,7 +320,7 @@ launchway runs start PROJECT [--ref R] [-i name=value ...] [--wait] [--timeout D
 | `--ref` | the project's default branch | The branch or tag to run. |
 | `-i` | none | An input value, `name=value`. Once for each input; a list input as `name=a,b,c`. The same name twice is refused. |
 | `--wait` | off | Wait for the run to finish, printing each step as its status changes, and exit with its outcome. |
-| `--timeout` | none | With `--wait`, stop waiting after this long, such as `10m`. The run goes on. |
+| `--timeout` | none | With `--wait`, stop waiting after this long, such as `10m`. The Sortie goes on. |
 | `--json` | off | Print the run as JSON. |
 
 ```sh
@@ -379,17 +379,17 @@ run_06gzde1rb0s24hb652q0 demo-app         #3     failed     manual       main   
 run_06gzde0f5gjz0scwmhz0 demo-app         #2     failed     manual       main           2026-11-19 20:10:20
 ```
 
-The columns are the run ID, project, number, status, event, branch or tag, and when it was created.
+The columns are the Sortie ID, project, number, status, event, branch or tag, and when it was created.
 
 ### launchway runs show
 
-Shows a run and its steps.
+Shows a Sortie and its steps.
 
 ```text
 launchway runs show RUN_ID [--json]
 ```
 
-`--json` prints the whole run as the server returns it. Without it the steps are listed after the run's **stages**: the steps
+`--json` prints the whole run as the server returns it. Without it the steps are listed after the Sortie's **stages**: the steps
 of a stage do not wait for each other, so a stage with several runs them at the same time (`stage 2 (runs together): test
 (running), security-go (running)`).
 
@@ -413,7 +413,7 @@ Steps:
 
 ### launchway runs logs
 
-Prints a run's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
+Prints a Sortie's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
 
 ```text
 launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
@@ -423,7 +423,7 @@ launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
 |---|---|---|
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
 | `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
-| `--follow` | off | Keep printing new lines until the run finishes. |
+| `--follow` | off | Keep printing new lines until the Sortie finishes. |
 
 ```sh
 launchway runs logs run_06gzde1rb0s24hb652q0 --step smoke-test
@@ -452,17 +452,17 @@ launchway runs cancel run_06gzde34x0b6151zjapg
 Asked run run_06gzde34x0b6151zjapg to cancel.
 ```
 
-A run that has finished exits with `4`: `launchway: the run has already finished`. A run waiting for its [lane](pipeline.md#lane) is canceled like any other, and leaves the line.
+A Sortie that has finished exits with `4`: `launchway: the run has already finished`. A Sortie waiting for its [lane](pipeline.md#lane) is canceled like any other, and leaves the line.
 
 ### launchway runs resume
 
-Continues a failed or canceled run: the same run goes on, running again its failed and canceled steps and keeping what succeeded.
+Continues a failed or canceled run: the same Sortie goes on, running again its failed and canceled steps and keeping what succeeded.
 
 ```text
 launchway runs resume RUN_ID [--wait] [--timeout D] [--json]
 ```
 
-With `--wait` it follows the run and exits as [`runs start`](#launchway-runs-start) does: `0` if it succeeded, `1` if it failed, `3` if it was canceled, `5` if `--timeout` passed first. A run that is not failed or canceled, or that opened a deployment, is refused with `4`. The same operation is `POST /api/v1/runs/{id}/resume`.
+With `--wait` it follows the Sortie and exits as [`runs start`](#launchway-runs-start) does: `0` if it succeeded, `1` if it failed, `3` if it was canceled, `5` if `--timeout` passed first. A Sortie that is not failed or canceled, or that opened a deployment, is refused with `4`. The same operation is `POST /api/v1/runs/{id}/resume`.
 
 ### launchway runs rerun
 
@@ -476,7 +476,7 @@ launchway runs rerun RUN_ID [--from STEP]... [--failed] [--plan] [--wait] [--tim
 |---|---|
 | `--from` | A step to start from; give it once for each step. The steps after any of them run again |
 | `--failed` | The smallest set of steps that covers every failed and canceled step |
-| `--plan` | Print what would run and what would be reused, or why it cannot be done (exit `4`), and make no run |
+| `--plan` | Print what would run and what would be reused, or why it cannot be done (exit `4`), and make no Sortie |
 | `--wait`, `--timeout` | As for `runs start`, with the same exit codes |
 | `--json` | Print JSON |
 
@@ -493,7 +493,7 @@ The same operation is `POST /api/v1/runs/{id}/rerun`, and the MCP tool `retry_ru
 
 ### launchway runs lanes
 
-Lists a project's [lanes](pipeline.md#lane) that have a run going or runs waiting.
+Lists a project's [lanes](pipeline.md#lane) that have a Sortie going or runs waiting.
 
 ```text
 launchway runs lanes PROJECT [--json]
@@ -505,11 +505,11 @@ release/ref main: held by run #41 (running)
   2. run #43 waits
 ```
 
-`launchway runs show` prints a run's own place in its lane (`lane release/ref main: waiting, number 1 in line, behind run #41`). The same data is `GET /api/v1/projects/{name}/lanes` in the [HTTP API](http-api.md) and the MCP tool `list_lanes`.
+`launchway runs show` prints a Sortie's own place in its lane (`lane release/ref main: waiting, number 1 in line, behind run #41`). The same data is `GET /api/v1/projects/{name}/lanes` in the [HTTP API](http-api.md) and the MCP tool `list_lanes`.
 
 ### launchway runs queue
 
-Lists the runs held back by [limits on concurrent runs](../guide/queues.md), in the order they will go, with why each waits; or moves one.
+Lists the Sorties held back by [limits on concurrent Sorties](../guide/queues.md), in the order they will go, with why each waits; or moves one.
 
 ```text
 launchway runs queue [PROJECT] [--json]
@@ -530,7 +530,7 @@ The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
 
 ## launchway policy
 
-Shows the policies in force and a run's policy decisions. See [Policy rules](policy-rules.md). `launchway policy` alone prints a summary and exits with `2`.
+Shows the policies in force and a Sortie's policy decisions. See [Policy rules](policy-rules.md). `launchway policy` alone prints a summary and exits with `2`.
 
 ### launchway policy list
 
@@ -538,7 +538,7 @@ Shows the policies in force and a run's policy decisions. See [Policy rules](pol
 launchway policy list [--json]
 ```
 
-Lists each policy source, its policies with their mode, rules and scope, and the most recent verdicts of runs you may see.
+Lists each policy source, its policies with their mode, rules and scope, and the most recent verdicts of Sorties you may see.
 
 ```text
 Source config (the server's configuration), version sha256:f374978e187f
@@ -557,7 +557,7 @@ A source whose policies cannot be loaded shows `FAILING CLOSED:` and the reason.
 launchway policy run RUN_ID [--json]
 ```
 
-Prints each decision of the run, policy by policy and rule by rule: what was found, what a failing rule needs, and any waiver that passed it.
+Prints each decision of the Sortie, policy by policy and rule by rule: what was found, what a failing rule needs, and any waiver that passed it.
 
 ```text
 2026-11-19 20:10:30  run start: WARN
@@ -600,8 +600,8 @@ launchway waivers grant PROJECT --policy P --rule R --reason "..." --expires D [
 | `--rule` | required | The rule of the policy. |
 | `--reason` | required | Why. It is recorded and shown wherever the verdict is. |
 | `--expires` | required | How long it lasts, such as `72h`. Rounded up to whole hours; at most `policy.waivers.max_days`. |
-| `--run` | none | Only for this run. |
-| `--environment` | none | Only for this environment (deploy rules). |
+| `--run` | none | Only for this Sortie. |
+| `--environment` | none | Only for this Airfield (deploy rules). |
 | `--finding` | none | Only for this finding's fingerprint (the `findings` rule). |
 | `--json` | off | Print the waiver as JSON. |
 
@@ -631,7 +631,7 @@ Revoked wvr_06gzde4tsd2z3aje3wh0  revoked  demo-shape/step_images for demo-app, 
 
 ## launchway blobs
 
-Shows and moves where artifacts are kept. It works on the database and the stores directly, not through the server, so it reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`). See [Where artifacts are kept](../artifacts.md).
+Shows and moves where Cargo (artifacts) are kept. It works on the database and the stores directly, not through the server, so it reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`). See [Where Cargo are kept](../artifacts.md).
 
 ### launchway blobs status
 
@@ -639,7 +639,7 @@ Shows and moves where artifacts are kept. It works on the database and the store
 launchway blobs status [--config launchway.yaml]
 ```
 
-Says which stores the database records artifacts in, and how much each holds.
+Says which stores the database records Cargo in, and how much each holds.
 
 ### launchway blobs copy
 
@@ -647,7 +647,7 @@ Says which stores the database records artifacts in, and how much each holds.
 launchway blobs copy --from STORE --to STORE [--config launchway.yaml] [--from-dir DIR] [--to-dir DIR] [--s3 s3.yaml] [--delete-source] [--dry-run] [--json]
 ```
 
-Copies every stored artifact file not yet recorded in the target store from the source store to the target, checking each file's SHA-256 as it is read and again after it is written, and records it there. Servers may keep running. It is safe to stop and run again: it carries on where it was, and picks up what servers still on the old store kept meanwhile.
+Copies every stored Cargo file not yet recorded in the target store from the source store to the target, checking each file's SHA-256 as it is read and again after it is written, and records it there. Servers may keep running. It is safe to stop and run again: it carries on where it was, and picks up what servers still on the old store kept meanwhile.
 
 | Flag | Meaning |
 |---|---|
@@ -676,11 +676,11 @@ launchway verifications show RUN_ID [--json]
 launchway verifications mark RUN_ID STEP passed|failed --reason TEXT
 ```
 
-`list` shows recent verifications (default `--limit 20`). `show` prints a run's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the Logbook (`verification.override`). On a protected environment the person who started the run may not mark it passed.
+`list` shows recent verifications (default `--limit 20`). `show` prints a Sortie's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the Logbook (`verification.override`). On a protected Airfield the person who started the run may not mark it passed.
 
 ## launchway deployments
 
-Rolls a service back after its deployment succeeded, and reviews emergency rollbacks. It uses the stored credentials, like `runs`. The server decides what is possible and who may, and its sentences are printed as they are. See [rollback after success](../guide/rollback-after-success.md).
+Rolls a service back after its deployment succeeded, and reviews Aborts (emergency Returns to base (rollbacks)). It uses the stored credentials, like `runs`. The server decides what is possible and who may, and its sentences are printed as they are. See [Return to base (rollback) after success](../guide/rollback-after-success.md).
 
 ```text
 launchway deployments options  --env E [--project P] [--service S] [--json]
@@ -689,7 +689,7 @@ launchway deployments review list [--json]
 launchway deployments review RUN_ID --comment TEXT
 ```
 
-`options` says what the service can be rolled back to: the earlier successful deployments, newest first, each with what it would revert and the consequence, or why nothing can be done and what would help. `rollback` prints the same, then asks for the rollback; the previous successful deployment is the default, and `--to` takes a deployment ID or a version. `--reason` is required and recorded. `--queue` waits behind a deployment that holds the environment's lock; without it the command is refused, naming that run. `--dry-run` only prints what it would do. `--project` may be left out when one service is deployed to the environment. `review list` shows emergency rollbacks of protected environments that no approver has acknowledged, and whether you may; `review RUN_ID --comment TEXT` acknowledges one (`--comment` is required).
+`options` says what the service can be returned to base to: the earlier successful deployments, newest first, each with what it would revert and the consequence, or why nothing can be done and what would help. `rollback` prints the same, then asks for the Return to base; the previous successful deployment is the default, and `--to` takes a deployment ID or a version. `--reason` is required and recorded. `--queue` waits behind a deployment that holds the Airfield's lock; without it the command is refused, naming that run. `--dry-run` only prints what it would do. `--project` may be left out when one service is deployed to the Airfield. `review list` shows Aborts of protected Airfields that no approver has acknowledged, and whether you may; `review RUN_ID --comment TEXT` acknowledges one (`--comment` is required).
 
 The same operations are the MCP tools `get_rollback_options`, `rollback_deployment`, `list_rollback_reviews` and `review_rollback`, and the routes in the [HTTP API](http-api.md).
 
@@ -702,9 +702,9 @@ launchway models [--json]
 
 `health-sources` lists the health sources your projects may name in verify steps, by name, type and projects. `models` lists the AI models your projects may name, with their limits and today's use. Neither shows where a source or model is or how it is reached, and nothing else if none is configured.
 
-## launchway runners
+## launchway Stations {#launchway-runners}
 
-Lists runners and manages their enrolment. Making join tokens, revoking and rotating need the role `runner_admin` names (`admin` by default) on every project. See [Runners on other machines and clusters](../guide/runner-identity.md).
+Lists Stations and manages their enrolment. Making join tokens, revoking and rotating need the role `runner_admin` names (`admin` by default) on every project. See [Stations on other machines and clusters](../guide/runner-identity.md).
 
 ```text
 launchway runners list [--json]
@@ -716,15 +716,15 @@ launchway runners rotate RUNNER
 
 | Command | What it does |
 |---|---|
-| `list` | Each runner, whether it is online, offline or revoked, its pool, whether it is enrolled or uses a shared or pool token (no identity), its version and labels, and what it is running |
-| `join-token` | Makes a join token for a pool and prints it once, with the command to run on the runner's machine. `--uses` (default `1`) is how many runners may enrol with it, `--ttl` (default `1h`, at most `168h`) how long it may be used, `--ephemeral` revokes each runner when it leaves. The pool defaults to `default` |
-| `revoke-token` | Stops a join token from enrolling runners |
-| `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the Logbook |
-| `rotate` | Asks an enrolled runner to move to a new key the next time it gets an access token |
+| `list` | Each Station, whether it is online, offline or revoked, its pool, whether it is enrolled or uses a shared or pool token (no identity), its version and labels, and what it is running |
+| `join-token` | Makes a join token for a pool and prints it once, with the command to run on the Station's machine. `--uses` (default `1`) is how many Stations may enrol with it, `--ttl` (default `1h`, at most `168h`) how long it may be used, `--ephemeral` revokes each Station when it leaves. The pool defaults to `default` |
+| `revoke-token` | Stops a join token from enrolling Stations |
+| `revoke` | Revokes an enrolled Station at once on every server; the steps it held are queued again. `--reason` is for the Logbook |
+| `rotate` | Asks an enrolled Station to move to a new key the next time it gets an access token |
 
 ## launchway config
 
-Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, environments, runner pools, role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the Logbook.
+Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, Airfields, Flight lines (Station (runner) pools), role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the Logbook.
 
 ```text
 launchway config overview [--json]
@@ -763,7 +763,7 @@ The same operations are the MCP tools `list_config`, `get_config`, `put_config`,
 
 ## launchway step-resources
 
-Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a run starts.
+Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a Sortie starts.
 
 ```text
 launchway step-resources get [--json]
@@ -791,7 +791,7 @@ launchway run-limits set --max-run-timeout D [--json]
 | Command | What it does |
 |---|---|
 | `get` | Prints the longest run timeout, or `not set` |
-| `set` | Changes it: a duration from `1m` to `720h`, such as `48h`; `--max-run-timeout ""` removes the limit. A pipeline whose timeout is longer is refused when a run starts and by validation in the editor and the MCP tool |
+| `set` | Changes it: a duration from `1m` to `720h`, such as `48h`; `--max-run-timeout ""` removes the limit. A pipeline whose timeout is longer is refused when a Sortie starts and by validation in the editor and the MCP tool |
 
 The same operations are `GET` and `PUT /api/v1/run-limits` in the [HTTP API](http-api.md#run-limits), and the MCP tools `get_run_limits` and `set_run_limits`.
 
@@ -809,17 +809,17 @@ launchway caches policy clear PROJECT [--json]
 
 | Command | What it does |
 |---|---|
-| `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the run that wrote it) and the total against the project's quota |
-| `delete` | Ends one entry by `--id`, or every entry of a cache by `--name` (all scopes and keys). The next run that wanted it starts without it and saves it again |
+| `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the Sortie that wrote it) and the total against the project's quota |
+| `delete` | Ends one entry by `--id`, or every entry of a cache by `--name` (all scopes and keys). The next Sortie that wanted it starts without it and saves it again |
 | `policy get` | Prints the installation's policy, or the one that applies to a project |
 | `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2), `idle_days` (default 7) and `max_age_days` (default 7: how old an entry may be before a restore treats it as missing); a flag you leave out keeps its value. With a project, it sets that project's own policy |
 | `policy clear` | Removes a project's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
-## launchway registry
+## launchway Depot {#launchway-registry}
 
-Shows what the built-in OCI registry holds, deletes images, and shows and changes its quota, retention and immutable-tag policy. A repository is `PROJECT/NAME`, the project first. Reading needs the viewer role on the project; deleting, policy changes and retention runs the admin role of the project; garbage collection and the installation's policy an administrator's. Everything that changes something is recorded in the audit trail (`registry.image_delete`, `registry.tag_delete`, `registry.policy`, `registry.retention_run`, `registry.gc_run`). See [the registry guide](../guide/registry.md).
+Shows what the built-in OCI registry holds, deletes images, and shows and changes its quota, retention and immutable-tag policy. A repository is `PROJECT/NAME`, the project first. Reading needs the viewer role on the project; deleting, policy changes and retention runs the admin role of the project; garbage collection and the installation's policy an administrator's. Everything that changes something is recorded in the Logbook (`registry.image_delete`, `registry.tag_delete`, `registry.policy`, `registry.retention_run`, `registry.gc_run`). See [the Depot guide](../guide/registry.md).
 
 ```text
 launchway registry status [--json]
@@ -835,21 +835,21 @@ launchway registry gc [--dry-run] [--last] [--json]
 
 | Command | What it does |
 |---|---|
-| `status` | The registry's address, how to log in, its limits, how many repositories you may see, and what protects blobs at rest (Launchway does not encrypt them in this release) |
+| `status` | The Depot's address, how to log in, its limits, how many repositories you may see, and what protects blobs at rest (Launchway does not encrypt them in this release) |
 | `list` | With a project, its repositories with images, tags and bytes, and usage against the quota; with a repository, its images: tags, digest, size, platforms, who pushed it (and which run), signature, SBOM and vulnerability summary, and the pull reference to copy |
 | `tags` | The repository's tags and the digest each points at |
-| `inspect` | One image or artifact, by tag or digest, with its manifest |
+| `inspect` | One image or Cargo, by tag or digest, with its manifest |
 | `delete` | Deletes an image by tag or digest, with its tags, signatures and SBOMs; `--tag` deletes only the tag. Refused for an immutable tag and for an image a deployment uses. The bytes go at the next collection |
 | `retention` | Previews what the retention rules would delete (nothing is deleted); `--run` deletes it |
 | `policy get` | The policy set at a level and the effective values after the levels are combined |
 | `policy set` | Replaces the policy at a level: the quota, the retention rule (keep the newest N tagged images, keep tags matching patterns, delete untagged images older than D days), the immutable tag patterns and which projects' runs may pull. Without a project it is the installation's |
 | `gc` | Collects garbage: blobs and uploads nothing refers to. `--dry-run` lists what would go; `--last` shows the last report |
 
-The same operations are the routes under [Built-in registry](http-api.md#built-in-registry) in the HTTP API, and the MCP tools `registry_status`, `list_registry_images`, `inspect_registry_image`, `delete_registry_image`, `get_registry_policy`, `set_registry_policy`, `preview_registry_retention`, `run_registry_retention` and `registry_gc`. Pushing and pulling are done with the clients you already have (`docker`, `podman`, `skopeo`, `helm`), with an API token as the password.
+The same operations are the routes under [Built-in Depot](http-api.md#built-in-registry) in the HTTP API, and the MCP tools `registry_status`, `list_registry_images`, `inspect_registry_image`, `delete_registry_image`, `get_registry_policy`, `set_registry_policy`, `preview_registry_retention`, `run_registry_retention` and `registry_gc`. Pushing and pulling are done with the clients you already have (`docker`, `podman`, `skopeo`, `helm`), with an API token as the password.
 
 ## launchway variables
 
-Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
+Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a Sortie starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
 
 ```text
 launchway variables list --installation|--organization|--unit U|--project P [--environment E] [--json]
@@ -865,9 +865,9 @@ The same operations are the routes under [Variables](http-api.md#variables) in t
 
 ## launchway toggles
 
-Feature toggles: make them, change what they do in an environment, read their history, revert, and manage the keys
+Switches (feature toggles): make them, change what they do in an Airfield, read their history, revert, and manage the keys
 applications use. See the [guide](../guide/feature-toggles.md). Every change is audited (`toggle.*`) and goes through the
-project's safeguards: a reason, and in a protected environment another person's approval (the command says when a change
+project's safeguards: a reason, and in a protected Airfield another person's approval (the command says when a change
 waits, and who approves it).
 
 ```
@@ -895,8 +895,8 @@ launchway toggles apply   PROJECT -f FILE --reason R [--origin config:<commit>]
 launchway toggles segments list PROJECT | set PROJECT NAME -f FILE [--reason R] | delete PROJECT NAME --reason R
 ```
 
-`set --on` and `--off` keep the rules the environment already has; `--percent N` serves the value to N percent of
-keys (for a boolean, true) and the off value to the rest. `rules` replaces the environment's whole state from a YAML
+`set --on` and `--off` keep the rules the Airfield already has; `--percent N` serves the value to N percent of
+keys (for a boolean, true) and the off value to the rest. `rules` replaces the Airfield's whole state from a YAML
 file. `--at` makes the change at a time (RFC 3339) instead of now. A key made by `keys create` or `keys rotate` is
 printed once. `plan` changes nothing; `apply` never removes what the file leaves out. `deployments rollback`
 lists the toggle changes made since the version it restores, and `--revert-toggles` reverts them with it.
@@ -945,15 +945,15 @@ On PostgreSQL it also says whether WAL archiving is on and when the last segment
 launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
 ```
 
-Says whether the secrets this installation stores are encrypted at rest, reading only: which holder keeps the root key (never the key), the key versions and the age of the oldest, how many stored secrets are sealed and how many are still in the clear, the progress of sealing, any addresses that carry a password, and **whether a database dump alone could reveal a secret** (yes only when a root key is in use and nothing is left in the clear). It names what is not yet encrypted (artifacts, logs, caches, Git packs) and that disk or volume encryption cannot be seen from here. Exit status 1 when a dump alone could reveal a secret, so a script can gate on it. A database that is encrypted, with no key configured, or with a key that does not open it, is refused with the plain message the server gives. `--restore-drill` also opens every sealed secret with the configured key, reading only, and exits 1 if one does not open: run it against a restored copy to prove the dump and the key belong together. The plain `launchway doctor` prints the one-sentence state. See [Encryption at rest](../guide/encryption-at-rest.md).
+Says whether the secrets this installation stores are encrypted at rest, reading only: which holder keeps the root key (never the key), the key versions and the age of the oldest, how many stored secrets are sealed and how many are still in the clear, the progress of sealing, any addresses that carry a password, and **whether a database dump alone could reveal a secret** (yes only when a root key is in use and nothing is left in the clear). It names what is not yet encrypted (Cargo, logs, caches, Git packs) and that disk or volume encryption cannot be seen from here. Exit status 1 when a dump alone could reveal a secret, so a script can gate on it. A database that is encrypted, with no key configured, or with a key that does not open it, is refused with the plain message the server gives. `--restore-drill` also opens every sealed secret with the configured key, reading only, and exits 1 if one does not open: run it against a restored copy to prove the dump and the key belong together. The plain `launchway doctor` prints the one-sentence state. See [Encryption at rest](../guide/encryption-at-rest.md).
 
-### launchway doctor registry
+### launchway doctor Depot {#launchway-doctor-registry}
 
 ```text
 launchway doctor registry [--config launchway.yaml] [--json]
 ```
 
-Says whether the built-in registry would work as configured: whether it is on, which artifact store holds its blobs, whether sign-in is on (it answers every request with `503` while it is off, because there is no anonymous registry), whether an address is set, and, plainly, **that Launchway does not encrypt the registry's blobs itself in this release**, so the volume, database or bucket that holds the artifact store must be encrypted. Exit status 1 when something stops it working.
+Says whether the built-in Depot would work as configured: whether it is on, which Cargo store holds its blobs, whether sign-in is on (it answers every request with `503` while it is off, because there is no anonymous Depot), whether an address is set, and, plainly, **that Launchway does not encrypt the Depot's blobs itself in this release**, so the volume, database or bucket that holds the Cargo store must be encrypted. Exit status 1 when something stops it working.
 
 ## launchway encryption
 
@@ -965,7 +965,7 @@ launchway encryption rotate [--data] [--config launchway.yaml] [--json]
 launchway encryption rewrap [--config launchway.yaml]
 ```
 
-The root key for [encryption at rest](../guide/encryption-at-rest.md). `init`, `rotate` and `rewrap` run on a machine that has the root key (the same configuration file and environment as the server) and open the database directly, so they work while servers run; `status` asks a server and needs `launchway login` as an administrator.
+The root key for [encryption at rest](../guide/encryption-at-rest.md). `init`, `rotate` and `rewrap` run on a machine that has the root key (the same configuration file and Airfield as the server) and open the database directly, so they work while servers run; `status` asks a server and needs `launchway login` as an administrator.
 
 `init` makes a key file (32 random bytes in base64, mode `0600`; the default path is `encryption.key_file`, else `<data>/root.key`), or with `--passphrase` a keystore whose passphrase comes from `--passphrase-file` or is asked twice on the terminal. It never overwrites a file, never prints the key, and says what to do next: keep a copy somewhere other than the database's backups, and tell the servers where it is.
 
@@ -1001,7 +1001,7 @@ launchway repos mirror remove OWNER/NAME --id mir_...
 launchway repos mirror stop OWNER/NAME [--final-sync]
 ```
 
-`status` lists each mirror with its state (`ok`, `error`, `pending`, `paused`, `running`), its lag, the number of refs and the last error, with credentials removed; `--behind` lists only those that have fallen behind. `add --direction pull` needs a repository with no branches or tags of its own, because mirroring replaces them. `sync` runs the pull mirror (or the one named with `--id`) now and exits with `4` if the run failed, printing why.
+`status` lists each mirror with its state (`ok`, `error`, `pending`, `paused`, `running`), its lag, the number of refs and the last error, with credentials removed; `--behind` lists only those that have fallen behind. `add --direction pull` needs a repository with no branches or tags of its own, because mirroring replaces them. `sync` runs the pull mirror (or the one named with `--id`) now and exits with `4` if the Sortie failed, printing why.
 
 `stop` is the cut-over step: the repository stops being a mirror, the mirror is deleted and pushes are accepted. With `--final-sync` the mirror runs once more first, and nothing changes if that run fails. A pull mirror whose source suddenly lists no branches or tags refuses to delete everything; stop mirroring if the other server really was emptied.
 
@@ -1157,7 +1157,7 @@ launchway f717337
 
 - [HTTP API](http-api.md): what the client commands call.
 - [Environment variables](environment-variables.md)
-- [Server configuration](server-config.md) and [runner configuration](runner-config.md)
+- [Server configuration](server-config.md) and [Station configuration](runner-config.md)
 
 ### launchway approvals
 
@@ -1169,9 +1169,9 @@ launchway approvals approve RUN_ID STEP [--comment TEXT]
 launchway approvals reject RUN_ID STEP [--comment TEXT]
 ```
 
-`list` prints the run, step, question, who started it, when it has waited since and expires, and
+`list` prints the Sortie, step, question, who started it, when it has waited since and expires, and
 "1 of 2 approved (ann)" for an approval that asks for several people. The server's refusals (you
-started the run, it expired, it is not waiting, you may not decide it) are printed as they are, and
+started the Sortie, it expired, it is not waiting, you may not decide it) are printed as they are, and
 the exit code is `4`. The same operations are `GET /api/v1/approvals` and
 `POST /api/v1/runs/{id}/steps/{step}/approve` and `/reject`, and the MCP tools `list_approvals` and
 `decide_approval`.

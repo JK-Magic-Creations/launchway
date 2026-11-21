@@ -17,9 +17,9 @@ Milestone 2 makes pipelines as dynamic as real code needs without giving up chec
 ## What you will be able to do
 
 - You write a deployment step in the language your team already uses, test it on your laptop, and share it as a pinned version.
-- A step looks at the repository and prints the extra steps it needs; Launchway checks them and shows them on the run.
+- A step looks at the repository and prints the extra steps it needs; Launchway checks them and shows them on the Sortie.
 - You drag a step onto a pipeline and see the exact lines it will change in Git before you save.
-- A message on a queue starts a pipeline, and a rejected message is visible with the reason.
+- A message on a Holding pattern starts a pipeline, and a rejected message is visible with the reason.
 - You import jobs from an automation server and read a report of what needs a person.
 
 ## How it fits together
@@ -103,7 +103,7 @@ Publish a custom step, not only a template, from a repository and pin users to a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run. This gives the freedom of a script with the safety of a checked definition, and it makes dynamic pipelines possible without file-first configuration.
+A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the Sortie. This gives the freedom of a script with the safety of a checked definition, and it makes dynamic pipelines possible without file-first configuration.
 
 **Depends on:** Custom steps in your own language.
 
@@ -113,7 +113,7 @@ A step can print more steps in any language; Launchway checks them against the s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A small typed expression language with no loops and no side effects, checked before the run; today's conditions keep working. Because expressions cannot loop or change anything, a pipeline is always checkable without running it.
+A small typed expression language with no loops and no side effects, checked before the Sortie; today's conditions keep working. Because expressions cannot loop or change anything, a pipeline is always checkable without running it.
 
 [Read the documentation](../reference/pipeline.md#when) · [Area page](pipelines.md)
 
@@ -121,7 +121,7 @@ A small typed expression language with no loops and no side effects, checked bef
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it. Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.
+A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.
 
 [Area page](pipelines.md)
 
@@ -179,9 +179,9 @@ Lay steps out as a graph of containers with fan-out and join, for work that is n
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Runners on VMs and on customers' machines update under your policy, so the fleet never drifts. Hosted pools update automatically, self-hosted pools are notified, and Kubernetes runners follow the chart.
+Stations on VMs and on customers' machines update under your policy, so the fleet never drifts. Hosted pools update automatically, self-hosted pools are notified, and Kubernetes Stations follow the chart.
 
-**Depends on:** Runner identity and pools.
+**Depends on:** Station identity and pools.
 
 [Area page](pipelines.md)
 
@@ -189,7 +189,7 @@ Runners on VMs and on customers' machines update under your policy, so the fleet
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page. Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.
+Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page. Flaky tests are marked on the Sortie and on the pull request, so they are quarantined instead of argued over.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -213,9 +213,9 @@ A team’s machines share the work by what is free, and nobody’s laptop is tak
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A build can run on any of a team’s machines and is placed on one with room for it. Today a runner takes work when it has a free slot; placement by what is really free comes next.
+A build can run on any of a team’s machines and is placed on one with room for it. Today a Station takes work when it has a free slot; placement by what is really free comes next.
 
-**Depends on:** Runner identity and pools.
+**Depends on:** Station identity and pools.
 
 [Area page](pipelines.md)
 
@@ -223,9 +223,9 @@ A build can run on any of a team’s machines and is placed on one with room for
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A runner on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets. This is the first piece of placement to be built, because it makes lending a personal machine safe.
+A Station on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets. This is the first piece of placement to be built, because it makes lending a personal machine safe.
 
-**Depends on:** Runner identity and pools.
+**Depends on:** Station identity and pools.
 
 [Area page](pipelines.md)
 
@@ -243,7 +243,7 @@ The parallel steps of one build can run on different machines, with their shared
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier runs, to place it. The hints are advice; a wrong hint wastes time but never breaks a build.
+A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier Sorties, to place it. The hints are advice; a wrong hint wastes time but never breaks a build.
 
 **Depends on:** Builds placed by free processor and memory.
 
@@ -253,7 +253,7 @@ A step can say how much processor and memory it needs, and Launchway uses that, 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Runners that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run. This is a gap, listed honestly.
+Stations that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run. This is a gap, listed honestly.
 
 **Depends on:** Matrix builds.
 
@@ -277,7 +277,7 @@ Test results that are a pleasure to read and easy to hand to someone else.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
+Every run can produce a detailed, well-laid-out Debrief as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -309,7 +309,7 @@ Architecture diagrams drawn in Launchway beside generated ones and Mermaid. Diag
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Views of your delivery and runtime drawn from what Launchway knows, always current. Applications, pipelines and environments appear as diagrams you can paste into a document.
+Views of your delivery and runtime drawn from what Launchway knows, always current. Applications, pipelines and Airfields appear as diagrams you can paste into a document.
 
 [Area page](pipelines.md)
 
@@ -354,9 +354,9 @@ A step catalog and typed custom steps instead of plug-ins that run inside the se
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work. Equivalent to the build agents teams rely on, with identity and audit on every connection.
+Guidance and checks that show Stations on any machine, in any network, replace the build agents teams rely on. Stations that connect outward, with pools and labels, already work. Equivalent to the build agents teams rely on, with identity and audit on every connection.
 
-**Depends on:** Runner identity and pools.
+**Depends on:** Station identity and pools.
 
 
 ### Share and reuse across projects {#g-share-and-reuse-across-projects}
@@ -375,7 +375,7 @@ Set a template or a Flight plan at the Wing or Squadron and every project beneat
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline. Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every run records the values it used.
+Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline. Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every Sortie records the values it used.
 
 [Read the documentation](../guide/variables.md)
 
@@ -403,7 +403,7 @@ Starter templates for common languages that set up best practice, naming standar
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Environments and services as short lists with sensible defaults, not another set of ideas to learn before anything works. You will be able to start with one environment and grow, with locks and defaults coming from the level above.
+Airfields and services as short lists with sensible defaults, not another set of ideas to learn before anything works. You will be able to start with one Airfield and grow, with locks and defaults coming from the level above.
 
 [Area page](pipelines.md)
 
@@ -411,7 +411,7 @@ Environments and services as short lists with sensible defaults, not another set
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A connection to a registry, a cluster or a cloud set up once at a level and used below it, with its use shown. Secrets stay where they are; only the name of the connection is shared.
+A connection to a Depot, a cluster or a cloud set up once at a level and used below it, with its use shown. Secrets stay where they are; only the name of the connection is shared.
 
 **Depends on:** Overrides, locks and the hierarchy view.
 
@@ -435,7 +435,7 @@ A cache may only make a build faster, never change its result. Build tools becom
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces. Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the run says so and names the path.
+A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces. Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the Sortie says so and names the path.
 
 [Area page](build-tools-caches.md)
 
@@ -475,7 +475,7 @@ What a pull request writes only that pull request reads; what a trusted branch w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every run shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify. Resolved versions are recorded, for example “resolved a snapshot to the build published four minutes ago”.
+Every Sortie shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify. Resolved versions are recorded, for example “resolved a snapshot to the build published four minutes ago”.
 
 [Area page](build-tools-caches.md)
 
@@ -491,7 +491,7 @@ Run a build with and without cache and compare the results, or run without cache
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
+Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and Debriefs. No hand-written cache keys. First phase of the recipes.
 
 [Area page](build-tools-caches.md)
 
@@ -523,7 +523,7 @@ Android projects build with Gradle recipes, signing keys kept on your side, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Apple projects build on macOS runners you provide, with signing kept on your side. The honest constraint: Apple builds need Apple hardware.
+Apple projects build on macOS Stations you provide, with signing kept on your side. The honest constraint: Apple builds need Apple hardware.
 
 [Area page](build-tools-caches.md)
 
@@ -531,7 +531,7 @@ Apple projects build on macOS runners you provide, with signing kept on your sid
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each cross-platform framework says which runner it needs, so a build lands on the right machine. Follows Android and iOS.
+Each cross-platform framework says which Station it needs, so a build lands on the right machine. Follows Android and iOS.
 
 [Area page](build-tools-caches.md)
 
@@ -583,7 +583,7 @@ launchway run uses the same step images, recipes and cache rules as the server, 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its environment. Never with production secrets.
+Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its Airfield. Never with production secrets.
 
 [Area page](developer-experience.md)
 
@@ -599,7 +599,7 @@ A flaky test still runs and reports but stops blocking, with an owner and an exp
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An environment that expires by itself and has a cost cap, with its link posted on the pull request. A mobile equivalent is an install link per pull request.
+An Airfield that expires by itself and has a cost cap, with its link posted on the pull request. A mobile equivalent is an install link per pull request.
 
 [Area page](developer-experience.md)
 
@@ -607,7 +607,7 @@ An environment that expires by itself and has a cost cap, with its link posted o
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-One answer to why something is not moving: no runner with the capability, a run ahead, a lock, an approval, a quota. Being built with waiting for room; the rest follows.
+One answer to why something is not moving: no Station with the capability, a Sortie ahead, a lock, an approval, a quota. Being built with waiting for room; the rest follows.
 
 [Area page](developer-experience.md)
 
@@ -641,15 +641,15 @@ This milestone is done when all of these are true.
 
 - A custom step in at least three languages runs from a published contract and is unit-tested outside Launchway.
 - A generated pipeline is checked against the same schema and policy as a written one.
-- Expressions are checked before a run and have no loops or side effects.
+- Expressions are checked before a Sortie and have no loops or side effects.
 - The designer and the text editor produce identical files for identical pipelines.
 - The gap analysis lists every gap with a test, and each gap is closed or recorded as a decision.
-- Runners on virtual machines update under policy without manual work.
+- Stations on virtual machines update under policy without manual work.
 
 ## What is deliberately not in it
 
 - Applications, hosts and traffic (Milestone 3).
-- Hosted runners (Milestone 7).
+- Hosted Stations (Milestone 7).
 
 ---
 

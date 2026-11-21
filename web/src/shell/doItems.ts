@@ -24,7 +24,7 @@ export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
   out.push({ id: "learn", label: "Learn how Launchway works", hint: "The documentation of this release, offline", href: "/learn", icon: "book", group: "Do" });
   for (const p of projects) {
     if (p.last_run?.status === "failed") {
-      out.push({ id: "why-" + p.name, label: `See why ${p.name} failed`, hint: `Run #${p.last_run.number}`, href: `/runs/${p.last_run.id}`, icon: "alert", group: "Do" });
+      out.push({ id: "why-" + p.name, label: `See why ${p.name} failed`, hint: terms().say(`{Run} #${p.last_run.number}`), href: `/runs/${p.last_run.id}`, icon: "alert", group: "Do" });
     }
     out.push({ id: "project-" + p.name, label: p.name, hint: "Project", href: `/projects/${encodeURIComponent(p.name)}`, icon: "code", group: "Projects" });
   }

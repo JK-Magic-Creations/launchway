@@ -4,7 +4,7 @@ This page lists the messages Launchway gives when something is wrong, grouped by
 with what each means and what to do. It is for operators and for anyone running pipelines.
 
 > **Verified** on 2026-11-19 against commit f717337: every message in a `text` block below was
-> reproduced on a server (SQLite and PostgreSQL 17), a runner, `launchway run` or the command line,
+> reproduced on a server (SQLite and PostgreSQL 17), a Station (runner), `launchway run` or the command line,
 > with Dex and OpenBao in containers, and is quoted as it appeared (paths and names shortened to
 > examples). **Not verified:** messages marked "from the code", which are quoted from the source
 > without being reproduced.
@@ -73,7 +73,7 @@ launchway: launchway.yaml: auth.oidc.client_secret_env: the environment variable
 ```
 
 Every problem in the `auth` section is listed at once. The last one means the service was started
-without its environment file, or the variable has another name.
+without its Airfield (environment) file, or the variable has another name.
 
 ### The database does not answer
 
@@ -108,14 +108,14 @@ launchway: listen tcp 127.0.0.1:8080: bind: address already in use
 Another process (perhaps another Launchway) listens there. Stop it, or change `listen` or
 `--listen`.
 
-### A runner pool's token is missing or weak
+### A Flight line's token is missing or weak {#a-runner-pools-token-is-missing-or-weak}
 
 ```text
 launchway: launchway.yaml: runner_pools: prod-deployers: the variable POOL_TOKEN is not set
 launchway: launchway.yaml: runner_pools: prod-deployers: the token is shorter than 32 characters; make a long random one, for example with: openssl rand -hex 24
 ```
 
-Each deploy runner pool needs its own long random token, given in the variable or file named.
+Each deploy Flight line (Station (runner) pool) needs its own long random token, given in the variable or file named.
 
 ### A secret store is configured wrongly
 
@@ -251,7 +251,7 @@ Seen when the command line is pointed at a server without sign-in with any `LAUN
 such a server has no API tokens, so the command line cannot be used there. Use the UI, or turn on
 sign-in.
 
-## Runners do not take work
+## Stations do not take work {#runners-do-not-take-work}
 
 ```text
 launchway: a server URL (--server, LAUNCHWAY_SERVER or server: in --config) and a token (--token or LAUNCHWAY_RUNNER_TOKEN) are required
@@ -265,23 +265,23 @@ WARN could not reach the server; retrying err="lease: a valid runner token is re
 ```
 
 The server was reached, but the token is wrong. Despite the words "could not reach", retrying will
-not help: give the runner the server's current token. The runner keeps retrying, up to every 30
+not help: give the Station the server's current token. The Station keeps retrying, up to every 30
 seconds, and its `/readyz` stays `503` with `the server has not answered yet`.
 
 ```text
 WARN could not reach the server; retrying err="Post \"http://127.0.0.1:8080/api/runner/v1/lease\": dial tcp 127.0.0.1:8080: connect: connection refused" in=1s
 ```
 
-The server is down or the address is wrong. Through HTTPS with a private CA, give the runner the
+The server is down or the address is wrong. Through HTTPS with a private CA, give the Station the
 CA (for example with `SSL_CERT_FILE`).
 
 ```text
 launchway: unknown executor foo; use auto, container, podman, docker, host or kubernetes
 ```
 
-See the [runner configuration reference](../reference/runner-config.md).
+See the [Station configuration reference](../reference/runner-config.md).
 
-A runner that is not seen for a while is shown offline under **Runners**, and the steps it held
+A Station that is not seen for a while is shown offline under **Stations**, and the steps it held
 are run again elsewhere.
 
 ## A pipeline is refused
@@ -332,11 +332,11 @@ secret REGISTRY_PASSWORD (bao:apps/demo/registry#password): this runner has no s
 
 | Reason | What to do |
 |---|---|
-| no secret store called | the runner that took the step does not have that store; configure it on every runner that may take the step |
+| no secret store called | the Station that took the step does not have that store; configure it on every Station that may take the step |
 | does not allow project or key | widen the store's `projects` or `keys`, if this project should read it |
 | no secret at, no field | write the secret, or fix `key` or `field` |
 | permission denied | the token's policy or the Kubernetes role does not cover the path |
-| refused the kubernetes login | the role's bound service account or namespace does not match the runner's; a wrong `auth_path` gave this message too |
+| refused the kubernetes login | the role's bound service account or namespace does not match the Station's; a wrong `auth_path` gave this message too |
 
 A store that does not answer is asked again for 30 seconds, then the step is handed back to be
 run again later:
@@ -362,17 +362,17 @@ A run with image steps shows:
 This run builds images, so all its steps wait for a runner that can build them, and none has been seen in the last 2 minutes. A runner builds images when its configuration names image builders (images.builders).
 ```
 
-No connected runner has `images.builders` in its configuration. Configure one; see
+No connected Station has `images.builders` in its configuration. Configure one; see
 [Build and sign an image](../tutorials/build-and-sign-image.md).
 
 ## A tool says "No user exists for uid 1000"
 
 The OpenSSH client (and so `git` over ssh), and some other tools and language runtimes, look the current user up in
 `/etc/passwd` and stop when there is no entry. The Kubernetes executor runs steps as a numeric user (1000 by default) that
-most images do not list. Runners from this version on give that user an entry (`launchway`, home `/home/launchway`)
+most images do not list. Stations from this version on give that user an entry (`launchway`, home `/home/launchway`)
 through an init container in each step image, and say so at the start of each step: `Running as launchway (uid 1000,
 gid 1000)`. If your step shows `Running as uid 1000, gid 1000, with no account entry`, the operator set
-`kubernetes.user_entry: false`; if it shows nothing like that, the runner is older than this fix: upgrade it. If the step
+`kubernetes.user_entry: false`; if it shows nothing like that, the Station is older than this fix: upgrade it. If the step
 fails to start and names the init container, see [The step's user](../reference/runner-config.md#the-steps-user).
 
 ## Deploy steps fail
@@ -381,17 +381,17 @@ fails to start and names the init container, see [The step's user](../reference/
 deploy-prod: project other may not deploy to prod (see the environment's projects in the server's configuration)
 ```
 
-The run is refused with `422` before it starts. Add the project to the environment's `projects`,
+The Sortie (run) is refused with `422` before it starts. Add the project to the Airfield's `projects`,
 if it should deploy there.
 
 ```text
 no deploy runner serving target prod-cluster took the step within 1m
 ```
 
-No deploy runner of a pool serving that target is connected. Start one with the pool's token and a
+No deploy Station of a pool serving that target is connected. Start one with the pool's token and a
 `deploy:` section listing the target; see [Deploy with approval](../tutorials/deploy-with-approval.md).
 
-## A policy blocks a run
+## A policy blocks a Sortie {#a-policy-blocks-a-run}
 
 ```text
 the run was refused when it started: blocked by policy: policy pinned-images (enforce), rule step_images: step hello: docker.io/library/alpine:3.22 (not pinned by digest); step publish: docker.io/library/alpine:3.22 (not pinned by digest); needs every step and container image pinned by digest (name@sha256:…). Grant a waiver or change what was found, then resume the run
@@ -423,15 +423,15 @@ The image has no shell, and Git needs one to read a repository from a local path
 `https://` or SSH URL for `repo`. Starting a run of such a project answers
 `something went wrong on the server; its log has the details`.
 
-Every step fails at once when the server's built-in runner runs in the image:
+Every step fails at once when the server's built-in Station runs in the image:
 
 ```text
 Could not run the step: fork/exec /bin/sh: no such file or directory
 ```
 
-In the image the built-in runner picks the `host` executor (`executor=host` in the
+In the image the built-in Station picks the `host` executor (`executor=host` in the
 `runner started` line), and the image has no shell. Set `runner: { enabled: false }` and connect
-[runners](connect-runner.md) on other machines.
+[Stations](connect-runner.md) on other machines.
 
 ## What next
 

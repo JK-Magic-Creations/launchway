@@ -6,7 +6,7 @@ person reviews the pull request, the pipeline checks it like any other, and a pe
 outside update robot.
 
 This page is how it works and how to use it. The settings and the file are in
-[Dependency updates: settings and file](../reference/dependency-updates.md).
+[Maintenance (dependency updates): settings and file](../reference/dependency-updates.md).
 
 ## What it covers
 
@@ -34,8 +34,8 @@ reported, but it is never edited on its own: update the package that needs it.
   not held back, because waiting is the greater risk.
 - **Grouped.** Minor and patch updates of one ecosystem and directory share one pull request; a major update is
   always its own. You can name groups by pattern.
-- **Limited.** At most three update pull requests are open at a time, and a run opens at most three. A burst
-  of updates waits and says why. Security fixes are not held to the number open, only to what one run opens.
+- **Limited.** At most three update pull requests are open at a time, and a Sortie (run) opens at most three. A burst
+  of updates waits and says why. Security fixes are not held to the number open, only to what one Sortie opens.
 - **One pull request per dependency or group, kept up to date.** When a newer version appears, or the default
   branch moves, the same pull request is rebuilt in place. When the update is no longer needed (merged another way,
   or the dependency was removed) it is closed with a note.
@@ -49,7 +49,7 @@ exists" and left to a person.
 ## Where the lock files come from
 
 The server never runs a package manager. The updater edits the manifest as text and then runs the ecosystem's
-own tool on a copy of the files, inside a step container on a runner, with no secrets and only the registries your
+own tool on a copy of the files, inside a step container on a Station (runner), with no secrets and only the Depots (registries) your
 installation allows. It takes back only the files that were meant to change (a manifest and its lock file) and
 refuses anything else. The pull request names the exact command and the image it ran in. Pin the toolchain
 images by digest and mirror them in the settings key `toolchains`.
@@ -72,8 +72,8 @@ launchway deps ignore tinyfmt --reason "pinned until the vendor fixes 2.x"
 
 ## Running it
 
-The updater runs as a step of a pipeline on a runner with a token that may push branches and open pull requests,
-so the pull requests it opens are ordinary and the runner, not the server, runs the package tools. Give that token to an account named like `launchway-updater` (the name is on the default list of automation accounts): the pull requests it opens then run in the restricted mode of [pull-request trust](pull-request-trust.md), with no secrets, no deploys and no cache written outside their own scope, and they can still pass the required checks that need none. An account with another name is a person to Launchway, and its pull requests run as any other, so add the name to `automation.accounts` if you use one:
+The updater runs as a step of a pipeline on a Station with a token that may push branches and open pull requests,
+so the pull requests it opens are ordinary and the Station, not the server, runs the package tools. Give that token to an account named like `launchway-updater` (the name is on the default list of automation accounts): the pull requests it opens then run in the restricted mode of [pull-request trust](pull-request-trust.md), with no secrets, no launches (deploys) and no cache written outside their own scope, and they can still pass the required checks that need none. An account with another name is a person to Launchway, and its pull requests run as any other, so add the name to `automation.accounts` if you use one:
 
 ```yaml
 pipeline: dependency-updates
@@ -91,9 +91,9 @@ first: it lists exactly what would be opened, and nothing is opened by looking.
 
 `launchway updates run --dry-run` does everything but change something.
 
-## Registries, mirrors and offline use
+## Depots, mirrors and offline use {#registries-mirrors-and-offline-use}
 
-The server and the runner ask the Go module proxy, the npm registry, PyPI and container registries for versions,
+The server and the Station ask the Go module proxy, the npm registry, PyPI and container registries for versions,
 and an OSV service for vulnerabilities. Every request goes through the installation's egress rules, and answers
 are cached for an hour. To use your own mirrors, or none at all, set `LAUNCHWAY_UPDATES_GOPROXY`,
 `LAUNCHWAY_UPDATES_NPM_REGISTRY`, `LAUNCHWAY_UPDATES_PYPI`, `LAUNCHWAY_UPDATES_OCI_MIRRORS`,
@@ -105,5 +105,5 @@ more source with its address in the same place.
 
 Settings are the repository's file and the levels' settings; there is no form to edit them in the web interface
 yet, so the page shows them and never offers a button that would not work. The pull request links to release
-notes where the registry gives a link, but does not quote a changelog. Automatic merging is off and not built; it
+notes where the Depot gives a link, but does not quote a changelog. Automatic merging is off and not built; it
 will be available only where a level allows it, once the required checks pass, for the kinds you name.

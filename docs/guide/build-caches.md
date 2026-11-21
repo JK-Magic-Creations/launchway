@@ -3,10 +3,10 @@
 Keep dependencies between runs, so that a step does not start from nothing every time.
 
 A step can name directories to restore before its script runs and to save after it, under a key
-made from a lock file. The first run that sees a lock file installs everything and saves it;
+made from a lock file. The first Sortie (run) that sees a lock file installs everything and saves it;
 every later run with the same lock file restores it in seconds. Nothing but the database
-Launchway already needs is required: entries are kept in the same store as artifacts, which is the
-database unless you chose a filesystem or S3 ([where artifacts are kept](../artifacts.md)).
+Launchway already needs is required: entries are kept in the same store as Cargo (artifacts), which is the
+database unless you chose a filesystem or S3 ([where Cargo are kept](../artifacts.md)).
 
 ```yaml
 steps:
@@ -34,12 +34,12 @@ them do not take old output for new. The rest is a matter of what you cache, bel
 
 ## The key
 
-The key is made of, always: the format of the entry; the runner's operating system and
+The key is made of, always: the format of the entry; the Station's operating system and
 architecture; the cache's name; and **the step's image resolved to its digest**. A tag such as
-`python:3.13` names whatever the registry holds today, so the key uses what it resolved to: a
+`python:3.13` names whatever the Depot (registry) holds today, so the key uses what it resolved to: a
 different JDK, Node or Python behind the same tag is a different key and never restores an
 incompatible entry. (An image written with `@sha256:` is used as written. A container engine reports its own copy; the Kubernetes
-executor asks the image's registry. If neither can say, the key uses the reference as written and
+executor asks the image's Depot. If neither can say, the key uses the reference as written and
 the log says so; pin the image by digest, or name the tool's version under `key.versions`.)
 
 You add: the paths and SHA-256 contents of the files `key.files` matches, in sorted order; the text of
@@ -52,7 +52,7 @@ If the step changes a file the key is made of (an install that rewrites a lock f
 saved under the key of the files as the step left them, never under the key from before it; the log
 says so.
 
-The run page and `launchway runs show` list everything a key was made of, so that a surprising miss
+The Sortie page and `launchway runs show` list everything a key was made of, so that a surprising miss
 can be explained: which input changed.
 
 ## Generations and maximum age
@@ -68,19 +68,19 @@ An entry also has an age, counted from when its contents were last **started fro
 step saves after restoring something keeps that age, so a chain of refreshes does not live for ever.
 Past `max_age` (7 days unless the cache or the project's cache policy says otherwise; a cache may ask
 for less than the policy, never more) a restore treats the entry as missing, the step rebuilds the
-cache from nothing, and that rebuild starts a new chain. The run says `Too old` for such an entry. An
+cache from nothing, and that rebuild starts a new chain. The Sortie says `Too old` for such an entry. An
 entry restored as a fallback does not keep itself alive by being used.
 
 With `fallback: latest`, a step whose key has no entry starts from the newest entry of the same name
 and platform that its run may read (younger than the maximum age), and saves its own result under the
 new key. It grows, and keeps what dependencies dropped, until the maximum age ends the chain; set `max_age` when you use
-it. The run records the entry actually restored, with its own key, generation and age, not the step's key.
+it. The Sortie records the entry actually restored, with its own key, generation and age, not the step's key.
 
 ## Who can read and write what
 
-The server, not the runner, decides which entries a run may touch, from how the run started. This
+The server, not the Station (runner), decides which entries a run may touch, from how the Sortie started. This
 matters because a pull request runs code from anyone who can open one: what it writes must never
-be restored by a run that is trusted with secrets or deploys.
+be restored by a Sortie that is trusted with secrets or deploys.
 
 | Run | Reads | Writes |
 |---|---|---|
@@ -98,7 +98,7 @@ that way even if a pull request's own pipeline says the cache is not.
 
 So a pull request starts from what the default branch built, and saves only where the default
 branch never looks. Nothing is shared between projects. Launchway takes the default branch from the
-project's repository; if it cannot tell which it is, no run writes `default` (a run of any branch then
+project's repository; if it cannot tell which it is, no Sortie writes `default` (a run of any branch then
 saves to its own branch scope) rather than guess. The same scopes decide whose **image cache** an
 image step uses: the protected tag only a default-branch run writes, a tag of its own for every other
 scope (a pull request imports the protected one and exports only to its own; a fork's reads only its
@@ -130,13 +130,13 @@ the step. (Launchway's own image scan never uses the build cache for this reason
 
 ## Credentials are never saved
 
-A cache is restored by every run that may read it, so a credential in one reaches them all. A cache
+A cache is restored by every Sortie that may read it, so a credential in one reaches them all. A cache
 that holds a file that looks like a credential is **not saved**, from any scope: `.netrc`,
 `.git-credentials`, private keys, `.env`, an `.npmrc` with an auth token, a Maven `settings.xml` with a
-server password, a `gradle.properties` with a password, a Docker `config.json` with registry auth, a
+server password, a `gradle.properties` with a password, a Docker `config.json` with Depot auth, a
 kubeconfig with a token, `~/.aws/credentials`, a `.pypirc` or pip configuration with credentials in an
 index URL, and the like. The step's log names the file and the fix: narrow the cache's paths so they
-leave it out (cache `.m2/repository`, not the whole `.m2`) and use short-lived registry credentials that are
+leave it out (cache `.m2/repository`, not the whole `.m2`) and use short-lived Depot credentials that are
 not written into the workspace. A reference such as `${NPM_TOKEN}` is not a credential. There is no setting that
 turns the refusal off.
 
@@ -151,8 +151,8 @@ Cache pip: saved 120 MiB as generation 2 of key 3f9c… (the step changed what w
 Cache pip: not saved: it holds 1 file(s) that look like credentials: .m2/settings.xml (a Maven settings.xml with a server password) …
 ```
 
-The same results are on the step in the run page, in `launchway runs show` (with what the key was made
-of), in the run's JSON (`caches` on each step) and in the MCP tool `get_run`. A cache never changes a step's outcome: if it
+The same results are on the step in the Sortie page, in `launchway runs show` (with what the key was made
+of), in the Sortie's JSON (`caches` on each step) and in the MCP tool `get_run`. A cache never changes a step's outcome: if it
 cannot be restored (a damaged entry, a server that cannot be reached) or saved (over the limits,
 caching off, credentials), the step runs on, and the log says why. A damaged entry is ended so that
 the next step saves a good one.
@@ -180,7 +180,7 @@ lookups miss and nothing is saved, and the pipeline still passes validation.
 
 People with the operator role delete entries (one, or a whole cache by name) from the project's
 **Caches** page, `launchway caches delete`, `DELETE /api/v1/projects/{name}/caches` and the MCP tool
-`delete_cache`; viewers list them (`launchway caches list`, `list_caches`). The next run that wanted a
+`delete_cache`; viewers list them (`launchway caches list`, `list_caches`). The next Sortie that wanted a
 deleted entry starts without it and saves it again.
 
 ## What a cache entry is not (yet)
@@ -192,8 +192,8 @@ Two protections are **not** part of build caches today, and neither should be as
   yet covered). `sensitive: true` limits who may *read* an entry through Launchway; it does not
   encrypt it. Do not cache a credential; the build refuses to save a cache whose paths hold one.
 - **Entries are not signed.** What stops one run from planting an entry for another is the scope,
-  pipeline and `share` rules above, decided by the server; a runner cannot choose them. Signing each
-  entry with the runner's identity (so that a stolen blob-store write cannot plant one either) is
+  pipeline and `share` rules above, decided by the server; a Station cannot choose them. Signing each
+  entry with the Station's identity (so that a stolen blob-store write cannot plant one either) is
   planned, not built.
 
 Both belong to the same next slice as the per-object encryption of caches, so they will arrive together.
@@ -208,10 +208,10 @@ Nothing in a pipeline has to change. A cache that holds a credential file, which
 warning, is now not saved until its paths are narrowed. The schema change (35) is additive; see
 [database migrations](../development/migrations.md).
 
-## Runners and older servers
+## Stations and older servers {#runners-and-older-servers}
 
-Runners that know caches say so, and a step with `cache:` is only given to them. A pipeline with a
-cache carries `requires: 25`, so servers older than that leave its runs alone; use the key only once
-every server and runner is upgraded (see [database migrations](../development/migrations.md)).
+Stations that know caches say so, and a step with `cache:` is only given to them. A pipeline with a
+cache carries `requires: 25`, so servers older than that leave its Sorties alone; use the key only once
+every server and Station is upgraded (see [database migrations](../development/migrations.md)).
 
 See the [pipeline reference](../reference/pipeline.md#cache) for every key and limit.

@@ -1,7 +1,7 @@
-# Deploy with approval, rollout control and rollback
+# Deploy with approval, rollout control and Return to base (rollback) {#deploy-with-approval-rollout-control-and-rollback}
 
-Release a service through Argo CD as an Argo Rollouts canary: Launchway commits the new version to
-a GitOps repository, stops at the canary's pause, smoke-tests the canary, asks a person, promotes
+Release a service through Argo CD as an Argo Rollouts Pathfinder (canary): Launchway commits the new version to
+a GitOps repository, stops at the Pathfinder's pause, smoke-tests the Pathfinder, asks a person, promotes
 it to 100%, and rolls back by itself when the smoke test fails. For developers and operators who
 have run a [first pipeline](first-pipeline.md) and want to see delivery end to end.
 
@@ -9,7 +9,7 @@ have run a [first pipeline](first-pipeline.md) and want to see delivery end to e
 > kind cluster (Kubernetes in rootless Podman) with Argo CD v3.3.7 and Argo Rollouts v1.8.3 as
 > `deploy/test/argo/up.sh` installs them, with other namespace, application and port names.
 > **Not verified:** step 1 on a new machine (the cluster already existed), Docker instead of
-> Podman, a cluster other than kind, the Helm chart's deploy runner.
+> Podman, a cluster other than kind, the Helm chart's deploy Station (runner).
 
 You need a throwaway Kubernetes cluster with Argo CD, Argo Rollouts and a Git server. The
 repository's test environment makes one with kind in a few minutes. Everything else runs on your
@@ -34,9 +34,9 @@ flowchart LR
 - Free local ports 8080 (Launchway) and 3000 (the Git server, forwarded).
 - About 4 GB of free memory for the cluster.
 
-Words used here: an **environment** is a place a service is deployed to (here `staging`), served
-by a **target** (a cluster); a **deploy runner** is the process that changes the target, and a
-**runner pool** is the token it uses; a **deployment** is one deploy step's change and everything
+Words used here: an **Airfield (environment)** is a place a service is deployed to (here `staging`), served
+by a **target** (a cluster); a **deploy Station** is the process that changes the target, and a
+**Flight line (Station (runner) pool)** is the token it uses; a **deployment** is one deploy step's change and everything
 that guards it. See the [glossary](../glossary.md).
 
 ## 1 Make the cluster
@@ -79,7 +79,7 @@ cluster/  deploy-runner.yaml  gitops/  launchway.yaml  shop/
 | `cluster/` | The namespaces, and the Argo CD Application with its repository credentials |
 | `shop/` | The shop's own repository, with the pipeline |
 | `launchway.yaml` | The server's configuration |
-| `deploy-runner.yaml` | The deploy runner's configuration |
+| `deploy-runner.yaml` | The deploy Station's configuration |
 
 Every command below runs in `~/deploy-tutorial`. Make the namespaces: `shop` for the service and
 `launchway-steps` for the pipeline's step pods, both enforcing Pod Security "restricted":
@@ -91,7 +91,7 @@ kubectl --context kind-launchway-test apply -f cluster/namespaces.yaml
 ## 3 Push the GitOps repository
 
 The shop is BusyBox's web server, serving `shop <version>` on `/` and `ok` on `/healthz`. Its
-`gitops/apps/shop/rollout.yaml` is an Argo Rollouts canary that stops at a pause with no duration,
+`gitops/apps/shop/rollout.yaml` is an Argo Rollouts Pathfinder that stops at a pause with no duration,
 until something promotes it:
 
 ```yaml
@@ -113,7 +113,7 @@ The version is one line, which the deploy step will change:
               value: "1.0.0"
 ```
 
-And it has a bug planted on purpose, so that you can see a rollback: a version ending in `-broken`
+And it has a bug planted on purpose, so that you can see a Return to base: a version ending in `-broken`
 serves no `/healthz`.
 
 Forward the Git server to port 3000 and push:
@@ -129,7 +129,7 @@ cd ..
 ```
 
 Gitea creates the private repository `lwtest/shop-gitops` on the first push. Keep the
-port-forward running: the deploy runner pushes through it.
+port-forward running: the deploy Station pushes through it.
 
 ## 4 Create the Argo CD Application
 
@@ -170,8 +170,8 @@ shop   2         2         2            2           15s
 
 ## 5 Configure and start the server
 
-`launchway.yaml` declares the environment, the runner pool that may serve its target, and the
-built-in runner, which runs steps as pods in the cluster so the smoke test can reach the canary:
+`launchway.yaml` declares the Airfield, the Flight line that may serve its target, and the
+built-in Station, which runs steps as pods in the cluster so the smoke test can reach the Pathfinder:
 
 ```yaml
 listen: 127.0.0.1:8080
@@ -199,10 +199,10 @@ runner:
     namespace: launchway-steps
 ```
 
-Only a pool's token can take deploy work, and only for the pool's targets: the shared runner
-token, which runners that run anyone's code hold, cannot. A pool token is at least 32 characters.
+Only a pool's token can take deploy work, and only for the pool's targets: the shared Station
+token, which Stations that Sortie (run) anyone's code hold, cannot. A pool token is at least 32 characters.
 
-Make the shop's repository, a pool token, and start the server with the token in its environment:
+Make the shop's repository, a pool token, and start the server with the token in its Airfield:
 
 ```sh
 cd shop
@@ -223,9 +223,9 @@ level=INFO msg="runner started" name="laptop (built in)" executor="kubernetes (l
 
 Leave it running.
 
-## 6 Start the deploy runner
+## 6 Start the deploy Station {#6-start-the-deploy-runner}
 
-The deploy runner is `launchway runner` with a `deploy:` section. It never runs a script: it
+The deploy Station is `launchway runner` with a `deploy:` section. It never runs a script: it
 commits to the GitOps repository, asks Argo CD to sync if it must, watches the Application and the
 Rollout, and gives the rollout commands. `deploy-runner.yaml`:
 
@@ -256,7 +256,7 @@ deploy:
 - `applications`, `rollout_namespaces` and `paths` are allow-lists: project `shop` may deploy only
   the Application `shop`, watch rollouts only in `shop`, and change only files under `apps/shop/`.
 - `url` and `argocd_url` differ because your machine reaches Git through the port-forward and
-  Argo CD reaches it inside the cluster. The runner matches the Application by `argocd_url`.
+  Argo CD reaches it inside the cluster. The Station matches the Application by `argocd_url`.
 - The Git password comes from a secret store, never from this file.
 
 In a second terminal, in `~/deploy-tutorial`:
@@ -274,8 +274,8 @@ INFO deploy runner started name=deploy-kind targets=[kind] server=http://127.0.0
 ```
 
 > [!NOTE]
-> This runner uses your kind admin context, which is fine for a throwaway cluster. In a real
-> cluster, run the deploy runner with the Helm chart (`delivery.deployRunner`), which gives it
+> This Station uses your kind admin context, which is fine for a throwaway cluster. In a real
+> cluster, run the deploy Station with the Helm chart (`delivery.deployRunner`), which gives it
 > only the access it needs: see [Install on Kubernetes](../howto/install-kubernetes.md).
 
 Open **http://127.0.0.1:8080/environments**: `staging` says *observed by deploy-kind*.
@@ -355,23 +355,23 @@ steps:
 | Step | What it does |
 |---|---|
 | `build` | Stands in for building an image: it outputs the version to release. With an [image step](build-and-sign-image.md) you would pin the image by digest instead (`image:` and `digest: { output: image.digest }` in `changes`) |
-| `deploy` | Commits the new `VERSION` to `apps/shop/rollout.yaml` (`write_back`), lets Argo CD sync, and with `until: paused` ends when the rollout reaches its pause, with the canary running |
-| `canary-smoke` | An ordinary step, run as a pod, that tests the canary through `shop-canary` |
+| `deploy` | Commits the new `VERSION` to `apps/shop/rollout.yaml` (`write_back`), lets Argo CD sync, and with `until: paused` ends when the rollout reaches its pause, with the Pathfinder running |
+| `canary-smoke` | An ordinary step, run as a pod, that tests the Pathfinder through `shop-canary` |
 | `approve` | Waits for a person. `deployment: deploy` shows the live rollout beside the question |
 | `promote` | A rollout step: it promotes past the pause and waits until the rollout is healthy |
-| `rollback` | Runs only if the deployment was made and a step it needs did not succeed. `abort_first` aborts the canary at once, then reverts the commit |
+| `rollback` | Runs only if the deployment was made and a step it needs did not succeed. `abort_first` aborts the Pathfinder at once, then reverts the commit |
 
 `rollback` needs `promote`, so a failure anywhere on the way (the smoke test, a rejected approval,
-the promotion) leaves `promote` not succeeded and the rollback runs. See
+the promotion) leaves `promote` not succeeded and the Return to base runs. See
 [Deployments](../guide/deployments.md) for every key.
 
 ## 8 Release version 1.1.0
 
-Go to **Projects**, press **Start a run** on `shop`, keep `version` at `1.1.0` and press
+Go to **Projects**, press **Start a Sortie** on `shop`, keep `version` at `1.1.0` and press
 **Start run**. (Or: `curl -s -X POST -H 'X-Launchway-CSRF: 1' -d
 '{"ref":"main","inputs":{"version":"1.1.0"}}' http://127.0.0.1:8080/api/v1/projects/shop/runs`.)
 
-In about half a minute `build`, `deploy` and `canary-smoke` have succeeded and the run waits for
+In about half a minute `build`, `deploy` and `canary-smoke` have succeeded and the Sortie waits for
 approval. The `deploy` step's log:
 
 ```text
@@ -392,18 +392,18 @@ ok
 ```
 
 Click the `deploy` step to see the **deployment panel**: what Argo CD and the rollout report now,
-the canary's steps with the current one, the observations so far, and buttons to control the
+the Pathfinder's steps with the current one, the observations so far, and buttons to control the
 rollout.
 
-![The deployment panel of the deploy step while the run waits for approval: staging on target kind, application shop, version 1.1.0, commit 24966d99 to gitops on main, holding staging's lock; observed now, the rollout is paused at step 2 of 3; Argo CD synced, health Suspended; the rollout's steps weight 50%, pause (current) and weight 100%; Promote, Promote full and Abort buttons; and the observations step by step from waiting for Argo CD to the pause](../images/tutorials/deploy-panel-paused.png)
+![The deployment panel of the deploy step while the Sortie waits for approval: staging on target kind, application shop, version 1.1.0, commit 24966d99 to gitops on main, holding staging's lock; observed now, the rollout is paused at step 2 of 3; Argo CD synced, health Suspended; the rollout's steps weight 50%, pause (current) and weight 100%; Promote, Promote full and Abort buttons; and the observations step by step from waiting for Argo CD to the pause](../images/tutorials/deploy-panel-paused.png)
 
 The deployment holds `staging`'s lock: another run of the shop waits until this one is done.
 You could press **Promote** here; instead, decide the approval. Open **Waiting for a decision** and click the
-question (or press **Decide** on the run). The clearance step shows what it guards, with an
+question (or press **Decide** on the Sortie). The clearance step shows what it guards, with an
 optional comment; press **Go** (labeled **Approve** in the plain set).
 
 The `promote` step promotes the rollout and waits until it is healthy; `rollback` is skipped
-(*every step it needs succeeded*). The run succeeds, and the panel of `promote` shows the command
+(*every step it needs succeeded*). The Sortie succeeds, and the panel of `promote` shows the command
 it gave:
 
 ```text
@@ -412,14 +412,14 @@ Promote  by step promote  applied
 for the rollout at canary step 2, paused  pod template c67899b5b
 ```
 
-Now open **Environments**:
+Now open **Airfields**:
 
-![The Environments page: service shop in environment staging, observed by deploy-kind, runs version 1.1.0 since a few seconds ago, deployed by run 1, Argo CD sync Synced and health Healthy](../images/tutorials/deploy-environments-deployed.png)
+![The Airfields page: service shop in Airfield staging, observed by deploy-kind, runs version 1.1.0 since a few seconds ago, deployed by run 1, Argo CD sync Synced and health Healthy](../images/tutorials/deploy-environments-deployed.png)
 
-## 9 Release a broken version and watch the rollback
+## 9 Release a broken version and watch the Return to base {#9-release-a-broken-version-and-watch-the-rollback}
 
-Start another run (**Projects**, **Start a run** on `shop`), this time with `version` set to
-`1.2.0-broken`. The canary starts, but its
+Start another Sortie (**Projects**, **Start a Sortie** on `shop`), this time with `version` set to
+`1.2.0-broken`. The Pathfinder starts, but its
 `/healthz` is missing, so `canary-smoke` fails:
 
 ```text
@@ -442,11 +442,11 @@ Sync: not needed: the application syncs by itself
 Done; waiting for Argo CD
 ```
 
-The abort took the canary's traffic away within seconds; the revert is what lasts, because Git
-named the broken version until then. The run fails (its smoke test did), and its deployment says
-**Rolled back**:
+The abort took the Pathfinder's traffic away within seconds; the revert is what lasts, because Git
+named the broken version until then. The Sortie fails (its smoke test did), and its deployment says
+**Returned to base**:
 
-![The run of version 1.2.0-broken: it failed at canary-smoke with HTTP 404; staging shows shop 1.1.0 to 1.2.0-broken, Rolled back; the rollback step's panel says the rollback step reverted the commit and the environment was healthy again afterwards, with the version 1.2.0-broken that ran 1.1.0 before, the commit and the commit that reverted it, and the observations from the pause to healthy](../images/tutorials/deploy-rollback.png)
+![The run of version 1.2.0-broken: it failed at canary-smoke with HTTP 404; staging shows shop 1.1.0 to 1.2.0-broken, Returned to base; the Return to base step's panel says the Return to base step reverted the commit and the Airfield was healthy again afterwards, with the version 1.2.0-broken that ran 1.1.0 before, the commit and the commit that reverted it, and the observations from the pause to healthy](../images/tutorials/deploy-rollback.png)
 
 The GitOps repository has the whole story, as ordinary commits:
 
@@ -462,13 +462,13 @@ bccb4c1 Launchway  Roll back shop in staging to 1.1.0
 dd45276 You  The shop, version 1.0.0
 ```
 
-**Environments** still shows `1.1.0`, deployed by run 1, with run 2 rolled back in its history:
+**Airfields** still shows `1.1.0`, deployed by run 1, with run 2 returned to base in its history:
 
-![The Environments page after the rollback: shop in staging runs 1.1.0 from run 1; run 2, 1.2.0-broken, Rolled back; Synced and Healthy; the history lists run 2 rolled back and run 1 deployed](../images/tutorials/deploy-environments-rolled-back.png)
+![The Airfields page after the Return to base: shop in staging runs 1.1.0 from run 1; run 2, 1.2.0-broken, Returned to base; Synced and Healthy; the history lists run 2 returned to base and run 1 deployed](../images/tutorials/deploy-environments-rolled-back.png)
 
 ## 10 Clean up
 
-Stop the server and the deploy runner with Ctrl+C, then:
+Stop the server and the deploy Station with Ctrl+C, then:
 
 ```sh
 kill %1                                   # the port-forward, if started from this shell
@@ -484,19 +484,19 @@ cluster with `kind delete cluster --name launchway-test`.
 
 | What you see | Cause and fix |
 |---|---|
-| The `deploy` step waits in *queued* | No deploy runner serves target `kind`: check the runner is running with the pool's token |
-| `a valid runner token is required (HTTP 401)` in the deploy runner's output | The token is not the pool's (`LAUNCHWAY_POOL_DEPLOY_KIND_TOKEN` of the server) |
+| The `deploy` step waits in *queued* | No deploy Station serves target `kind`: check the Station is running with the pool's token |
+| `a valid runner token is required (HTTP 401)` in the deploy Station's output | The token is not the pool's (`LAUNCHWAY_POOL_DEPLOY_KIND_TOKEN` of the server) |
 
 ## What you learned
 
-- Environments and runner pools live in the server's configuration; a deploy runner with the pool's
+- Airfields and Flight lines live in the server's configuration; a deploy Station with the pool's
   token is the only thing that touches Git and the cluster for them.
 - A deploy step commits a version to a GitOps repository and judges "deployed" from what Argo CD
   and Argo Rollouts report, never from the commit alone.
 - `until: paused`, a smoke step, an approval naming the deployment and a `kind: rollout` step give
-  a canary a test and a person before it reaches 100%.
-- A rollback step with `abort_first` stops a bad canary at once and reverts its commit, and the
-  Environments page and Git both show what happened.
+  a Pathfinder a test and a person before it reaches 100%.
+- A Return to base step with `abort_first` stops a bad Pathfinder at once and reverts its commit, and the
+  Airfields page and Git both show what happened.
 
 ## What next
 
@@ -505,5 +505,5 @@ cluster with `kind delete cluster --name launchway-test`.
 - [Policy gates and waivers](policy-gates.md): require tests, a clean scan and an approval before
   `deploy` may run.
 - [Deployments](../guide/deployments.md) in the guide: sync windows, queues, `on_cancel`,
-  protected environments.
-- [Install on Kubernetes](../howto/install-kubernetes.md): run the deploy runner with the Helm chart.
+  protected Airfields.
+- [Install on Kubernetes](../howto/install-kubernetes.md): run the deploy Station with the Helm chart.

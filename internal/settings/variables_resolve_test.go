@@ -292,13 +292,15 @@ func TestAllNamesAreResolvedWhenNoneIsAsked(t *testing.T) {
 // The rule is one sentence and must be the same everywhere it is written:
 // the guide, the concept page, the references and the pipeline guide.
 func TestTheRuleIsTheSameInEveryDocument(t *testing.T) {
-	core := strings.TrimSuffix(VariableRule, " Lists replace, never merge. Variables and locks never cross Wings.")
+	// A page that has met a word before does not repeat the plain word beside it: "Sortie (run)" is "Sortie" there.
+	plain := strings.NewReplacer(" (run)", "", " (environment)", "")
+	core := plain.Replace(strings.TrimSuffix(VariableRule, " Lists replace, never merge. Variables and locks never cross Wings."))
 	for _, f := range []string{"docs/guide/variables.md", "docs/learn/concepts/variables.md", "docs/reference/http-api.md", "docs/reference/cli.md"} {
 		b, err := os.ReadFile("../../" + f)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(string(b), core) {
+		if !strings.Contains(plain.Replace(string(b)), core) {
 			t.Errorf("%s does not hold the rule, word for word:\n%s", f, core)
 		}
 	}

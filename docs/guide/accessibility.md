@@ -13,7 +13,7 @@ The API, the command line and the MCP server have a written quality bar of their
 ## What you can rely on
 
 - **Keyboard.** Everything can be done without a mouse. The first Tab stop is a link that skips to the page. The slash key opens the search, and you can turn that shortcut off under your user menu. Dialogs keep focus inside them, close with Escape and give focus back to the button that opened them. Menus, tabs and lists follow the keyboard patterns of the WAI-ARIA Authoring Practices: arrow keys move, Home and End jump.
-- **Screen readers.** Every page has one main heading, landmarks (banner, navigation, main) and a title that is read when you move between pages. Buttons and links have names. Status is always a word as well as a shape: a step is Passed, Failed, Waiting for a person or Running, never only a colored dot. The launch line, which is a drawing, is also a list that reads station by station with each state. The diagrams in Learn come with their text. Changes that happen on their own, such as a run that fails, a decision that needs you, a command that finished or a session that ended, are announced without moving your focus.
+- **Screen readers.** Every page has one main heading, landmarks (banner, navigation, main) and a title that is read when you move between pages. Buttons and links have names. Status is always a word as well as a shape: a step is Passed, Failed, Waiting for a person or Running, never only a colored dot. The launch line, which is a drawing, is also a list that reads station by station with each state. The diagrams in Learn come with their text. Changes that happen on their own, such as a Sortie (run) that fails, a decision that needs you, a command that finished or a session that ended, are announced without moving your focus.
 - **Color and contrast.** Text meets 4.5 to 1 against its background and icons, control borders and the focus ring meet 3 to 1, in the light and the dark theme. Links inside sentences are underlined. Nothing depends on color alone.
 - **Size and zoom.** The page reflows down to 320 pixels wide and at 400 percent zoom without sideways scrolling. Targets are at least 24 by 24 pixels, and 44 on a touch screen. Text spacing overrides do not cut text off.
 - **Motion.** If your system asks for reduced motion, nothing animates; running work is still a shape and a word. Nothing flashes.
@@ -32,11 +32,11 @@ The API, the command line and the MCP server have a written quality bar of their
 | Keyboard-only journeys, with the accessibility tree and the announcements checked | A journey that needs a mouse, focus that is lost, an outcome that is not announced | `make web-a11y` |
 | A baseline that may only shrink | A new violation, and a fixed one left in the list | Both of the above |
 
-The journeys cover: skipping to the page, searching and opening a failed run to read why it failed, deciding an approval with a reason, starting a run, adding a variable, opening Learn and searching it, closing overlays with Escape, and a session that ends.
+The journeys cover: skipping to the page, searching and opening a failed run to read why it failed, deciding an approval with a reason, starting a Sortie, adding a variable, opening Learn and searching it, closing overlays with Escape, and a session that ends.
 
 ## What is checked by hand
 
-An automated scan finds about a third of the problems that matter. These are checked by a person before a release, with a screen reader and the keyboard: reading a run page from top to bottom, deciding an approval, using the search, Learn and the settings with NVDA on Windows and VoiceOver on macOS; zooming to 400 percent; Windows high contrast. The results are not yet written down for each release.
+An automated scan finds about a third of the problems that matter. These are checked by a person before a release, with a screen reader and the keyboard: reading a Sortie page from top to bottom, deciding an approval, using the search, Learn and the settings with NVDA on Windows and VoiceOver on macOS; zooming to 400 percent; Windows high contrast. The results are not yet written down for each release.
 
 ## Known gaps
 

@@ -54,7 +54,7 @@ export function verifyState(v: { status?: string; outcome?: VerifyOutcome; overr
     case "failed": return { label: "Failed", tone: "bad" };
     case "inconclusive": return { label: "Inconclusive", tone: "warn" };
   }
-  if (v.status === "queued") return { label: "Waiting for a deploy runner", tone: "idle" };
+  if (v.status === "queued") return { label: terms().say("Waiting for a {deploy:do} {runner}"), tone: "idle" };
   if (v.status === "canceled") return { label: "Canceled", tone: "idle" };
   if (v.start && v.start > now) return { label: "Starts soon", tone: "run" };
   return { label: "Watching", tone: "run" };
@@ -118,11 +118,11 @@ export function VerificationPanel({ run, step, list, reload }: { run: RunDetail;
 
 function NoVerification({ run, step, loading }: { run: RunDetail; step: StepView; loading: boolean }) {
   const g = graphVerify(run, step.id);
-  const env = step.environment || run.step_list.find((s) => s.id === step.deployment)?.environment || "its environment";
+  const env = step.environment || run.step_list.find((s) => s.id === step.deployment)?.environment || terms().say("its {environment}");
   let body;
   if (loading && step.attempt > 0) body = <div className="loading">Loading…</div>;
   else if (step.status === "pending") {
-    body = <p className="sub">Watches {env} {g ? `for ${g.duration}, in intervals of ${g.interval},` : ""} once {step.needs?.length ? step.needs.join(", ") : "the run"} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>;
+    body = <p className="sub">Watches {env} {g ? `for ${g.duration}, in intervals of ${g.interval},` : ""} once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>;
   } else if (step.status === "skipped") body = <p className="sub">{step.error || "Skipped"}. Nothing was watched.</p>;
   else if (step.status === "canceled") body = <p className="sub">Canceled before the verification started.</p>;
   else if (step.status === "failed") body = <p className="sub">It failed before the verification started{step.error ? `: ${step.error}` : "."}</p>;
@@ -160,7 +160,7 @@ function Verification({ run, step, v, now, reload }: { run: RunDetail; step: Ste
         <div className="callout callout-wait vwait" role="status">
           <span>
             <strong>Waiting for a person.</strong> The verification was inconclusive, and this step is set to pause
-            {" "}(<Mono>on_inconclusive: pause</Mono>): someone must mark it passed or failed below. The run waits until then
+            {" "}(<Mono>on_inconclusive: pause</Mono>{terms().say("): someone must mark it passed or failed below. The {run} waits until then")}
             {v.deadline ? <>; if nobody decides by {clock(v.deadline)} ({v.deadline > now ? `in ${duration(v.deadline - now)}` : "now"}), it fails</> : null}.
           </span>
         </div>
@@ -208,7 +208,7 @@ function Progress({ v, now }: { v: VerificationView; now: number }) {
   if (v.decided || v.override) {
     text = v.verdict.intervals >= v.total ? `All ${v.total} intervals judged (${window}).` : `Decided after ${v.verdict.intervals} of ${v.total} intervals (${window}).`;
   } else if (v.status === "queued") {
-    text = `${window}, waiting for a deploy runner serving target ${v.target} to take it.`;
+    text = terms().say(`${window}, waiting for a {deploy:do} {runner} serving target ${v.target} to take it.`);
   } else if (v.start > now) {
     text = `${window}; the first starts in ${duration(v.start - now)}.`;
   } else if (n >= v.total) {
@@ -216,7 +216,7 @@ function Progress({ v, now }: { v: VerificationView; now: number }) {
   } else {
     const end = v.start + (n + 1) * ims;
     text = end > now ? `Interval ${n + 1} of ${v.total}, next in ${Math.ceil((end - now) / 1000)}s.`
-      : `Interval ${n + 1} of ${v.total} is over; waiting for the deploy runner to report it (${duration(now - end)}).`;
+      : terms().say(`Interval ${n + 1} of ${v.total} is over; waiting for the {deploy:do} {runner} to report it (${duration(now - end)}).`);
   }
   return <p className="vprogress">{text}</p>;
 }
@@ -260,7 +260,7 @@ function VerdictBox({ v, st }: { v: VerificationView; st: { label: string; tone:
         <p className="vverdict-note">With <Mono>on_fail: {v.on_fail}</Mono>, a failure also aborts the deployment's rollout.</p>
       )}
       {vd.outcome === "inconclusive" && v.on_inconclusive !== "pause" && !v.override && (
-        <p className="vverdict-note">With <Mono>on_inconclusive: {v.on_inconclusive}</Mono>, an inconclusive verification {v.on_inconclusive === "pass" ? "lets the run go on" : "fails the step"}.</p>
+        <p className="vverdict-note">With <Mono>on_inconclusive: {v.on_inconclusive}</Mono>, an inconclusive verification {v.on_inconclusive === "pass" ? terms().say("lets the {run} go on") : "fails the step"}.</p>
       )}
     </div>
   );
@@ -694,7 +694,7 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
       <h4 className="h-xs">Decide by hand</h4>
       <p className="sub small">
         {v.status === "waiting" ? "The statistics could not decide. " : "You may decide before the window is over. "}
-        Marking it passed lets the run go on; marking it failed acts as a failed verification does
+        {terms().say("Marking it passed lets the {run} go on; marking it failed acts as a failed verification does")}
         {aborts ? <> (<Mono>on_fail: {v.on_fail}</Mono>: the deployment's rollout is aborted)</> : null}.
         {" "}A pass marked by a person does not teach later verifications.
       </p>
@@ -757,7 +757,7 @@ function WhatWasRead({ v }: { v: VerificationView }) {
           {params.map(([k, val]) => <Fragment key={k}><dt className="mono">{`{{${k}}}`}</dt><dd className="mono">{val}</dd></Fragment>)}
         </dl>
       )}
-      <p className="sub small">Read by a deploy runner serving target <Mono>{v.target}</Mono>, with the credentials its operator configured; queries run once each interval is over.</p>
+      <p className="sub small">{terms().say("Read by a {deploy:do} {runner} serving target")} <Mono>{v.target}</Mono>, with the credentials its operator configured; queries run once each interval is over.</p>
     </details>
   );
 }
@@ -771,7 +771,7 @@ export function VerificationSummaryRows({ list, onSelect }: { list: Verification
   const now = useNow(1000, live);
   if (!list || list.length === 0) return null;
   return (
-    <section className="depsum" aria-label="Verifications of this run">
+    <section className="depsum" aria-label={terms().say("Verifications of this {run}")}>
       {list.map((v) => (
         <button key={v.step} type="button" className="depsum-row" onClick={() => onSelect(v.step)}>
           <span className="depsum-env">{v.environment}</span>
@@ -793,8 +793,7 @@ export function VerificationsTab({ run, list, error, reload, onStep }: {
   return (
     <div className="imgs">
       <p className="sub imgs-intro">
-        {steps.length === 1 ? "1 verify step" : `${steps.length} verify steps`}: each watches an environment for a window and decides from metrics and logs
-        whether the new version is healthy. The statistics decide; a model, if one is named, only explains.
+        {steps.length === 1 ? "1 verify step" : `${steps.length} verify steps`}{terms().say(": each watches an {environment} for a window and decides from metrics and logs whether the new version is healthy. The statistics decide; a model, if one is named, only explains.")}
       </p>
       {steps.map((s) => (
         <div key={s.id} className="vtab-step">

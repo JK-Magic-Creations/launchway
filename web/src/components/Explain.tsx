@@ -5,6 +5,7 @@ import { canOperate, useMe } from "../auth";
 import { ErrorBox, Mono } from "./ui";
 import { WizardButton } from "./WizardButton";
 import { costText, usageText } from "./usageText";
+import { terms } from "../terms";
 
 // Models: asking one to explain a failed step, what an ai step's model
 // said, and the models the server knows. A model's words are always shown
@@ -93,7 +94,7 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
         </div>
         {why && <p id={`xwhy-${step.id}`} className="dctl-why">{why}</p>}
         <p className="sub small">
-          Sends {usable.length === 1 ? <>model <strong>{model}</strong></> : "the model"} the step's error, the last 200 lines of its log (secrets already masked by the runner) and its failed tests.
+          Sends {usable.length === 1 ? <>model <strong>{model}</strong></> : "the model"} {terms().say("the step's error, the last 200 lines of its log (secrets already masked by the {runner}) and its failed tests.")}
           {(() => { const m = usable.find((x) => x.name === model); return m ? <> {m.local ? "It runs on a server of the operator's own." : `It is a ${m.provider} model, reached over the network.`}</> : null; })()}
         </p>
       </div>
@@ -233,7 +234,7 @@ function ModelRow({ m }: { m: ModelView }) {
       <td data-label="Limits" className="small">
         <div>{m.max_tokens.toLocaleString()} tokens out per call</div>
         <div>{Math.round(m.max_input_bytes / 1024).toLocaleString()} KiB in per call</div>
-        <div>{m.calls_per_run} calls per run</div>
+        <div>{m.calls_per_run} {terms().say("calls per {run}")}</div>
         <div>{m.tokens_per_day ? `${m.tokens_per_day.toLocaleString()} tokens a day per project` : "no daily limit"}</div>
       </td>
       <td data-label="Used today" className="small">
@@ -261,7 +262,7 @@ export function HealthSourcesSection() {
   return (
     <section className="card">
       <h2 className="h-sm">Health sources</h2>
-      <p className="sub">Monitoring that verify steps may read, by name, to judge a deployment. Where each is and its credentials stay with the deploy runners.</p>
+      <p className="sub">{terms().say("Monitoring that verify steps may read, by name, to judge a deployment. Where each is and its credentials stay with the {deploy:do} {runners}.")}</p>
       {list.length === 0 ? <p className="sub"><strong>None yet</strong>: verify steps are refused.</p> : (
         <ul className="hsources">
           {list.map((h) => (

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -74,6 +75,13 @@ func TestOverviewShowsOnlyWhatTheCallerMaySee(t *testing.T) {
 	body := string(got.body)
 	if got.status != 200 || !strings.Contains(body, "pay-web") {
 		t.Fatalf("the viewer's overview: %d %s", got.status, body)
+	}
+	// The vocabulary is public wording, not configuration; its sentences may hold any ordinary word.
+	var shown map[string]any
+	if err := json.Unmarshal(got.body, &shown); err == nil {
+		delete(shown, "vocabulary")
+		b, _ := json.Marshal(shown)
+		body = string(b)
 	}
 	for _, leak := range []string{"layoffs-planner", "other", "corp.internal", "problem", "servers"} {
 		if strings.Contains(body, leak) {

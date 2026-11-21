@@ -5,6 +5,7 @@ import { useId } from "react";
 import type { RuleInfo } from "../api";
 import { POINT, RULES, type RuleField } from "../configKinds";
 import { splitList } from "./ConfigForm";
+import { terms } from "../terms";
 
 type Rules = Record<string, unknown>;
 
@@ -22,7 +23,7 @@ export function PolicyRules({ catalogue, rules, onChange, problems }: {
   return (
     <fieldset className="cf-section">
       <legend className="cf-section-title">Rules</legend>
-      <p className="cf-help">A policy passes when every rule it has passes. Each rule is judged at one point of a run; tick the rules this policy has.</p>
+      <p className="cf-help">{terms().say("A policy passes when every rule it has passes. Each rule is judged at one point of a {run}; tick the rules this policy has.")}</p>
       <ul className="cf-rules">
         {catalogue.map((r) => (
           <RuleRow key={r.name} info={r} on={r.name in rules} value={rules[r.name]} onToggle={(b) => toggle(r.name, b)}

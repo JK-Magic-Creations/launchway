@@ -4,272 +4,16 @@
   "rules": {
     "people-read": "What a person reads (screens, documentation, command help and output, the `error` and `next` sentences, MCP descriptions, notices, chart comments) uses the product words. Screens and messages the server builds ask the terms system ({key}, terms().label) so a rename takes effect; documentation names the default word and, once per page that introduces a level, the plain word beside it. Never a hard-coded plain level name where the level is meant.",
     "identifiers": "Stable identifiers (API JSON fields and paths, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds, Go identifiers) cannot follow a renameable word. Each level has one neutral, permanent name: installation, organization, unit, project. They are documented as 'the API name of a Base' and are never themed.",
-    "ordinary-words": "Where an industry word is the accepted term it stays ordinary: pipeline, step, run, branch, commit, pull request, secret, environment, deploy, rollback, variable, template, library, runner, artifact, registry.",
-    "buttons": "Open decision, not applied: the owner chose Clearance with Go and No-go, so the decision buttons say Go and No-go. A proposal to put the ordinary verbs Approve and Reject on the buttons, and keep Go and No-go as the recorded answer, is the owner's to take.",
-    "capitals": "Level words are the product's proper names for its levels: write Base, Wing, Squadron and Project capitalized when they mean the level (a lower-case 'base' or 'wing' reads as an ordinary word). Feature words are product nouns too: Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload. 'launch line' stays lower case. (The screens' terms helper lower-cases a word in the middle of a sentence; that is an open decision.)",
+    "ordinary-words": "Where an industry word is the accepted term it stays ordinary: pipeline, step, alert, branch, pull request, commit, secret, variable, template, library. Everything else Launchway names itself (runner, run, queue, deploy, environment, rollback, canary, registry, artifact and the rest of the table) uses the product word, with the plain word beside it where the word is introduced.",
+    "buttons": "A button for a delivery action uses the product verb: Launch (deploy), Return to base (rollback), Abort (emergency rollback). The plain word is in the button's accessible description and in the confirmation text. Elsewhere an ordinary verb on a button stays acceptable where a newcomer must understand it (Save, Cancel, Approve, Reject).",
+    "capitals": "Product words are capitalized as names, in pages as well as documents: Sortie, Station, Airfield, Launch, Tower, Radar. Level words (Base, Wing, Squadron, Project) and feature words (Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload) too. The business set reads as ordinary English: its words are lower case in the middle of a sentence, except the level words. 'launch line' stays lower case.",
     "spelling": "American English: organization, color, behavior, license (noun and verb), initialize, customize.",
     "disclaimer": "These are ordinary words used descriptively. Launchway is not affiliated with or endorsed by any military service.",
-    "levels-in-prose": "Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list."
+    "levels-in-prose": "Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.",
+    "statuses": "A status is always shown with an icon and its plain word beside the themed one ('Airborne · running'); in the business set only the plain word. Never color alone.",
+    "no-combat": "Flying and ground operations only. No strike, target, kill, weapon or attack words and no real program, unit or rank names are product words.",
+    "stable-addresses": "Page addresses (URLs, routes), documentation file names, anchors, flags, API fields and enum values, JSON output, and stored role names never change with a word."
   },
-  "terms": [
-    {
-      "key": "installation",
-      "default": "Base",
-      "plural": "Bases",
-      "plain": "Installation",
-      "meaning": "The whole installation, and every customer's own walled-off space on the hosted service: the top level.",
-      "renameable": true,
-      "identifier": "installation",
-      "appears": "navigation, first-run wizard, settings, sign-up, hosted-service docs",
-      "mustNotBeCalled": [
-        "tenant",
-        "workspace",
-        "account",
-        "instance",
-        "organization (for the top level)"
-      ]
-    },
-    {
-      "key": "organization",
-      "default": "Wing",
-      "plural": "Wings",
-      "plain": "Organization",
-      "meaning": "The group that owns the projects: the second level.",
-      "renameable": true,
-      "identifier": "organization (kind name today: organisation)",
-      "appears": "settings, variables, policies, wizards",
-      "mustNotBeCalled": [
-        "org",
-        "organisation",
-        "company (in product text)",
-        "tenant"
-      ]
-    },
-    {
-      "key": "unit",
-      "default": "Squadron",
-      "plural": "Squadrons",
-      "plain": "Team",
-      "meaning": "An optional group of projects with shared settings: the third level.",
-      "renameable": true,
-      "identifier": "unit",
-      "appears": "settings, variables, wizards, project pages",
-      "mustNotBeCalled": [
-        "group",
-        "namespace",
-        "workspace",
-        "team (when the default words are in effect)"
-      ]
-    },
-    {
-      "key": "project",
-      "default": "Project",
-      "plural": "Projects",
-      "plain": "Project",
-      "meaning": "One repository and its pipeline: the fourth level.",
-      "renameable": true,
-      "identifier": "project",
-      "appears": "everywhere",
-      "mustNotBeCalled": [
-        "repo (as the level)",
-        "app (that is an application, a deployed thing)"
-      ]
-    },
-    {
-      "key": "guide",
-      "default": "Wingman",
-      "plural": "Wingmen",
-      "plain": "Guide",
-      "meaning": "The helper panel beside every page: where you are and what you can do next.",
-      "renameable": true,
-      "identifier": "guide",
-      "appears": "the panel, the first-run wizard, learn pages",
-      "mustNotBeCalled": [
-        "assistant",
-        "copilot",
-        "chatbot",
-        "bot"
-      ]
-    },
-    {
-      "key": "preflight",
-      "default": "Preflight",
-      "plain": "Checks",
-      "meaning": "The checks made before a run, a merge or a deploy.",
-      "renameable": true,
-      "identifier": "preflight",
-      "appears": "run and deploy pages, policy docs",
-      "mustNotBeCalled": [
-        "pre-checks",
-        "gate checks"
-      ]
-    },
-    {
-      "key": "checklist",
-      "default": "Checklist",
-      "plain": "Checklist",
-      "meaning": "The list of things that must be true before a change goes on.",
-      "renameable": true,
-      "identifier": "checklist",
-      "appears": "environments, merge rules, support bundles",
-      "mustNotBeCalled": [
-        "gate list"
-      ]
-    },
-    {
-      "key": "clearance",
-      "default": "Clearance",
-      "plain": "Approval",
-      "meaning": "A person decides whether a change may go on, by saying Go or No-go.",
-      "renameable": true,
-      "identifier": "approval (step kind, path /approvals)",
-      "appears": "run pages, the decisions list, settings, policies",
-      "mustNotBeCalled": [
-        "sign-off",
-        "gate (for the thing a person gives)"
-      ]
-    },
-    {
-      "key": "go",
-      "default": "Go",
-      "plain": "Approve",
-      "meaning": "The recorded answer that lets the run continue. The button says Approve in both sets.",
-      "renameable": true,
-      "identifier": "approve (path)",
-      "appears": "decision records, the run timeline",
-      "mustNotBeCalled": []
-    },
-    {
-      "key": "no_go",
-      "default": "No-go",
-      "plain": "Reject",
-      "meaning": "The recorded answer that fails the step. The button says Reject in both sets.",
-      "renameable": true,
-      "identifier": "reject (path)",
-      "appears": "decision records, the run timeline",
-      "mustNotBeCalled": [
-        "nogo",
-        "no go",
-        "NoGo"
-      ]
-    },
-    {
-      "key": "hold",
-      "default": "Hold",
-      "plain": "Freeze",
-      "meaning": "A time when changes may not go out.",
-      "renameable": true,
-      "identifier": "hold",
-      "appears": "environments, schedules, policies",
-      "mustNotBeCalled": [
-        "blackout",
-        "code freeze (use freeze in the plain set)"
-      ]
-    },
-    {
-      "key": "flight_plan",
-      "default": "Flight plan",
-      "plain": "Pipeline template",
-      "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
-      "renameable": true,
-      "identifier": "flight_plan",
-      "appears": "new project, template library, learn pages",
-      "mustNotBeCalled": [
-        "blueprint",
-        "boilerplate",
-        "starter pipeline (say Flight plan, or pipeline template as the plain word)",
-        "step template (a Maneuver is a different thing)"
-      ]
-    },
-    {
-      "key": "maneuver",
-      "default": "Maneuver",
-      "plain": "Step template",
-      "meaning": "A reusable step, or a few steps, that a Flight plan or a pipeline uses: build an image, deliver to one environment.",
-      "renameable": true,
-      "identifier": "template (files, keys and uses: launchway/<name> are unchanged)",
-      "appears": "template library, learn pages",
-      "mustNotBeCalled": [
-        "macro",
-        "snippet"
-      ]
-    },
-    {
-      "key": "hangar",
-      "default": "Hangar",
-      "plain": "Template library",
-      "meaning": "The Flight plans and Maneuvers that ship inside Launchway, with their gallery.",
-      "renameable": true,
-      "identifier": "library launchway (uses: launchway/<name> is unchanged)",
-      "appears": "library page, learn pages",
-      "mustNotBeCalled": [
-        "marketplace",
-        "store"
-      ]
-    },
-    {
-      "key": "logbook",
-      "default": "Logbook",
-      "plain": "Audit trail",
-      "meaning": "The append-only record of who did what, and when.",
-      "renameable": true,
-      "identifier": "audit (paths and event actions)",
-      "appears": "settings, run pages, security docs",
-      "mustNotBeCalled": [
-        "audit log"
-      ]
-    },
-    {
-      "key": "payload",
-      "default": "Payload",
-      "plain": "Contents",
-      "meaning": "What a change delivers.",
-      "renameable": true,
-      "identifier": "payload",
-      "appears": "deploy pages, release notes",
-      "mustNotBeCalled": [
-        "delivery contents",
-        "manifest (that is a file)"
-      ]
-    },
-    {
-      "key": "in_flight",
-      "default": "In flight",
-      "plain": "In progress",
-      "meaning": "A change on its way to production.",
-      "renameable": true,
-      "identifier": "in_flight",
-      "appears": "overview, application pages",
-      "mustNotBeCalled": []
-    },
-    {
-      "key": "launch_line",
-      "default": "Launch line",
-      "plain": "Launch line",
-      "meaning": "The path a change travels, from commit to production. Named after the product, so the same in both sets.",
-      "renameable": true,
-      "identifier": "launch_line",
-      "appears": "application and project pages, docs",
-      "mustNotBeCalled": [
-        "pipeline view (a pipeline is the definition; the launch line is the path of one change)"
-      ]
-    },
-    {
-      "key": "detachment",
-      "default": "Detachment",
-      "plain": "Site agent (proposed)",
-      "meaning": "The agent on the customer's side that does the work and holds the data, so the hosted service holds nothing sensitive.",
-      "renameable": true,
-      "inTermsSystem": false,
-      "identifier": "none yet",
-      "appears": "hosted-service roadmap; not yet in the product",
-      "mustNotBeCalled": [
-        "connector",
-        "delegate",
-        "relay"
-      ]
-    }
-  ],
   "stableNames": {
     "today": [
       {
@@ -302,7 +46,8 @@
       "SECURITY.md",
       "SUPPORT.md",
       "docs/**/*.md",
-      "internal/pipeline/guide/*.md"
+      "internal/pipeline/guide/*.md",
+      "deploy/README.md"
     ],
     "web": [
       "web/src/**/*.ts",
@@ -337,8 +82,15 @@
       "docs/reference/helm-values.md",
       "docs/roadmap-list.md",
       "docs/roadmap/milestone-*.md",
-      "docs/roadmap/beyond.md"
-    ]
+      "docs/roadmap/beyond.md",
+      "docs/reference/accessibility-conformance.md"
+    ],
+    "webDataModules": [
+      "web/src/shell/guideData.ts",
+      "web/src/shell/comingData.ts",
+      "web/src/learn/links.ts"
+    ],
+    "webDataModulesNote": "Modules of constant text whose accessors fill the words in (guideFor, comingFor, the Learn links): scripts/vocabulary-fix --web writes placeholders into their strings without wrapping them."
   },
   "checks": [
     {
@@ -401,9 +153,9 @@
       "scope": [
         "web"
       ],
-      "pattern": "(?<![{_])\\b(?:Wingmen|Wingman|Squadrons?|Preflight|Clearances?|Logbook|Flight plans?|Maneuvers?|Hangar|Payloads?|No-go)\\b(?!\\})",
+      "pattern": "(?<![{_])\\b(?:Wingmen|Wingman|Squadrons?|Preflight|Clearances?|Logbook|Flight plans?|Payloads?|No-go)\\b(?!\\})",
       "caseSensitive": true,
-      "use": "the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {maneuver}, {hangar}, {payload}, {no_go}",
+      "use": "the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go}",
       "fix": null
     },
     {
@@ -553,30 +305,1432 @@
       "fix": null
     }
   ],
-  "levelNames": [
+  "words": {
+    "groups": [
+      {
+        "ID": "levels",
+        "Title": "Levels"
+      },
+      {
+        "ID": "work",
+        "Title": "Work"
+      },
+      {
+        "ID": "delivery",
+        "Title": "Delivery"
+      },
+      {
+        "ID": "platform",
+        "Title": "Platform"
+      },
+      {
+        "ID": "roles",
+        "Title": "Roles"
+      },
+      {
+        "ID": "statuses",
+        "Title": "Statuses"
+      }
+    ],
+    "words": [
+      {
+        "key": "installation",
+        "group": "levels",
+        "aviation": {
+          "one": "Base",
+          "many": "Bases"
+        },
+        "plain": {
+          "one": "Installation",
+          "many": "Installations"
+        },
+        "meaning": "The whole installation, and every customer's own walled-off space on the hosted service: the top level.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "tenant",
+          "workspace",
+          "account",
+          "instance",
+          "organization (for the top level)"
+        ]
+      },
+      {
+        "key": "organization",
+        "group": "levels",
+        "aviation": {
+          "one": "Wing",
+          "many": "Wings"
+        },
+        "plain": {
+          "one": "Organization",
+          "many": "Organizations"
+        },
+        "meaning": "The group that owns the projects: the second level.",
+        "renameable": true,
+        "identifier": "organization (kind name today: organisation)",
+        "mustNotBeCalled": [
+          "org",
+          "organisation",
+          "company (in product text)",
+          "tenant"
+        ]
+      },
+      {
+        "key": "unit",
+        "group": "levels",
+        "aviation": {
+          "one": "Squadron",
+          "many": "Squadrons"
+        },
+        "plain": {
+          "one": "Team",
+          "many": "Teams"
+        },
+        "meaning": "An optional group of projects with shared settings: the third level.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "group",
+          "namespace",
+          "workspace",
+          "team (when the default words are in effect)"
+        ]
+      },
+      {
+        "key": "project",
+        "group": "levels",
+        "aviation": {
+          "one": "Project",
+          "many": "Projects"
+        },
+        "plain": {
+          "one": "Project",
+          "many": "Projects"
+        },
+        "meaning": "One repository and its pipeline: the fourth level.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "repo (as the level)",
+          "app (that is an application, a deployed thing)"
+        ]
+      },
+      {
+        "key": "runner",
+        "group": "work",
+        "aviation": {
+          "one": "Station"
+        },
+        "plain": {
+          "one": "Runner"
+        },
+        "meaning": "A machine or service that does the work of a pipeline's steps.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "agent (for a Station)",
+          "worker",
+          "node"
+        ]
+      },
+      {
+        "key": "runner_group",
+        "group": "work",
+        "aviation": {
+          "one": "Flight line"
+        },
+        "plain": {
+          "one": "Runner group"
+        },
+        "meaning": "A group of runners that share a purpose, such as every runner that can build images.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "runner pool (in text a person reads)",
+          "fleet"
+        ]
+      },
+      {
+        "key": "run",
+        "group": "work",
+        "aviation": {
+          "one": "Sortie",
+          "many": "Sorties"
+        },
+        "plain": {
+          "one": "Run"
+        },
+        "meaning": "One execution of a pipeline, from the first step to the last.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "build (for any run)",
+          "job (for a whole run)",
+          "execution"
+        ]
+      },
+      {
+        "key": "queue",
+        "group": "work",
+        "aviation": {
+          "one": "Holding pattern"
+        },
+        "plain": {
+          "one": "Queue"
+        },
+        "meaning": "Where runs wait until a runner or a slot is free, and the reason each one is waiting.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "backlog"
+        ]
+      },
+      {
+        "key": "run_log",
+        "group": "work",
+        "aviation": {
+          "one": "Flight recorder"
+        },
+        "plain": {
+          "one": "Run log"
+        },
+        "meaning": "The recorded output of every step of a run, kept so you can read what happened.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "console output"
+        ]
+      },
+      {
+        "key": "debrief",
+        "group": "work",
+        "aviation": {
+          "one": "Debrief"
+        },
+        "plain": {
+          "one": "Run summary"
+        },
+        "meaning": "The summary after a run: what passed, what failed and why, with the test report.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "post-mortem (for every run)"
+        ]
+      },
+      {
+        "key": "schedule",
+        "group": "work",
+        "aviation": {
+          "one": "Patrol"
+        },
+        "plain": {
+          "one": "Scheduled run"
+        },
+        "meaning": "A run that starts by itself at set times, such as every night.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "cron job (in text a person reads)"
+        ]
+      },
+      {
+        "key": "deploy",
+        "group": "delivery",
+        "aviation": {
+          "one": "Launch",
+          "many": "Launches",
+          "do": "launch",
+          "did": "launched",
+          "doing": "launching"
+        },
+        "plain": {
+          "one": "Deploy",
+          "many": "Deploys",
+          "do": "deploy",
+          "did": "deployed",
+          "doing": "deploying"
+        },
+        "meaning": "Put a version of your software into an environment, such as testing or production.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "release (for the act of putting live)",
+          "push to production"
+        ]
+      },
+      {
+        "key": "environment",
+        "group": "delivery",
+        "aviation": {
+          "one": "Airfield"
+        },
+        "plain": {
+          "one": "Environment"
+        },
+        "meaning": "A place your software runs, such as development, testing or production.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "stage (for a place)",
+          "target"
+        ]
+      },
+      {
+        "key": "rollback",
+        "group": "delivery",
+        "aviation": {
+          "one": "Return to base",
+          "many": "Returns to base",
+          "do": "return to base",
+          "did": "returned to base",
+          "doing": "returning to base"
+        },
+        "plain": {
+          "one": "Rollback",
+          "many": "Rollbacks",
+          "do": "roll back",
+          "did": "rolled back",
+          "doing": "rolling back"
+        },
+        "meaning": "Go back to the previous working version after a deploy.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "revert (for a deployment)",
+          "undo"
+        ]
+      },
+      {
+        "key": "emergency_rollback",
+        "group": "delivery",
+        "aviation": {
+          "one": "Abort",
+          "many": "Aborts",
+          "do": "abort",
+          "did": "aborted",
+          "doing": "aborting"
+        },
+        "plain": {
+          "one": "Emergency rollback",
+          "many": "Emergency rollbacks",
+          "do": "roll back immediately",
+          "did": "rolled back immediately",
+          "doing": "rolling back immediately"
+        },
+        "meaning": "Go back at once, skipping the checks and waits, when production is hurt.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "panic button",
+          "kill (for a deployment)"
+        ]
+      },
+      {
+        "key": "canary",
+        "group": "delivery",
+        "aviation": {
+          "one": "Pathfinder"
+        },
+        "plain": {
+          "one": "Canary"
+        },
+        "meaning": "A small first share of traffic or machines that gets the new version before everyone, to catch problems early.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "test group"
+        ]
+      },
+      {
+        "key": "post_deploy_watch",
+        "group": "delivery",
+        "aviation": {
+          "one": "Overwatch"
+        },
+        "plain": {
+          "one": "Post-deploy watch"
+        },
+        "meaning": "The time after a deploy when Launchway keeps watching health signals and can go back by itself.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "soak (for the watch)"
+        ]
+      },
+      {
+        "key": "toggle",
+        "group": "delivery",
+        "aviation": {
+          "one": "Switch"
+        },
+        "plain": {
+          "one": "Feature toggle"
+        },
+        "meaning": "A setting that turns a feature on or off without a new deploy.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "feature flag (in text a person reads)"
+        ]
+      },
+      {
+        "key": "kill_switch",
+        "group": "delivery",
+        "aviation": {
+          "one": "Master switch"
+        },
+        "plain": {
+          "one": "Kill switch"
+        },
+        "meaning": "A switch that turns a feature off for everyone at once.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "kill (for the act)"
+        ]
+      },
+      {
+        "key": "release_unit",
+        "group": "delivery",
+        "aviation": {
+          "one": "Formation"
+        },
+        "plain": {
+          "one": "Release group"
+        },
+        "meaning": "Several things that are released together and move as one.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "bundle"
+        ]
+      },
+      {
+        "key": "preflight",
+        "group": "delivery",
+        "aviation": {
+          "one": "Preflight"
+        },
+        "plain": {
+          "one": "Checks"
+        },
+        "meaning": "The checks made before a run, a merge or a deploy.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "pre-checks",
+          "gate checks"
+        ]
+      },
+      {
+        "key": "checklist",
+        "group": "delivery",
+        "aviation": {
+          "one": "Checklist"
+        },
+        "plain": {
+          "one": "Checklist"
+        },
+        "meaning": "The list of things that must be true before a change goes on.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "gate list"
+        ]
+      },
+      {
+        "key": "clearance",
+        "group": "delivery",
+        "aviation": {
+          "one": "Clearance"
+        },
+        "plain": {
+          "one": "Approval"
+        },
+        "meaning": "A person decides whether a change may go on, by saying Go or No-go.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "sign-off",
+          "gate (for the thing a person gives)"
+        ]
+      },
+      {
+        "key": "go",
+        "group": "delivery",
+        "aviation": {
+          "one": "Go"
+        },
+        "plain": {
+          "one": "Approve"
+        },
+        "meaning": "The recorded answer that lets the run continue. The button says Approve in both sets.",
+        "renameable": true
+      },
+      {
+        "key": "no_go",
+        "group": "delivery",
+        "aviation": {
+          "one": "No-go"
+        },
+        "plain": {
+          "one": "Reject"
+        },
+        "meaning": "The recorded answer that fails the step. The button says Reject in both sets.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "nogo",
+          "no go",
+          "NoGo"
+        ]
+      },
+      {
+        "key": "hold",
+        "group": "delivery",
+        "aviation": {
+          "one": "Hold"
+        },
+        "plain": {
+          "one": "Freeze"
+        },
+        "meaning": "A time when changes may not go out.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "blackout",
+          "code freeze (use freeze in the plain set)"
+        ]
+      },
+      {
+        "key": "flight_plan",
+        "group": "delivery",
+        "aviation": {
+          "one": "Flight plan"
+        },
+        "plain": {
+          "one": "Starter pipeline"
+        },
+        "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "blueprint",
+          "boilerplate",
+          "pipeline template (a step template is a different thing)"
+        ]
+      },
+      {
+        "key": "maneuver",
+        "group": "delivery",
+        "aviation": {
+          "one": "Maneuver"
+        },
+        "plain": {
+          "one": "Step template"
+        },
+        "meaning": "A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "macro",
+          "action (that is another product's word)",
+          "module"
+        ]
+      },
+      {
+        "key": "hangar",
+        "group": "delivery",
+        "aviation": {
+          "one": "Hangar"
+        },
+        "plain": {
+          "one": "Template library"
+        },
+        "meaning": "The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "marketplace",
+          "store"
+        ]
+      },
+      {
+        "key": "payload",
+        "group": "delivery",
+        "aviation": {
+          "one": "Payload"
+        },
+        "plain": {
+          "one": "Contents"
+        },
+        "meaning": "What a change delivers.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "delivery contents",
+          "manifest (that is a file)"
+        ]
+      },
+      {
+        "key": "in_flight",
+        "group": "delivery",
+        "aviation": {
+          "one": "In flight"
+        },
+        "plain": {
+          "one": "In progress"
+        },
+        "meaning": "A change on its way to production.",
+        "renameable": true
+      },
+      {
+        "key": "launch_line",
+        "group": "delivery",
+        "aviation": {
+          "one": "Launch line"
+        },
+        "plain": {
+          "one": "Launch line"
+        },
+        "meaning": "The path a change travels, from commit to production. Named after the product, so the same in both sets.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "pipeline view (a pipeline is the definition; the launch line is the path of one change)"
+        ]
+      },
+      {
+        "key": "home",
+        "group": "platform",
+        "aviation": {
+          "one": "Tower"
+        },
+        "plain": {
+          "one": "Home"
+        },
+        "meaning": "The first page: what needs you now, and a map of everything Launchway holds.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "dashboard (for the first page)"
+        ]
+      },
+      {
+        "key": "monitoring",
+        "group": "platform",
+        "aviation": {
+          "one": "Radar"
+        },
+        "plain": {
+          "one": "Monitoring",
+          "many": "Monitoring"
+        },
+        "meaning": "Health, metrics and the map of how services talk to each other.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "observability (in screens)"
+        ]
+      },
+      {
+        "key": "notifications",
+        "group": "platform",
+        "aviation": {
+          "one": "Comms",
+          "many": "Comms"
+        },
+        "plain": {
+          "one": "Notifications",
+          "many": "Notifications"
+        },
+        "meaning": "Messages Launchway sends when something needs attention, and where they go.",
+        "renameable": true
+      },
+      {
+        "key": "registry",
+        "group": "platform",
+        "aviation": {
+          "one": "Depot"
+        },
+        "plain": {
+          "one": "Registry"
+        },
+        "meaning": "Launchway's built-in store for container images and charts.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "repository (for the store)"
+        ]
+      },
+      {
+        "key": "artifact",
+        "group": "platform",
+        "aviation": {
+          "one": "Cargo",
+          "many": "Cargo"
+        },
+        "plain": {
+          "one": "Artifact"
+        },
+        "meaning": "A file or image a pipeline builds and keeps, such as a package or container image.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "build output"
+        ]
+      },
+      {
+        "key": "standards",
+        "group": "platform",
+        "aviation": {
+          "one": "Standing orders",
+          "many": "Standing orders"
+        },
+        "plain": {
+          "one": "Standards",
+          "many": "Standards"
+        },
+        "meaning": "The rules every project must meet: policies, required checks and approvals.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "compliance rules"
+        ]
+      },
+      {
+        "key": "scan",
+        "group": "platform",
+        "aviation": {
+          "one": "Inspection"
+        },
+        "plain": {
+          "one": "Security scan"
+        },
+        "meaning": "A check of your code and images for known security problems.",
+        "renameable": true
+      },
+      {
+        "key": "dependency_updates",
+        "group": "platform",
+        "aviation": {
+          "one": "Maintenance",
+          "many": "Maintenance"
+        },
+        "plain": {
+          "one": "Dependency updates",
+          "many": "Dependency updates"
+        },
+        "meaning": "Proposed updates to the libraries a project uses, opened as pull requests.",
+        "renameable": true
+      },
+      {
+        "key": "chaos_test",
+        "group": "platform",
+        "aviation": {
+          "one": "Drill"
+        },
+        "plain": {
+          "one": "Chaos test"
+        },
+        "meaning": "A planned failure, such as stopping a service, to prove the system recovers.",
+        "renameable": true
+      },
+      {
+        "key": "learn",
+        "group": "platform",
+        "aviation": {
+          "one": "Flight school"
+        },
+        "plain": {
+          "one": "Learn"
+        },
+        "meaning": "Short lessons that teach Launchway by doing.",
+        "renameable": true
+      },
+      {
+        "key": "first_run",
+        "group": "platform",
+        "aviation": {
+          "one": "In-processing"
+        },
+        "plain": {
+          "one": "Setup"
+        },
+        "meaning": "The guided setup the first time Launchway starts.",
+        "renameable": true
+      },
+      {
+        "key": "guide",
+        "group": "platform",
+        "aviation": {
+          "one": "Wingman"
+        },
+        "plain": {
+          "one": "Guide"
+        },
+        "meaning": "The helper panel beside every page: where you are and what you can do next.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "assistant",
+          "copilot",
+          "chatbot",
+          "bot"
+        ]
+      },
+      {
+        "key": "logbook",
+        "group": "platform",
+        "aviation": {
+          "one": "Logbook"
+        },
+        "plain": {
+          "one": "Audit trail"
+        },
+        "meaning": "The append-only record of who did what, and when.",
+        "renameable": true,
+        "mustNotBeCalled": [
+          "audit log"
+        ]
+      },
+      {
+        "key": "owner",
+        "group": "roles",
+        "aviation": {
+          "one": "Commander"
+        },
+        "plain": {
+          "one": "Owner"
+        },
+        "meaning": "Can do everything, including who may do what. The stored role is owner.",
+        "renameable": true
+      },
+      {
+        "key": "approver",
+        "group": "roles",
+        "aviation": {
+          "one": "Controller"
+        },
+        "plain": {
+          "one": "Approver"
+        },
+        "meaning": "Decides whether a change may go on. The stored role is approver.",
+        "renameable": true
+      },
+      {
+        "key": "developer",
+        "group": "roles",
+        "aviation": {
+          "one": "Pilot"
+        },
+        "plain": {
+          "one": "Developer"
+        },
+        "meaning": "Writes code and starts runs. The stored role is developer.",
+        "renameable": true
+      },
+      {
+        "key": "viewer",
+        "group": "roles",
+        "aviation": {
+          "one": "Observer"
+        },
+        "plain": {
+          "one": "Viewer"
+        },
+        "meaning": "Can read everything and change nothing. The stored role is viewer.",
+        "renameable": true
+      },
+      {
+        "key": "queued",
+        "group": "statuses",
+        "aviation": {
+          "one": "Holding"
+        },
+        "plain": {
+          "one": "Queued"
+        },
+        "meaning": "Waiting for a runner or a free slot.",
+        "renameable": false
+      },
+      {
+        "key": "running",
+        "group": "statuses",
+        "aviation": {
+          "one": "Airborne"
+        },
+        "plain": {
+          "one": "Running"
+        },
+        "meaning": "Working right now.",
+        "renameable": false
+      },
+      {
+        "key": "succeeded",
+        "group": "statuses",
+        "aviation": {
+          "one": "Mission complete"
+        },
+        "plain": {
+          "one": "Succeeded"
+        },
+        "meaning": "Finished, and everything passed.",
+        "renameable": false
+      },
+      {
+        "key": "failed",
+        "group": "statuses",
+        "aviation": {
+          "one": "Failed"
+        },
+        "plain": {
+          "one": "Failed"
+        },
+        "meaning": "Finished, and something did not pass.",
+        "renameable": false
+      },
+      {
+        "key": "canceled",
+        "group": "statuses",
+        "aviation": {
+          "one": "Scrubbed"
+        },
+        "plain": {
+          "one": "Canceled"
+        },
+        "meaning": "Stopped on purpose before it finished.",
+        "renameable": false
+      },
+      {
+        "key": "rolled_back",
+        "group": "statuses",
+        "aviation": {
+          "one": "Returned to base"
+        },
+        "plain": {
+          "one": "Rolled back"
+        },
+        "meaning": "Went back to the previous version.",
+        "renameable": false
+      },
+      {
+        "key": "waiting",
+        "group": "statuses",
+        "aviation": {
+          "one": "Waiting"
+        },
+        "plain": {
+          "one": "Waiting"
+        },
+        "meaning": "Paused until a person decides or a condition is met.",
+        "renameable": false
+      }
+    ]
+  },
+  "superseded": [
     {
-      "stable": "installation",
-      "aviation": "Base",
-      "plain": "Installation",
-      "note": "the whole installation, the top level"
+      "key": "runner_group",
+      "rules": [
+        {
+          "pattern": "\\brunner (?:groups?|pools?)\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
     },
     {
-      "stable": "organization (kind name today: organisation)",
-      "aviation": "Wing",
-      "plain": "Organization",
-      "note": "owns the projects; the second level"
+      "key": "runner",
+      "rules": [
+        {
+          "pattern": "\\brunners\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\brunner\\b(?!-)",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Runner": "{Runner}",
+        "Runners": "{Runners}"
+      }
     },
     {
-      "stable": "unit",
-      "aviation": "Squadron",
-      "plain": "Team",
-      "note": "an optional group of projects; the third level"
+      "key": "emergency_rollback",
+      "rules": [
+        {
+          "pattern": "\\bemergency rollbacks?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
     },
     {
-      "stable": "project",
-      "aviation": "Project",
-      "plain": "Project",
-      "note": "one repository and its pipeline; the fourth level"
+      "key": "run",
+      "rules": [
+        {
+          "pattern": "(?<=\\b(?:all|recent|latest|your|the|these|those|failed|past|old|new|queued|other|several|many|two|three|four|five|every|of|its|their|no|any|more|fewer|both|concurrent|parallel|previous|earlier|older|newer|manual|scheduled|pending|running|finished|successful|passing|failing|green|red|\\d+) )runs\\b(?! (?:the|a|an|it|them|this|these|on|in|to|with|and then)\\b)",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "(?<=\\b(?:a|an|the|each|every|this|your|its|per|one|last|latest|recent|failed|new|first|whole|single|same|current|previous|next|another|any|no|entire|passing|failing|successful|finished|queued|running|manual|other|their|our|any) )run\\b(?! (?:command|script|time|key|as|the|it|them|this|these|on|in|to|with|a|an|of|and then|together|at|after|before|for|if|when|once|because|from|first|last|more|less|only|again|alone|by|until|while|every|each|all|both|under|over|against|concurrently|serially|sequentially|one|two|three|can|may|must|will|would|should|could|does|do|did|has|have|had|is|are|was|were|not)\\b)(?!-)",
+          "to": "one",
+          "auto": true
+        },
+        {
+          "pattern": "^Run(?= {3,}| ?#)",
+          "to": "one",
+          "auto": false,
+          "web": true
+        }
+      ],
+      "labels": {
+        "Run": "{Run}",
+        "Runs": "{Runs}"
+      }
+    },
+    {
+      "key": "run_log",
+      "rules": [
+        {
+          "pattern": "\\brun logs?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "debrief",
+      "rules": [
+        {
+          "pattern": "\\brun summar(?:y|ies)\\b",
+          "to": "number",
+          "auto": true
+        },
+        {
+          "pattern": "\\btest reports?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "schedule",
+      "rules": [
+        {
+          "pattern": "\\bscheduled runs?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "deploy",
+      "rules": [
+        {
+          "pattern": "\\bdeploys\\b(?! (?:step|steps|runner|\\{runners?\\}|key)\\b)",
+          "to": "does",
+          "auto": false,
+          "web": true
+        },
+        {
+          "pattern": "\\bdeployed\\b",
+          "to": "did",
+          "auto": false,
+          "web": true
+        },
+        {
+          "pattern": "\\bdeploying\\b",
+          "to": "doing",
+          "auto": false,
+          "web": true
+        },
+        {
+          "pattern": "\\bdeploy\\b(?! (?:step|steps|runner|runners|\\{runners?\\}|\\{Runners?\\}|key|keys|token|pipeline|kind|stage|action|job)\\b)(?!-)",
+          "to": "do",
+          "auto": false,
+          "web": true
+        }
+      ],
+      "labels": {
+        "Deploy": "{Deploy:do}"
+      }
+    },
+    {
+      "key": "environment",
+      "rules": [
+        {
+          "pattern": "(?<!\\b(?:test|build|runtime|execution|shell|local|container|CI|operating|virtual|python|node|sandbox|isolated|clean|process|your|own|host|calling|parent|current process) )\\benvironments\\b(?! variables?)",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "(?<!\\b(?:test|build|runtime|execution|shell|local|container|CI|operating|virtual|python|node|sandbox|isolated|clean|process|your|own|host|calling|parent|current process) )\\benvironment\\b(?! variables?)(?!-)",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Environment": "{Environment}",
+        "Environments": "{Environments}"
+      }
+    },
+    {
+      "key": "rollback",
+      "rules": [
+        {
+          "pattern": "\\brollbacks\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\brollback\\b(?!-)",
+          "to": "one",
+          "auto": true
+        },
+        {
+          "pattern": "\\broll(?:s)? back\\b",
+          "to": "does_rb",
+          "auto": false,
+          "web": true
+        },
+        {
+          "pattern": "\\brolled back\\b",
+          "to": "did",
+          "auto": true
+        },
+        {
+          "pattern": "\\brolling back\\b",
+          "to": "doing",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Rollback": "{Rollback}",
+        "Rollbacks": "{Rollbacks}"
+      }
+    },
+    {
+      "key": "canary",
+      "rules": [
+        {
+          "pattern": "\\bcanaries\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\bcanary\\b",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Canary": "{Canary}"
+      }
+    },
+    {
+      "key": "post_deploy_watch",
+      "rules": [
+        {
+          "pattern": "\\bpost-?deploy(?:ment)? watch(?:es)?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "toggle",
+      "rules": [
+        {
+          "pattern": "\\bfeature (?:toggles|flags)\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\bfeature (?:toggle|flag)\\b",
+          "to": "one",
+          "auto": true
+        },
+        {
+          "pattern": "\\btoggles?\\b",
+          "to": "number",
+          "auto": false
+        }
+      ],
+      "labels": {
+        "Toggles": "{Toggles}",
+        "Toggle": "{Toggle}"
+      }
+    },
+    {
+      "key": "kill_switch",
+      "rules": [
+        {
+          "pattern": "\\bkill switch(?:es)?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "queue",
+      "rules": [
+        {
+          "pattern": "(?<=\\b(?:the|a|an|in|on|your|its|each|every|per|this|that|run|build|job) )queues\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "(?<=\\b(?:the|a|an|in|on|your|its|each|every|per|this|that|run|build|job) )queue\\b(?!-)",
+          "to": "one",
+          "auto": true
+        },
+        {
+          "pattern": "\\bqueue[sd]?\\b|\\bqueueing\\b",
+          "to": "one",
+          "auto": false
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "registry",
+      "rules": [
+        {
+          "pattern": "(?<!\\b(?:container|image|OCI|Docker|Helm|npm|package|remote|external|upstream|private|public|Harbor|GHCR|chart|another|any|an|other|third-party|existing) )\\bregistries\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "(?<!\\b(?:container|image|OCI|Docker|Helm|npm|package|remote|external|upstream|private|public|Harbor|GHCR|chart|another|any|an|other|third-party|existing) )\\bregistry\\b",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Registry": "{Registry}"
+      }
+    },
+    {
+      "key": "artifact",
+      "rules": [
+        {
+          "pattern": "\\bartifacts\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\bartifact\\b(?!-)",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Artifact": "{Artifact}",
+        "Artifacts": "{Artifacts}"
+      }
+    },
+    {
+      "key": "standards",
+      "rules": [
+        {
+          "pattern": "(?<=\\b(?:the|your|our|team|project|default|own|these) )standards\\b",
+          "to": "many",
+          "auto": false
+        }
+      ],
+      "labels": {
+        "Standards": "{Standards}"
+      }
+    },
+    {
+      "key": "scan",
+      "rules": [
+        {
+          "pattern": "\\b(?:security|vulnerability) scans\\b",
+          "to": "many",
+          "auto": true
+        },
+        {
+          "pattern": "\\b(?:security|vulnerability) scan\\b",
+          "to": "one",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Security scan": "{Scan}"
+      }
+    },
+    {
+      "key": "dependency_updates",
+      "rules": [
+        {
+          "pattern": "\\bdependency updates?\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "chaos_test",
+      "rules": [
+        {
+          "pattern": "\\bchaos (?:tests?|testing|experiments?)\\b",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "home",
+      "rules": [
+        {
+          "pattern": "\\b(?:the )?home (?:page|screen)\\b",
+          "to": "one",
+          "auto": false
+        }
+      ],
+      "labels": {
+        "Home": "{Home}"
+      }
+    },
+    {
+      "key": "monitoring",
+      "rules": [
+        {
+          "pattern": "\\bnetwork view\\b",
+          "to": "one",
+          "auto": false
+        }
+      ],
+      "labels": {
+        "Monitoring": "{Monitoring}"
+      }
+    },
+    {
+      "key": "notifications",
+      "rules": [],
+      "labels": {
+        "Notifications": "{Notifications}"
+      }
+    },
+    {
+      "key": "learn",
+      "rules": [],
+      "labels": {
+        "Learn": "{Learn}"
+      }
+    },
+    {
+      "key": "first_run",
+      "rules": [
+        {
+          "pattern": "\\bfirst-run (?:setup|wizard)\\b|\\bsetup wizard\\b",
+          "to": "one",
+          "auto": false
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "release_unit",
+      "rules": [
+        {
+          "pattern": "\\brelease groups?\\b",
+          "to": "number",
+          "auto": false
+        }
+      ],
+      "labels": {}
+    },
+    {
+      "key": "owner",
+      "rules": [
+        {
+          "pattern": "\\b(?:owner|approver|developer|viewer) roles?\\b",
+          "to": "one",
+          "auto": false
+        }
+      ],
+      "labels": {
+        "Owner": "{Owner}",
+        "Approver": "{Approver}",
+        "Developer": "{Developer}",
+        "Viewer": "{Viewer}"
+      }
+    },
+    {
+      "key": "queued",
+      "rules": [],
+      "labels": {
+        "Queued": "",
+        "Running": "",
+        "Succeeded": "",
+        "Canceled": "",
+        "Rolled back": ""
+      }
+    },
+    {
+      "key": "maneuver",
+      "rules": [],
+      "labels": {
+        "Step template": "{Maneuver}"
+      }
+    },
+    {
+      "key": "hangar",
+      "rules": [],
+      "labels": {
+        "Template library": "{Hangar}"
+      }
     }
-  ]
+  ],
+  "guard": {
+    "comment": "Words that must not appear in text a person reads except through the terms helper, as code, or on quality/vocabulary-allow.json. Each entry belongs to a key of `words`; every themed word must have an entry (check.mjs fails without one). rules[].to says which form of the themed word replaces the match when scripts/vocabulary-fix applies an auto rule to documentation: one, many, number (plural when the match ends in s), do, does, did, doing, does_rb. labels are single-word captions (a button, a heading, a menu item) that are flagged only when written exactly so in the web or Go sources.",
+    "denyAsProductWords": [
+      "strike",
+      "target",
+      "kill",
+      "weapon",
+      "bomb",
+      "missile",
+      "attack",
+      "assault",
+      "combat",
+      "raid",
+      "war",
+      "fire",
+      "shoot",
+      "gun",
+      "ammo"
+    ],
+    "realNames": [
+      "General",
+      "Colonel",
+      "Major",
+      "Captain",
+      "Lieutenant",
+      "Sergeant",
+      "Airman",
+      "Red Flag",
+      "Thunderbirds",
+      "Blue Angels",
+      "Top Gun",
+      "Strategic Air Command",
+      "NORAD",
+      "Air Force",
+      "USAF",
+      "Navy",
+      "Marine",
+      "Apollo",
+      "Gemini",
+      "Manhattan",
+      "Skunk Works",
+      "Maverick",
+      "Goose",
+      "Viper",
+      "Raptor",
+      "Predator",
+      "Reaper",
+      "Hornet",
+      "Eagle",
+      "Falcon",
+      "Warthog"
+    ],
+    "guardedByChecks": [
+      "preflight",
+      "clearance",
+      "go",
+      "no_go",
+      "hold",
+      "flight_plan",
+      "payload",
+      "in_flight",
+      "guide",
+      "logbook",
+      "approver",
+      "developer",
+      "viewer"
+    ],
+    "guardedByChecksNote": "Words guarded by the older review rules in `checks` (and by what is in the table: the plain word is the set's own word) rather than by a `superseded` entry."
+  }
 }

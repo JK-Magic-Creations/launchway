@@ -16,7 +16,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
   someone else changed the object meanwhile. A change with no version replaces whatever is there.
 - **Checks.** A change is checked as part of the whole configuration, by the rules the configuration
   file has always been held to (one validator): two changes that are each valid but not together,
-  such as deleting an environment a pool still serves, cannot both be made. Every problem is listed.
+  such as deleting an Airfield (environment) a pool still serves, cannot both be made. Every problem is listed.
 - **History.** Every change is recorded with who made it, when, the action, the settings before and
   after, and an optional comment. History is never rewritten.
 - **Deleting is reversible.** A deleted object is kept and `restore` brings it back as it was. The
@@ -35,7 +35,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
   `launchway config set project NAME -f project.yaml --unit platform` attaches (or moves) a project,
   and `--unit ""` takes it out of its unit; over the API it is the `unit` in the body of
   `PUT /api/v1/config/{kind}/{name}`. Moving a project changes which roles, libraries, policies,
-  environments, runner pools and secret stores defined at a Squadron apply to it, from the next run; its
+  Airfields (environments), Flight lines (Station (runner) pools) and secret stores defined at a Squadron apply to it, from the next Sortie (run); its
   runs, repository and history stay where they are. Changing it needs an administrator of the installation.
 
 ## The kinds
@@ -121,15 +121,15 @@ A project changes the flight plan it gets, without leaving it, with `default_pip
 `enabled: false` runs no flight plan (a repository file still runs), and `with` gives other values for
 some of the template's parameters; the rest stay as the Flight plan sets them. The Flight plan is checked
 with the rest of the configuration: a library or template that does not exist is refused when you
-save. Every run records where its pipeline came from: the run page and the push decisions say "the
-flight plan of the Wing ran", and the run keeps the pipeline text it amounts to.
+save. Every Sortie (run) records where its pipeline came from: the Sortie page and the push decisions say "the
+flight plan of the Wing ran", and the Sortie keeps the pipeline text it amounts to.
 
-## Where artifacts are kept, and the MCP endpoint
+## Where Cargo (artifacts) are kept, and the MCP endpoint {#where-artifacts-are-kept-and-the-mcp-endpoint}
 
 `installation` holds `artifacts.store` (`database`, `filesystem` or `s3`), `artifacts.dir`,
 `artifacts.s3` and `artifacts.database`, and the whole `mcp:` section (`enabled`, `allowed_origins`,
 `requests_per_minute`, `concurrent`, `total`, `oauth`). The MCP settings apply at once, including
-turning the endpoint off and on. The artifact store is chosen when a server starts, so a change to
+turning the endpoint off and on. The Cargo store is chosen when a server starts, so a change to
 it takes effect when each server next restarts; copy the artifacts first with `launchway blobs
 copy`. Object-store credentials are never stored: servers read them from the environment.
 

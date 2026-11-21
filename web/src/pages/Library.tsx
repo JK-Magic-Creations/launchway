@@ -4,6 +4,7 @@ import { EntityLink } from "../components/EntityLink";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { ago } from "../format";
 import { useInstallation } from "../guided/facts";
+import { terms } from "../terms";
 
 /** The library's front page: the building blocks that have something to show. */
 export function LibraryPage() {
@@ -26,11 +27,11 @@ export function LibraryPage() {
         )}
         <Link href="/images" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">▣</span>
-          <span>Images<br /><span className="faint">What your runs built, found by digest, repository or project.</span></span>
+          <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or project.")}</span></span>
         </Link>
         <Link href="/images/components" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">◫</span>
-          <span>Components<br /><span className="faint">What is inside your software, found by name across every run.</span></span>
+          <span>Components<br /><span className="faint">{terms().say("What is inside your software, found by name across every {run}.")}</span></span>
         </Link>
       </div>
     </div>

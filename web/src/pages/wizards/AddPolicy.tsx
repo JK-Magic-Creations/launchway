@@ -9,6 +9,7 @@ import { Choices, DefinedAt, ListInput, TextInput } from "../../components/Confi
 import { PolicyRules } from "../../components/PolicyRules";
 import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, type StepDef } from "./Wizards";
+import { terms } from "../../terms";
 
 export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
   const proj = overview.levels.project;
@@ -61,8 +62,8 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
       render: (by) => (
         <Choices legend="What happens when a rule fails?" value={mode} onChange={(v) => setMode(v as "report" | "enforce")} problems={by.mode}
           options={[
-            { value: "report", label: "Report only", badge: "start here", help: "The verdict is recorded and shown as a warning on the run; nothing is stopped. Use it to see how many runs would fail before you enforce." },
-            { value: "enforce", label: "Enforce", help: "A failing rule stops the step (a deploy, an image push) or the run at its start, saying why. Someone with the right role can grant a time-limited waiver." },
+            { value: "report", label: "Report only", badge: "start here", help: terms().say("The verdict is recorded and shown as a warning on the {run}; nothing is stopped. Use it to see how many {runs} would fail before you enforce.") },
+            { value: "enforce", label: "Enforce", help: terms().say("A failing rule stops the step (a {deploy:do}, an image push) or the run at its start, saying why. Someone with the right role can grant a time-limited waiver.") },
           ]} />
       ),
     },
@@ -74,14 +75,14 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
           <PickNames legend={proj.plural} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.scope}
             help={`Nothing ticked: every ${proj.singular.toLowerCase()}.`} />
           {hasDeploy ? (
-            <PickNames legend="Environments" names={envNames} value={environments} onChange={setEnvironments}
-              help="Only deployments to these are judged by the deploy rules. Nothing ticked: every environment. Most teams scope deploy rules to production." />
-          ) : <p className="cf-help">Environments: only rules judged before deploying can be scoped to environments, and this policy has none.</p>}
+            <PickNames legend={terms().say("{Environments}")} names={envNames} value={environments} onChange={setEnvironments}
+              help={terms().say("Only deployments to these are judged by the {deploy:do} rules. Nothing ticked: every {environment}. Most teams scope {deploy:do} rules to production.")} />
+          ) : <p className="cf-help">{terms().say("{Environments}: only rules judged before {deploy:doing} can be scoped to {environments}, and this policy has none.")}</p>}
           <div className="cf-grid">
             <ListInput label="Branches" value={branches} onChange={setBranches} placeholder="main, release/*"
               help="Only runs of these branches. A run of a tag or a pull request has no branch, so it would not match. Empty: any." />
           </div>
-          <PickNames legend="Events" names={EVENTS} value={events} onChange={setEvents} help="Only runs started by these. Nothing ticked: every run." placeholder="" />
+          <PickNames legend="Events" names={EVENTS} value={events} onChange={setEvents} help={terms().say("Only runs started by these. Nothing ticked: every {run}.")} placeholder="" />
         </>
       ),
     },

@@ -14,6 +14,7 @@ import { useNow } from "../live";
 import { useValidation } from "../validation";
 import { RunRow } from "./Activity";
 import { ProjectHead } from "./PipelineChrome";
+import { terms } from "../terms";
 
 type View = "live" | "text" | "draw" | "history";
 const VIEWS: View[] = ["live", "text", "draw", "history"];
@@ -117,13 +118,13 @@ function History({ name, now }: { name: string; now: number }) {
   return (
     <>
       <ErrorBox error={runs.error} />
-      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title="No runs yet" action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">Start one from the project</LinkButton>}>Every run of this pipeline will be listed here, with its launch line.</EmptyState></Sheet>}
+      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title={terms().say("No {runs} yet")} action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">Start one from the project</LinkButton>}>Every run of this pipeline will be listed here, with its launch line.</EmptyState></Sheet>}
       {runs.data && runs.data.length > 0 && (
         <>
           <Sheet title="How it has been going" actions={<RateText trend={t} />}>
             <div className="sh-b row wrap"><TrendStrip trend={t} label={`The last ${t.ticks.length} runs of ${name}`} /><span className="faint small">oldest to newest; {t.passed} passed, {t.failed} failed</span></div>
           </Sheet>
-          <Sheet title="Runs">{runs.data.map((r) => <RunRow key={r.id} r={r} line={by.get(r.id)} now={now} />)}</Sheet>
+          <Sheet title={terms().say("{Runs}")}>{runs.data.map((r) => <RunRow key={r.id} r={r} line={by.get(r.id)} now={now} />)}</Sheet>
         </>
       )}
     </>

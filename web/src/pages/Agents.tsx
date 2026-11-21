@@ -1,4 +1,5 @@
 import { PageHead } from "../kit/layout";
+import { roleName } from "../roles";
 import { useEffect, useState } from "react";
 import type { Role } from "../api";
 import { useMe } from "../auth";
@@ -96,7 +97,7 @@ export function AgentsPage() {
               <label className="field"><span>Role</span>
                 <select value={role} onChange={(e) => setRole(e.target.value as Role | "")}>
                   <option value="">Same as mine{limits?.your_role ? ` (${limits.your_role})` : ""}</option>
-                  {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
                 </select></label>
               <label className="field"><span>Projects</span>
                 <input value={projects} placeholder="every project, or: pay-*, web" onChange={(e) => setProjects(e.target.value)} /></label>

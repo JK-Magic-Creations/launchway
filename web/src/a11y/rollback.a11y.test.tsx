@@ -24,19 +24,19 @@ describe.each(["light", "dark"])("rollback views, %s theme", (theme) => {
 
   it("the confirmation with the consequence and the reason", async () => {
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: /Roll back to 1\.3\.2/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole("button", { name: /Return to base: 1\.3\.2/ }, { timeout: 8000 }));
     await screen.findByRole("dialog", {}, { timeout: 8000 });
     await expectClean("rollback confirmation");
   }, 20000);
   it("the picker of an older version", async () => {
     await open();
-    fireEvent.click(await screen.findByRole("button", { name: /Roll back to…/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole("button", { name: /Return to base: another version/ }, { timeout: 8000 }));
     await screen.findByRole("dialog", {}, { timeout: 8000 });
     await expectClean("rollback picker");
   }, 20000);
   it("the review dialog", async () => {
     await open();
-    const list = await screen.findByText(/emergency rollback/, {}, { timeout: 8000 });
+    const list = await screen.findByText(/Abort/, {}, { timeout: 8000 });
     expect(list).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: /Acknowledge/ }, { timeout: 8000 }));
     await screen.findByRole("dialog", {}, { timeout: 8000 });

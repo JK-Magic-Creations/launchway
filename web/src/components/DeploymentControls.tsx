@@ -4,6 +4,7 @@ import { ago, clock } from "../format";
 import { ErrorBox, Mono } from "./ui";
 import { freshness } from "./Deployment";
 import { RolloutOverview } from "./RolloutOverview";
+import { terms } from "../terms";
 
 // Controlling a deployment's Argo Rollouts rollout: Promote, Promote full,
 // Abort and Retry, and the commands given so far. A command is applied by
@@ -170,7 +171,7 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
       <h4 className="h-xs">Control the rollout</h4>
       {uncertain && anyEnabled && (
         <p className="dctl-uncertain" role="note">
-          What is shown may be out of date. The command will be applied when a deploy runner reaches the cluster, and only if the rollout is still where it is shown; you can withdraw it until then.
+          {terms().say("What is shown may be out of date. The command will be applied when a {deploy:do} {runner} reaches the cluster, and only if the rollout is still where it is shown; you can withdraw it until then.")}
         </p>
       )}
       {anyEnabled && (
@@ -210,7 +211,7 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
             {(d.snapshot?.analysis ?? []).some((a) => a.phase === "Failed" || a.phase === "Error")
               ? " An analysis of this version has failed: promoting past it ships a version a check rejected."
               : (d.snapshot?.analysis ?? []).some((a) => a.phase === "Running") ? " An analysis is still running, and promoting stops waiting for it." : ""}
-            {" "}Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or roll back.
+            {" "}{terms().say("Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or {rollback:do}.")}
           </span>
           <span className="dctl-confirm-actions">
             <button type="button" className="btn btn-danger dctl-full-confirm" disabled={busy} onClick={() => { setConfirmFull(false); give("promote-full"); }}>Yes, promote fully</button>
@@ -241,7 +242,7 @@ function whoGave(c: CommandView): string {
   switch (c.origin) {
     case "step": return `step ${c.step}`;
     case "pauses": return `step ${c.step} (pauses: promote)`;
-    case "on_cancel": return "canceling the run (on_cancel: abort)";
+    case "on_cancel": return terms().say("canceling the {run} (on_cancel: abort)");
     default: return c.actor;
   }
 }
@@ -252,9 +253,9 @@ function stateOf(c: CommandView): { text: string; tone: string } {
     case "pending":
       return c.detail
         ? { text: `handed back: ${c.detail}; it will be tried again`, tone: "warn" }
-        : { text: "waiting for a deploy runner to take it", tone: "wait" };
+        : { text: terms().say("waiting for a {deploy:do} {runner} to take it"), tone: "wait" };
     case "taken":
-      return { text: `taken by ${c.taken_by || "a deploy runner"}`, tone: "run" };
+      return { text: `taken by ${c.taken_by || terms().say("a {deploy:do} {runner}")}`, tone: "run" };
     case "withdrawn":
       return { text: `withdrawn${c.withdrawn_by ? ` by ${c.withdrawn_by}` : ""}`, tone: "idle" };
     case "done":
@@ -295,7 +296,7 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
               {c.comment && <blockquote className="approval-comment">{c.comment}</blockquote>}
               <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <span className="faint">, {clock(c.done_at)}</span> : null}.</div>
               <div className="dep-notes">
-                <span>for the rollout {c.expect.step !== undefined ? <>at canary step {c.expect.step + 1}{c.expect.paused ? ", paused" : ""}</> : c.expect.paused ? "paused" : "as it was"}</span>
+                <span>for the rollout {c.expect.step !== undefined ? <>{terms().say("at {canary} step")} {c.expect.step + 1}{c.expect.paused ? ", paused" : ""}</> : c.expect.paused ? "paused" : "as it was"}</span>
                 {c.expect.pod_hash && <span>pod template <Mono>{c.expect.pod_hash}</Mono></span>}
                 {c.tries > 1 && <span>taken {c.tries} times</span>}
               </div>

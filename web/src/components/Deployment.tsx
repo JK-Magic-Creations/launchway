@@ -175,8 +175,8 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
   if ((f.state === "never" || f.state === "stale") && unserved(d, now)) {
     return (
       <span className="dfresh dfresh-warn" data-case="unserved">
-        {compact ? `no deploy runner serves target ${d.target}`
-          : <>No deploy runner serves target <Mono>{d.target}</Mono>: nothing is observed, and commands wait until one does.</>}
+        {compact ? terms().say(`no {deploy:do} {runner} serves target ${d.target}`)
+          : <>{terms().say("No {deploy:do} {runner} serves target")} <Mono>{d.target}</Mono>: nothing is observed, and commands wait until one does.</>}
         {f.state === "stale" && <span className="faint"> (last observed {ago(d.observed_at!, now)}{by})</span>}
       </span>
     );
@@ -187,11 +187,11 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
         ? <span className="dfresh dfresh-closed">last observed {ago(d.observed_at, now)}{by}, before it ended</span>
         : null;
     case "never":
-      return <span className="dfresh dfresh-warn">{compact ? `no deploy runner has observed this yet (target ${d.target})`
+      return <span className="dfresh dfresh-warn">{compact ? terms().say(`no {deploy:do} {runner} has observed this yet (target ${d.target})`)
         : d.observer ? <>Not observed yet; {d.observer} serves target <Mono>{d.target}</Mono>.</>
-        : <>No deploy runner has observed this yet: is one running for target <Mono>{d.target}</Mono>?</>}</span>;
+        : <>{terms().say("No {deploy:do} {runner} has observed this yet: is one running for target")} <Mono>{d.target}</Mono>?</>}</span>;
     case "error":
-      return <span className="dfresh dfresh-bad">The runner cannot see the application: {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
+      return <span className="dfresh dfresh-bad">{terms().say("The {runner} cannot see the application:")} {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
     case "stale":
       return <span className="dfresh dfresh-warn">Last observed {ago(d.observed_at!, now)}{by}{compact ? "" : ": what is shown may be out of date"}</span>;
     case "fresh":
@@ -246,14 +246,14 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
       <div className="dep-head">
         <h3 className="h-sm">
           {step.kind === "rollout" || step.kind === "approval" ? controlTitle(run, step, d)
-            : step.kind !== "rollback" ? `Deploying ${d.service} to ${d.environment}`
-            : step.status === "skipped" ? `No rollback needed: ${d.service} in ${d.environment}`
-            : step.status === "pending" ? `Can roll back ${d.service} in ${d.environment}`
-            : `Rolling back ${d.service} in ${d.environment}`}
+            : step.kind !== "rollback" ? terms().say(`{Deploy:doing} ${d.service} to ${d.environment}`)
+            : step.status === "skipped" ? terms().say(`No {rollback} needed: ${d.service} in ${d.environment}`)
+            : step.status === "pending" ? terms().say(`Can {rollback:do} ${d.service} in ${d.environment}`)
+            : terms().say(`{Rollback:doing} ${d.service} in ${d.environment}`)}
         </h3>
         <div className="dep-pills">
           <DeployStatePill d={d} now={now} />
-          {d.holding && <span className="dpill dpill-lock" title={`While it holds the lock, no other run deploys ${d.service} to ${d.environment}`}>holds {d.environment}'s lock</span>}
+          {d.holding && <span className="dpill dpill-lock" title={terms().say(`While it holds the lock, no other {run} {deploy:does} ${d.service} to ${d.environment}`)}>holds {d.environment}'s lock</span>}
         </div>
       </div>
       {step.kind === "rollback" && step.status === "skipped" && (
@@ -269,7 +269,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         </div>
       )}
       <dl className="kv dep-facts">
-        <dt>Environment</dt><dd><strong>{d.environment}</strong> <span className="faint">on target</span> <Mono>{d.target}</Mono></dd>
+        <dt>{terms().say("{Environment}")}</dt><dd><strong>{d.environment}</strong> <span className="faint">on target</span> <Mono>{d.target}</Mono></dd>
         <dt>Service</dt><dd>{d.project === d.service ? d.service : <>{d.service} <span className="faint">of {d.project}</span></>}</dd>
         <dt>Application</dt><dd><Mono>{d.application}</Mono> <span className="faint">in Argo CD</span></dd>
         <dt>Version</dt>
@@ -290,7 +290,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         )}
         {d.revert && <><dt>Reverted by</dt><dd><Mono><span title={d.revert}>{shortSha(d.revert)}</span></Mono> <span className="faint">on</span> <Mono>{d.branch}</Mono></dd></>}
         <dt>Lock</dt>
-        <dd>{d.holding ? `Holds ${d.environment}'s lock for ${d.service}: other runs wait until it is done.` : `Does not hold ${d.environment}'s lock${d.verdict ? " (released when it ended)" : ""}.`}</dd>
+        <dd>{d.holding ? terms().say(`Holds ${d.environment}'s lock for ${d.service}: other {runs} wait until it is done.`) : `Does not hold ${d.environment}'s lock${d.verdict ? " (released when it ended)" : ""}.`}</dd>
         <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <span className="faint">, deployed {clock(d.deployed_at)}</span> : null}</dd>
       </dl>
       <Observed d={d} now={now} />
@@ -390,7 +390,7 @@ export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["
       </div>
       {r.message && <div className="dep-msg">{r.message}</div>}
       {steps.length > 0 && (
-        <ol className="cstrip" aria-label={`Canary steps: ${r.step !== undefined ? `at ${Math.min(r.step + 1, r.steps)} of ${r.steps}` : `${r.steps} steps`}`}>
+        <ol className="cstrip" aria-label={terms().say(`{Canary} steps: ${r.step !== undefined ? `at ${Math.min(r.step + 1, r.steps)} of ${r.steps}` : `${r.steps} steps`}`)}>
           {steps.map((name, i) => {
             const state = r.step === undefined ? "todo" : i < r.step ? "done" : i === r.step ? "now" : "todo";
             return (
@@ -438,7 +438,7 @@ export function Analyses({ list, muted }: { list: NonNullable<DeploySnapshot["an
           <div className="dep-chips">
             <Mono>{a.name}</Mono>
             <span className={`dpill dpill-${analysisTone(a.phase, muted)}`}>{a.phase}</span>
-            {a.kind && <span className="faint">{a.kind === "Background" ? "runs throughout" : a.step_index !== undefined ? `at canary step ${a.step_index + 1}` : a.kind}</span>}
+            {a.kind && <span className="faint">{a.kind === "Background" ? "runs throughout" : a.step_index !== undefined ? terms().say(`at {canary} step ${a.step_index + 1}`) : a.kind}</span>}
           </div>
           {a.message && <div className="dep-msg">{a.message}</div>}
           {a.metrics && a.metrics.length > 0 && (
@@ -497,35 +497,35 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
         <span>
           <strong>Waiting for {env}'s lock</strong>{step.started_at ? <> since {ago(step.started_at, now)}</> : null}.{" "}
           {holder
-            ? <>Run <Link href={`/runs/${holder.run}?step=${encodeURIComponent(holder.step ?? "")}`}>#{holder.number}</Link> holds it{holder.step ? <> with {holder.step}</> : null}{holder.version ? <>, deploying <Mono>{holder.version}</Mono></> : null}. </>
-            : <>Another run is deploying to {env}. </>}
-          Only one run deploys a service to an environment at a time; this one goes ahead when that deployment is done.
-          {" "}See <Link href="/deployments/environments">Environments</Link>.
+            ? <>{terms().say("{Run}")} <Link href={`/runs/${holder.run}?step=${encodeURIComponent(holder.step ?? "")}`}>#{holder.number}</Link> holds it{holder.step ? <> with {holder.step}</> : null}{holder.version ? <>, deploying <Mono>{holder.version}</Mono></> : null}. </>
+            : <>{terms().say("Another run is {deploy:doing} to")} {env}. </>}
+          {terms().say("Only one {run} {deploy:does} a service to an {environment} at a time; this one goes ahead when that deployment is done.")}
+          {" "}See <Link href="/deployments/environments">{terms().say("{Environments}")}</Link>.
         </span>
       </div>
     );
   } else if (step.status === "skipped") {
     body = (
       <p className="sub">
-        {step.skip_kind === "not_needed" ? <>Not needed: {step.error || "there was nothing to roll back"}.</>
-          : step.skip_kind === "superseded" ? <>Superseded by a newer run: a newer run of the same service started waiting for {env}'s lock, so this older one did not deploy.{step.error ? ` ${step.error}.` : ""}</>
-          : <>{step.error || "Skipped"}. Nothing was deployed.</>}
+        {step.skip_kind === "not_needed" ? <>Not needed: {step.error || terms().say("there was nothing to {rollback:do}")}.</>
+          : step.skip_kind === "superseded" ? <>Superseded by a newer run: a newer run of the same service started waiting for {env}{terms().say("'s lock, so this older one did not {deploy:do}.")}{step.error ? ` ${step.error}.` : ""}</>
+          : <>{step.error || "Skipped"}{terms().say(". Nothing was {deploy:did}.")}</>}
       </p>
     );
   } else if (step.status === "pending" || step.status === "queued") {
     body = <p className="sub">{step.kind === "rollback"
       ? "Runs only if a step guarding the deployment fails: it then reverts the deployment's commit."
-      : step.kind === "rollout" ? `Acts on the rollout of ${step.deployment || "its deployment"} once ${step.needs?.length ? step.needs.join(", ") : "the run"} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
-      : `Deploys to ${env || "its environment"} once ${step.needs?.length ? step.needs.join(", ") : "the run"} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`}</p>;
+      : step.kind === "rollout" ? `Acts on the rollout of ${step.deployment || "its deployment"} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
+      : terms().say(`{Deploy:does} to ${env || terms().say("its {environment}")} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`)}</p>;
   } else if (step.status === "canceled") {
-    body = <p className="sub">Canceled before it deployed anything.</p>;
+    body = <p className="sub">{terms().say("Canceled before it {deploy:did} anything.")}</p>;
   } else {
     body = <p className="sub">This server has no deployment recorded for this step.</p>;
   }
   return (
     <section className="card dep" aria-label="Deployment">
       <div className="dep-head">
-        <h3 className="h-sm">{step.kind === "rollback" ? "Rollback" : step.kind === "rollout" ? `Rollout of ${step.deployment ?? "a deployment"}` : env ? `Deploying to ${env}` : "Deployment"}</h3>
+        <h3 className="h-sm">{step.kind === "rollback" ? terms().say("{Rollback}") : step.kind === "rollout" ? `Rollout of ${step.deployment ?? "a deployment"}` : env ? terms().say(`{Deploy:doing} to ${env}`) : "Deployment"}</h3>
       </div>
       {body}
     </section>
@@ -558,7 +558,7 @@ export function DeploymentSummary({ run, onSelect }: { run: RunDetail; onSelect:
   const now = useNow(1000, live);
   if (list.length === 0) return null;
   return (
-    <section className="depsum" aria-label="Deployments of this run">
+    <section className="depsum" aria-label={terms().say("Deployments of this {run}")}>
       {list.map((d) => (
         <button key={d.id} type="button" className="depsum-row" onClick={() => onSelect(d.verdict === "rolled_back" || d.verdict === "rollback_failed" ? (d.rollback_step ?? d.step) : d.step)}>
           <span className="depsum-env">{d.environment}</span>

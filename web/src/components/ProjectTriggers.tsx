@@ -35,7 +35,7 @@ export function ProjectTriggers({ project }: { project: string }) {
       )}
       {v.schedules.length > 0 && (
         <table className="table sched-table">
-          <thead><tr><th>When</th><th>Runs</th><th>Next</th><th>Last</th></tr></thead>
+          <thead><tr><th>When</th><th>{terms().say("{Runs}")}</th><th>Next</th><th>Last</th></tr></thead>
           <tbody>{v.schedules.map((s) => <ScheduleRow key={s.key} s={s} now={now} />)}</tbody>
         </table>
       )}

@@ -22,9 +22,9 @@ Each service has a built-in default and a popular backend you can use instead, w
 
 ## What each one is
 
-- **Object storage** speaks the part of S3 that Terraform, registries, backup tools and build caches use, with short-lived credentials from a step’s identity. It is promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket or bundle a managed server.
+- **Object storage** speaks the part of S3 that Terraform, Depots (registries), backup tools and build caches use, with short-lived credentials from a step’s identity. It is promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket or bundle a managed server.
 - **State** uses the standard HTTP backend with locking, so a step needs no backend setup. It is encrypted, versioned and never shown raw.
 - **A cache** is not built into Launchway. An application can be given a managed Valkey as a backing service, installed through GitOps.
-- **Feature toggles** use the OpenFeature standard. Rules evaluate in the application, so toggles keep working when Launchway is down and personal data never leaves it.
+- **Switches (feature toggles)** use the OpenFeature standard. Rules evaluate in the application, so toggles keep working when Launchway is down and personal data never leaves it.
 
 Go back to the [Roadmap](../public/roadmap.html).

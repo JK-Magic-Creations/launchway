@@ -6,6 +6,7 @@ import { navigate, onLink } from "../router";
 import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo, SEVERITIES, SeverityLegend, serious, seriousLabel, severityLabel, severityRank } from "../components/Security";
 import { FindingRow } from "./RunSecurity";
+import { terms } from "../terms";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -80,7 +81,7 @@ export function ProjectSecurityPage({ name }: { name: string }) {
               <summary>Show as a table</summary>
               <div className="table-scroll">
                 <table className="inputs-table">
-                  <thead><tr><th>Run</th><th>Commit</th>{SEVERITIES.map((s) => <th key={s}>{severityLabel(s)}</th>)}<th>All</th></tr></thead>
+                  <thead><tr><th>{terms().say("{Run}")}</th><th>Commit</th>{SEVERITIES.map((s) => <th key={s}>{severityLabel(s)}</th>)}<th>All</th></tr></thead>
                   <tbody>{[...data.runs].reverse().map((r) => (
                     <tr key={r.id}>
                       <td><Link href={`/runs/${r.id}?tab=security`}>#{r.number}</Link></td>
@@ -155,7 +156,7 @@ function OpenFindings({ data }: { data: ProjectSecurity }) {
         </div>
       </div>
       {shown.length === 0 ? (
-        <div className="empty empty-sm">{data.open.length === 0 ? "Nothing is open: the latest run found nothing." : "No open findings match these filters."}</div>
+        <div className="empty empty-sm">{data.open.length === 0 ? terms().say("Nothing is open: the latest {run} found nothing.") : "No open findings match these filters."}</div>
       ) : (
         <div className="tgroups">
           <ul className="tlist">
@@ -262,7 +263,7 @@ function SeverityChart({ runs }: { runs: SecurityRun[] }) {
             });
           }
           return (
-            <a key={r.id} href={`/runs/${r.id}?tab=security`} onClick={onLink as never} aria-label={`Run ${r.number}: ${text.join(", ")}`}
+            <a key={r.id} href={`/runs/${r.id}?tab=security`} onClick={onLink as never} aria-label={terms().say(`{Run} ${r.number}: ${text.join(", ")}`)}
               onMouseEnter={show} onFocus={show} onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)} className="chart-bar">
               <rect x={PAD_L + i * l.step} y={0} width={l.step} height={H - PAD_B} className="chart-hit" />
               {marks}

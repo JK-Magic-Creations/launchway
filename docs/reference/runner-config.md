@@ -14,18 +14,18 @@ A ```yaml block preceded by a line with the HTML comment "validate-config runner
 with the runner's loader by the same test.
 -->
 
-# Runner configuration reference
+# Station (runner) configuration reference {#runner-configuration-reference}
 
-This page lists every setting of a runner's configuration file, read by
+This page lists every setting of a Station's configuration file, read by
 `launchway runner --config runner.yaml`, with the flags and environment variables that override
 them. The same settings, except `server`, `name`, `data` and `deploy`, make up the `runner:`
-section of the [server's configuration](server-config.md#runner), for the runner built into the
-server. It is for operators who run [runners](../glossary.md#runner); for a walk-through, see
-[Connect a runner](../howto/connect-runner.md).
+section of the [server's configuration](server-config.md#runner), for the Station built into the
+server. It is for operators who run [Stations](../glossary.md#runner); for a walk-through, see
+[Connect a Station](../howto/connect-runner.md).
 
 ## How settings are read
 
-A runner takes each setting from the first of:
+A Station takes each setting from the first of:
 
 1. a flag on the command line;
 2. an environment variable, for the server URL and the token only;
@@ -35,8 +35,8 @@ A runner takes each setting from the first of:
 | Flag | Variable | File setting | Default |
 |---|---|---|---|
 | `--server URL` | `LAUNCHWAY_SERVER` | `server` | required |
-| `--token T` | `LAUNCHWAY_RUNNER_TOKEN` | never in the file | the shared runner token or a pool's token; give this or `--join`, not both. Not needed once the runner is enrolled |
-| `--join J` | `LAUNCHWAY_JOIN` | never in the file | a join token, to enrol the runner once and give it an identity of its own. Not needed once the runner is enrolled |
+| `--token T` | `LAUNCHWAY_RUNNER_TOKEN` | never in the file | the shared Station token or a pool's token; give this or `--join`, not both. Not needed once the Station is enrolled |
+| `--join J` | `LAUNCHWAY_JOIN` | never in the file | a join token, to enrol the Station once and give it an identity of its own. Not needed once the Station is enrolled |
 | `--labels a,b` | | `labels` | none |
 | `--name NAME` | | `name` | the host name |
 | `--data DIR` | | `data` | `launchway-runner` |
@@ -49,11 +49,11 @@ A runner takes each setting from the first of:
 | `--health-listen ADDR` | | | none. Serves `/healthz` (the process is up) and `/readyz` (the server answered within two minutes), such as `:8081` |
 | `--config FILE` | | | none |
 
-The token is the shared runner token for build runners, or a
-[runner pool's](server-config.md#runner-pools) token for a deploy runner. A runner enrolled with a
+The token is the shared Station token for build Stations, or a
+[Flight line's](server-config.md#runner-pools) token for a launch (deploy) Station. A Station enrolled with a
 join token has no use for it: it keeps its identity (a key it made, under `<data>/identity`), and
 starts without `--join` or `--token`. See
-[Runners on other machines and clusters](../guide/runner-identity.md). Relative paths in the
+[Stations on other machines and clusters](../guide/runner-identity.md). Relative paths in the
 file are relative to the file's directory. Unknown settings are refused, naming the line.
 
 `launchway run`, which runs a pipeline on your own machine, takes `--executor`, the `--k8s-*` flags,
@@ -100,42 +100,42 @@ reports:
   max_total_mib: 20
 ```
 
-## Runner settings
+## Station settings {#runner-settings}
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `server` | URL | required | The server's address. Runners only connect outbound, to any server sharing the database |
-| `name` | text | the host name | Shown on the Runners page. The runner's identity is `runner-<name>` |
+| `server` | URL | required | The server's address. Stations only connect outbound, to any server sharing the database |
+| `name` | text | the host name | Shown on the Stations page. The Station's identity is `runner-<name>` |
 | `data` | directory | `launchway-runner` | Where runs' workspaces are cloned |
-| `concurrency` | whole number | `2` | Steps it runs at once. All of a run's steps go to the runner that took its first step, so a run's parallel steps share this |
-| `ai` | boolean | `false` | Whether this runner may call the AI models the server lists, for `ai` steps (and, on a deploy runner, to explain verifications). Keys come from the runner's own secret stores and never enter a step's container. See [AI models](../guide/ai.md) |
-| `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod per run) |
-| `spool.max_mib` | whole number | `256` | While the server cannot be reached (no answer, or `503`), the runner keeps executing the step and keeps its log lines and its result on its own disk, under `<data>/spool`, and delivers them in order when the server answers. This is how many MiB of log lines it keeps per step; when it is full the oldest lines are dropped and one line in the log says how many. The result is never dropped. Nothing is written to disk until the first failure |
-| `spool.max_age` | duration | `15m` | How old a kept log line may be before it is dropped, with the same marker. A runner that restarts during an outage delivers what it finds. The step's log shows a line such as "The server could not be reached from 14:02:10 to 14:03:40; nothing was lost." |
+| `concurrency` | whole number | `2` | Steps it runs at once. All of a Sortie's steps go to the Station that took its first step, so a Sortie's parallel steps share this |
+| `ai` | boolean | `false` | Whether this Station may call the AI models the server lists, for `ai` steps (and, on a launch Station, to explain verifications). Keys come from the Station's own secret stores and never enter a step's container. See [AI models](../guide/ai.md) |
+| `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod per Sortie (run)) |
+| `spool.max_mib` | whole number | `256` | While the server cannot be reached (no answer, or `503`), the Station keeps executing the step and keeps its log lines and its result on its own disk, under `<data>/spool`, and delivers them in order when the server answers. This is how many MiB of log lines it keeps per step; when it is full the oldest lines are dropped and one line in the log says how many. The result is never dropped. Nothing is written to disk until the first failure |
+| `spool.max_age` | duration | `15m` | How old a kept log line may be before it is dropped, with the same marker. A Station that restarts during an outage delivers what it finds. The step's log shows a line such as "The server could not be reached from 14:02:10 to 14:03:40; nothing was lost." |
 
 ## Identity, labels and the network
 
-A runner enrolled with a join token has an identity of its own and belongs to a pool; see
-[Runners on other machines and clusters](../guide/runner-identity.md). These settings describe it
-and its connection to the server. They are in the runner's file only: the runner built into the
+A Station enrolled with a join token has an identity of its own and belongs to a pool; see
+[Stations on other machines and clusters](../guide/runner-identity.md). These settings describe it
+and its connection to the server. They are in the Station's file only: the Station built into the
 server has no use for them.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `labels` | list | none | What the runner has, such as `arm64` or `gpu`. They add to the labels of its join token. A pipeline's `runner: { labels: [...] }` runs only on runners that have all of them |
-| `proxy` | URL | `HTTPS_PROXY`, `HTTP_PROXY` | The proxy for the runner's requests to the server. Wins over the environment |
-| `no_proxy` | text | `NO_PROXY` | Hosts reached without the proxy. Wins over the environment |
+| `labels` | list | none | What the Station has, such as `arm64` or `gpu`. They add to the labels of its join token. A pipeline's `runner: { labels: [...] }` runs only on Stations that have all of them |
+| `proxy` | URL | `HTTPS_PROXY`, `HTTP_PROXY` | The proxy for the Station's requests to the server. Wins over the Airfield (environment) |
+| `no_proxy` | text | `NO_PROXY` | Hosts reached without the proxy. Wins over the Airfield |
 | `ca_file` | path | the system's | PEM certificates added to the system's, for a server or a proxy whose certificate a private authority signed, such as one that inspects TLS |
 
-A runner waits for work in requests of up to 25 seconds, so a proxy must allow idle requests of at
-least 30. Runners prove who they are inside each request, not with client certificates, so they
+A Station waits for work in requests of up to 25 seconds, so a proxy must allow idle requests of at
+least 30. Stations prove who they are inside each request, not with client certificates, so they
 work through proxies that inspect TLS.
 
-## What the runner accepts
+## What the Station accepts {#what-the-runner-accepts}
 
-`accept` is the runner's own limit on the work the server may send it. It is checked on the runner
+`accept` is the Station's own limit on the work the server may send it. It is checked on the Station
 before anything runs: no clone, no secret looked up, no container started. The server cannot change
 it, because it lives only in this file. A job it does not allow is refused: the step fails without
 retries, saying why, and the refusal is audited (`runner.refused`). Every list that is empty allows
@@ -145,25 +145,25 @@ any run of characters (slashes included) and `?` one character.
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `accept.projects` | list of patterns | any project | Projects whose work the runner takes |
-| `accept.repositories` | list of patterns | any | Repositories it clones, as URLs without credentials such as `https://git.example.com/shop/*`: the run's own and every library's |
+| `accept.projects` | list of patterns | any project | Projects whose work the Station takes |
+| `accept.repositories` | list of patterns | any | Repositories it clones, as URLs without credentials such as `https://git.example.com/shop/*`: the Sortie's own and every library's |
 | `accept.images` | list of patterns | any | Images steps and their containers may use, written in full (`docker.io/library/golang:1.27`, not `golang:1.27`), such as `registry.example.com/*` or `docker.io/library/golang@sha256:*` |
 | `accept.images_by_digest` | boolean | `false` | Refuse images that are not pinned by digest (`name@sha256:…`) |
 | `accept.executors` | list | any | The executors it may use: its own (`podman`, `docker`, `host`, `kubernetes`) for ordinary steps, `buildkit` for image steps and `deploy` for deploy steps |
-| `accept.environments` | list of patterns | any | The environments a deploy runner deploys to |
+| `accept.environments` | list of patterns | any | The Airfields a launch Station deploys to |
 | `accept.pull_requests` | boolean | allowed | `false` refuses runs of pull requests: code anyone who can open one wrote |
 | `accept.drafts` | boolean | allowed | `false` refuses draft runs: pipeline text that is not in Git |
 | `accept.max_timeout` | duration | none | Refuses steps that may run longer, such as `2h` |
 | `accept.env_deny` | list of patterns | none | Refuses steps that set environment variables (or secrets) with these names, such as `LD_PRELOAD`, `BASH_ENV` or `GIT_*` |
 
-Whatever its settings, a runner also refuses IDs from the server that do not look like the server's
-own (they become paths), and a run whose source is a directory of another machine (only
-`launchway run` makes those). An enrolled runner does not fall back to running steps on its host
+Whatever its settings, a Station also refuses IDs from the server that do not look like the server's
+own (they become paths), and a Sortie whose source is a directory of another machine (only
+`launchway run` makes those). An enrolled Station does not fall back to running steps on its host
 when it finds no Podman or Docker, unless `executor: host` is chosen.
 
-`accept` limits what work reaches the runner's network and secrets. It cannot make the work it does
+`accept` limits what work reaches the Station's network and secrets. It cannot make the work it does
 accept safe: a server that has been taken over can still send any script for a project, repository
-and image the runner accepts. Keep `accept`, the secret stores and the network as narrow as the
+and image the Station accepts. Keep `accept`, the secret stores and the network as narrow as the
 pool's work.
 
 <!-- validate-config runner -->
@@ -183,7 +183,7 @@ accept:
 
 ## Kubernetes
 
-Settings of the `kubernetes` executor: each run gets one pod in `namespace`, with a helper container
+Settings of the `kubernetes` executor: each Sortie gets one pod in `namespace`, with a helper container
 holding the workspace and a container per image or toolbox.
 
 <!-- keys: runner -->
@@ -191,7 +191,7 @@ holding the workspace and a container per image or toolbox.
 |---|---|---|---|
 | `kubernetes.kubeconfig` | path | the usual rules, or in-cluster | The kubeconfig file |
 | `kubernetes.context` | text | the current context | The kubeconfig context |
-| `kubernetes.namespace` | text | the context's namespace, else `default` | Where step pods run. It must exist; the runner checks it can list pods there when it starts |
+| `kubernetes.namespace` | text | the context's namespace, else `default` | Where step pods run. It must exist; the Station checks it can list pods there when it starts |
 | `kubernetes.helper_image` | image | `docker.io/library/busybox:1.37` | The helper container's image. It needs `sh` and `tar` |
 | `kubernetes.service_account` | text | none | The service account step pods run as. Without it, no token is mounted |
 | `kubernetes.node_selector` | mapping | none | Node labels step pods must match |
@@ -201,8 +201,8 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.max_cpu` | quantity | none (no cap) | The most CPU one container may ask for, as a request or a limit. A default the server chose (the installation's step resource defaults) is lowered to this, and the log says so; a step or container that explicitly asks for more fails before the pod is made, naming this setting |
 | `kubernetes.max_memory` | quantity | none (no cap) | The most memory one container may ask for, as a request or a limit. Server defaults are lowered to it; an explicit ask above it fails the step, naming this setting |
 | `kubernetes.image_pull_secrets` | list | none | Secrets in the namespace for pulling step images |
-| `kubernetes.keep_failed` | duration | `0` | A grace period before a failed or cancelled run's pod is removed. The default removes it as soon as the run ends: a running pod holds namespace quota, and a resume does not need it (see [What happens to a run's pod](#what-happens-to-a-runs-pod)) |
-| `kubernetes.max_pod_age` | duration | `24h` | The longest a step pod lives, whatever the server says about its run, unless a step of it is executing on this runner. Bounds what a crashed runner or a forgotten run can leave behind. `0` turns the bound off |
+| `kubernetes.keep_failed` | duration | `0` | A grace period before a failed or cancelled run's pod is removed. The default removes it as soon as the Sortie ends: a running pod holds namespace quota, and a resume does not need it (see [What happens to a Sortie's pod](#what-happens-to-a-runs-pod)) |
+| `kubernetes.max_pod_age` | duration | `24h` | The longest a step pod lives, whatever the server says about its Sortie, unless a step of it is executing on this Station. Bounds what a crashed Station or a forgotten run can leave behind. `0` turns the bound off |
 | `kubernetes.start_timeout` | duration | `10m` | How long to wait for a pod's images to be pulled and its containers to start |
 | `kubernetes.restricted` | boolean | `true` | Every container, services included, runs as `run_as_user` with no privilege escalation, no capabilities and the `RuntimeDefault` seccomp profile, so step pods meet Pod Security `restricted`. `HOME` is a writable `/home/launchway`. `false` runs images as their own users, often root, and needs a namespace that allows it. Pipelines cannot change this |
 | `kubernetes.run_as_user` | whole number | `1000` | With `restricted`: the user containers run as. Not 0 |
@@ -221,51 +221,51 @@ shell-less case to support; services are untouched and keep their own account fi
 the step fails with a message that names the image and the setting. The container executor (`podman` or `docker`) runs
 the image's own user, which the image's account files already describe, so it needs nothing.
 
-### What happens to a run's pod
+### What happens to a Sortie's pod {#what-happens-to-a-runs-pod}
 
-On Kubernetes each run has one step pod, which holds the run's workspace and its containers. A
+On Kubernetes each run has one step pod, which holds the Sortie's workspace and its containers. A
 running pod holds CPU and memory in the step namespace's quota for as long as it exists, so the
-runner does not keep one for a run that has ended.
+Station does not keep one for a Sortie that has ended.
 
-The runner's reaper removes a pod when any of these holds:
+The Station's reaper removes a pod when any of these holds:
 
-- the server says the run ended: succeeded, failed (at any step, including an image step, whether
-  the later steps were skipped or not, and including a run that timed out) or canceled. A failed or
+- the server says the Sortie ended: succeeded, failed (at any step, including an image step, whether
+  the later steps were skipped or not, and including a Sortie that timed out) or canceled. A failed or
   canceled run's pod can be kept for a grace period with `kubernetes.keep_failed` (default 0, so no
   grace);
-- the server does not know the run and this runner made the pod (pods of unknown runs that other
-  runners made are left to their runner, or to the age bound);
+- the server does not know the Sortie and this Station made the pod (pods of unknown runs that other
+  Stations made are left to their Station, or to the age bound);
 - the pod is older than `kubernetes.max_pod_age` (24h) and no step of its run is executing on this
-  runner, whatever the server says. This is what stops a crashed runner, or a run nobody holds a
+  Station, whatever the server says. This is what stops a crashed Station, or a Sortie nobody holds a
   lease on, from leaking a pod.
 
-A pod with a step executing on this runner is never removed. The reaper looks when the runner
-starts (so a restarted runner clears what the crashed one left), soon after any step reports its
+A pod with a step executing on this Station is never removed. The reaper looks when the Station
+starts (so a restarted Station clears what the crashed one left), soon after any step reports its
 result, and every 30 seconds. A step that cannot start because the namespace's quota is used up
 fails with the cause `infrastructure` and a message that names the quota, so `retry` with its
 backoff applies, and `retry.on` must list `infrastructure` for it to be retried.
 
-**What a resume keeps.** The run's workspace is the runner's checkout of the commit, on the
-runner's disk under its data directory (kept 24 hours after it was last used), not the pod. A
+**What a resume keeps.** The Sortie's workspace is the Station's checkout of the commit, on the
+Station's disk under its data directory (kept 24 hours after it was last used), not the pod. A
 resume, or a re-run from a step, makes a new pod and fills it from that checkout, so it still
 starts from the same commit and the same libraries. The trade-off: files that earlier steps wrote
 inside the pod (build output, downloaded dependencies) are not in the new pod, so a step that
-depends on them must be run again, or hand them on as [artifacts](../guide/artifacts.md). This
-costs a few seconds to start a pod and some re-work, and in return a failed run never holds quota.
+depends on them must be run again, or hand them on as [Cargo (artifacts)](../guide/artifacts.md). This
+costs a few seconds to start a pod and some re-work, and in return a failed Sortie never holds quota.
 An operator who prefers a resume to find the old pod may set `keep_failed` to a short period such
 as `10m`; the pod then holds quota for that long, and `max_pod_age` is still the upper bound.
 
 ## Secrets
 
 `secrets` maps store names (`^[a-z][a-z0-9_-]{0,62}$`) to secret stores. A pipeline's
-[secret references](pipeline.md#secret-references) name a store and a key; the runner looks values
-up just before the step runs. A runner has only the stores you configure. See
+[secret references](pipeline.md#secret-references) name a store and a key; the Station looks values
+up just before the step runs. A Station has only the stores you configure. See
 [Manage secrets](../howto/secrets.md).
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `secrets.<name>.type` | text | required | `env` (a variable of the runner process, not `LAUNCHWAY_*`), `file` (a file in a directory, such as a mounted Kubernetes Secret) or `vault` (a KV version 2 engine of HashiCorp Vault or OpenBao; references need `field`) |
+| `secrets.<name>.type` | text | required | `env` (a variable of the Station process, not `LAUNCHWAY_*`), `file` (a file in a directory, such as a mounted Kubernetes Secret) or `vault` (a KV version 2 engine of HashiCorp Vault or OpenBao; references need `field`) |
 | `secrets.<name>.projects` | list of patterns | every project | The projects whose steps may read the store. `*` does not cross `/` |
 | `secrets.<name>.keys` | list of patterns | every key | The keys that may be read |
 | `secrets.<name>.dir` | directory | required for `file` | The directory; nothing outside it can be read |
@@ -279,7 +279,7 @@ up just before the step runs. A runner has only the stores you configure. See
 | `secrets.<name>.auth_path` | text | `kubernetes` | `vault` with `role`: where Kubernetes auth is mounted |
 | `secrets.<name>.jwt_file` | path | `/var/run/secrets/kubernetes.io/serviceaccount/token` | `vault` with `role`: the service account token |
 
-Settings that belong to another type are refused. Stores are checked when the runner starts, without
+Settings that belong to another type are refused. Stores are checked when the Station starts, without
 contacting them: a `file` store's directory must exist, and a `token_env` variable must be set. A store
 that cannot be reached when a step needs it is asked again for 30 seconds, then the step is handed
 back to run later.
@@ -297,17 +297,17 @@ Limits on the report files collected after each step. `0` means the default.
 
 ## Images
 
-`images` lets the runner take [image steps](pipeline.md#kind-image): the BuildKit daemons it sends
-builds to and the registries it pushes to. Unset, the runner takes no image steps. See
+`images` lets the Station take [image steps](pipeline.md#kind-image): the BuildKit daemons it sends
+builds to and the Depots (registries) it pushes to. Unset, the Station takes no image steps. See
 [Build and sign an image](../tutorials/build-and-sign-image.md).
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `images.builders[].name` | name | required | `^[a-z0-9][a-z0-9_-]{0,62}$`, unique |
-| `images.builders[].address` | text | required | `tcp://host:port` (with mutual TLS) or `unix:///path` for a daemon on the runner's machine |
+| `images.builders[].address` | text | required | `tcp://host:port` (with mutual TLS) or `unix:///path` for a daemon on the Station's machine |
 | `images.builders[].ca_file` | path | required for `tcp://` | The CA that signed the daemon's certificate |
-| `images.builders[].cert_file` | path | required for `tcp://` | The runner's client certificate. Goes with `key_file` |
+| `images.builders[].cert_file` | path | required for `tcp://` | The Station's client certificate. Goes with `key_file` |
 | `images.builders[].key_file` | path | required for `tcp://` | Its key |
 | `images.builders[].server_name` | text | the address's host | The name in the daemon's certificate |
 | `images.builders[].insecure` | boolean | `false` | A `tcp://` daemon without TLS. For tests on one machine only |
@@ -319,15 +319,15 @@ builds to and the registries it pushes to. Unset, the runner takes no image step
 An image step uses the first builder that serves its project and every platform it asks for, or
 one builder per platform when no single one does.
 
-### Registries
+### Depots {#registries}
 
 `images.registries` maps the names pipelines use (`tags: [{ registry: harbor, ... }]`) to
-registries. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`. The name `launchway` is the [built-in registry](../guide/registry.md): a step that names it (or names no registry) is handed its address and a credential made for the run by the server, and nothing needs configuring here; a registry you configure under that name is used instead.
+Depots. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`. The name `launchway` is the [built-in Depot](../guide/registry.md): a step that names it (or names no Depot) is handed its address and a credential made for the run by the server, and nothing needs configuring here; a Depot you configure under that name is used instead.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `images.registries.<name>.host` | text | required | The registry as written in image references: `harbor.example.com` or `localhost:5000` |
+| `images.registries.<name>.host` | text | required | The Depot as written in image references: `harbor.example.com` or `localhost:5000` |
 | `images.registries.<name>.credentials.username` | text | | The push (and pull) account. Written in place, or as `username_from` |
 | `images.registries.<name>.credentials.username_from.store` | name | | Or the user name from a secret store |
 | `images.registries.<name>.credentials.username_from.key` | text | | |
@@ -343,8 +343,8 @@ registries. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`. The name `launchway` is th
 | `images.registries.<name>.pull_credentials.password.key` | text | | |
 | `images.registries.<name>.pull_credentials.password.field` | text | | |
 | `images.registries.<name>.pull_projects` | list of patterns | every project | The projects whose builds get `pull_credentials`. Needs `pull_credentials` |
-| `images.registries.<name>.ca_file` | path | the system's | A CA the runner trusts for this registry |
-| `images.registries.<name>.insecure` | boolean | `false` | Plain HTTP. Only for a registry on the runner's machine or in tests |
+| `images.registries.<name>.ca_file` | path | the system's | A CA the Station trusts for this Depot |
+| `images.registries.<name>.insecure` | boolean | `false` | Plain HTTP. Only for a Depot on the Station's machine or in tests |
 | `images.registries.<name>.push[].projects` | list of patterns | required | Projects a push rule allows |
 | `images.registries.<name>.push[].repositories` | list of patterns | required | Repositories they may push to, without the host: `team/shop`, `team/*` (one level) or `team/**` (any depth). Nothing is pushed without a rule |
 
@@ -359,15 +359,15 @@ get `pull_credentials` only when they may read secrets.
 | `images.scanner.image` | image pinned by digest | a pinned Trivy | The image that makes SBOMs and finds vulnerabilities, run inside the builder. Must end in `@sha256:...` |
 | `images.scanner.db_repository` | text | the scanner's own | Where it downloads its vulnerability database, for installations that mirror it |
 | `images.scanner.java_db_repository` | text | the scanner's own | The same for its Java database |
-| `images.signing.key_file` | path | required with `signing` | The runner's own cosign key, for steps that say `sign: true`. Steps never see it |
+| `images.signing.key_file` | path | required with `signing` | The Station's own cosign key, for steps that say `sign: true`. Steps never see it |
 | `images.signing.password_file` | path | none | The key's password, if it is encrypted |
 
-## Deploy
+## Launch
 
-A `deploy` section makes the runner a deploy runner: it does the work of
-[deploy, rollback and rollout steps](pipeline.md#kind-deploy) for the targets listed, through the
+A `deploy` section makes the Station a launch Station: it does the work of
+[launch, Return to base (rollback) and rollout steps](pipeline.md#kind-deploy) for the targets listed, through the
 Kubernetes API with its own identity, and runs no other steps. Its token must be a
-[runner pool's](server-config.md#runner-pools). `executor` and `kubernetes` do not apply.
+[Flight line's](server-config.md#runner-pools). `executor` and `kubernetes` do not apply.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
@@ -377,16 +377,16 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.targets.<name>.kubernetes.context` | text | | The kubeconfig context. The current context is never used |
 | `deploy.targets.<name>.argocd_namespace` | text | `argocd` | Where the Argo CD Applications are |
 | `deploy.targets.<name>.applications[].projects` | list of patterns | required | Projects a rule allows |
-| `deploy.targets.<name>.applications[].names` | list of patterns | required | Applications they may deploy. At least one rule is required |
+| `deploy.targets.<name>.applications[].names` | list of patterns | required | Applications they may launch. At least one rule is required |
 | `deploy.targets.<name>.rollout_namespaces` | list | none | Namespaces whose Argo Rollouts rollouts deploy steps may watch |
 | `deploy.targets.<name>.refresh` | boolean | `true` | Ask Argo CD to look at the repository at once after a commit (the refresh annotation). Needs patch on the Application; without it, skipped with a note in the log |
-| `deploy.repos.<name>.url` | URL or path | required | The GitOps repository the runner clones and pushes to, by the name pipelines use (`write_back.repo`). No credentials in the URL |
+| `deploy.repos.<name>.url` | URL or path | required | The GitOps repository the Station clones and pushes to, by the name pipelines use (`write_back.repo`). No credentials in the URL |
 | `deploy.repos.<name>.argocd_url` | URL | `url` | The repository's address as Argo CD's Applications write it, when it differs |
 | `deploy.repos.<name>.credentials.store` | name | none | The token or password for HTTP basic authentication, from a secret store |
 | `deploy.repos.<name>.credentials.key` | text | | |
 | `deploy.repos.<name>.credentials.field` | text | | |
 | `deploy.repos.<name>.username` | text | `launchway` | The user name sent with the credentials |
-| `deploy.repos.<name>.hosted` | boolean | `false` | The repository is hosted by Launchway and `url` is its address. Deploy steps then write with their own credential, which the server gives each deployment (the environment's `write_back`), and never with a stored one; `credentials`, if any, only read. A hosted repository needs the environment's `write_back`, and `write_back` needs `hosted: true` |
+| `deploy.repos.<name>.hosted` | boolean | `false` | The repository is hosted by Launchway and `url` is its address. Deploy steps then write with their own credential, which the server gives each deployment (the Airfield's `write_back`), and never with a stored one; `credentials`, if any, only read. A hosted repository needs the Airfield's `write_back`, and `write_back` needs `hosted: true` |
 | `deploy.repos.<name>.paths[].projects` | list of patterns | required | Projects a rule allows |
 | `deploy.repos.<name>.paths[].files` | list of patterns | required | Files they may change; `**` matches any number of directories. At least one rule is required |
 | `deploy.repos.<name>.author.name` | text | `Launchway` | The commits' author |
@@ -416,16 +416,16 @@ secrets:
 
 ## Health sources
 
-On a deploy runner, `health_sources` says where the monitoring systems are, for
+On a launch Station, `health_sources` says where the monitoring systems are, for
 [verification steps](../guide/verification.md). The server's `verification.sources` lists the same
-names, types and projects; the deploy runners that serve an environment's target hold the rest, because they are next
+names, types and projects; the launch Stations that serve an Airfield's target hold the rest, because they are next
 to the monitoring systems and never run anyone's script. A health source needs a `deploy` section.
-Credentials are only secret references, read from the runner's own stores for each query.
+Credentials are only secret references, read from the Station's own stores for each query.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres`, `http`, or `check` (the deploy runner's own health calls) |
+| `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres`, `http`, or `check` (the launch Station's own health calls) |
 | `health_sources.<name>.url` | URL | required (not for `check`) | The base URL. For `postgres`, a `postgres://` URL without a password |
 | `health_sources.<name>.projects` | list of patterns | none: allows no project | The projects that may use the source |
 | `health_sources.<name>.auth.type` | text | | `bearer`, `basic` or `header`. For `clickhouse` and `postgres` it may be left out: the user and the secret are the database account |
@@ -505,7 +505,7 @@ health_sources:
 
 ## What next
 
-- [Server configuration](server-config.md): environments and runner pools that deploy runners
+- [Server configuration](server-config.md): Airfields and Flight lines (Station (runner) pools) that launch Stations
   serve.
-- [Helm values](helm-values.md): the chart renders this file for its runners from `runner.*` and
+- [Helm values](helm-values.md): the chart renders this file for its Stations from `runner.*` and
   `delivery.deployRunner.*`.

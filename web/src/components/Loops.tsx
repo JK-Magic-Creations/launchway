@@ -3,6 +3,7 @@ import { groupStatus } from "./Graph";
 import { StatusIcon, statusLabel, tone } from "./ui";
 import type { Loop, LoopMember, RunWithTriggers } from "../triggers";
 import "../triggers.css";
+import { terms } from "../terms";
 
 const loopsOf = (run: RunDetail): Loop[] => (run as RunWithTriggers).graph.loops ?? [];
 
@@ -103,7 +104,7 @@ export function LoopPanel({ run, loop, selected, onSelect }: { run: RunDetail; l
       <button type="button" className={`loop-cell t-${tone(st)}` + (on ? " loop-cell-on" : "")} aria-pressed={on}
         aria-label={`${m.id}: ${statusLabel(st)}`} title={m.id} onClick={() => pick(m)}>
         <StatusIcon status={st} size={14} />{label}
-        {m.allowed_failure && <span className="badge-allowed" title="continue_for: this combination may fail without failing the run">allowed</span>}
+        {m.allowed_failure && <span className="badge-allowed" title={terms().say("continue_for: this combination may fail without failing the {run}")}>allowed</span>}
       </button>
     );
   };

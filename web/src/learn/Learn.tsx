@@ -6,6 +6,7 @@ import { navigate, onLink } from "../router";
 import { learnHref, loadArticle, loadIndex, loadManifest, type Article, type Manifest, type SearchIndex } from "./content";
 import { search } from "./search";
 import "../styles/learn.css";
+import { terms } from "../terms";
 
 const PLAYGROUND_KEY = "launchway.playground";
 
@@ -59,7 +60,7 @@ export function LearnRoot({ path }: { path: string }) {
   return (
     <div className="page learn">
       <div className="learn-top">
-        <CrumbList crumbs={[{ label: "Learn", href: route.kind === "home" ? undefined : "/learn" }, ...(route.kind === "search" ? [{ label: "Search" }] : [])]} />
+        <CrumbList crumbs={[{ label: terms().say("{Learn}"), href: route.kind === "home" ? undefined : "/learn" }, ...(route.kind === "search" ? [{ label: "Search" }] : [])]} />
         <SearchBox key={q} q={q} />
       </div>
       {manifest.error && <div className="errorbox" role="alert">{manifest.error}</div>}
@@ -124,7 +125,7 @@ function Home({ manifest, version }: { manifest: Manifest; version: string }) {
   return (
     <div className="learn-home">
       <header className="learn-hero">
-        <div className="eyebrow">Learn</div>
+        <div className="eyebrow">{terms().say("{Learn}")}</div>
         <h1>Learn Launchway</h1>
         <p className="lead">Everything you need to understand Launchway, in the product itself, and always for the release you run. No other website is needed.</p>
         <div className="learn-hero-actions">
@@ -228,7 +229,7 @@ function ArticleView({ a, manifest, version }: { a: Article; manifest: Manifest;
     <>
       <article className="learn-article">
         <style>{style}</style>
-        <div className="eyebrow">{section?.title ?? "Learn"}</div>
+        <div className="eyebrow">{section?.title ?? terms().say("{Learn}")}</div>
         <h1>{a.title}</h1>
         {/* The text is built from docs/ by the release, not typed by anyone who uses this server. */}
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}

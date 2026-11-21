@@ -2,12 +2,12 @@
 
 A step that watches a deployment's metrics and logs for a window of time and decides passed, failed or inconclusive.
 
-A `kind: verify` step watches a deployment (or an environment) for a window of time, reads its
+A `kind: verify` step watches a deployment (or an Airfield (environment)) for a window of time, reads its
 metrics and logs, and decides **passed**, **failed** or **inconclusive**. The judging is built into
 Launchway: plain statistics and log clustering, no AI service and nothing to install. A model can
 explain the verdict (see [AI models](ai.md)), but the statistics decide.
 
-## A canary verified with Prometheus and Loki, then promoted or aborted
+## A Pathfinder (canary) verified with Prometheus and Loki, then promoted or aborted {#a-canary-verified-with-prometheus-and-loki-then-promoted-or-aborted}
 
 ```yaml
 steps:
@@ -74,9 +74,9 @@ steps:
     abort_first: true
 ```
 
-A healthy canary passes and the rollout step promotes it. A canary whose error rate climbs fails
+A healthy Pathfinder passes and the rollout step promotes it. A Pathfinder whose error rate climbs fails
 the verification: `on_fail: abort` aborts the rollout through the same command a person's Abort
-button gives (recorded, audited, applied by the deploy runner), and the rollback step reverts the
+button gives (recorded, audited, applied by the launch (deploy) Station (runner)), and the Return to base (rollback) step reverts the
 Git change. Placeholders `{{name}}` take the step's `params`: `{ run: sha }`, `{ input: name }`,
 `{ output: step.key }`, or a fact of the deployment (`namespace`, `rollout`, `application`,
 `version`, `previous_version`, `environment`, `service`, `canary_hash`, `stable_hash`). Each value
@@ -85,12 +85,12 @@ Elasticsearch JSON string values) or sent as a typed parameter (SQL); a placehol
 string is refused when the pipeline is checked.
 
 A verify step can also stand alone: `environment: prod` and `service: shop` instead of
-`deployment:`, to watch what runs now (after a deploy done elsewhere, or on a schedule).
+`deployment:`, to watch what runs now (after a launch done elsewhere, or on a schedule).
 
 ## Log verification with ClickHouse
 
 SQL and HTTP sources run only statements their operator wrote, by name; a pipeline passes typed
-parameters and never writes SQL. On the deploy runner:
+parameters and never writes SQL. On the launch Station:
 
 ```yaml
 health_sources:
@@ -136,8 +136,8 @@ has at least 3 lines), as does a known one appearing unusually often.
 ## Health sources
 
 Operators configure where the data is; pipelines only name it. The servers list the names, types
-and projects (`verification.sources`; every server lists the same ones), and the deploy runners
-that serve the environment's target hold the rest (`health_sources`), because they are the ones next
+and projects (`verification.sources`; every server lists the same ones), and the launch Stations
+that serve the Airfield's target hold the rest (`health_sources`), because they are the ones next
 to the monitoring systems and they never run anyone's script:
 
 ```yaml
@@ -168,10 +168,10 @@ Types: `prometheus`, `loki`, `clickhouse`, `elasticsearch` / `opensearch` (with 
 only indices pipelines may search), `postgres` (named statements in a read-only transaction) and
 `http` (named requests to any JSON API, with a path into the answer). With the Helm chart,
 `delivery.verification.sources` fills both sides. Credentials are only secret references, read from
-the deploy runner's own stores for each query.
+the launch Station's own stores for each query.
 
 **What a pipeline cannot do with a health source.** Use one its project is not listed for (checked
-when the pipeline is validated, and again on the deploy runner); run SQL of its own; search an
+when the pipeline is validated, and again on the launch Station); run SQL of its own; search an
 index not allowed; change anything (PromQL and LogQL are read APIs; ClickHouse statements run with
 `readonly=1`; PostgreSQL ones in a `READ ONLY` transaction; HTTP requests go to the configured
 host only, without following redirects); or read without bounds (each query has a timeout, at most
@@ -181,7 +181,7 @@ they are clustered, stored or shown).
 ## The built-in health proof
 
 Most services have a health address and no metric. A metric with a `check` needs no monitoring
-system at all: the deploy runner calls the service it just deployed, from inside the cluster, again
+system at all: the launch Station (runner) calls the service it just launched, from inside the cluster, again
 and again for the whole window, and the share of calls that answered as expected is the metric.
 
 ```yaml
@@ -218,16 +218,16 @@ steps:
           success: 0.95                          # per interval; one failure in twenty is fine
 ```
 
-Each interval the runner makes a call every `every` (default 5 seconds) and records each one with
+Each interval the Station makes a call every `every` (default 5 seconds) and records each one with
 its time, status and latency. If some failed, the verification says so in words: "3 of 20 requests
-to the health address returned 503", or "2 did not answer within 5s". The run page lists the failed calls under
+to the health address returned 503", or "2 did not answer within 5s". The Sortie (run) page lists the failed calls under
 the metric, and the deployment panel shows the same sentence. As with any metric, `failures` (default
 2) consecutive failing intervals fail the verification, and `on_fail: rollback` rolls back; use
-`on_fail: abort` to stop a canary at once, which makes the proof a smoke test of a rollout step.
+`on_fail: abort` to stop a Pathfinder (canary) at once, which makes the proof a smoke test of a rollout step.
 Because a check is made while the interval runs, the verdict is ready when the window ends: there is
 no ingestion delay to wait for.
 
-What the deploy runner will not do, whatever a pipeline says:
+What the launch Station will not do, whatever a pipeline says:
 
 - It calls only the hosts and Service namespaces its own `check` source lists (an empty list allows
   nothing), and only for the projects the source lists. An address literal must be in a listed range.
@@ -236,7 +236,7 @@ What the deploy runner will not do, whatever a pipeline says:
   as an answer that is not healthy) and no proxy is used.
 - Only `GET` and `HEAD`; at most 30 seconds a call; at most 64 KiB of the answer is read; at most 200
   calls are recorded per interval.
-- Credentials are `secret_headers`, secret references the runner reads from its own stores. They are
+- Credentials are `secret_headers`, secret references the Station reads from its own stores. They are
   never written in the pipeline, the record or the log; a header that is not secret (`Host`, say) goes
   under `headers`.
 - Certificates are verified (the source's `ca_file` adds authorities); `insecure_tls` works only if the
@@ -249,7 +249,7 @@ health address in front of it, or keep reading a probe metric.
 
 Each interval, a metric's value is the mean of its readings, checked against `fail_fast` bounds,
 `max`/`min`, the stable version in the same interval, and the baseline learned from earlier passed
-verifications of the same environment and service, in standard deviations:
+verifications of the same Airfield and service, in standard deviations:
 
 | sensitivity | fails beyond | and at least | log clusters match at | unusual frequency |
 |---|---|---|---|---|
@@ -269,17 +269,17 @@ regressed baseline, seasonality, warm-up) are written down in
 
 **Marking a verification passed or failed.** An operator of the project may mark a running or
 paused verification passed or failed, with a reason (`verification.override` in the Logbook);
-on a protected environment the person who started the run may not mark it passed. A pass marked by
+on a protected Airfield the person who started the Sortie (run) may not mark it passed. A pass marked by
 a person does not become part of the baseline.
 
-**The run page** has a Verification tab and panel: the intervals as a timeline, a chart per metric
-with the canary, the stable version's band and the baseline's band and the points that failed, the
+**The Sortie page** has a Verification tab and panel: the intervals as a timeline, a chart per metric
+with the Pathfinder, the stable version's band and the baseline's band and the points that failed, the
 log clusters with counts and sample lines (new ones first), the verdict in words ("error-rate:
 0.042 against the stable version's 0.003, 6.1 standard deviations above"), and the buttons the
-viewer may use. **The Environments page** lists each service's recent verifications. API:
+viewer may use. **The Airfields page** lists each service's recent verifications. API:
 `GET /api/v1/runs/{run}/verifications`, `GET /api/v1/verifications?environment=&project=&service=`,
 `POST /api/v1/runs/{run}/steps/{step}/verify/override`, `GET /api/v1/health-sources` (names only).
 CLI: `launchway verifications list|show|mark`, `launchway health-sources`.
 
-Verify steps need schema 19: use them once every server and deploy runner is upgraded, and take
-them out before rolling back (see [docs/development/migrations.md](../development/migrations.md)).
+Verify steps need schema 19: use them once every server and launch Station is upgraded, and take
+them out before returning to base (see [docs/development/migrations.md](../development/migrations.md)).

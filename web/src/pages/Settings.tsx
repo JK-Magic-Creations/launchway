@@ -2,6 +2,7 @@ import { useMe } from "../auth";
 import { Link } from "../components/ui";
 import { PageHead } from "../kit/layout";
 import { useHosting } from "./SshKeys";
+import { terms } from "../terms";
 
 /** People and access: how people and programs prove who they are. Each choice that is on is a card. */
 export function AccessPage() {
@@ -20,7 +21,7 @@ export function AccessPage() {
           <li><Link href="/settings/access/ssh-keys" className="guided-tile guided-tile-block"><strong>SSH keys</strong><span className="faint">Keys that let you clone and push over SSH, and the server's fingerprints to check.</span></Link></li>
         )}
         {me.mcp?.enabled !== false && (
-          <li><Link href="/settings/access/agents" className="guided-tile guided-tile-block"><strong>Connect an agent</strong><span className="faint">Let an AI assistant read your runs and, if you allow it, act on them.</span></Link></li>
+          <li><Link href="/settings/access/agents" className="guided-tile guided-tile-block"><strong>Connect an agent</strong><span className="faint">{terms().say("Let an AI assistant read your {runs} and, if you allow it, act on them.")}</span></Link></li>
         )}
         {me.admin && me.auth_mode === "none" && (
           <li><Link href="/config/wizard/first-run?step=signin" className="guided-tile guided-tile-block"><strong>Turn on sign-in</strong><span className="faint">So people use the accounts they have, and groups decide what each may do.</span></Link></li>

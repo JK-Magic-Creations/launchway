@@ -8,7 +8,7 @@ behind it.
 |---|---|
 | [Pipeline file](pipeline.md) | every key of `.launchway/pipeline.yaml` and of library templates |
 | [Server configuration](server-config.md) | every setting of `launchway.yaml` |
-| [Runner configuration](runner-config.md) | every setting of `runner.yaml` |
+| [Station (runner) configuration](runner-config.md) | every setting of `runner.yaml` |
 | [Helm values](helm-values.md) | every value of the Helm chart |
 | [Command line](cli.md) | every command and flag of `launchway` |
 | [HTTP API](http-api.md) | every route, who may call it, and what it returns |
@@ -17,7 +17,7 @@ behind it.
 | [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
 | [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
 | [Archive format](archive-format.md) | the document that stores another server's issues and comments read-only in a repository |
-| [Events and audit actions](events.md) | the run event log, the live stream and the Logbook |
+| [Events and audit actions](events.md) | the Sortie (run) event log, the live stream and the Logbook |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
 | [Policy rules](policy-rules.md) | the policy rule catalog |
 | [Vocabulary](vocabulary.md) | the words Launchway uses for its own concepts, and the rules for using them |

@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/jk-magic-creations/launchway/internal/settings"
 )
 
 // Every error answer has the same three parts: error (what went wrong, in plain words), code (a stable word for
@@ -46,5 +48,20 @@ func TestErrorAnswersKeepWhatTheHandlerAdded(t *testing.T) {
 	writeJSON(rec, http.StatusOK, map[string]string{"error": "not an error"})
 	if strings.Contains(rec.Body.String(), "code") {
 		t.Errorf("a 200 answer was changed: %s", rec.Body.String())
+	}
+}
+
+// A handler writes {runner}; the answer says the word of the installation's set, in `error` and `next` only.
+func TestErrorSentencesUseTheInstallationsWords(t *testing.T) {
+	defer settings.SetCurrentTerms(settings.Terms{})
+	settings.SetCurrentTerms(settings.Terms{})
+	got := withErrorShape(400, map[string]string{"error": "the {runner} has no ID", "code": "bad_request", "next": "Enrol the {runner}; {rollback:do} if you must."}).(map[string]string)
+	if got["error"] != "the Station has no ID" || got["code"] != "bad_request" || got["next"] != "Enrol the Station; return to base if you must." {
+		t.Fatalf("aviation: %+v", got)
+	}
+	settings.SetCurrentTerms(settings.Terms{Set: "business"})
+	got = withErrorShape(400, map[string]string{"error": "the {runner} has no ID"}).(map[string]string)
+	if got["error"] != "the runner has no ID" {
+		t.Fatalf("business: %+v", got)
 	}
 }

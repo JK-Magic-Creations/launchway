@@ -67,7 +67,7 @@ describe("the setup guide", () => {
     serve();
     await open("runner");
     expect(screen.getByLabelText("Wingman")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Learn more about runners/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Learn more about Stations/ })).toBeTruthy();
   });
 });
 

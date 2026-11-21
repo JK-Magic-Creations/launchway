@@ -1,13 +1,13 @@
 # Secrets
 
 This guide gives pipelines passwords, tokens and keys without the Launchway server ever seeing
-them: secret stores on runners (environment variables, files, Vault or OpenBao), allow-lists,
+them: secret stores on Stations (environment variables, files, Vault or OpenBao), allow-lists,
 masking, and what pull-request and draft runs may read. It is for operators who run servers and
-runners.
+Stations.
 
 > **Verified** on 2026-11-19 against commit f717337: OpenBao 2.7.2 in dev mode in a container, with
-> a token limited by a policy and with Kubernetes auth against a kind cluster (the runner on the
-> host, reading a service account token from a file); a server's built-in runner reading a secret
+> a token limited by a policy and with Kubernetes auth against a kind cluster (the Station on the
+> host, reading a service account token from a file); a server's built-in Station reading a secret
 > and printing it masked; the database dumped and searched for the value; `file` and `env` stores
 > and every refusal shown below with `launchway run --secrets-config`; a draft run refused.
 > **Not verified:** HashiCorp Vault itself (only OpenBao); Vault namespaces and `ca_file`; Kubernetes
@@ -16,10 +16,10 @@ runners.
 
 ## What you need
 
-- A Launchway server and at least one runner. The built-in runner counts. See
-  [Install on one server](install-single-server.md) and [Connect a runner](connect-runner.md).
+- A Launchway server and at least one Station. The built-in Station counts. See
+  [Install on one server](install-single-server.md) and [Connect a Station](connect-runner.md).
 - For the `vault` store: a Vault or OpenBao server with a KV version 2 secrets engine, reachable from
-  the runners (not from the server).
+  the Stations (not from the server).
 
 ## How it works
 
@@ -45,30 +45,30 @@ steps:
 ```
 
 The pipeline, the server, the database and the UI hold only the reference, written
-`bao:apps/demo/registry#password`. The runner that takes the step looks the value up just before
+`bao:apps/demo/registry#password`. The Station that takes the step looks the value up just before
 the step runs, inside the network that owns the secret, and replaces it with `***` in the step's
-log and outputs. The database never contains the value: after the run below, a dump of the whole
+log and outputs. The database never contains the value: after the Sortie (run) below, a dump of the whole
 database had the reference twice and the value nowhere.
 
 ## Where stores are configured
 
-Each runner has only the stores configured on it. Store names are lower-case letters, digits,
+Each Station has only the stores configured on it. Store names are lower-case letters, digits,
 hyphens and underscores.
 
-| Runner | Where its stores are |
+| Station | Where its stores are |
 |---|---|
-| The server's built-in runner | `runner.secrets` in the server's configuration |
+| The server's built-in Station | `runner.secrets` in the server's configuration |
 | `launchway runner` | `secrets:` in its `--config` file, or a separate `--secrets-config FILE` |
 | `launchway run` on your machine | `--secrets-config FILE`, plus an `env` store of your own environment |
 
-A server or shared runner has an `env` store only if you define one, because it lets pipelines read
-the runner's environment. Settings are checked when the runner starts; unknown settings and
+A server or shared Station has an `env` store only if you define one, because it lets pipelines read
+the Station's Airfield (environment). Settings are checked when the Station starts; unknown settings and
 settings of another store type are refused.
 
 ## The env store
 
-`key` is an environment variable of the runner process. Variables starting with `LAUNCHWAY_` can
-never be read, so the runner's token stays out of reach.
+`key` is an environment variable of the Station process. Variables starting with `LAUNCHWAY_` can
+never be read, so the Station's token stays out of reach.
 
 ```yaml
 runner:
@@ -102,7 +102,7 @@ secret X (mounted:../bao-token): key "../bao-token" must be a relative file name
 This works with HashiCorp Vault and with OpenBao. `key` is a path in a KV version 2 engine and
 `field` is required.
 
-First give the runner a token that can only read what pipelines need. With OpenBao (`vault` takes
+First give the Station a token that can only read what pipelines need. With OpenBao (`vault` takes
 the same arguments):
 
 ```sh
@@ -117,7 +117,7 @@ bao policy write launchway-read launchway-read.hcl
 bao token create -policy=launchway-read -period=24h -field=token
 ```
 
-Then configure the store, here on a server's built-in runner, with the token in an environment
+Then configure the store, here on a server's built-in Station, with the token in an Airfield
 variable:
 
 ```yaml
@@ -139,12 +139,12 @@ LW_BAO_TOKEN='the token' launchway server --config launchway.yaml
 ```
 
 Launchway does not renew tokens. A periodic token must be renewed by something else before its
-period ends. With `token_file`, the runner reads the file again whenever the store answers `403`,
-so a process that renews or replaces the token in that file keeps the runner working.
+period ends. With `token_file`, the Station reads the file again whenever the store answers `403`,
+so a process that renews or replaces the token in that file keeps the Station working.
 
 ## The vault store with Kubernetes auth
 
-A runner in a Kubernetes pod can log in with its service account instead of a token. Set up the
+A Station in a Kubernetes pod can log in with its service account instead of a token. Set up the
 auth method once (the API server address and CA are your cluster's):
 
 ```sh
@@ -158,8 +158,8 @@ bao write auth/kubernetes/role/launchway \
   token_policies=launchway-read ttl=1h
 ```
 
-Without a `token_reviewer_jwt`, OpenBao checks each login with the runner's own token, so the
-runner's service account needs the `system:auth-delegator` cluster role:
+Without a `token_reviewer_jwt`, OpenBao checks each login with the Station's own token, so the
+Station's service account needs the `system:auth-delegator` cluster role:
 
 ```sh
 kubectl create clusterrolebinding launchway-runner-tokenreview \
@@ -178,13 +178,13 @@ secrets:
     keys: ["apps/*/*"]
 ```
 
-The runner logs in when it first needs a value, keeps the token it gets, and logs in again when
+The Station logs in when it first needs a value, keeps the token it gets, and logs in again when
 nine tenths of the token's lifetime have passed or when the store answers `403`.
 
 ## Allow-lists
 
 Any pipeline can ask any store for any key, so limit each store. Both lists are checked on the
-runner, before the store is asked:
+Station, before the store is asked:
 
 - `projects`: the projects whose runs may read the store;
 - `keys`: the keys they may read.
@@ -245,7 +245,7 @@ LW_BAO_TOKEN='the token' launchway run --secrets-config secrets.yaml
 
 ## Masking
 
-The runner replaces every secret value with `***` in the step's log and in its outputs, which later
+The Station replaces every secret value with `***` in the step's log and in its outputs, which later
 steps receive and the server stores.
 
 - A value of several lines is masked line by line.
@@ -254,8 +254,8 @@ steps receive and the server stores.
 - Masking hides the exact text only. A step that prints the value changed (encoded, reversed, one
   character a line) leaks it. Treat a step that may read secrets as able to reveal them.
 
-On Kubernetes, a step's environment, secrets included, is in memory in the run's pod while the
-step runs, where the run's other containers could read it. Do not put containers you do not trust
+On Kubernetes, a step's Airfield, secrets included, is in memory in the Sortie's pod while the
+step runs, where the Sortie's other containers could read it. Do not put containers you do not trust
 in a pipeline that uses secrets.
 
 ## Pull requests and drafts
@@ -292,13 +292,13 @@ start. Image steps never push from pull-request and draft runs.
 | What happened | The step | Example |
 |---|---|---|
 | The secret does not exist, or may not be read | fails, naming the store and key | `there is no secret at secret/apps/demo/nothing` |
-| The store cannot be reached, is sealed or answers 5xx | the runner asks again for 30 seconds, then hands the step back to be run again later | `vault did not answer: ... connection refused. The step will be run again.` |
+| The store cannot be reached, is sealed or answers 5xx | the Station asks again for 30 seconds, then hands the step back to be run again later | `vault did not answer: ... connection refused. The step will be run again.` |
 
 More messages and what to do about them are in [Troubleshooting](troubleshooting.md#secrets).
 
 ## What next
 
-- [Connect a runner](connect-runner.md)
+- [Connect a Station](connect-runner.md)
 - [Pipeline reference: secrets](../reference/pipeline.md)
-- [Runner configuration reference](../reference/runner-config.md)
+- [Station configuration reference](../reference/runner-config.md)
 - [Trust model](../security/trust-model.md)

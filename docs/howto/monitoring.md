@@ -1,12 +1,12 @@
 # Monitor Launchway
 
 This guide says how to watch Launchway itself: the health and readiness endpoints of servers and
-runners, what the logs contain, how to use the Logbook, and what to alert on. It is for
+Stations (runners), what the logs contain, how to use the Logbook, and what to alert on. It is for
 operators.
 
 > **Verified** on 2026-11-19 against commit f717337: every endpoint below with `curl`, on servers
 > using SQLite and PostgreSQL 17; `/readyz` while the server was stopping and while its PostgreSQL
-> container was stopped; a runner's `--health-listen` endpoints before it reached the server, while
+> container was stopped; a Station's `--health-listen` endpoints before it reached the server, while
 > connected, and after its server stopped; the log lines quoted; audit queries. **Not verified:**
 > the `incompatible` answer of `/readyz` (quoted from the code); log shipping into any particular
 > system.
@@ -62,9 +62,9 @@ schema, which helps to spot servers left on an old version:
 {"auth_mode":"oidc","schema":{"code":21,"database":21,"minimum":7},"version":"f717337"}
 ```
 
-## Health and readiness of a runner
+## Health and readiness of a Station {#health-and-readiness-of-a-runner}
 
-A runner on another machine serves the same two paths, in plain text, when started with
+A Station on another machine serves the same two paths, in plain text, when started with
 `--health-listen`:
 
 ```sh
@@ -77,11 +77,11 @@ curl -s http://127.0.0.1:8081/readyz
 | `GET /healthz` | the process is up | no answer |
 | `GET /readyz` | the server answered within the last two minutes | `the server has not answered yet`, or `the server last answered 2m3s ago` |
 
-A runner whose token is wrong never gets an answer it counts, so its `/readyz` stays at
-`the server has not answered yet`. Without `--health-listen` a runner serves nothing. The built-in
-runner of a server has no endpoints of its own.
+A Station whose token is wrong never gets an answer it counts, so its `/readyz` stays at
+`the server has not answered yet`. Without `--health-listen` a Station serves nothing. The built-in
+Station of a server has no endpoints of its own.
 
-In the UI, **Runners** lists every runner with its executor, version and when it was last seen;
+In the UI, **Stations** lists every Station with its executor, version and when it was last seen;
 `GET /api/v1/runners` gives the same with `online` true or false (any signed-in person with a role
 may read it).
 
@@ -92,7 +92,7 @@ There is no `/metrics` endpoint: Launchway does not export Prometheus metrics ye
 
 ## Logs
 
-Servers and runners write logs to standard error, one line per event. There is no access log of
+Servers and Stations write logs to standard error, one line per event. There is no access log of
 HTTP requests, and no option for JSON.
 
 A server writes `key=value` text:
@@ -104,9 +104,9 @@ time=2026-11-19T20:09:08.519-06:00 level=WARN msg="a sign-in failed" err="exchan
 ```
 
 At start-up it also prints a block saying where it listens, the number of projects, the data
-directory, the database (password hidden) and where the runner token is.
+directory, the database (password hidden) and where the Station token is.
 
-A runner started with `launchway runner` writes the date first, without `key=`:
+A Station started with `launchway runner` writes the date first, without `key=`:
 
 ```text
 2026/11/19 20:02:09 INFO runner started name=build-2 executor="container (podman)" concurrency=2 server=https://launchway.example.com
@@ -117,7 +117,7 @@ Logs never contain secret values, tokens or session ids. Requests that fail on t
 `something went wrong on the server; its log has the details`, and the details are in a
 `level=ERROR msg="request failed"` line.
 
-Step output is not in these logs: it is stored with the run, and read in the UI or with
+Step output is not in these logs: it is stored with the Sortie (run), and read in the UI or with
 `launchway runs logs <run-id>`.
 
 ## the Logbook
@@ -155,8 +155,8 @@ The trail is kept until you delete old rows from the `audit` table yourself. See
 |---|---|---|
 | A server is not ready | `GET /readyz` is not `200` | for 1 minute |
 | A server is down | `GET /healthz` does not answer | 2 checks in a row |
-| A runner lost its server | runner `GET /readyz` is `503` | as it happens (it already waits 2 minutes) |
-| Too few runners | `GET /api/v1/runners`: count of `online: true` | below what you expect, for 5 minutes |
+| A Station lost its server | Station `GET /readyz` is `503` | as it happens (it already waits 2 minutes) |
+| Too few Stations | `GET /api/v1/runners`: count of `online: true` | below what you expect, for 5 minutes |
 | Servers on different versions | `GET /api/v1/info` `version` differs between servers | outside an upgrade |
 | Database trouble | log lines `level=ERROR` with `failed to connect`, `the database does not answer yet` | any, for 1 minute |
 | Repositories cannot be read | log lines `msg="polling a project"` | the same project for 10 minutes |
@@ -166,8 +166,8 @@ The trail is kept until you delete old rows from the `audit` table yourself. See
 | Brute force | audit `token.use` denied, or 429 refusals | more than you normally see |
 | Disk | the data directory and the database | 80% full |
 
-Runs that wait for a runner that never comes show a hint on the run (`runner_hint` in the API),
-such as for image steps when no runner can build images. A deploy step fails with
+Runs that wait for a Station that never comes show a hint on the Sortie (`runner_hint` in the API),
+such as for image steps when no Station can build images. A deploy step fails with
 `no deploy runner serving target <target> took the step within <timeout>`.
 
 ## What next

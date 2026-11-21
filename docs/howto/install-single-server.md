@@ -8,11 +8,11 @@ servers on Kubernetes, see [Install on Kubernetes](install-kubernetes.md).
 > **Verified** on 2026-11-19 against commit f717337: `make all` and `make image` (Podman 6.1) from a
 > clean clone; the server on SQLite and on PostgreSQL 17; the refusal to listen without sign-in;
 > the server as a transient systemd user unit (`systemd-run --user`) including `/readyz` during a
-> stop; `systemd-analyze verify` on the unit below; the image run with Podman with a runner on the
+> stop; `systemd-analyze verify` on the unit below; the image run with Podman with a Station (runner) on the
 > host; nginx 1.29 in a container in front of it with TLS, `trust_proxy`, an unbuffered
-> `/api/v1/stream`, `Secure` cookies and a runner connecting through it. **Not verified:** the unit
+> `/api/v1/stream`, `Secure` cookies and a Station connecting through it. **Not verified:** the unit
 > as a system service with `User=launchway` (no root on the test machine); rootless Podman for the
-> built-in runner under that system service; Docker instead of Podman; a Caddy configuration.
+> built-in Station under that system service; Docker instead of Podman; a Caddy configuration.
 
 ## What you need
 
@@ -22,7 +22,7 @@ servers on Kubernetes, see [Install on Kubernetes](install-kubernetes.md).
   `launchway doctor git` checks a server). Everything else works with any git.
 - To build the container image instead: Podman (or Docker) only.
 - For steps in containers on this server: Podman or Docker. Steps can also run on other machines;
-  see [Connect a runner](connect-runner.md).
+  see [Connect a Station](connect-runner.md).
 - An OpenID Connect provider for sign-in, before anyone else can reach the server. See
   [Sign-in with OpenID Connect and roles](oidc-and-roles.md).
 - Optional: a PostgreSQL database (version 17 was tested). Without one, Launchway uses an embedded
@@ -66,7 +66,7 @@ launchway f717337
 
 `make all` runs `npm ci` and `npm run build` in `web/`, then builds a static binary
 (`CGO_ENABLED=0`) at `bin/launchway`. The UI is compiled into the binary, so `bin/launchway` is
-the only file you need to copy to the server. The same binary is the server, the runner and the
+the only file you need to copy to the server. The same binary is the server, the Station and the
 command line.
 
 Install it, and create a system user and the configuration directory:
@@ -132,7 +132,7 @@ runner:
   concurrency: 2
 ```
 
-Keep secrets out of this file. Put them in an environment file that only root and the service can
+Keep secrets out of this file. Put them in an Airfield (environment) file that only root and the service can
 read:
 
 ```sh
@@ -243,21 +243,21 @@ When it starts, the server prints where it listens, where its data is and which 
 On `systemctl stop` the server answers `503` on `/readyz` at once, keeps serving for
 `server.drain_delay`, then gives requests in flight up to 15 seconds. Steps that were running are
 run again when a server starts. `TimeoutStopSec=60s` leaves room for that and for the built-in
-runner, which gets up to 30 seconds.
+Station, which gets up to 30 seconds.
 
-The built-in runner starts step containers as the service user. With `executor: podman`, that
+The built-in Station starts step containers as the service user. With `executor: podman`, that
 user needs rootless Podman to work (entries in `/etc/subuid` and `/etc/subgid`, and its home
 directory, here `/var/lib/launchway`, writable). If you would rather not run builds on the server,
-set `runner: { enabled: false }` and [connect runners](connect-runner.md) on other machines; they
+set `runner: { enabled: false }` and [connect Stations](connect-runner.md) on other machines; they
 read the token from `/var/lib/launchway/runner-token`, or you can set `LAUNCHWAY_RUNNER_TOKEN` in
-the environment file.
+the Airfield file.
 
 ## Or run the container with Podman
 
 In a container, the server must listen on `0.0.0.0` to be reached through a published port, so it
-needs sign-in (or `auth.allow_anonymous: true`). Turn the built-in runner off: the image has no
-shell and no container runtime, so it could not run steps. Give the runner token yourself, so that
-runners on other machines can use it:
+needs sign-in (or `auth.allow_anonymous: true`). Turn the built-in Station off: the image has no
+shell and no container runtime, so it could not run steps. Give the Station token yourself, so that
+Stations on other machines can use it:
 
 ```yaml
 # launchway.yaml for the container
@@ -286,7 +286,7 @@ podman run -d --name launchway \
   localhost/launchway:f717337
 ```
 
-Then start a runner on a machine with Podman or Docker:
+Then start a Station on a machine with Podman or Docker:
 
 ```sh
 LAUNCHWAY_RUNNER_TOKEN="$(cat runner-token)" launchway runner \
@@ -310,9 +310,9 @@ The proxy must:
 - set `X-Forwarded-Proto` and add the client's address as the last entry of `X-Forwarded-For`;
 - not buffer `/api/v1/stream`, the live event stream (server-sent events, with a comment every
   15 seconds);
-- accept large request bodies from runners: step results carry test and SARIF reports (about
-  80 MiB with the default limits) and artifacts arrive in 8 MiB pieces;
-- keep requests open for at least 30 seconds: runners wait up to 25 seconds for work.
+- accept large request bodies from Stations: step results carry test and SARIF reports (about
+  80 MiB with the default limits) and Cargo (artifacts) arrive in 8 MiB pieces;
+- keep requests open for at least 30 seconds: Stations wait up to 25 seconds for work.
 
 Set `server.trust_proxy: true` only when clients cannot reach Launchway except through the proxy.
 Then Launchway marks cookies `Secure` from `X-Forwarded-Proto` and takes the client's address
@@ -401,24 +401,24 @@ Inbound, to the server:
 
 | From | To | Why |
 |---|---|---|
-| Browsers, the command line, runners | the proxy, port 443 | everything; runners use the same address as people |
+| Browsers, the command line, Stations | the proxy, port 443 | everything; Stations use the same address as people |
 | Git hosts | the proxy, port 443 | only if you use webhooks (`/api/v1/projects/<name>/git-hook` or webhook triggers) |
 
 Launchway itself listens on one port (`listen`). Keep it closed to everything but the proxy.
 
 Outbound, from the server: your Git hosts (to poll projects and libraries), the OpenID Connect
 provider (discovery, keys, token exchange), PostgreSQL if you use it, and S3-compatible storage
-if artifacts are kept there.
+if Cargo are kept there.
 
-Outbound, from runners (the built-in one included): the server, the Git hosts, the image
-registries steps pull from, secret stores, and the Kubernetes API for the Kubernetes executor.
-Runners never need inbound connections.
+Outbound, from Stations (the built-in one included): the server, the Git hosts, the image
+Depots (registries) steps pull from, secret stores, and the Kubernetes API for the Kubernetes executor.
+Stations never need inbound connections.
 
 ## What next
 
 - [Sign-in with OpenID Connect and roles](oidc-and-roles.md)
 - [Secrets](secrets.md)
-- [Connect a runner](connect-runner.md)
+- [Connect a Station](connect-runner.md)
 - [Monitoring](monitoring.md)
 - [Back up, restore and upgrade](backup-restore-upgrade.md)
 - [Server configuration reference](../reference/server-config.md)

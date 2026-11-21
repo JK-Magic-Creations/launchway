@@ -1,7 +1,7 @@
 # Install Launchway on Google GKE
 
 This guide runs Launchway on Google Kubernetes Engine with the Helm chart: servers spread across
-zones, Cloud SQL for PostgreSQL as the shared database, artifacts in Cloud Storage, the UI behind a
+zones, Cloud SQL for PostgreSQL as the shared database, Cargo (artifacts) in Cloud Storage, the UI behind a
 GKE Gateway, and step pods on a node pool of their own. It is for operators who have read
 [Install on Kubernetes](install-kubernetes.md), which explains the chart itself.
 
@@ -9,19 +9,19 @@ GKE Gateway, and step pods on a node pool of their own. It is for operators who 
 > `deploy/helm/launchway/examples/gke.yaml` (the values file below), and `helm install` of the same
 > file on a local kind cluster with only what cannot exist there replaced (the image, the database
 > URL, the S3 endpoint pointed at MinIO, the step namespace, no node selector, no HTTPRoute because
-> kind had no Gateway API): three servers and three runners became ready, and the servers accepted
+> kind had no Gateway API): three servers and three Stations (runners) became ready, and the servers accepted
 > `region: auto` and started with the S3 store. **Not verified:** nothing was run on Google Cloud.
 > Not tested: GKE itself, Cloud SQL (including `sslmode=verify-ca` with its server CA), Cloud
-> Storage through its XML API with HMAC keys, the GKE Gateway and its policies, Artifact Registry,
+> Storage through its XML API with HMAC keys, the GKE Gateway and its policies, Cargo Depot (registry),
 > node pools, and Vault Kubernetes auth from GKE.
 
 ## What you need
 
 - A GKE cluster (Standard or Autopilot) on Kubernetes 1.30 or later, with the Gateway API enabled,
   `kubectl` for it, and Helm 3.8 or later.
-- An Artifact Registry repository for the Launchway image, and Podman or Docker to build it.
+- A Cargo Depot repository for the Launchway image, and Podman or Docker to build it.
 - A Cloud SQL for PostgreSQL instance with a private IP in the cluster's VPC.
-- A Cloud Storage bucket for artifacts, and a service account with an HMAC key that may use it.
+- A Cloud Storage bucket for Cargo, and a service account with an HMAC key that may use it.
 - An OpenID Connect provider for sign-in (see [Sign-in with OpenID Connect and roles](oidc-and-roles.md)).
 - Optional: a node pool for step pods, and Vault or OpenBao for secrets.
 
@@ -39,16 +39,16 @@ flowchart LR
   runners --> vault["Vault"]
 ```
 
-Only the servers use the database and the bucket. Runners talk to the servers, the Kubernetes API,
+Only the servers use the database and the bucket. Stations talk to the servers, the Kubernetes API,
 your Git host and your secret stores, all outbound.
 
 ## Build and push the image
 
 Once releases are published you can mirror the signed release image
-`ghcr.io/jk-magic-creations/launchway:VERSION` into Artifact Registry instead (check it first as
+`ghcr.io/jk-magic-creations/launchway:VERSION` into Cargo Depot instead (check it first as
 [Verifying downloads](../security/verify-downloads.md#check-an-image) describes). Until then:
 
-Build the image from a clone of the repository and push it to Artifact Registry:
+Build the image from a clone of the repository and push it to Cargo Depot:
 
 ```sh
 make image IMAGE=localhost/launchway:0.1.0
@@ -58,7 +58,7 @@ podman tag localhost/launchway:0.1.0 europe-west1-docker.pkg.dev/acme-ci/launchw
 podman push europe-west1-docker.pkg.dev/acme-ci/launchway/launchway:0.1.0
 ```
 
-The nodes' service account needs the Artifact Registry Reader role on that repository. Pin the
+The nodes' service account needs the Cargo Depot Reader role on that repository. Pin the
 image by digest in production with `image.digest`.
 
 ## The database
@@ -83,16 +83,16 @@ kubectl -n launchway create secret generic launchway-database \
 Back the database up with Cloud SQL's automated backups and point-in-time recovery; see
 [Back up, restore and upgrade](backup-restore-upgrade.md).
 
-## Artifact storage in Cloud Storage
+## Cargo storage in Cloud Storage {#artifact-storage-in-cloud-storage}
 
-Launchway's artifact store speaks the S3 API, signed with AWS Signature Version 4. Cloud Storage
+Launchway's Cargo store speaks the S3 API, signed with AWS Signature Version 4. Cloud Storage
 offers an S3-compatible XML API at `https://storage.googleapis.com` that accepts such requests when
 they are signed with an [HMAC key](https://cloud.google.com/storage/docs/authentication/hmackeys).
 Launchway uses only plain object requests and multipart uploads (create, upload part, complete,
 abort), which that API documents.
 
 > [!WARNING]
-> Launchway's store is tested against MinIO, not against Cloud Storage. Try a pipeline that keeps and fetches an artifact before relying on it.
+> Launchway's store is tested against MinIO, not against Cloud Storage. Try a pipeline that keeps and fetches a Cargo before relying on it.
 
 Create the bucket and a service account with the Storage Object User role on it, then an HMAC key
 for that service account. Put the key in a Secret under the names the store reads:
@@ -173,12 +173,12 @@ spec:
 
 ## Secrets from Vault
 
-Runners log in to Vault or OpenBao with Kubernetes auth, using their own ServiceAccount token
+Stations log in to Vault or OpenBao with Kubernetes auth, using their own ServiceAccount token
 (`launchway-runner` in the release namespace). Configure Vault's Kubernetes auth method for the GKE
 cluster: its API server address, its CA certificate, and a role bound to that ServiceAccount in
 namespace `launchway`. This is Vault's own Kubernetes auth; Launchway does not use Google
 identities for it. If Vault checks tokens with the client's own token rather than a reviewer token,
-the runners' ServiceAccount also needs the `system:auth-delegator` ClusterRole. See
+the Stations' ServiceAccount also needs the `system:auth-delegator` ClusterRole. See
 [Secrets](secrets.md).
 
 ## The values file
@@ -312,14 +312,14 @@ kubectl -n launchway get httproute launchway
 ```
 
 `launchway-gateway-policies.yaml` holds the two policies above. Point `launchway.example.com` at the
-Gateway's address, open `https://launchway.example.com/` and sign in. Check the servers and runners:
+Gateway's address, open `https://launchway.example.com/` and sign in. Check the servers and Stations:
 
 ```sh
 kubectl -n launchway logs deploy/launchway-server | grep -e 'store=s3' -e 'listening'
 kubectl -n launchway get pods -l app.kubernetes.io/component=runner
 ```
 
-A runner is ready only while the servers answer it, so ready runners mean they reached the servers.
+A Station is ready only while the servers answer it, so ready Stations mean they reached the servers.
 
 ## Check it before installing
 
@@ -332,7 +332,7 @@ helm template launchway deploy/helm/launchway -n launchway -f deploy/helm/launch
 
 ## What next
 
-- [Connect a runner](connect-runner.md) in another project or network.
+- [Connect a Station](connect-runner.md) in another project or network.
 - [Back up, restore and upgrade](backup-restore-upgrade.md).
-- [Install on Kubernetes](install-kubernetes.md) for scaling, the deploy runner and upgrades.
+- [Install on Kubernetes](install-kubernetes.md) for scaling, the deploy Station and upgrades.
 - [Helm values](../reference/helm-values.md) for every setting.

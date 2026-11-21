@@ -13,6 +13,7 @@ import { onLink } from "../router";
 import { TOGGLE_KINDS, TOGGLE_TYPES, showValue, togglesApi, valueOf, type Change, type EnvView, type Toggle, type ToggleState, type ToggleType } from "../togglesApi";
 import { ProjectHead } from "./PipelineChrome";
 import "../toggles.css";
+import { terms } from "../terms";
 
 const enc = encodeURIComponent;
 
@@ -54,20 +55,20 @@ export function ProjectTogglesPage({ name }: { name: string }) {
   const stale = (data?.toggles ?? []).filter((t) => t.stale.length > 0);
   return (
     <div className="page">
-      <ProjectHead name={name} on="toggles" title={`Feature toggles of ${name}`}
+      <ProjectHead name={name} on="toggles" title={terms().say(`{Toggles} of ${name}`)}
         sentence="A value your application reads at run time, so that a feature can be turned on, off or rolled out to a share of users without a deployment."
         actions={<>{can && <Button kind="pri" icon="plus" onClick={() => setMaking(true)}>New toggle</Button>}<LinkButton href={`/projects/${enc(name)}/toggle-settings`} icon="settings">Keys and safeguards</LinkButton></>} />
       <ErrorBox error={list.error} />
       {(data?.waiting?.length ?? 0) > 0 && <Waiting project={name} changes={data!.waiting} onChanged={list.reload} />}
-      <Sheet title="Toggles">
+      <Sheet title={terms().say("{Toggles}")}>
         {!data ? <div className="loading">Loading…</div> : data.toggles.length === 0 ? (
           <EmptyState title="No toggles yet" action={can ? <Button kind="pri" onClick={() => setMaking(true)}>Make the first toggle</Button> : undefined}>
-            Make one here, then read it in your application with the Go or TypeScript SDK. Safeguards are on from the start: a reason for every change, and an approval in a protected environment.
+            {terms().say("Make one here, then read it in your application with the Go or TypeScript SDK. Safeguards are on from the start: a reason for every change, and an approval in a protected {environment}.")}
           </EmptyState>
         ) : (
           <table className="tg-table">
-            <caption className="sr-only">Toggles of {name} and what each does in each environment</caption>
-            <thead><tr><th scope="col">Toggle</th>{envs.map((e) => <th scope="col" key={e}>{e}</th>)}</tr></thead>
+            <caption className="sr-only">Toggles of {name} {terms().say("and what each does in each {environment}")}</caption>
+            <thead><tr><th scope="col">{terms().say("{Toggle}")}</th>{envs.map((e) => <th scope="col" key={e}>{e}</th>)}</tr></thead>
             <tbody>
               {data.toggles.map((t) => (
                 <tr key={t.key}>
@@ -121,7 +122,7 @@ function NewToggle({ project, onClose, onDone }: { project: string; onClose: () 
         <label>Kind <select value={kind} onChange={(e) => setKind(e.target.value)}>{TOGGLE_KINDS.map((t) => <option key={t}>{t}</option>)}</select></label>
         <label>Value while off {type === "boolean" ? "(false when left empty)" : ""} <input value={def} onChange={(e) => setDef(e.target.value)} /></label>
         <label>What it is for <input value={description} onChange={(e) => setDescription(e.target.value)} /></label>
-        <label>Owner <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="a person or team who will remove it" /></label>
+        <label>{terms().say("{Owner}")} <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="a person or team who will remove it" /></label>
         <label>Expected removal date <input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
         <label>Why <input value={reason} onChange={(e) => setReason(e.target.value)} required /></label>
         <ErrorBox error={error} />
@@ -210,7 +211,7 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
       </div>
       {tg.stale.map((n) => <p className="tg-callout" key={n.reason}><b>A note, not an action.</b> {n.detail}</p>)}
       <ErrorBox error={t.error} />
-      {tg.environments.length === 0 && <Sheet title="Environments"><p className="sub">No environment is known to this project yet.</p></Sheet>}
+      {tg.environments.length === 0 && <Sheet title={terms().say("{Environments}")}><p className="sub">{terms().say("No {environment} is known to this project yet.")}</p></Sheet>}
       {tg.environments.map((e) => (
         <Sheet key={e.environment} title={e.environment} actions={can && editing !== e.environment && !(tg.inherited && !me?.admin) ? <>{tg.kind === "kill" && tg.safe_value !== null && <Button sm kind="bad" onClick={() => setKilling(e.environment)}>Switch to the safe value now</Button>}<Button sm onClick={() => setEditing(e.environment)}>Edit</Button></> : undefined}>
           <div className="tg-env">
@@ -279,7 +280,7 @@ function Reverter({ project, change, onClose, onDone }: { project: string; chang
   };
   return (
     <Why title={`Revert change #${change.id}`} label="Why" onClose={onClose} onGo={go} busy={busy} error={error} ok="Revert">
-      <p>{sentence(change)} by {change.actor}. The environment goes back to what it was before. A revert is never held for approval, and is recorded like any other change.{also > 0 ? ` It also undid ${also} later change(s).` : ""}</p>
+      <p>{sentence(change)} by {change.actor}{terms().say(". The {environment} goes back to what it was before. A revert is never held for approval, and is recorded like any other change.")}{also > 0 ? ` It also undid ${also} later change(s).` : ""}</p>
     </Why>
   );
 }

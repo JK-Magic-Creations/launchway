@@ -6,7 +6,7 @@ version 1 of the ruleset format (`"schema": 1`); a client that sees a higher sch
 
 ## Keys
 
-Every call carries an SDK key, made in the web page or with `launchway toggles keys create`, for one environment of
+Every call carries an SDK key, made in the web page or with `launchway toggles keys create`, for one Airfield (environment) of
 one project: `Authorization: Bearer lwt_srv_...` (a **server key**, a secret) or `lwt_cli_...` (a **client key**,
 public; `X-Launchway-Client-Id` carries it as well). A missing, unknown, revoked or expired key is `401` and says nothing
 about which. A call a key's kind may not make is `403`. `429` carries `Retry-After`.
@@ -15,7 +15,7 @@ about which. A call a key's kind may not make is `403`. `429` carries `Retry-Aft
 
 | Call | Key | Answer |
 |---|---|---|
-| `GET /api/sdk/v1/ruleset` | server | The environment's ruleset (below) as JSON, with an `ETag`. `If-None-Match` with a current tag is `304`. |
+| `GET /api/sdk/v1/ruleset` | server | The Airfield's ruleset (below) as JSON, with an `ETag`. `If-None-Match` with a current tag is `304`. |
 | `GET /api/sdk/v1/stream` | server | `text/event-stream`. Event `ruleset` with `id` the ETag (no quotes) and `data` the ruleset JSON, sent on connection and whenever the ruleset changes. `: ping` comments keep it open. `retry: 3000` is sent first. A key may have 20 streams open. |
 | `POST /api/sdk/v1/evaluate` | client or server | Body `{"context": {...}, "toggles": ["a", "b"]}` (toggles optional: all). Answer `{"environment": "...", "values": {"a": {"value": ..., "reason": "..."}}}`. A client key gets only client-visible toggles; others, and unknown ones, are `reason: "not_found"`. A client key's answer has no rule ids. At most 100 attributes, 200 toggles, 64 KiB. Allowed origins are enforced when the client key names some (`403` otherwise). `OPTIONS` answers a browser's preflight. |
 | `POST /api/sdk/v1/telemetry` | server | Body `{"counts": [{"toggle", "value", "reason", "count"}]}`, at most 500: aggregated evaluations, no context. Answer `{"accepted": n}`. Once a minute is plenty (the limit is 12 per minute). |
@@ -91,4 +91,4 @@ result. The server, the Go SDK and the TypeScript SDK all run them. A new SDK is
 ## Remote evaluation, and what it sees
 
 A client key never receives rules: the server evaluates for the context it is sent and returns values. That context
-is not stored, logged or put in the audit trail. Send only the attributes your rules look at.
+is not stored, logged or put in the Logbook. Send only the attributes your rules look at.

@@ -49,45 +49,45 @@ steps:
 ## Run
 
 A **run** is one execution of a pipeline, at one commit. Runs have a number per project (#1, #2,
-...). A run is started by a push, a pull request, a schedule, a webhook, a person, or a person
-trying unsaved text (a **draft run**). Every change to a run is stored as an
-[event](../reference/events.md), so a run survives a server crash and can be **resumed** from the
+...). A Sortie (run) is started by a push, a pull request, a schedule, a webhook, a person, or a person
+trying unsaved text (a **draft run**). Every change to a Sortie is stored as an
+[event](../reference/events.md), so a Sortie survives a server crash and can be **resumed** from the
 step that failed, or **re-run** from any step.
 
 ## Step
 
-A **step** is one unit of work in a run. Most steps run a shell script in a container image.
+A **step** is one unit of work in a Sortie. Most steps run a shell script in a container image.
 Steps say which other steps they **need**; steps whose needs are met run in parallel. A step can
-pass small values (**outputs**) to the steps that need it, keep files (**artifacts**), and report
+pass small values (**outputs**) to the steps that need it, keep files (**Cargo (artifacts)**), and report
 test results, security findings and software bills of materials. Special kinds of step build
 container images (`kind: image`), wait for a person (`kind: approval`), deploy (`kind: deploy`),
-roll back (`kind: rollback`), control a canary rollout (`kind: rollout`), verify a deployment from its
+roll back (`kind: rollback`), control a Pathfinder (canary) rollout (`kind: rollout`), verify a deployment from its
 metrics and logs (`kind: verify`) or ask a configured AI model a question (`kind: ai`).
 
-## Runner
+## Station (runner) {#runner}
 
-A **runner** is the program that does the work of steps. It connects out to the server, asks for
+A **Station** is the program that does the work of steps. It connects out to the server, asks for
 work, runs each step in a container, a Kubernetes pod or directly on its machine, streams the log
-back and reports the result. The server has a built-in runner; more runners can run on other
-machines or clusters. Runners look up secrets themselves, so secret values never reach the server.
-A **deploy runner** is a runner with a `deploy:` section that does deploy work for a
-**runner pool**. A runner enrolled with a **join token** has an identity of its own and takes only
-the work of its pool's projects. See [Connect a runner](../howto/connect-runner.md) and
-[Runners on other machines and clusters](../guide/runner-identity.md).
+back and reports the result. The server has a built-in Station; more Stations can run on other
+machines or clusters. Stations look up secrets themselves, so secret values never reach the server.
+A **deploy Station** is a Station with a `deploy:` section that does deploy work for a
+**Flight line (Station (runner) pool)**. A Station enrolled with a **join token** has an identity of its own and takes only
+the work of its pool's projects. See [Connect a Station](../howto/connect-runner.md) and
+[Stations on other machines and clusters](../guide/runner-identity.md).
 
-## Environment
+## Airfield (environment) {#environment}
 
-An **environment** is a place a project deploys to, such as `staging` or `prod`, named in the
+An **Airfield** is a place a project deploys to, such as `staging` or `prod`, named in the
 server's configuration with the deploy target that serves it and the projects allowed to deploy
-there. Each service has one lock per environment, so only one deployment happens at a time, and
-the **Environments** page shows what version runs where. An environment can be **protected**, so
-the person who started a run cannot promote it there. See [Deployments](../guide/deployments.md).
+there. Each service has one lock per Airfield, so only one deployment happens at a time, and
+the **Airfields** page shows what version runs where. An Airfield can be **protected**, so
+the person who started a Sortie cannot promote it there. See [Deployments](../guide/deployments.md).
 
 ## Library
 
 A **library** is a Git repository of pipeline **templates** and the scripts they run. A pipeline
 names a library and a version (a Git tag, branch or commit) and uses a template as if it were one
-step; the run records the exact commit used. Libraries let a platform team give many projects the
+step; the Sortie records the exact commit used. Libraries let a platform team give many projects the
 same build, scan or release steps. See [Shared libraries](../guide/libraries.md).
 
 ## Policy
@@ -101,8 +101,8 @@ only warns). A **waiver** lets one rule pass for a project for a limited time, w
 
 ## Approval
 
-An **approval** is a step that pauses the run until a person approves or rejects it. Pending
-approvals are listed on the **Approvals** page. With sign-in on, the person who started a run
+An **approval** is a step that pauses the Sortie until a person approves or rejects it. Pending
+approvals are listed on the **Approvals** page. With sign-in on, the person who started a Sortie
 cannot approve it themselves, by default. See [Approvals and re-runs](../guide/approvals-and-reruns.md).
 
 ## Roles and access
@@ -113,7 +113,7 @@ each project: **viewer** (see), **operator** (start, cancel, approve, save pipel
 provider. Scripts use **API tokens** that expire. See [Sign-in and access](../guide/access.md) and
 [Roles and permissions](../reference/roles.md).
 
-## How the pieces meet in one run
+## How the pieces meet in one Sortie {#how-the-pieces-meet-in-one-run}
 
 ```mermaid
 sequenceDiagram

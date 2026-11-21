@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { RunStatus, StepStatus } from "../api";
 import { onLink } from "../router";
-import { terms } from "../terms";
+import { terms, useTerms } from "../terms";
 
 type AnyStatus = RunStatus | StepStatus;
 
@@ -41,17 +41,38 @@ export function StatusIcon({ status, size = 16 }: { status: AnyStatus; size?: nu
   }
 }
 
-export function StatusPill({ status, label }: { status: AnyStatus; label?: string }) {
+/** Which statuses have a word in the vocabulary (the others are shown as they are: Starting, Skipped). */
+const STATUS_KEY: Partial<Record<string, string>> = { queued: "queued", running: "running", succeeded: "succeeded", failed: "failed", canceled: "canceled", waiting: "waiting", rolled_back: "rolled_back" };
+
+/** A status in words: the themed word and the plain word, which are the same word in the plain set and for Failed. */
+export function statusParts(s: string): { themed: string; plain: string } {
+  const t = terms();
+  const k = STATUS_KEY[s];
+  const plain = LABEL[s as AnyStatus] ?? (k ? t.plain(k) : s);
+  if (!k) return { themed: plain, plain };
+  return { themed: t.word(k), plain: t.plain(k) };
+}
+
+/** StatusPill is THE way a run, step or rollback status is shown: an icon, the themed word and, beside it, the plain
+ * word ("Airborne · running"), so it never relies on color or on knowing the theme. In the business set, and where the
+ * two words are the same, the word appears once. The plain word is always in the text for assistive technology. */
+export function StatusPill({ status, label }: { status: AnyStatus | "rolled_back"; label?: string }) {
+  useTerms();
+  const p = label ? null : statusParts(status);
   return (
-    <span className={`pill pill-${tone(status)}`}>
-      <StatusIcon status={status} size={14} />
-      {label ?? statusLabel(status)}
+    <span className={`pill pill-${tone(status as AnyStatus)}`} data-status={status}>
+      <StatusIcon status={status as AnyStatus} size={14} />
+      {label ?? p!.themed}
+      {p && p.themed.toLowerCase() !== p.plain.toLowerCase() && <span className="pill-plain"><span aria-hidden="true">{" · "}</span><span className="visually-hidden">, </span>{p.plain.toLowerCase()}</span>}
     </span>
   );
 }
 
-// A status a newer server introduced is shown as it is called.
-export function statusLabel(s: AnyStatus): string { return LABEL[s] ?? s; }
+/** The status as one phrase, for an accessible name or a sentence. */
+export function statusLabel(s: AnyStatus | string): string {
+  const p = statusParts(s);
+  return p.themed.toLowerCase() === p.plain.toLowerCase() ? p.plain : `${p.themed} (${p.plain.toLowerCase()})`;
+}
 
 /** The status a step is drawn with: a deploy step waiting for its
  * deployment to finish is at work, so it is drawn as running. */
@@ -73,8 +94,8 @@ export function stepLabel(s: {
     if (s.kind === "verify" || s.wait_kind === "verify") return "Waiting for a person";
     if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return terms().say("Waiting for {clearance}");
     const env = s.environment;
-    if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : "Waiting for the environment's lock";
-    const what = s.kind === "rollback" ? "Rolling back" : s.kind === "rollout" ? (env ? `Acting on the rollout in ${env}` : "Acting on the rollout") : env ? `Deploying to ${env}` : "Deploying";
+    if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : terms().say("Waiting for the {environment}'s lock");
+    const what = s.kind === "rollback" ? terms().say("{Rollback:doing}") : s.kind === "rollout" ? (env ? `Acting on the rollout in ${env}` : "Acting on the rollout") : env ? terms().say(`{Deploy:doing} to ${env}`) : "Deploying";
     return phase ? `${what}: ${phase}` : what;
   }
   if (s.status === "skipped") {

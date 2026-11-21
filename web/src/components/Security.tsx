@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ArtifactView, FindingCounts, FindingStatus, Severity } from "../api";
+import { terms } from "../terms";
 
 // Pieces shared by the run's Security and Artifacts tabs, the run lists, a
 // project's security page and the component search.
@@ -195,7 +196,7 @@ export function FindingsHowTo({ compact }: { compact?: boolean }) {
     reports:
       findings: reports/security/*.sarif
       sbom: reports/sbom.cdx.json`}</pre>
-      <p className="sub">Findings are read from SARIF 2.1.0 files, which Semgrep, Trivy, gitleaks, CodeQL and most other scanners write. The SBOM is read from a CycloneDX JSON file, which Launchway also keeps as an artifact to download.</p>
+      <p className="sub">{terms().say("Findings are read from SARIF 2.1.0 files, which Semgrep, Trivy, gitleaks, CodeQL and most other scanners write. The SBOM is read from a CycloneDX JSON file, which Launchway also keeps as an {artifact} to download.")}</p>
     </div>
   );
 }

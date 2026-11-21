@@ -59,16 +59,16 @@ const has = (n: number | null) => (n ?? 0) > 0;
 
 /** The ten areas, in the order of a change's journey, then the places visited less often (docs 42, section 17). */
 export const SECTIONS: Section[] = [
-  { id: "home", label: "Home", href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
+  { id: "home", get label() { return say("{Home}"); }, href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
   { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, promise: "Repositories and projects: files, commits, branches and reviews.", tabs: [] },
-  { id: "pipelines", label: "Pipelines", href: "/pipelines", icon: "graph", group: 1, promise: "The steps that build, test and release your software, and how their runs went.", tabs: [] },
+  { id: "pipelines", label: "Pipelines", href: "/pipelines", icon: "graph", group: 1, get promise() { return say("The steps that build, test and release your software, and how their {runs} went."); }, tabs: [] },
   { id: "images", label: "Images", href: "/images", icon: "package", group: 1, promise: "Container images, Helm charts and files your pipelines build, with what is in them.", tabs: [] },
   {
-    id: "deployments", label: "Deployments", href: "/deployments", icon: "deploy", group: 2, side: "What is running, and where.",
-    promise: "What is running where: applications, environments, hosts and machine images.",
+    id: "deployments", get label() { return say("{Deploys}"); }, href: "/deployments", icon: "deploy", group: 2, side: "What is running, and where.",
+    get promise() { return say("What is running where: applications, {environments}, hosts and machine images."); },
     tabs: [
       { id: "overview", label: "Overview", href: "/deployments", icon: "deploy" },
-      { id: "environments", label: "Environments", href: "/deployments/environments", icon: "list" },
+      { id: "environments", get label() { return say("{Environments}"); }, href: "/deployments/environments", icon: "list", aka: "Environments" },
       // Appears when a deploy runner has seen an Argo CD application.
       { id: "applications", label: "Applications", href: "/deployments/applications", icon: "graph", show: ({ facts }) => has(facts.applications) },
       { id: "hosts", label: "Hosts", href: "/deployments/hosts", icon: "server", soon: true },
@@ -76,13 +76,13 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "traffic", label: "Traffic", href: "/traffic", icon: "flow", group: 2, side: "How requests flow, and how they are protected.",
+    id: "traffic", get label() { return say("{Monitoring}"); }, href: "/traffic", icon: "flow", group: 2, side: "How requests flow, and how they are protected.",
     promise: "How requests flow between services, and what protects and watches them.",
     tabs: [
       { id: "map", label: "Traffic map", href: "/traffic", icon: "flow", soon: true },
       { id: "protection", label: "Protection", href: "/traffic/protection", icon: "shield", soon: true },
       { id: "reliability", label: "Reliability", href: "/traffic/reliability", icon: "clock", soon: true },
-      { id: "toggles", label: "Toggles", href: "/traffic/toggles", icon: "bolt", soon: true },
+      { id: "toggles", get label() { return say("{Toggles}"); }, href: "/traffic/toggles", icon: "bolt", aka: "Toggles", soon: true },
     ],
   },
   {
@@ -97,10 +97,10 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "activity", label: "Activity", href: "/activity", icon: "activity", group: 3, side: "Runs and decisions.",
-    promise: "Every run, and everything waiting for a person to decide.",
+    id: "activity", label: "Activity", href: "/activity", icon: "activity", group: 3, get side() { return say("{Runs} and decisions."); },
+    get promise() { return say("Every {run}, and everything waiting for a person to decide."); },
     tabs: [
-      { id: "runs", label: "Runs", href: "/activity", icon: "activity" },
+      { id: "runs", get label() { return say("{Runs}"); }, href: "/activity", icon: "activity", aka: "Runs" },
       { id: "approvals", label: "Waiting for a decision", href: "/activity/approvals", icon: "gate" },
     ],
   },
@@ -114,13 +114,13 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "settings", label: "Settings", href: "/settings", icon: "settings", group: 3, side: "Set up once, then rarely.",
-    get promise() { return say("People, runners, rules, signal sources, configuration, the words Launchway uses and the {logbook}."); },
+    get promise() { return say(terms().say("People, {runners}, rules, signal sources, configuration, the words Launchway uses and the {logbook}.")); },
     tabs: [
       { id: "overview", label: "Overview", href: "/settings", icon: "settings" },
-      { id: "runners", label: "Runners", href: "/settings/runners", icon: "server", show: ({ me }) => me.runners },
+      { id: "runners", get label() { return say("{Runners}"); }, href: "/settings/runners", icon: "server", aka: "Runners", show: ({ me }) => me.runners },
       { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
       { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
-      { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
+      { id: "rules", get label() { return say("{Standards}"); }, href: "/settings/rules", icon: "shield", aka: "Rules", show: ({ me }) => me.runners },
       { id: "variables", label: "Variables", href: "/settings/variables", icon: "list" },
       { id: "import", label: "Import repositories", href: "/repositories/import", icon: "code", show: ({ me }) => me.admin && (me as Me & { hosting?: boolean }).hosting === true },
       { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
@@ -177,7 +177,7 @@ function page(pattern: string, section: SectionId, tab: string | undefined, titl
 
 /** Every page, most specific first. The pattern is the router's. */
 export const PAGES: PageInfo[] = [
-  page("/", "home", undefined, () => "Home", () => []),
+  page("/", "home", undefined, () => terms().say("{Home}"), () => []),
 
   page("/projects", "projects", undefined, () => "Code", () => []),
   page("/code/:page", "projects", undefined, (p) => comingTitle("/code/" + p.page), (p) => [{ label: comingTitle("/code/" + p.page) }]),
@@ -191,17 +191,17 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/caches", "pipelines", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Build caches" }]),
   page("/projects/:name/variables", "pipelines", undefined, (p) => `Variables of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Variables" }]),
   page("/setup/guide", "settings", "guide", () => "Setup guide", () => [{ label: "Setup guide" }]),
-  page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Toggles" }]),
-  page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Toggles", href: `/projects/${enc(p.name)}/toggles` }, { label: p.toggle }]),
-  page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Toggles", href: `/projects/${enc(p.name)}/toggles` }, { label: "Keys and safeguards" }]),
+  page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}") }]),
+  page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` }, { label: p.toggle }]),
+  page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` }, { label: "Keys and safeguards" }]),
   page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
   page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
   page("/repositories/:owner/:name/mirrors", "projects", undefined, (p) => `Mirrors of ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Mirrors" }]),
   page("/repositories/:owner/:name/dependencies", "projects", undefined, (p) => `Dependencies of ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Dependencies" }]),
-  page("/repositories/:owner/:name/updates", "projects", undefined, (p) => `Dependency updates of ${p.owner}/${p.name}`,
-    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Dependency updates" }]),
+  page("/repositories/:owner/:name/updates", "projects", undefined, (p) => terms().say(`{Dependency_updatess} of ${p.owner}/${p.name}`),
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: terms().say("{Dependency_updatess}") }]),
   page("/repositories/:owner/:name/history", "projects", undefined, (p) => `Imported history of ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Imported history" }]),
   page("/repositories/:owner/:name/pulls", "projects", undefined, (p) => `Pull requests of ${p.owner}/${p.name}`,
@@ -216,10 +216,10 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}/code` }, { label: p.sha.slice(0, 8) }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
-  page("/deployments", "deployments", "overview", () => "Deployments", () => []),
-  page("/deployments/environments", "deployments", "environments", () => "Environments", () => [{ label: "Environments" }]),
-  page("/deployments/environments/:name", "deployments", "environments", (p) => `Environment ${p.name}`,
-    (p) => [{ label: "Environments", href: "/deployments/environments" }, { label: p.name }]),
+  page("/deployments", "deployments", "overview", () => say("{Deploys}"), () => []),
+  page("/deployments/environments", "deployments", "environments", () => terms().say("{Environments}"), () => [{ label: terms().say("{Environments}") }]),
+  page("/deployments/environments/:name", "deployments", "environments", (p) => terms().say(`{Environment} ${p.name}`),
+    (p) => [{ label: terms().say("{Environments}"), href: "/deployments/environments" }, { label: p.name }]),
   page("/deployments/hosts", "deployments", "hosts", () => "Hosts", () => [{ label: "Hosts" }]),
   page("/deployments/machine-images", "deployments", "machine-images", () => "Machine images", () => [{ label: "Machine images" }]),
   page("/deployments/applications", "deployments", "applications", () => "Applications", () => [{ label: "Applications" }]),
@@ -230,14 +230,14 @@ export const PAGES: PageInfo[] = [
   page("/owners/:owner", "projects", undefined, (p) => `Owner ${p.owner}`,
     (p) => [{ label: "Repositories", href: "/repositories" }, { label: p.owner }]),
 
-  page("/activity", "activity", "runs", () => "Runs", () => [{ label: "Runs" }]),
+  page("/activity", "activity", "runs", () => terms().say("{Runs}"), () => [{ label: terms().say("{Runs}") }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
-  page("/runs/:id", "activity", "runs", (p) => `Run ${p.id}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}` }]),
+  page("/runs/:id", "activity", "runs", (p) => terms().say(`{Run} ${p.id}`), (p) => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: terms().say(`{Run} ${p.id.slice(0, 8)}`) }]),
 
   page("/images", "images", undefined, () => "Images", () => []),
   page("/images/components", "images", undefined, () => "Components", () => [{ label: "Components" }]),
-  page("/images/registry", "images", undefined, () => "Registry", () => [{ label: "Registry" }]),
-  page("/images/registry/:project", "images", undefined, (p) => `Registry of ${p.project}`, (p) => [{ label: "Registry", href: "/images/registry" }, { label: p.project }]),
+  page("/images/registry", "images", undefined, () => terms().say("{Registry}"), () => [{ label: terms().say("{Registry}") }]),
+  page("/images/registry/:project", "images", undefined, (p) => terms().say(`{Registry} of ${p.project}`), (p) => [{ label: terms().say("{Registry}"), href: "/images/registry" }, { label: p.project }]),
   page("/images/digest/:digest", "images", undefined, (p) => `Image ${p.digest.slice(0, 19)}`, (p) => [{ label: "Image " + p.digest.slice(0, 19) }]),
   page("/images/:page", "images", undefined, (p) => comingTitle("/images/" + p.page), (p) => [{ label: comingTitle("/images/" + p.page) }]),
 
@@ -253,14 +253,14 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: "Templates", href: "/library/templates" }, { label: p.library }, { label: p.name }]),
 
   // The Learn area is not an eleventh area: it is help, reached from the top bar, the Guide and the pages' own links.
-  page("/learn", "home", undefined, () => "Learn", () => []),
-  page("/learn/:a", "home", undefined, () => "Learn", () => []),
-  page("/learn/:a/:b", "home", undefined, () => "Learn", () => []),
+  page("/learn", "home", undefined, () => terms().say("{Learn}"), () => []),
+  page("/learn/:a", "home", undefined, () => terms().say("{Learn}"), () => []),
+  page("/learn/:a/:b", "home", undefined, () => terms().say("{Learn}"), () => []),
 
   page("/kit", "settings", undefined, () => "Design kit", () => [{ label: "Design kit" }]),
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
-  page("/settings/runners", "settings", "runners", () => "Runners", () => [{ label: "Runners" }]),
+  page("/settings/runners", "settings", "runners", () => terms().say("{Runners}"), () => [{ label: terms().say("{Runners}") }]),
   page("/settings/access", "settings", "access", () => "People and access", () => [{ label: "People and access" }]),
   page("/settings/access/keys", "settings", "access", () => "Keys for scripts",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Keys for scripts" }]),

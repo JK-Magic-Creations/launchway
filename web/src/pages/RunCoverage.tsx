@@ -3,6 +3,7 @@ import { api, type CoverageFiles, type CoverageSort, type CoverageStep, type Cov
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { bytes } from "../components/Security";
 import { CoverageHowTo, Delta, MEASURES, Meter, MiniBar, level, measureLabel, pct, ratio, type Measure } from "../components/Coverage";
+import { terms } from "../terms";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 const PAGE = 50;
@@ -50,7 +51,7 @@ function CoverageView({ run, cov, totals, version }: { run: RunDetail; cov: RunC
     <div className="cov">
       <section className="card csum" aria-label="Coverage totals">
         <div className="csum-head">
-          <h2 className="h-sm">Coverage of this run</h2>
+          <h2 className="h-sm">{terms().say("Coverage of this {run}")}</h2>
           <span className="faint small">
             {cov.steps.reduce((n, s) => n + s.source_files, 0).toLocaleString()} source files from {cov.steps.length} step{cov.steps.length === 1 ? "" : "s"}
           </span>
@@ -225,7 +226,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
         </div>
         <ErrorBox error={error} />
         {!data ? <div className="loading">Loading…</div> : data.files.length === 0 ? (
-          <div className="empty empty-sm">{query ? <>No files match <strong>{query}</strong>.</> : "No per-file coverage was kept for this run."}</div>
+          <div className="empty empty-sm">{query ? <>No files match <strong>{query}</strong>.</> : terms().say("No per-file coverage was kept for this {run}.")}</div>
         ) : (
           <>
             <div className="table-scroll">
@@ -265,7 +266,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
 }
 
 function Change({ v }: { v?: number | null }) {
-  if (v === undefined || v === null) return <span className="faint" title="Not in the previous run">new</span>;
+  if (v === undefined || v === null) return <span className="faint" title={terms().say("Not in the previous {run}")}>new</span>;
   const d = Math.round(v * 10) / 10;
   if (d === 0) return <span className="faint">±0</span>;
   return (

@@ -1,6 +1,11 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+
+	"github.com/jk-magic-creations/launchway/internal/settings"
+)
 
 // errorCodes and errorNext give every error answer the same three parts (docs/development/interface-quality.md):
 // error, a plain sentence of what went wrong; code, a stable word a program can branch on; and next, what to do
@@ -19,6 +24,16 @@ var errorCodes = map[int][2]string{
 	http.StatusInternalServerError:   {"internal", "Try again. If it keeps failing, give an administrator the time and the request, and ask them to look at the server log."},
 	http.StatusBadGateway:            {"upstream", "The system behind Launchway did not answer; try again shortly."},
 	http.StatusServiceUnavailable:    {"unavailable", "Try again shortly; the Retry-After header, when present, says when."},
+}
+
+// sayWords fills the installation's words into the two human sentences of an error answer: a handler writes
+// {run}, {runner} or {rollback:do} and the answer says Sortie, Station or "return to base" (or the plain words
+// of the business set). Fields, codes and enum values never change with a set.
+func sayWords(sentence string) string {
+	if !strings.Contains(sentence, "{") {
+		return sentence
+	}
+	return settings.CurrentWords().Say(sentence)
 }
 
 func withErrorShape(status int, v any) any {
@@ -44,6 +59,7 @@ func withErrorShape(status int, v any) any {
 		if out["next"] == "" {
 			out["next"] = def[1]
 		}
+		out["error"], out["next"] = sayWords(out["error"]), sayWords(out["next"])
 		return out
 	case map[string]any:
 		if _, has := b["error"]; !has {
@@ -58,6 +74,11 @@ func withErrorShape(status int, v any) any {
 		}
 		if _, has := out["next"]; !has {
 			out["next"] = def[1]
+		}
+		for _, k := range []string{"error", "next"} {
+			if str, ok := out[k].(string); ok {
+				out[k] = sayWords(str)
+			}
 		}
 		return out
 	}

@@ -1,4 +1,4 @@
-# Test reports
+# Debriefs (test reports) {#test-reports}
 
 How Launchway reads test result files and coverage, and what the Tests tab and the project Tests page show.
 
@@ -38,7 +38,7 @@ steps:
 ## Formats
 
 The format of each file is worked out from its content, never from its name. A file that is
-none of these is shown as such, with the reason ("reports/x.json: not a test report: ..."); it
+none of these is shown as such, with the reason ("reports/x.json: not a Debrief: ..."); it
 never fails the step. Every format was checked against output of the real tool, run in a
 container; those files are the test data in `internal/testreport/testdata/real` and
 `internal/coverage/testdata/real`.
@@ -128,7 +128,7 @@ dotnet:
 
 ## What you see
 
-- **The Tests tab** of a run shows the totals, a pass rate and a bar, then every result, failures
+- **The Tests tab** of a Sortie (run) shows the totals, a pass rate and a bar, then every result, failures
   first. Results can be filtered by status, tag, suite and browser (or Playwright project),
   searched, sorted by time, and grouped by step, suite or browser. A strip compares the run with
   the previous run of the same branch: **new failures** (they passed then), **fixed** and **still
@@ -148,14 +148,14 @@ dotnet:
 ## Attachments
 
 `reports.tests.attachments` names one directory. When the step ends, it is kept as the step's
-artifact `test-attachments` (whole or not at all, within `reports.max_attachment_files` and
+Cargo (artifact) `test-attachments` (whole or not at all, within `reports.max_attachment_files` and
 `max_attachment_mib`), and a report's attachment is shown only if it is one of those files: a path
 a report names, relative to the report or the workspace, or absolute inside the workspace, that
 leads outside the directory (`..`, `/etc/passwd`) is listed with the reason and never read.
 Symbolic links are never followed when the directory is kept, on any executor. Attachments that
 reports carry inside them (Cucumber and Karate embeddings, Playwright bodies) are kept by the
-server as the artifact `test-embedded`, at most 5 MiB each and 20 MiB per report. Both count
-toward the run's and project's artifact limits and expire like other artifacts.
+server as the Cargo `test-embedded`, at most 5 MiB each and 20 MiB per report. Both count
+toward the Sortie's and project's Cargo limits and expire like other Cargo.
 
 Attachments are served by what their content is, not what the report says it is: PNG, JPEG, GIF
 and WebP images, WebM and MP4 videos and plain text are shown inline; everything else (HTML, SVG,
@@ -181,11 +181,11 @@ reports:
 - **fail_under** fails a step that otherwise succeeded when its coverage is lower, saying so
   ("Coverage too low (fail_under): line coverage is 71.4% (25 of 35), under the 80% this step
   requires"); a step whose reports cannot be read fails it too. Such a failure is not retried.
-- **The Coverage tab** of a run shows lines (or statements), branches and functions, how they
+- **The Coverage tab** of a Sortie shows lines (or statements), branches and functions, how they
   changed since the previous run of the branch and against the project's default branch, each
   step's coverage and threshold, and a table of packages and files with their change.
   A project's Tests page shows the trend.
-- Runners collect coverage like test reports (`runner.reports.*` limits). A runner older than this
+- Stations (runners) collect coverage like Debriefs (`runner.reports.*` limits). A Station older than this
   feature is not given a step that declares coverage.
 
 ## HTML reports
@@ -198,8 +198,8 @@ reports:
 ```
 
 A step publishes a directory a tool generated: Playwright's or Karate's HTML report, an Allure
-site, coverage HTML. It is kept as the artifact `report-<name>` (within `reports.max_html_files`
-and `max_html_mib`) and shown on the run's **Reports** tab.
+site, coverage HTML. It is kept as the Cargo `report-<name>` (within `reports.max_html_files`
+and `max_html_mib`) and shown on the Sortie's **Reports** tab.
 
 **The threat model.** A report's HTML and script come from whoever can push code, pull-request
 authors included. Launchway must not let that script act as the person looking at it: read their
@@ -207,7 +207,7 @@ runs, start runs, approve deployments, create tokens. So:
 
 - A report is served under `/hosted/<link>/`, where the link is signed by the servers, names one
   report and works for four hours. Those pages take no session: the link is the permission, and it
-  is given only to people who may see the run. Anyone they pass it on to can read that report until
+  is given only to people who may see the Sortie. Anyone they pass it on to can read that report until
   it expires, and nothing else.
 - Every file is served with a Content-Security-Policy `sandbox` without `allow-same-origin`, so the
   page runs in an opaque origin: it cannot read Launchway's cookies or storage, and the browser
@@ -238,7 +238,7 @@ the Reports tab: every attempt was blocked.
 
 ## API and command line
 
-Anyone who may see the run or project:
+Anyone who may see the Sortie or project:
 
 - `GET /api/v1/runs/{id}/tests` (summary, step by step),
   `GET /api/v1/runs/{id}/tests/cases?status=failed|passed|skipped|flaky&q=&step=&tag=&suite=&variant=&sort=failures|slowest|name&limit=&offset=`
@@ -253,7 +253,7 @@ Anyone who may see the run or project:
 - `launchway runs tests <run> [--all | --status S] [--tag T]`, `launchway runs coverage <run> [--files]`
   and `launchway runs reports <run>`, each with `--json`.
 
-Run summaries carry `tests` totals.
+Debriefs carry `tests` totals.
 
 ## What is kept, and limits
 
@@ -263,29 +263,29 @@ same transaction: messages cut to 2 KiB, traces to 8 KiB, captured output (only 
 failed) to its last 4 KiB, and steps, attachments and properties to at most 64 KiB a result and
 16 MiB an attempt (failing results first; a passing result's steps are the first thing left out).
 A step keeps at most 200 steps a result, 20 attachments, 20 tags and 20 properties. Launchway keeps
-runs forever (there is no run retention yet), so individual results are bounded per project: when
+runs forever (there is no Sortie retention yet), so individual results are bounded per project: when
 a project has more than `max_cases_per_project`, the oldest runs' results are removed first; their
-totals stay, and the run says so. Coverage files are bounded the same way.
+totals stay, and the Sortie says so. Coverage files are bounded the same way.
 
 | Setting | Where | Default | Meaning |
 |---|---|---|---|
-| `tests.max_upload_mib` | server | 24 | MiB of report files accepted per step attempt; runners are told and send no more |
-| `tests.max_cases_per_run` | server | 50000 | individual results one run keeps; beyond it, only the totals |
+| `tests.max_upload_mib` | server | 24 | MiB of report files accepted per step attempt; Stations are told and send no more |
+| `tests.max_cases_per_run` | server | 50000 | individual results one Sortie keeps; beyond it, only the totals |
 | `tests.max_cases_per_project` | server | 1000000 | individual results a project keeps; the oldest runs' go first |
 | `reports.max_attachment_files` | server | 2000 | files a step's attachments directory may hold |
 | `reports.max_attachment_mib` | server | 512 | MiB a step's attachments directory may hold |
 | `reports.max_html_files` | server | 5000 | files one HTML report may hold |
 | `reports.max_html_mib` | server | 256 | MiB one HTML report may hold |
 | `reports.max_coverage_upload_mib` | server | 24 | MiB of coverage reports accepted per step attempt |
-| `reports.max_coverage_files_per_run` | server | 20000 | source files' coverage one run keeps; beyond it, only the totals |
+| `reports.max_coverage_files_per_run` | server | 20000 | source files' coverage one Sortie keeps; beyond it, only the totals |
 | `reports.max_coverage_files_per_project` | server | 2000000 | source files' coverage a project keeps; the oldest runs' go first |
 | `reports.origin` | server | unset | a separate origin that alone serves HTML reports |
-| `runner.reports.max_files` | runner | 100 | files collected per step attempt (the first, in name order), for tests and for coverage |
-| `runner.reports.max_file_mib` | runner | 10 | MiB read of one file; a larger one is cut, and what was read is still used |
-| `runner.reports.max_total_mib` | runner | 20 | MiB read of all of an attempt's files |
+| `runner.reports.max_files` | Station | 100 | files collected per step attempt (the first, in name order), for tests and for coverage |
+| `runner.reports.max_file_mib` | Station | 10 | MiB read of one file; a larger one is cut, and what was read is still used |
+| `runner.reports.max_total_mib` | Station | 20 | MiB read of all of an attempt's files |
 
 With the Helm chart these are `config.tests.*`, `config.reports.*` (camel case, such as
 `maxHtmlMiB`) and `runner.reports.*` in the values, unset by default. A server older than the one
-that brought test reports cannot read a pipeline with `reports:`, and one older than schema 18
+that brought Debriefs cannot read a pipeline with `reports:`, and one older than schema 18
 cannot read `reports.tests.attachments`, `reports.coverage` or `reports.html`; use the keys once
 every server is upgraded (see [docs/development/migrations.md](../development/migrations.md)).

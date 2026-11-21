@@ -1,13 +1,13 @@
 # Policy gates and waivers
 
 Set a rule that every pipeline of a project must follow, watch it in report mode, enforce it, and
-let one run through with a waiver that has a reason and an expiry. For platform engineers and
+let one Sortie (run) through with a waiver that has a reason and an expiry. For platform engineers and
 security reviewers. Takes about 15 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, using
 > the `hello` project from the earlier tutorials (it uses a library template). **Not verified
 > here:** the gates before deploying and before an image push; they are judged the same way and
-> are shown in [Deploy with approval and rollback](deploy-with-approval.md).
+> are shown in [Deploy with approval and Return to base (rollback)](deploy-with-approval.md).
 
 ## What you need
 
@@ -49,7 +49,7 @@ policy:
 
 Restart the server. A mistake in a policy stops the server from starting, with the file and line.
 
-Start a run of `hello` (**Start a run**, or the `curl` command from the
+Start a run of `hello` (**Start a Sortie**, or the `curl` command from the
 [first tutorial](first-pipeline.md#7-start-a-run-by-hand)). It runs as before, but its **Policy**
 tab shows a warning, rule by rule:
 
@@ -66,7 +66,7 @@ stop, then enforce them.
 
 ## 2 Enforce it
 
-Change `mode: report` to `mode: enforce` and restart the server. Start another run. It fails at
+Change `mode: report` to `mode: enforce` and restart the server. Start another Sortie. It fails at
 once, and every step says why:
 
 ```text
@@ -75,15 +75,15 @@ step_images: container test-py: python:3.12-slim (not pinned by digest); step li
 (not pinned by digest); ...
 ```
 
-The decision is a `policy.evaluated` event in the run's log, with the policy as judged, the facts
+The decision is a `policy.evaluated` event in the Sortie's log, with the policy as judged, the facts
 and the time, so it can be checked later.
 
-## 3 Waive the rule for this run
+## 3 Waive the rule for this Sortie {#3-waive-the-rule-for-this-run}
 
 The right fix is to pin the images (`alpine:3.22@sha256:...`). When that has to wait, an admin of
 the project can grant a **waiver**: one rule of one policy, for a project, optionally only for one
-run or environment, with a reason and an expiry. In the web UI press **Waive…** beside the rule on the run's Policy
-tab, or the API (replace the run id):
+run or Airfield (environment), with a reason and an expiry. In the web UI press **Waive…** beside the rule on the Sortie's Policy
+tab, or the API (replace the Sortie id):
 
 ```sh
 curl -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
@@ -102,8 +102,8 @@ curl -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 }
 ```
 
-A rule is judged again when a run is resumed. Press **Resume** on the run (or
-`POST /api/v1/runs/<run-id>/resume` with the same header). The run passes the gate and succeeds,
+A rule is judged again when a run is resumed. Press **Resume** on the Sortie (or
+`POST /api/v1/runs/<run-id>/resume` with the same header). The Sortie passes the gate and succeeds,
 and the Policy tab shows both decisions: the block, then the pass with `step_images` **waived**
 and the waiver's reason. Waivers are recorded in the Logbook (`policy.waive`) and expire on
 their own; at most `policy.waivers.max_days` (default 30) ahead.
@@ -115,7 +115,7 @@ their own; at most `policy.waivers.max_days` (default 30) ahead.
 ## 4 Gates before deploying
 
 The rules that matter most for production are judged just before a deploy step takes its
-environment's lock: `tests`, `findings`, `sbom`, `deployed_images`, `approvals` and `refs`. For
+Airfield's lock: `tests`, `findings`, `sbom`, `deployed_images`, `approvals` and `refs`. For
 example:
 
 ```yaml
@@ -130,13 +130,13 @@ example:
         refs: { branches: [main] }
 ```
 
-See [Deploy with approval and rollback](deploy-with-approval.md) for deploy steps, and the
+See [Deploy with approval and Return to base](deploy-with-approval.md) for deploy steps, and the
 [policy rules reference](../reference/policy-rules.md) for every rule.
 
 ## What you learned
 
 - Policies are typed rules in the server's configuration, judged at fixed points, never in the pipeline.
-- Report mode shows what a policy would do; enforce mode stops the run or step, saying why.
+- Report mode shows what a policy would do; enforce mode stops the Sortie or step, saying why.
 - A waiver lets one rule pass, with a reason and an expiry, recorded and shown with the verdict.
 
 ## What next

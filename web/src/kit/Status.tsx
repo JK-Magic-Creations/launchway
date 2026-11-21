@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { RunStatus, StepStatus } from "../api";
 import { Icon, type IconName } from "./Icon";
+import { statusLabel } from "../components/ui";
 
 /** The states the design knows. A state is a shape, a colour and a word, never colour alone. */
 export type State = "ok" | "bad" | "warn" | "wait" | "run" | "idle" | "skip";
@@ -14,7 +15,7 @@ const GLYPH: Partial<Record<State, IconName>> = { ok: "check", bad: "x", warn: "
 export function Status({ state, size, label }: { state: State; size?: "l"; label?: string }) {
   const g = GLYPH[state];
   return (
-    <span className={["st", state, size].filter(Boolean).join(" ")} role="img" aria-label={label ?? WORD[state]}>
+    <span className={["st", state, size].filter(Boolean).join(" ")} role="img" aria-label={label ?? (state === "run" ? statusLabel("running") : WORD[state])}>
       {g && <Icon name={g} />}
     </span>
   );

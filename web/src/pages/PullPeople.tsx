@@ -3,6 +3,7 @@ import { launchApi, type LaunchLineView } from "../api/launch";
 import { Link } from "../components/ui";
 import { LaunchLine, toStations } from "../kit/LaunchLine";
 import { Chip } from "../kit/Status";
+import { terms } from "../terms";
 
 /** The launch line of the latest run of a pull request, the same line the Home and Activity pages draw (the kit's
  * LaunchLine, through its public props), with the run's number, its state in words and a link to it. It sits under
@@ -23,10 +24,10 @@ export function PullRunLine({ runId, head }: { runId: string | undefined; head: 
     return () => { alive = false; window.clearInterval(t); };
   }, [runId, head, finished]);
   if (!runId) return <p className="faint small pr-runline">No run has started for this pull request yet.</p>;
-  if (!line) return failed ? <p className="faint small pr-runline">The latest run, <Link href={`/runs/${runId}`}>{runId}</Link>, cannot be shown here.</p> : null;
+  if (!line) return failed ? <p className="faint small pr-runline">{terms().say("The latest {run},")} <Link href={`/runs/${runId}`}>{runId}</Link>, cannot be shown here.</p> : null;
   return (
-    <section className="pr-runline" aria-label="Latest run">
-      <div className="pr-runline-head"><span>Latest run: <Link href={`/runs/${line.run}`}>#{line.number} of {line.project}</Link> <span className="faint">{line.now}</span></span></div>
+    <section className="pr-runline" aria-label={terms().say("Latest {run}")}>
+      <div className="pr-runline-head"><span>{terms().say("Latest {run}:")} <Link href={`/runs/${line.run}`}>#{line.number} of {line.project}</Link> <span className="faint">{line.now}</span></span></div>
       <LaunchLine stations={toStations(line.stations)} label={`The pipeline's launch line for run #${line.number}`} />
     </section>
   );

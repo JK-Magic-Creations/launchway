@@ -32,8 +32,8 @@ export function DecisionsPage({ approvals }: { approvals: Approvals }) {
       <ErrorBox error={approvals.error} />
       {list === null && !approvals.error && <div className="loading">Loading…</div>}
       {list && list.length === 0 && (
-        <Sheet><EmptyState title="All clear" action={<LinkButton href="/activity" icon="arrow">See the runs</LinkButton>}>
-          A run waits here when it reaches a step that needs {t.lower("clearance")}. Nothing is waiting now.
+        <Sheet><EmptyState title="All clear" action={<LinkButton href="/activity" icon="arrow">{terms().say("See the {runs}")}</LinkButton>}>
+          {terms().say("A {run} waits here when it reaches a step that needs")} {t.lower("clearance")}. Nothing is waiting now.
         </EmptyState></Sheet>
       )}
       {list && list.length > 0 && (
@@ -60,8 +60,8 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
   const before = detail ? succeededBefore(detail, step) : [];
   const left = a.deadline - now;
   const evidence = [
-    { key: "tests", label: "Tests", value: tests ? `${tests.passed} of ${tests.total}` : "none", note: tests ? (tests.failed > 0 ? `${tests.failed} failed` : tests.flaky > 0 ? `all passed, ${tests.flaky} flaky` : "all passed") : "no test report in this run" },
-    { key: "scan", label: "Findings", value: finds ? finds.total : "none", note: finds ? (serious > 0 ? `${serious} critical or high` : finds.total > 0 ? "none critical or high" : "nothing found") : "no scan in this run" },
+    { key: "tests", label: "Tests", value: tests ? `${tests.passed} of ${tests.total}` : "none", note: tests ? (tests.failed > 0 ? `${tests.failed} failed` : tests.flaky > 0 ? `all passed, ${tests.flaky} flaky` : "all passed") : terms().say("no {debrief} in this {run}") },
+    { key: "scan", label: "Findings", value: finds ? finds.total : "none", note: finds ? (serious > 0 ? `${serious} critical or high` : finds.total > 0 ? "none critical or high" : "nothing found") : terms().say("no scan in this {run}") },
     { key: "who", label: "Started by", value: a.started_by || "unknown", note: detail ? (detail.event === "push" ? "a push" : detail.event) : undefined },
     { key: "left", label: "Expires", value: left > 0 ? duration(left) : "now", note: `asked ${ago(a.waiting_since, now)}` },
   ];
@@ -69,8 +69,8 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
   const may = whoMayDecide(a as unknown as ApprovalProgress);
   if (several || may) evidence.push({ key: "several", label: "Decided by", value: several ? several.split(";")[0] : "one person", note: may ? `may decide: ${may}` : undefined });
   return (
-    <Decision icon="gate" tone="warn" title={a.message || `Run #${a.run_number} of ${a.project} needs ${t.lower("clearance")}`} evidence={evidence}
-      children={`Run #${a.run_number} of ${a.project} stopped at ${a.step_id} and waits for a person.`}
+    <Decision icon="gate" tone="warn" title={a.message || terms().say(`{Run} #${a.run_number} of ${a.project} needs ${t.lower("clearance")}`)} evidence={evidence}
+      children={terms().say(`{Run} #${a.run_number} of ${a.project} stopped at ${a.step_id} and waits for a person.`)}
       actions={
         <div className="decide-form">
           <div className="then">
@@ -78,14 +78,14 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
             <div><b>If you say {t.label("no_go")}</b>{next.reject}</div>
           </div>
           <p className="small faint" style={{ margin: 0 }}>
-            <EntityLink kind="project" name={a.project} /> · <EntityLink kind="run" name={`run #${a.run_number}`} id={a.run_id} />
+            <EntityLink kind="project" name={a.project} /> · <EntityLink kind="run" name={terms().say(`{run} #${a.run_number}`)} id={a.run_id} />
             {refLabel(a) ? ` · ${refLabel(a)}` : ""}{a.short_sha ? ` · ${a.short_sha}` : ""}{a.commit_subject ? ` · ${a.commit_subject}` : ""}
             {before.length > 0 ? ` · passed so far: ${before.join(", ")}` : ""}
           </p>
           <div className="row wrap">
             {diff ? <a className="btn btn-sm" href={diff} target="_blank" rel="noreferrer noopener"><Icon name="code" size="s" />See the change in the repository</a>
               : <span className="faint small">{project ? "This repository has no web address, so there is no link to the change." : ""}</span>}
-            <a className="btn btn-sm" href={`/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`} onClick={onLink}>Open the run</a>
+            <a className="btn btn-sm" href={`/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`} onClick={onLink}>{terms().say("Open the {run}")}</a>
             {left > 0 && <span className="faint small" title={clock(a.deadline)}>expires {clock(a.deadline)}</span>}
           </div>
           <Decide a={a} refusal={refusal} />
@@ -104,7 +104,7 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
     setBusy(true); setError(null);
     try {
       await (approve ? api.approve : api.reject)(a.run_id, a.step_id, reason.trim());
-      setDone(approve ? `${t.label("go")}. The run goes on.` : `${t.label("no_go")}. The run stopped here.`);
+      setDone(approve ? terms().say(`${t.label("go")}. The {run} goes on.`) : terms().say(`${t.label("no_go")}. The {run} stopped here.`));
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   if (done) return <div className="note" role="status"><Icon name="check" />{done}</div>;
@@ -124,8 +124,8 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
           <textarea id={`why-${a.run_id}-${a.step_id}`} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} placeholder="For example: tests pass and the release notes are ready." />
           <ErrorBox error={error} />
           <div className="acts decide">
-            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? `You cannot say ${t.label("go")} to this: see the note above` : `${t.label("go")}: ${t.lower("clearance")} is given and the run goes on`}>{t.label("go")}</Button>
-            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? `Say why, then ${t.lower("no_go")}` : `${t.label("no_go")}: ${t.lower("clearance")} is refused and the run stops here`}>{t.label("no_go")}</Button>
+            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? `You cannot say ${t.label("go")} to this: see the note above` : terms().say(`${t.label("go")}: ${t.lower("clearance")} is given and the {run} goes on`)}>{t.label("go")}</Button>
+            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? `Say why, then ${t.lower("no_go")}` : terms().say(`${t.label("no_go")}: ${t.lower("clearance")} is refused and the {run} stops here`)}>{t.label("no_go")}</Button>
           </div>
         </>
       )}

@@ -12,8 +12,8 @@ See [What Launchway is](../start/overview.md).
 ## Why it matters
 
 - **Fewer failed releases.** Every change goes through the same tests and checks; a failed
-  deployment is rolled back automatically.
-- **Evidence.** Every run records what was built, how it was checked and who approved it.
+  deployment is returned to base automatically.
+- **Evidence.** Every Sortie (run) records what was built, how it was checked and who approved it.
   Policies make the important checks mandatory, with recorded, expiring exceptions.
 - **Control.** Code, secrets and records stay on infrastructure you choose. Secret values never
   reach the Launchway server.

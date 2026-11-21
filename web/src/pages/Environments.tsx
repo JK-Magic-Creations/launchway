@@ -7,6 +7,7 @@ import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../components/Deployment";
 import { VerifyPill } from "../components/Verification";
 import { PageHead } from "../kit/layout";
+import { terms } from "../terms";
 
 // EnvironmentsPage shows, for every service of every project, what each
 // environment runs, what is being deployed there now, and who holds or waits
@@ -34,9 +35,9 @@ export function EnvironmentsPage() {
 
   return (
     <div className="page page-wide">
-      <PageHead eyebrow="Deployments" title="Environments"
-        sentence="What each environment runs, by service, and what is being deployed there now. Checked every 5 seconds."
-        actions={envs && envs.length > 0 ? <WizardButton wizard="add-environment" label="Add an environment" /> : undefined} />
+      <PageHead eyebrow={terms().say("{Deploys}")} title={terms().say("{Environments}")}
+        sentence={terms().say("What each {environment} runs, by service, and what is being {deploy:did} there now. Checked every 5 seconds.")}
+        actions={envs && envs.length > 0 ? <WizardButton wizard="add-environment" label={terms().say("Add an {environment}")} /> : undefined} />
       <ErrorBox error={error} />
       {envs === null && !error && <div className="loading">Loading…</div>}
       {envs && envs.length === 0 && <NoEnvironments />}
@@ -45,13 +46,13 @@ export function EnvironmentsPage() {
           {unobserved.length > 0 && (
             <div className="callout callout-draft">
               {unobserved.map((e) => (
-                <div key={e.name}><strong>{e.name}</strong>: no deploy runner observes target <Mono>{e.target}</Mono>, so deployments there cannot finish and nothing shown for it is current.</div>
+                <div key={e.name}><strong>{e.name}</strong>{terms().say(": no {deploy:do} {runner} observes target")} <Mono>{e.target}</Mono>, so deployments there cannot finish and nothing shown for it is current.</div>
               ))}
             </div>
           )}
           {rows.length === 0 ? (
-            <Empty title="Nothing has been deployed yet">
-              Environments are set up: {envs.map((e) => e.name).join(", ")}. A run deploys to one when it reaches a step with <Mono>kind: deploy</Mono>.
+            <Empty title={terms().say("Nothing has been {deploy:did} yet")}>
+              {terms().say("{Environments} are set up:")} {envs.map((e) => e.name).join(", ")}{terms().say(". A {run} {deploy:does} to one when it reaches a step with")} <Mono>kind: deploy</Mono>.
               <Example />
             </Empty>
           ) : (
@@ -84,8 +85,8 @@ export function EnvironmentsPage() {
                           <td key={e.name} data-env={e.name}>
                             <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <span className="faint">· {e.target}</span></span>
                             {u ? <UnitCell env={e} unit={u} now={now} tick={tick} />
-                              : allows(e, r.project) ? <span className="faint">Nothing deployed here yet.</span>
-                              : vs.length === 0 ? <span className="faint">{r.project} may not deploy here.</span> : null}
+                              : allows(e, r.project) ? <span className="faint">{terms().say("Nothing {deploy:did} here yet.")}</span>
+                              : vs.length === 0 ? <span className="faint">{r.project} {terms().say("may not {deploy:do} here.")}</span> : null}
                             {vs.length > 0 && <Verifications list={vs} now={now} />}
                           </td>
                         );
@@ -121,7 +122,7 @@ function LiveLine({ live, now }: { live: LiveView; now: number }) {
   return (
     <div className="unit-live">
       {live.snapshot?.app && <div className="unit-line"><AppChips app={live.snapshot.app} muted={old} /></div>}
-      {live.snapshot?.error && <div className="unit-line small dep-msg-bad">The runner cannot see the application: {live.snapshot.error}</div>}
+      {live.snapshot?.error && <div className="unit-line small dep-msg-bad">{terms().say("The {runner} cannot see the application:")} {live.snapshot.error}</div>}
       <div className={"unit-line small " + (old ? "dfresh-warn" : "faint")} data-case={old ? "live-stale" : "live"}>
         observed {ago(live.observed_at, now)}{live.observed_by ? ` by ${live.observed_by}` : ""}{old ? ": what is shown may be out of date" : ""}
       </div>
@@ -144,7 +145,7 @@ function observing(e: EnvironmentView, now: number): boolean {
 function ObserverLine({ env, now }: { env: EnvironmentView; now: number }) {
   return observing(env, now)
     ? <div className="envgrid-observer"><span className="online online-on" />observed by {env.observer}</div>
-    : <div className="envgrid-observer envgrid-observer-none"><span className="online" />no deploy runner observes target {env.target}</div>;
+    : <div className="envgrid-observer envgrid-observer-none"><span className="online" />{terms().say("no {deploy:do} {runner} observes target")} {env.target}</div>;
 }
 
 // allows reports whether a project may deploy to an environment, matching
@@ -175,10 +176,10 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
       {cur ? (
         <div className="unit-current">
           <span className="unit-version mono">{cur.version}</span>
-          <span className="unit-since" title={clock(cur.since)}>since {ago(cur.since, now)}, by <Link href={`/runs/${cur.run}`}>run #{cur.run_number}</Link></span>
+          <span className="unit-since" title={clock(cur.since)}>since {ago(cur.since, now)}, by <Link href={`/runs/${cur.run}`}>{terms().say("{run} #")}{cur.run_number}</Link></span>
         </div>
       ) : (
-        <div className="unit-current"><span className="faint">Nothing Launchway deployed is known to run here.</span></div>
+        <div className="unit-current"><span className="faint">{terms().say("Nothing Launchway {deploy:did} is known to run here.")}</span></div>
       )}
       {last && (
         <div className="unit-last">
@@ -200,11 +201,11 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
         </div>
       )}
       {live && <LiveLine live={live} now={now} />}
-      {idle && !live && <div className="unit-line small faint">Not observed while idle (needs a deploy runner of this release)</div>}
+      {idle && !live && <div className="unit-line small faint">{terms().say("Not observed while idle (needs a {deploy:do} {runner} of this release)")}</div>}
       {(unit.lock || unit.waiting.length > 0) && (
         <div className="unit-lock">
           {unit.lock && (
-            <div>Lock held by <Link href={`/runs/${unit.lock.run}?step=${encodeURIComponent(unit.lock.step ?? "")}`}>run #{unit.lock.number}</Link></div>
+            <div>Lock held by <Link href={`/runs/${unit.lock.run}?step=${encodeURIComponent(unit.lock.step ?? "")}`}>{terms().say("{run} #")}{unit.lock.number}</Link></div>
           )}
           {unit.waiting.length > 0 && (
             <div>
@@ -293,11 +294,11 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
 function NoEnvironments() {
   return (
     <>
-      <WizardEmpty title="No environments yet" wizard="add-environment" label="Add an environment"
-        text="An environment is a place runs deploy to, such as staging or prod: add one to see what runs where and to deploy with a protected, queued, recorded step." />
+      <WizardEmpty title={terms().say("No {environments} yet")} wizard="add-environment" label={terms().say("Add an {environment}")}
+        text={terms().say("An {environment} is a place runs {deploy:do} to, such as staging or prod: add one to see what runs where and to {deploy:do} with a protected, queued, recorded step.")} />
       <details className="card">
-        <summary className="h-sm">How a pipeline deploys to an environment</summary>
-        <p className="sub">A run deploys when it reaches a step with <Mono>kind: deploy</Mono>: the step commits the new version to your GitOps repository,
+        <summary className="h-sm">{terms().say("How a pipeline {deploy:does} to an {environment}")}</summary>
+        <p className="sub">{terms().say("A {run} {deploy:does} when it reaches a step with")} <Mono>kind: deploy</Mono>: the step commits the new version to your GitOps repository,
           asks Argo CD to sync, and waits until the application is healthy.</p>
         <Example />
       </details>
@@ -309,10 +310,10 @@ function Example() {
   return (
     <div className="howto">
       <p className="sub">In a project's <Mono>.launchway/pipeline.yaml</Mono>:</p>
-      <pre className="code">{`  deploy-prod:
-    kind: deploy
+      <pre className="code">{terms().say(`  deploy-prod:
+    kind: {deploy:do}
     needs: build
-    environment: prod
+    {environment}: prod
     version: { output: build.tag }
     argocd:
       application: shop
@@ -322,7 +323,7 @@ function Example() {
         changes:
           - file: apps/shop.yaml
             image: team/shop
-            tag: { output: build.tag }`}</pre>
+            tag: { output: build.tag }`)}</pre>
     </div>
   );
 }

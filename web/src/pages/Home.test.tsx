@@ -4,6 +4,11 @@ import { applications } from "../guided/derive";
 import { approval, environment, me, project, run, runner } from "../test/fixtures";
 import { expectEntitiesLinked } from "../test/entities";
 import { Home, type HomeProps } from "./Home";
+import { setTerms, resetTerms } from "../terms";
+import { afterEach, beforeEach } from "vitest";
+// These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
+beforeEach(() => setTerms({ set: "business" }));
+afterEach(() => resetTerms());
 
 const props = (over: Partial<HomeProps> = {}): HomeProps => ({
   me: me({ auth_mode: "none" }), projects: [], runs: [], runners: [], environments: [], applications: [], approvals: [], now: 10_000, ...over,
@@ -20,7 +25,7 @@ describe("Home on a new installation", () => {
   });
   it("lists the rest of the checklist as links", () => {
     render(<Home {...props()} />);
-    const list = screen.getByRole("region", { name: /Setup checklist/ });
+    const list = screen.getByRole("region", { name: /Setup checklist/i });
     expect(within(list).getAllByRole("link").map((a) => a.textContent)).toEqual([
       "Add your first project", "Choose who does the work", "See your first run pass", "Create an environment", "Turn on sign-in",
     ]);
@@ -41,7 +46,7 @@ describe("Home as setup progresses", () => {
   it("is all set when sign-in is on too", () => {
     render(<Home {...props({ projects: [project()], runners: [runner()], runs: [run()], environments: [environment()], me: me({ auth_mode: "oidc" }) })} />);
     expect(screen.getByRole("status")).toHaveTextContent("You are all set up.");
-    expect(screen.queryByRole("region", { name: /Setup checklist/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Setup checklist/i })).not.toBeInTheDocument();
   });
 });
 

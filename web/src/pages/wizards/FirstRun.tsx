@@ -117,7 +117,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
           options={[
             { value: "no", label: "No, not now", help: `Every ${projWord.toLowerCase()} shares the ${wt.lower("organization")}'s settings. The simplest start; you can add ${wt.pluralLower("unit")} any time and the screens then show them.` },
             { value: "yes", label: `Yes, into ${wt.pluralLower("unit")}`,
-              help: `Each ${unitWord.toLowerCase()} gets its own roles, libraries, policies, environments, runner pools and secret stores, which apply only to its ${wt.pluralLower("project")}. One level, never nested.` },
+              help: terms().say(`Each ${unitWord.toLowerCase()} gets its own roles, libraries, policies, {environments}, {runner_groups} and secret stores, which apply only to its ${wt.pluralLower("project")}. One level, never nested.`) },
           ]} />
         {useUnits === "yes" && !overview.units_in_use && (
           <div className="cf-grid">
@@ -205,8 +205,8 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
           <h3 className="h-sm">Next</h3>
           {flow.name && <RunItNow name={flow.name} branch={flow.branch} />}
           <ul className="cf-next">
-            <li><Link href="/config/wizard/add-runner">Add a runner</Link> to take the steps of runs</li>
-            <li><Link href="/config/wizard/add-environment">Add an environment</Link> to deploy to</li>
+            <li><Link href="/config/wizard/add-runner">{terms().say("Add a {runner}")}</Link> {terms().say("to take the steps of {runs}")}</li>
+            <li><Link href="/config/wizard/add-environment">{terms().say("Add an {environment}")}</Link> {terms().say("to {deploy:do} to")}</li>
             <li><Link href="/config">Back to configuration</Link></li>
           </ul>
         </>

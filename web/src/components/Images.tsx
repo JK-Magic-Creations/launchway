@@ -1,6 +1,7 @@
 import type { ArtifactView, FindingCounts, ImageBuild, ImageScan, ImageValue, ScanLevel, SecretRef } from "../api";
 import { Mono } from "./ui";
 import { artifactArchiveURL, artifactFileURL } from "./Security";
+import { terms } from "../terms";
 
 // Pieces shared by the run's Images tab, an image step's panel, the graph
 // and the image search.
@@ -60,7 +61,7 @@ export function scanCounts(s: ImageScan): FindingCounts {
 
 /** Where a signing key comes from, in words. */
 export function keySourceText(src?: string): string {
-  if (!src || src === "runner") return "the runner's key";
+  if (!src || src === "runner") return terms().say("the {runner}'s key");
   return `from the secret ${src}`;
 }
 
@@ -87,7 +88,7 @@ export function ImageBuildFacts({ b }: { b: ImageBuild }) {
     <>
       <dt>Context</dt><dd><Mono>{b.context || "."}</Mono></dd>
       <dt>Dockerfile</dt><dd><Mono>{b.file || "Dockerfile"}</Mono>{b.target && <> · target <Mono>{b.target}</Mono></>}</dd>
-      <dt>Platforms</dt><dd>{b.platforms?.length ? b.platforms.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">the runner's own</span>}</dd>
+      <dt>Platforms</dt><dd>{b.platforms?.length ? b.platforms.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">{terms().say("the {runner}'s own")}</span>}</dd>
       {args.length > 0 && (
         <><dt>Build args</dt><dd>{args.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <ImageValueText v={v} /></div>)}</dd></>
       )}
@@ -100,12 +101,12 @@ export function ImageBuildFacts({ b }: { b: ImageBuild }) {
       <dt>Push</dt><dd>{push ? "yes, except in pull-request runs" : "no: built and checked only"}</dd>
       {b.cache && <><dt>Cache</dt><dd><Mono>{b.cache.registry}/{b.cache.repository}</Mono></dd></>}
       <dt>SBOM</dt><dd>{b.sbom ? "yes" : "no"}</dd>
-      <dt>Provenance</dt><dd>{b.provenance ? (b.sign ? "yes, signed and attached to the image" : "yes, kept as an artifact") : "no"}</dd>
+      <dt>Provenance</dt><dd>{b.provenance ? (b.sign ? "yes, signed and attached to the image" : terms().say("yes, kept as an {artifact}")) : "no"}</dd>
       <dt>Signing</dt>
       <dd>
         {!b.sign ? "not signed"
           : b.sign.key ? <>with the key in <Mono>{refText(b.sign.key)}</Mono>{b.sign.password && <>, password in <Mono>{refText(b.sign.password)}</Mono></>}</>
-          : "with the runner's key"}
+          : terms().say("with the {runner}'s key")}
       </dd>
       <dt>Scan</dt><dd>{b.scan ? scanPolicy(b.scan) : "no"}</dd>
     </>

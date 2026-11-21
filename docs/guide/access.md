@@ -56,7 +56,7 @@ is on.
 
 | Role | May |
 |---|---|
-| `viewer` | see a project and its runs, logs, events, pipeline files and approvals; see the runners; use the Playground; open the pipeline editor |
+| `viewer` | see a project and its Sorties (runs), logs, events, pipeline files and approvals; see the Stations (runners); use the Playground; open the pipeline editor |
 | `operator` | everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, save pipelines, and start draft runs if `drafts.allow` is `operator` |
 | `admin` | everything an operator may, read the Logbook, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` (the default; see [Policies](policies.md)) |
 
@@ -68,8 +68,8 @@ needs `admin` from an entry without `projects`.
 
 An entry may also list `environments` (patterns, as for projects). It then grants its role on
 deployments (the commands of [Controlling a rollout](deployments.md#controlling-a-rollout-promote-abort-retry),
-and approvals that name a deployment) to those environments only; on its projects otherwise it
-grants as usual. An entry without `environments` covers every environment. An API token limited to
+and approvals that name a deployment) to those Airfields (environments) only; on its projects otherwise it
+grants as usual. An entry without `environments` covers every Airfield. An API token limited to
 a role or projects never grants more there than its maker has:
 
 ```yaml
@@ -80,7 +80,7 @@ auth:
 ```
 
 Rights are worked out on every request from the configuration and the groups the provider gave at
-the person's latest sign-in, and checked by the server whatever the UI shows. A run, project or
+the person's latest sign-in, and checked by the server whatever the UI shows. A Sortie, project or
 approval you may not see answers `404`, exactly as if it did not exist; one you may see but not
 change answers `403`. Lists and the live stream contain only what you may see.
 
@@ -121,7 +121,7 @@ minute; each server counts on its own and remembers at most 10,000 addresses. Be
 proxy, the address is the one the proxy saw only with `server.trust_proxy: true`; otherwise
 `X-Forwarded-For` is ignored, so a client cannot dodge the limit by making addresses up.
 
-A limited token works only on servers that know limits: an older server, during a rollback,
+A limited token works only on servers that know limits: an older server, during a Return to base (rollback),
 refuses it rather than grant its owner's full rights. Tokens without limits work on both.
 
 Launchway cannot tell when someone leaves your organization: their tokens keep the groups of their
@@ -149,7 +149,7 @@ whenever `redirect_url` starts with `https://`.
 
 Every call that changes something (starting, canceling and resuming runs, starting draft runs
 (`run.draft`), saving pipelines (`pipeline.save`), approving and rejecting, making and revoking
-tokens, re-runs (`run.rerun`), deployment commands (`deployment.*`) and artifact deletions
+tokens, re-runs (`run.rerun`), deployment commands (`deployment.*`) and Cargo (artifact) deletions
 (`artifact.delete`)), allowed or refused, with sign-in on or off, every token that is refused (`token.use`), every
 webhook call (`webhook.git`, `webhook.run`), allowed or refused, every waiver granted or revoked (`policy.waive`,
 `policy.revoke_waiver`), allowed or refused, and every sign-in, failed sign-in and sign-out is

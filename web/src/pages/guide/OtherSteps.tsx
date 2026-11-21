@@ -7,20 +7,21 @@ import { Unavailable, Wingman } from "./Frame";
 import { useOverview } from "../../configApi";
 import { ConnectRepoWizard } from "../wizards/ConnectRepo";
 import { Empty, Link } from "../../components/ui";
+import { terms } from "../../terms";
 
 /** Step 5: is a runner connected, and how to add another. */
 export function RunnerStep({ step }: { step: GuideStep }) {
   return (
     <>
       <p>{step.summary}</p>
-      <Wingman learn={{ label: "Learn more about runners", slug: "guide/runner-identity" }}>
-        A runner is the machine that runs the steps of your pipelines. {step.state === "done" ? "One is already connected, which is all you need to start; add more for capacity or for other kinds of machine." : "Until one is connected, no pipeline step can run."}
+      <Wingman learn={{ label: terms().say("Learn more about {runners}"), slug: "guide/runner-identity" }}>
+        {terms().say("A {runner} is the machine that runs the steps of your pipelines.")} {step.state === "done" ? "One is already connected, which is all you need to start; add more for capacity or for other kinds of machine." : "Until one is connected, no pipeline step can run."}
       </Wingman>
       <div className="gd-choices">
-        <LinkButton href="/config/wizard/add-runner" kind={step.state === "done" ? undefined : "pri"}>Add a runner</LinkButton>
-        <LinkButton href="/settings/runners">See the runners</LinkButton>
+        <LinkButton href="/config/wizard/add-runner" kind={step.state === "done" ? undefined : "pri"}>{terms().say("Add a {runner}")}</LinkButton>
+        <LinkButton href="/settings/runners">{terms().say("See the {runners}")}</LinkButton>
       </div>
-      <p className="faint">With the Helm chart, runners come with the installation; on another machine, <code>launchway runner --server ADDRESS --join TOKEN</code> joins one with a short-lived join token made under Runners.</p>
+      <p className="faint">{terms().say("With the Helm chart, {runners} come with the installation; on another machine,")} <code>launchway runner --server ADDRESS --join TOKEN</code> {terms().say("joins one with a short-lived join token made under {Runners}.")}</p>
     </>
   );
 }
@@ -99,7 +100,7 @@ export function FinishStep({ items }: { items: ChecklistItem[] }) {
       <h3 className="h-sm">What to do next</h3>
       <ul className="cf-next">
         <li><Link href="/settings/access">Invite the people who will use it</Link></li>
-        <li><Link href="/deployments/environments">Add an environment to deploy to</Link></li>
+        <li><Link href="/deployments/environments">{terms().say("Add an {environment} to {deploy:do} to")}</Link></li>
         <li><Link href="/settings/rules">Choose the rules every pipeline is held to</Link></li>
         <li><Link href="/learn/howto/install-in-ten-minutes">Read what to do after the first sign-in</Link></li>
       </ul>

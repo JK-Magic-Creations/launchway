@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CoverageCounter, CoverageTotals, CoverageTrend } from "../api";
 import { shortSha } from "../format";
 import { onLink } from "../router";
+import { terms } from "../terms";
 
 // Pieces shared by a run's Coverage tab and a project's coverage trend.
 
@@ -161,7 +162,7 @@ export function CoverageTrendChart({ trend }: { trend: CoverageTrend }) {
           {runs.map((r, i) => {
             const lv = ratio(r.totals.lines);
             const bv = ratio(r.totals.branches);
-            const label = `Run ${r.number}: ${measureLabel("lines", unit).toLowerCase()} ${pct(lv)}, branches ${pct(bv)}`;
+            const label = terms().say(`{Run} ${r.number}: ${measureLabel("lines", unit).toLowerCase()} ${pct(lv)}, branches ${pct(bv)}`);
             return (
               <a key={r.id} href={`/runs/${r.id}?tab=coverage`} onClick={onLink as never} aria-label={label} className="chart-bar"
                 onMouseEnter={() => setTip(i)} onFocus={() => setTip(i)} onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)}>
