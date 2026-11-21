@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"os"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	testlib.NoPrompt()
 	gitexec.Reexec() // git's hooks of a hosted repository are symlinks to this binary
 	os.Exit(m.Run())
 }

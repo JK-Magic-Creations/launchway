@@ -149,13 +149,15 @@ func (s Spec) build() (env []string, cfg []string, err error) {
 	// What git always sees. These are set last by name below, so nothing
 	// given or inherited can override them.
 	fixed := map[string]string{
-		"HOME":                   emptyHome(),
-		"XDG_CONFIG_HOME":        filepath.Join(emptyHome(), ".config"),
-		"GIT_CONFIG_NOSYSTEM":    "1",
-		"GIT_CONFIG_GLOBAL":      os.DevNull,
-		"GIT_TERMINAL_PROMPT":    "0",
-		"GIT_ASKPASS":            "",
-		"SSH_ASKPASS":            "",
+		"HOME":                emptyHome(),
+		"XDG_CONFIG_HOME":     filepath.Join(emptyHome(), ".config"),
+		"GIT_CONFIG_NOSYSTEM": "1",
+		"GIT_CONFIG_GLOBAL":   os.DevNull,
+		"GIT_TERMINAL_PROMPT": "0",
+		// Git falls back to SSH_ASKPASS (a graphical dialog on a desktop
+		// session) when GIT_ASKPASS is empty, so one that refuses is set and
+		// SSH_ASKPASS is never passed: nothing here can prompt a person.
+		"GIT_ASKPASS":            "/bin/false",
 		"GIT_PAGER":              "cat",
 		"LC_ALL":                 "C",
 		"GIT_OPTIONAL_LOCKS":     "0",

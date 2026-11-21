@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"io"
 	"math/rand"
 	"os"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	testlib.NoPrompt()
 	Reexec()
 	os.Exit(m.Run())
 }
