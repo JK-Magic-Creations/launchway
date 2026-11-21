@@ -89,20 +89,10 @@ func (s *Store) notifyComment(ctx context.Context, tx DB, c Caller, it *Item, bo
 			return err
 		}
 	}
-	rows, err := tx.Query(ctx, `SELECT who FROM work_watchers WHERE item_id = ?`, it.ID)
+	ws, err := queryAll(ctx, tx, scanString, `SELECT who FROM work_watchers WHERE item_id = ?`, it.ID)
 	if err != nil {
 		return err
 	}
-	var ws []string
-	for rows.Next() {
-		var w string
-		if err := rows.Scan(&w); err != nil {
-			rows.Close()
-			return err
-		}
-		ws = append(ws, w)
-	}
-	rows.Close()
 	for _, w := range ws {
 		if !done[w] {
 			if err := s.notify(ctx, tx, w, c.Name, InboxComment, it.ID, c.Name+" commented on "+it.Ref); err != nil {

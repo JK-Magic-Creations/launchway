@@ -292,3 +292,37 @@ func (s *Store) DB() DB { return s.db }
 // BeginTx starts a transaction, for the importers and tests that write many
 // rows at once.
 func (s *Store) BeginTx(ctx context.Context) (Tx, error) { return s.db.BeginTx(ctx) }
+
+// queryAll runs a query and scans every row with scan. The rows are closed and
+// checked before it returns, so the caller may run other queries straight away
+// (a SQLite connection cannot interleave them).
+func queryAll[T any](ctx context.Context, db DB, scan func(scanner) (T, error), q string, args ...any) ([]T, error) {
+	rows, err := db.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []T
+	for rows.Next() {
+		v, err := scan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// scanString scans a one-column row.
+func scanString(r scanner) (string, error) {
+	var s string
+	err := r.Scan(&s)
+	return s, err
+}
+
+// scanScope scans a (scope kind, scope id) row.
+func scanScope(r scanner) (Scope, error) {
+	var sc Scope
+	err := r.Scan(&sc.Kind, &sc.ID)
+	return sc, err
+}

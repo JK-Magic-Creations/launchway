@@ -383,6 +383,65 @@ type newPlan struct {
 	labels                      []string
 }
 
+// normalizeNew checks and fills in the fields of a new item.
+func (s *Store) normalizeNew(c Caller, eff *Effective, in *NewItem) error {
+	in.Title = cleanTitle(in.Title)
+	if in.Title == "" || len(in.Title) > MaxTitle {
+		return invalid("a title is 1 to %d characters", MaxTitle)
+	}
+	if len(in.Body) > MaxBody {
+		return invalid("the body is longer than %d bytes", MaxBody)
+	}
+	if in.Body == "" {
+		for _, d := range eff.Types {
+			if d.Key == in.Type {
+				in.Body = d.Template
+			}
+		}
+	}
+	in.Body = cleanBody(in.Body)
+	if in.State == "" {
+		in.State = eff.FirstOf(CatTodo)
+	}
+	if _, ok := eff.StateByKey(in.State); !ok {
+		return invalid("%q is not a state of this workflow", in.State)
+	}
+	if in.Priority == "" {
+		in.Priority = "normal"
+	}
+	if !slices.Contains(Priorities, in.Priority) {
+		return invalid("priority is one of %s", strings.Join(Priorities, ", "))
+	}
+	if in.Estimate < 0 || in.Estimate > 100000 {
+		return invalid("an estimate is between 0 and 100000")
+	}
+	if len(in.Labels) > MaxLabels || len(in.Assignees) > MaxAssignees || len(in.Criteria) > MaxCriteria {
+		return invalid("too many labels, assignees or criteria")
+	}
+	if err := s.checkCustom(eff, in.Type, in.Custom); err != nil {
+		return err
+	}
+	if in.Confidential && !c.canWrite(in.Scope) {
+		return forbidden("you may not make confidential work here")
+	}
+	return nil
+}
+
+// parseNewTimes reads the optional times of a new item.
+func parseNewTimes(in NewItem) (start, due, created, closed int64, err error) {
+	if start, err = ParseTime(in.StartAt); err != nil {
+		return
+	}
+	if due, err = ParseTime(in.DueAt); err != nil {
+		return
+	}
+	if created, err = ParseTime(in.CreatedAt); err != nil {
+		return
+	}
+	closed, err = ParseTime(in.ClosedAt)
+	return
+}
+
 func (s *Store) prepareNew(ctx context.Context, c Caller, in NewItem) (*newPlan, error) {
 	if err := in.Scope.Validate(); err != nil {
 		return nil, err
@@ -400,58 +459,10 @@ func (s *Store) prepareNew(ctx context.Context, c Caller, in NewItem) (*newPlan,
 	if !eff.TypeAllowed(in.Type) {
 		return nil, invalid("items of type %q are not used here", in.Type)
 	}
-	in.Title = cleanTitle(in.Title)
-	if in.Title == "" || len(in.Title) > MaxTitle {
-		return nil, invalid("a title is 1 to %d characters", MaxTitle)
-	}
-	if len(in.Body) > MaxBody {
-		return nil, invalid("the body is longer than %d bytes", MaxBody)
-	}
-	if in.Body == "" {
-		for _, d := range eff.Types {
-			if d.Key == in.Type {
-				in.Body = d.Template
-			}
-		}
-	}
-	in.Body = cleanBody(in.Body)
-	if in.State == "" {
-		in.State = eff.FirstOf(CatTodo)
-	}
-	if _, ok := eff.StateByKey(in.State); !ok {
-		return nil, invalid("%q is not a state of this workflow", in.State)
-	}
-	if in.Priority == "" {
-		in.Priority = "normal"
-	}
-	if !slices.Contains(Priorities, in.Priority) {
-		return nil, invalid("priority is one of %s", strings.Join(Priorities, ", "))
-	}
-	if in.Estimate < 0 || in.Estimate > 100000 {
-		return nil, invalid("an estimate is between 0 and 100000")
-	}
-	if len(in.Labels) > MaxLabels || len(in.Assignees) > MaxAssignees || len(in.Criteria) > MaxCriteria {
-		return nil, invalid("too many labels, assignees or criteria")
-	}
-	if err := s.checkCustom(eff, in.Type, in.Custom); err != nil {
+	if err := s.normalizeNew(c, eff, &in); err != nil {
 		return nil, err
 	}
-	if in.Confidential && !c.canWrite(in.Scope) {
-		return nil, forbidden("you may not make confidential work here")
-	}
-	start, err := ParseTime(in.StartAt)
-	if err != nil {
-		return nil, err
-	}
-	due, err := ParseTime(in.DueAt)
-	if err != nil {
-		return nil, err
-	}
-	created, err := ParseTime(in.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	closed, err := ParseTime(in.ClosedAt)
+	start, due, created, closed, err := parseNewTimes(in)
 	if err != nil {
 		return nil, err
 	}
@@ -476,6 +487,40 @@ func (s *Store) prepareNew(ctx context.Context, c Caller, in NewItem) (*newPlan,
 		}
 	}
 	return &newPlan{in: in, eff: eff, start: start, due: due, created: created, closed: closed, reporter: reporter, rkind: rkind, labels: labels}, nil
+}
+
+// insertNewChildren writes the labels, assignees and criteria of a new item
+// and returns the assignees it added.
+func (s *Store) insertNewChildren(ctx context.Context, tx DB, id string, in NewItem, labels []string) (map[string]bool, error) {
+	for _, l := range labels {
+		if _, err := tx.Exec(ctx, `INSERT INTO work_labels(item_id, label) VALUES(?,?)`, id, l); err != nil {
+			return nil, err
+		}
+	}
+	seen := map[string]bool{}
+	for _, name := range in.Assignees {
+		a, err := s.assigneeKind(ctx, tx, name)
+		if err != nil {
+			return nil, err
+		}
+		if seen[a.Name] {
+			continue
+		}
+		seen[a.Name] = true
+		if _, err := tx.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) VALUES(?,?,?)`, id, a.Name, a.Kind); err != nil {
+			return nil, err
+		}
+	}
+	for i, text := range in.Criteria {
+		text = cleanTitle(text)
+		if text == "" {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO work_criteria(id, item_id, pos, text, done) VALUES(?,?,?,?,0)`, newID("wc"), id, i, text); err != nil {
+			return nil, err
+		}
+	}
+	return seen, nil
 }
 
 func (s *Store) insertNew(ctx context.Context, c Caller, p *newPlan) (string, error) {
@@ -542,33 +587,9 @@ func (s *Store) insertNew(ctx context.Context, c Caller, p *newPlan) (string, er
 			start, due, reporter, rkind, conf, difficulty, string(custom), in.SourceKey, 1, created, now, closed); err != nil {
 			return err
 		}
-		for _, l := range labels {
-			if _, err = tx.Exec(ctx, `INSERT INTO work_labels(item_id, label) VALUES(?,?)`, id, l); err != nil {
-				return err
-			}
-		}
-		seen := map[string]bool{}
-		for _, name := range in.Assignees {
-			a, err := s.assigneeKind(ctx, tx, name)
-			if err != nil {
-				return err
-			}
-			if seen[a.Name] {
-				continue
-			}
-			seen[a.Name] = true
-			if _, err = tx.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) VALUES(?,?,?)`, id, a.Name, a.Kind); err != nil {
-				return err
-			}
-		}
-		for i, text := range in.Criteria {
-			text = cleanTitle(text)
-			if text == "" {
-				continue
-			}
-			if _, err = tx.Exec(ctx, `INSERT INTO work_criteria(id, item_id, pos, text, done) VALUES(?,?,?,?,0)`, newID("wc"), id, i, text); err != nil {
-				return err
-			}
+		seen, err := s.insertNewChildren(ctx, tx, id, in, labels)
+		if err != nil {
+			return err
 		}
 		if sid != "" {
 			if err = s.sprintAdd(ctx, tx, sid, id, toMilli(in.Estimate)); err != nil {
@@ -647,54 +668,60 @@ func (s *Store) checkParent(ctx context.Context, tx DB, c Caller, id, typ, paren
 // hydrateChunk loads the related rows of up to a few hundred items.
 func (s *Store) hydrateChunk(ctx context.Context, db DB, byID map[string]*Item, chunk []string, full bool) error {
 	in, args := inList(chunk)
-	rows, err := db.Query(ctx, `SELECT item_id, label FROM work_labels WHERE item_id IN (`+in+`) ORDER BY label`, args...)
+	labels, err := queryAll(ctx, db, func(r scanner) ([2]string, error) {
+		var x [2]string
+		err := r.Scan(&x[0], &x[1])
+		return x, err
+	}, `SELECT item_id, label FROM work_labels WHERE item_id IN (`+in+`) ORDER BY label`, args...)
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var id, l string
-		if err := rows.Scan(&id, &l); err != nil {
-			rows.Close()
-			return err
-		}
-		byID[id].Labels = append(byID[id].Labels, l)
+	for _, x := range labels {
+		byID[x[0]].Labels = append(byID[x[0]].Labels, x[1])
 	}
-	rows.Close()
-	rows, err = db.Query(ctx, `SELECT item_id, who, kind FROM work_assignees WHERE item_id IN (`+in+`) ORDER BY who`, args...)
+	type assignee struct {
+		id string
+		a  Assignee
+	}
+	assignees, err := queryAll(ctx, db, func(r scanner) (assignee, error) {
+		var x assignee
+		err := r.Scan(&x.id, &x.a.Name, &x.a.Kind)
+		return x, err
+	}, `SELECT item_id, who, kind FROM work_assignees WHERE item_id IN (`+in+`) ORDER BY who`, args...)
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var id string
-		var a Assignee
-		if err := rows.Scan(&id, &a.Name, &a.Kind); err != nil {
-			rows.Close()
-			return err
-		}
-		byID[id].Assignees = append(byID[id].Assignees, a)
+	for _, x := range assignees {
+		byID[x.id].Assignees = append(byID[x.id].Assignees, x.a)
 	}
-	rows.Close()
-	// Blockers that are still open, and the item's claim.
-	rows, err = db.Query(ctx, `SELECT l.to_id, b.state, b.scope_kind, b.scope_id, b.number FROM work_links l JOIN work_items b ON b.id = l.from_id
-			WHERE l.kind = 'blocks' AND l.to_id IN (`+in+`)`, args...)
-	if err != nil {
+	if err := s.hydrateBlockers(ctx, db, byID, in, args); err != nil {
 		return err
 	}
+	if err := s.hydrateClaims(ctx, db, byID, in, args); err != nil {
+		return err
+	}
+	if !full {
+		return nil
+	}
+	return s.hydrateFull(ctx, db, byID, in, args)
+}
+
+// hydrateBlockers marks the items that an open item blocks.
+func (s *Store) hydrateBlockers(ctx context.Context, db DB, byID map[string]*Item, in string, args []any) error {
 	type blk struct {
 		to, state string
 		sc        Scope
 		n         int
 	}
-	var blks []blk
-	for rows.Next() {
+	blks, err := queryAll(ctx, db, func(r scanner) (blk, error) {
 		var b blk
-		if err := rows.Scan(&b.to, &b.state, &b.sc.Kind, &b.sc.ID, &b.n); err != nil {
-			rows.Close()
-			return err
-		}
-		blks = append(blks, b)
+		err := r.Scan(&b.to, &b.state, &b.sc.Kind, &b.sc.ID, &b.n)
+		return b, err
+	}, `SELECT l.to_id, b.state, b.scope_kind, b.scope_id, b.number FROM work_links l JOIN work_items b ON b.id = l.from_id
+			WHERE l.kind = 'blocks' AND l.to_id IN (`+in+`)`, args...)
+	if err != nil {
+		return err
 	}
-	rows.Close()
 	for _, b := range blks {
 		eff, err := s.settingsCached(ctx, b.sc)
 		if err != nil {
@@ -710,53 +737,65 @@ func (s *Store) hydrateChunk(ctx context.Context, db DB, byID map[string]*Item, 
 		byID[b.to].Blocked = true
 		byID[b.to].BlockedBy = append(byID[b.to].BlockedBy, fmt.Sprintf("%s-%d", p, b.n))
 	}
-	rows, err = db.Query(ctx, `SELECT item_id, agent, claimed_at, heartbeat_at, lease_until, note FROM work_claims WHERE item_id IN (`+in+`)`, args...)
+	return nil
+}
+
+// hydrateClaims loads the claim of each item.
+func (s *Store) hydrateClaims(ctx context.Context, db DB, byID map[string]*Item, in string, args []any) error {
+	now := ms(s.now())
+	type claimRow struct {
+		id string
+		cl Claim
+	}
+	rows, err := queryAll(ctx, db, func(r scanner) (claimRow, error) {
+		var x claimRow
+		var a, h, l int64
+		if err := r.Scan(&x.id, &x.cl.Agent, &a, &h, &l, &x.cl.Note); err != nil {
+			return x, err
+		}
+		x.cl.ClaimedAt, x.cl.Heartbeat, x.cl.LeaseUntil, x.cl.Expired = iso(a), iso(h), iso(l), l < now
+		return x, nil
+	}, `SELECT item_id, agent, claimed_at, heartbeat_at, lease_until, note FROM work_claims WHERE item_id IN (`+in+`)`, args...)
 	if err != nil {
 		return err
 	}
-	now := ms(s.now())
-	for rows.Next() {
-		var id string
-		var cl Claim
-		var a, h, l int64
-		if err := rows.Scan(&id, &cl.Agent, &a, &h, &l, &cl.Note); err != nil {
-			rows.Close()
-			return err
-		}
-		cl.ClaimedAt, cl.Heartbeat, cl.LeaseUntil, cl.Expired = iso(a), iso(h), iso(l), l < now
-		byID[id].Claim = &cl
+	for i := range rows {
+		byID[rows[i].id].Claim = &rows[i].cl
 	}
-	rows.Close()
-	if full {
-		rows, err = db.Query(ctx, `SELECT item_id, id, text, done FROM work_criteria WHERE item_id IN (`+in+`) ORDER BY item_id, pos`, args...)
-		if err != nil {
-			return err
+	return nil
+}
+
+// hydrateFull loads the criteria and watchers of each item.
+func (s *Store) hydrateFull(ctx context.Context, db DB, byID map[string]*Item, in string, args []any) error {
+	type crit struct {
+		id string
+		c  Criterion
+	}
+	crits, err := queryAll(ctx, db, func(r scanner) (crit, error) {
+		var x crit
+		var d int
+		if err := r.Scan(&x.id, &x.c.ID, &x.c.Text, &d); err != nil {
+			return x, err
 		}
-		for rows.Next() {
-			var id string
-			var c Criterion
-			var d int
-			if err := rows.Scan(&id, &c.ID, &c.Text, &d); err != nil {
-				rows.Close()
-				return err
-			}
-			c.Done = d != 0
-			byID[id].Criteria = append(byID[id].Criteria, c)
-		}
-		rows.Close()
-		rows, err = db.Query(ctx, `SELECT item_id, who FROM work_watchers WHERE item_id IN (`+in+`) ORDER BY who`, args...)
-		if err != nil {
-			return err
-		}
-		for rows.Next() {
-			var id, w string
-			if err := rows.Scan(&id, &w); err != nil {
-				rows.Close()
-				return err
-			}
-			byID[id].Watchers = append(byID[id].Watchers, w)
-		}
-		rows.Close()
+		x.c.Done = d != 0
+		return x, nil
+	}, `SELECT item_id, id, text, done FROM work_criteria WHERE item_id IN (`+in+`) ORDER BY item_id, pos`, args...)
+	if err != nil {
+		return err
+	}
+	for _, x := range crits {
+		byID[x.id].Criteria = append(byID[x.id].Criteria, x.c)
+	}
+	watchers, err := queryAll(ctx, db, func(r scanner) ([2]string, error) {
+		var x [2]string
+		err := r.Scan(&x[0], &x[1])
+		return x, err
+	}, `SELECT item_id, who FROM work_watchers WHERE item_id IN (`+in+`) ORDER BY who`, args...)
+	if err != nil {
+		return err
+	}
+	for _, x := range watchers {
+		byID[x[0]].Watchers = append(byID[x[0]].Watchers, x[1])
 	}
 	return nil
 }

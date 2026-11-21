@@ -20,11 +20,11 @@ func (s *Store) lockScope(ctx context.Context, tx DB, sc Scope) error {
 }
 
 func (s *Store) nextRank(ctx context.Context, tx DB, sc Scope) (int64, error) {
-	var max int64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&max); err != nil {
+	var top int64
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&top); err != nil {
 		return 0, err
 	}
-	return max + rankGap, nil
+	return top + rankGap, nil
 }
 
 // Position says where a moved item goes.
@@ -66,17 +66,17 @@ func (s *Store) placeRank(ctx context.Context, tx DB, c Caller, it *Item, pos Po
 	}
 	switch pos.Where {
 	case "top":
-		min, err := one(`SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
+		lowest, err := one(`SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
 		if err != nil {
 			return err
 		}
-		target = min - rankGap // ranks may go below zero: only their order matters
+		target = lowest - rankGap // ranks may go below zero: only their order matters
 	case "bottom":
-		max, err := one(`SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
+		highest, err := one(`SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
 		if err != nil {
 			return err
 		}
-		target = max + rankGap
+		target = highest + rankGap
 	case "before", "after":
 		oid, err := s.idOf(ctx, tx, pos.Other)
 		if err != nil {

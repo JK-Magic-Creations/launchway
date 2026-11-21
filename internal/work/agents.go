@@ -114,7 +114,7 @@ func newToken() (string, error) {
 	return TokenPrefix + strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b[:])), nil
 }
 
-func checkNames(what string, in []string, max int) ([]string, error) {
+func checkNames(what string, in []string, limit int) ([]string, error) {
 	out := []string{}
 	for _, v := range in {
 		v = strings.TrimSpace(v)
@@ -126,8 +126,8 @@ func checkNames(what string, in []string, max int) ([]string, error) {
 		}
 		out = append(out, v)
 	}
-	if len(out) > max {
-		return nil, invalid("%s: at most %d entries", what, max)
+	if len(out) > limit {
+		return nil, invalid("%s: at most %d entries", what, limit)
 	}
 	return out, nil
 }
@@ -221,7 +221,7 @@ func (s *Store) RotateAgentToken(ctx context.Context, c Caller, name string) (*A
 	if err != nil {
 		return nil, "", err
 	}
-	if c.Agent != nil || !c.Human() || !(c.isMaintainer(a.Scope) || c.Name == a.Owner) {
+	if c.Agent != nil || !c.Human() || (!c.isMaintainer(a.Scope) && c.Name != a.Owner) {
 		return nil, "", forbidden("only the agent's owner or a maintainer of %s rotates its token", a.Scope)
 	}
 	tok, err := newToken()
@@ -236,42 +236,35 @@ func (s *Store) RotateAgentToken(ctx context.Context, c Caller, name string) (*A
 	return a, tok, err
 }
 
-// UpdateAgent changes an agent: its limits, its work, the kill switch.
-func (s *Store) UpdateAgent(ctx context.Context, c Caller, name string, p AgentPatch) (*Agent, error) {
-	a, err := s.AgentByName(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	if c.Agent != nil || !c.Human() || !(c.isMaintainer(a.Scope) || c.Name == a.Owner) {
-		return nil, forbidden("only the agent's owner or a maintainer of %s changes it", a.Scope)
-	}
+// applyAgentPatch checks a patch and applies it to the agent.
+func applyAgentPatch(a *Agent, p AgentPatch) (err error) {
 	if p.Description != nil {
 		a.Description = cleanBody(*p.Description)
 	}
 	if p.Projects != nil {
 		if a.Projects, err = checkNames("projects", *p.Projects, 100); err != nil || len(a.Projects) == 0 {
-			return nil, invalid("an agent names the projects it may work in")
+			return invalid("an agent names the projects it may work in")
 		}
 	}
 	if p.Types != nil {
 		if a.Types, err = checkNames("types", *p.Types, 10); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	if p.Labels != nil {
 		if a.Labels, err = checkNames("labels", *p.Labels, 20); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	if p.Concurrency != nil {
 		if *p.Concurrency < 1 || *p.Concurrency > 20 {
-			return nil, invalid("concurrency is 1 to 20")
+			return invalid("concurrency is 1 to 20")
 		}
 		a.Concurrency = *p.Concurrency
 	}
 	if p.PerDay != nil {
 		if *p.PerDay < 1 || *p.PerDay > 500 {
-			return nil, invalid("per_day is 1 to 500")
+			return invalid("per_day is 1 to 500")
 		}
 		a.PerDay = *p.PerDay
 	}
@@ -291,7 +284,7 @@ func (s *Store) UpdateAgent(ctx context.Context, c Caller, name string, p AgentP
 		a.Class = *p.Class
 	}
 	if !slices.Contains([]string{"", "small", "medium", "large"}, a.Class) {
-		return nil, invalid("class is small, medium or large")
+		return invalid("class is small, medium or large")
 	}
 	for _, f := range []struct {
 		v   *int64
@@ -299,10 +292,25 @@ func (s *Store) UpdateAgent(ctx context.Context, c Caller, name string, p AgentP
 	}{{p.BudgetTokensDay, &a.BudgetTokensDay}, {p.BudgetCentsDay, &a.BudgetCentsDay}, {p.ItemTokens, &a.ItemTokens}, {p.ItemCents, &a.ItemCents}, {p.ItemSeconds, &a.ItemSeconds}} {
 		if f.v != nil {
 			if *f.v < 0 {
-				return nil, invalid("a budget is zero (no limit) or more")
+				return invalid("a budget is zero (no limit) or more")
 			}
 			*f.dst = *f.v
 		}
+	}
+	return nil
+}
+
+// UpdateAgent changes an agent: its limits, its work, the kill switch.
+func (s *Store) UpdateAgent(ctx context.Context, c Caller, name string, p AgentPatch) (*Agent, error) {
+	a, err := s.AgentByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if c.Agent != nil || !c.Human() || (!c.isMaintainer(a.Scope) && c.Name != a.Owner) {
+		return nil, forbidden("only the agent's owner or a maintainer of %s changes it", a.Scope)
+	}
+	if err := applyAgentPatch(a, p); err != nil {
+		return nil, err
 	}
 	pj, _ := json.Marshal(a.Projects)
 	tj, _ := json.Marshal(a.Types)
@@ -341,7 +349,7 @@ func (s *Store) DeleteAgent(ctx context.Context, c Caller, name string) error {
 	if err != nil {
 		return err
 	}
-	if c.Agent != nil || !c.Human() || !(c.isMaintainer(a.Scope) || c.Name == a.Owner) {
+	if c.Agent != nil || !c.Human() || (!c.isMaintainer(a.Scope) && c.Name != a.Owner) {
 		return forbidden("only the agent's owner or a maintainer of %s removes it", a.Scope)
 	}
 	return s.tx(ctx, func(tx DB) error {
@@ -411,20 +419,10 @@ func (s *Store) agentCounts(ctx context.Context, a *Agent) error {
 
 // Agents lists the registered agents the caller may see: those of levels they read.
 func (s *Store) Agents(ctx context.Context, c Caller) ([]*Agent, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+agentCols+` FROM work_agents ORDER BY name`)
+	all, err := queryAll(ctx, s.db, scanAgent, `SELECT `+agentCols+` FROM work_agents ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
-	var all []*Agent
-	for rows.Next() {
-		a, err := scanAgent(rows)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		all = append(all, a)
-	}
-	rows.Close()
 	out := []*Agent{}
 	for _, a := range all {
 		if !c.canRead(a.Scope) && c.Kind != KindSystem {

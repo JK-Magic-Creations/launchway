@@ -106,22 +106,16 @@ func (s *Store) blockPath(ctx context.Context, tx DB, start, target string) ([]s
 			}
 			return path, nil
 		}
-		rows, err := tx.Query(ctx, `SELECT to_id FROM work_links WHERE from_id = ? AND kind = 'blocks'`, nodes[i].id)
+		next, err := queryAll(ctx, tx, scanString, `SELECT to_id FROM work_links WHERE from_id = ? AND kind = 'blocks'`, nodes[i].id)
 		if err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return nil, err
-			}
+		for _, id := range next {
 			if !seen[id] {
 				seen[id] = true
 				nodes = append(nodes, node{id, i})
 			}
 		}
-		rows.Close()
 	}
 	return nil, nil
 }
@@ -168,25 +162,19 @@ func (s *Store) Links(ctx context.Context, c Caller, ref string) ([]Link, error)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(ctx, `SELECT id, from_id, to_id, kind, created_by, created_at FROM work_links WHERE from_id = ? OR to_id = ? ORDER BY created_at`, it.ID, it.ID)
-	if err != nil {
-		return nil, err
-	}
 	type raw struct {
 		l        Link
 		from, to string
 		at       int64
 	}
-	var rs []raw
-	for rows.Next() {
+	rs, err := queryAll(ctx, s.db, func(sc scanner) (raw, error) {
 		var r raw
-		if err := rows.Scan(&r.l.ID, &r.from, &r.to, &r.l.Kind, &r.l.CreatedBy, &r.at); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		rs = append(rs, r)
+		err := sc.Scan(&r.l.ID, &r.from, &r.to, &r.l.Kind, &r.l.CreatedBy, &r.at)
+		return r, err
+	}, `SELECT id, from_id, to_id, kind, created_by, created_at FROM work_links WHERE from_id = ? OR to_id = ? ORDER BY created_at`, it.ID, it.ID)
+	if err != nil {
+		return nil, err
 	}
-	rows.Close()
 	out := []Link{}
 	for _, r := range rs {
 		a, err := s.load(ctx, s.db, r.from)
@@ -318,20 +306,10 @@ func (s *Store) codeLinksOf(ctx context.Context, id string) ([]CodeLink, error) 
 // ItemsForCode finds the items tied to a piece of code (a commit, a pull
 // request), as the caller may see them.
 func (s *Store) ItemsForCode(ctx context.Context, c Caller, kind, repo, ref string) ([]*Item, error) {
-	rows, err := s.db.Query(ctx, `SELECT item_id FROM work_code_links WHERE kind = ? AND repo = ? AND ref = ?`, kind, repo, ref)
+	idList, err := queryAll(ctx, s.db, scanString, `SELECT item_id FROM work_code_links WHERE kind = ? AND repo = ? AND ref = ?`, kind, repo, ref)
 	if err != nil {
 		return nil, err
 	}
-	var idList []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		idList = append(idList, id)
-	}
-	rows.Close()
 	out := []*Item{}
 	for _, id := range idList {
 		it, err := s.load(ctx, s.db, id)

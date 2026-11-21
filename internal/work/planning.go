@@ -179,20 +179,10 @@ func (s *Store) Milestones(ctx context.Context, c Caller, sc Scope) ([]*Mileston
 	if !c.canRead(sc) {
 		return nil, notFound("no such project")
 	}
-	rows, err := s.db.Query(ctx, `SELECT id FROM work_milestones WHERE scope_kind = ? AND scope_id = ? ORDER BY CASE WHEN due_at = 0 THEN 1 ELSE 0 END, due_at, title`, sc.Kind, sc.ID)
+	idList, err := queryAll(ctx, s.db, scanString, `SELECT id FROM work_milestones WHERE scope_kind = ? AND scope_id = ? ORDER BY CASE WHEN due_at = 0 THEN 1 ELSE 0 END, due_at, title`, sc.Kind, sc.ID)
 	if err != nil {
 		return nil, err
 	}
-	var idList []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		idList = append(idList, id)
-	}
-	rows.Close()
 	out := []*Milestone{}
 	for _, id := range idList {
 		m, err := s.GetMilestone(ctx, c, id)
@@ -450,24 +440,18 @@ func (s *Store) CompleteSprint(ctx context.Context, c Caller, id, carryTo string
 				return invalid("sprint %s is not a planned or active sprint of this project", carryTo)
 			}
 		}
-		rows, err := tx.Query(ctx, `SELECT si.item_id, i.state, i.estimate_milli FROM work_sprint_items si JOIN work_items i ON i.id = si.item_id WHERE si.sprint_id = ?`, id)
-		if err != nil {
-			return err
-		}
 		type row struct {
 			id, state string
 			est       int64
 		}
-		var all []row
-		for rows.Next() {
-			var r row
-			if err := rows.Scan(&r.id, &r.state, &r.est); err != nil {
-				rows.Close()
-				return err
-			}
-			all = append(all, r)
+		all, err := queryAll(ctx, tx, func(r scanner) (row, error) {
+			var x row
+			err := r.Scan(&x.id, &x.state, &x.est)
+			return x, err
+		}, `SELECT si.item_id, i.state, i.estimate_milli FROM work_sprint_items si JOIN work_items i ON i.id = si.item_id WHERE si.sprint_id = ?`, id)
+		if err != nil {
+			return err
 		}
-		rows.Close()
 		now := ms(s.now())
 		for _, r := range all {
 			done := 0
@@ -575,20 +559,10 @@ func (s *Store) Sprints(ctx context.Context, c Caller, sc Scope) ([]*Sprint, err
 	if !c.canRead(sc) {
 		return nil, notFound("no such project")
 	}
-	rows, err := s.db.Query(ctx, `SELECT id FROM work_sprints WHERE scope_kind = ? AND scope_id = ? ORDER BY start_at DESC`, sc.Kind, sc.ID)
+	idList, err := queryAll(ctx, s.db, scanString, `SELECT id FROM work_sprints WHERE scope_kind = ? AND scope_id = ? ORDER BY start_at DESC`, sc.Kind, sc.ID)
 	if err != nil {
 		return nil, err
 	}
-	var idList []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		idList = append(idList, id)
-	}
-	rows.Close()
 	out := []*Sprint{}
 	for _, id := range idList {
 		sp, err := s.GetSprint(ctx, c, id)

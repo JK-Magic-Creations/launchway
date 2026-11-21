@@ -19,21 +19,15 @@ const (
 // back to Ready, the owner of the agent is told, the history says why.
 func (s *Store) SweepLeases(ctx context.Context) (int, error) {
 	now := ms(s.now())
-	rows, err := s.db.Query(ctx, `SELECT item_id, agent FROM work_claims WHERE lease_until < ?`, now)
+	type cl struct{ item, agent string }
+	list, err := queryAll(ctx, s.db, func(r scanner) (cl, error) {
+		var x cl
+		err := r.Scan(&x.item, &x.agent)
+		return x, err
+	}, `SELECT item_id, agent FROM work_claims WHERE lease_until < ?`, now)
 	if err != nil {
 		return 0, err
 	}
-	type cl struct{ item, agent string }
-	var list []cl
-	for rows.Next() {
-		var x cl
-		if err := rows.Scan(&x.item, &x.agent); err != nil {
-			rows.Close()
-			return 0, err
-		}
-		list = append(list, x)
-	}
-	rows.Close()
 	n := 0
 	for _, x := range list {
 		err := s.tx(ctx, func(tx DB) error {
@@ -99,20 +93,10 @@ func (s *Store) returnItem(ctx context.Context, tx DB, by Actor, itemID, agent, 
 }
 
 func (s *Store) releaseAll(ctx context.Context, tx DB, by Actor, agent, reason string) error {
-	rows, err := tx.Query(ctx, `SELECT item_id FROM work_claims WHERE agent = ?`, agent)
+	idList, err := queryAll(ctx, tx, scanString, `SELECT item_id FROM work_claims WHERE agent = ?`, agent)
 	if err != nil {
 		return err
 	}
-	var idList []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		idList = append(idList, id)
-	}
-	rows.Close()
 	for _, id := range idList {
 		if _, err := tx.Exec(ctx, `DELETE FROM work_claims WHERE item_id = ?`, id); err != nil {
 			return err
@@ -156,20 +140,10 @@ func (s *Store) Queue(ctx context.Context, agent *Agent, limit int) ([]*Item, er
 	args = append(args, cargs...)
 	args = append(args, ms(s.now()))
 	args = append(args, cargs...)
-	rows, err := s.db.Query(ctx, `SELECT `+itemColsI+` FROM work_items i WHERE `+strings.Join(conds, " AND ")+` ORDER BY CASE i.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, i.rank LIMIT ?`, append(args, limit*5)...)
+	items, err := queryAll(ctx, s.db, scanItem, `SELECT `+itemColsI+` FROM work_items i WHERE `+strings.Join(conds, " AND ")+` ORDER BY CASE i.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, i.rank LIMIT ?`, append(args, limit*5)...)
 	if err != nil {
 		return nil, err
 	}
-	var items []*Item
-	for rows.Next() {
-		it, err := scanItem(rows)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		items = append(items, it)
-	}
-	rows.Close()
 	if err := s.hydrate(ctx, s.db, items, false); err != nil {
 		return nil, err
 	}
@@ -233,41 +207,12 @@ func (s *Store) Claim(ctx context.Context, agent *Agent, o ClaimOptions) (*Item,
 	if err != nil {
 		return nil, err
 	}
-	if a.Disabled {
-		return nil, forbidden("agent %s is switched off", a.Name)
+	if err := checkAgentLimits(a); err != nil {
+		return nil, err
 	}
-	if a.Active >= a.Concurrency {
-		return nil, conflict("agent %s already holds %d item(s), its limit; finish or hand one back first", a.Name, a.Active)
-	}
-	if a.Today >= a.PerDay {
-		return nil, conflict("agent %s has taken %d items in the last 24 hours, its limit", a.Name, a.Today)
-	}
-	if (a.BudgetTokensDay > 0 && a.UsedTokensDay >= a.BudgetTokensDay) || (a.BudgetCentsDay > 0 && a.UsedCentsDay >= a.BudgetCentsDay) {
-		return nil, conflict("agent %s has used its budget for the last 24 hours (%d tokens, %d cents reported); a person may raise it", a.Name, a.UsedTokensDay, a.UsedCentsDay)
-	}
-	var target *Item
-	if o.Item != "" {
-		id, err := s.idOf(ctx, s.db, o.Item)
-		if err != nil {
-			return nil, err
-		}
-		target, err = s.load(ctx, s.db, id)
-		if err != nil {
-			return nil, err
-		}
-		assigned := slices.ContainsFunc(target.Assignees, func(x Assignee) bool { return x.Name == a.Name })
-		if !assigned && !(len(target.Assignees) == 0 && a.inPool(target)) {
-			return nil, forbidden("%s is not assigned to agent %s, and is not in its pool", target.Ref, a.Name)
-		}
-	} else {
-		q, err := s.Queue(ctx, a, 1)
-		if err != nil {
-			return nil, err
-		}
-		if len(q) == 0 {
-			return nil, notFound("nothing is waiting for agent " + a.Name)
-		}
-		target = q[0]
+	target, err := s.claimTarget(ctx, a, o.Item)
+	if err != nil {
+		return nil, err
 	}
 	if err := s.checkClass(ctx, a, target); err != nil {
 		return nil, err
@@ -280,65 +225,112 @@ func (s *Store) Claim(ctx context.Context, agent *Agent, o ClaimOptions) (*Item,
 	} else if !ok {
 		return nil, forbidden("agents are switched off for %s", target.Scope)
 	}
-	actor := Actor{Name: a.Name, Kind: KindAgent, Via: "api"}
-	err = s.tx(ctx, func(tx DB) error {
-		now := ms(s.now())
-		cur, err := s.load(ctx, tx, target.ID)
-		if err != nil {
-			return err
-		}
-		eff, err := s.settingsCached(ctx, cur.Scope)
-		if err != nil {
-			return err
-		}
-		if eff.Closed(cur.State) {
-			return conflict("%s is finished", cur.Ref)
-		}
-		if cur.Blocked {
-			return conflict("%s is blocked by %s", cur.Ref, strings.Join(cur.BlockedBy, ", "))
-		}
-		res, err := tx.Exec(ctx, `INSERT INTO work_claims(item_id, agent, claimed_at, heartbeat_at, lease_until, note)
-			SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM work_claims WHERE item_id = ?)`, cur.ID, a.Name, now, now, now+lease.Milliseconds(), cleanTitle(o.Note), cur.ID)
-		if err != nil {
-			return err
-		}
-		if n, _ := res.RowsAffected(); n == 0 {
-			return conflict("%s is held by another agent", cur.Ref)
-		}
-		// Concurrency again, now that the claim is in the same transaction
-		// that decides: another claim of this agent may have landed.
-		var held int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM work_claims WHERE agent = ? AND lease_until >= ?`, a.Name, now).Scan(&held); err != nil {
-			return err
-		}
-		if held > a.Concurrency {
-			return conflict("agent %s already holds its limit", a.Name)
-		}
-		if !slices.ContainsFunc(cur.Assignees, func(x Assignee) bool { return x.Name == a.Name }) {
-			if _, err := tx.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) VALUES(?,?,?)`, cur.ID, a.Name, KindAgent); err != nil {
-				return err
-			}
-		}
-		to := cur.State
-		if eff.Category(cur.State) == CatTodo {
-			to = "in_progress"
-			if _, ok := eff.StateByKey(to); !ok {
-				to = firstDoing(eff, cur.State)
-			}
-		}
-		if _, err := tx.Exec(ctx, `UPDATE work_items SET state = ?, version = version + 1, updated_at = ? WHERE id = ?`, to, now, cur.ID); err != nil {
-			return err
-		}
-		if err := s.event(ctx, tx, cur.ID, actor, "claimed", 0, map[string]any{"agent": a.Name, "lease_until": iso(now + lease.Milliseconds()), "from": cur.State, "to": to}); err != nil {
-			return err
-		}
-		return s.logAgent(ctx, tx, a.Name, cur.ID, "claim", cur.Ref)
-	})
+	err = s.tx(ctx, func(tx DB) error { return s.claimTx(ctx, tx, a, target.ID, lease, o.Note) })
 	if err != nil {
 		return nil, err
 	}
 	s.invalidate()
 	return s.load(ctx, s.db, target.ID)
+}
+
+// checkAgentLimits refuses an agent that is off or past a limit.
+func checkAgentLimits(a *Agent) error {
+	if a.Disabled {
+		return forbidden("agent %s is switched off", a.Name)
+	}
+	if a.Active >= a.Concurrency {
+		return conflict("agent %s already holds %d item(s), its limit; finish or hand one back first", a.Name, a.Active)
+	}
+	if a.Today >= a.PerDay {
+		return conflict("agent %s has taken %d items in the last 24 hours, its limit", a.Name, a.Today)
+	}
+	if (a.BudgetTokensDay > 0 && a.UsedTokensDay >= a.BudgetTokensDay) || (a.BudgetCentsDay > 0 && a.UsedCentsDay >= a.BudgetCentsDay) {
+		return conflict("agent %s has used its budget for the last 24 hours (%d tokens, %d cents reported); a person may raise it", a.Name, a.UsedTokensDay, a.UsedCentsDay)
+	}
+	return nil
+}
+
+// claimTarget is the item named, or the next in the agent's queue.
+func (s *Store) claimTarget(ctx context.Context, a *Agent, item string) (*Item, error) {
+	if item == "" {
+		q, err := s.Queue(ctx, a, 1)
+		if err != nil {
+			return nil, err
+		}
+		if len(q) == 0 {
+			return nil, notFound("nothing is waiting for agent " + a.Name)
+		}
+		return q[0], nil
+	}
+	id, err := s.idOf(ctx, s.db, item)
+	if err != nil {
+		return nil, err
+	}
+	target, err := s.load(ctx, s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	assigned := slices.ContainsFunc(target.Assignees, func(x Assignee) bool { return x.Name == a.Name })
+	if !assigned && (len(target.Assignees) != 0 || !a.inPool(target)) {
+		return nil, forbidden("%s is not assigned to agent %s, and is not in its pool", target.Ref, a.Name)
+	}
+	return target, nil
+}
+
+// claimTx takes the claim inside the transaction that decides it.
+func (s *Store) claimTx(ctx context.Context, tx DB, a *Agent, itemID string, lease time.Duration, note string) error {
+	actor := Actor{Name: a.Name, Kind: KindAgent, Via: "api"}
+	now := ms(s.now())
+	cur, err := s.load(ctx, tx, itemID)
+	if err != nil {
+		return err
+	}
+	eff, err := s.settingsCached(ctx, cur.Scope)
+	if err != nil {
+		return err
+	}
+	if eff.Closed(cur.State) {
+		return conflict("%s is finished", cur.Ref)
+	}
+	if cur.Blocked {
+		return conflict("%s is blocked by %s", cur.Ref, strings.Join(cur.BlockedBy, ", "))
+	}
+	res, err := tx.Exec(ctx, `INSERT INTO work_claims(item_id, agent, claimed_at, heartbeat_at, lease_until, note)
+		SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM work_claims WHERE item_id = ?)`, cur.ID, a.Name, now, now, now+lease.Milliseconds(), cleanTitle(note), cur.ID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return conflict("%s is held by another agent", cur.Ref)
+	}
+	// Concurrency again, now that the claim is in the same transaction
+	// that decides: another claim of this agent may have landed.
+	var held int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM work_claims WHERE agent = ? AND lease_until >= ?`, a.Name, now).Scan(&held); err != nil {
+		return err
+	}
+	if held > a.Concurrency {
+		return conflict("agent %s already holds its limit", a.Name)
+	}
+	if !slices.ContainsFunc(cur.Assignees, func(x Assignee) bool { return x.Name == a.Name }) {
+		if _, err := tx.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) VALUES(?,?,?)`, cur.ID, a.Name, KindAgent); err != nil {
+			return err
+		}
+	}
+	to := cur.State
+	if eff.Category(cur.State) == CatTodo {
+		to = "in_progress"
+		if _, ok := eff.StateByKey(to); !ok {
+			to = firstDoing(eff, cur.State)
+		}
+	}
+	if _, err := tx.Exec(ctx, `UPDATE work_items SET state = ?, version = version + 1, updated_at = ? WHERE id = ?`, to, now, cur.ID); err != nil {
+		return err
+	}
+	if err := s.event(ctx, tx, cur.ID, actor, "claimed", 0, map[string]any{"agent": a.Name, "lease_until": iso(now + lease.Milliseconds()), "from": cur.State, "to": to}); err != nil {
+		return err
+	}
+	return s.logAgent(ctx, tx, a.Name, cur.ID, "claim", cur.Ref)
 }
 
 func firstDoing(eff *Effective, fallback string) string {

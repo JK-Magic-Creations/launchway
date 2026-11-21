@@ -287,6 +287,17 @@ type updatePullBody struct {
 	AutoMerge *string `json:"auto_merge"`
 }
 
+// setPullState closes or reopens a pull request.
+func setPullState(ctx context.Context, svc *pulls.Service, repoID string, p pulls.PullRequest, state, actor string) error {
+	switch state {
+	case "closed":
+		return svc.Close(ctx, repoID, p, actor)
+	case "open":
+		return svc.Reopen(ctx, repoID, p, actor)
+	}
+	return fmt.Errorf("%w: state is closed or open", pulls.ErrInvalid)
+}
+
 func (s *Server) updatePull(w http.ResponseWriter, r *http.Request) {
 	repo, p, ok := s.pullTarget(w, r)
 	if !ok {
@@ -333,16 +344,7 @@ func (s *Server) updatePull(w http.ResponseWriter, r *http.Request) {
 		changes = append(changes, "target "+*in.Target)
 	}
 	if in.State != nil {
-		var err error
-		switch *in.State {
-		case "closed":
-			err = svc.Close(ctx, repo.ID, p, id.User)
-		case "open":
-			err = svc.Reopen(ctx, repo.ID, p, id.User)
-		default:
-			err = fmt.Errorf("%w: state is closed or open", pulls.ErrInvalid)
-		}
-		if err != nil {
+		if err := setPullState(ctx, svc, repo.ID, p, *in.State, id.User); err != nil {
 			s.failPull(w, err)
 			return
 		}

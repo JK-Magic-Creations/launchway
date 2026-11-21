@@ -36,20 +36,14 @@ func (s *Store) PromoteArchive(ctx context.Context, c Caller, sc Scope, repoID, 
 		return nil, forbidden("only a maintainer promotes an archive into %s", sc)
 	}
 	rep := &ImportReport{Preview: preview}
-	rows, err := s.db.Query(ctx, `SELECT number, title, state, author, body, labels, milestone, assignees, is_pull, created_at, updated_at, closed_at FROM imported_issues WHERE repo_id = ? ORDER BY number`, repoID)
+	all, err := queryAll(ctx, s.db, func(r scanner) (archIssue, error) {
+		var x archIssue
+		err := r.Scan(&x.n, &x.title, &x.state, &x.author, &x.body, &x.labels, &x.milestone, &x.assigned, &x.pull, &x.created, &x.updated, &x.closed)
+		return x, err
+	}, `SELECT number, title, state, author, body, labels, milestone, assignees, is_pull, created_at, updated_at, closed_at FROM imported_issues WHERE repo_id = ? ORDER BY number`, repoID)
 	if err != nil {
 		return nil, err
 	}
-	var all []archIssue
-	for rows.Next() {
-		var x archIssue
-		if err := rows.Scan(&x.n, &x.title, &x.state, &x.author, &x.body, &x.labels, &x.milestone, &x.assigned, &x.pull, &x.created, &x.updated, &x.closed); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		all = append(all, x)
-	}
-	rows.Close()
 	if len(all) == 0 {
 		return nil, notFound("this project has no imported issues to promote")
 	}
@@ -57,93 +51,10 @@ func (s *Store) PromoteArchive(ctx context.Context, c Caller, sc Scope, repoID, 
 	if err != nil {
 		return nil, err
 	}
-	sys := System("import")
-	done := eff.FirstOf(CatDone)
-	todo := eff.FirstOf(CatTodo)
 	for _, x := range all {
-		key := archiveKey(repoID, x.n)
-		if x.pull == 1 {
-			continue // pull requests become links below
-		}
-		var existing string
-		err := s.db.QueryRow(ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND source_key = ?`, sc.Kind, sc.ID, key).Scan(&existing)
-		if err == nil {
-			rep.Existing++
-			if !preview {
-				n, err := s.topUpComments(ctx, repoID, x.n, existing)
-				if err != nil {
-					return nil, err
-				}
-				rep.Comments += n
-			}
-			continue
-		}
-		if !isNoRows(err) {
+		if err := s.promoteIssue(ctx, sc, repoID, x, eff, preview, rep); err != nil {
 			return nil, err
 		}
-		var taken int
-		if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND number = ?`, sc.Kind, sc.ID, x.n).Scan(&taken); err != nil {
-			return nil, err
-		}
-		if taken > 0 {
-			rep.Conflicts = append(rep.Conflicts, fmt.Sprintf("#%d: a live item already has that number", x.n))
-			continue
-		}
-		rep.Created++
-		if preview {
-			var nc int
-			_ = s.db.QueryRow(ctx, `SELECT COUNT(*) FROM imported_comments WHERE repo_id = ? AND issue_number = ?`, repoID, x.n).Scan(&nc)
-			rep.Comments += nc
-			continue
-		}
-		var labels, assignees []string
-		_ = json.Unmarshal([]byte(x.labels), &labels)
-		_ = json.Unmarshal([]byte(x.assigned), &assignees)
-		typ := TypeIssue
-		for _, l := range labels {
-			if strings.EqualFold(l, "bug") {
-				typ = TypeBug
-			}
-		}
-		state := todo
-		if x.state == "closed" {
-			state = done
-		}
-		in := NewItem{Scope: sc, Type: typ, Title: x.title, Body: x.body, State: state, Labels: labels, Reporter: x.author, SourceKey: key, Number: x.n,
-			CreatedAt: iso(x.created), ClosedAt: iso(x.closed)}
-		if x.milestone != "" {
-			if _, err := s.ensureMilestone(ctx, sc, x.milestone); err == nil {
-				in.Milestone = x.milestone
-			}
-		}
-		if in.Reporter == "" {
-			in.Reporter = "unknown"
-		}
-		for _, a := range assignees {
-			if a != "" {
-				in.Assignees = append(in.Assignees, "person:"+a)
-			}
-		}
-		in.Assignees = nil // assignees are kept as text below, never matched to accounts
-		it, err := s.Create(ctx, sys, in)
-		if err != nil {
-			rep.Warnings = append(rep.Warnings, fmt.Sprintf("#%d: %v", x.n, err))
-			rep.Created--
-			continue
-		}
-		if len(assignees) > 0 {
-			for _, a := range assignees {
-				_, _ = s.db.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) SELECT ?,?,'person' WHERE NOT EXISTS (SELECT 1 FROM work_assignees WHERE item_id = ? AND who = ?)`, it.ID, a, it.ID, a)
-			}
-		}
-		if _, err := s.db.Exec(ctx, `UPDATE work_items SET updated_at = ? WHERE id = ?`, x.updated, it.ID); err != nil {
-			return nil, err
-		}
-		n, err := s.topUpComments(ctx, repoID, x.n, it.ID)
-		if err != nil {
-			return nil, err
-		}
-		rep.Comments += n
 	}
 	if err := s.promotePullLinks(ctx, sc, repoID, repoPath, preview, rep, all); err != nil {
 		return nil, err
@@ -155,22 +66,109 @@ func (s *Store) PromoteArchive(ctx context.Context, c Caller, sc Scope, repoID, 
 	return rep, nil
 }
 
+// promoteIssue turns one archived issue into a live item, or counts it.
+func (s *Store) promoteIssue(ctx context.Context, sc Scope, repoID string, x archIssue, eff *Effective, preview bool, rep *ImportReport) error {
+	sys := System("import")
+	done := eff.FirstOf(CatDone)
+	todo := eff.FirstOf(CatTodo)
+	key := archiveKey(repoID, x.n)
+	if x.pull == 1 {
+		return nil // pull requests become links below
+	}
+	var existing string
+	err := s.db.QueryRow(ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND source_key = ?`, sc.Kind, sc.ID, key).Scan(&existing)
+	if err == nil {
+		rep.Existing++
+		if !preview {
+			n, err := s.topUpComments(ctx, repoID, x.n, existing)
+			if err != nil {
+				return err
+			}
+			rep.Comments += n
+		}
+		return nil
+	}
+	if !isNoRows(err) {
+		return err
+	}
+	var taken int
+	if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND number = ?`, sc.Kind, sc.ID, x.n).Scan(&taken); err != nil {
+		return err
+	}
+	if taken > 0 {
+		rep.Conflicts = append(rep.Conflicts, fmt.Sprintf("#%d: a live item already has that number", x.n))
+		return nil
+	}
+	rep.Created++
+	if preview {
+		var nc int
+		_ = s.db.QueryRow(ctx, `SELECT COUNT(*) FROM imported_comments WHERE repo_id = ? AND issue_number = ?`, repoID, x.n).Scan(&nc)
+		rep.Comments += nc
+		return nil
+	}
+	var labels, assignees []string
+	_ = json.Unmarshal([]byte(x.labels), &labels)
+	_ = json.Unmarshal([]byte(x.assigned), &assignees)
+	typ := TypeIssue
+	for _, l := range labels {
+		if strings.EqualFold(l, "bug") {
+			typ = TypeBug
+		}
+	}
+	state := todo
+	if x.state == "closed" {
+		state = done
+	}
+	in := NewItem{Scope: sc, Type: typ, Title: x.title, Body: x.body, State: state, Labels: labels, Reporter: x.author, SourceKey: key, Number: x.n,
+		CreatedAt: iso(x.created), ClosedAt: iso(x.closed)}
+	if x.milestone != "" {
+		if _, err := s.ensureMilestone(ctx, sc, x.milestone); err == nil {
+			in.Milestone = x.milestone
+		}
+	}
+	if in.Reporter == "" {
+		in.Reporter = "unknown"
+	}
+	for _, a := range assignees {
+		if a != "" {
+			in.Assignees = append(in.Assignees, "person:"+a)
+		}
+	}
+	in.Assignees = nil // assignees are kept as text below, never matched to accounts
+	it, err := s.Create(ctx, sys, in)
+	if err != nil {
+		rep.Warnings = append(rep.Warnings, fmt.Sprintf("#%d: %v", x.n, err))
+		rep.Created--
+		return nil
+	}
+	if len(assignees) > 0 {
+		for _, a := range assignees {
+			_, _ = s.db.Exec(ctx, `INSERT INTO work_assignees(item_id, who, kind) SELECT ?,?,'person' WHERE NOT EXISTS (SELECT 1 FROM work_assignees WHERE item_id = ? AND who = ?)`, it.ID, a, it.ID, a)
+		}
+	}
+	if _, err := s.db.Exec(ctx, `UPDATE work_items SET updated_at = ? WHERE id = ?`, x.updated, it.ID); err != nil {
+		return err
+	}
+	n, err := s.topUpComments(ctx, repoID, x.n, it.ID)
+	if err != nil {
+		return err
+	}
+	rep.Comments += n
+	return nil
+}
+
 var shaPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 
 func (s *Store) linkArchiveCommits(ctx context.Context, sc Scope, repoID, repoPath string) int {
-	rows, err := s.db.Query(ctx, `SELECT i.id, d.body FROM work_items i JOIN imported_issues d ON d.repo_id = ? AND i.source_key = 'archive:' || ? || '#' || d.number WHERE i.scope_kind = ? AND i.scope_id = ?`, repoID, repoID, sc.Kind, sc.ID)
+	type pair struct{ id, body string }
+	ps, err := queryAll(ctx, s.db, func(r scanner) (pair, error) {
+		var p pair
+		err := r.Scan(&p.id, &p.body)
+		return p, err
+	}, `SELECT i.id, d.body FROM work_items i JOIN imported_issues d ON d.repo_id = ? AND i.source_key = 'archive:' || ? || '#' || d.number WHERE i.scope_kind = ? AND i.scope_id = ?`, repoID, repoID, sc.Kind, sc.ID)
 	if err != nil {
 		return 0
 	}
-	type pair struct{ id, body string }
-	var ps []pair
-	for rows.Next() {
-		var p pair
-		if rows.Scan(&p.id, &p.body) == nil {
-			ps = append(ps, p)
-		}
-	}
-	rows.Close()
 	n := 0
 	for _, p := range ps {
 		for _, sha := range shaPattern.FindAllString(p.body, 5) {
@@ -202,25 +200,19 @@ func (s *Store) ensureMilestone(ctx context.Context, sc Scope, title string) (st
 // topUpComments copies the archive's comments of an issue that the live item
 // does not have yet (keeping author text and times).
 func (s *Store) topUpComments(ctx context.Context, repoID string, number int, itemID string) (int, error) {
-	rows, err := s.db.Query(ctx, `SELECT position, author, body, created_at, updated_at FROM imported_comments WHERE repo_id = ? AND issue_number = ? ORDER BY position`, repoID, number)
-	if err != nil {
-		return 0, err
-	}
 	type cm struct {
 		pos          int
 		author, body string
 		created, upd int64
 	}
-	var cs []cm
-	for rows.Next() {
+	cs, err := queryAll(ctx, s.db, func(r scanner) (cm, error) {
 		var x cm
-		if err := rows.Scan(&x.pos, &x.author, &x.body, &x.created, &x.upd); err != nil {
-			rows.Close()
-			return 0, err
-		}
-		cs = append(cs, x)
+		err := r.Scan(&x.pos, &x.author, &x.body, &x.created, &x.upd)
+		return x, err
+	}, `SELECT position, author, body, created_at, updated_at FROM imported_comments WHERE repo_id = ? AND issue_number = ? ORDER BY position`, repoID, number)
+	if err != nil {
+		return 0, err
 	}
-	rows.Close()
 	n := 0
 	for _, x := range cs {
 		id := fmt.Sprintf("wcm_a%s_%d_%d", shortHash(repoID), number, x.pos)
@@ -301,85 +293,107 @@ func (s *Store) ImportStories(ctx context.Context, c Caller, sc Scope, docs []St
 	ordered := make([]StoryDoc, len(docs))
 	copy(ordered, docs)
 	sort.SliceStable(ordered, func(i, j int) bool { return docType(ordered[i]) == TypeEpic && docType(ordered[j]) != TypeEpic })
-	sys := System("import")
-	ids := map[string]string{}
-	find := func(key string) string {
-		if id, ok := ids[key]; ok {
-			return id
-		}
-		var id string
-		if s.db.QueryRow(ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND source_key = ?`, sc.Kind, sc.ID, key).Scan(&id) == nil {
-			ids[key] = id
-		}
-		return id
-	}
+	im := &storyImport{s: s, ctx: ctx, sc: sc, rep: rep, preview: preview, update: update, sys: System("import"), ids: map[string]string{}}
 	for _, d := range ordered {
-		existing := find(d.Key)
-		if existing != "" {
-			rep.Existing++
-			if update && !preview {
-				if _, err := s.Update(ctx, sys, existing, Patch{Title: &d.Title, Body: &d.Body}); err != nil {
-					rep.Warnings = append(rep.Warnings, d.Key+": "+err.Error())
-				} else {
-					rep.Updated++
-				}
-			}
-			continue
-		}
-		rep.Created++
-		if preview {
-			continue
-		}
-		in := NewItem{Scope: sc, Type: docType(d), Title: truncate(d.Title, MaxTitle), Body: d.Body, Labels: limitLabels(d.Labels), SourceKey: d.Key, Criteria: parseCriteria(d.Body)}
-		if d.Milestone != "" {
-			if _, err := s.ensureMilestone(ctx, sc, d.Milestone); err == nil {
-				in.Milestone = d.Milestone
-			}
-		}
-		if d.Epic != "" {
-			if pid := find(d.Epic); pid != "" {
-				in.Parent = pid
-			} else {
-				rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s: its epic %s is not in the project or the file", d.Key, d.Epic))
-			}
-		}
-		it, err := s.Create(ctx, sys, in)
-		if err != nil {
-			rep.Created--
-			rep.Warnings = append(rep.Warnings, d.Key+": "+err.Error())
-			continue
-		}
-		ids[d.Key] = it.ID
+		im.importDoc(d)
 	}
-	// Dependencies: what a story depends on blocks it.
 	for _, d := range docs {
-		for _, dep := range d.DependsOn {
-			from, to := find(dep), find(d.Key)
-			if to == "" {
-				continue
-			}
-			if from == "" {
-				if !preview {
-					rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s depends on %s, which is not in the project or the file", d.Key, dep))
-				}
-				continue
-			}
-			var had int
-			_ = s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_links WHERE from_id = ? AND to_id = ? AND kind = 'blocks'`, from, to).Scan(&had)
-			if had > 0 {
-				continue
-			}
-			rep.Links++
-			if preview {
-				continue
-			}
-			if _, err := s.AddLink(ctx, sys, from, LinkBlocks, to); err != nil {
-				rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s depends on %s: %v", d.Key, dep, err))
-				rep.Links--
-			}
-		}
+		im.linkDependencies(d)
 	}
 	return rep, nil
+}
+
+// storyImport is the state of one ImportStories run.
+type storyImport struct {
+	s               *Store
+	ctx             context.Context
+	sc              Scope
+	rep             *ImportReport
+	preview, update bool
+	sys             Caller
+	ids             map[string]string
+}
+
+// find is the id of the item with a source key, or "".
+func (im *storyImport) find(key string) string {
+	if id, ok := im.ids[key]; ok {
+		return id
+	}
+	var id string
+	if im.s.db.QueryRow(im.ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND source_key = ?`, im.sc.Kind, im.sc.ID, key).Scan(&id) == nil {
+		im.ids[key] = id
+	}
+	return id
+}
+
+// importDoc creates, updates or counts one story.
+func (im *storyImport) importDoc(d StoryDoc) {
+	rep, s, ctx, sc := im.rep, im.s, im.ctx, im.sc
+	if existing := im.find(d.Key); existing != "" {
+		rep.Existing++
+		if im.update && !im.preview {
+			if _, err := s.Update(ctx, im.sys, existing, Patch{Title: &d.Title, Body: &d.Body}); err != nil {
+				rep.Warnings = append(rep.Warnings, d.Key+": "+err.Error())
+			} else {
+				rep.Updated++
+			}
+		}
+		return
+	}
+	rep.Created++
+	if im.preview {
+		return
+	}
+	in := NewItem{Scope: sc, Type: docType(d), Title: truncate(d.Title, MaxTitle), Body: d.Body, Labels: limitLabels(d.Labels), SourceKey: d.Key, Criteria: parseCriteria(d.Body)}
+	if d.Milestone != "" {
+		if _, err := s.ensureMilestone(ctx, sc, d.Milestone); err == nil {
+			in.Milestone = d.Milestone
+		}
+	}
+	if d.Epic != "" {
+		if pid := im.find(d.Epic); pid != "" {
+			in.Parent = pid
+		} else {
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s: its epic %s is not in the project or the file", d.Key, d.Epic))
+		}
+	}
+	it, err := s.Create(ctx, im.sys, in)
+	if err != nil {
+		rep.Created--
+		rep.Warnings = append(rep.Warnings, d.Key+": "+err.Error())
+		return
+	}
+	im.ids[d.Key] = it.ID
+}
+
+// linkDependencies makes what a story depends on block it.
+func (im *storyImport) linkDependencies(d StoryDoc) {
+	rep := im.rep
+	for _, dep := range d.DependsOn {
+		from, to := im.find(dep), im.find(d.Key)
+		if to == "" {
+			continue
+		}
+		if from == "" {
+			if !im.preview {
+				rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s depends on %s, which is not in the project or the file", d.Key, dep))
+			}
+			continue
+		}
+		var had int
+		_ = im.s.db.QueryRow(im.ctx, `SELECT COUNT(*) FROM work_links WHERE from_id = ? AND to_id = ? AND kind = 'blocks'`, from, to).Scan(&had)
+		if had > 0 {
+			continue
+		}
+		rep.Links++
+		if im.preview {
+			continue
+		}
+		if _, err := im.s.AddLink(im.ctx, im.sys, from, LinkBlocks, to); err != nil {
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("%s depends on %s: %v", d.Key, dep, err))
+			rep.Links--
+		}
+	}
 }
 
 func docType(d StoryDoc) string {

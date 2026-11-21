@@ -306,6 +306,18 @@ func (e *Effective) stateName(key string) string {
 
 // Validate checks settings before they are stored.
 func (s *Settings) Validate() error {
+	for _, check := range []func() error{
+		s.validateBasics, s.validateStates, s.validateTypes, s.validateFields, s.validateClose,
+		s.validateAutonomy, s.validateReview, s.validateClasses, s.validateAgentReason,
+	} {
+		if err := check(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Settings) validateBasics() error {
 	if s.Prefix != "" {
 		if len(s.Prefix) > 10 || strings.ToUpper(s.Prefix) != s.Prefix || strings.ContainsAny(s.Prefix, " -#/") {
 			return invalid("a prefix is up to 10 capital letters or digits, such as PAY")
@@ -314,47 +326,60 @@ func (s *Settings) Validate() error {
 	if s.Unit != "" && s.Unit != "points" && s.Unit != "hours" {
 		return invalid("estimate_unit is points or hours")
 	}
-	if len(s.States) > 0 {
-		seen := map[string]bool{}
-		done, todo := false, false
-		for _, st := range s.States {
-			if st.Key == "" || st.Name == "" || seen[st.Key] || len(st.Key) > 40 {
-				return invalid("each state needs a unique key and a name")
-			}
-			seen[st.Key] = true
-			switch st.Category {
-			case CatTodo:
-				todo = true
-			case CatDoing, CatReview:
-			case CatDone:
-				done = true
-			case CatCancelled:
-			default:
-				return invalid("state %s has category %q: use todo, doing, review, done or cancelled", st.Key, st.Category)
-			}
-			if st.WIP < 0 {
-				return invalid("state %s has a negative limit", st.Key)
-			}
+	return nil
+}
+
+func (s *Settings) validateStates() error {
+	if len(s.States) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	done, todo := false, false
+	for _, st := range s.States {
+		if st.Key == "" || st.Name == "" || seen[st.Key] || len(st.Key) > 40 {
+			return invalid("each state needs a unique key and a name")
 		}
-		if !todo || !done || len(s.States) > 20 {
-			return invalid("a workflow has between 2 and 20 states and at least one to-do and one done state")
+		seen[st.Key] = true
+		switch st.Category {
+		case CatTodo:
+			todo = true
+		case CatDoing, CatReview:
+		case CatDone:
+			done = true
+		case CatCancelled:
+		default:
+			return invalid("state %s has category %q: use todo, doing, review, done or cancelled", st.Key, st.Category)
 		}
-		for _, t := range s.Transitions {
-			if !seen[t.To] || (t.Who != WhoAnyone && t.Who != WhoHuman && t.Who != WhoMaintainer) {
-				return invalid("a transition names a state of the workflow and who may make it (anyone, human or maintainer)")
-			}
-			for _, f := range t.From {
-				if !seen[f] {
-					return invalid("transition into %s names the unknown state %s", t.To, f)
-				}
+		if st.WIP < 0 {
+			return invalid("state %s has a negative limit", st.Key)
+		}
+	}
+	if !todo || !done || len(s.States) > 20 {
+		return invalid("a workflow has between 2 and 20 states and at least one to-do and one done state")
+	}
+	for _, t := range s.Transitions {
+		if !seen[t.To] || (t.Who != WhoAnyone && t.Who != WhoHuman && t.Who != WhoMaintainer) {
+			return invalid("a transition names a state of the workflow and who may make it (anyone, human or maintainer)")
+		}
+		for _, f := range t.From {
+			if !seen[f] {
+				return invalid("transition into %s names the unknown state %s", t.To, f)
 			}
 		}
 	}
+	return nil
+}
+
+func (s *Settings) validateTypes() error {
 	for _, t := range s.Types {
 		if t.Key == "" || t.Name == "" || !slices.Contains(Types, t.Key) {
 			return invalid("a type is one of %s", strings.Join(Types, ", "))
 		}
 	}
+	return nil
+}
+
+func (s *Settings) validateFields() error {
 	for _, f := range s.Fields {
 		if f.Key == "" || f.Name == "" || strings.ContainsAny(f.Key, " .") {
 			return invalid("a custom field needs a key and a name")
@@ -369,55 +394,79 @@ func (s *Settings) Validate() error {
 			return invalid("field %s has type %q: use text, number, date, select or boolean", f.Key, f.Type)
 		}
 	}
+	return nil
+}
+
+func (s *Settings) validateClose() error {
 	if s.Close != nil {
 		if s.Close.On != "merge" && s.Close.On != "review" && s.Close.On != "never" {
 			return invalid("close.on is merge, review or never")
 		}
 	}
-	if s.Agents != nil && s.Agents.Autonomy != nil {
-		au := s.Agents.Autonomy
-		if au.Level < 0 || au.Level > 4 || au.MaxFiles < 0 || au.MaxLines < 0 || au.PauseAfter < 0 || au.PauseDays < 0 {
-			return invalid("autonomy level is 0 to 4, and the limits are not negative")
-		}
-		if au.Level > AutonomyPerson && strings.TrimSpace(au.Reason) == "" {
-			return invalid("raising agent autonomy above 'a person approves and merges' needs a reason, which is recorded")
-		}
-		if au.Level >= AutonomyAutoMerge && len(au.Paths) == 0 {
-			return invalid("autonomy 2 lists the paths an agent may change without a person (for example docs/**); with none it would allow nothing")
-		}
-		for _, p := range au.Paths {
-			if _, err := path.Match(p, ""); err != nil {
-				return invalid("%q is not a path pattern", p)
-			}
+	return nil
+}
+
+func (s *Settings) validateAutonomy() error {
+	if s.Agents == nil || s.Agents.Autonomy == nil {
+		return nil
+	}
+	au := s.Agents.Autonomy
+	if au.Level < 0 || au.Level > 4 || au.MaxFiles < 0 || au.MaxLines < 0 || au.PauseAfter < 0 || au.PauseDays < 0 {
+		return invalid("autonomy level is 0 to 4, and the limits are not negative")
+	}
+	if au.Level > AutonomyPerson && strings.TrimSpace(au.Reason) == "" {
+		return invalid("raising agent autonomy above 'a person approves and merges' needs a reason, which is recorded")
+	}
+	if au.Level >= AutonomyAutoMerge && len(au.Paths) == 0 {
+		return invalid("autonomy 2 lists the paths an agent may change without a person (for example docs/**); with none it would allow nothing")
+	}
+	for _, p := range au.Paths {
+		if _, err := path.Match(p, ""); err != nil {
+			return invalid("%q is not a path pattern", p)
 		}
 	}
-	if s.Agents != nil && s.Agents.Review != nil {
-		r := s.Agents.Review
-		if r.Mode != ReviewHumanOnly && r.Mode != ReviewIndependent {
-			return invalid("review mode is human_only or independent_agent_allowed")
-		}
-		if r.SamplePercent < 0 || r.SamplePercent > 100 || r.MaxFiles < 0 || r.MaxLines < 0 {
-			return invalid("sample_percent is 0 to 100 and the limits are not negative")
-		}
-		if r.Mode == ReviewIndependent && (strings.TrimSpace(r.Reason) == "" || len(r.Paths) == 0) {
-			return invalid("letting an independent agent's approval count needs a reason and the paths it covers")
-		}
+	return nil
+}
+
+func (s *Settings) validateReview() error {
+	if s.Agents == nil || s.Agents.Review == nil {
+		return nil
 	}
+	r := s.Agents.Review
+	if r.Mode != ReviewHumanOnly && r.Mode != ReviewIndependent {
+		return invalid("review mode is human_only or independent_agent_allowed")
+	}
+	if r.SamplePercent < 0 || r.SamplePercent > 100 || r.MaxFiles < 0 || r.MaxLines < 0 {
+		return invalid("sample_percent is 0 to 100 and the limits are not negative")
+	}
+	if r.Mode == ReviewIndependent && (strings.TrimSpace(r.Reason) == "" || len(r.Paths) == 0) {
+		return invalid("letting an independent agent's approval count needs a reason and the paths it covers")
+	}
+	return nil
+}
+
+func (s *Settings) validateClasses() error {
+	sizes := []string{"small", "medium", "large"}
 	for d, cl := range s.Classes {
-		if !slices.Contains([]string{"small", "medium", "large"}, d) {
+		if !slices.Contains(sizes, d) {
 			return invalid("difficulty %q is small, medium or large", d)
 		}
 		for _, c := range cl {
-			if !slices.Contains([]string{"small", "medium", "large"}, c) {
+			if !slices.Contains(sizes, c) {
 				return invalid("class %q is small, medium or large", c)
 			}
 		}
 	}
-	if s.Agents != nil {
-		loosened := (s.Agents.HumanApproval != nil && !*s.Agents.HumanApproval) || (s.Agents.AllowMerge != nil && *s.Agents.AllowMerge)
-		if loosened && strings.TrimSpace(s.Agents.Reason) == "" {
-			return invalid("letting agents land work without a person's approval, or merge it, needs a reason, which is recorded")
-		}
+	return nil
+}
+
+func (s *Settings) validateAgentReason() error {
+	if s.Agents == nil {
+		return nil
+	}
+	loosened := (s.Agents.HumanApproval != nil && !*s.Agents.HumanApproval) || (s.Agents.AllowMerge != nil && *s.Agents.AllowMerge)
+	if loosened && strings.TrimSpace(s.Agents.Reason) == "" {
+		return invalid("letting agents land work without a person's approval, or merge it, needs a reason, which is recorded")
 	}
 	return nil
 }

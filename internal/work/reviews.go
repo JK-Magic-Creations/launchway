@@ -99,6 +99,107 @@ func (v *Verdict) check() error {
 	return nil
 }
 
+// checkIndependent refuses a review by an agent that wrote the change or
+// holds or held the work.
+func (s *Store) checkIndependent(ctx context.Context, a *Agent, in ReviewInput) error {
+	if slices.Contains(in.AuthorAgents, a.Name) {
+		return forbidden("an agent never reviews a pull request it opened or pushed to")
+	}
+	// Whoever holds or held the lease of a linked item is not independent.
+	for _, id := range in.ItemIDs {
+		var n int
+		if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_agent_log WHERE agent = ? AND item_id = ? AND action IN ('claim','review')`, a.Name, id).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return forbidden("agent %s held the work this pull request is for, so it is not independent of it", a.Name)
+		}
+		if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_claims WHERE item_id = ? AND agent = ?`, id, a.Name).Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 {
+			return forbidden("agent %s holds the work this pull request is for", a.Name)
+		}
+	}
+	return nil
+}
+
+// policyReasons says why the policy, the mode or the model keep a review from counting.
+func (s *Store) policyReasons(ctx context.Context, a *Agent, in ReviewInput, eff *Effective, pol *AgentReviewPolicy) []string {
+	var r []string
+	if !eff.Agents.AgentsEnabled() {
+		r = append(r, "agents are switched off here")
+	}
+	if pol.Mode != ReviewIndependent {
+		r = append(r, "the policy here is that a person reviews; this is advice")
+	}
+	if !in.Verdict.ScopeOK {
+		r = append(r, "the reviewer judged the change out of scope")
+	}
+	if pol.RequireDifferentModel {
+		if a.Model == "" {
+			r = append(r, "the policy needs a different model, and this agent declares none")
+		}
+		for _, name := range in.AuthorAgents {
+			au, err := s.AgentByName(ctx, name)
+			if err != nil {
+				continue
+			}
+			if au.Model == "" || strings.EqualFold(au.Model, a.Model) {
+				r = append(r, fmt.Sprintf("the policy needs a different model than the author's (%s); this agent declares %q", name, a.Model))
+			}
+		}
+	}
+	return r
+}
+
+// fileReasons says which changed files only a person approves.
+func fileReasons(files []ChangedFile, pol *AgentReviewPolicy) []string {
+	var r []string
+	for _, f := range files {
+		for _, p := range alwaysHuman {
+			if matchGlob(p, f.Path) {
+				r = append(r, fmt.Sprintf("%s is on the list of files only a person approves", f.Path))
+			}
+		}
+		if f.Deleted && IsTestPath(f.Path) {
+			r = append(r, "the change deletes a test: only a person approves that")
+		}
+		listed := false
+		for _, p := range pol.Paths {
+			if matchGlob(p, f.Path) {
+				listed = true
+			}
+		}
+		if !listed {
+			r = append(r, fmt.Sprintf("%s is not among the paths the policy lets an agent approve", f.Path))
+		}
+	}
+	return r
+}
+
+// sizeReasons says why the size, the tests or the type keep a review from counting.
+func sizeReasons(in ReviewInput, pol *AgentReviewPolicy) []string {
+	var r []string
+	if in.Change.TestsSkipped {
+		r = append(r, "the change skips a test: only a person approves that")
+	}
+	maxFiles, maxLines := 10, 200
+	if pol.MaxFiles > 0 {
+		maxFiles = pol.MaxFiles
+	}
+	if pol.MaxLines > 0 {
+		maxLines = pol.MaxLines
+	}
+	if len(in.Change.Files) == 0 || len(in.Change.Files) > maxFiles || in.Change.Lines > maxLines {
+		r = append(r, fmt.Sprintf("the change is outside the size the policy lets an agent approve (%d files, %d lines)", maxFiles, maxLines))
+	}
+	if len(pol.Types) > 0 && !slices.Contains(pol.Types, in.Change.ItemType) {
+		r = append(r, fmt.Sprintf("the policy lets an agent approve only %s work", strings.Join(pol.Types, ", ")))
+	}
+	return r
+}
+
 // SubmitAgentReview stores an agent's review of a pull request. Whether it
 // counts as an approval is decided here, by the policy and by independence:
 // the reviewer is a registered agent other than any that wrote the change or
@@ -119,25 +220,8 @@ func (s *Store) SubmitAgentReview(ctx context.Context, reviewer *Agent, in Revie
 	if !s.AgentCovers(a, in.Change.Scope) {
 		return nil, forbidden("agent %s does not work in %s", a.Name, in.Change.Scope)
 	}
-	var advice []string
-	if slices.Contains(in.AuthorAgents, a.Name) {
-		return nil, forbidden("an agent never reviews a pull request it opened or pushed to")
-	}
-	// Whoever holds or held the lease of a linked item is not independent.
-	for _, id := range in.ItemIDs {
-		var n int
-		if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_agent_log WHERE agent = ? AND item_id = ? AND action IN ('claim','review')`, a.Name, id).Scan(&n); err != nil {
-			return nil, err
-		}
-		if n > 0 {
-			return nil, forbidden("agent %s held the work this pull request is for, so it is not independent of it", a.Name)
-		}
-		if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_claims WHERE item_id = ? AND agent = ?`, id, a.Name).Scan(&n); err != nil {
-			return nil, err
-		}
-		if n > 0 {
-			return nil, forbidden("agent %s holds the work this pull request is for", a.Name)
-		}
+	if err := s.checkIndependent(ctx, a, in); err != nil {
+		return nil, err
 	}
 	eff, err := s.Settings(ctx, in.Change.Scope)
 	if err != nil {
@@ -147,66 +231,11 @@ func (s *Store) SubmitAgentReview(ctx context.Context, reviewer *Agent, in Revie
 	if eff.Agents != nil && eff.Agents.Review != nil {
 		pol = eff.Agents.Review
 	}
-	counts := in.Verdict.Decision == "approve"
-	no := func(f string, a ...any) { counts = false; advice = append(advice, fmt.Sprintf(f, a...)) }
-	if !eff.Agents.AgentsEnabled() {
-		no("agents are switched off here")
-	}
-	if pol.Mode != ReviewIndependent {
-		no("the policy here is that a person reviews; this is advice")
-	}
-	if !in.Verdict.ScopeOK {
-		no("the reviewer judged the change out of scope")
-	}
-	if pol.RequireDifferentModel {
-		if a.Model == "" {
-			no("the policy needs a different model, and this agent declares none")
-		}
-		for _, name := range in.AuthorAgents {
-			au, err := s.AgentByName(ctx, name)
-			if err != nil {
-				continue
-			}
-			if au.Model == "" || strings.EqualFold(au.Model, a.Model) {
-				no("the policy needs a different model than the author's (%s); this agent declares %q", name, a.Model)
-			}
-		}
-	}
-	for _, f := range in.Change.Files {
-		for _, p := range alwaysHuman {
-			if matchGlob(p, f.Path) {
-				no("%s is on the list of files only a person approves", f.Path)
-			}
-		}
-		if f.Deleted && IsTestPath(f.Path) {
-			no("the change deletes a test: only a person approves that")
-		}
-		listed := false
-		for _, p := range pol.Paths {
-			if matchGlob(p, f.Path) {
-				listed = true
-			}
-		}
-		if !listed {
-			no("%s is not among the paths the policy lets an agent approve", f.Path)
-		}
-	}
-	if in.Change.TestsSkipped {
-		no("the change skips a test: only a person approves that")
-	}
-	maxFiles, maxLines := 10, 200
-	if pol.MaxFiles > 0 {
-		maxFiles = pol.MaxFiles
-	}
-	if pol.MaxLines > 0 {
-		maxLines = pol.MaxLines
-	}
-	if len(in.Change.Files) == 0 || len(in.Change.Files) > maxFiles || in.Change.Lines > maxLines {
-		no("the change is outside the size the policy lets an agent approve (%d files, %d lines)", maxFiles, maxLines)
-	}
-	if len(pol.Types) > 0 && !slices.Contains(pol.Types, in.Change.ItemType) {
-		no("the policy lets an agent approve only %s work", strings.Join(pol.Types, ", "))
-	}
+	var advice []string
+	advice = append(advice, s.policyReasons(ctx, a, in, eff, pol)...)
+	advice = append(advice, fileReasons(in.Change.Files, pol)...)
+	advice = append(advice, sizeReasons(in, pol)...)
+	counts := in.Verdict.Decision == "approve" && len(advice) == 0
 	detail, _ := json.Marshal(in.Verdict)
 	rv := &AgentReview{ID: newID("war"), Repo: in.Repo, Pull: in.Pull, Agent: a.Name, Verdict: in.Verdict, Counts: counts, Advice: strings.Join(advice, "; ")}
 	now := ms(s.now())
@@ -373,41 +402,36 @@ func (s *Store) Spend(ctx context.Context, c Caller) ([]SpendRow, error) {
 		out = append(out, SpendRow{Name: a.Name, Kind: "agent", Period: "24h", BudgetCents: a.BudgetCentsDay, SpentCents: a.UsedCentsDay, RemainingCents: remaining(a.BudgetCentsDay, a.UsedCentsDay),
 			BudgetTokens: a.BudgetTokensDay, SpentTokens: a.UsedTokensDay, RemainingTokens: remaining(a.BudgetTokensDay, a.UsedTokensDay)})
 	}
-	rows, err := s.db.Query(ctx, `SELECT i.scope_kind, i.scope_id, COALESCE(SUM(u.cents),0), COALESCE(SUM(u.tokens),0), COALESCE(SUM(u.seconds),0) FROM work_usage u JOIN work_items i ON i.id = u.item_id GROUP BY i.scope_kind, i.scope_id ORDER BY 3 DESC`)
+	type proj struct {
+		sc                  Scope
+		cents, tokens, secs int64
+	}
+	projs, err := queryAll(ctx, s.db, func(r scanner) (proj, error) {
+		var x proj
+		err := r.Scan(&x.sc.Kind, &x.sc.ID, &x.cents, &x.tokens, &x.secs)
+		return x, err
+	}, `SELECT i.scope_kind, i.scope_id, COALESCE(SUM(u.cents),0), COALESCE(SUM(u.tokens),0), COALESCE(SUM(u.seconds),0) FROM work_usage u JOIN work_items i ON i.id = u.item_id GROUP BY i.scope_kind, i.scope_id ORDER BY 3 DESC`)
 	if err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		var sc Scope
-		var cents, tokens, secs int64
-		if err := rows.Scan(&sc.Kind, &sc.ID, &cents, &tokens, &secs); err != nil {
-			rows.Close()
-			return nil, err
+	for _, p := range projs {
+		if c.canRead(p.sc) {
+			out = append(out, SpendRow{Name: p.sc.String(), Kind: "project", Period: "all time", SpentCents: p.cents, SpentTokens: p.tokens, Seconds: p.secs})
 		}
-		if c.canRead(sc) {
-			out = append(out, SpendRow{Name: sc.String(), Kind: "project", Period: "all time", SpentCents: cents, SpentTokens: tokens, Seconds: secs})
-		}
-	}
-	rows.Close()
-	rows, err = s.db.Query(ctx, `SELECT u.item_id, COALESCE(SUM(u.cents),0), COALESCE(SUM(u.tokens),0), COALESCE(SUM(u.seconds),0), MAX(u.agent) FROM work_usage u GROUP BY u.item_id ORDER BY 2 DESC LIMIT 20`)
-	if err != nil {
-		return nil, err
 	}
 	type it struct {
 		id      string
 		c, t, s int64
 		agent   string
 	}
-	var its []it
-	for rows.Next() {
+	its, err := queryAll(ctx, s.db, func(r scanner) (it, error) {
 		var x it
-		if err := rows.Scan(&x.id, &x.c, &x.t, &x.s, &x.agent); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		its = append(its, x)
+		err := r.Scan(&x.id, &x.c, &x.t, &x.s, &x.agent)
+		return x, err
+	}, `SELECT u.item_id, COALESCE(SUM(u.cents),0), COALESCE(SUM(u.tokens),0), COALESCE(SUM(u.seconds),0), MAX(u.agent) FROM work_usage u GROUP BY u.item_id ORDER BY 2 DESC LIMIT 20`)
+	if err != nil {
+		return nil, err
 	}
-	rows.Close()
 	for _, x := range its {
 		item, err := s.load(ctx, s.db, x.id)
 		if err != nil || !c.canSee(item) {

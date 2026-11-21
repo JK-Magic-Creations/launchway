@@ -79,28 +79,8 @@ func (s *Server) deliveryOf(r *http.Request, it *work.Item, code []work.CodeLink
 	sort.SliceStable(names, func(i, j int) bool { return false })
 	var running, missing []string
 	for _, env := range names {
-		line := workEnvLine{Environment: env}
-		for _, d := range byEnv[env] { // newest first: the first one that holds the fix is the earliest since... the newest
-			if d.Commit == "" || d.Repo == "" {
-				continue
-			}
-			for _, c := range commits {
-				if c.Repo == d.Repo && s.holdsCommit(r, d.Repo, c.Ref, d.Commit) {
-					line.Running, line.Deployment, line.Run, line.Version = true, d.ID, d.RunID, d.Version
-					line.Since = time.UnixMilli(d.DeployedAt).UTC().Format(time.RFC3339)
-				}
-			}
-		}
-		// The earliest deployment that holds it is when it began to run there.
+		line := s.envLine(r, env, byEnv[env], commits)
 		if line.Running {
-			for _, d := range byEnv[env] {
-				for _, c := range commits {
-					if d.Repo == c.Repo && d.Commit != "" && s.holdsCommit(r, d.Repo, c.Ref, d.Commit) && d.DeployedAt > 0 {
-						line.Since = time.UnixMilli(d.DeployedAt).UTC().Format(time.RFC3339)
-						line.Deployment, line.Run, line.Version = d.ID, d.RunID, d.Version
-					}
-				}
-			}
 			running = append(running, fmt.Sprintf("on %s since %s", env, line.Since[11:16]))
 		} else {
 			missing = append(missing, env)
@@ -116,6 +96,34 @@ func (s *Server) deliveryOf(r *http.Request, it *work.Item, code []work.CodeLink
 		out.Sentence = "Merged, " + strings.Join(running, ", ") + ", not yet on " + strings.Join(missing, " or ") + "."
 	}
 	return out
+}
+
+// envLine says whether the merged commits run in one environment, and since when.
+func (s *Server) envLine(r *http.Request, env string, deps []engine.DeploymentView, commits []work.CodeLink) workEnvLine {
+	line := workEnvLine{Environment: env}
+	for _, d := range deps { // newest first
+		if d.Commit == "" || d.Repo == "" {
+			continue
+		}
+		for _, c := range commits {
+			if c.Repo == d.Repo && s.holdsCommit(r, d.Repo, c.Ref, d.Commit) {
+				line.Running, line.Deployment, line.Run, line.Version = true, d.ID, d.RunID, d.Version
+				line.Since = time.UnixMilli(d.DeployedAt).UTC().Format(time.RFC3339)
+			}
+		}
+	}
+	// The earliest deployment that holds it is when it began to run there.
+	if line.Running {
+		for _, d := range deps {
+			for _, c := range commits {
+				if d.Repo == c.Repo && d.Commit != "" && s.holdsCommit(r, d.Repo, c.Ref, d.Commit) && d.DeployedAt > 0 {
+					line.Since = time.UnixMilli(d.DeployedAt).UTC().Format(time.RFC3339)
+					line.Deployment, line.Run, line.Version = d.ID, d.RunID, d.Version
+				}
+			}
+		}
+	}
+	return line
 }
 
 // holdsCommit says whether the commit a deployment ran contains the commit

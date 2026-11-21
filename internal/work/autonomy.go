@@ -188,86 +188,40 @@ func (s *Store) Gate(ctx context.Context, ch AgentChange) (*Decision, error) {
 		return d, nil
 	}
 	d.NeedsHuman = true // until the policy says otherwise
-	why := func(f string, a ...any) { d.Reasons = append(d.Reasons, fmt.Sprintf(f, a...)) }
+	protected, reasons := protectedReasons(ch)
+	d.Reasons = append(d.Reasons, reasons...)
 	if d.Level == AutonomyProposeOnly {
-		why("policy: agents here only propose; they open no pull requests")
-	}
-	protected := false
-	for _, f := range ch.Files {
-		for _, p := range alwaysHuman {
-			if matchGlob(p, f.Path) {
-				protected = true
-				why("%s is a protected file (pipelines, branch rules, owners, quarantine, standards, the autonomy policy): a person always approves a change to it", f.Path)
-				break
-			}
-		}
-		if f.Deleted && IsTestPath(f.Path) {
-			protected = true
-			why("%s is a test and the change deletes it: a person always approves that", f.Path)
-		}
-	}
-	if ch.TestsSkipped {
-		protected = true
-		why("the change skips or disables a test: a person always approves that")
+		// Said before the file reasons, as the policy comes first.
+		d.Reasons = append([]string{"policy: agents here only propose; they open no pull requests"}, d.Reasons...)
 	}
 	if ch.ChecksSkipped || !ch.ChecksPassed {
-		why("required checks have not all passed (a failing or skipped check blocks every merge)")
+		d.Reasons = append(d.Reasons, "required checks have not all passed (a failing or skipped check blocks every merge)")
 	} else if ch.ChecksRequired == 0 && d.EnforcedLevel >= AutonomyAutoMerge {
-		why("no check is required on this branch, so nothing can show that the change is safe to merge without a person")
+		d.Reasons = append(d.Reasons, "no check is required on this branch, so nothing can show that the change is safe to merge without a person")
 	}
 	if d.EnforcedLevel < AutonomyAutoMerge {
 		if d.Level < AutonomyPerson+1 {
-			why("policy: a person approves and merges")
+			d.Reasons = append(d.Reasons, "policy: a person approves and merges")
 		}
 	} else if !protected && ch.ChecksPassed && !ch.ChecksSkipped && ch.ChecksRequired > 0 {
-		paused, n, err := s.Paused(ctx, ch.Scope, au)
-		if err != nil {
+		if err := s.autoMergeCheck(ctx, ch, au, d); err != nil {
 			return nil, err
 		}
-		d.Paused = paused
-		maxFiles, maxLines := 10, 200
-		if au.MaxFiles > 0 {
-			maxFiles = au.MaxFiles
-		}
-		if au.MaxLines > 0 {
-			maxLines = au.MaxLines
-		}
-		ok := true
-		switch {
-		case paused:
-			ok = false
-			why("autonomy is paused: %d of this project's recent agent changes were reverted or failed delivery; a person clears the pause", n)
-		case len(ch.Files) == 0 || len(ch.Files) > maxFiles || ch.Lines > maxLines:
-			ok = false
-			why("the change is outside the policy's size (up to %d files and %d lines)", maxFiles, maxLines)
-		case len(au.Types) > 0 && !contains(au.Types, ch.ItemType):
-			ok = false
-			why("the policy auto-merges only %s work", strings.Join(au.Types, ", "))
-		}
-		for _, f := range ch.Files {
-			listed := false
-			for _, p := range au.Paths {
-				if matchGlob(p, f.Path) {
-					listed = true
-				}
-			}
-			if !listed {
-				ok = false
-				why("%s is not among the paths the policy lets an agent change on its own", f.Path)
-			}
-		}
-		if ok {
-			d.AutoMerge, d.NeedsHuman = true, false
-			d.Reasons = append(d.Reasons, "policy level 2: every check passed and the change is of a listed kind")
-		}
 	}
+	s.settleMerge(ctx, ch, d, protected)
+	return d, nil
+}
+
+// settleMerge counts the approvals of an agent and of a person and says
+// whether the change can merge.
+func (s *Store) settleMerge(ctx context.Context, ch AgentChange, d *Decision, protected bool) {
 	// An independent agent's approval counts only where the review policy
 	// allows it for this change, and never for what a person always approves.
 	agentApproved := false
 	if ch.Repo != "" && !protected {
 		if n, err := s.countedAgentApprovals(ctx, ch.Repo, ch.Pull); err == nil && n > 0 {
 			agentApproved = true
-			why("an independent agent approved it, as the review policy allows for this change")
+			d.Reasons = append(d.Reasons, "an independent agent approved it, as the review policy allows for this change")
 		}
 	}
 	d.AgentApproved = agentApproved
@@ -279,7 +233,74 @@ func (s *Store) Gate(ctx context.Context, ch AgentChange) (*Decision, error) {
 	if d.NeedsHuman && ch.HumanApproved && len(d.Reasons) > 0 {
 		d.Reasons = append(d.Reasons, "a person approved it")
 	}
-	return d, nil
+}
+
+// protectedReasons says whether the change touches what a person always
+// approves, and why.
+func protectedReasons(ch AgentChange) (bool, []string) {
+	protected := false
+	var r []string
+	for _, f := range ch.Files {
+		for _, p := range alwaysHuman {
+			if matchGlob(p, f.Path) {
+				protected = true
+				r = append(r, fmt.Sprintf("%s is a protected file (pipelines, branch rules, owners, quarantine, standards, the autonomy policy): a person always approves a change to it", f.Path))
+				break
+			}
+		}
+		if f.Deleted && IsTestPath(f.Path) {
+			protected = true
+			r = append(r, fmt.Sprintf("%s is a test and the change deletes it: a person always approves that", f.Path))
+		}
+	}
+	if ch.TestsSkipped {
+		protected = true
+		r = append(r, "the change skips or disables a test: a person always approves that")
+	}
+	return protected, r
+}
+
+// autoMergeCheck applies the level-2 policy to a change whose checks passed:
+// it sets the decision to auto-merge or says why not.
+func (s *Store) autoMergeCheck(ctx context.Context, ch AgentChange, au *Autonomy, d *Decision) error {
+	paused, n, err := s.Paused(ctx, ch.Scope, au)
+	if err != nil {
+		return err
+	}
+	d.Paused = paused
+	maxFiles, maxLines := 10, 200
+	if au.MaxFiles > 0 {
+		maxFiles = au.MaxFiles
+	}
+	if au.MaxLines > 0 {
+		maxLines = au.MaxLines
+	}
+	ok := true
+	why := func(f string, a ...any) { ok = false; d.Reasons = append(d.Reasons, fmt.Sprintf(f, a...)) }
+	switch {
+	case paused:
+		why("autonomy is paused: %d of this project's recent agent changes were reverted or failed delivery; a person clears the pause", n)
+	case len(ch.Files) == 0 || len(ch.Files) > maxFiles || ch.Lines > maxLines:
+		why("the change is outside the policy's size (up to %d files and %d lines)", maxFiles, maxLines)
+	case len(au.Types) > 0 && !contains(au.Types, ch.ItemType):
+		why("the policy auto-merges only %s work", strings.Join(au.Types, ", "))
+	}
+	for _, f := range ch.Files {
+		listed := false
+		for _, p := range au.Paths {
+			if matchGlob(p, f.Path) {
+				listed = true
+			}
+		}
+		if !listed {
+			why("%s is not among the paths the policy lets an agent change on its own", f.Path)
+		}
+	}
+	if ok {
+		d.AutoMerge, d.NeedsHuman = true, false
+		d.Reasons = append(d.Reasons, "policy level 2: every check passed and the change is of a listed kind")
+	}
+	return nil
 }
 
 func contains(l []string, v string) bool {

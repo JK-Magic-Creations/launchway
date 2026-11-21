@@ -80,19 +80,13 @@ func (s *Store) notifyAssigned(ctx context.Context, tx DB, c Caller, itemID, tit
 // item, and the watchers of items that were waiting for this one.
 func (s *Store) notifyState(ctx context.Context, tx DB, c Caller, it *Item, to string, eff *Effective) error {
 	who := map[string]bool{}
-	rows, err := tx.Query(ctx, `SELECT who FROM work_watchers WHERE item_id = ?`, it.ID)
+	watchers, err := queryAll(ctx, tx, scanString, `SELECT who FROM work_watchers WHERE item_id = ?`, it.ID)
 	if err != nil {
 		return err
 	}
-	for rows.Next() {
-		var w string
-		if err := rows.Scan(&w); err != nil {
-			rows.Close()
-			return err
-		}
+	for _, w := range watchers {
 		who[w] = true
 	}
-	rows.Close()
 	name := to
 	if st, ok := eff.StateByKey(to); ok {
 		name = st.Name
@@ -106,20 +100,10 @@ func (s *Store) notifyState(ctx context.Context, tx DB, c Caller, it *Item, to s
 		return nil
 	}
 	// Items this one blocked, that nothing else blocks now.
-	rows, err = tx.Query(ctx, `SELECT to_id FROM work_links WHERE from_id = ? AND kind = 'blocks'`, it.ID)
+	blocked, err := queryAll(ctx, tx, scanString, `SELECT to_id FROM work_links WHERE from_id = ? AND kind = 'blocks'`, it.ID)
 	if err != nil {
 		return err
 	}
-	var blocked []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		blocked = append(blocked, id)
-	}
-	rows.Close()
 	for _, id := range blocked {
 		b, err := s.load(ctx, tx, id)
 		if err != nil {
@@ -134,19 +118,13 @@ func (s *Store) notifyState(ctx context.Context, tx DB, c Caller, it *Item, to s
 		for _, a := range b.Assignees {
 			recipients[a.Name] = true
 		}
-		wr, err := tx.Query(ctx, `SELECT who FROM work_watchers WHERE item_id = ?`, id)
+		ws, err := queryAll(ctx, tx, scanString, `SELECT who FROM work_watchers WHERE item_id = ?`, id)
 		if err != nil {
 			return err
 		}
-		for wr.Next() {
-			var w string
-			if err := wr.Scan(&w); err != nil {
-				wr.Close()
-				return err
-			}
+		for _, w := range ws {
 			recipients[w] = true
 		}
-		wr.Close()
 		for w := range recipients {
 			if err := s.notify(ctx, tx, w, c.Name, InboxUnblocked, id, b.Ref+" is no longer blocked: "+it.Ref+" is finished"); err != nil {
 				return err

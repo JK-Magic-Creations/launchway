@@ -190,32 +190,30 @@ func (s *Store) Burndown(ctx context.Context, c Caller, sprintID string) (*Burnd
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(ctx, `SELECT si.estimate_milli, si.added_at, si.committed, i.state, i.closed_at FROM work_sprint_items si JOIN work_items i ON i.id = si.item_id WHERE si.sprint_id = ?`, sprintID)
-	if err != nil {
-		return nil, err
-	}
 	type it struct {
 		est, added, closed int64
 		committed          bool
 		done               bool
 	}
-	var items []it
-	var committed float64
-	for rows.Next() {
+	items, err := queryAll(ctx, s.db, func(r scanner) (it, error) {
 		var x it
 		var com int
 		var state string
-		if err := rows.Scan(&x.est, &x.added, &com, &state, &x.closed); err != nil {
-			rows.Close()
-			return nil, err
+		if err := r.Scan(&x.est, &x.added, &com, &state, &x.closed); err != nil {
+			return x, err
 		}
 		x.committed, x.done = com == 1, eff.Category(state) == CatDone
+		return x, nil
+	}, `SELECT si.estimate_milli, si.added_at, si.committed, i.state, i.closed_at FROM work_sprint_items si JOIN work_items i ON i.id = si.item_id WHERE si.sprint_id = ?`, sprintID)
+	if err != nil {
+		return nil, err
+	}
+	var committed float64
+	for _, x := range items {
 		if x.committed || sp.State == "planned" {
 			committed += fromMilli(x.est)
 		}
-		items = append(items, x)
 	}
-	rows.Close()
 	bd := &Burndown{Sprint: sp.Name, Unit: sp.Unit, Committed: committed}
 	first, last := dayStart(time.UnixMilli(startAt)), dayStart(time.UnixMilli(endAt))
 	days := int(last.Sub(first).Hours()/24) + 1
@@ -369,21 +367,15 @@ func (s *Store) CFD(ctx context.Context, c Caller, sc Scope, days int) (*CFD, er
 	// Confidential items count in the total only for those who may see them;
 	// a chart of counts must not give them away, so they are left out.
 	conf := map[string]bool{}
-	rows, err := s.db.Query(ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND confidential = 1`, sc.Kind, sc.ID)
+	confIDs, err := queryAll(ctx, s.db, scanString, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? AND confidential = 1`, sc.Kind, sc.ID)
 	if err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
+	for _, id := range confIDs {
 		if !c.isMaintainer(sc) {
 			conf[id] = true
 		}
 	}
-	rows.Close()
 	out := &CFD{States: eff.States}
 	today := dayStart(s.now())
 	for d := days - 1; d >= 0; d-- {

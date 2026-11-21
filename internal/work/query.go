@@ -149,20 +149,10 @@ func (s *Store) closedStates(ctx context.Context) ([]string, error) {
 	}
 	s.mu.Unlock()
 	set := map[string]bool{"done": true, "wont_do": true}
-	rows, err := s.db.Query(ctx, `SELECT scope_kind, scope_id FROM work_scopes WHERE settings <> '{}'`)
+	scopes, err := queryAll(ctx, s.db, scanScope, `SELECT scope_kind, scope_id FROM work_scopes WHERE settings <> '{}'`)
 	if err != nil {
 		return nil, err
 	}
-	var scopes []Scope
-	for rows.Next() {
-		var sc Scope
-		if err := rows.Scan(&sc.Kind, &sc.ID); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		scopes = append(scopes, sc)
-	}
-	rows.Close()
 	for _, sc := range scopes {
 		eff, err := s.Settings(ctx, sc)
 		if err != nil {
@@ -188,17 +178,12 @@ func (s *Store) closedStates(ctx context.Context) ([]string, error) {
 // scopeFilter builds the part of a WHERE that holds the caller to what they
 // may read, and hides confidential items from those who may not see them.
 func (s *Store) visibility(ctx context.Context, c Caller, only []Scope) (string, []any, error) {
-	rows, err := s.db.Query(ctx, `SELECT scope_kind, scope_id FROM work_scopes`)
+	scopes, err := queryAll(ctx, s.db, scanScope, `SELECT scope_kind, scope_id FROM work_scopes`)
 	if err != nil {
 		return "", nil, err
 	}
 	var readable, maintained []string
-	for rows.Next() {
-		var sc Scope
-		if err := rows.Scan(&sc.Kind, &sc.ID); err != nil {
-			rows.Close()
-			return "", nil, err
-		}
+	for _, sc := range scopes {
 		if len(only) > 0 && !slices.Contains(only, sc) {
 			continue
 		}
@@ -210,7 +195,6 @@ func (s *Store) visibility(ctx context.Context, c Caller, only []Scope) (string,
 			}
 		}
 	}
-	rows.Close()
 	if len(readable) == 0 {
 		return "1 = 0", nil, nil
 	}
@@ -218,8 +202,8 @@ func (s *Store) visibility(ctx context.Context, c Caller, only []Scope) (string,
 	w := `(i.scope_kind || ':' || i.scope_id) IN (` + in + `)`
 	conf := `i.confidential = 0`
 	if len(maintained) > 0 {
-		min, margs := inList(maintained)
-		conf += ` OR (i.scope_kind || ':' || i.scope_id) IN (` + min + `)`
+		mIn, margs := inList(maintained)
+		conf += ` OR (i.scope_kind || ':' || i.scope_id) IN (` + mIn + `)`
 		args = append(args, margs...)
 	}
 	conf += ` OR i.reporter = ? OR EXISTS (SELECT 1 FROM work_assignees ca WHERE ca.item_id = i.id AND ca.who = ?)`
@@ -231,6 +215,149 @@ func likePattern(s string) string {
 	return "%" + strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.ToLower(s)) + "%"
 }
 
+// termEnv is what the condition builders of a query term share.
+type termEnv struct {
+	ctx   context.Context
+	s     *Store
+	c     Caller
+	cin   string
+	cargs []any
+	now   time.Time
+}
+
+// termBuilder turns one query term into an SQL condition and its arguments.
+type termBuilder func(e *termEnv, t term) (string, []any)
+
+const noAssignee = `NOT EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id)`
+const hasAssignee = `EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id AND x.who = ?)`
+
+func (e *termEnv) openClosed(val string) (string, []any, bool) {
+	switch val {
+	case "open":
+		return `i.state NOT IN (` + e.cin + `)`, e.cargs, true
+	case "closed":
+		return `i.state IN (` + e.cin + `)`, e.cargs, true
+	}
+	return "", nil, false
+}
+
+func eq(col string) termBuilder {
+	return func(_ *termEnv, t term) (string, []any) { return col + ` = ?`, []any{t.val} }
+}
+
+var termBuilders = map[string]termBuilder{
+	"text": func(_ *termEnv, t term) (string, []any) {
+		p := likePattern(t.val)
+		return `(LOWER(i.title) LIKE ? ESCAPE '\' OR LOWER(i.body) LIKE ? ESCAPE '\')`, []any{p, p}
+	},
+	"state": func(e *termEnv, t term) (string, []any) {
+		if cond, a, ok := e.openClosed(t.val); ok {
+			return cond, a
+		}
+		return `i.state = ?`, []any{t.val}
+	},
+	"type":     eq("i.type"),
+	"priority": eq("i.priority"),
+	"label": func(_ *termEnv, t term) (string, []any) {
+		return `EXISTS (SELECT 1 FROM work_labels l WHERE l.item_id = i.id AND l.label = ?)`, []any{strings.ToLower(t.val)}
+	},
+	"assignee": termAssignee,
+	"agent":    termAssignee,
+	"reporter": func(e *termEnv, t term) (string, []any) {
+		v := t.val
+		if v == "me" {
+			v = e.c.Name
+		}
+		return `i.reporter = ?`, []any{v}
+	},
+	"milestone": func(_ *termEnv, t term) (string, []any) {
+		return `i.milestone_id IN (SELECT id FROM work_milestones WHERE title = ?)`, []any{t.val}
+	},
+	"sprint": func(_ *termEnv, t term) (string, []any) {
+		if t.val == "none" {
+			return `i.sprint_id = ''`, nil
+		}
+		return `i.sprint_id IN (SELECT id FROM work_sprints WHERE name = ?)`, []any{t.val}
+	},
+	"parent": termParent,
+	"epic":   termParent,
+	"key":    eq("i.source_key"),
+	"ref": func(_ *termEnv, t term) (string, []any) {
+		prefix, n, ok := ParseRef(t.val)
+		if !ok {
+			return `1 = 0`, nil
+		}
+		return `i.number = ? AND EXISTS (SELECT 1 FROM work_scopes sc WHERE sc.scope_kind = i.scope_kind AND sc.scope_id = i.scope_id AND sc.prefix = ?)`, []any{n, prefix}
+	},
+	"updated": dateTerm("i.updated_at"),
+	"created": dateTerm("i.created_at"),
+	"due":     dateTerm("i.due_at"),
+	"closed":  dateTerm("i.closed_at"),
+	"is":      termIs,
+}
+
+func termAssignee(e *termEnv, t term) (string, []any) {
+	switch t.val {
+	case "none":
+		return noAssignee, nil
+	case "me":
+		return hasAssignee, []any{e.c.Name}
+	}
+	return hasAssignee, []any{strings.TrimPrefix(t.val, "@")}
+}
+
+func termParent(e *termEnv, t term) (string, []any) {
+	id, err := e.s.idOf(e.ctx, e.s.db, t.val)
+	if err != nil {
+		return `1 = 0`, nil
+	}
+	return `(i.parent_id = ? OR i.parent_id IN (SELECT id FROM work_items WHERE parent_id = ?))`, []any{id, id}
+}
+
+func dateTerm(col string) termBuilder {
+	return func(e *termEnv, t term) (string, []any) {
+		at, _ := parseWhen(t.val, e.now)
+		op := t.op
+		if op == "" {
+			// A date alone is that day.
+			return fmt.Sprintf(`(%s >= ? AND %s < ?)`, col, col), []any{at, at + 24*3600*1000}
+		}
+		// "<7d" is more recent than a week ago for ages, and "<2026-01-01"
+		// before that date for dates: both are "before the instant" if a
+		// date, "after the instant" if an age.
+		age := len(t.val) > 1 && (strings.HasSuffix(t.val, "d") || strings.HasSuffix(t.val, "w")) && t.val != "today"
+		if age {
+			if op == "<" {
+				op = ">"
+			} else {
+				op = "<"
+			}
+		}
+		return fmt.Sprintf(`(%s <> 0 AND %s %s ?)`, col, col, op), []any{at}
+	}
+}
+
+func termIs(e *termEnv, t term) (string, []any) {
+	if cond, a, ok := e.openClosed(t.val); ok {
+		return cond, a
+	}
+	switch t.val {
+	case "unassigned":
+		return noAssignee, nil
+	case "claimed":
+		return `EXISTS (SELECT 1 FROM work_claims k WHERE k.item_id = i.id AND k.lease_until >= ?)`, []any{ms(e.s.now())}
+	case "confidential":
+		return `i.confidential = 1`, nil
+	case "epic":
+		return `i.type = 'epic'`, nil
+	case "overdue":
+		return `(i.due_at <> 0 AND i.due_at < ? AND i.state NOT IN (` + e.cin + `))`, append([]any{ms(e.s.now())}, e.cargs...)
+	case "blocked":
+		return `EXISTS (SELECT 1 FROM work_links l JOIN work_items b ON b.id = l.from_id WHERE l.kind = 'blocks' AND l.to_id = i.id AND b.state NOT IN (` + e.cin + `))`, e.cargs
+	}
+	return "", nil
+}
+
 // where builds the conditions of a query.
 func (s *Store) where(ctx context.Context, c Caller, q *Query) (string, []any, error) {
 	var conds []string
@@ -240,111 +367,13 @@ func (s *Store) where(ctx context.Context, c Caller, q *Query) (string, []any, e
 		return "", nil, err
 	}
 	cin, cargs := inList(closed)
-	now := time.Now()
+	env := &termEnv{ctx: ctx, s: s, c: c, cin: cin, cargs: cargs, now: time.Now()}
 	for _, t := range q.terms {
-		var cond string
-		var a []any
-		switch t.key {
-		case "text":
-			cond = `(LOWER(i.title) LIKE ? ESCAPE '\' OR LOWER(i.body) LIKE ? ESCAPE '\')`
-			p := likePattern(t.val)
-			a = []any{p, p}
-		case "state":
-			switch t.val {
-			case "open":
-				cond, a = `i.state NOT IN (`+cin+`)`, cargs
-			case "closed":
-				cond, a = `i.state IN (`+cin+`)`, cargs
-			default:
-				cond, a = `i.state = ?`, []any{t.val}
-			}
-		case "type":
-			cond, a = `i.type = ?`, []any{t.val}
-		case "priority":
-			cond, a = `i.priority = ?`, []any{t.val}
-		case "label":
-			cond, a = `EXISTS (SELECT 1 FROM work_labels l WHERE l.item_id = i.id AND l.label = ?)`, []any{strings.ToLower(t.val)}
-		case "assignee", "agent":
-			switch {
-			case t.val == "none":
-				cond = `NOT EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id)`
-			case t.val == "me":
-				cond, a = `EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id AND x.who = ?)`, []any{c.Name}
-			default:
-				cond, a = `EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id AND x.who = ?)`, []any{strings.TrimPrefix(t.val, "@")}
-			}
-		case "reporter":
-			v := t.val
-			if v == "me" {
-				v = c.Name
-			}
-			cond, a = `i.reporter = ?`, []any{v}
-		case "milestone":
-			cond, a = `i.milestone_id IN (SELECT id FROM work_milestones WHERE title = ?)`, []any{t.val}
-		case "sprint":
-			if t.val == "none" {
-				cond = `i.sprint_id = ''`
-			} else {
-				cond, a = `i.sprint_id IN (SELECT id FROM work_sprints WHERE name = ?)`, []any{t.val}
-			}
-		case "parent", "epic":
-			id, err := s.idOf(ctx, s.db, t.val)
-			if err != nil {
-				cond = `1 = 0`
-			} else {
-				cond, a = `(i.parent_id = ? OR i.parent_id IN (SELECT id FROM work_items WHERE parent_id = ?))`, []any{id, id}
-			}
-		case "key":
-			cond, a = `i.source_key = ?`, []any{t.val}
-		case "ref":
-			prefix, n, ok := ParseRef(t.val)
-			if !ok {
-				cond = `1 = 0`
-			} else {
-				cond, a = `i.number = ? AND EXISTS (SELECT 1 FROM work_scopes sc WHERE sc.scope_kind = i.scope_kind AND sc.scope_id = i.scope_id AND sc.prefix = ?)`, []any{n, prefix}
-			}
-		case "updated", "created", "due", "closed":
-			col := map[string]string{"updated": "i.updated_at", "created": "i.created_at", "due": "i.due_at", "closed": "i.closed_at"}[t.key]
-			at, _ := parseWhen(t.val, now)
-			op := t.op
-			if op == "" {
-				// A date alone is that day.
-				cond, a = fmt.Sprintf(`(%s >= ? AND %s < ?)`, col, col), []any{at, at + 24*3600*1000}
-				break
-			}
-			// "<7d" is more recent than a week ago for ages, and "<2026-01-01"
-			// before that date for dates: both are "before the instant" if a
-			// date, "after the instant" if an age.
-			age := len(t.val) > 1 && (strings.HasSuffix(t.val, "d") || strings.HasSuffix(t.val, "w")) && t.val != "today"
-			if age {
-				if op == "<" {
-					op = ">"
-				} else {
-					op = "<"
-				}
-			}
-			cond, a = fmt.Sprintf(`(%s <> 0 AND %s %s ?)`, col, col, op), []any{at}
-		case "is":
-			switch t.val {
-			case "open":
-				cond, a = `i.state NOT IN (`+cin+`)`, cargs
-			case "closed":
-				cond, a = `i.state IN (`+cin+`)`, cargs
-			case "unassigned":
-				cond = `NOT EXISTS (SELECT 1 FROM work_assignees x WHERE x.item_id = i.id)`
-			case "claimed":
-				cond, a = `EXISTS (SELECT 1 FROM work_claims k WHERE k.item_id = i.id AND k.lease_until >= ?)`, []any{ms(s.now())}
-			case "confidential":
-				cond = `i.confidential = 1`
-			case "epic":
-				cond = `i.type = 'epic'`
-			case "overdue":
-				cond, a = `(i.due_at <> 0 AND i.due_at < ? AND i.state NOT IN (`+cin+`))`, append([]any{ms(s.now())}, cargs...)
-			case "blocked":
-				cond = `EXISTS (SELECT 1 FROM work_links l JOIN work_items b ON b.id = l.from_id WHERE l.kind = 'blocks' AND l.to_id = i.id AND b.state NOT IN (` + cin + `))`
-				a = cargs
-			}
+		build, ok := termBuilders[t.key]
+		if !ok {
+			continue
 		}
+		cond, a := build(env, t)
 		if cond == "" {
 			continue
 		}

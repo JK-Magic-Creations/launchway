@@ -79,6 +79,52 @@ func (s *Server) mayCloseFor(user string, sc work.Scope) bool {
 	return s.workAllows(&identity{User: user, Via: viaSession}, sc, auth.Operate)
 }
 
+// readPatchAndChecks fills what the patch and the required checks say about a change.
+func (s *Server) readPatchAndChecks(ctx context.Context, repo forge.Repository, p pulls.PullRequest, d pulls.Diff, ch *work.AgentChange) {
+	if pt, err := s.Forge.Pulls.PatchOf(ctx, repo.ID, d.From, d.To, nil, true, pulls.DefaultLimits); err == nil {
+		var added []string
+		for _, l := range strings.Split(pt.Diff, "\n") {
+			if strings.HasPrefix(l, "+") && !strings.HasPrefix(l, "+++") {
+				added = append(added, l[1:])
+			}
+		}
+		ch.TestsSkipped = work.SkipsTests(added) || pt.Truncated || pt.Held
+	}
+	rd, err := s.Forge.Pulls.Readiness(ctx, repo.ID, repo.Path, p, pulls.RoleNone)
+	if err != nil {
+		return
+	}
+	ch.ChecksPassed = true
+	for _, c := range rd.Checks {
+		if !c.Required {
+			continue
+		}
+		ch.ChecksRequired++
+		if c.Status == pulls.CheckSkipped {
+			ch.ChecksSkipped = true
+		}
+		if c.Status != pulls.CheckPassed {
+			ch.ChecksPassed = false
+		}
+	}
+}
+
+// pullAuthors names the agents that opened or pushed to a pull request.
+func (s *Server) pullAuthors(ctx context.Context, p pulls.PullRequest) []string {
+	authors := []string{}
+	if isAgentUser(p.Author) {
+		authors = append(authors, agentNameOf(p.Author))
+	}
+	if revs, err := s.Forge.Pulls.Store.Revisions(ctx, p.ID); err == nil {
+		for _, r := range revs {
+			if isAgentUser(r.Actor) && !contains(authors, agentNameOf(r.Actor)) {
+				authors = append(authors, agentNameOf(r.Actor))
+			}
+		}
+	}
+	return authors
+}
+
 // agentChangeOf describes a pull request for the merge gate and the agents'
 // reviews, as the server itself reads it.
 func (s *Server) agentChangeOf(ctx context.Context, repo forge.Repository, p pulls.PullRequest) (work.AgentChange, []string, []string, error) {
@@ -99,50 +145,14 @@ func (s *Server) agentChangeOf(ctx context.Context, repo forge.Repository, p pul
 		ch.Files = append(ch.Files, work.ChangedFile{Path: ".launchway/(more files than were read)"})
 	}
 	ch.Lines = d.Additions + d.Deletions
-	if pt, err := s.Forge.Pulls.PatchOf(ctx, repo.ID, d.From, d.To, nil, true, pulls.DefaultLimits); err == nil {
-		var added []string
-		for _, l := range strings.Split(pt.Diff, "\n") {
-			if strings.HasPrefix(l, "+") && !strings.HasPrefix(l, "+++") {
-				added = append(added, l[1:])
-			}
-		}
-		ch.TestsSkipped = work.SkipsTests(added) || pt.Truncated || pt.Held
-	}
-	if rd, err := s.Forge.Pulls.Readiness(ctx, repo.ID, repo.Path, p, pulls.RoleNone); err == nil {
-		required := 0
-		ch.ChecksPassed = true
-		for _, c := range rd.Checks {
-			if !c.Required {
-				continue
-			}
-			required++
-			ch.ChecksRequired++
-			if c.Status == pulls.CheckSkipped {
-				ch.ChecksSkipped = true
-			}
-			if c.Status != pulls.CheckPassed {
-				ch.ChecksPassed = false
-			}
-		}
-		_ = required
-	}
+	s.readPatchAndChecks(ctx, repo, p, d, &ch)
 	rs, _ := s.Forge.Pulls.Store.Reviews(ctx, p.ID)
 	for _, r := range rs {
 		if r.State == "submitted" && r.Verdict == "approve" && r.CommitSHA == p.HeadSHA && !isAgentUser(r.Author) && r.Author != p.Author {
 			ch.HumanApproved = true
 		}
 	}
-	authors := []string{}
-	if isAgentUser(p.Author) {
-		authors = append(authors, agentNameOf(p.Author))
-	}
-	if revs, err := s.Forge.Pulls.Store.Revisions(ctx, p.ID); err == nil {
-		for _, r := range revs {
-			if isAgentUser(r.Actor) && !contains(authors, agentNameOf(r.Actor)) {
-				authors = append(authors, agentNameOf(r.Actor))
-			}
-		}
-	}
+	authors := s.pullAuthors(ctx, p)
 	var itemIDs []string
 	items, _ := st.ItemsForCode(ctx, work.System("git"), work.CodePull, repo.Path, fmt.Sprint(p.Number))
 	for _, it := range items {

@@ -52,7 +52,7 @@ func TestUpdateVersionsHistoryAndWorkflow(t *testing.T) {
 	wantErr(t, err, "changed since you read it")
 	// Only a person finishes; the default workflow says so.
 	agentCaller := bob
-	agentCaller.Actor.Kind = work.KindAgent
+	agentCaller.Kind = work.KindAgent
 	_, err = s.Update(ctx, agentCaller, it.Ref, work.Patch{State: ptr("done")})
 	wantErr(t, err, "only a person")
 	done, err := s.Update(ctx, bob, it.Ref, work.Patch{State: ptr("done")})

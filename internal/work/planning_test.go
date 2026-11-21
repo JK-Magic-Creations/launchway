@@ -54,7 +54,7 @@ func TestQueryLanguage(t *testing.T) {
 			t.Fatalf("%q: %v", q, err)
 		}
 		got := refs(p)
-		if fmt.Sprint(got) != fmt.Sprint(want) && !(len(got) == 0 && len(want) == 0) {
+		if fmt.Sprint(got) != fmt.Sprint(want) && (len(got) != 0 || len(want) != 0) {
 			t.Errorf("%q: %v, want %v", q, got, want)
 		}
 	}
@@ -152,7 +152,7 @@ func TestLinksCyclesAndCodeLinks(t *testing.T) {
 	if got.Blocked {
 		t.Fatal("still blocked")
 	}
-	in, unread, _ := s.Inbox(ctx, person("bob", false, true).Actor.Name, true, 10)
+	in, unread, _ := s.Inbox(ctx, person("bob", false, true).Name, true, 10)
 	_ = in
 	_ = unread
 	// References in text.
@@ -207,7 +207,7 @@ func TestPullMergeMovesWorkAndNeverClosesAcrossProjects(t *testing.T) {
 	// A merge by an agent never marks work done.
 	third := mustCreate(t, s, bob, work.NewItem{Title: "third"})
 	agentBy := bob
-	agentBy.Actor.Kind = work.KindAgent
+	agentBy.Kind = work.KindAgent
 	ch2 := work.PullChange{Repo: "acme/shop", Number: 5, Title: "x", Body: "fixes #" + fmt.Sprint(third.Number), State: "merged", By: agentBy}
 	if _, err := s.ApplyPull(ctx, proj, ch2); err != nil {
 		t.Fatal(err)

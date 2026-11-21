@@ -36,7 +36,7 @@ func (cl *client) showBoard(b any) {
 		}
 	}
 	if len(wlist(b, "columns")) == 0 {
-		cl.out.Write([]byte("Nothing on the board.\n"))
+		fmt.Fprintln(cl.out, "Nothing on the board.")
 	}
 }
 
