@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ func TestSpoolDropsLinesOlderThanTheAgeBound(t *testing.T) {
 // leaves no directory behind.
 func TestSpoolWritesNothingWhenTheServerIsFine(t *testing.T) {
 	s := testSpool(t, 1<<20, time.Hour, time.Now)
-	if err := s.Drain(nil); err != nil || !s.Done() {
+	if err := s.Drain(context.Background()); err != nil || !s.Done() {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(s.dir); err == nil {

@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 479,
+  "total": 470,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -591,48 +591,6 @@
       "count": 1
     },
     {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.DB).Begin must not be called. use (*database/sql.DB).BeginTx",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.DB).Exec must not be called. use (*database/sql.DB).ExecContext",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.DB).Query must not be called. use (*database/sql.DB).QueryContext",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.DB).QueryRow must not be called. use (*database/sql.DB).QueryRowContext",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.Tx).Exec must not be called. use (*database/sql.Tx).ExecContext",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.Tx).Query must not be called. use (*database/sql.Tx).QueryContext",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/db.go",
-      "linter": "noctx",
-      "text": "(*database/sql.Tx).QueryRow must not be called. use (*database/sql.Tx).QueryRowContext",
-      "count": 1
-    },
-    {
       "file": "internal/engine/deployments.go",
       "linter": "rowserrcheck",
       "text": "rows.Err must be checked",
@@ -666,7 +624,7 @@
       "file": "internal/engine/engine.go",
       "linter": "errcheck",
       "text": "Error return value of `tx.Rollback` is not checked",
-      "count": 4
+      "count": 3
     },
     {
       "file": "internal/engine/engine.go",
@@ -690,12 +648,6 @@
       "file": "internal/engine/engine.go",
       "linter": "gocyclo",
       "text": "cyclomatic complexity 42 of func `(*cmd).advance` is high (\u003e 30)",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/engine.go",
-      "linter": "gosec",
-      "text": "G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
       "count": 1
     },
     {
@@ -1541,7 +1493,7 @@
     {
       "file": "internal/runner/runner.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 36 of func `(*Runner).execute` is high (\u003e 30)",
+      "text": "cyclomatic complexity 34 of func `(*Runner).execute` is high (\u003e 30)",
       "count": 1
     },
     {

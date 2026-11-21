@@ -76,8 +76,8 @@ func faultify(t *testing.T, d *dbx, path string) (*faultDB, *time.Duration) {
 	f := &faultDB{}
 	old := d.DB
 	d.DB = sql.OpenDB(&faultConnector{f: f, inner: inner, dsn: dsn})
-	d.DB.SetMaxOpenConns(8)
-	t.Cleanup(func() { d.DB.Close(); d.DB = old })
+	d.SetMaxOpenConns(8)
+	t.Cleanup(func() { d.Close(); d.DB = old })
 	var slept time.Duration
 	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
 	var mu sync.Mutex
@@ -144,7 +144,7 @@ type faultTx struct {
 
 func (x *faultTx) Commit() error {
 	if err := x.f.check("commit", ""); err != nil {
-		x.Tx.Rollback()
+		x.Rollback()
 		return err
 	}
 	if err := x.Tx.Commit(); err != nil {

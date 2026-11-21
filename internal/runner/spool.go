@@ -83,7 +83,7 @@ func orDefault[T int64 | time.Duration](v, def T) T {
 func safeName(s string) string {
 	b := []byte(s)
 	for i, c := range b {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '-' || c == '_') {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '_' {
 			b[i] = '_'
 		}
 	}

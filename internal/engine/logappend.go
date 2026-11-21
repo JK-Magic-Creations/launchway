@@ -48,7 +48,7 @@ func (e *Engine) appendLogs(leaseID string, offset int, lines []LogLine) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var l leaseRef
 	var last int
 	var runnerID string

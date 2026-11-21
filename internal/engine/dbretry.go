@@ -170,7 +170,7 @@ func (r *retrier) next(err error) error {
 		if r.conflicts >= r.maxConflicts {
 			return err
 		}
-		r.d.sleep(time.Duration(rand.Int64N(int64(r.conflicts)*int64(2*time.Millisecond))) + time.Millisecond)
+		r.d.sleep(time.Duration(rand.Int64N(int64(r.conflicts)*int64(2*time.Millisecond))) + time.Millisecond) //nolint:gosec // jitter, not security
 		return nil
 	}
 	var ce *commitError
@@ -187,7 +187,7 @@ func (r *retrier) next(err error) error {
 	}
 	p := r.pause
 	r.pause = min(2*r.pause, 5*time.Second)
-	p = p/2 + time.Duration(rand.Int64N(int64(p/2)+1))
+	p = p/2 + time.Duration(rand.Int64N(int64(p/2)+1)) //nolint:gosec // jitter, not security
 	p = min(p, r.d.stallBudget()-waited)
 	r.d.sleep(p)
 	return nil
@@ -267,7 +267,7 @@ func (d *dbx) Exec(q string, a ...any) (sql.Result, error) {
 	q = rebind(d.pg, q)
 	rt := d.retrier(0, false)
 	for {
-		res, err := d.DB.Exec(q, a...)
+		res, err := d.DB.Exec(q, a...) //nolint:noctx // the store layer has no context yet (doc 45, change 4)
 		if err == nil {
 			return res, nil
 		}
@@ -282,7 +282,7 @@ func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) {
 	q = rebind(d.pg, q)
 	rt := d.retrier(0, true)
 	for {
-		rows, err := d.DB.Query(q, a...)
+		rows, err := d.DB.Query(q, a...) //nolint:noctx // as above
 		if err == nil {
 			return rows, nil
 		}
@@ -294,7 +294,7 @@ func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) {
 
 func (d *dbx) QueryRow(q string, a ...any) *rowx {
 	q = rebind(d.pg, q)
-	run := func() *sql.Row { return d.DB.QueryRow(q, a...) }
+	run := func() *sql.Row { return d.DB.QueryRow(q, a...) } //nolint:noctx // as above
 	return &rowx{row: run(), run: run, d: d}
 }
 
@@ -303,7 +303,7 @@ func (d *dbx) QueryRow(q string, a ...any) *rowx {
 func (d *dbx) Begin() (*txx, error) {
 	rt := d.retrier(0, true)
 	for {
-		tx, err := d.DB.Begin()
+		tx, err := d.DB.Begin() //nolint:noctx // as above
 		if err == nil {
 			return &txx{Tx: tx, pg: d.pg}, nil
 		}
@@ -321,10 +321,14 @@ func (d *dbx) sleep(t time.Duration) {
 	time.Sleep(t)
 }
 
-func (t *txx) Exec(q string, a ...any) (sql.Result, error) { return t.Tx.Exec(rebind(t.pg, q), a...) }
-func (t *txx) Query(q string, a ...any) (*sql.Rows, error) { return t.Tx.Query(rebind(t.pg, q), a...) }
+func (t *txx) Exec(q string, a ...any) (sql.Result, error) {
+	return t.Tx.Exec(rebind(t.pg, q), a...) //nolint:noctx // as above
+}
+func (t *txx) Query(q string, a ...any) (*sql.Rows, error) {
+	return t.Tx.Query(rebind(t.pg, q), a...) //nolint:noctx // as above
+}
 func (t *txx) QueryRow(q string, a ...any) *rowx {
-	return &rowx{row: t.Tx.QueryRow(rebind(t.pg, q), a...)}
+	return &rowx{row: t.Tx.QueryRow(rebind(t.pg, q), a...)} //nolint:noctx // as above
 }
 
 // Commit commits; a failure that may have left the change stored is marked

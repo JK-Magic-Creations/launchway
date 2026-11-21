@@ -97,7 +97,8 @@ func TestStoreGivesUpAfterTheStallBudgetWithUnavailable(t *testing.T) {
 	}
 	rows, err := e.db.Query(`SELECT 1`)
 	if err == nil {
-		rows.Close()
+		defer rows.Close()
+		_ = rows.Err()
 		t.Fatal("a read during the outage should fail after the budget")
 	}
 	if !errors.Is(err, ErrUnavailable) {

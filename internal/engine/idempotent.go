@@ -76,6 +76,7 @@ func (e *Engine) pruneWrites() {
 	if err != nil {
 		return
 	}
+	defer rows.Close()
 	var old []string
 	cut := e.now().Add(-writeKeep).UnixMilli()
 	for rows.Next() {
@@ -84,6 +85,9 @@ func (e *Engine) pruneWrites() {
 		if rows.Scan(&k, &v) == nil && json.Unmarshal([]byte(v), &r) == nil && r.At < cut {
 			old = append(old, k)
 		}
+	}
+	if rows.Err() != nil {
+		return
 	}
 	rows.Close()
 	for _, k := range old {
@@ -98,9 +102,12 @@ func (e *Engine) FinishRecorded(leaseID string) bool {
 	return ok
 }
 
-// rememberFinish records, in the transaction that ends the lease, that
+// endFinishedLease ends the lease and records, in the same transaction, that
 // Finish has been applied.
-func (c *cmd) rememberFinish(leaseID string) error {
+func (c *cmd) endFinishedLease(leaseID string) error {
+	if err := c.endLease(leaseID); err != nil {
+		return err
+	}
 	return putWrite(c.tx, "finish:"+leaseID, writeRecord{At: c.e.now().UnixMilli(), Status: 204})
 }
 

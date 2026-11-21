@@ -1,6 +1,7 @@
 package testdb
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/url"
@@ -33,7 +34,7 @@ func ThroughProxy(t testing.TB, addr string) (string, *Proxy) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +86,7 @@ func (p *Proxy) serve() {
 }
 
 func (p *Proxy) pipe(c net.Conn) {
-	up, err := net.DialTimeout("tcp", p.target, 5*time.Second)
+	up, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(context.Background(), "tcp", p.target)
 	if err != nil {
 		c.Close()
 		return

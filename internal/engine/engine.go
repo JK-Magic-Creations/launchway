@@ -1185,10 +1185,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
 			return ErrLeaseLost
 		}
-		if err := c.endLease(leaseID); err != nil {
-			return err
-		}
-		if err := c.rememberFinish(leaseID); err != nil {
+		if err := c.endFinishedLease(leaseID); err != nil {
 			return err
 		}
 		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsDeployKind() {

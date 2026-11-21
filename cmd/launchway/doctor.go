@@ -51,7 +51,7 @@ func cmdDoctor(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
 	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
 	asJSON := fs.Bool("json", false, "print JSON")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
 		return err

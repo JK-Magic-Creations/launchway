@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -121,8 +120,6 @@ func TestEveryRunnerWriteIsAppliedOnceWhenDeliveredTwice(t *testing.T) {
 type swappable struct {
 	mu sync.Mutex
 	h  http.Handler
-	ln net.Listener
-	hs *httptest.Server
 }
 
 func (s *swappable) ServeHTTP(w http.ResponseWriter, r *http.Request) {

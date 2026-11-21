@@ -80,7 +80,7 @@ func (e *Engine) markAliveTx() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	now := e.now()
 	clk := e.db.clk
 	if last := clk.lastGood.Load(); last != 0 && clk.realNow().Sub(time.Unix(0, last)) > e.ttl/2 {

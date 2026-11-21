@@ -75,7 +75,7 @@ func InspectDatabase(ctx context.Context, addr string, wait time.Duration) (Data
 		d = &dbx{DB: db}
 	}
 	defer d.Close()
-	if err := connect(d, wait, slog.New(slog.NewTextHandler(io.Discard, nil))); err != nil {
+	if err := connect(d, wait, slog.New(slog.NewTextHandler(io.Discard, nil))); err != nil { //nolint:contextcheck // connect has its own timeouts
 		return DatabaseState{}, fmt.Errorf("connecting to the database: %w", err)
 	}
 	st, err := d.state(ctx)

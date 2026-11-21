@@ -47,7 +47,7 @@ func replay(w http.ResponseWriter, status int, body []byte) {
 	}
 	w.Header().Set("Idempotent-Replayed", "true")
 	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	_, _ = w.Write(body) //nolint:gosec // the bytes are a JSON answer this server itself made
 }
 
 // answerRecorder passes an answer on and keeps a copy of it.
