@@ -18,3 +18,18 @@ func init() {
 		permissionTable[k] = v
 	}
 }
+
+// Rows of the MCP permission table for the delivery tools. The matrix run
+// has no deployment dep_x: not found after the permission check, and a
+// viewer is refused the logs.
+func init() {
+	for k, v := range map[string]mcpRow{
+		"get_delivery":          {map[string]any{"run_id": "{pay}", "deployment": "dep_x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+		"get_delivery_manifest": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "object": "ConfigMap/a/b"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+		"get_delivery_logs":     {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "pod": "p"}, false, [5]string{mNotFound, mRefused, mNotFound, mNotFound, mNotFound}},
+		"control_delivery": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "restart", "object": "Rollout/a/b", "reason": "x", "confirm": true}, false,
+			[5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	} {
+		mcpPermissionTable[k] = v
+	}
+}
