@@ -652,7 +652,7 @@ func failedWords(failed []string) string {
 // ---- waiting ----
 
 type waitIn struct {
-	RunID          string `json:"run_id"`
+	RunID          string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"how long to wait at most; default 60, at most 600"`
 	Until          string `json:"until,omitempty" jsonschema:"finished (the default), or waiting: also stop when a step waits for an approval"`
 }
@@ -745,7 +745,7 @@ func progressLine(d *engine.RunDetail) string {
 // ---- logs ----
 
 type logIn struct {
-	RunID    string `json:"run_id"`
+	RunID    string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Step     string `json:"step" jsonschema:"the step's ID, as get_run lists it"`
 	Attempt  int    `json:"attempt,omitempty" jsonschema:"which attempt; default the latest"`
 	Mode     string `json:"mode,omitempty" jsonschema:"tail (the default): the last lines; head: the first lines, or those after after_seq; search: lines containing query"`
@@ -916,7 +916,7 @@ func listArtifacts(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in r
 }
 
 type readFileIn struct {
-	RunID      string `json:"run_id"`
+	RunID      string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	ArtifactID string `json:"artifact_id" jsonschema:"the artifact's id, from list_artifacts"`
 	Path       string `json:"path" jsonschema:"the file's path, from list_artifacts"`
 	Offset     int64  `json:"offset,omitempty" jsonschema:"start this many bytes into the file"`
@@ -990,8 +990,8 @@ type imagesIn struct {
 	RunID      string `json:"run_id,omitempty" jsonschema:"the images this run built"`
 	Repository string `json:"repository,omitempty" jsonschema:"or: images pushed to this repository (host/path)"`
 	Digest     string `json:"digest,omitempty" jsonschema:"or: the image with this digest"`
-	Tag        string `json:"tag,omitempty"`
-	Project    string `json:"project,omitempty"`
+	Tag        string `json:"tag,omitempty" jsonschema:"only images with this tag"`
+	Project    string `json:"project,omitempty" jsonschema:"only images built by this project"`
 	Limit      int    `json:"limit,omitempty" jsonschema:"at most 50; default 20"`
 }
 
@@ -1035,8 +1035,8 @@ func listImages(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in imag
 
 type deploymentsIn struct {
 	Environment string `json:"environment,omitempty" jsonschema:"only this environment"`
-	Project     string `json:"project,omitempty"`
-	Service     string `json:"service,omitempty"`
+	Project     string `json:"project,omitempty" jsonschema:"only deployments of this project"`
+	Service     string `json:"service,omitempty" jsonschema:"only deployments of this service"`
 	RunID       string `json:"run_id,omitempty" jsonschema:"with deployment: the commands possible on that deployment now"`
 	Deployment  string `json:"deployment,omitempty" jsonschema:"a deployment's ID (dep_…), from this tool or get_run"`
 	Limit       int    `json:"limit,omitempty" jsonschema:"recent deployments to list, at most 50; default 10"`

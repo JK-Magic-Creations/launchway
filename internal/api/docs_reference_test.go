@@ -41,8 +41,8 @@ var docAccessNames = map[access]string{
 }
 
 type docRoute struct {
-	access, audit string
-	line          int
+	access, audit, text string
+	line                int
 }
 
 var routeRowRe = regexp.MustCompile("^`((?:GET|POST|PUT|PATCH|DELETE|HEAD) /[^`]*)`$")
@@ -78,7 +78,7 @@ func docRoutes(t *testing.T) map[string]docRoute {
 		if audit == "—" {
 			audit = ""
 		}
-		out[m[1]] = docRoute{access: strings.Trim(cells[1], "`"), audit: audit, line: i + 1}
+		out[m[1]] = docRoute{access: strings.Trim(cells[1], "`"), audit: audit, text: cells[3], line: i + 1}
 	}
 	return out
 }

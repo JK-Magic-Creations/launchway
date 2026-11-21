@@ -342,13 +342,13 @@ func checkRepository(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 
 type checkSignInIn struct {
 	Issuer          string   `json:"issuer" jsonschema:"the identity provider's issuer address"`
-	ClientID        string   `json:"client_id"`
+	ClientID        string   `json:"client_id" jsonschema:"the OpenID Connect client ID the provider gave Launchway"`
 	RedirectURL     string   `json:"redirect_url" jsonschema:"this server's address followed by /auth/callback"`
 	ClientSecretEnv string   `json:"client_secret_env" jsonschema:"the name of the environment variable that will hold the client secret; never the secret"`
-	GroupsClaim     string   `json:"groups_claim,omitempty"`
-	UsernameClaim   string   `json:"username_claim,omitempty"`
-	AdminGroups     []string `json:"admin_groups,omitempty"`
-	AdminUsers      []string `json:"admin_users,omitempty"`
+	GroupsClaim     string   `json:"groups_claim,omitempty" jsonschema:"the claim that lists a person's groups, groups if left out"`
+	UsernameClaim   string   `json:"username_claim,omitempty" jsonschema:"the claim used as the person's name"`
+	AdminGroups     []string `json:"admin_groups,omitempty" jsonschema:"groups whose members become administrators"`
+	AdminUsers      []string `json:"admin_users,omitempty" jsonschema:"usernames that become administrators"`
 }
 
 func checkSignIn(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in checkSignInIn) (obj, error) {

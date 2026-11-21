@@ -37,7 +37,7 @@ func addChangeTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type startIn struct {
-	Project      string            `json:"project"`
+	Project      string            `json:"project" jsonschema:"the project to start a run of"`
 	Ref          string            `json:"ref,omitempty" jsonschema:"a branch or tag; default the project's default branch"`
 	Inputs       map[string]any    `json:"inputs,omitempty" jsonschema:"values for the pipeline's inputs, by name (get_project lists them); the others take their defaults"`
 	Libraries    map[string]string `json:"libraries,omitempty" jsonschema:"use other versions of libraries the pipeline names: library name to tag, branch or commit"`
@@ -125,7 +125,7 @@ func cancelRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in runIn
 }
 
 type retryIn struct {
-	RunID      string   `json:"run_id"`
+	RunID      string   `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	FromStep   string   `json:"from_step,omitempty" jsonschema:"re-run from this step in a new run; without it (and without from_steps and failed_only), resume this run"`
 	FromSteps  []string `json:"from_steps,omitempty" jsonschema:"re-run from several steps at once in a new run: each runs again with every step after it"`
 	FailedOnly bool     `json:"failed_only,omitempty" jsonschema:"re-run in a new run from the smallest set of steps that covers every failed and canceled step"`
@@ -165,7 +165,7 @@ func retryRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in retryI
 }
 
 type decideIn struct {
-	RunID    string `json:"run_id"`
+	RunID    string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Step     string `json:"step" jsonschema:"the approval step's ID"`
 	Decision string `json:"decision" jsonschema:"approve or reject"`
 	Comment  string `json:"comment,omitempty" jsonschema:"why, kept with the decision"`
@@ -200,7 +200,7 @@ func decideApproval(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 }
 
 type rolloutIn struct {
-	RunID      string `json:"run_id"`
+	RunID      string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Deployment string `json:"deployment" jsonschema:"the deployment's ID (dep_…)"`
 	Action     string `json:"action" jsonschema:"promote, promote-full, abort or retry"`
 	Comment    string `json:"comment,omitempty" jsonschema:"why, kept with the command"`

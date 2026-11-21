@@ -12,12 +12,12 @@ import (
 )
 
 type testsIn struct {
-	RunID          string `json:"run_id"`
+	RunID          string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Status         string `json:"status,omitempty" jsonschema:"failed (the default: failed and errored), passed, skipped, flaky or all"`
 	Search         string `json:"search,omitempty" jsonschema:"only results whose suite, name, file or message contains this"`
 	Step           string `json:"step,omitempty" jsonschema:"only this step's results"`
 	Limit          int    `json:"limit,omitempty" jsonschema:"how many results, at most 50; default 20"`
-	Cursor         string `json:"cursor,omitempty"`
+	Cursor         string `json:"cursor,omitempty" jsonschema:"the next_cursor of the previous page, to read the next page"`
 	IncludeDetails bool   `json:"include_details,omitempty" jsonschema:"add each result's trace and captured output (for at most 10 results)"`
 }
 
@@ -112,12 +112,12 @@ func getTestResults(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 }
 
 type findingsIn struct {
-	RunID    string   `json:"run_id"`
+	RunID    string   `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Severity []string `json:"severity,omitempty" jsonschema:"only these severities: critical, high, medium, low, unknown"`
 	Status   string   `json:"status,omitempty" jsonschema:"new, existing or fixed; default new and existing"`
 	Search   string   `json:"search,omitempty" jsonschema:"only findings whose rule, message or file contains this"`
 	Limit    int      `json:"limit,omitempty" jsonschema:"at most 50; default 20"`
-	Cursor   string   `json:"cursor,omitempty"`
+	Cursor   string   `json:"cursor,omitempty" jsonschema:"the next_cursor of the previous page, to read the next page"`
 }
 
 type findingOut struct {

@@ -100,6 +100,15 @@ func main() {
 	}
 	args := os.Args[2:]
 	var err error
+	// -h or --help on any command prints its help and exits 0, signed in or not: help must not need a server.
+	helping := helpRequested(os.Args[1], args)
+	if helping {
+		if text, ok := helpTexts[os.Args[1]]; ok {
+			fmt.Print(text)
+			os.Exit(0)
+		}
+		allowHelpWithoutCredentials()
+	}
 	switch os.Args[1] {
 	case "server":
 		err = cmdServer(args)
@@ -159,7 +168,56 @@ func main() {
 		os.Exit(unknownCommand(os.Args[1]))
 	}
 	if err != nil {
+		var ex exitErr
+		if helping && errors.As(err, &ex) && int(ex) == exitUsage {
+			os.Exit(0) // the flag set printed its help and asked for exit 2, which is for a command written wrongly
+		}
 		exitOn(err)
+	}
+}
+
+// helpTexts are the commands whose arguments are not parsed as flags only: asking for help prints this, and runs nothing.
+var helpTexts = map[string]string{
+	"validate": `Usage: launchway validate [file] [--project NAME]
+
+Checks a pipeline file (default .launchway/pipeline.yaml) and prints each problem with its file, line and
+path, one per line. Exits 0 if the file is valid, 1 if it has problems. With --project NAME the server you
+are signed in to checks it for that project as well: its libraries, the limits the installation sets, and
+what the project must have for the pipeline to work.
+`,
+	"graph": `Usage: launchway graph [file]
+
+Prints a pipeline's graph (steps and what each needs) as JSON. The file defaults to .launchway/pipeline.yaml.
+Exits 0, or 1 if the file has problems.
+`,
+}
+
+// helpRequested says whether the arguments ask for help: -h, -help or --help before any "--". The commands that
+// start a server or a runner, and those that already answer help themselves, are left alone.
+func helpRequested(command string, args []string) bool {
+	switch command {
+	case "server", "runner", "run", "help", "--help", "-h", "version", "--version", "-v":
+		return false
+	}
+	for _, a := range args {
+		if a == "--" {
+			return false
+		}
+		if a == "-h" || a == "-help" || a == "--help" {
+			return true
+		}
+	}
+	return false
+}
+
+// allowHelpWithoutCredentials lets a client command get as far as printing its flags: the stand-ins are never
+// used, because help makes no request.
+func allowHelpWithoutCredentials() {
+	if os.Getenv("LAUNCHWAY_SERVER") == "" {
+		_ = os.Setenv("LAUNCHWAY_SERVER", "http://127.0.0.1:1")
+	}
+	if os.Getenv("LAUNCHWAY_TOKEN") == "" {
+		_ = os.Setenv("LAUNCHWAY_TOKEN", "help")
 	}
 }
 

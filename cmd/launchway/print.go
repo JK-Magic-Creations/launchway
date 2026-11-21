@@ -24,7 +24,7 @@ var palette = []string{"36", "35", "34", "33", "32", "96", "95", "94"}
 
 func newPrinter(p *pipeline.Pipeline) *printer {
 	pr := &printer{
-		color:   isTerminal(os.Stdout) && os.Getenv("NO_COLOR") == "",
+		color:   useColor(),
 		colorOf: map[string]string{}, status: map[string]engine.StepStatus{},
 		attempt: map[string]int{}, seq: map[string]int{},
 	}
@@ -150,4 +150,11 @@ func took(s *engine.StepView) string {
 	}
 	d := time.Duration(s.FinishedAt-s.StartedAt) * time.Millisecond
 	return strings.TrimSpace("in " + d.Round(100*time.Millisecond).String())
+}
+
+// useColor says whether to color output: only on a terminal, never when NO_COLOR is set (set and not empty, per
+// no-color.org) and not on a terminal that says it cannot (TERM=dumb). Color is never the only carrier of
+// meaning: every status is also a word.
+func useColor() bool {
+	return isTerminal(os.Stdout) && os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb"
 }
