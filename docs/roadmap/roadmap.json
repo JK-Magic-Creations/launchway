@@ -464,18 +464,18 @@
           "blurb": "Pull requests that show the run, the tests and the policy verdict on one page.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Pull requests on the built-in host",
               "value": "Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass.",
-              "detail": "A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist. Pull requests and code review are being built now.",
+              "detail": "Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest run's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview environment and deployment on the same page.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Review with inline comments and suggestions",
-              "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed.",
-              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision.",
+              "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads.",
+              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
@@ -483,7 +483,7 @@
               "status": "in-progress",
               "title": "Branch rules and protected tags",
               "value": "Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move.",
-              "detail": "The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run. Today protected branches have a first version (blocked pushes and a plain reason); required approvals arrive with pull requests.",
+              "detail": "Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Not built: protected tags, linear history, and rules that ask for signed commits (refused, not ignored).",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
@@ -496,10 +496,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Merge styles and auto-merge",
-              "value": "Merge, squash, rebase and fast-forward, and merge automatically when the checks pass.",
-              "detail": "Auto-merge is driven by events, not polling. A manually merged marker handles changes landed outside Launchway.",
+              "value": "Merge commit, squash and rebase, chosen per repository, and merge automatically when the rules pass.",
+              "detail": "Auto-merge is driven by events, not polling. A manually merged marker handles changes landed outside Launchway. Fast-forward-only merging is not built.",
               "needs": "Branch rules and protected tags.",
               "area": "git-hosting"
             },

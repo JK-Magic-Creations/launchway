@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 10 available · 10 in progress · 59 planned · 79 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 13 available · 8 in progress · 58 planned · 79 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -49,7 +49,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Host your code](#g-host-your-code) | 20 | 4 | 0 | 16 |
-| [Review and merge changes](#g-review-and-merge-changes) | 10 | 0 | 3 | 7 |
+| [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
@@ -269,9 +269,9 @@ Pull requests that show the run, the tests and the policy verdict on one page.
 
 #### Pull requests on the built-in host {#pull-requests-on-the-built-in-host}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist. Pull requests and code review are being built now.
+Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest run's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview environment and deployment on the same page.
 
 **Depends on:** Built-in Git hosting.
 
@@ -279,9 +279,9 @@ Open, review, discuss and merge changes inside Launchway, with branch rules that
 
 #### Review with inline comments and suggestions {#review-with-inline-comments-and-suggestions}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision.
+Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -291,7 +291,7 @@ Comment on lines and ranges, suggest a change the author can apply in one click,
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run. Today protected branches have a first version (blocked pushes and a plain reason); required approvals arrive with pull requests.
+Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Not built: protected tags, linear history, and rules that ask for signed commits (refused, not ignored).
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -309,9 +309,9 @@ Name who must review changes to which paths, using people or groups. Owners can 
 
 #### Merge styles and auto-merge {#merge-styles-and-auto-merge}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Merge, squash, rebase and fast-forward, and merge automatically when the checks pass. Auto-merge is driven by events, not polling. A manually merged marker handles changes landed outside Launchway.
+Merge commit, squash and rebase, chosen per repository, and merge automatically when the rules pass. Auto-merge is driven by events, not polling. A manually merged marker handles changes landed outside Launchway. Fast-forward-only merging is not built.
 
 **Depends on:** Branch rules and protected tags.
 
