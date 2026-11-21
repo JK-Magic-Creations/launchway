@@ -294,14 +294,14 @@ func (s *Server) Handler() http.Handler {
 	}
 	mux := http.NewServeMux()
 	for _, rt := range s.routes() {
-		mux.Handle(rt.pattern, s.guard(rt))
+		s.register(mux, rt)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
+	return s.recoverer(securityHeaders(s.splitOrigin(s.gitAlias(mux))))
 }
 
 // ---- shutting down ----

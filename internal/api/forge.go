@@ -8,6 +8,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 )
 
 // Launchway's own Git hosting (forge.hosting; see internal/forge/hosting).
@@ -25,6 +26,12 @@ type HostedProvider interface {
 // ForgeHosting is hosting, set up, as the API serves it.
 type ForgeHosting struct {
 	Provider HostedProvider
+	// Git serves clone, fetch and push; RunTokens checks the read-only
+	// credentials of runs. AllowInsecureHTTP lets Basic credentials travel over
+	// plain HTTP to a listener that is not loopback.
+	Git               *githttp.Handler
+	RunTokens         githttp.RunTokens
+	AllowInsecureHTTP bool
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -47,13 +54,13 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return []route{
+	return append(s.gitRoutes(), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},
 		{"PATCH /api/v1/repositories/{owner}/{name}", repoAdmin, "repository.update", s.updateRepo},
 		{"DELETE /api/v1/repositories/{owner}/{name}", repoAdmin, "repository.delete", s.deleteRepo},
-	}
+	}...)
 }
 
 func (s *Server) forgeOn(w http.ResponseWriter) bool {

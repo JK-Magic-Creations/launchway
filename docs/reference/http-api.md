@@ -411,6 +411,21 @@ Only with `forge.hosting` on; otherwise every route answers `404` with `{"error"
 | `PATCH /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `visibility`, `default_branch`, `archived`, or renames with `owner` and `name`. The old address stops working. |
 | `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
 
+### Git over HTTP
+
+Clone, fetch and push with the real `git`. Every address has two forms: `/git/<owner>/<name>.git/...` and the form other Git hosts use, `/<owner>/<name>.git/...`, so a remote moves to Launchway by changing its host. `.git` may be left off. Only the smart protocol is served (protocol version 2 for fetch, gzip request bodies).
+
+These routes do not use cookies. They take HTTP Basic (the password is a Launchway API token, the user name is ignored; a token alone as the user name works too), `Authorization: Bearer <token>`, `Authorization: token <token>`, or a run's read-only credential. A token in the query string is refused with `400`. Basic over plain HTTP is refused with `403` unless the listener is loopback or `forge.allow_insecure_http` is on. A failure answers `401` with `WWW-Authenticate: Basic`; a repository that does not exist, one the caller may not read and, without credentials, a private one are told apart by nobody. Anonymous clones work only on a repository whose visibility is `public`. A push to an archived or mirror repository answers `403`. With Git hosting off every route answers `404 feature_off`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /git/{owner}/{name}/info/refs` | `repo-viewer` | — | The ref advertisement (`?service=git-upload-pack`, or `git-receive-pack`, which needs push rights). The dumb protocol is not served. |
+| `POST /git/{owner}/{name}/git-upload-pack` | `repo-viewer` | — | Fetch and clone. The request body is limited to 32 MiB. |
+| `POST /git/{owner}/{name}/git-receive-pack` | `repo-operator` | `git.push` | Push. The body is limited by `forge.max_push_mib`; the audit entry names the refs and the token. |
+| `GET /{owner}/{name}/info/refs` | `repo-viewer` | — | The same, at the address other Git hosts use. |
+| `POST /{owner}/{name}/git-upload-pack` | `repo-viewer` | — | The same. |
+| `POST /{owner}/{name}/git-receive-pack` | `repo-operator` | `git.push` | The same. |
+
 ## API tokens
 
 These routes need sign-in on: with sign-in off they answer `404` with `API tokens need sign-in, which is off on this server (auth.mode: none)`.

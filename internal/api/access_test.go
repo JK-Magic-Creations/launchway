@@ -132,6 +132,13 @@ var permissionTable = map[string]matrixRow{
 	// Step resources: anyone signed in reads, an admin changes.
 	"GET /api/v1/step-resources":        {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/step-resources/limits": {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	// Git over HTTP authenticates by itself (Basic or a token, never a cookie); with hosting off every call is 404 feature_off.
+	"GET /git/{owner}/{name}/info/refs":         {"GET", "/git/o/x.git/info/refs?service=git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"POST /git/{owner}/{name}/git-upload-pack":  {"POST", "/git/o/x.git/git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"POST /git/{owner}/{name}/git-receive-pack": {"POST", "/git/o/x.git/git-receive-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /{owner}/{name}/info/refs":             {"GET", "/o/x.git/info/refs?service=git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"POST /{owner}/{name}/git-upload-pack":      {"POST", "/o/x.git/git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"POST /{owner}/{name}/git-receive-pack":     {"POST", "/o/x.git/git-receive-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
 	// Git hosting is off in this server, so what passes the check answers 404 feature_off.
 	"GET /api/v1/repositories":                   {"GET", "/api/v1/repositories", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories":                  {"POST", "/api/v1/repositories", `{"name":"x"}`, [6]int{401, 403, 403, 403, 403, 404}},
@@ -216,7 +223,7 @@ func TestEveryRouteIsInThePermissionTable(t *testing.T) {
 			t.Errorf("route %q is not in the permission table in access_test.go; add a row saying who may call it", rt.pattern)
 		}
 		if strings.HasPrefix(rt.pattern, "POST ") || strings.HasPrefix(rt.pattern, "DELETE ") {
-			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" {
+			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && !strings.HasSuffix(rt.pattern, "/git-upload-pack") {
 				t.Errorf("route %q changes something but records nothing in the audit trail", rt.pattern)
 			}
 		}

@@ -68,3 +68,11 @@ capacity; past that, use the S3 or filesystem store.
 `reference-transaction` needs git 2.28. The sequence of hooks and the one-pack-per-push behaviour were
 checked on git 2.28.0 and 2.56.1. The server logs the installed version at start-up and warns about what
 it is too old for.
+
+## Fetching an object by its ID
+
+`uploadpack.allowAnySHA1InWant` is off, so over protocol versions 0 and 1 a client cannot fetch a commit no
+ref reaches. Protocol version 2 does not check what was advertised: git serves any object it holds. What
+keeps a force-pushed secret from being fetched by its ID is therefore that consolidation (`Maintain`) writes
+only what the refs reach, and the caches are rebuilt from the new pack. Until then the object is still in the
+packs. A leaked secret must be revoked, not only removed from history.

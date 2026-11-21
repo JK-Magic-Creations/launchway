@@ -13,9 +13,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
@@ -60,8 +62,10 @@ type Hosting struct {
 	Forge      *store.Store
 	Provider   *launchway.Provider
 	Connection forge.Connection
-	o          Options
-	log        *slog.Logger
+	// RunTokens makes and checks the read-only tokens of runs.
+	RunTokens githttp.RunTokens
+	o         Options
+	log       *slog.Logger
 }
 
 // New refuses (with the reason) when this server cannot host: git too old,
@@ -107,9 +111,17 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	if conn.Kind != forge.KindLaunchway {
 		return nil, fmt.Errorf("a connection named %s exists and is of kind %s; rename it before turning hosting on", ConnectionName, conn.Kind)
 	}
+	key, err := o.Engine.SharedValue("git_run_token_key", auth.NewKey())
+	if err != nil {
+		return nil, fmt.Errorf("the key for run tokens: %w", err)
+	}
+	rt := githttp.RunTokens{Key: []byte(key)}
 	po := o.Provider
 	po.BaseURL = o.BaseURL
-	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, o: o, log: o.Log}, nil
+	if po.Minter == nil {
+		po.Minter = rt
+	}
+	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, RunTokens: rt, o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.

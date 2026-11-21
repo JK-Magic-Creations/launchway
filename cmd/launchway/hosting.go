@@ -12,6 +12,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
 	_ "github.com/jk-magic-creations/launchway/internal/forge/storage"
@@ -43,7 +44,8 @@ func newHosting(cfg *config.Config, eng *engine.Engine, log *slog.Logger, srv *a
 	if err != nil {
 		return nil, err
 	}
-	srv.Forge = &api.ForgeHosting{Provider: h.Provider}
+	srv.Forge = &api.ForgeHosting{Provider: h.Provider, RunTokens: h.RunTokens, AllowInsecureHTTP: f.AllowInsecureHTTP,
+		Git: githttp.New(githttp.Options{Backend: h.Store, MaxPushBytes: int64(f.MaxPushMiB) << 20, MaxConcurrent: f.MaxConcurrent, Log: log})}
 	log.Info("Git hosting is on", "connection", h.Connection.Name)
 	return &hostedForge{h}, nil
 }

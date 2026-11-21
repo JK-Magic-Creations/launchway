@@ -118,30 +118,7 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 			s.tokenDenied(r, touch, "", "", "the Authorization header holds no Launchway API token")
 			return nil, nil
 		}
-		t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
-		if errors.Is(err, engine.ErrNotFound) {
-			s.tokenDenied(r, touch, "", "", "an unknown or revoked token")
-			return nil, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if now.UnixMilli() >= t.ExpiresAt {
-			s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
-			return nil, nil
-		}
-		if touch {
-			if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
-				s.Log.Warn("recording that a token was used", "err", err)
-			}
-		}
-		id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
-		if t.Role != "" {
-			if id.capRole, err = auth.ParseRole(t.Role); err != nil {
-				return nil, nil // a role this server does not know: refuse rather than guess
-			}
-		}
-		return id, nil
+		return s.tokenIdentity(r, tok, touch)
 	}
 	c, err := r.Cookie(sessionCookie)
 	if err != nil || c.Value == "" {
@@ -185,6 +162,9 @@ func (s *Server) requestIdentity(r *http.Request) (*identity, error) {
 // guard wraps a route's handler with everything access needs: who is
 // calling, the CSRF check, the permission check, and the audit record.
 func (s *Server) guard(rt route) http.Handler {
+	if isGitRoute(rt.pattern) {
+		return rt.handler // authenticates by itself: see gitHTTP
+	}
 	switch rt.access {
 	case public:
 		return rt.handler
@@ -575,3 +555,34 @@ func nonEmpty(a, b string) string {
 }
 
 func shortSHA(sha string) string { return sha[:min(len(sha), 8)] }
+
+// tokenIdentity is who an API token stands for: nil if it is unknown,
+// revoked or expired (counted as a failed attempt), with touch recording
+// that it was used.
+func (s *Server) tokenIdentity(r *http.Request, tok string, touch bool) (*identity, error) {
+	now := s.Now()
+	t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
+	if errors.Is(err, engine.ErrNotFound) {
+		s.tokenDenied(r, touch, "", "", "an unknown or revoked token")
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if now.UnixMilli() >= t.ExpiresAt {
+		s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
+		return nil, nil
+	}
+	if touch {
+		if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
+			s.Log.Warn("recording that a token was used", "err", err)
+		}
+	}
+	id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
+	if t.Role != "" {
+		if id.capRole, err = auth.ParseRole(t.Role); err != nil {
+			return nil, nil // a role this server does not know: refuse rather than guess
+		}
+	}
+	return id, nil
+}

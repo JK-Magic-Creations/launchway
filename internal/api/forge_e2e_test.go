@@ -10,6 +10,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
 )
 
@@ -32,6 +33,12 @@ func hostedPolicy(t *testing.T) *auth.Policy {
 // hostedEnv is a signed-in server with Git hosting on.
 func hostedEnv(t *testing.T, o envOpts) (*authEnv, *hosting.Hosting) {
 	t.Helper()
+	return hostedEnvWith(t, o, hosting.Options{}, githttp.Options{})
+}
+
+// hostedEnvWith is hostedEnv with limits.
+func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Options) (*authEnv, *hosting.Hosting) {
+	t.Helper()
 	if o.policy == nil {
 		o.policy = hostedPolicy(t)
 	}
@@ -40,11 +47,13 @@ func hostedEnv(t *testing.T, o envOpts) (*authEnv, *hosting.Hosting) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h, err := hosting.New(t.Context(), hosting.Options{Engine: e.eng, Blobs: blobs, Data: t.TempDir(), Server: "api-test", BaseURL: e.srv.URL, Log: quiet()})
+	ho.Engine, ho.Blobs, ho.Data, ho.Server, ho.BaseURL, ho.Log = e.eng, blobs, t.TempDir(), "api-test", e.srv.URL, quiet()
+	h, err := hosting.New(t.Context(), ho)
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.api.Forge = &ForgeHosting{Provider: h.Provider}
+	go_.Backend, go_.Log = h.Store, quiet()
+	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens}
 	return e, h
 }
 
