@@ -213,7 +213,7 @@ type promotion struct {
 // status that says what went wrong, with words.
 func (s *Server) promoteOne(ctx context.Context, p promotion) (*engine.ReleasePromotion, *engine.RunSummary, int, error) {
 	rel := p.Release
-	if s.Projects == nil && s.StartRelease == nil {
+	if s.Projects == nil && s.Releases.Start == nil {
 		return nil, nil, http.StatusNotFound, errors.New("no projects are configured")
 	}
 	ck, err := s.Engine.ReleaseChecklist(rel.ID, p.Airfield)
@@ -253,39 +253,12 @@ func (s *Server) promoteOne(ctx context.Context, p promotion) (*engine.ReleasePr
 			return nil, nil, http.StatusConflict, fmt.Errorf("the tag %s no longer points to the released commit %s; nothing is promoted until it is back (a tag is never moved: if it was, release a new version)", rel.Tag, rel.SHA[:8])
 		}
 	}
-	// Give the pipeline what the release is: the same commit, the same digest.
-	inputs := map[string]string{}
-	declared := map[string]bool{}
-	if s.Projects != nil {
-		info, err := s.Projects.InputsAt(ctx, rel.Project, rel.Tag)
-		if err != nil {
-			return nil, nil, 0, err
-		}
-		if len(info.Problems) > 0 {
-			return nil, nil, http.StatusUnprocessableEntity, fmt.Errorf("the pipeline at %s has problems: %s", rel.Tag, info.Problems[0].Message)
-		}
-		for _, in := range info.Inputs {
-			declared[in.Name] = true
-		}
-	}
-	digests := make([]string, 0, len(rel.Digests))
-	for _, d := range rel.Digests {
-		digests = append(digests, d.Digest)
-	}
-	want := map[string]string{"release": rel.Version, "version": rel.Version, "airfield": p.Airfield, "sha": rel.SHA}
-	if len(digests) > 0 {
-		want["digest"], want["digests"] = digests[0], strings.Join(digests, ",")
-	}
-	for k, v := range want {
-		if declared[k] {
-			inputs[k] = v
-		}
-	}
-	if s.Projects != nil && !declared["airfield"] && !declared["release"] && !declared["version"] {
-		return nil, nil, http.StatusConflict, fmt.Errorf("the pipeline of %s takes no input named airfield, release or version, so Launchway cannot tell it what to promote or where: add inputs airfield and release (and digest for the image) to .launchway/pipeline.yaml, as the guide \"Promoting a release\" shows", rel.Project)
+	inputs, code, err := s.promotionInputs(ctx, rel, p.Airfield)
+	if err != nil {
+		return nil, nil, code, err
 	}
 	rq := source.StartRequest{Project: rel.Project, Ref: rel.Tag, Actor: p.Actor, Inputs: inputs}
-	start := s.StartRelease
+	start := s.Releases.Start
 	if start == nil {
 		start = s.Projects.StartRunWith
 	}
@@ -298,9 +271,45 @@ func (s *Server) promoteOne(ctx context.Context, p promotion) (*engine.ReleasePr
 		_ = s.Engine.Cancel(run.ID, p.Actor)
 		return nil, nil, http.StatusConflict, fmt.Errorf("the Sortie ran at %s, not the release's commit %s; it was canceled", run.SHA[:8], rel.SHA[:8])
 	}
-	rec, err := s.Engine.RecordPromotion(engine.ReleasePromotion{ReleaseID: rel.ID, Project: rel.Project, Version: rel.Version, Airfield: p.Airfield, SHA: rel.SHA,
+	rec, err := s.Engine.RecordPromotion(engine.ReleasePromotion{ReleaseID: rel.ID, Project: rel.Project, Version: rel.Version, Airfield: p.Airfield, SHA: rel.SHA, //nolint:contextcheck // a notification outlives the request
 		Digests: rel.Digests, RunID: run.ID, RunNumber: run.Number, FormationID: p.Formation, RequestedBy: p.Actor, Override: p.Override, Overridden: strings.Join(overridden, ","), State: "started"})
 	return rec, run, 0, err
+}
+
+// promotionInputs gives the pipeline what the release is: the same commit, the same digest, as the inputs it declares.
+func (s *Server) promotionInputs(ctx context.Context, rel *engine.Release, airfield string) (map[string]string, int, error) {
+	// Give the pipeline what the release is: the same commit, the same digest.
+	inputs := map[string]string{}
+	declared := map[string]bool{}
+	if s.Projects != nil {
+		info, err := s.Projects.InputsAt(ctx, rel.Project, rel.Tag)
+		if err != nil {
+			return nil, 0, err
+		}
+		if len(info.Problems) > 0 {
+			return nil, http.StatusUnprocessableEntity, fmt.Errorf("the pipeline at %s has problems: %s", rel.Tag, info.Problems[0].Message)
+		}
+		for _, in := range info.Inputs {
+			declared[in.Name] = true
+		}
+	}
+	digests := make([]string, 0, len(rel.Digests))
+	for _, d := range rel.Digests {
+		digests = append(digests, d.Digest)
+	}
+	want := map[string]string{"release": rel.Version, "version": rel.Version, "airfield": airfield, "sha": rel.SHA}
+	if len(digests) > 0 {
+		want["digest"], want["digests"] = digests[0], strings.Join(digests, ",")
+	}
+	for k, v := range want {
+		if declared[k] {
+			inputs[k] = v
+		}
+	}
+	if s.Projects != nil && !declared["airfield"] && !declared["release"] && !declared["version"] {
+		return nil, http.StatusConflict, fmt.Errorf("the pipeline of %s takes no input named airfield, release or version, so Launchway cannot tell it what to promote or where: add inputs airfield and release (and digest for the image) to .launchway/pipeline.yaml, as the guide \"Promoting a release\" shows", rel.Project)
+	}
+	return inputs, 0, nil
 }
 
 func blockerText(items []release.Item) string {
@@ -379,7 +388,7 @@ func (s *Server) planPromotion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, releaseTarget(rel)+" → "+in.Airfield, "planned for "+at.UTC().Format(time.RFC3339))
-	pr, err := s.Engine.RecordPromotion(engine.ReleasePromotion{ReleaseID: rel.ID, Project: rel.Project, Version: rel.Version, Airfield: in.Airfield, SHA: rel.SHA,
+	pr, err := s.Engine.RecordPromotion(engine.ReleasePromotion{ReleaseID: rel.ID, Project: rel.Project, Version: rel.Version, Airfield: in.Airfield, SHA: rel.SHA, //nolint:contextcheck // a notification outlives the request
 		PlannedFor: at.UnixMilli(), RequestedBy: id.User, State: "planned", Detail: clip(in.Note, 300)})
 	if err != nil {
 		s.fail(w, err)
@@ -428,7 +437,7 @@ func (s *Server) returnToBase(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.Engine.NoticeReleaseReturned(project, in.Airfield, "", to, id.User, in.Reason, sum.ID)
+	s.Engine.NoticeReleaseReturned(project, in.Airfield, "", to, id.User, in.Reason, sum.ID) //nolint:contextcheck // a notification outlives the request
 	writeJSON(w, http.StatusCreated, sum)
 }
 

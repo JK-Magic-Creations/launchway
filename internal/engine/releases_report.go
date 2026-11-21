@@ -39,6 +39,7 @@ func (e *Engine) ReleaseLaunches(project, airfield string, from, to time.Time) (
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	type dep struct {
 		id, run, project, service, env, version, mode, verdict string
 		opened, deployed, closed                               int64
@@ -47,12 +48,13 @@ func (e *Engine) ReleaseLaunches(project, airfield string, from, to time.Time) (
 	for rows.Next() {
 		var d dep
 		if err := rows.Scan(&d.id, &d.run, &d.project, &d.service, &d.env, &d.version, &d.mode, &d.verdict, &d.opened, &d.deployed, &d.closed); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		deps = append(deps, d)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	rels, err := e.ListReleases(ReleaseFilter{Project: project})
 	if err != nil {
 		return nil, err

@@ -175,6 +175,8 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 }
 
 func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
+	addReleaseChangeTools2(srv, c)
+	addReleaseChangeTools3(srv, c)
 	type createIn struct {
 		Project       string `json:"project" jsonschema:"the project's name"`
 		Version       string `json:"version" jsonschema:"the new version; propose_next_release_version suggests one"`
@@ -279,6 +281,9 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 		"Moves a draft to candidate: it may be promoted to Airfields that are not protected, for testing, while the release is not yet made.", "/candidate", false)
 	simple("publish_release", "Publish a release",
 		"Publishes a draft or candidate: creates the annotated tag at the release's commit (or checks the adopted one) and fixes the release. From then on its version, commit, tag, assets and digests never change; only withdrawing it is possible. Refused if the tag exists at another commit.", "/publish", true)
+}
+
+func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "withdraw_release", Annotations: changes("Withdraw a release", true, false),
 		Description: "Withdraws (yanks) a candidate or published release, with a reason that is recorded. It stays in the record and is no longer promoted."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
@@ -368,6 +373,9 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 		}) (relOut, error) {
 			return relCall(ctx, c, "return_to_base", http.MethodPost, apiPath("/api/v1/projects/%s/release-returns", in.Project), map[string]any{"airfield": in.Airfield, "to": in.To, "reason": in.Reason, "queue": in.Queue})
 		})
+}
+
+func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "set_release_settings", Annotations: changes("Set release settings", false, true),
 		Description: "Sets how a project's versions are written and ordered (semver, calver, natural or created), the tag prefix, the changelog file, and whether published releases may be downloaded without signing in (only when the installation allows it). Project administrators only. The scheme cannot change once releases exist."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {

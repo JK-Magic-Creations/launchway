@@ -34,6 +34,13 @@ import (
 //   - an administrator of every project makes freezes of every project and
 //     says whether the installation allows public downloads.
 
+// ReleaseOptions are what a server is given for releases: the work tracker's source of changes, when there is one
+// (nil: merged pull requests and commits), and how a promotion starts its Sortie (nil: the project manager does).
+type ReleaseOptions struct {
+	Notes release.Source
+	Start func(ctx context.Context, rq source.StartRequest) (*engine.RunSummary, error)
+}
+
 func (s *Server) releaseRoutes() []route {
 	p := "/api/v1/projects/{name}"
 	return []route{
@@ -306,9 +313,9 @@ func (s *Server) createRelease(w http.ResponseWriter, r *http.Request) {
 // releaseChanges reads the changes between the previous release's commit and a commit: from the
 // work tracker's source when there is one, else from merged pull requests and commits.
 func (s *Server) releaseChanges(ctx context.Context, project, fromSHA, toSHA string) ([]release.Change, string, error) {
-	if s.ReleaseNotes != nil {
-		if ch, err := s.ReleaseNotes.ChangesSince(project, fromSHA, toSHA); err == nil {
-			return ch, s.ReleaseNotes.Name(), nil
+	if s.Releases.Notes != nil {
+		if ch, err := s.Releases.Notes.ChangesSince(project, fromSHA, toSHA); err == nil {
+			return ch, s.Releases.Notes.Name(), nil
 		}
 	}
 	commits, err := s.Projects.CommitsBetween(ctx, project, fromSHA, toSHA)
@@ -569,7 +576,7 @@ func (s *Server) deleteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, releaseTarget(rel), "deleted the draft")
-	if err := s.Engine.DeleteRelease(rel.ID); err != nil {
+	if err := s.Engine.DeleteRelease(rel.ID); err != nil { //nolint:contextcheck // removing files after the request is answered is not bound to it
 		s.fail(w, err)
 		return
 	}
@@ -660,7 +667,7 @@ func (s *Server) publishRelease(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.Engine.NoticeReleasePublished(got)
+	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
 	writeJSON(w, http.StatusOK, s.releaseView(r, got))
 }

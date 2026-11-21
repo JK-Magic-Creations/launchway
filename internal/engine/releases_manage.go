@@ -289,23 +289,13 @@ func (e *Engine) ReleaseMatrix(visible func(project string) bool) (airfields []s
 	if err := e.needReleases(); err != nil {
 		return nil, nil, err
 	}
-	for _, env := range e.AirfieldOrder() {
-		airfields = append(airfields, env)
-	}
+	airfields = append(airfields, e.AirfieldOrder()...)
 	// Projects that have releases or run somewhere.
 	projects := map[string]bool{}
 	for _, q := range []string{`SELECT DISTINCT project FROM releases`, `SELECT DISTINCT project FROM environment_state`} {
-		rs, err := e.db.Query(q)
-		if err != nil {
+		if err := e.collectProjects(q, projects); err != nil {
 			return nil, nil, err
 		}
-		for rs.Next() {
-			var p string
-			if rs.Scan(&p) == nil {
-				projects[p] = true
-			}
-		}
-		rs.Close()
 	}
 	names := make([]string, 0, len(projects))
 	for p := range projects {
@@ -701,13 +691,13 @@ func (e *Engine) eventsFreezes(ctx context.Context, n *Notifier) ([]notify.Event
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var out []notify.Event
 	var done []string
 	for rows.Next() {
 		var id, project, af, reason string
 		var ends int64
 		if err := rows.Scan(&id, &project, &af, &reason, &ends); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		where := "every Airfield"
@@ -718,7 +708,9 @@ func (e *Engine) eventsFreezes(ctx context.Context, n *Notifier) ([]notify.Event
 			Title: fmt.Sprintf("A freeze began for %s: nothing is promoted until %s", where, time.UnixMilli(ends).UTC().Format("2006-01-02 15:04 MST")), Detail: clipText(reason, 200), Link: n.link("/deployments/releases/calendar")})
 		done = append(done, id)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	for _, id := range done {
 		_, _ = e.db.Exec(`UPDATE release_freezes SET announced = 1 WHERE id = ?`, id)
 	}
@@ -727,3 +719,19 @@ func (e *Engine) eventsFreezes(ctx context.Context, n *Notifier) ([]notify.Event
 
 // AirfieldKnown returns nil if the Airfield exists.
 func (e *Engine) AirfieldKnown(name string) error { return e.checkAirfield(name) }
+
+// collectProjects adds the project names a query returns.
+func (e *Engine) collectProjects(q string, into map[string]bool) error {
+	rs, err := e.db.Query(q)
+	if err != nil {
+		return err
+	}
+	defer rs.Close()
+	for rs.Next() {
+		var p string
+		if rs.Scan(&p) == nil {
+			into[p] = true
+		}
+	}
+	return rs.Err()
+}

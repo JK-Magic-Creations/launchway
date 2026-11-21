@@ -16,6 +16,7 @@ import (
 // rollbacks.go and engine/rollbacks.go): the same routes, the same refusals.
 
 func addRollbackReadTools(srv *mcp.Server, c *mcpCall) {
+	addReleaseReadTools(srv, c) // releases ride with the delivery tools
 	addTool(srv, c, &mcp.Tool{Name: "get_rollback_options", Annotations: readOnly("Get rollback options"),
 		Description: "Whether a service of a project can be rolled back in an environment after its deployment succeeded, and to what: the earlier successful deployments (version, when, which run) with, for each, what would be reverted and the consequence and suggestions. When it cannot, the reason and what would help; when another deployment holds the lock, queueable says rollback_deployment with queue true waits behind it."},
 		mcpCallTimeout, getRollbackOptions)
@@ -25,6 +26,7 @@ func addRollbackReadTools(srv *mcp.Server, c *mcpCall) {
 }
 
 func addRollbackChangeTools(srv *mcp.Server, c *mcpCall) {
+	addReleaseChangeTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "rollback_deployment", Annotations: changes("Roll back a deployment", true, false),
 		Description: "Roll a service back to an earlier successful deployment, after its deployment succeeded. It is a run of its own that reverts in Git, newest first, every deployment after the version asked for, and waits until the application is healthy. A reason is required and recorded. It never rolls back a database or configuration. On a protected environment it is an emergency action: no approval first, and an approver reviews it afterwards (unless a setting requires approval first). get_rollback_options says what is possible and what each choice does."},
 		mcpCallTimeout, rollbackDeployment)

@@ -25,7 +25,6 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
-	"github.com/jk-magic-creations/launchway/internal/release"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -80,16 +79,11 @@ type Server struct {
 	Variables *settings.VariableService // variables set at levels (schema 29)
 	Secrets   *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
 	sealerMu  sync.Mutex
-	sealer    *auth.Sealer // seals the state of sign-ins in progress
-	reportKey []byte       // signs links to HTML reports
-
-	// ReleaseNotes, when set, supplies the changes of a release (the work tracker's closed items); nil: merged pull requests and commits.
-	ReleaseNotes release.Source
-	// StartRelease starts the Sortie of a promotion; nil: the project manager does.
-	StartRelease func(ctx context.Context, rq source.StartRequest) (*engine.RunSummary, error)
-
-	MCP   *MCPOptions   // turns on the Model Context Protocol endpoint, /mcp; nil is off
-	Forge *ForgeHosting // Git hosting; nil is off
+	sealer    *auth.Sealer   // seals the state of sign-ins in progress
+	reportKey []byte         // signs links to HTML reports
+	Releases  ReleaseOptions // see releases.go
+	MCP       *MCPOptions    // turns on the Model Context Protocol endpoint, /mcp; nil is off
+	Forge     *ForgeHosting  // Git hosting; nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter

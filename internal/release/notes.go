@@ -95,7 +95,7 @@ func Render(version string, changes []Change, source string) Notes {
 }
 
 func link(text, url string) string {
-	if url == "" || !(strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://")) || strings.ContainsAny(url, " ()<>") {
+	if url == "" || !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") || strings.ContainsAny(url, " ()<>") {
 		return text
 	}
 	return "[" + text + "](" + url + ")"

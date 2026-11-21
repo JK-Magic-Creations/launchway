@@ -162,7 +162,7 @@ func (e *Engine) AddReleaseCargo(ctx context.Context, releaseID, runID, artifact
 	if err := e.db.QueryRow(`SELECT sha FROM runs WHERE id = ?`, runID).Scan(&sha); err != nil {
 		return nil, err
 	}
-	if sha != "" && !(len(r.SHA) >= 7 && (hasPrefix(sha, r.SHA) || hasPrefix(r.SHA, sha))) {
+	if sha != "" && (len(r.SHA) < 7 || !hasPrefix(sha, r.SHA) && !hasPrefix(r.SHA, sha)) {
 		return nil, fmt.Errorf("%w: the Sortie ran at commit %s, not the release's commit %s; assets must come from the commit being released", ErrConflict, shortSHA(sha), shortSHA(r.SHA))
 	}
 	f, err := e.OpenArtifactFile(ctx, runID, artifactID, path, 0)
@@ -302,6 +302,7 @@ func (e *Engine) dropAssets(releaseID string) {
 	if err != nil {
 		return
 	}
+	defer rows.Close()
 	var keys []string
 	for rows.Next() {
 		var k string
@@ -309,7 +310,9 @@ func (e *Engine) dropAssets(releaseID string) {
 			keys = append(keys, k)
 		}
 	}
-	rows.Close()
+	if rows.Err() != nil {
+		return
+	}
 	for _, k := range keys {
 		_ = st.Delete(context.Background(), k)
 	}

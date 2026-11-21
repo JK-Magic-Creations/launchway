@@ -5,6 +5,7 @@ package main
 // printed as they are.
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -413,7 +414,7 @@ func (cl *client) upload(project, version, file, name string) error {
 	if err != nil {
 		return usageErr("%v", err)
 	}
-	req, err := http.NewRequest(http.MethodPut, cl.c.Server+cl.relPath(project, version, "/assets/"+url.PathEscape(nonEmptyStr(name, filepath.Base(file)))), f) //nolint:gosec // G704: the user's own configured server
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, cl.c.Server+cl.relPath(project, version, "/assets/"+url.PathEscape(nonEmptyStr(name, filepath.Base(file)))), f) //nolint:gosec // G704: the user's own configured server
 	if err != nil {
 		return usageErr("%v", err)
 	}
@@ -439,7 +440,7 @@ func (cl *client) upload(project, version, file, name string) error {
 }
 
 func (cl *client) download(path, dest string) error {
-	req, err := http.NewRequest(http.MethodGet, cl.c.Server+path, nil) //nolint:gosec // G704: the user's own configured server
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, cl.c.Server+path, nil) //nolint:gosec // G704: the user's own configured server
 	if err != nil {
 		return usageErr("%v", err)
 	}
@@ -767,7 +768,7 @@ func (cl *client) releaseGate(args []string) error {
 		notes := fs.Bool("notes", false, "the release must have notes")
 		nofind := fs.Bool("no-findings", false, "no blocking findings may be open")
 		soak := fs.Int("soak", 0, "minutes in the previous Airfield")
-		clear := fs.Int("clearances", 0, "how many clearances")
+		nClear := fs.Int("clearances", 0, "how many clearances")
 		role := fs.String("clearance-role", "", "operator or admin (default both)")
 		prev := fs.String("previous", "", "the Airfield it must be in first")
 		days := fs.String("window-days", "", "mon,tue,...")
@@ -781,7 +782,7 @@ func (cl *client) releaseGate(args []string) error {
 		if len(pos) != 1 || *airfield == "" {
 			return usageErr("launchway release gate set PROJECT --airfield A [flags]")
 		}
-		g := map[string]any{"require_checks": *checks, "require_notes": *notes, "require_no_blocking_findings": *nofind, "soak_minutes": *soak, "clearances": *clear, "previous_airfield": *prev}
+		g := map[string]any{"require_checks": *checks, "require_notes": *notes, "require_no_blocking_findings": *nofind, "soak_minutes": *soak, "clearances": *nClear, "previous_airfield": *prev}
 		if *role != "" {
 			g["clearance_roles"] = []string{*role}
 		}

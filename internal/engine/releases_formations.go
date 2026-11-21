@@ -99,7 +99,7 @@ func (e *Engine) CreateFormation(name, note string, releaseIDs []string, actor s
 		if err != nil {
 			return err
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 		if _, err := tx.Exec(`INSERT INTO release_formations(id, name, note, state, created_by, created_at) VALUES(?,?,?,?,?,?)`, f.ID, f.Name, f.Note, f.State, actor, f.CreatedAt); err != nil {
 			return err
 		}
@@ -159,6 +159,7 @@ func (e *Engine) ListFormations(limit int) ([]Formation, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var idl []string
 	for rows.Next() {
 		var id string
@@ -166,7 +167,9 @@ func (e *Engine) ListFormations(limit int) ([]Formation, error) {
 			idl = append(idl, id)
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	out := []Formation{}
 	for _, id := range idl {
 		f, err := e.GetFormation(id)

@@ -303,14 +303,14 @@ func roleList(r []string) string {
 	return strings.Join(r, " or ")
 }
 
-func dur(min int) string {
+func dur(minutes int) string {
 	switch {
-	case min%1440 == 0:
-		return fmt.Sprintf("%d day(s)", min/1440)
-	case min%60 == 0:
-		return fmt.Sprintf("%d hour(s)", min/60)
+	case minutes%1440 == 0:
+		return fmt.Sprintf("%d day(s)", minutes/1440)
+	case minutes%60 == 0:
+		return fmt.Sprintf("%d hour(s)", minutes/60)
 	}
-	return fmt.Sprintf("%d minute(s)", min)
+	return fmt.Sprintf("%d minute(s)", minutes)
 }
 
 // Ready reports whether every line passes (or is skipped).
