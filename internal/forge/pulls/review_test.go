@@ -68,12 +68,6 @@ func TestCommentsFollowTheCodeOrBecomeOutdated(t *testing.T) {
 	if c := byID[onL3.ID]; !c.Outdated || c.Line != 3 || c.CommitSHA != p.HeadSHA {
 		t.Errorf("the comment on lines that changed: %+v", c)
 	}
-	for _, tc := range []struct {
-		line, want int
-		ok         bool
-	}{{1, 1, true}, {5, 4, true}, {9, 8, true}} {
-		_ = tc
-	}
 	hs := parseHunks("@@ -2,0 +3,2 @@\n+a\n+b\n@@ -6 +8,0 @@\n-x\n")
 	if got, ok := mapLine(hs, 1); !ok || got != 1 {
 		t.Errorf("before: %d %v", got, ok)
