@@ -205,6 +205,10 @@ type RunInfo struct {
 	SHA      string     `json:"sha"`
 	Created  int64      `json:"created_at"`
 	Steps    []StepInfo `json:"steps"`
+	// PathSkipped marks a head that a trigger's path filter kept from starting
+	// a run (no pipeline, no steps): the required checks of that head count
+	// as satisfied, since the repository's own rule says nothing needed to run.
+	PathSkipped bool `json:"path_skipped,omitempty"`
 }
 
 // StepInfo is one step of a run.
@@ -212,6 +216,8 @@ type StepInfo struct {
 	Name    string `json:"name"`
 	Status  string `json:"status"`
 	Allowed bool   `json:"allowed_to_fail,omitempty"`
+	// SkipKind says why a skipped step was skipped; "paths" is a path rule.
+	SkipKind string `json:"skip_kind,omitempty"`
 }
 
 // RunSource finds the runs of a pull request: every run whose trigger is the
@@ -229,7 +235,10 @@ const (
 	CheckFailed   = "failed"
 	CheckCanceled = "canceled"
 	CheckSkipped  = "skipped"
-	CheckMissing  = "missing"
+	// CheckPathSkipped is a step or pipeline that a path rule kept from
+	// running: it satisfies a required check.
+	CheckPathSkipped = "skipped_by_paths"
+	CheckMissing     = "missing"
 )
 
 // Check is the result of one pipeline or one step on the head of a pull request.
@@ -274,8 +283,15 @@ func (s *Service) Checks(ctx context.Context, repoID, repoPath string, p PullReq
 			}
 		}
 	}
+	pathSkipped := false
+	for _, r := range runs {
+		pathSkipped = pathSkipped || r.PathSkipped
+	}
 	latest := map[string]RunInfo{}
 	for _, r := range runs {
+		if r.PathSkipped {
+			continue
+		}
 		key := r.Project + "\x00" + r.Pipeline
 		if old, ok := latest[key]; !ok || r.Created > old.Created {
 			latest[key] = r
@@ -297,6 +313,9 @@ func (s *Service) Checks(ctx context.Context, repoID, repoPath string, p PullReq
 			if st.Status == "failed" && st.Allowed {
 				status = CheckPassed
 			}
+			if st.Status == "skipped" && st.SkipKind == "paths" {
+				status = CheckPathSkipped
+			}
 			checks = append(checks, Check{Name: r.Pipeline + "/" + st.Name, Status: status, RunID: r.ID, Project: r.Project, Run: r.Number})
 		}
 	}
@@ -308,7 +327,11 @@ func (s *Service) Checks(ctx context.Context, repoID, repoPath string, p PullReq
 	}
 	for _, name := range required {
 		if _, ok := findCheck(checks, name); !ok {
-			checks = append(checks, Check{Name: name, Status: CheckMissing, Required: true})
+			status := CheckMissing
+			if pathSkipped {
+				status = CheckPathSkipped
+			}
+			checks = append(checks, Check{Name: name, Status: status, Required: true})
 		}
 	}
 	return checks, used, nil
@@ -357,7 +380,7 @@ func checkRank(s string) int {
 	switch s {
 	case CheckPassed:
 		return 0
-	case CheckSkipped:
+	case CheckSkipped, CheckPathSkipped:
 		return 1
 	case CheckRunning:
 		return 2
@@ -542,7 +565,7 @@ func (s *Service) checkBlockers(ctx context.Context, repoID, repoPath string, p 
 		switch {
 		case !ok || c.Status == CheckRunning || c.Status == CheckPending:
 			r.block("check", "`"+name+"` has not passed")
-		case c.Status == CheckPassed:
+		case c.Status == CheckPassed, c.Status == CheckPathSkipped:
 		case c.Status == CheckFailed:
 			r.block("check", "`"+name+"` failed")
 		case c.Status == CheckCanceled:

@@ -66,6 +66,7 @@ type listLanesOut struct {
 }
 
 func addLaneTools(srv *mcp.Server, c *mcpCall) {
+	addQueueTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "list_lanes", Annotations: readOnly("List lanes"),
 		Description: "A project's lanes that have a run going or runs waiting: for each, the run that holds it and the runs waiting for it, in the order they start. A pipeline's lane makes its runs take turns; cancel_run cancels a waiting run."},
 		mcpCallTimeout, listLanes)

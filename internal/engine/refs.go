@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"maps"
 	"slices"
+	"time"
 )
 
 // Every server polls every project's repository, so each change to a ref is
@@ -28,6 +29,12 @@ type PushDecision struct {
 	Detail  string `json:"detail"`
 	RunID   string `json:"run_id,omitempty"`
 }
+
+// OutcomePathRule is the outcome of a push or pull request whose changed files
+// the trigger's paths or paths_ignore keep from starting a run. Such decisions
+// are kept for a month beyond the newest ones: a pull request's required
+// checks count as satisfied by one.
+const OutcomePathRule = "skipped_paths"
 
 // keepDecisions is how many push decisions are kept per project.
 const keepDecisions = 50
@@ -167,8 +174,9 @@ func (e *Engine) pruneDecisions(project string) {
 	unlock := e.writeLock()
 	defer unlock()
 	if _, err := e.db.Exec(`DELETE FROM push_decisions WHERE project = ? AND id NOT IN
-		(SELECT id FROM push_decisions WHERE project = ? ORDER BY at DESC, id DESC LIMIT ?)`,
-		project, project, keepDecisions); err != nil {
+		(SELECT id FROM push_decisions WHERE project = ? ORDER BY at DESC, id DESC LIMIT ?)
+		AND NOT (outcome = ? AND at > ?)`,
+		project, project, keepDecisions, OutcomePathRule, e.now().Add(-30*24*time.Hour).UnixMilli()); err != nil {
 		e.log.Warn("forgetting old push decisions", "project", project, "err", err)
 	}
 }

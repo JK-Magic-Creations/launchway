@@ -110,6 +110,7 @@ func mergeUsed(a, b []pipeline.BoundVariable) []pipeline.BoundVariable {
 
 // createRun creates a run and records the variables it used.
 func (m *Manager) createRun(ctx context.Context, nr engine.NewRun, rec *varRecord) (*engine.RunSummary, error) {
+	m.classifyRun(&nr)
 	run, err := m.eng.CreateRun(nr)
 	if err == nil && run != nil {
 		m.record(ctx, run.ID, rec)

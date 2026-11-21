@@ -81,6 +81,7 @@ export function stepLabel(s: {
     if (s.skip_kind === "not_needed") return "Not needed";
     if (s.skip_kind === "superseded") return "Superseded by a newer run";
     if (s.skip_kind === "condition") return "Condition not met";
+    if (s.skip_kind === "paths") return "Skipped: no matching file changed";
   }
   return statusLabel(s.status);
 }

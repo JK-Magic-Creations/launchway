@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 13 available · 8 in progress · 58 planned · 79 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 17 available · 8 in progress · 58 planned · 83 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -54,7 +54,7 @@ flowchart TD
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 7 | 2 | 1 | 4 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 11 | 6 | 1 | 4 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
 | [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 5 | 0 | 3 | 2 |
@@ -690,6 +690,46 @@ Re-run just the failed steps of a run, with earlier results reused. Re-running f
 Each step can choose its own image, runner and working area. A step that needs a large machine or special hardware asks for it without moving the whole pipeline.
 
 [Area page](pipelines.md)
+
+#### Steps wait for room instead of failing {#steps-wait-for-room-instead-of-failing}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build. A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.
+
+**Depends on:** Nothing beyond what runs pipelines today.
+
+[Read the documentation](../guide/queues.md) · [Area page](pipelines.md)
+
+#### Limits and a fair order for runs {#limits-and-a-fair-order-for-runs}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Runs over a limit are held with a reason, in a visible order, and the main build is never held. Limits on concurrent runs of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.
+
+**Depends on:** Nothing beyond what runs pipelines today.
+
+[Read the documentation](../guide/queues.md) · [Area page](pipelines.md)
+
+#### Path filters on triggers and steps {#path-filters-on-triggers-and-steps}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+A documentation-only change builds the docs and skips the image and the deploy approvals. paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a run that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.
+
+**Depends on:** Nothing beyond what runs pipelines today.
+
+[Read the documentation](../reference/pipeline.md#path-filters) · [Area page](pipelines.md)
+
+#### Restricted runs for untrusted pull requests {#restricted-runs-for-untrusted-pull-requests}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves. A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a registry; a maintainer can choose Run with secrets, which is recorded. The run page says which mode it is in and why.
+
+**Depends on:** Nothing beyond what runs pipelines today.
+
+[Read the documentation](../guide/pull-request-trust.md) · [Area page](pipelines.md)
 
 ### A guided interface a complete beginner can use {#g-a-guided-interface-a-complete-beginner-can-use}
 

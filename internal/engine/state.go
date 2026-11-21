@@ -103,6 +103,11 @@ type RunState struct {
 	RunGate *policy.Evaluation
 	// Policy lists every policy decision on the run, in order.
 	Policy []*policy.Evaluation
+	// Queue is the run's class and place in the queue; nil for a run created
+	// before schema 38.
+	Queue *QueueState
+	// Restriction is set for a restricted pull-request run (schema 38).
+	Restriction *RestrictionState
 	// Review is the acknowledgment of an emergency rollback that needed
 	// review (schema 32); nil until an approver gives it.
 	Review *ReviewState
@@ -120,6 +125,27 @@ type RunState struct {
 	// every schema this build has.
 	vocab int
 }
+
+// QueueState is a run's place in the queue of its project (schema 38).
+type QueueState struct {
+	Class      string
+	Automation bool
+	Priority   int
+	// Held says the run is waiting to be let go (none of its steps is queued);
+	// Manual that an operator holds it, so limits never let it go by
+	// themselves. Code and Reason say why it is held; Since is when it began;
+	// Bumped is when an operator moved it to the front (0 if none did).
+	Held, Manual bool
+	Code, Reason string
+	Since        int64
+	Bumped       int64
+}
+
+// queueHeld reports whether the run waits in the queue, so that none of its
+// steps are queued.
+func (st *RunState) holdsBack() bool { return st.laneWaiting() || st.queueHeld() }
+
+func (st *RunState) queueHeld() bool { return st.Queue != nil && st.Queue.Held }
 
 // LaneState is a run's place in a lane.
 type LaneState struct {
@@ -284,6 +310,9 @@ func (st *RunState) secretsAllowed() bool {
 	case st.Draft != nil:
 		return st.Draft.Secrets
 	case st.Trigger.Event == pipeline.EventPullRequest:
+		if st.Restriction != nil {
+			return st.Restriction.Approved
+		}
 		return st.PullRequestSecrets
 	}
 	return true
@@ -337,7 +366,7 @@ var (
 		pipeline.KindImage, pipeline.KindVerify, pipeline.KindAI}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}
-	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded}
+	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded, SkipPaths, SkipRestricted}
 )
 
 // understands reports whether this state's server knows events of schema v.
@@ -383,7 +412,7 @@ func (st *RunState) check(ev Event) bool {
 		st.notUnderstood("step %s, which is not in the pipeline", p.Step)
 		return false
 	}
-	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != RunReviewed && ev.Type != PolicyEvaluated && !ev.Type.isLane() {
+	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != RunReviewed && ev.Type != PolicyEvaluated && !ev.Type.isRunLevel() {
 		st.notUnderstood("a %s event without a step", ev.Type)
 		return false
 	}
@@ -551,6 +580,12 @@ func (st *RunState) apply(ev Event) {
 	case RunLaneWaiting, RunLaneStarted, RunLaneReplaced, RunLaneSkipped:
 		st.applyLane(ev)
 
+	case RunHeld, RunAdmitted, RunBumped:
+		st.applyQueue(ev)
+
+	case RunTrusted:
+		st.applyTrusted(ev)
+
 	case PolicyEvaluated:
 		if p.Policy == nil {
 			break
@@ -593,6 +628,12 @@ func (st *RunState) applyCreated(ev Event) {
 		st.Rerun = &r
 	}
 	st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
+	if r := p.Restricted; r != nil {
+		st.Restriction = &RestrictionState{Code: r.Code, Reason: r.Reason}
+	}
+	if q := p.Queue; q != nil {
+		st.Queue = &QueueState{Class: q.Class, Automation: q.Automation, Priority: q.Priority, Since: ev.At}
+	}
 	st.SelfApproval = p.SelfApproval
 	st.Status = RunQueued
 	st.CreatedAt = ev.At
@@ -725,7 +766,7 @@ func (st *RunState) approvalWaiting() bool {
 // person does not count against the timeout; the deadline is worked out
 // again when they decide).
 func (st *RunState) deadline() int64 {
-	if st.Pipeline == nil || st.Pipeline.Timeout <= 0 || st.Status.Terminal() || st.CancelRequested || st.approvalWaiting() || st.laneWaiting() {
+	if st.Pipeline == nil || st.Pipeline.Timeout <= 0 || st.Status.Terminal() || st.CancelRequested || st.approvalWaiting() || st.laneWaiting() || st.queueHeld() {
 		return 0
 	}
 	return st.CreatedAt + st.Pipeline.Timeout.D().Milliseconds() + st.Excluded

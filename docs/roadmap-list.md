@@ -9,6 +9,7 @@ Launchway is one place to host your code, build it, test it, scan it and deliver
 
 **What changed in the roadmap, 21 November 2026.**
 
+- Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.
 - Statuses now reflect what has been built: hosting over HTTPS and SSH, mirrors and import, webhooks, protected branches (a first version), variables at levels, failures that say why, the Learn area and the accessibility and security gates.
 - Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).
 - The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.
@@ -62,6 +63,7 @@ compliance items provide controls and evidence.
 | A failed step says why | Every failed step states its reason and cause with the evidence, can be re-run from that step, and the actions offered are only those that can work. ([more](guide/approvals-and-reruns.md)) |
 | A push starts a run | A push to a hosted repository starts the matching pipeline, with markers to skip a run, and a minimum Git version checked at install. ([more](guide/triggers.md)) |
 | Security scans as gates | Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model. ([more](security/how-launchway-is-scanned.md)) |
+| Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 
@@ -164,6 +166,10 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Cloud sign-in per step](roadmap/milestone-1.md#cloud-sign-in-per-step) | Planned | Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. |
 | [Re-run only what failed](roadmap/milestone-1.md#re-run-only-what-failed) | Planned | Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works. |
 | [Per-step runner and workspace](roadmap/milestone-1.md#per-step-runner-and-workspace) | Planned | Each step can choose its own image, runner and working area. |
+| [Steps wait for room instead of failing](roadmap/milestone-1.md#steps-wait-for-room-instead-of-failing) | Available | A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build. ([docs](guide/queues.md)) |
+| [Limits and a fair order for runs](roadmap/milestone-1.md#limits-and-a-fair-order-for-runs) | Available | Runs over a limit are held with a reason, in a visible order, and the main build is never held. ([docs](guide/queues.md)) |
+| [Path filters on triggers and steps](roadmap/milestone-1.md#path-filters-on-triggers-and-steps) | Available | A documentation-only change builds the docs and skips the image and the deploy approvals. ([docs](reference/pipeline.md#path-filters)) |
+| [Restricted runs for untrusted pull requests](roadmap/milestone-1.md#restricted-runs-for-untrusted-pull-requests) | Available | Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves. ([docs](guide/pull-request-trust.md)) |
 
 ### A guided interface a complete beginner can use
 

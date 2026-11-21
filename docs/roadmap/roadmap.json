@@ -239,6 +239,12 @@
       "title": "Security scans as gates",
       "value": "Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model.",
       "link": "security/how-launchway-is-scanned"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "Queues, limits and path filters",
+      "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
+      "link": "guide/queues"
     }
   ],
   "milestones": [
@@ -820,6 +826,42 @@
               "value": "Each step can choose its own image, runner and working area.",
               "detail": "A step that needs a large machine or special hardware asks for it without moving the whole pipeline.",
               "area": "pipelines"
+            },
+            {
+              "status": "available",
+              "title": "Steps wait for room instead of failing",
+              "value": "A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build.",
+              "detail": "A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/queues"
+            },
+            {
+              "status": "available",
+              "title": "Limits and a fair order for runs",
+              "value": "Runs over a limit are held with a reason, in a visible order, and the main build is never held.",
+              "detail": "Limits on concurrent runs of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/queues"
+            },
+            {
+              "status": "available",
+              "title": "Path filters on triggers and steps",
+              "value": "A documentation-only change builds the docs and skips the image and the deploy approvals.",
+              "detail": "paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a run that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "reference/pipeline#path-filters"
+            },
+            {
+              "status": "available",
+              "title": "Restricted runs for untrusted pull requests",
+              "value": "Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves.",
+              "detail": "A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a registry; a maintainer can choose Run with secrets, which is recorded. The run page says which mode it is in and why.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/pull-request-trust"
             }
           ]
         },
@@ -4191,6 +4233,7 @@
   "whatChanged": {
     "date": "21 November 2026",
     "items": [
+      "Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.",
       "Statuses now reflect what has been built: hosting over HTTPS and SSH, mirrors and import, webhooks, protected branches (a first version), variables at levels, failures that say why, the Learn area and the accessibility and security gates.",
       "Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).",
       "The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.",

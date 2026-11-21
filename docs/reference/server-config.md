@@ -38,7 +38,7 @@ the database, and nothing an administrator manages day to day.
 
 Everything else lives in the database: `projects`, `libraries`, `environments`, `runner_pools`,
 `runner_admin`, `auth.access` (role bindings), `auth.tokens`, `policy`, `verification`, `ai.models`,
-`approvals`, `drafts`, `pull_requests`, `queues`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
+`approvals`, `drafts`, `pull_requests`, `queues`, `automation`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
 `origin`), `artifacts` (limits, retention and where artifacts are kept) and `mcp`. The sections below
 that describe them document the **keys of the import format**: the keys a first start imports, that
 `launchway config export` writes and `launchway config import` reads. A server that starts with a
@@ -225,7 +225,16 @@ the highest role wins.
 | `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this project |
 | `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this project |
 | `projects[].pull_requests.secrets` | boolean | the server's `pull_requests.secrets` | Overrides `pull_requests.secrets` for this project |
+| `projects[].pull_requests.untrusted` | `restrict` or `allow` | the server's `pull_requests.untrusted` | Overrides `pull_requests.untrusted` for this project |
 | `projects[].queues.max_wait` | duration or `off` | the server's `queues.max_wait` | Overrides `queues.max_wait` for this project |
+| `projects[].queues.runs` | whole number | the server's `queues.runs` | Overrides `queues.runs` for this project |
+| `projects[].queues.pipeline_runs` | whole number | the server's `queues.pipeline_runs` | Overrides `queues.pipeline_runs` for this project |
+| `projects[].queues.pull_request_runs` | whole number | the server's `queues.pull_request_runs` | Overrides `queues.pull_request_runs` for this project |
+| `projects[].queues.push_runs` | whole number | the server's `queues.push_runs` | Overrides `queues.push_runs` for this project |
+| `projects[].queues.schedule_runs` | whole number | the server's `queues.schedule_runs` | Overrides `queues.schedule_runs` for this project |
+| `projects[].queues.manual_runs` | whole number | the server's `queues.manual_runs` | Overrides `queues.manual_runs` for this project |
+| `projects[].queues.automation_runs` | whole number | the server's `queues.automation_runs` | Overrides `queues.automation_runs` for this project |
+| `projects[].queues.supersede_pull_requests` | boolean | the server's `queues.supersede_pull_requests` | Overrides `queues.supersede_pull_requests` for this project |
 | `projects[].push.branch_prefix` | text | `launchway/` | Lets the pipeline editor save to the repository. Saves go to a new branch `<prefix><you>/<date-time>`. Letters, digits, `-`, `_`, `.` and `/`, at most 100 |
 | `projects[].push.allow_direct` | list of patterns | none | Branches that may be saved to directly |
 | `projects[].schedules.enabled` | boolean | the server's `schedules.enabled` | Turns this project's [schedules](pipeline.md#schedule) on or off |
@@ -306,6 +315,7 @@ these settings.
 | `drafts.allow` | text | `operator` | The role needed on a project to start a draft run there: `admin`, `operator` or `none` (nobody) |
 | `drafts.secrets` | boolean | `false` | Let steps of draft runs read secrets |
 | `pull_requests.secrets` | boolean | `false` | Let steps of pull-request runs read secrets, and image steps use pull credentials and build secrets |
+| `pull_requests.untrusted` | `restrict` or `allow` | `restrict` | What happens to a pull request from an [automation account](#automation-accounts): `restrict` runs it without secrets (even with `pull_requests.secrets: true`), deploy steps, saved caches or registry pushes, using the pipeline of the default branch, until a maintainer approves it with *Run with secrets*; `allow` treats it like any other pull request. See [Pull-request trust](../guide/pull-request-trust.md) |
 
 ## Queues and limits
 
@@ -316,6 +326,24 @@ project may override these settings.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `queues.max_wait` | duration or `off` | `60m` | The longest a step waits for room (the step namespace's quota, a node with space) before it fails with the reason and what to change. `off` waits for ever |
+| `queues.runs` | whole number | `10` | How many runs of a project go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
+| `queues.pipeline_runs` | whole number | no limit | How many runs of one pipeline go at once |
+| `queues.pull_request_runs` | whole number | `4` | How many pull-request runs of a project go at once |
+| `queues.push_runs` | whole number | no limit | How many runs for pushes to branches that are not protected go at once |
+| `queues.schedule_runs` | whole number | no limit | How many scheduled runs go at once |
+| `queues.manual_runs` | whole number | no limit | How many runs started by hand, by a webhook or by a re-run go at once |
+| `queues.automation_runs` | whole number | `2` | How many runs started by [automation accounts](#automation-accounts) go at once: a burst of dependency updates runs this many at a time |
+| `queues.supersede_pull_requests` | boolean | `true` | A new commit on a pull request cancels the older run of the same pull request, with the reason on the old run. A pipeline's `supersede: false` keeps every run of its own |
+
+## Automation accounts
+
+Accounts that are bots: dependency updaters and release tools. Their runs are counted apart in the
+queue (`queues.automation_runs`).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `automation.accounts` | list of patterns | `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*` | Account names, matched without regard to case against the commit's author and the person who started the run; `*` and `?` match. An empty list names none |
 
 ## Tests
 

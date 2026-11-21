@@ -57,6 +57,10 @@ oldest schema whose servers understand it.
 | `run.resumed` | 1 | someone resumes a failed or cancelled run | `actor`; `draft_secrets` for a draft run (whether its steps may read secrets from now on) |
 | `run.finished` | 1 | every step has ended | `status`: `succeeded`, `failed` or `canceled` |
 | `run.reviewed` | 32 | an approver acknowledges an emergency rollback that needed review (see [rollback after success](../guide/rollback-after-success.md)) | `actor`, `comment` |
+| `run.trusted` | 38 | a maintainer approved a restricted run (a pull request from an automation account or a fork): "Run with secrets" | `actor`, `comment` |
+| `run.held` | 38 | a limit on concurrent runs (or an operator) holds the run back when it is created, or an operator holds it: no step is queued | `queue` (`code`, `reason`, and `manual` for a hold an operator put on), `actor` |
+| `run.admitted` | 38 | a held run may go: its lane is joined and its steps are queued; the time it waited does not count against its timeout | `actor` (set when an operator released or moved it) |
+| `run.bumped` | 38 | an operator moved a held run to the front of the queue (`reason` `release` when a person's hold was lifted instead) | `actor`, `reason` |
 | `run.lane_waiting` | 24 | a run of a pipeline with a [lane](pipeline.md#lane) arrives while another run holds the lane and waits its turn: no step is queued | `lane` (`name`, `key`, `label`, and `run`, `number` of the run it waits behind) |
 | `run.lane_started` | 24 | the run took a free lane, or the lane was handed to it when the run before it ended (in the same transaction), or it took the lane again on a resume | `lane` (`name`, `key`, `label`) |
 | `run.lane_replaced` | 24 | a newer run took this run's place: a waiting run under `queue: newest`, or the holder and waiting runs under `when_busy: cancel`; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the newer run) |
@@ -240,6 +244,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.cancel` | `POST /api/v1/runs/{id}/cancel` |
 | `run.resume` | `POST /api/v1/runs/{id}/resume` |
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
+| `run.queue` | `POST /api/v1/runs/{id}/queue`: run next, hold or release a run that waits in a queue (the action is in the detail) |
+| `run.trust` | `POST /api/v1/runs/{id}/trust`: a maintainer approving a restricted run, *Run with secrets* (the comment is in the detail) |
 | `approval.approve` | `POST /api/v1/runs/{id}/steps/{step}/approve` |
 | `approval.reject` | `POST /api/v1/runs/{id}/steps/{step}/reject` |
 | `deployment.promote` | `POST /api/v1/runs/{id}/deployments/{dep}/promote`: the request only; the outcome is `deployment.command_outcome` |

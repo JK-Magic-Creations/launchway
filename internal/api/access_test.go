@@ -120,6 +120,9 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/tests":        {"GET", "/api/v1/projects/pay-api/tests", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// No test has run: 404 after the permission check too (see TestTestResultsFollowAccess).
 	"GET /api/v1/projects/{name}/tests/history": {"GET", "/api/v1/projects/pay-api/tests/history?key=k", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/queue":                         {"GET", "/api/v1/queue", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"POST /api/v1/runs/{id}/queue":              {"POST", "/api/v1/runs/{pay}/queue", `{"action":"hold"}`, [6]int{401, 404, 403, allowed, 404, allowed}},
+	"POST /api/v1/runs/{id}/trust":              {"POST", "/api/v1/runs/{pay}/trust", `{}`, [6]int{401, 404, 403, allowed, 404, allowed}},
 	"POST /api/v1/runs/{id}/cancel":             {"POST", "/api/v1/runs/{pay}/cancel", "", [6]int{401, 404, 403, allowed, 404, allowed}},
 	"POST /api/v1/runs/{id}/resume":             {"POST", "/api/v1/runs/{pay}/resume", "", [6]int{401, 404, 403, allowed, 404, allowed}},
 	// {pay} is waiting for an approval, so it cannot be re-run yet: 409 after the permission check.

@@ -31,6 +31,10 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// SupersedeOff is a pipeline that says supersede: false: a new commit on a
+	// pull request does not cancel the older run, whatever the installation's
+	// queues setting says.
+	SupersedeOff bool `json:"supersede_off,omitempty"`
 	// Lane controls which runs of the project may go at the same time
 	// (schema 24); nil: runs overlap freely. See Lane.
 	Lane *Lane `json:"lane,omitempty"`
@@ -135,12 +139,20 @@ type PullRequestTrigger struct {
 	// Into are patterns of the branches a pull request may target, as the
 	// branches of on.push; empty means any.
 	Into []string `json:"into,omitempty"`
+	// Paths and PathsIgnore filter pull requests by the files they changed
+	// since they left the target branch (see paths.go).
+	Paths       []string `json:"paths,omitempty"`
+	PathsIgnore []string `json:"paths_ignore,omitempty"`
 }
 
 // PushTrigger starts a run when matching branches or tags are pushed.
 type PushTrigger struct {
 	Branches []string `json:"branches,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
+	// Paths and PathsIgnore filter pushes to branches by the files they
+	// changed (see paths.go); tags are never filtered.
+	Paths       []string `json:"paths,omitempty"`
+	PathsIgnore []string `json:"paths_ignore,omitempty"`
 }
 
 // Step kinds. A plain step runs a script; an approval pauses the run until a
@@ -450,6 +462,9 @@ type Condition struct {
 	// failed, was cancelled or was not run because of a failure) or
 	// always (whatever happened). See UpstreamAllows.
 	Upstream string `json:"upstream,omitempty"`
+	// Changed makes the step run only if a changed file matches one of the
+	// globs (see paths.go). A run whose changes are not known runs it.
+	Changed []string `json:"changed,omitempty"`
 
 	inputLine int // where input or output was written, for messages
 }
@@ -490,6 +505,8 @@ type Context struct {
 	// OutputKeys lists the outputs a step did write, so that a missing one
 	// can say what was there instead; nil if not known.
 	OutputKeys func(step string) []string
+	// Changed is what the run's change touched; nil means not known.
+	Changed *ChangeSet
 }
 
 // OutputRef splits the step and key of an output test, which are written
@@ -563,13 +580,13 @@ func (c *Condition) Match(ctx Context) bool {
 			return false
 		}
 	}
-	if c.OutputWhy(ctx) != "" {
+	if c.OutputWhy(ctx) != "" || c.ChangedWhy(ctx) != "" {
 		return false
 	}
 	if len(c.Event) > 0 {
 		return matchAny(c.Event, ctx.Event)
 	}
-	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" && c.Output == "" {
+	if (c.Upstream != "" || len(c.Changed) > 0) && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" && c.Output == "" {
 		return true // only about upstream: not a guard that keeps steps out of drafts
 	}
 	return ctx.Event != EventDraft
@@ -587,6 +604,21 @@ func (t Triggers) MatchPush(branch, tag string) bool {
 }
 
 // MatchPullRequest reports whether pull requests start a run.
+// PushPaths and PullRequestPaths are the path filters of the triggers.
+func (t Triggers) PushPaths() PathFilter {
+	if t.Push == nil {
+		return PathFilter{}
+	}
+	return PathFilter{Paths: t.Push.Paths, Ignore: t.Push.PathsIgnore}
+}
+
+func (t Triggers) PullRequestPaths() PathFilter {
+	if t.PullRequest == nil {
+		return PathFilter{}
+	}
+	return PathFilter{Paths: t.PullRequest.Paths, Ignore: t.PullRequest.PathsIgnore}
+}
+
 func (t Triggers) MatchPullRequest() bool { return t.PullRequest != nil }
 
 // FiltersPullRequests reports whether the pipeline runs only for pull

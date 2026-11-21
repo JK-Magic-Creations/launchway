@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -75,6 +76,8 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 			sb.Why = "skipped: its when condition did not hold"
 		case "upstream":
 			sb.Why = "skipped: a step it needs did not succeed"
+		case engine.SkipPaths:
+			sb.Why = "skipped by a path rule (it counts as passed for required checks): " + untrusted(strings.TrimPrefix(s.Error, pipeline.PathSkipPrefix), 300)
 		case engine.SkipNotNeeded:
 			sb.Why = "skipped: not needed"
 		case engine.SkipSuperseded:

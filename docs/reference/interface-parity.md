@@ -114,6 +114,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
+| `GET /api/v1/queue` | `list_queue` | `runs queue` | `not needed by terraform` | equal |
 | `DELETE /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `PATCH /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
@@ -194,6 +195,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `GET /api/v1/runs/{id}/pipeline-file` | `get_run` | — | — | gap: the pipeline text a run used is shown in the UI; get_run has the steps, the CLI has no command for the text |
 | `GET /api/v1/runs/{id}/policy` | — | `policy run` | — | gap: no MCP tool shows a run's policy decisions yet |
+| `POST /api/v1/runs/{id}/queue` | `queue_run` | `runs queue` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/reports` | — | `runs reports` | — | gap: no MCP tool lists hosted reports yet |
 | `GET /api/v1/runs/{id}/rerun` | `retry_run` | — | — | gap: launchway has no runs retry command yet |
 | `POST /api/v1/runs/{id}/rerun` | `retry_run` | — | — | gap: launchway has no runs retry command yet |
@@ -211,6 +213,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/compare` | `get_test_results` | `runs tests` | — | equal |
+| `POST /api/v1/runs/{id}/trust` | `trust_run` | `runs trust` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |

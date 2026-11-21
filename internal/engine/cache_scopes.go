@@ -52,6 +52,9 @@ func (e *Engine) scopesOf(st *RunState) cacheScopes {
 		// nothing, so that whatever it writes cannot reach anything else.
 		s.read = []string{cacheScopeDefault}
 		s.whyNone = "a draft run saves no cache; it restores the default branch's"
+	case t.Event == pipeline.EventPullRequest && st.restricted():
+		s.read = []string{cacheScopeDefault}
+		s.whyNone = "a restricted pull-request run saves no cache; it restores the default branch's"
 	case t.Event == pipeline.EventPullRequest:
 		if t.PullRequest > 0 {
 			own := cacheScopePull + strconv.Itoa(t.PullRequest)

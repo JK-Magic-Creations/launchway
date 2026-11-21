@@ -38,6 +38,7 @@ CREATE TABLE run_queue (
   class        TEXT    NOT NULL,
   author_class TEXT    NOT NULL DEFAULT '',
   state        TEXT    NOT NULL DEFAULT 'active',
+  manual       INTEGER NOT NULL DEFAULT 0,
   priority     INTEGER NOT NULL DEFAULT 0,
   bumped       {{BIG}} NOT NULL DEFAULT 0,
   since        {{BIG}} NOT NULL DEFAULT 0,

@@ -484,6 +484,27 @@ release/ref main: held by run #41 (running)
 
 `launchway runs show` prints a run's own place in its lane (`lane release/ref main: waiting, number 1 in line, behind run #41`). The same data is `GET /api/v1/projects/{name}/lanes` in the [HTTP API](http-api.md) and the MCP tool `list_lanes`.
 
+### launchway runs queue
+
+Lists the runs held back by [limits on concurrent runs](../guide/queues.md), in the order they will go, with why each waits; or moves one.
+
+```text
+launchway runs queue [PROJECT] [--json]
+launchway runs queue next|hold|release RUN_ID
+```
+
+`next` puts the run at the front (and lets it go now if the limits have room), `hold` keeps it waiting until released, `release` lets the limits decide again. The same is `GET /api/v1/queue` and `POST /api/v1/runs/{id}/queue` in the [HTTP API](http-api.md) and the MCP tools `list_queue` and `queue_run`.
+
+### launchway runs trust
+
+Approves a restricted run, a pull request from an automation account: *Run with secrets*, recorded with your name. See [Pull-request trust](../guide/pull-request-trust.md).
+
+```text
+launchway runs trust RUN_ID [--comment TEXT]
+```
+
+The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
+
 ## launchway policy
 
 Shows the policies in force and a run's policy decisions. See [Policy rules](policy-rules.md). `launchway policy` alone prints a summary and exits with `2`.

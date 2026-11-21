@@ -7,7 +7,7 @@ import { RerunButton, RerunFailedButton, RerunPicker } from "../components/Rerun
 import { StepCauseView } from "../components/StepCause";
 import { RunFlowBanners } from "../components/RunFlow";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
+import { api, call, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { Icon } from "../kit/Icon";
 import { useNow, useStream } from "../live";
@@ -245,6 +245,11 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !done && !run.cancel_requested && mayCancel && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
+          {mayOperate && (run.actions ?? []).filter((a) => a.available && ["run_next", "hold", "release"].includes(a.name)).map((a) => (
+            <button key={a.name} type="button" className="btn" disabled={busy} onClick={() => act(() => call("POST", `/api/v1/runs/${run.id}/queue`, { action: a.name }))}>
+              {a.name === "run_next" ? "Run next" : a.name === "hold" ? "Hold" : "Release"}
+            </button>
+          ))}
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && !run.draft && <RerunFailedButton run={run} />}
           {mayOperate && !run.needs_newer_server && run.status === "canceled" && run.resume?.allowed !== false && (
             <button type="button" className="btn btn-primary" disabled={busy}
@@ -255,6 +260,14 @@ export function RunPage({ id }: { id: string }) {
           )}
         </>} />
       <ErrorBox error={actionErr} />
+      {run.restriction && (
+        <div className="notice" role="note" data-code={run.restriction.code}>
+          <strong>{run.restriction.approved ? "Approved to run with secrets." : "Restricted run."}</strong> {run.restriction.summary}.
+          {mayOperate && run.actions?.some((a) => a.name === "run_with_secrets" && a.available) && (
+            <> <button type="button" className="btn" disabled={busy} onClick={() => act(() => call("POST", `/api/v1/runs/${run.id}/trust`, {}))}>Run with secrets</button></>
+          )}
+        </div>
+      )}
       <RollbackBanner run={run} onChanged={() => load(true)} />
       <RolledBackLine run={run} />
       {actionErr instanceof Error && /Re-run from/.test(actionErr.message) && rerunTarget && mayRerun && (

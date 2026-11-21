@@ -16,6 +16,7 @@ const done = (s: StepView | undefined) => !s || s.status === "succeeded" || s.st
 export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | null {
   switch (step.status) {
     case "pending": {
+      if (run.queue?.held) return { kind: "step", short: "Waiting in the queue", text: `${run.queue.reason ?? "Waiting for room"}.` };
       if (run.lane?.state === "waiting") return { kind: "step", short: "Waiting for its lane", text: run.lane.reason || `The whole run waits its turn in the lane ${run.lane.label}.` };
       const open = (step.needs ?? []).filter((n) => !done(run.step_list.find((s) => s.id === n)));
       if (open.length > 0) return { kind: "step", short: `After ${open.join(" and ")}`, text: `Waiting for ${open.join(" and ")} to finish first.` };

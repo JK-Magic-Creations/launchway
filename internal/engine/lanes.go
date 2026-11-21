@@ -584,7 +584,7 @@ func (e *Engine) attachLanePositions(runs []*RunSummary) error {
 // counter second, so the two could wait for each other on PostgreSQL. Every
 // path now takes run_counters first, then run rows.
 func (c *cmd) lockLaneBeforeRows() error {
-	if c.st.Lane == nil || !c.e.knows(schemaFlow) {
+	if (c.st.Lane == nil && c.st.Queue == nil) || !c.e.knows(schemaFlow) {
 		return nil
 	}
 	for _, ev := range c.events {

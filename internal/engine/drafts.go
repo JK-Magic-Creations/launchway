@@ -71,8 +71,13 @@ func draftSecretsRefused(project string, def *pipeline.Step) string {
 
 // pullRequestSecretsRefused explains why a step of a pull-request run failed
 // without running.
-func pullRequestSecretsRefused(project string, def *pipeline.Step) string {
+func pullRequestSecretsRefused(st *RunState, def *pipeline.Step) string {
+	project := st.Project
 	names := slices.Sorted(maps.Keys(def.Secrets))
+	if st.restricted() {
+		return fmt.Sprintf("not run: this run is restricted (%s), so it may not read secrets (the step asks for %s). A maintainer can approve it with Run with secrets",
+			st.Restriction.Reason, strings.Join(names, ", "))
+	}
 	return fmt.Sprintf("not run: this run is for a pull request, whose code may come from anyone who can open one, and pull-request runs of %s "+
 		"may not read secrets (the step asks for %s). Guard the step with when: { event: [push, manual] }, or ask an administrator "+
 		"to set pull_requests.secrets: true for the project",

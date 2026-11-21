@@ -82,6 +82,7 @@
         "guide/ai",
         "guide/git-over-ssh",
         "guide/pull-requests",
+        "guide/pull-request-trust",
         "guide/webhooks",
         "guide/secrets",
         "guide/configuration",

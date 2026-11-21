@@ -14,6 +14,10 @@ declare module "../api" {
     deadline_at?: number;
     /** The run's place in its pipeline's lane (runs of the project take turns); absent when it has none. */
     lane?: LaneInfo;
+    /** Where the run is in its project's queue (limits on concurrent runs); `held` says none of its steps is queued yet, and `reason` why. */
+    /** Set for a restricted run (a pull request from an automation account or a fork): why, and whether a maintainer approved it. */
+    restriction?: { code: string; reason: string; approved: boolean; approved_by?: string; summary: string };
+    queue?: { class: string; held: boolean; manual?: boolean; code?: string; reason?: string };
     /** How many steps failed for good and were allowed to (on_failure: continue). */
     allowed_failures?: number;
     /** Their names, in step order. */
