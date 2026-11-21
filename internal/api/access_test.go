@@ -311,13 +311,32 @@ var permissionTable = map[string]matrixRow{
 	// Build caches. Runners work under a lease (the runner routes need a
 	// runner token); a project's entries are read by its viewers and
 	// deleted by its operators; an administrator changes the policy.
-	"POST /api/runner/v1/caches/lookup":   {"POST", "/api/runner/v1/caches/lookup", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/caches/begin":    {"POST", "/api/runner/v1/caches/begin", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"PUT /api/runner/v1/caches/chunk":     {"PUT", "/api/runner/v1/caches/chunk", "x", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/caches/commit":   {"POST", "/api/runner/v1/caches/commit", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/caches/download": {"POST", "/api/runner/v1/caches/download", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/caches/discard":  {"POST", "/api/runner/v1/caches/discard", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"GET /api/v1/projects/{name}/caches":  {"GET", "/api/v1/projects/pay-api/caches", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/runner/v1/caches/lookup":                         {"POST", "/api/runner/v1/caches/lookup", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/begin":                          {"POST", "/api/runner/v1/caches/begin", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"PUT /api/runner/v1/caches/chunk":                           {"PUT", "/api/runner/v1/caches/chunk", "x", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/commit":                         {"POST", "/api/runner/v1/caches/commit", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/download":                       {"POST", "/api/runner/v1/caches/download", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/discard":                        {"POST", "/api/runner/v1/caches/discard", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/state/v1/{project}/{workspace}":                   {"GET", "/api/state/v1/pay-api/nope", "", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/state/v1/{project}/{workspace}":                  {"POST", "/api/state/v1/pay-api/nope", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"PUT /api/state/v1/{project}/{workspace}":                   {"PUT", "/api/state/v1/pay-api/nope", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"DELETE /api/state/v1/{project}/{workspace}":                {"DELETE", "/api/state/v1/pay-api/nope", "", [6]int{401, 401, 401, 401, 401, 401}},
+	"LOCK /api/state/v1/{project}/{workspace}/lock":             {"LOCK", "/api/state/v1/pay-api/nope/lock", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"UNLOCK /api/state/v1/{project}/{workspace}/lock":           {"UNLOCK", "/api/state/v1/pay-api/nope/lock", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/config/state-credential":               {"POST", "/api/runner/v1/config/state-credential", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/v1/projects/{name}/state":                         {"GET", "/api/v1/projects/pay-api/state", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/state/{workspace}":             {"GET", "/api/v1/projects/pay-api/state/nope", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/state/{workspace}/versions":    {"GET", "/api/v1/projects/pay-api/state/nope/versions", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/state/{workspace}/pull":        {"GET", "/api/v1/projects/pay-api/state/nope/pull?reason=test", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"PUT /api/v1/projects/{name}/state/{workspace}/push":        {"PUT", "/api/v1/projects/pay-api/state/nope/push", "{}", [6]int{401, 404, 403, allowed, 404, allowed}},
+	"POST /api/v1/projects/{name}/state/{workspace}/lock":       {"POST", "/api/v1/projects/pay-api/state/nope/lock", `{"reason":"t"}`, [6]int{401, 404, 403, allowed, 404, allowed}},
+	"DELETE /api/v1/projects/{name}/state/{workspace}/lock":     {"DELETE", "/api/v1/projects/pay-api/state/nope/lock", "", [6]int{401, 404, 403, allowed, 404, allowed}},
+	"POST /api/v1/projects/{name}/state/{workspace}/rollback":   {"POST", "/api/v1/projects/pay-api/state/nope/rollback", "{}", [6]int{401, 404, 403, allowed, 404, allowed}},
+	"GET /api/v1/runs/{id}/config-reports":                      {"GET", "/api/v1/runs/{pay}/config-reports", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/config-reports/{step}":               {"GET", "/api/v1/runs/{pay}/config-reports/nope", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed": {"POST", "/api/v1/runs/{pay}/config-reports/nope/rerun-failed", "{}", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/configuration":                 {"GET", "/api/v1/projects/pay-api/configuration", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/caches":                        {"GET", "/api/v1/projects/pay-api/caches", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// Nothing is cached, so deleting is a 404 after the permission check.
 	"DELETE /api/v1/projects/{name}/caches/{id}": {"DELETE", "/api/v1/projects/pay-api/caches/cch_nope", "", [6]int{401, 404, 403, 404, 404, 404}},
 	"DELETE /api/v1/projects/{name}/caches":      {"DELETE", "/api/v1/projects/pay-api/caches?name=pip", "", [6]int{401, 404, 403, 404, 404, 404}},
@@ -503,7 +522,8 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
 var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
-	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
+	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate", "GET /api/state/v1/{project}/{workspace}", "POST /api/state/v1/{project}/{workspace}", "PUT /api/state/v1/{project}/{workspace}", "DELETE /api/state/v1/{project}/{workspace}",
+	"LOCK /api/state/v1/{project}/{workspace}/lock", "UNLOCK /api/state/v1/{project}/{workspace}/lock"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.

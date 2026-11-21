@@ -303,6 +303,15 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |
 | `step_resources.set_default` | `PUT /api/v1/step-resources/defaults/{kind}` (also `launchway step-resources set-default`); the detail holds the default before and after |
 | `run_limits.set` | `PUT /api/v1/run-limits` (also `launchway run-limits set`); the detail holds the limits before and after |
+| `state.pull` | `GET /api/v1/projects/{name}/state/{workspace}/pull` (also `launchway state pull`); the target is the workspace, the detail the version, its serial and the reason given. The raw state leaves the server only here |
+| `state.push` | `PUT /api/v1/projects/{name}/state/{workspace}/push` (also `launchway state push`); the detail says which version it became and whether another lineage was adopted |
+| `state.lock` | A client took a workspace's lock (the state backend's `LOCK`, detail: the lock id), or a person locked it by hand (detail: the reason) |
+| `state.unlock` | A client released its lock, or a person force-released one (`DELETE /api/v1/projects/{name}/state/{workspace}/lock`, `launchway state unlock`); the detail names the holder and the reason. A delete through the backend protocol is recorded as `state.delete` |
+| `state.lock_released` | A lock whose run had ended was released by the next `LOCK` (Terraform has no lock heartbeat) |
+| `state.rollback` | `POST /api/v1/projects/{name}/state/{workspace}/rollback` (also `launchway state rollback`); the detail says which version was stored again as which, and why |
+| `state.credential` | A runner asked, under a lease, for the state credential of one workspace; the detail says whether it is read only (pull request and draft runs) |
+| `state.denied` | The state backend refused a credential: an invalid, expired or misused state credential, or a token without the role (outcome `denied`) |
+| `config.rerun_failed` | `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` (also `launchway configuration rerun-failed`); the target is the new run and the detail names the hosts |
 | `cache.delete` | `DELETE /api/v1/projects/{name}/caches/{id}` and `DELETE /api/v1/projects/{name}/caches?name=` (also `launchway caches delete`); the target is the entry or the cache name and the detail says how much was ended |
 | `standards.settings_set` | `PUT /api/v1/standards/settings` (also `launchway standards set`); the target is the level and scope, the detail says the version saved, and says plainly in capitals when Standing orders were switched off, with the reason |
 | `finding.accept` | `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` (also `launchway findings accept` and the MCP tool `accept_finding`); the target is the finding's fingerprint and the detail holds the decision, the end date and the reason |
