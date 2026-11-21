@@ -171,11 +171,11 @@ func (s *Store) Apply(ctx context.Context, origin, scope, ref string, a Assertio
 		if !ok {
 			return res, fmt.Errorf("unknown edge kind %q", e.Kind)
 		}
-		from, err := upsert(Node{Kind: e.From.Kind, Key: e.From.Key}, true)
+		from, err := upsert(Node{Kind: e.From.Kind, Key: e.From.Key, Subject: e.Subject}, true)
 		if err != nil {
 			return res, err
 		}
-		to, err := upsert(Node{Kind: e.To.Kind, Key: e.To.Key}, true)
+		to, err := upsert(Node{Kind: e.To.Kind, Key: e.To.Key, Subject: e.Subject}, true)
 		if err != nil {
 			return res, err
 		}
