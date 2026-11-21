@@ -194,8 +194,10 @@ type cacheTask struct {
 	// which case skip says why and the cache is neither restored nor saved.
 	key  string
 	skip string
-	// keyParts is what the key is made of, in words.
+	// keyParts is what the key is made of, in words; keyIn is the input it
+	// was worked out from (its files' contents as they were before the step).
 	keyParts []executor.KeyPart
+	keyIn    executor.CacheKeyInput
 	// restored is what the restore found: hit, fallback or miss.
 	restored string
 	res      engine.CacheResult
@@ -369,6 +371,7 @@ func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, []exe
 		return "", nil, why
 	}
 	in.Versions = vs
+	t.keyIn = in
 	key, parts := executor.CacheKey(in)
 	return key, parts, ""
 }
@@ -467,7 +470,7 @@ func (cr *cacheRun) save(outcome string) {
 	ctx, cancel := context.WithTimeout(context.Background(), cacheTimeout)
 	defer cancel()
 	for _, t := range cr.tasks {
-		if t.skip != "" || !(&pipeline.Cache{Save: t.entry.Save}).SaveAfter(outcome) || t.restored == engine.CacheHit {
+		if t.skip != "" || !(&pipeline.Cache{Save: t.entry.Save}).SaveAfter(outcome) {
 			continue
 		}
 		cr.saveOne(ctx, t)
@@ -488,6 +491,14 @@ func (cr *cacheRun) notSaved(t *cacheTask, why string) {
 func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	name := t.entry.Name
 	start := time.Now()
+	changed, why := cr.rekey(ctx, t)
+	if why != "" {
+		cr.notSaved(t, why)
+		return
+	}
+	if t.restored == engine.CacheHit && !changed {
+		return // the entry with this key is the one the step started from, and entries are never changed
+	}
 	dir := filepath.Join(cr.dir, "save-"+name)
 	defer os.RemoveAll(dir)
 	maxEntry := cr.job.Cache.MaxEntryBytes

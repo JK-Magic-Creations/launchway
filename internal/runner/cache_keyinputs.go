@@ -116,3 +116,54 @@ func (cr *cacheRun) runVersionCommands(ctx context.Context, t *cacheTask, idx []
 	}
 	return out, nil
 }
+
+// rekey works out the key again, after the step, from the key files as the
+// step left them, and uses it from here on. A step may change the files its
+// key is made of (an install that rewrites a lock file, `go mod tidy`): an
+// entry saved under the key of the files as they were before would hold what
+// was built for the files as they are now, and a later run with the old
+// files would restore it. changed says the key is not the one worked out
+// before the step; the entry is then a new one under the new key, whatever the
+// restore found. why is set, and nothing saved, if the files cannot be read.
+func (cr *cacheRun) rekey(ctx context.Context, t *cacheTask) (changed bool, why string) {
+	if len(t.entry.KeyFiles) == 0 {
+		return false, ""
+	}
+	dir := filepath.Join(cr.dir, "rekey-"+t.entry.Name)
+	staged, err := executor.StageWorkspace(ctx, cr.r.execFor(cr.job), cr.spec, t.entry.KeyFiles, cacheKeyLimits, dir)
+	defer os.RemoveAll(dir)
+	if err != nil {
+		return false, "the key's files cannot be read after the step, so the key cannot be checked: " + strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": ")
+	}
+	in := t.keyIn
+	in.Files = staged.Files
+	key, parts := executor.CacheKey(in)
+	if key == t.key {
+		return false, ""
+	}
+	before := map[string]string{}
+	for _, f := range t.keyIn.Files {
+		before[f.Path] = f.SHA256
+	}
+	var names []string
+	seen := map[string]bool{}
+	for _, f := range staged.Files {
+		seen[f.Path] = true
+		if before[f.Path] != f.SHA256 {
+			names = append(names, f.Path)
+		}
+	}
+	for p := range before {
+		if !seen[p] {
+			names = append(names, p)
+		}
+	}
+	slices.Sort(names)
+	if len(names) > 3 {
+		names = append(names[:3], fmt.Sprintf("and %d more", len(names)-3))
+	}
+	cr.sys("Cache %s: the step changed its key files (%s); the entry is saved under the key of the files as the step left them, never under the key from before it", t.entry.Name, cr.mask(strings.Join(names, ", ")))
+	t.key, t.keyParts = key, parts
+	t.res.Key, t.res.KeyParts = key, keyParts(parts)
+	return true, ""
+}
