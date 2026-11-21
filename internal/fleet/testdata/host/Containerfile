@@ -1,0 +1,14 @@
+# A host for the fleet tests: systemd, sshd, a deploy user who may restart
+# one service and nothing else, and the service's unit.
+FROM docker.io/library/debian:12-slim
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      systemd systemd-sysv openssh-server sudo ca-certificates && rm -rf /var/lib/apt/lists/* \
+ && useradd -m -s /bin/bash deploy \
+ && echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart web' > /etc/sudoers.d/deploy \
+ && chmod 0440 /etc/sudoers.d/deploy \
+ && mkdir -p /opt/web/releases /home/deploy/.ssh && chown -R deploy:deploy /opt/web /home/deploy/.ssh \
+ && printf '[Unit]\nDescription=web\nStartLimitIntervalSec=0\n[Service]\nUser=deploy\nExecStart=/opt/web/current/web\nRestart=on-failure\nRestartSec=1\nTimeoutStopSec=15\n[Install]\nWantedBy=multi-user.target\n' > /etc/systemd/system/web.service \
+ && systemctl enable ssh web \
+ && printf 'PasswordAuthentication no\nPermitRootLogin no\nAllowUsers deploy\n' > /etc/ssh/sshd_config.d/10-lw.conf
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
