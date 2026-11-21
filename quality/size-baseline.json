@@ -3,8 +3,8 @@
   "max_file_lines": 1000,
   "max_func_lines": 150,
   "files": {
-    "cmd/launchway/main.go": 1005,
-    "internal/api/api.go": 1171,
+    "cmd/launchway/main.go": 1002,
+    "internal/api/api.go": 1158,
     "internal/api/mcp_tools.go": 1540,
     "internal/config/config.go": 1054,
     "internal/engine/artifacts.go": 1211,

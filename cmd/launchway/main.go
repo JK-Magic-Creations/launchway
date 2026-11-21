@@ -82,6 +82,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway doctor   [database]                 would this installation survive losing its database?
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -136,21 +137,17 @@ func main() {
 		err = cmdRunLimits(args)
 	case "caches":
 		err = cmdCaches(args)
+	case "doctor":
+		err = cmdDoctor(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", os.Args[1], usage)
-		os.Exit(2)
+		os.Exit(unknownCommand(os.Args[1]))
 	}
 	if err != nil {
-		var ex exitErr
-		if errors.As(err, &ex) {
-			os.Exit(int(ex))
-		}
-		fmt.Fprintln(os.Stderr, "launchway:", err)
-		os.Exit(1)
+		exitOn(err)
 	}
 }
 

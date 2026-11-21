@@ -45,6 +45,7 @@ curl -s http://127.0.0.1:8080/readyz
 | `status` | When | Example `error` |
 |---|---|---|
 | `stopping` | the server received SIGTERM | `the server is shutting down` |
+| `read_only` | the database answers but takes no writes: a standby (in recovery) or one set read-only | `the database is a standby (in recovery): it follows a primary and cannot take writes` |
 | `unavailable` | the database did not answer | `the database did not answer: failed to connect to ...: connection refused` |
 | `incompatible` | a newer build applied a migration this build cannot work with | `the database is at schema N, which needs a Launchway build that knows schema M or newer; this build knows schema K. Run a newer version` |
 

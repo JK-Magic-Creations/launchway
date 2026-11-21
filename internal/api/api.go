@@ -85,8 +85,9 @@ type Server struct {
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter
-	live     atomic.Pointer[Live] // see Reconfigure
-	draining atomic.Bool          // see Drain
+	live     atomic.Pointer[Live]                                // see Reconfigure
+	draining atomic.Bool                                         // see Drain
+	dbState  func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
 }
@@ -392,21 +393,7 @@ func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "stopping", "error": "the server is shutting down"})
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-	// Reading the schema checks that the database answers, and catches a
-	// newer server having applied a breaking migration since this one
-	// started.
-	schema, err := s.Engine.Schema(ctx)
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable", "error": "the database did not answer: " + err.Error()})
-		return
-	}
-	if msg := schema.Refusal(); msg != "" {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "incompatible", "error": msg, "schema": schema})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "schema": schema})
+	s.readyDatabase(w, r)
 }
 
 // ---- runner API ----

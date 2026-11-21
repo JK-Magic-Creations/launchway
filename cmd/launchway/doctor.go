@@ -1,0 +1,83 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+)
+
+const doctorUsage = `Usage:
+  launchway doctor [database] [--config launchway.yaml] [--json]
+
+Checks an installation and says what it finds in plain words.
+  database   whether this installation would survive the loss of its database,
+             and what would be lost
+`
+
+// exitOn ends the program for an error from a command.
+func exitOn(err error) {
+	var ex exitErr
+	if errors.As(err, &ex) {
+		os.Exit(int(ex))
+	}
+	fmt.Fprintln(os.Stderr, "launchway:", err)
+	os.Exit(1)
+}
+
+// unknownCommand says so and returns the exit status.
+func unknownCommand(name string) int {
+	fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", name, usage)
+	return 2
+}
+
+// cmdDoctor runs the doctor's sections; today there is one, database. It
+// reads the same configuration as the server (and LAUNCHWAY_DATABASE) and
+// opens the database directly, not through a server.
+func cmdDoctor(args []string) error {
+	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
+		fmt.Print(doctorUsage)
+		return nil
+	}
+	if len(args) > 0 && args[0] == "database" {
+		args = args[1:]
+	}
+	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
+	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
+	asJSON := fs.Bool("json", false, "print JSON")
+	fs.Parse(args)
+	cfg, err := config.Load(*cfgPath)
+	if err != nil {
+		return err
+	}
+	wait, _, err := cfg.Timings()
+	if err != nil {
+		return err
+	}
+	budget, err := cfg.StallBudget()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait+30*time.Second)
+	defer cancel()
+	st, err := engine.InspectDatabase(ctx, cfg.DatabaseAddr(), wait)
+	if err != nil {
+		return fmt.Errorf("the database cannot be reached, so nothing can be said about its availability: %w", err)
+	}
+	as := st.Assess()
+	if *asJSON {
+		return json.NewEncoder(os.Stdout).Encode(map[string]any{"database": st, "assessment": as, "stall_budget": budget.String()})
+	}
+	fmt.Printf("Database availability: %s\n", as.Level)
+	for _, l := range as.Lines {
+		fmt.Println("  " + l)
+	}
+	fmt.Printf("  Riding through an outage: a request waits up to %s for the database (resilience.stall_budget), then is answered 503 with Retry-After; runners keep running steps and keep their logs and results on disk.\n", budget)
+	return nil
+}

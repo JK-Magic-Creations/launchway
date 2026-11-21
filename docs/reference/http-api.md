@@ -142,7 +142,7 @@ For load balancers and orchestrators. Neither needs credentials.
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /healthz` | `public` | — | The process is up: `200 {"status": "ok"}`. |
-| `GET /readyz` | `public` | — | The server can do useful work: the database answered within 2 seconds and the server is not shutting down. |
+| `GET /readyz` | `public` | — | The server can do useful work: the database answered within 2 seconds, it can be written (not only reached), and the server is not shutting down. |
 
 `GET /readyz` answers `200` with the database schema:
 
@@ -150,7 +150,9 @@ For load balancers and orchestrators. Neither needs credentials.
 {"schema": {"code": 21, "database": 21, "minimum": 7}, "status": "ok"}
 ```
 
-It answers `503` with `status` `stopping` while the server drains before it stops, `unavailable` when the database did not answer, and `incompatible` when the database was migrated by a newer server that this one cannot work with. A runner started with `--health-listen` serves its own `/healthz` and `/readyz`; see [the command-line reference](cli.md#launchway-runner).
+The answer also has `database`: its `kind`, `writable`, `standby` (PostgreSQL in recovery) and, on PostgreSQL when the database user may see them (the `pg_monitor` or `pg_read_all_stats` role), `replication` (standbys streaming and synchronous, lag; on a standby the WAL receiver and replay lag) and `archiving`.
+
+It answers `503` with `status` `stopping` while the server drains before it stops, `unavailable` when the database did not answer, `read_only` when the database answers but cannot be written (a standby, or set read-only), so that a load balancer drains a server attached to it, and `incompatible` when the database was migrated by a newer server that this one cannot work with. A runner started with `--health-listen` serves its own `/healthz` and `/readyz`; see [the command-line reference](cli.md#launchway-runner).
 
 ## Sign-in
 
