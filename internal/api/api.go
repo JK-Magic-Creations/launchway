@@ -261,7 +261,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.recoverer(securityHeaders(s.splitOrigin(s.gitAlias(mux))))
+	return s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.gitAlias(mux)))))
 }
 
 // ---- shutting down ----

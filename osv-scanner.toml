@@ -1,0 +1,8 @@
+# Exceptions to the dependency scan (make security). Each one needs a reason and an end date:
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2027-01-31
+# reason = "why this cannot be exploited here, and what we are waiting for"
+#
+# There are none today.

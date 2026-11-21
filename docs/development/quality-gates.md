@@ -114,6 +114,17 @@ In `web/`:
   `bundle-budget.json`. Shrink with `React.lazy` per route; when the bundle gets smaller, run
   `npm run size:update` (it never raises the budget).
 
+## Security gates
+
+`make check` stays fast. The security scans need the network (vulnerability databases, images) or
+take longer, so they have targets of their own: `make security` (govulncheck, osv-scanner and npm
+audit, the secret scan of the Git history, charts and Dockerfile, short fuzzing), `make image-scan`,
+`make web-csp`, `make dast` and `make sbom`. The product's pipeline and
+`.github/workflows/security.yml` run the same targets. Each gate, its policy, its exception file
+and the licenses of the tools are on [How Launchway is scanned](../security/how-launchway-is-scanned.md).
+Baselines follow the same rule as above: `quality/gitleaks-baseline.json` may only shrink, and
+exceptions in `quality/trivy-ignore.yaml` and `osv-scanner.toml` carry a reason and an expiry date.
+
 ## Updating a baseline legitimately
 
 A baseline moves in one direction.

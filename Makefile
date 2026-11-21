@@ -391,3 +391,65 @@ check: fmt-check vet lint arch originality ratchet web-lint web-test learn-check
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.
 check-all: check web-size coverage-check
+
+# ---------------------------------------------------------------------------
+# Security gates (docs/security/how-launchway-is-scanned.md). Not in `make check`: they need network
+# (vulnerability databases, images) or take longer than seconds. The scanners run from pinned
+# containers or with `go run` at a pinned version (scripts/security/lib.sh); nothing is installed on
+# the machine and nothing is bundled into Launchway. `make security` runs them one at a time; the
+# product's own pipeline and .github/workflows/security.yml run the same targets.
+# ---------------------------------------------------------------------------
+.PHONY: security govulncheck osv secrets iac chart-pss fuzz image-scan scorecard dast
+
+security: govulncheck osv secrets iac chart-pss fuzz
+	@echo "make security: all security gates passed (image-scan and dast are separate: they need an image or a running server)"
+
+# Go vulnerabilities: reachable ones fail, unreachable ones are listed.
+govulncheck:
+	scripts/security/govulncheck.sh
+
+# Every locked dependency (Go, web UI, docs tools) against OSV.dev, plus npm audit.
+osv:
+	scripts/security/osv.sh
+
+# Secrets in the whole Git history, against the shrink-only baseline quality/gitleaks-baseline.json.
+secrets:
+	scripts/security/gitleaks.sh
+
+# Helm charts rendered and checked (kubeconform, kube-linter, Trivy config), Dockerfile lint (hadolint).
+iac:
+	scripts/security/iac.sh
+
+# The rendered charts' pods against Pod Security "restricted", and no secret values in ConfigMaps.
+chart-pss:
+	go test -count=1 -run 'TestChartsRender|TestRestrictedChecker' ./internal/config/
+
+# Short native Go fuzzing of every parser an outsider can feed (FUZZTIME=15s per target).
+fuzz:
+	scripts/security/fuzz.sh
+
+# Trivy over the built image (make image first; IMAGE names it).
+image-scan:
+	scripts/security/image-scan.sh
+
+# OpenSSF Scorecard of the public repository (informational).
+scorecard:
+	scripts/security/scorecard.sh
+
+# OWASP ZAP baseline scan of a throwaway local server (optional; needs make all).
+dast: all
+	scripts/security/dast.sh
+
+# The web UI's Content-Security-Policy in a real Chromium: every main page loads under it without a
+# violation, and an inline script is blocked. Same needs as web-a11y (a Chromium, make all first).
+.PHONY: web-csp
+web-csp: all
+	scripts/a11y-server.sh node web/scripts/csp-browser.mjs
+
+# CycloneDX SBOMs of the source tree and of the built binary, with Syft (the same tool and format
+# the release uses; releases attach them, signed). Written to bin/sbom-*.cdx.json.
+.PHONY: sbom
+sbom: tools build
+	$(TOOLS)/syft dir:. --exclude ./web/node_modules --exclude ./docs/node_modules --exclude ./bin --exclude ./.claude -o cyclonedx-json=bin/sbom-source.cdx.json -q
+	$(TOOLS)/syft file:bin/launchway -o cyclonedx-json=bin/sbom-binary.cdx.json -q
+	@echo "sbom: bin/sbom-source.cdx.json and bin/sbom-binary.cdx.json written"

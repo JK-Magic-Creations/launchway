@@ -30,7 +30,10 @@ RUN npm run build
 WORKDIR /src
 COPY docs/ docs/
 COPY scripts/docs/ scripts/docs/
-RUN cd docs && npm ci --no-audit --no-fund && cd .. && node scripts/docs/build-learn.mjs
+WORKDIR /src/docs
+RUN npm ci --no-audit --no-fund
+WORKDIR /src
+RUN node scripts/docs/build-learn.mjs
 
 # ---- the binary ----
 FROM ${GO_IMAGE} AS build
@@ -44,6 +47,7 @@ COPY --from=web /src/web/dist/ web/dist/
 ARG VERSION=dev
 ARG REVISION=
 ARG CREATED=
+# hadolint ignore=DL4006,SC2015
 RUN echo "$REVISION" | grep -Eq '^[0-9a-f]{40}([0-9a-f]{24})?$' \
     || { echo "REVISION must be the full commit (make image sets it): got '$REVISION'" >&2; exit 1; } \
     && echo "$CREATED" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' \
@@ -53,7 +57,9 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 # ---- the runtime file system ----
 # Packages are installed into an empty root, without their install scripts,
 # and the programs Git does not use are removed. The package database is kept
-# so that image scanners can see what is installed.
+# so that image scanners can see what is installed; /etc/os-release and /etc/alpine-release are
+# kept for the same reason: without them a scanner cannot tell which distribution's advisories to
+# check the packages against, and silently reports none.
 FROM ${ALPINE_IMAGE} AS rootfs
 RUN apk add --root /rootfs --initdb --no-cache --no-scripts \
         --keys-dir /etc/apk/keys --repositories-file /etc/apk/repositories \
@@ -62,6 +68,7 @@ RUN apk add --root /rootfs --initdb --no-cache --no-scripts \
         /rootfs/usr/bin/ssh-copy-id /rootfs/usr/bin/ssh-keyscan /rootfs/usr/bin/ssh-pkcs11-helper \
         /rootfs/usr/bin/findssl.sh /rootfs/usr/bin/git-shell \
     && rm -rf /rootfs/etc/apk /rootfs/var/cache/apk \
+    && cp /etc/alpine-release /etc/os-release /rootfs/etc/ \
     && mkdir -p /rootfs/tmp /rootfs/home/launchway /rootfs/var/lib/launchway /rootfs/etc/launchway \
     && chmod 1777 /rootfs/tmp \
     && printf 'root:x:0:0:root:/root:/sbin/nologin\nlaunchway:x:65532:65532:launchway:/home/launchway:/sbin/nologin\n' > /rootfs/etc/passwd \

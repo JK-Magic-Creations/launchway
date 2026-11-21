@@ -153,6 +153,8 @@
         },
         "security/trust-model",
         "security/hardening",
+        "security/how-launchway-is-scanned",
+        "security/threat-model",
         "security/supply-chain",
         "security/verify-downloads",
         "security/controls-and-compliance",

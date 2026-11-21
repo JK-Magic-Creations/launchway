@@ -31,4 +31,18 @@ header and a matching `Origin`. Every change and every sign-in is recorded in th
 
 Please report security problems privately through GitHub's
 [private vulnerability reporting](https://github.com/jk-magic-creations/launchway/security/advisories/new)
-rather than in a public issue. We will acknowledge the report and keep you informed.
+rather than in a public issue. We will acknowledge the report within 3 working days, give a first
+assessment within 10, and aim to fix confirmed high and critical problems within 30 days, telling you
+before anything is published. Fixed problems are published as GitHub security advisories, with credit
+if you want it. Please give us a reasonable time to fix a problem before you disclose it. The
+contact details are also in [security.txt](docs/public/.well-known/security.txt).
+
+## Supported versions
+
+Fixes go into the latest minor release; security fixes also go into the minor release before it
+([SUPPORT.md](SUPPORT.md)). Until a first release is published, only the `main` branch is supported.
+
+## How Launchway checks itself
+
+Dependency, secret, static-analysis, image, chart and fuzzing scans run on every change; the list,
+the policy and the latest results are in [How Launchway is scanned](docs/security/how-launchway-is-scanned.md).

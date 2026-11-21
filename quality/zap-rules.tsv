@@ -1,0 +1,12 @@
+# ZAP baseline rules (scripts/security/dast.sh). Columns: rule id, IGNORE|WARN|FAIL, rule name. Tab-separated.
+# A rule not listed here is WARN, which fails the optional DAST scan: nothing is ignored silently.
+# Each ignored rule says why on the line above it.
+# The web UI and its static files are public; the API answers carry no-store where they hold data.
+# Static files and the page shell are meant to be cached; they hold nothing private.
+10049	IGNORE	Storable and Cacheable Content
+# React sets style attributes, so style-src needs unsafe-inline; script-src does not (make web-csp proves inline scripts are blocked).
+10055	IGNORE	CSP: style-src unsafe-inline
+# Informational: the page is a single-page application.
+10109	IGNORE	Modern Web Application
+# Cross-origin isolation (COEP) is for pages that use SharedArrayBuffer; requiring it would break embedding of nothing and add risk of breaking OIDC redirects.
+90004	IGNORE	Cross-Origin-Embedder-Policy Header Missing or Invalid

@@ -1,0 +1,6 @@
+# hadolint (make security). DL3018 (pin apk package versions) is off on purpose: the packages are
+# installed from the repositories of a base image pinned to an exact Alpine release, and an exact
+# package pin would break the build whenever Alpine replaces a package in that release; the image
+# scan and the SBOM record what was installed.
+ignored:
+  - DL3018

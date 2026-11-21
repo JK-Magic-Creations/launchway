@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"runs\":[{\"originalUriBaseIds\":{\"\":{\"uri\":\"0\"}},\"results\":[{\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":\"file  /\"}}}]}")

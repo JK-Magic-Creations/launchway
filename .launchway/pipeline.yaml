@@ -46,6 +46,28 @@ steps:
     resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 6Gi }
     timeout: 20m
 
+  # Security gates that need only the toolchain (docs/security/how-launchway-is-scanned.md). The ones
+  # that need a container runtime (secret scan of the history, Trivy and hadolint on the manifests, the
+  # ZAP baseline) run in .github/workflows/security.yml and with `make security` on a developer machine.
+  security-go:
+    description: Reachable Go vulnerabilities fail; a short fuzz run of every parser
+    image: docker.io/library/golang:1.27
+    needs: check-code
+    run: |
+      go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+      FUZZTIME=20s scripts/security/fuzz.sh
+    resources: { cpu: 2, memory: 3Gi }
+    timeout: 20m
+
+  security-web:
+    description: npm audit of the web UI and the documentation tools (high and above fail)
+    image: docker.io/library/node:24-alpine
+    needs: check-code
+    run: |
+      (cd web && npm audit --package-lock-only --audit-level=high)
+      (cd docs && npm audit --package-lock-only --audit-level=high)
+    resources: { cpu: 500m, memory: 512Mi }
+
   build-ui:
     description: Build the web UI into web/dist
     image: docker.io/library/node:24-alpine
@@ -81,7 +103,7 @@ steps:
   image:
     description: Build, scan, sign and push the Launchway image by digest
     kind: image
-    needs: [test, gate-pipeline]
+    needs: [test, gate-pipeline, security-go, security-web]
     context: .
     file: Dockerfile            # builds the UI and the binary itself
     build_args:

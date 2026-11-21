@@ -456,7 +456,7 @@ func TestAuditSourceBehindProxy(t *testing.T) {
 func TestSecurityHeaders(t *testing.T) {
 	e := setupAuth(t, envOpts{})
 	r := newBrowser(t).get(e.srv.URL + "/")
-	if r.header.Get("X-Frame-Options") != "DENY" || r.header.Get("Content-Security-Policy") != "frame-ancestors 'none'" {
+	if r.header.Get("X-Frame-Options") != "DENY" || r.header.Get("Content-Security-Policy") != uiContentSecurityPolicy {
 		t.Fatalf("headers %v", r.header)
 	}
 }

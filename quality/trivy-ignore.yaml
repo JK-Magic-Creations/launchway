@@ -1,0 +1,23 @@
+# Exceptions to the Trivy scans (make security). Every entry says why and when it ends: an expired
+# entry stops hiding the finding, so someone has to look again. Nothing is added without a reason.
+# Format: https://trivy.dev/docs/configuration/filtering/#trivyignoreyaml
+misconfigurations:
+  # The rootless BuildKit daemon needs set-user-ID helpers (newuidmap) and SETUID/SETGID. This is
+  # documented in deploy/buildkit/README.md; the namespace enforces Pod Security "baseline" and
+  # audits "restricted". Revisit when BuildKit runs without the helpers (user namespaces in pods).
+  - id: KSV-0014
+    paths: [buildkitd.yaml]
+    statement: "rootless BuildKit writes its state under its home; the volume is an emptyDir/PVC, the image is rootless (see deploy/buildkit/README.md)"
+    expired_at: 2027-05-21
+  - id: KSV-0001
+    paths: [buildkitd.yaml]
+    statement: "newuidmap needs privilege escalation (see deploy/buildkit/README.md)"
+    expired_at: 2027-05-21
+  # The Kubernetes executor starts a step's pod and runs the step's script in it with pods/exec. The
+  # Role is bound to the STEP namespace only (a namespace where nothing but step pods run), never
+  # cluster-wide. Removing the need (an init container that fetches the script, then plain log
+  # streaming) is on the security backlog (design doc 53, story "runner without pods/exec").
+  - id: KSV-0053
+    paths: [server-default.yaml, server-ha.yaml, runner-remote.yaml, runner-deploy.yaml]
+    statement: "step-namespace Role for the Kubernetes executor; see the comment above"
+    expired_at: 2027-05-21
