@@ -613,10 +613,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if nr.Trigger.Event == "" {
 		nr.Trigger.Event = pipeline.EventManual
 	}
-	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
-		return nil, err
-	}
-	if err := e.checkSchemas(&nr); err != nil {
+	if err := e.checkRun(&nr); err != nil {
 		return nil, err
 	}
 	// While build pools decide where runs go, older servers, which would
@@ -625,37 +622,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if e.knows(schemaPools) && e.buildPoolsConfigured() {
 		poolRequires = schemaPools
 	}
-	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
+	draft, err := draftOf(&nr)
+	if err != nil {
 		return nil, err
 	}
-	if err := e.checkRollbackRun(&nr); err != nil {
+	prSecrets, err := e.pullRequestSecrets(&nr)
+	if err != nil {
 		return nil, err
-	}
-	var draft *Draft
-	switch {
-	case nr.Draft != nil:
-		if nr.Push != nil {
-			return nil, fmt.Errorf("%w: a draft run is never started by a push", ErrConflict)
-		}
-		draft = &Draft{Text: nr.Draft.Text, Hash: DraftHash(nr.Draft.Text), Secrets: nr.Draft.Secrets}
-		nr.Trigger.Event = pipeline.EventDraft
-	case nr.Trigger.Event == pipeline.EventDraft:
-		return nil, fmt.Errorf("%w: a draft run needs the text it runs", ErrConflict)
-	}
-	var prSecrets *bool
-	if nr.Trigger.Event == pipeline.EventPullRequest {
-		if !e.knows(schemaPullRequests) {
-			return nil, fmt.Errorf("%w: this server does not know pull-request runs (schema %d)", ErrConflict, schemaPullRequests)
-		}
-		if err := checkPullRequest(nr.Trigger); err != nil {
-			return nil, err
-		}
-		// Servers older than schema 9 do not know on.pull_request, so they
-		// leave such a run alone instead of running it with secrets.
-		if !nr.Pipeline.On.MatchPullRequest() {
-			return nil, fmt.Errorf("%w: a pull-request run's pipeline must ask for pull requests (on: { pull_request: {} })", ErrConflict)
-		}
-		prSecrets = &nr.PullRequestSecrets
 	}
 	runID := ids.New("run")
 	trig, src := nr.Trigger, nr.Source
@@ -663,7 +636,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	// the older ones of the same ref, in the transaction that creates it.
 	supersede := nr.Pipeline.Supersede && draft == nil && e.knows(schemaPullRequests) &&
 		(trig.Event == pipeline.EventPush || trig.Event == pipeline.EventPullRequest) && trig.Ref != ""
-	err := e.runTx(runID, true, func(c *cmd) error {
+	err = e.runTx(runID, true, func(c *cmd) error {
 		if nr.Push != nil {
 			claimed, err := claimRef(c.tx, nr.Project, *nr.Push)
 			if err != nil {
@@ -1819,7 +1792,7 @@ func (c *cmd) advance() {
 	if st.laneWaiting() && !st.CancelRequested {
 		return // the run waits for its lane; none of its steps is queued
 	}
-	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() && st.Trigger.Event != pipeline.EventRollback {
+	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.policyDue() {
 		c.policyChecked = true
 		c.gateRun()
 		if c.err != nil {
@@ -1840,20 +1813,9 @@ func (c *cmd) advance() {
 				continue
 			}
 			def := st.Pipeline.Step(id)
-			if def.IsRestore() {
-				if c.advanceRestore(id, def) {
-					changed = true
-				}
+			if c.advanceOwn(id, def, &changed) {
 				if c.err != nil {
 					return
-				}
-				continue
-			}
-			if def.IsRollback() {
-				// The rollback rule replaces the usual one: it runs because
-				// a step it needs did not succeed.
-				if c.advanceRollback(id, def) {
-					changed = true
 				}
 				continue
 			}

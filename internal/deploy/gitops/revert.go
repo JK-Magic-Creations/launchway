@@ -103,7 +103,7 @@ func (r *Repo) RevertSeries(ctx context.Context, items []RevertItem) (SeriesResu
 			}
 			if _, err := r.git(ctx, nil, "revert", "--no-edit", "--no-commit", full); err != nil {
 				conflicted, _ := r.git(ctx, nil, "diff", "--name-only", "--diff-filter=U", "-z")
-				r.git(ctx, nil, "revert", "--abort")
+				_, _ = r.git(ctx, nil, "revert", "--abort")
 				r.discard(ctx)
 				if files := splitNUL(conflicted); len(files) > 0 {
 					r.logf("Reverting %s conflicts with later changes in %s", short(full), r.Branch)

@@ -211,19 +211,8 @@ func (e *Engine) RollbacksNeedingReview(actor string, groups []string, visible f
 	if err != nil {
 		return nil, err
 	}
-	var all []ReviewItem
-	for rows.Next() {
-		var it ReviewItem
-		if err := rows.Scan(&it.Run, &it.Number, &it.Project, &it.Environment, &it.Service, &it.FromVersion, &it.ToVersion, &it.Reason, &it.Actor, &it.At); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if visible == nil || visible(it.Project) {
-			all = append(all, it)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	all, err := scanReviewRows(rows, visible)
+	if err != nil {
 		return nil, err
 	}
 	for _, it := range all {
@@ -254,4 +243,20 @@ func (e *Engine) EnvironmentOfRollback(runID string) (string, error) {
 		return "", fmt.Errorf("%w: run %s is not a rollback run", ErrConflict, runID)
 	}
 	return env, err
+}
+
+// scanReviewRows reads and closes the rows of the review query, keeping the projects the person may see.
+func scanReviewRows(rows *sql.Rows, visible func(string) bool) ([]ReviewItem, error) {
+	defer rows.Close()
+	var all []ReviewItem
+	for rows.Next() {
+		var it ReviewItem
+		if err := rows.Scan(&it.Run, &it.Number, &it.Project, &it.Environment, &it.Service, &it.FromVersion, &it.ToVersion, &it.Reason, &it.Actor, &it.At); err != nil {
+			return nil, err
+		}
+		if visible == nil || visible(it.Project) {
+			all = append(all, it)
+		}
+	}
+	return all, rows.Err()
 }

@@ -705,13 +705,8 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
 		return nil, err
 	}
-	if d.PoolHint, err = e.poolHint(st, d.StepList); err != nil {
+	if d.PoolHint, err = e.poolOrVerifyHint(st, d.StepList); err != nil {
 		return nil, err
-	}
-	if d.PoolHint == "" {
-		if d.PoolHint, err = e.verifyHint(st); err != nil {
-			return nil, err
-		}
 	}
 	d.Policy = policySummary(st)
 	d.Resume = st.resumeAdvice()
@@ -871,4 +866,14 @@ func (e *Engine) State(runID string) (*RunState, error) {
 		return nil, err
 	}
 	return Fold(evs), nil
+}
+
+// poolOrVerifyHint is the hint about build pools for a run's steps, or, when there is none, the one about the
+// pools its verification steps need.
+func (e *Engine) poolOrVerifyHint(st *RunState, steps []StepView) (string, error) {
+	hint, err := e.poolHint(st, steps)
+	if err != nil || hint != "" {
+		return hint, err
+	}
+	return e.verifyHint(st)
 }

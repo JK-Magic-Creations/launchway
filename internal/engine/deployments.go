@@ -673,18 +673,7 @@ func (c *cmd) persistSchema11() error {
 				_, err = c.tx.Exec(`UPDATE deployments SET rollback_step = ? WHERE id = ?`, ev.Data.Step, d.ID)
 			}
 		case DeployActionDone:
-			if f := d.Facts; f != nil && s != nil && s.Dep != nil {
-				if s.Dep.Action == ActionRevert {
-					_, err = c.tx.Exec(`UPDATE deployments SET revert_sha = ? WHERE id = ?`, f.Revert, s.Dep.ID)
-					if def := st.Pipeline.Step(ev.Data.Step); err == nil && def != nil && def.IsRestore() && f.Revert != "" {
-						// What the rollback left in Git is what the service runs now.
-						_, err = c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ? WHERE id = ?`, f.Repo, f.Branch, f.Revert, s.Dep.ID)
-					}
-				} else {
-					_, err = c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ?, changed = ? WHERE id = ?`,
-						f.Repo, f.Branch, f.Commit, boolInt(f.Changed), s.Dep.ID)
-				}
-			}
+			err = c.actionDone(ev, d, s)
 		case DeployPhase:
 			if s != nil && s.Dep != nil {
 				_, err = c.tx.Exec(`UPDATE deployments SET phase = ?, detail = ? WHERE id = ?`, d.Phase, d.Detail, s.Dep.ID)
@@ -976,4 +965,26 @@ func (c *cmd) finishAction(stepID string, s *StepState, def *pipeline.Step, leas
 		p.Excerpt = CleanExcerpt(res.Excerpt)
 		c.emit(StepFinished, p)
 	}
+}
+
+// actionDone records what a deploy step's action (apply or revert) left in Git.
+func (c *cmd) actionDone(ev Event, d *DeployEvent, s *StepState) error {
+	f := d.Facts
+	if f == nil || s == nil || s.Dep == nil {
+		return nil
+	}
+	if s.Dep.Action != ActionRevert {
+		_, err := c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ?, changed = ? WHERE id = ?`,
+			f.Repo, f.Branch, f.Commit, boolInt(f.Changed), s.Dep.ID)
+		return err
+	}
+	if _, err := c.tx.Exec(`UPDATE deployments SET revert_sha = ? WHERE id = ?`, f.Revert, s.Dep.ID); err != nil {
+		return err
+	}
+	if def := c.st.Pipeline.Step(ev.Data.Step); def != nil && def.IsRestore() && f.Revert != "" {
+		// What the rollback left in Git is what the service runs now.
+		_, err := c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ? WHERE id = ?`, f.Repo, f.Branch, f.Revert, s.Dep.ID)
+		return err
+	}
+	return nil
 }

@@ -436,7 +436,7 @@ func (e *Engine) RequestRollback(rq RollbackRequest) (*RunSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !plan.Action.Available && !(plan.Action.Queueable && rq.Queue) {
+	if !plan.Action.Available && (!plan.Action.Queueable || !rq.Queue) {
 		return nil, fmt.Errorf("%w: %s", ErrConflict, plan.Action.Reason)
 	}
 	target, err := pickTarget(plan, rq.To)

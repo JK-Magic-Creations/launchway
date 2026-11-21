@@ -95,6 +95,27 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 --secrets-config FILE, the secret stores they may read.
 `
 
+// commands are the commands that take their arguments and nothing else, by name.
+var commands = map[string]func([]string) error{
+	"runs":           cmdRuns,
+	"approvals":      cmdApprovals,
+	"deployments":    cmdDeployments,
+	"templates":      cmdTemplates,
+	"policy":         cmdPolicy,
+	"waivers":        cmdWaivers,
+	"mcp":            cmdMCP,
+	"verifications":  cmdVerifications,
+	"health-sources": cmdHealthSources,
+	"models":         cmdModels,
+	"runners":        cmdRunners,
+	"step-resources": cmdStepResources,
+	"config":         cmdConfig,
+	"run-limits":     cmdRunLimits,
+	"caches":         cmdCaches,
+	"variables":      cmdVariables,
+	"doctor":         cmdDoctor,
+}
+
 func main() {
 	gitexec.Reexec()
 	if len(os.Args) < 2 {
@@ -105,6 +126,12 @@ func main() {
 	var err error
 	// -h or --help on any command prints its help and exits 0, signed in or not: help must not need a server.
 	helping := prepareHelp(os.Args[1], args)
+	if run, ok := commands[os.Args[1]]; ok {
+		if err = run(args); err != nil {
+			exitAfter(err, helping)
+		}
+		return
+	}
 	switch os.Args[1] {
 	case "server":
 		err = cmdServer(args)
@@ -120,42 +147,8 @@ func main() {
 		err = cmdLogin(args)
 	case "blobs":
 		err = cmdBlobs(args)
-	case "runs":
-		err = cmdRuns(args)
-	case "approvals":
-		err = cmdApprovals(args)
-	case "deployments":
-		err = cmdDeployments(args)
-	case "templates":
-		err = cmdTemplates(args)
-	case "policy":
-		err = cmdPolicy(args)
-	case "waivers":
-		err = cmdWaivers(args)
-	case "mcp":
-		err = cmdMCP(args)
-	case "verifications":
-		err = cmdVerifications(args)
-	case "health-sources":
-		err = cmdHealthSources(args)
-	case "models":
-		err = cmdModels(args)
-	case "runners":
-		err = cmdRunners(args)
-	case "step-resources":
-		err = cmdStepResources(args)
-	case "config":
-		err = cmdConfig(args)
 	case "projects", "libraries", "environments", "policies", "runner-pools", "role-bindings", "policy-sources", "units", "secret-stores":
 		err = cmdKindAlias(os.Args[1])(args)
-	case "run-limits":
-		err = cmdRunLimits(args)
-	case "caches":
-		err = cmdCaches(args)
-	case "variables":
-		err = cmdVariables(args)
-	case "doctor":
-		err = cmdDoctor(args)
 	case "repos", "keys":
 		err = cmdHosting(os.Args[1], args)
 	case "version", "--version", "-v":

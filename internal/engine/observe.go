@@ -533,8 +533,8 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 				}
 			} else if def.IsRollback() {
 				outputs["revert"] = s.Dep.Commit
-				if s.Dep.Previous != nil && !def.IsRestore() {
-					outputs["version"] = s.Dep.Previous.Version
+				if p := rollbackPrevious(def, s.Dep); p != nil {
+					outputs["version"] = p.Version
 				}
 			}
 			c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepSucceeded), Outputs: outputs})
@@ -678,7 +678,7 @@ func (e *Engine) dispatchLocks() {
 		err := e.withRun(w.run, func(c *cmd) error {
 			s := c.st.Steps[w.step]
 			def := c.st.Pipeline.Step(w.step)
-			if s == nil || def == nil || !(def.IsDeploy() || def.IsRestore()) || s.Status != StepWaitingS || s.WaitKind != WaitLock || c.st.CancelRequested {
+			if s == nil || def == nil || (!def.IsDeploy() && !def.IsRestore()) || s.Status != StepWaitingS || s.WaitKind != WaitLock || c.st.CancelRequested {
 				return nil
 			}
 			if def.IsRestore() {
@@ -930,12 +930,7 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 			v.Observer, v.ObserverExpires = o[0].(string), o[1].(int64)
 		}
 		for _, u := range units[env.Name] {
-			if u.Last != nil && e.knows(schemaRollback) {
-				if plan, err := e.RollbackPlan(u.Project, env.Name, u.Service); err == nil {
-					a := plan.Action
-					u.Rollback = &a
-				}
-			}
+			e.attachRollback(u, env.Name)
 			v.Services = append(v.Services, *u)
 		}
 		sort.Slice(v.Services, func(i, j int) bool {
@@ -952,4 +947,24 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 
 func sortEnvs(list []Environment) {
 	sort.Slice(list, func(i, j int) bool { return list[i].Name < list[j].Name })
+}
+
+// rollbackPrevious is the deployment a rollback step's service ran before it, which is the version the step's
+// output names; a rollback run's restore step names the version it restored, not this one.
+func rollbackPrevious(def *pipeline.Step, dep *DeployState) *DeployRef {
+	if def.IsRestore() {
+		return nil
+	}
+	return dep.Previous
+}
+
+// attachRollback says on a unit whether, and to what, a person may roll it back now (schema 32).
+func (e *Engine) attachRollback(u *UnitView, environment string) {
+	if u.Last == nil || !e.knows(schemaRollback) {
+		return
+	}
+	if plan, err := e.RollbackPlan(u.Project, environment, u.Service); err == nil {
+		a := plan.Action
+		u.Rollback = &a
+	}
 }
