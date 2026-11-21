@@ -52,7 +52,7 @@ K apply -f "$CTL_DIR/cluster.yaml" >/dev/null
 # one the chart ships.
 log "applying the chart's rollout status admission policy for argocd/lw-deployer"
 helm template lw "$CTL_DIR/../../../helm/launchway" --namespace argocd \
-	--set postgresql.enabled=true \
+	--set externalURL=http://launchway.test \
 	--set 'delivery.environments[0].name=kind' --set 'delivery.environments[0].target=kind' \
 	--set 'delivery.environments[0].projects[0]=shop' \
 	--set delivery.deployRunner.enabled=true --set delivery.deployRunner.target=kind \

@@ -1,0 +1,224 @@
+{{- $np := .Values.networkPolicy -}}
+{{- if $np.enabled }}
+{{- $fullname := include "launchway.fullname" . -}}
+{{- $ns := .Release.Namespace -}}
+{{- $stepNS := include "launchway.stepNamespace" . -}}
+{{- $port := include "launchway.port" . | int -}}
+{{- /* Where the runners reach the server: runner.serverURL if set (any address on its port), else the chart's Service (the server pods). */ -}}
+{{- $serverEgressPeer := true -}}
+{{- $serverPort := .Values.service.port | int -}}
+{{- if .Values.runner.serverURL -}}
+{{- $su := urlParse .Values.runner.serverURL -}}
+{{- $serverEgressPeer = false -}}
+{{- $serverPort = (regexFind "[0-9]+$" $su.host | default (ternary "443" "80" (eq $su.scheme "https"))) | int -}}
+{{- end -}}
+# SERVER: in, only runners, step pods, the deploy runner and the proxy; out, DNS, the database and
+# networkPolicy.server.extraEgress. Not the Kubernetes API.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-server
+  namespace: {{ $ns }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        {{- if .Values.runner.enabled }}
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "runner") | nindent 14 }}
+        {{- end }}
+        {{- if .Values.delivery.deployRunner.enabled }}
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "deploy-runner") | nindent 14 }}
+        {{- end }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $stepNS }}
+          podSelector:
+            matchExpressions:
+              - { key: launchway.dev/run, operator: Exists }
+        {{- with $np.server.ingressFrom }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ $port }} }
+    {{- if and (not $np.server.ingressFrom) (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
+    # An Ingress or HTTPRoute is on and networkPolicy.server.ingressFrom is empty: the proxy's
+    # namespace is not known, so any source may reach the server port. Set ingressFrom to narrow it.
+    - ports:
+        - { protocol: TCP, port: {{ $port }} }
+    {{- end }}
+    {{- if .Values.ssh.enabled }}
+    - ports:
+        - { protocol: TCP, port: {{ .Values.ssh.port }} }
+    {{- end }}
+  egress:
+    {{- include "launchway.dnsEgress" . | nindent 4 }}
+    {{- if include "launchway.bundledDB" . | trim }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "postgresql") | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: 5432 }
+    {{- else }}
+    {{- $dbport := $np.database.port | int -}}
+    {{- if .Values.database.url }}{{ with (urlParse .Values.database.url).host | regexFind ":[0-9]+$" }}{{ $dbport = trimPrefix ":" . | int }}{{ end }}{{ end }}
+    # The external database.
+    - ports:
+        - { protocol: TCP, port: {{ $dbport }} }
+      {{- with $np.database.cidrs }}
+      to:
+        {{- range . }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- with $np.server.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- if include "launchway.bundledDB" . | trim }}
+---
+# THE BUNDLED DATABASE: in, only the servers; out, nothing.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-postgresql
+  namespace: {{ $ns }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "postgresql") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "postgresql") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: 5432 }
+  egress: []
+{{- end }}
+{{- range $comp := list "runner" "deploy-runner" }}
+{{- if or (and (eq $comp "runner") $.Values.runner.enabled) (and (eq $comp "deploy-runner") $.Values.delivery.deployRunner.enabled) }}
+---
+# {{ upper $comp }} pods: nothing comes in (kubelet probes are not affected); out, DNS, the Launchway
+# server, the Kubernetes API{{ if eq $comp "runner" }} (to start and exec into step pods){{ end }} and what the extraEgress value adds.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-{{ $comp }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "launchway.componentLabels" (list $ $comp) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list $ $comp) | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- include "launchway.dnsEgress" $ | nindent 4 }}
+    - ports:
+        - { protocol: TCP, port: {{ $serverPort }} }
+      {{- if $serverEgressPeer }}
+      to:
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list $ "server") | nindent 14 }}
+      {{- end }}
+    - ports:
+        {{- range $np.runner.kubernetesAPI.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+      {{- with $np.runner.kubernetesAPI.cidrs }}
+      to:
+        {{- range . }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      {{- end }}
+    {{- with (ternary $np.runner.extraEgress $np.deployRunner.extraEgress (eq $comp "runner")) }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- if and .Values.runner.enabled $np.steps.enabled }}
+---
+# STEP PODS (the pods runners start for each run, in {{ $stepNS }}): nothing comes in; out, DNS, the
+# Launchway server and{{ if $np.steps.internet }} the internet on ports {{ join ", " $np.steps.ports }} except private,
+# link-local (cloud metadata), carrier-grade NAT and any networkPolicy.steps.exceptCIDRs ranges, which
+# keeps them off the database, the Kubernetes API and the metadata service{{ else }} nothing else{{ end }}.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-steps
+  namespace: {{ $stepNS }}
+  labels:
+    {{- include "launchway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: steps
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: launchway.dev/run, operator: Exists }
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- include "launchway.dnsEgress" . | nindent 4 }}
+    # The Launchway server, so steps can report to it.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $ns }}
+          podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: {{ $port }} }
+    {{- if $np.steps.internet }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              {{- range $np.steps.exceptCIDRs }}
+              {{- if not (contains ":" .) }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+        {{- if $np.steps.allowIPv6 }}
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+              - ::1/128
+              {{- range $np.steps.exceptCIDRs }}
+              {{- if contains ":" . }}
+              - {{ . }}
+              {{- end }}
+              {{- end }}
+        {{- end }}
+      ports:
+        {{- range $np.steps.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+    {{- end }}
+    {{- with $np.steps.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

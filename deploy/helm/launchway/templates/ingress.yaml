@@ -20,19 +20,9 @@ spec:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
+    {{- range (.Values.ingress.hosts | default (list (include "launchway.externalHostname" .))) }}
     - host: {{ . | quote }}
       http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ $fullname }}
-                port:
-                  name: http
-    {{- else }}
-    - http:
         paths:
           - path: /
             pathType: Prefix

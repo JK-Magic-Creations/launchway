@@ -13,6 +13,9 @@
 #   kubectl -n launchway create secret generic launchway-oidc --from-literal=client-secret=...
 #   helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/eks.yaml
 
+# The address people open (the one required value).
+externalURL: https://launchway.example.com
+
 image:
   # Your copy of the image, in Amazon ECR. Pin a digest in production; it wins over the tag.
   repository: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/launchway

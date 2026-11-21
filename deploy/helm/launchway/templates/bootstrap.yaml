@@ -1,0 +1,165 @@
+{{- /* The install hook Job: makes, only if absent, the Secrets the installation needs (root key,
+       runner token, bundled database password, setup code, deploy pool token). Nothing in these
+       manifests is secret material, so `helm template` is the same every time, under Helm and under
+       a GitOps controller (Argo CD runs the hooks as PreSync). The Job, its ServiceAccount, Role
+       and policy are hooks: they are not part of the release, so `helm uninstall` leaves them (and
+       the Secrets it made) behind. */ -}}
+{{- $lines := include "launchway.bootstrapSecrets" . | splitList "\n" | compact -}}
+{{- if $lines }}
+{{- $fullname := include "launchway.fullname" . -}}
+{{- $name := printf "%s-bootstrap" $fullname -}}
+{{- $names := list -}}
+{{- range $lines }}{{ $names = append $names (splitn "=" 2 . )._1 }}{{ end -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-30"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-30"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  # Reading is limited to the named Secrets.
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get]
+    resourceNames:
+      {{- range $names }}
+      - {{ . }}
+      {{- end }}
+  # Kubernetes cannot limit "create" by name (the object does not exist yet), so this rule allows
+  # creating a Secret of any name in this namespace. It cannot read, change or delete one; the Job
+  # creates only the names above, and only when they are absent.
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-30"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+{{- if .Values.networkPolicy.enabled }}
+---
+# The Job's own traffic: DNS and the Kubernetes API, nothing else; nothing comes in.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-30"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "bootstrap") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- include "launchway.dnsEgress" . | nindent 4 }}
+    - ports:
+        {{- range .Values.networkPolicy.runner.kubernetesAPI.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+      {{- with .Values.networkPolicy.runner.kubernetesAPI.cidrs }}
+      to:
+        {{- range . }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      {{- end }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 4
+  activeDeadlineSeconds: {{ .Values.bootstrap.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "launchway.componentLabels" (list . "bootstrap") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ $name }}
+      # This Job is the one pod that needs the Kubernetes API.
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.bootstrap.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bootstrap.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: bootstrap-secrets
+          image: {{ include "launchway.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["bootstrap-secrets"]
+          env:
+            - name: LAUNCHWAY_BOOTSTRAP_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            {{- range $lines }}
+            {{- $kv := splitn "=" 2 . }}
+            - name: LAUNCHWAY_BOOTSTRAP_{{ $kv._0 | upper | replace "-" "_" }}
+              value: {{ $kv._1 | quote }}
+            {{- end }}
+            - name: LAUNCHWAY_BOOTSTRAP_LABELS
+              value: {{ printf "app.kubernetes.io/name=%s,app.kubernetes.io/instance=%s,app.kubernetes.io/part-of=launchway,app.kubernetes.io/component=secrets" (include "launchway.name" .) .Release.Name | quote }}
+          resources:
+            {{- toYaml .Values.bootstrap.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+{{- end }}
