@@ -807,6 +807,21 @@ launchway events replay EVENT
 
 `list` prints each event with a line for every decision and its reason. `show` adds the payload as kept. `replay` starts the run the event asked for again, at the same commit and with the same inputs, for operators; only verified events can be replayed, and the new event points back to the first. The same are `GET /api/v1/events`, `GET /api/v1/events/{id}` and `POST /api/v1/events/{id}/replay` in the [HTTP API](http-api.md) and the MCP tools `list_events`, `get_event` and `replay_event`.
 
+## launchway event-sources
+
+Incoming webhook sources of a project. See [Event sources](../guide/event-sources.md).
+
+```text
+launchway event-sources list PROJECT [--json]
+launchway event-sources create PROJECT --name NAME [--map INPUT=EXPRESSION ...] [--filter EXPR] [--dedupe-key EXPR]
+                               [--schema-file FILE] [--ref REF] [--debounce SECONDS | --batch SECONDS] [--max-body BYTES] [--rate PER_MINUTE]
+launchway event-sources change PROJECT NAME [the same flags] [--enable=false] [--rotate-secret]
+launchway event-sources delete PROJECT NAME
+launchway event-sources test PROJECT NAME --body FILE|-
+```
+
+`create` prints the signing secret once. `test` judges a body the way a call would be and starts nothing. The same are the `event-sources` routes of the [HTTP API](http-api.md) and the MCP tools `list_event_sources`, `test_event_source` and `delete_event_source` (a source is made on the console or in the web interface, because its secret is shown once).
+
 ## launchway caches
 
 Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the Logbook as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.

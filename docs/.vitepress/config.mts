@@ -208,6 +208,7 @@ export default defineConfig({
           { text: 'Triggers', link: '/guide/triggers' },
           { text: 'Queues and limits', link: '/guide/queues' },
           { text: 'Events', link: '/guide/events' },
+          { text: 'Event sources', link: '/guide/event-sources' },
           { text: 'Editing pipelines', link: '/guide/editor' },
           { text: 'Built-in accounts', link: '/guide/built-in-accounts' },
           { text: 'Shared libraries', link: '/guide/libraries' },

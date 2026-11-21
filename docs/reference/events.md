@@ -244,6 +244,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.cancel` | `POST /api/v1/runs/{id}/cancel` |
 | `run.resume` | `POST /api/v1/runs/{id}/resume` |
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
+| `event_source.create` | `POST /api/v1/projects/{name}/event-sources`: an incoming event source was made; the signing secret was shown once and is never recorded |
+| `event_source.change` | `POST /api/v1/projects/{name}/event-sources/{source}`: its settings changed, or its secret was replaced |
+| `event_source.test` | `POST /api/v1/projects/{name}/event-sources/{source}/test`: a body was tried against a source; nothing started |
+| `event_source.delete` | `DELETE /api/v1/projects/{name}/event-sources/{source}`: an event source was removed |
+| `event_source.call` | a call to an event source's address: the user is `event-source:<name>`; a call that cannot prove itself is recorded as denied, and one that did is recorded with what became of it (started, filtered, duplicate...) |
 | `event.replay` | `POST /api/v1/events/{id}/replay`: an event started again by an operator; the target is the event, the detail says what started |
 | `run.queue` | `POST /api/v1/runs/{id}/queue`: run next, hold or release a Sortie that waits in a Holding pattern (the action is in the detail) |
 | `run.trust` | `POST /api/v1/runs/{id}/trust`: a maintainer approving a restricted run, *Run with secrets* (the comment is in the detail) |

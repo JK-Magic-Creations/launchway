@@ -16,8 +16,10 @@ func init() {
 		// signed in or not: pay-api takes none.
 		"POST /api/v1/projects/{name}/git-hook":           {"POST", "/api/v1/projects/pay-api/git-hook", "{}", [6]int{404, 404, 404, 404, 404, 404}},
 		"POST /api/v1/projects/{name}/webhooks/{trigger}": {"POST", "/api/v1/projects/pay-api/webhooks/deploy", "{}", [6]int{404, 404, 404, 404, 404, 404}},
+		// An unknown event source is 404 to everyone, nothing revealed.
+		"POST /api/v1/projects/{name}/sources/{source}": {"POST", "/api/v1/projects/pay-api/sources/x", "{}", [6]int{404, 404, 404, 404, 404, 404}},
 	} {
 		permissionTable[k] = v
 	}
-	publicRoutes = append(publicRoutes, "POST /api/v1/projects/{name}/git-hook", "POST /api/v1/projects/{name}/webhooks/{trigger}")
+	publicRoutes = append(publicRoutes, "POST /api/v1/projects/{name}/git-hook", "POST /api/v1/projects/{name}/webhooks/{trigger}", "POST /api/v1/projects/{name}/sources/{source}")
 }

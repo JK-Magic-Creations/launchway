@@ -314,6 +314,7 @@ func (m *Manager) Start(ctx context.Context) {
 	}
 	m.watchMu.Unlock()
 	go m.runSchedules(ctx)
+	go m.runWindows(ctx)
 }
 
 // startWatch starts polling one project; the caller holds watchMu.

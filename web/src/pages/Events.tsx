@@ -1,10 +1,12 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { ErrorBox } from "../components/ui";
 import { useLoad } from "../guided/useLoad";
 import { clock } from "../format";
 import { Button, EmptyState, PageHead, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { DECISIONS, SOURCES, eventsApi, type EventRecord } from "../eventsApi";
+
+const EventSources = lazy(() => import("./EventSources"));
 
 interface Filters { project: string; source: string; decision: string; verified: string }
 const NONE: Filters = { project: "", source: "", decision: "", verified: "" };
@@ -44,6 +46,7 @@ export function EventsPage() {
           <button type="button" className="btn" onClick={() => { setDraft(NONE); setFilters(NONE); }}>Clear</button>
         </div>
       </form>
+      <Suspense fallback={null}><EventSources /></Suspense>
       <ErrorBox error={err ?? list.error} />
       {done && <p role="status" className="faint">{done}</p>}
       {list.loading && !list.data && <div className="loading">Loading…</div>}

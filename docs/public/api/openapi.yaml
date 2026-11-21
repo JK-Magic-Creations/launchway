@@ -3185,6 +3185,182 @@ paths:
                 - projects
             x-launchway-access: project-draft
             x-launchway-audit: run.draft
+    /api/v1/projects/{name}/event-sources:
+        get:
+            description: The project's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret). The secret is never returned. See [Event sources](../guide/event-sources.md).
+            operationId: get_api_v1_projects_name_event_sources
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The project's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret).
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: 'Makes a source: {"name", "mapping": {"input": "expression"}, "filter", "dedupe_key", "schema" (JSON Schema text), "ref", "debounce_seconds" or "batch_seconds", "max_body", "rate_per_minute"}. Answers 201 with the source and its secret, **shown once**. Every expression is checked when it is saved (400 says which). 409 with code no_root_key on a server with no root key.'
+            operationId: post_api_v1_projects_name_event_sources
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a source: {"name", "mapping": {"input": "expression"}, "filter", "dedupe_key", "schema" (JSON Schema text), "ref", "debounce_seconds" or "batch_seconds", "max_body", "rate_per_minute"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: event_source.create
+    /api/v1/projects/{name}/event-sources/{source}:
+        delete:
+            description: Removes the source and what it remembers.
+            operationId: delete_api_v1_projects_name_event_sources_source
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: source
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes the source and what it remembers.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: event_source.delete
+        post:
+            description: 'Changes the fields that are given, and with "rotate_secret": true makes a new secret (answered once). "enabled": false turns the source off.'
+            operationId: post_api_v1_projects_name_event_sources_source
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: source
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes the fields that are given, and with "rotate_secret": true makes a new secret (answered once).'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: event_source.change
+    /api/v1/projects/{name}/event-sources/{source}/test:
+        post:
+            description: 'Judges {"body": {...}, "headers": {...}} as a call would be (schema, filter, dedupe key, mapping, the pipeline''s inputs) and records and starts nothing. Answers status (ready, filtered, refused or error), the reason, any problems, and the inputs the run would get.'
+            operationId: post_api_v1_projects_name_event_sources_source_test
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: source
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Judges {"body": {...}, "headers": {...}} as a call would be (schema, filter, dedupe key, mapping, the pipeline''s inputs) and records and starts nothing.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: event_source.test
     /api/v1/projects/{name}/git-hook:
         post:
             description: 'A Git host''s push or pull-request webhook: makes the server poll the project at once. Recorded as webhook.git.'
@@ -3812,6 +3988,39 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/sources/{source}:
+        post:
+            description: 'The call itself: a JSON body up to the source''s limit, signed with X-Launchway-Timestamp and X-Launchway-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<body>"> (five minutes, once). 201 started or held, 202 waiting in a window, 200 filtered or duplicate, 422 refused or error (with problems), 404 for a source that does not exist or cannot prove itself, 409 for a signature used before, 413 too large, 429 over the rate. Every answer but 404 for a missing source is an event, and the call is in the Logbook as event_source.call.'
+            operationId: post_api_v1_projects_name_sources_source
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: source
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'The call itself: a JSON body up to the source''s limit, signed with X-Launchway-Timestamp and X-Launchway-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<body>"> (five minutes, once).'
+            tags:
+                - projects
+            x-launchway-access: public
     /api/v1/projects/{name}/tests:
         get:
             description: 'A project''s tests over its last runs of a ref: totals, slowest, most failing, flaky.'

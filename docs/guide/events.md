@@ -11,7 +11,7 @@ or started when you did not expect it, the event log says why, in words.
 | `pull_request` | A pull request was opened or its head moved |
 | `schedule` | A schedule fired |
 | `webhook` | A webhook trigger was called |
-| `event_source` | An event source of the project received a call |
+| `event_source` | An event source of the project received a call (see [Event sources](event-sources.md)) |
 | `manual` | A person, a token or an agent started a run, or re-ran one |
 | `run_result` | Another project's run ended |
 | `launch_result` | Another project's launch ended |

@@ -124,6 +124,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/caches/{id}` | `delete_cache` | `caches delete` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/coverage` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `POST /api/v1/projects/{name}/draft-runs` | `start_run (pipeline_text)` | — | — | gap: launchway runs start has no flag for a draft run yet |
+| `GET /api/v1/projects/{name}/event-sources` | `list_event_sources` | `event-sources list` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/event-sources` | — | `event-sources create` | — | exempt: the signing secret is shown once and must not enter an agent's context; the console and the web interface make and rotate sources (launchway event-sources) |
+| `DELETE /api/v1/projects/{name}/event-sources/{source}` | `delete_event_source` | `event-sources delete` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/event-sources/{source}` | — | `event-sources change` | — | exempt: the signing secret is shown once and must not enter an agent's context; the console and the web interface make and rotate sources (launchway event-sources) |
+| `POST /api/v1/projects/{name}/event-sources/{source}/test` | `test_event_source` | `event-sources test` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/git-hook` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
 | `GET /api/v1/projects/{name}/inputs` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/lanes` | `list_lanes` | `runs lanes` | `not needed by terraform` | equal |
@@ -144,6 +149,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/runs` | `start_run` | `runs start` | — | equal |
 | `GET /api/v1/projects/{name}/schedules` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
+| `POST /api/v1/projects/{name}/sources/{source}` | — | — | — | exempt: the address other systems call, signed with the source's secret: not an operation for people or agents (the console tests it with launchway event-sources test) |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
 | `POST /api/v1/projects/{name}/toggle-apply` | `apply_toggles_file` | `toggles apply` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
