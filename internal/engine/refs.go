@@ -227,7 +227,7 @@ func (e *Engine) RecordDecision(project string, d PushDecision) error {
 	if err == nil {
 		err = tx.Commit()
 	} else {
-		tx.Rollback()
+		_ = tx.Rollback()
 	}
 	unlock()
 	if err == nil && n == 0 {

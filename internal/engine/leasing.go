@@ -50,16 +50,15 @@ func (e *Engine) leaseCandidates(r RunnerInfo, now time.Time, ownOnly bool, pool
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var cands []leaseCand
 	for rows.Next() {
 		var c leaseCand
 		if err := rows.Scan(&c.run, &c.step, &c.attempt); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		cands = append(cands, c)
 	}
-	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}

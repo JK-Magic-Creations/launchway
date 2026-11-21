@@ -433,8 +433,8 @@ func (ps *parser) checkLane(p *Pipeline) {
 func (l *Lane) Label(ref string, pullRequest int, inputs map[string]string) string {
 	label := l.Name
 	for _, e := range l.Per {
-		switch {
-		case e == LanePerRef:
+		switch e {
+		case LanePerRef:
 			switch {
 			case strings.HasPrefix(ref, "refs/heads/"):
 				label += "/ref " + strings.TrimPrefix(ref, "refs/heads/")
@@ -443,7 +443,7 @@ func (l *Lane) Label(ref string, pullRequest int, inputs map[string]string) stri
 			case ref != "":
 				label += "/ref " + ref
 			}
-		case e == LanePerPullRequest:
+		case LanePerPullRequest:
 			if pullRequest > 0 {
 				label += "/pull request " + strconv.Itoa(pullRequest)
 			}
@@ -460,10 +460,10 @@ func (l *Lane) Label(ref string, pullRequest int, inputs map[string]string) stri
 func (l *Lane) LaneKey(ref string, pullRequest int, inputs map[string]string) string {
 	key := l.Name
 	for _, e := range l.Per {
-		switch {
-		case e == LanePerRef:
+		switch e {
+		case LanePerRef:
 			key += "@" + ref
-		case e == LanePerPullRequest:
+		case LanePerPullRequest:
 			if pullRequest > 0 {
 				key += "#" + strconv.Itoa(pullRequest)
 			} else {

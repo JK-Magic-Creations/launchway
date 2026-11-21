@@ -353,98 +353,7 @@ func (st *RunState) check(ev Event) bool {
 	}
 	st.Schema = max(st.Schema, since, p.Requires)
 	if ev.Type == RunCreated {
-		if p.Pipeline == nil {
-			st.notUnderstood("a run without a pipeline")
-			return false
-		}
-		for _, s := range p.Pipeline.Steps {
-			if !slices.Contains(knownStepKinds, s.Kind) {
-				st.notUnderstood("step kind %q", s.Kind)
-			}
-		}
-		// Pull-request runs and the pipeline keys of schema 9. A release
-		// older than that does not know these keys, so it reads the
-		// pipeline as not understood (see decodePayload); a build limited
-		// to an older schema for testing says the same here.
-		if p.Pipeline.UsesSchema9() || (p.Trigger != nil && p.Trigger.Event == pipeline.EventPullRequest) {
-			st.Schema = max(st.Schema, schemaPullRequests)
-			if !st.understands(schemaPullRequests) {
-				st.notUnderstood("a pipeline key of schema %d (on.pull_request or supersede), or a pull-request run", schemaPullRequests)
-			}
-		}
-		// Test reports. A step that declares them has its files collected
-		// and stored, which a server that does not know reports would
-		// silently skip.
-		if p.Pipeline.UsesSchema10() {
-			st.Schema = max(st.Schema, schemaTests)
-			if !st.understands(schemaTests) {
-				st.notUnderstood("a pipeline key of schema %d (reports)", schemaTests)
-			}
-		}
-		// Deploy and rollback steps hold locks and change environments; a
-		// server that does not know them must leave the whole run alone.
-		if p.Pipeline.UsesSchema11() {
-			st.Schema = max(st.Schema, schemaDeploy)
-			if !st.understands(schemaDeploy) {
-				st.notUnderstood("deploy or rollback steps (schema %d)", schemaDeploy)
-			}
-		}
-		// Artifacts, fetch, and findings and SBOM reports: a server that
-		// does not know them would run a step without the files it fetches.
-		if p.Pipeline.UsesSchema12() {
-			st.Schema = max(st.Schema, schemaArtifacts)
-			if !st.understands(schemaArtifacts) {
-				st.notUnderstood("a pipeline key of schema %d (artifacts, fetch, reports.findings or reports.sbom)", schemaArtifacts)
-			}
-		}
-		// Run inputs, loops, schedules and webhooks (see usesSchema13).
-		if usesSchema13(p) {
-			st.Schema = max(st.Schema, schemaTriggers)
-			if !st.understands(schemaTriggers) {
-				st.notUnderstood("a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)", schemaTriggers)
-			}
-		}
-		// Image steps, and deploy changes that pin a digest.
-		if p.Pipeline.UsesSchema15() {
-			st.Schema = max(st.Schema, schemaImages)
-			if !st.understands(schemaImages) {
-				st.notUnderstood("image steps or deploy changes that pin a digest (schema %d)", schemaImages)
-			}
-		}
-		// Test attachments, coverage and HTML reports.
-		if p.Pipeline.UsesSchema18() {
-			st.Schema = max(st.Schema, schemaReports)
-			if !st.understands(schemaReports) {
-				st.notUnderstood("test attachments, coverage or HTML reports (schema %d)", schemaReports)
-			}
-		}
-		// Verify and ai steps.
-		if p.Pipeline.UsesSchemaVerify() {
-			st.Schema = max(st.Schema, schemaVerify)
-			if !st.understands(schemaVerify) {
-				st.notUnderstood("verify or ai steps (schema %d)", schemaVerify)
-			}
-		}
-		// Flow control: conditions on outputs, tolerated failures, retry
-		// waits and causes, run timeouts, lanes.
-		if p.Pipeline.UsesSchemaFlow() {
-			st.Schema = max(st.Schema, schemaFlow)
-			if !st.understands(schemaFlow) {
-				st.notUnderstood("a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)", schemaFlow)
-			}
-		}
-		// Rollout steps, and the keys that control a rollout.
-		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
-			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
-			if need := max(schemaControl, p.Pipeline.Requires); !st.understands(need) {
-				what := "rollout steps or keys that control a rollout"
-				if p.Pipeline.Requires >= schemaPools {
-					what = "a pipeline key of a newer schema, such as runner:"
-				}
-				st.notUnderstood("%s (schema %d)", what, need)
-			}
-		}
-		return true
+		return st.checkCreated(p)
 	}
 	if st.Steps == nil {
 		st.notUnderstood("a %s event before the run was created", ev.Type)
@@ -477,6 +386,63 @@ func (st *RunState) check(ev Event) bool {
 	return true
 }
 
+// checkCreated reads a run.created payload: whether the pipeline is there,
+// its step kinds are known and the schemas its keys need are understood.
+func (st *RunState) checkCreated(p Payload) bool {
+	if p.Pipeline == nil {
+		st.notUnderstood("a run without a pipeline")
+		return false
+	}
+	for _, s := range p.Pipeline.Steps {
+		if !slices.Contains(knownStepKinds, s.Kind) {
+			st.notUnderstood("step kind %q", s.Kind)
+		}
+	}
+	// What the pipeline's keys need, in the order the schemas came. A release
+	// older than a schema does not know its keys, so it reads the pipeline as
+	// not understood (see decodePayload); a build limited to an older schema
+	// for testing says the same here. A step that, for example, collects test
+	// reports or holds a deploy lock would be silently skipped by a server that
+	// does not know it, so such a run is left alone.
+	for _, k := range []struct {
+		uses   bool
+		schema int
+		what   string
+	}{
+		// Pull-request runs and the pipeline keys of schema 9.
+		{p.Pipeline.UsesSchema9() || (p.Trigger != nil && p.Trigger.Event == pipeline.EventPullRequest), schemaPullRequests,
+			"a pipeline key of schema %d (on.pull_request or supersede), or a pull-request run"},
+		{p.Pipeline.UsesSchema10(), schemaTests, "a pipeline key of schema %d (reports)"},
+		{p.Pipeline.UsesSchema11(), schemaDeploy, "deploy or rollback steps (schema %d)"},
+		{p.Pipeline.UsesSchema12(), schemaArtifacts, "a pipeline key of schema %d (artifacts, fetch, reports.findings or reports.sbom)"},
+		{usesSchema13(p), schemaTriggers, "a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)"},
+		{p.Pipeline.UsesSchema15(), schemaImages, "image steps or deploy changes that pin a digest (schema %d)"},
+		{p.Pipeline.UsesSchema18(), schemaReports, "test attachments, coverage or HTML reports (schema %d)"},
+		{p.Pipeline.UsesSchemaVerify(), schemaVerify, "verify or ai steps (schema %d)"},
+		{p.Pipeline.UsesSchemaFlow(), schemaFlow, "a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)"},
+	} {
+		if !k.uses {
+			continue
+		}
+		st.Schema = max(st.Schema, k.schema)
+		if !st.understands(k.schema) {
+			st.notUnderstood(k.what, k.schema)
+		}
+	}
+	// Rollout steps, and the keys that control a rollout.
+	if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
+		st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
+		if need := max(schemaControl, p.Pipeline.Requires); !st.understands(need) {
+			what := "rollout steps or keys that control a rollout"
+			if p.Pipeline.Requires >= schemaPools {
+				what = "a pipeline key of a newer schema, such as runner:"
+			}
+			st.notUnderstood("%s (schema %d)", what, need)
+		}
+	}
+	return true
+}
+
 // apply moves the state forward by one event. It must stay deterministic:
 // the same events always produce the same state.
 func (st *RunState) apply(ev Event) {
@@ -491,34 +457,7 @@ func (st *RunState) apply(ev Event) {
 	}
 	switch ev.Type {
 	case RunCreated:
-		st.ID = ev.RunID
-		st.Project = p.Project
-		st.Number = p.Number
-		st.Pipeline = p.Pipeline
-		if p.Trigger != nil {
-			st.Trigger = *p.Trigger
-		}
-		if p.Source != nil {
-			st.Source = *p.Source
-		}
-		if p.Draft != nil {
-			d := *p.Draft
-			st.Draft = &d
-		}
-		if p.Rerun != nil {
-			r := *p.Rerun
-			st.Rerun = &r
-		}
-		st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
-		st.SelfApproval = p.SelfApproval
-		st.Status = RunQueued
-		st.CreatedAt = ev.At
-		st.Steps = map[string]*StepState{}
-		st.Order = nil
-		for i, step := range p.Pipeline.Steps {
-			st.Steps[step.ID] = &StepState{ID: step.ID, Position: i, Status: StepPending}
-			st.Order = append(st.Order, step.ID)
-		}
+		st.applyCreated(ev)
 
 	case RunCancelRequested:
 		st.CancelRequested = true
@@ -537,23 +476,7 @@ func (st *RunState) apply(ev Event) {
 		st.FinishedAt = ev.At
 
 	case StepQueued:
-		if p.Attempt != s.Attempt && s.Dep != nil {
-			s.Dep.Phases = 0
-		}
-		s.Status = StepQueuedS
-		s.WaitKind = ""
-		if d := p.Deploy; d != nil {
-			st.queueAction(s, d)
-		}
-		s.Attempt = p.Attempt
-		s.QueuedAt = ev.At
-		s.StartedAt, s.FinishedAt = 0, 0
-		s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
-		s.Outputs = nil
-		s.Excerpt = ""
-		s.Evidence = nil
-		s.Allowed = false
-		s.NotBefore = p.NotBefore
+		st.applyQueued(ev, s)
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -563,28 +486,7 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 
 	case StepLeased:
-		s.Status = StepLeasedS
-		s.NotBefore = 0
-		s.LeaseID = p.Lease
-		s.Runner = p.Runner
-		// A deploy runner's actions need no workspace: they do not move the
-		// run to that runner. Nor do verify and ai steps.
-		if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
-			break
-		}
-		if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
-			if st.Status == RunQueued {
-				st.Status, st.StartedAt = RunRunning, ev.At
-			}
-			break
-		}
-		if p.Runner != st.Runner {
-			st.Runner, st.Workspace = p.Runner, p.Lease
-		}
-		if st.Status == RunQueued {
-			st.Status = RunRunning
-			st.StartedAt = ev.At
-		}
+		st.applyLeased(ev, s)
 
 	case StepStarted:
 		s.Status = StepRunning
@@ -610,43 +512,13 @@ func (st *RunState) apply(ev Event) {
 		}
 
 	case StepReset:
-		s.Status = StepPending
-		s.Failures, s.Lost = 0, 0
-		s.Error, s.SkipKind, s.Excerpt = "", "", ""
-		s.Allowed = false
-		s.NotBefore, s.FailCause = 0, ""
-		s.ExitCode = nil
-		s.StartedAt, s.FinishedAt = 0, 0
-		s.clearDecision()
-		s.WaitKind, s.Dep = "", nil
-		s.Gate, s.Evidence = nil, nil
-		s.Ver, s.AI = nil, nil
+		st.applyReset(ev, s)
 
 	case StepWaiting:
-		s.Status = StepWaitingS
-		s.Attempt = p.Attempt
-		// It starts waiting now; how long it waited is shown like a step's run time.
-		s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
-		s.Error = ""
-		s.clearDecision()
-		s.Deadline = p.Deadline
-		if st.Status == RunQueued {
-			st.Status = RunRunning
-			st.StartedAt = ev.At
-		}
+		st.applyWaiting(ev, s)
 
 	case StepApproved, StepRejected:
-		st.endApprovalWait(s, ev.At)
-		if ev.Type == StepApproved {
-			s.Status = StepSucceeded
-			s.Error = ""
-		} else {
-			s.Status = StepFailed
-			s.Failures++
-			s.Error = p.Reason
-		}
-		s.FinishedAt = ev.At
-		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
+		st.applyDecided(ev, s)
 
 	case StepReused:
 		s.applyReused(p, ev)
@@ -671,6 +543,136 @@ func (st *RunState) apply(ev Event) {
 	default:
 		st.applyDeploy(ev, s)
 	}
+}
+
+// applyCreated folds run.created: what the run is, and what was in force when
+// it was created.
+func (st *RunState) applyCreated(ev Event) {
+	p := ev.Data
+	st.ID = ev.RunID
+	st.Project = p.Project
+	st.Number = p.Number
+	st.Pipeline = p.Pipeline
+	if p.Trigger != nil {
+		st.Trigger = *p.Trigger
+	}
+	if p.Source != nil {
+		st.Source = *p.Source
+	}
+	if p.Draft != nil {
+		d := *p.Draft
+		st.Draft = &d
+	}
+	if p.Rerun != nil {
+		r := *p.Rerun
+		st.Rerun = &r
+	}
+	st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
+	st.SelfApproval = p.SelfApproval
+	st.Status = RunQueued
+	st.CreatedAt = ev.At
+	st.Steps = map[string]*StepState{}
+	st.Order = nil
+	for i, step := range p.Pipeline.Steps {
+		st.Steps[step.ID] = &StepState{ID: step.ID, Position: i, Status: StepPending}
+		st.Order = append(st.Order, step.ID)
+	}
+}
+
+// applyQueued folds StepQueued.
+func (st *RunState) applyQueued(ev Event, s *StepState) {
+	p := ev.Data
+	if p.Attempt != s.Attempt && s.Dep != nil {
+		s.Dep.Phases = 0
+	}
+	s.Status = StepQueuedS
+	s.WaitKind = ""
+	if d := p.Deploy; d != nil {
+		st.queueAction(s, d)
+	}
+	s.Attempt = p.Attempt
+	s.QueuedAt = ev.At
+	s.StartedAt, s.FinishedAt = 0, 0
+	s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
+	s.Outputs = nil
+	s.Excerpt = ""
+	s.Evidence = nil
+	s.Allowed = false
+	s.NotBefore = p.NotBefore
+}
+
+// applyLeased folds StepLeased.
+func (st *RunState) applyLeased(ev Event, s *StepState) {
+	p := ev.Data
+	s.Status = StepLeasedS
+	s.NotBefore = 0
+	s.LeaseID = p.Lease
+	s.Runner = p.Runner
+	// A deploy runner's actions need no workspace: they do not move the
+	// run to that runner. Nor do verify and ai steps.
+	if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
+		return
+	}
+	if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
+		if st.Status == RunQueued {
+			st.Status, st.StartedAt = RunRunning, ev.At
+		}
+		return
+	}
+	if p.Runner != st.Runner {
+		st.Runner, st.Workspace = p.Runner, p.Lease
+	}
+	if st.Status == RunQueued {
+		st.Status = RunRunning
+		st.StartedAt = ev.At
+	}
+}
+
+// applyReset folds StepReset.
+func (st *RunState) applyReset(ev Event, s *StepState) {
+	s.Status = StepPending
+	s.Failures, s.Lost = 0, 0
+	s.Error, s.SkipKind, s.Excerpt = "", "", ""
+	s.Allowed = false
+	s.NotBefore, s.FailCause = 0, ""
+	s.ExitCode = nil
+	s.StartedAt, s.FinishedAt = 0, 0
+	s.clearDecision()
+	s.WaitKind, s.Dep = "", nil
+	s.Gate, s.Evidence = nil, nil
+	s.Ver, s.AI = nil, nil
+}
+
+// applyWaiting folds StepWaiting.
+func (st *RunState) applyWaiting(ev Event, s *StepState) {
+	p := ev.Data
+	s.Status = StepWaitingS
+	s.Attempt = p.Attempt
+	// It starts waiting now; how long it waited is shown like a step's run time.
+	s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
+	s.Error = ""
+	s.clearDecision()
+	s.Deadline = p.Deadline
+	if st.Status == RunQueued {
+		st.Status = RunRunning
+		st.StartedAt = ev.At
+	}
+}
+
+// applyDecided folds StepApproved and StepRejected.
+func (st *RunState) applyDecided(ev Event, s *StepState) {
+	p := ev.Data
+	st.endApprovalWait(s, ev.At)
+	if ev.Type == StepApproved {
+		s.Status = StepSucceeded
+		s.Error = ""
+	} else {
+		s.Status = StepFailed
+		s.Failures++
+		s.Error = p.Reason
+	}
+	s.FinishedAt = ev.At
+	s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
 }
 
 // endApprovalWait counts the time an approval waited, now that it ends,

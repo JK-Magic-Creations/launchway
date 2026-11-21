@@ -306,10 +306,10 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 				from.Run, from.Number, from.Attempt = s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt
 			}
 			p := Payload{Step: id, Outcome: string(s.Status), Outputs: s.Outputs, Reused: from, Actor: s.DecidedBy, Comment: s.Comment}
-			switch {
-			case s.Status == StepSkippedS:
+			switch s.Status {
+			case StepSkippedS:
 				p.SkipKind, p.Reason = s.SkipKind, s.Error
-			case s.Status == StepFailed:
+			case StepFailed:
 				p.Allowed, p.Reason = true, s.Error
 			}
 			c.emit(StepReused, p)

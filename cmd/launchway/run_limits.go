@@ -59,7 +59,7 @@ func (cl *client) runLimitsGet(args []string) error {
 
 func (cl *client) runLimitsSet(args []string) error {
 	fs := flag.NewFlagSet("run-limits set", flag.ContinueOnError)
-	max := fs.String("max-run-timeout", "", "the longest timeout a pipeline may ask for; \"\" removes the limit")
+	maxTimeout := fs.String("max-run-timeout", "", "the longest timeout a pipeline may ask for; \"\" removes the limit")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -69,7 +69,7 @@ func (cl *client) runLimitsSet(args []string) error {
 		return usageErr("launchway run-limits set --max-run-timeout D")
 	}
 	var out runLimitsView
-	if err := cl.call("PUT", "/api/v1/run-limits", map[string]string{"max_run_timeout": *max}, &out); err != nil {
+	if err := cl.call("PUT", "/api/v1/run-limits", map[string]string{"max_run_timeout": *maxTimeout}, &out); err != nil {
 		return err
 	}
 	return cl.print(out, *asJSON, func() {

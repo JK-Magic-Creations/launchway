@@ -220,23 +220,23 @@ func (c *cmd) displaceInLane(runID string, number int, label string) error {
 
 // startFromLane starts a waiting run (this command's run, or one it changes
 // with alsoRun) if its lane is free and it is first in line.
-func (o *cmd) startFromLane() (bool, error) {
-	if !o.st.laneWaiting() || o.st.Status.Terminal() || o.st.CancelRequested {
+func (c *cmd) startFromLane() (bool, error) {
+	if !c.st.laneWaiting() || c.st.Status.Terminal() || c.st.CancelRequested {
 		return false, nil
 	}
-	_, _, held, err := o.activeHolder(o.st.Project, o.st.Lane.Key)
+	_, _, held, err := c.activeHolder(c.st.Project, c.st.Lane.Key)
 	if err != nil || held {
 		return false, err
 	}
-	waiting, err := o.waitingRuns(o.st.Project, o.st.Lane.Key)
+	waiting, err := c.waitingRuns(c.st.Project, c.st.Lane.Key)
 	if err != nil {
 		return false, err
 	}
-	if len(waiting) > 0 && waiting[0] != o.runID {
+	if len(waiting) > 0 && waiting[0] != c.runID {
 		return false, nil
 	}
-	o.emit(RunLaneStarted, Payload{Lane: laneEvent(o.st, "", 0)})
-	o.advance()
+	c.emit(RunLaneStarted, Payload{Lane: laneEvent(c.st, "", 0)})
+	c.advance()
 	return true, nil
 }
 
@@ -361,17 +361,20 @@ func (e *Engine) recoverLanes() {
 		e.log.Error("looking for lanes with no holder", "err", err)
 		return
 	}
+	defer rows.Close()
 	var first []string
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
 			e.log.Error("looking for lanes with no holder", "err", err)
 			return
 		}
 		first = append(first, id)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		e.log.Error("looking for lanes with no holder", "err", err)
+		return
+	}
 	for _, id := range first {
 		err := e.withRun(id, func(c *cmd) error {
 			if err := c.lockLanes(c.st.Project); err != nil {
@@ -463,22 +466,26 @@ func (e *Engine) Lanes(project string) ([]LaneView, error) {
 		order = append(order, key)
 		return v
 	}
-	rows, err := e.db.Query(`SELECT h.lane_key, r.lane_name, r.lane_label, r.id, r.number, r.status, r.event, h.since
+	if err := func() error {
+		rows, err := e.db.Query(`SELECT h.lane_key, r.lane_name, r.lane_label, r.id, r.number, r.status, r.event, h.since
 		FROM lane_holders h JOIN runs r ON r.id = h.run_id WHERE h.project = ? ORDER BY h.lane_key`, project)
-	if err != nil {
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key, name, label string
+			var s LaneRunSummary
+			if err := rows.Scan(&key, &name, &label, &s.ID, &s.Number, &s.Status, &s.Event, &s.Since); err != nil {
+				return err
+			}
+			get(key, name, label).Holder = &s
+		}
+		return rows.Err()
+	}(); err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		var key, name, label string
-		var s LaneRunSummary
-		if err := rows.Scan(&key, &name, &label, &s.ID, &s.Number, &s.Status, &s.Event, &s.Since); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		get(key, name, label).Holder = &s
-	}
-	rows.Close()
-	rows, err = e.db.Query(`SELECT w.lane_key, r.lane_name, r.lane_label, r.id, r.number, r.status, r.event, w.since, w.position
+	rows, err := e.db.Query(`SELECT w.lane_key, r.lane_name, r.lane_label, r.id, r.number, r.status, r.event, w.since, w.position
 		FROM lane_waiting w JOIN runs r ON r.id = w.run_id WHERE w.project = ? ORDER BY w.lane_key, w.position`, project)
 	if err != nil {
 		return nil, err

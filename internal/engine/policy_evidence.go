@@ -96,29 +96,7 @@ func (c *cmd) stepEvidence(stepID string, deployDef *pipeline.Step, floor string
 	// threshold, as far as the run kept them.
 	if floor != "" {
 		for _, a := range withFindings {
-			rows, err := c.tx.Query(`SELECT fingerprint, tool, rule_id, severity, file, start_line FROM findings
-				WHERE run_id = ? AND step_id = ? AND attempt = ? ORDER BY id`, a.run, a.step, a.attempt)
-			if err != nil {
-				return nil, err
-			}
-			for rows.Next() {
-				var f policy.FindingFact
-				if err := rows.Scan(&f.Fingerprint, &f.Tool, &f.Rule, &f.Severity, &f.File, &f.Line); err != nil {
-					rows.Close()
-					return nil, err
-				}
-				if !policy.Worse(f.Severity, floor) {
-					continue
-				}
-				if len(ev.Findings) >= policy.MaxListedFacts {
-					ev.FindingsListed = false
-					break
-				}
-				f.Step = a.step
-				ev.Findings = append(ev.Findings, f)
-			}
-			rows.Close()
-			if err := rows.Err(); err != nil {
+			if err := c.addFindingFacts(ev, a.run, a.step, a.attempt, floor); err != nil {
 				return nil, err
 			}
 		}
@@ -134,4 +112,31 @@ func (c *cmd) stepEvidence(stepID string, deployDef *pipeline.Step, floor string
 		}
 	}
 	return ev, nil
+}
+
+// addFindingFacts adds to ev the findings of one step attempt that are worse
+// than floor, as far as the run kept them and up to the most it lists.
+func (c *cmd) addFindingFacts(ev *policy.Evidence, run, step string, attempt int, floor string) error {
+	rows, err := c.tx.Query(`SELECT fingerprint, tool, rule_id, severity, file, start_line FROM findings
+		WHERE run_id = ? AND step_id = ? AND attempt = ? ORDER BY id`, run, step, attempt)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var f policy.FindingFact
+		if err := rows.Scan(&f.Fingerprint, &f.Tool, &f.Rule, &f.Severity, &f.File, &f.Line); err != nil {
+			return err
+		}
+		if !policy.Worse(f.Severity, floor) {
+			continue
+		}
+		if len(ev.Findings) >= policy.MaxListedFacts {
+			ev.FindingsListed = false
+			break
+		}
+		f.Step = step
+		ev.Findings = append(ev.Findings, f)
+	}
+	return rows.Err()
 }

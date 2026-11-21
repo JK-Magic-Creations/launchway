@@ -169,17 +169,20 @@ func (e *Engine) expireRunTimeouts() {
 		e.log.Error("looking for runs past their timeout", "err", err)
 		return
 	}
+	defer rows.Close()
 	var due []string
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
 			e.log.Error("looking for runs past their timeout", "err", err)
 			return
 		}
 		due = append(due, id)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		e.log.Error("looking for runs past their timeout", "err", err)
+		return
+	}
 	for _, id := range due {
 		err := e.withRun(id, func(c *cmd) error {
 			if d := c.st.deadline(); d == 0 || d > c.now {
@@ -236,16 +239,16 @@ func readRunLimits(q interface {
 	QueryRow(string, ...any) *sql.Row
 }) (RunLimits, error) {
 	var l RunLimits
-	var max int64
-	err := q.QueryRow(`SELECT max_run_timeout, updated_at, updated_by FROM installation_limits WHERE name = ?`, limitsName).Scan(&max, &l.UpdatedAt, &l.UpdatedBy)
+	var limit int64
+	err := q.QueryRow(`SELECT max_run_timeout, updated_at, updated_by FROM installation_limits WHERE name = ?`, limitsName).Scan(&limit, &l.UpdatedAt, &l.UpdatedBy)
 	if errors.Is(err, sql.ErrNoRows) {
 		return l, nil
 	}
 	if err != nil {
 		return l, err
 	}
-	if max > 0 {
-		l.MaxRunTimeout = pipeline.Duration(time.Duration(max) * time.Millisecond).Short()
+	if limit > 0 {
+		l.MaxRunTimeout = pipeline.Duration(time.Duration(limit) * time.Millisecond).Short()
 	}
 	return l, nil
 }
@@ -256,7 +259,7 @@ func (e *Engine) SetRunLimits(l RunLimits, actor string) (before, after RunLimit
 	if !e.knows(schemaFlow) {
 		return before, after, fmt.Errorf("%w: this server does not know installation limits (schema %d)", ErrConflict, schemaFlow)
 	}
-	var max time.Duration
+	var limit time.Duration
 	if l.MaxRunTimeout != "" {
 		d, perr := time.ParseDuration(l.MaxRunTimeout)
 		switch {
@@ -266,7 +269,7 @@ func (e *Engine) SetRunLimits(l RunLimits, actor string) (before, after RunLimit
 			return before, after, fmt.Errorf("%w: max_run_timeout must be between %s and %s", ErrInvalid,
 				pipeline.Duration(pipeline.MinRunTimeout).Short(), pipeline.Duration(pipeline.MaxRunTimeout).Short())
 		}
-		max = d
+		limit = d
 	}
 	unlock := e.writeLock()
 	defer unlock()
@@ -274,13 +277,13 @@ func (e *Engine) SetRunLimits(l RunLimits, actor string) (before, after RunLimit
 	if err != nil {
 		return before, after, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if before, err = readRunLimits(tx); err != nil {
 		return before, after, err
 	}
 	if _, err = tx.Exec(`INSERT INTO installation_limits(name, max_run_timeout, updated_at, updated_by) VALUES(?,?,?,?)
 		ON CONFLICT(name) DO UPDATE SET max_run_timeout = excluded.max_run_timeout, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
-		limitsName, max.Milliseconds(), e.now().UnixMilli(), actor); err != nil {
+		limitsName, limit.Milliseconds(), e.now().UnixMilli(), actor); err != nil {
 		return before, after, err
 	}
 	if after, err = readRunLimits(tx); err != nil {
@@ -312,8 +315,8 @@ func (e *Engine) checkRunLimits(q interface {
 	if l.MaxRunTimeout == "" {
 		return nil
 	}
-	max, err := time.ParseDuration(l.MaxRunTimeout)
-	if err != nil || p.Timeout.D() <= max {
+	limit, err := time.ParseDuration(l.MaxRunTimeout)
+	if err != nil || p.Timeout.D() <= limit {
 		return nil
 	}
 	return pipeline.Problems{{Line: p.TimeoutLine, Path: "timeout", Message: fmt.Sprintf(

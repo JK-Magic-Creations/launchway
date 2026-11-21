@@ -1824,66 +1824,29 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
-	if c.e.knows(schemaReruns) {
-		if err := c.persistSchema8(); err != nil {
-			return err
+	// What each schema added to the derived tables, written by builds that know it.
+	for _, w := range []struct {
+		schema int
+		write  func() error
+	}{
+		{schemaReruns, c.persistSchema8},
+		{schemaFlow, func() error { return c.persistFlow(changed) }},
+		{schemaFlow, c.persistLanes},
+		{schemaPullRequests, c.persistSchema9},
+		{schemaTests, c.persistSchema10},
+		{schemaDeploy, c.persistSchema11},
+		{schemaArtifacts, c.persistSchema12},
+		{schemaControl, c.persistControl},
+		{schemaImages, c.persistImages},
+		{schemaPolicy, c.persistPolicy},
+		{schemaReports, c.persistSchema18},
+		{schemaVerify, c.persistVerify},
+		{schemaPools, c.persistPools},
+	} {
+		if !c.e.knows(w.schema) {
+			continue
 		}
-	}
-	if c.e.knows(schemaFlow) {
-		if err := c.persistFlow(changed); err != nil {
-			return err
-		}
-		if err := c.persistLanes(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaPullRequests) {
-		if err := c.persistSchema9(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaTests) {
-		if err := c.persistSchema10(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaDeploy) {
-		if err := c.persistSchema11(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaArtifacts) {
-		if err := c.persistSchema12(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaControl) {
-		if err := c.persistControl(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaImages) {
-		if err := c.persistImages(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaPolicy) {
-		if err := c.persistPolicy(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaReports) {
-		if err := c.persistSchema18(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaVerify) {
-		if err := c.persistVerify(); err != nil {
-			return err
-		}
-	}
-	if c.e.knows(schemaPools) {
-		if err := c.persistPools(); err != nil {
+		if err := w.write(); err != nil {
 			return err
 		}
 	}

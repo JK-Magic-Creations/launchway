@@ -21,7 +21,7 @@ func (c *cmd) lose(stepID, reason string) {
 	switch {
 	case c.st.CancelRequested:
 		c.emit(StepCanceled, Payload{Step: stepID, Attempt: s.Attempt, Reason: c.st.canceledBecause()})
-	case s.Lost <= c.e.maxLost && !(policy && !def.RetriesCause(pipeline.CauseInfrastructure)):
+	case s.Lost <= c.e.maxLost && (!policy || def.RetriesCause(pipeline.CauseInfrastructure)):
 		q := Payload{Step: stepID, Attempt: s.Attempt + 1, Reason: "requeued after: " + reason}
 		if policy {
 			if wait := def.RetryDelay(s.Lost); wait > 0 {
