@@ -240,37 +240,72 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <h2 id="h-changed">What changed in the roadmap</h2>
     <p class="wc-date">21 November 2026</p>
     <ul>
-      <li>Six new areas: standards and scanning for every repository, build tools and caches that are never stale, dependency order and releases, built-in platform services, configuration as code, and the developer’s golden path.</li>
-      <li>A new area on installing Launchway: one guided installer for a laptop, a server or Kubernetes, a chart with a handful of values, and built-in accounts with a one-time setup code.</li>
-      <li>The hosted service now describes your own Base for every customer, a vendor console and separate vendor sign-in that see the service and never your work, and support bundles you choose and preview.</li>
-      <li>Now available: pull requests with code review and merge rules, parallel steps drawn as parallel, a step user with an account entry, testing like the pipeline, and rollback after a successful deployment.</li>
-      <li>In progress: encryption of stored secrets under a root key, the cache correctness fixes, built-in accounts, the installer, and waiting for room instead of failing.</li>
-      <li>How we build has four new principles: simple to install, walled-off Bases proven by tests, a cache that never changes a result, and an order the system works out and a person can override.</li>
+      <li>The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.</li>
+      <li>Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.</li>
+      <li>Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.</li>
+      <li>A free plan principle: every feature on, spend limit at zero. Prices and numeric limits are not decided and are not listed.</li>
+      <li>Builds across a team’s machines by free processor and memory, load-aware runners on personal machines, fair use, matrix builds, shared step templates, a starter library, detection, a gallery, launchway init and an editor schema (being built now).</li>
+      <li>Statuses corrected against the code: only what is on the main branch is Available. Encryption at rest, built-in accounts, the guided installer, queueing and limits, path filters, restricted pull requests, deploy health checks, GitOps write-back, notifications, offline validation and dependency updates are built and in final integration.</li>
+      <li>New: a short, honest “Where Launchway stands today” section, and the order we are building in.</li>
     </ul>
+  </section>
+
+<section class="what-changed" aria-labelledby="h-stands">
+    <h2 id="h-stands">Where Launchway stands today</h2>
+    <p class="wc-date">What is already strong</p>
+    <ul>
+      <li>Delivery with verification and rollback: a deployment is checked, and you can return to the last good state even after it succeeded.</li>
+      <li>Failures that explain themselves: a failed run says why, with the evidence, and re-runs from the failed step.</li>
+      <li>Pipelines you can see: steps drawn the way they run, and a change followed from idea to running software.</li>
+      <li>Runs on your own hardware: one program and a database, with no outside service required.</li>
+    </ul>
+    <p class="wc-date">What is not there yet</p>
+    <ul>
+      <li>A large library of ready-made steps and starters: a first set is being built now.</li>
+      <li>Hosted runners: they come last in the opening of the hosted service.</li>
+      <li>Matrix builds: being built now, not yet merged.</li>
+      <li>Windows and macOS runners.</li>
+      <li>Maturity: Launchway is young, has few users and has not been through an independent security audit or a certification.</li>
+    </ul>
+    <p class="wc-date">Much of what is listed as in progress is built and tested but not yet merged; it counts as Available only when it is.</p>
+  </section>
+
+<section class="what-changed" aria-labelledby="h-queue">
+    <h2 id="h-queue">The order we are building in</h2>
+    <p class="wc-date">After what is already in flight, in this order.</p>
+    <ol>
+      <li><b><a href="./roadmap/build-order.html">One combined, tested build, and moving the repositories</a>.</b> Everything in flight is joined into one release, tested together, and the repositories are moved onto Launchway itself.</li>
+      <li><b><a href="./roadmap/repository-standards.html">Standards for every repository</a>.</b> Scans and best practices are on by default for every repository, and a team can turn them down.</li>
+      <li><b><a href="./roadmap/developer-experience.html">Polished test reports</a>.</b> Detailed test results as web pages and PDF.</li>
+      <li><b><a href="./roadmap/repository-standards.html">Adapters for the tools teams already use</a>.</b> Results from commercial products join the same findings, gates and reports.</li>
+      <li><b><a href="./roadmap/ai.html">The model gateway</a>.</b> One endpoint for any model, hosted or local, with usage and spending limits.</li>
+      <li><b><a href="./roadmap/pipelines.html">Runner placement</a>.</b> Load-aware runners on personal machines first, then a build’s parallel steps spread across machines, size hints and fairness.</li>
+      <li><b><a href="./roadmap/hosted-service.html">The track towards the first outside user</a>.</b> The files-on-your-machines mode and the wall between Bases, then the opening stages.</li>
+    </ol>
   </section>
 
   <div class="stats" aria-label="Where things stand">
     <div class="stat st-available"><b>67</b><span><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span></span></div>
-    <div class="stat st-in-progress"><b>34</b><span><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></span></div>
-    <div class="stat st-planned"><b>446</b><span><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span></span></div>
-    <div class="stat"><b>547</b><span class="stat-l">capabilities in all</span></div>
+    <div class="stat st-in-progress"><b>50</b><span><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></span></div>
+    <div class="stat st-planned"><b>477</b><span><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span></span></div>
+    <div class="stat"><b>594</b><span class="stat-l">capabilities in all</span></div>
   </div>
 
   <nav aria-label="Milestones">
 <ol class="journey" aria-label="The milestones, in order">
   <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">42 things</span></a></li>
-  <li class="when-now"><a href="#milestone-1"><span class="node" aria-hidden="true">1</span><span class="jname">Host and run</span><span class="jwhen">Now</span><span class="bar" role="img" aria-label="16 available, 19 in progress, 62 planned of 97"><span class="seg st-available" style="flex:16"></span><span class="seg st-in-progress" style="flex:19"></span><span class="seg st-planned" style="flex:62"></span></span></a></li>
-  <li class="when-next"><a href="#milestone-2"><span class="node" aria-hidden="true">2</span><span class="jname">Pipeline power</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 6 in progress, 47 planned of 55"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:6"></span><span class="seg st-planned" style="flex:47"></span></span></a></li>
-  <li class="when-next"><a href="#milestone-3"><span class="node" aria-hidden="true">3</span><span class="jname">Delivery depth</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 3 in progress, 89 planned of 92"><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:89"></span></span></a></li>
+  <li class="when-now"><a href="#milestone-1"><span class="node" aria-hidden="true">1</span><span class="jname">Host and run</span><span class="jwhen">Now</span><span class="bar" role="img" aria-label="16 available, 31 in progress, 60 planned of 107"><span class="seg st-available" style="flex:16"></span><span class="seg st-in-progress" style="flex:31"></span><span class="seg st-planned" style="flex:60"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-2"><span class="node" aria-hidden="true">2</span><span class="jname">Pipeline power</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 6 in progress, 54 planned of 62"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:6"></span><span class="seg st-planned" style="flex:54"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-3"><span class="node" aria-hidden="true">3</span><span class="jname">Delivery depth</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 5 in progress, 87 planned of 92"><span class="seg st-in-progress" style="flex:5"></span><span class="seg st-planned" style="flex:87"></span></span></a></li>
   <li class="when-later"><a href="#milestone-4"><span class="node" aria-hidden="true">4</span><span class="jname">Registry</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="1 available, 0 in progress, 15 planned of 16"><span class="seg st-available" style="flex:1"></span><span class="seg st-planned" style="flex:15"></span></span></a></li>
-  <li class="when-later"><a href="#milestone-5"><span class="node" aria-hidden="true">5</span><span class="jname">Software graph</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="1 available, 0 in progress, 25 planned of 26"><span class="seg st-available" style="flex:1"></span><span class="seg st-planned" style="flex:25"></span></span></a></li>
-  <li class="when-later"><a href="#milestone-6"><span class="node" aria-hidden="true">6</span><span class="jname">AI helper</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="2 available, 0 in progress, 13 planned of 15"><span class="seg st-available" style="flex:2"></span><span class="seg st-planned" style="flex:13"></span></span></a></li>
-  <li class="when-later"><a href="#milestone-7"><span class="node" aria-hidden="true">7</span><span class="jname">Hosted service</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="0 available, 2 in progress, 39 planned of 41"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:39"></span></span></a></li>
+  <li class="when-later"><a href="#milestone-5"><span class="node" aria-hidden="true">5</span><span class="jname">Software graph</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="1 available, 2 in progress, 24 planned of 27"><span class="seg st-available" style="flex:1"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:24"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-6"><span class="node" aria-hidden="true">6</span><span class="jname">AI helper</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 0 in progress, 13 planned of 15"><span class="seg st-available" style="flex:2"></span><span class="seg st-planned" style="flex:13"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-7"><span class="node" aria-hidden="true">7</span><span class="jname">Hosted service</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 2 in progress, 66 planned of 68"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:66"></span></span></a></li>
   <li class="when-next"><a href="#milestone-8"><span class="node" aria-hidden="true">8</span><span class="jname">Zero downtime</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="1 available, 1 in progress, 46 planned of 48"><span class="seg st-available" style="flex:1"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:46"></span></span></a></li>
   <li class="when-next"><a href="#milestone-9"><span class="node" aria-hidden="true">9</span><span class="jname">Network and traffic</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 0 in progress, 31 planned of 31"><span class="seg st-planned" style="flex:31"></span></span></a></li>
   <li class="when-next"><a href="#milestone-10"><span class="node" aria-hidden="true">10</span><span class="jname">Databases</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 1 in progress, 21 planned of 22"><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:21"></span></span></a></li>
   <li class="when-next"><a href="#milestone-11"><span class="node" aria-hidden="true">11</span><span class="jname">Kubernetes and VMs</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 0 in progress, 18 planned of 18"><span class="seg st-planned" style="flex:18"></span></span></a></li>
-  <li class="when-next"><a href="#milestone-12"><span class="node" aria-hidden="true">12</span><span class="jname">Security and trust</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 2 in progress, 32 planned of 36"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:32"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-12"><span class="node" aria-hidden="true">12</span><span class="jname">Security and trust</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="2 available, 2 in progress, 34 planned of 38"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:34"></span></span></a></li>
   <li class="when-later"><a href="#beyond"><span class="node" aria-hidden="true">+</span><span class="jname">Beyond</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="0 available, 0 in progress, 8 planned of 8"><span class="seg st-planned" style="flex:8"></span></span></a></li>
 </ol>
   </nav>
@@ -331,8 +366,8 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   <a href="./roadmap/milestone-3.html"><g class="dep-node when-next"><rect x="314" y="84" width="210" height="54" rx="11"/><text x="328" y="107" class="bp-t dep-l">Milestone 3</text><text x="328" y="126" class="dep-n">Delivery depth · Next</text></g></a>
   <a href="./roadmap/milestone-4.html"><g class="dep-node when-later"><rect x="314" y="154" width="210" height="54" rx="11"/><text x="328" y="177" class="bp-t dep-l">Milestone 4</text><text x="328" y="196" class="dep-n">Registry · Later</text></g></a>
   <a href="./roadmap/milestone-5.html"><g class="dep-node when-later"><rect x="614" y="119" width="210" height="54" rx="11"/><text x="628" y="142" class="bp-t dep-l">Milestone 5</text><text x="628" y="161" class="dep-n">Software graph · Later</text></g></a>
-  <a href="./roadmap/milestone-6.html"><g class="dep-node when-later"><rect x="314" y="224" width="210" height="54" rx="11"/><text x="328" y="247" class="bp-t dep-l">Milestone 6</text><text x="328" y="266" class="dep-n">AI helper · Later</text></g></a>
-  <a href="./roadmap/milestone-7.html"><g class="dep-node when-later"><rect x="314" y="294" width="210" height="54" rx="11"/><text x="328" y="317" class="bp-t dep-l">Milestone 7</text><text x="328" y="336" class="dep-n">Hosted service · Later</text></g></a>
+  <a href="./roadmap/milestone-6.html"><g class="dep-node when-next"><rect x="314" y="224" width="210" height="54" rx="11"/><text x="328" y="247" class="bp-t dep-l">Milestone 6</text><text x="328" y="266" class="dep-n">AI helper · Next</text></g></a>
+  <a href="./roadmap/milestone-7.html"><g class="dep-node when-next"><rect x="314" y="294" width="210" height="54" rx="11"/><text x="328" y="317" class="bp-t dep-l">Milestone 7</text><text x="328" y="336" class="dep-n">Hosted service · Next</text></g></a>
   <a href="./roadmap/milestone-8.html"><g class="dep-node when-next"><rect x="614" y="189" width="210" height="54" rx="11"/><text x="628" y="212" class="bp-t dep-l">Milestone 8</text><text x="628" y="231" class="dep-n">Zero downtime · Next</text></g></a>
   <a href="./roadmap/milestone-9.html"><g class="dep-node when-next"><rect x="614" y="259" width="210" height="54" rx="11"/><text x="628" y="282" class="bp-t dep-l">Milestone 9</text><text x="628" y="301" class="dep-n">Network and traffic · Next</text></g></a>
   <a href="./roadmap/milestone-10.html"><g class="dep-node when-next"><rect x="914" y="119" width="210" height="54" rx="11"/><text x="928" y="142" class="bp-t dep-l">Milestone 10</text><text x="928" y="161" class="dep-n">Databases · Next</text></g></a>
@@ -355,7 +390,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card"><h4><a href="./roadmap/traffic.html">Live traffic, protection and reliability</a></h4><p>The traffic map, limits and attack signals, reliability targets and toggles in one view.</p></li>
       <li class="card"><h4><a href="./roadmap/software-graph.html">The software graph and automated patching</a></h4><p>What is deployed where, and the loop that patches it safely.</p></li>
       <li class="card"><h4><a href="./roadmap/ai.html">AI as an optional helper</a></h4><p>The gateway, local models, spending limits and the protected path.</p></li>
-      <li class="card"><h4><a href="./roadmap/hosted-service.html">The hosted service and sandboxed runners</a></h4><p>Isolation layers, runners on your machines and the public demo.</p></li>
+      <li class="card"><h4><a href="./roadmap/hosted-service.html">The hosted service and sandboxed runners</a></h4><p>Sign-up, three ways to run with easy moves, size limits, never public file storage, opening in stages, isolation layers and the public demo.</p></li>
       <li class="card"><h4><a href="./roadmap/guided-interface.html">The guided interface</a></h4><p>Follow a change on its launch line, and the overview, focus and detail pattern.</p></li>
       <li class="card"><h4><a href="./roadmap/zero-downtime.html">Zero-downtime delivery</a></h4><p>One model for every deployment: a plan, a shifter, proofs, controls and the last stable state, with the watch afterward.</p></li>
       <li class="card"><h4><a href="./roadmap/network.html">Network and traffic</a></h4><p>The path of a request from the edge to a workload, where findings come from, DNS and service meshes.</p></li>
@@ -463,7 +498,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-1.html">Open the detail page<span class="visually-hidden"> for Host and run</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="16 available, 19 in progress, 62 planned of 97"><span class="seg st-available" style="flex:16"></span><span class="seg st-in-progress" style="flex:19"></span><span class="seg st-planned" style="flex:62"></span></span><span class="m-count">16 available · 19 in progress · 62 planned</span><span class="m-count">97 capabilities in 11 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="16 available, 31 in progress, 60 planned of 107"><span class="seg st-available" style="flex:16"></span><span class="seg st-in-progress" style="flex:31"></span><span class="seg st-planned" style="flex:60"></span></span><span class="m-count">16 available · 31 in progress · 60 planned</span><span class="m-count">107 capabilities in 12 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">Host your code</span><span class="g-count">20 · <span class="bar" role="img" aria-label="4 available, 0 in progress, 16 planned of 20"><span class="seg st-available" style="flex:4"></span><span class="seg st-planned" style="flex:16"></span></span></span></summary>
@@ -558,13 +593,13 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     </ul>
   </details>
   <details class="subgroup">
-    <summary><span class="g-name">Pipelines that match what teams expect from hosted CI</span><span class="g-count">12 · <span class="bar" role="img" aria-label="4 available, 3 in progress, 5 planned of 12"><span class="seg st-available" style="flex:4"></span><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:5"></span></span></span></summary>
+    <summary><span class="g-name">Pipelines that match what teams expect from hosted CI</span><span class="g-count">12 · <span class="bar" role="img" aria-label="4 available, 5 in progress, 3 planned of 12"><span class="seg st-available" style="flex:4"></span><span class="seg st-in-progress" style="flex:5"></span><span class="seg st-planned" style="flex:3"></span></span></span></summary>
     <p class="g-blurb">Everything a hosted CI service offers, in one place.</p>
     <ul class="grid">
       <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-1.html#conditions-retries-lanes-and-re-runs">Conditions, retries, lanes and re-runs</a></h4><p>Run a step only when it should, retry what is flaky, make runs take turns, and re-run from any step. <a class="more" href="./reference/pipeline.html#when">Read more<span class="visually-hidden"> about Conditions, retries, lanes and re-runs</span> →</a></p></li>
       <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-1.html#warm-builds-with-caches">Warm builds with caches</a></h4><p>Keep dependencies between runs so builds start warm, with rules for who may read and write them. <a class="more" href="./guide/build-caches.html">Read more<span class="visually-hidden"> about Warm builds with caches</span> →</a></p></li>
       <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#flow-control-part-two">Flow control, part two</a></h4><p>Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members.</p></li>
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-1.html#platform-matrices">Platform matrices</a></h4><p>Run the same steps across operating systems and architectures from one definition.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#matrix-builds">Matrix builds</a></h4><p>Run the same steps across operating systems, architectures and versions from one definition.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-1.html#cloud-sign-in-per-step">Cloud sign-in per step</a></h4><p>Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-1.html#re-run-only-what-failed">Re-run only what failed</a></h4><p>Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-1.html#per-step-runner-and-workspace">Per-step runner and workspace</a></h4><p>Each step can choose its own image, runner and working area.</p></li>
@@ -572,7 +607,23 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-1.html#a-step-s-user-has-an-account-entry">A step's user has an account entry</a></h4><p>The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work.</p></li>
       <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#runs-wait-for-room-instead-of-failing">Runs wait for room instead of failing</a></h4><p>A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing.</p></li>
       <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#run-priority-and-limits">Run priority and limits</a></h4><p>Set which runs go first and how many may run at once, per installation or project.</p></li>
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-1.html#path-filters">Path filters</a></h4><p>Start a pipeline only when the files that changed match, or do not match, paths you name.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#path-filters">Path filters</a></h4><p>Start a pipeline only when the files that changed match, or do not match, paths you name.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Easy to start, easy to write</span><span class="g-count">10 · <span class="bar" role="img" aria-label="0 available, 10 in progress, 0 planned of 10"><span class="seg st-in-progress" style="flex:10"></span></span></span></summary>
+    <p class="g-blurb">Write a pipeline from a starter, from detection, or from nothing at all, and have the editor help. Being built now.</p>
+    <ul class="grid">
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#shared-step-templates">Shared step templates</a></h4><p>Write a step once as a template and use it in many pipelines, with its inputs checked.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#a-built-in-starter-library-for-each-language">A built-in starter library for each language</a></h4><p>Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#a-pipeline-with-no-file-by-detection">A pipeline with no file, by detection</a></h4><p>Push a repository with no pipeline file and Launchway looks at what it holds and proposes the right pipeline, which you accept as it is or save into the repository to edit.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#a-gallery-of-examples">A gallery of examples</a></h4><p>Browse working example pipelines for common jobs, copy one and see it run.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#launchway-init">launchway init</a></h4><p>One command in a repository that writes a first pipeline from what it finds there.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#an-editor-schema-for-pipeline-files">An editor schema for pipeline files</a></h4><p>A published description of the pipeline format that gives completion and inline errors in common editors.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#validate-pipelines-offline">Validate pipelines offline</a></h4><p>Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#more-power-in-templates">More power in templates</a></h4><p>Template defaults derived from other inputs, conditions on every kind of step and optional list entries.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#notifications-to-webhooks-and-chat-services">Notifications to webhooks and chat services</a></h4><p>Rules that send a signed webhook or a chat message when a run, a gate or a deployment changes, with a delivery log and retries.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-1.html#restricted-mode-for-untrusted-pull-requests">Restricted mode for untrusted pull requests</a></h4><p>A pull request from outside the team runs in a restricted mode: no secrets, no writes to shared caches and no deployment.</p></li>
     </ul>
   </details>
   <details class="subgroup">
@@ -639,7 +690,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-2.html">Open the detail page<span class="visually-hidden"> for Pipeline power</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="2 available, 6 in progress, 47 planned of 55"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:6"></span><span class="seg st-planned" style="flex:47"></span></span><span class="m-count">2 available · 6 in progress · 47 planned</span><span class="m-count">55 capabilities in 6 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="2 available, 6 in progress, 54 planned of 62"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:6"></span><span class="seg st-planned" style="flex:54"></span></span><span class="m-count">2 available · 6 in progress · 54 planned</span><span class="m-count">62 capabilities in 8 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">Write pipelines your way</span><span class="g-count">15 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 15 planned of 15"><span class="seg st-planned" style="flex:15"></span></span></span></summary>
@@ -660,6 +711,25 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#runners-that-keep-themselves-updated">Runners that keep themselves updated</a></h4><p>Runners on VMs and on customers' machines update under your policy, so the fleet never drifts.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#pipeline-history-and-flaky-tests">Pipeline history and flaky tests</a></h4><p>Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#step-pages">Step pages</a></h4><p>Each step has a page: where its code lives, its inputs and types, and which pipelines use it.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Builds use every machine sensibly</span><span class="g-count">6 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 6 planned of 6"><span class="seg st-planned" style="flex:6"></span></span></span></summary>
+    <p class="g-blurb">A team’s machines share the work by what is free, and nobody’s laptop is taken over.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#builds-placed-by-free-processor-and-memory">Builds placed by free processor and memory</a></h4><p>A build can run on any of a team’s machines and is placed on one with room for it.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#runners-on-personal-machines-hold-back-when-busy">Runners on personal machines hold back when busy</a></h4><p>A runner on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#a-build-s-parallel-steps-spread-across-machines">A build’s parallel steps spread across machines</a></h4><p>The parallel steps of one build can run on different machines, with their shared files moved safely between them.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#size-hints-for-steps">Size hints for steps</a></h4><p>A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier runs, to place it.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#windows-and-macos-runners">Windows and macOS runners</a></h4><p>Runners that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#fair-use-between-the-people-lending-machines">Fair use between the people lending machines</a></h4><p>Work is shared out so that no one person’s machines carry the whole team, and everyone can see how much each machine did.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Reports people want to read</span><span class="g-count">1 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 1 planned of 1"><span class="seg st-planned" style="flex:1"></span></span></span></summary>
+    <p class="g-blurb">Test results that are a pleasure to read and easy to hand to someone else.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-2.html#polished-test-reports-as-html-and-pdf">Polished test reports as HTML and PDF</a></h4><p>Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account.</p></li>
     </ul>
   </details>
   <details class="subgroup">
@@ -743,10 +813,10 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-3.html">Open the detail page<span class="visually-hidden"> for Delivery depth</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="0 available, 3 in progress, 89 planned of 92"><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:89"></span></span><span class="m-count">0 available · 3 in progress · 89 planned</span><span class="m-count">92 capabilities in 11 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="0 available, 5 in progress, 87 planned of 92"><span class="seg st-in-progress" style="flex:5"></span><span class="seg st-planned" style="flex:87"></span></span><span class="m-count">0 available · 5 in progress · 87 planned</span><span class="m-count">92 capabilities in 11 groups</span></div>
   </header>
   <details class="subgroup">
-    <summary><span class="g-name">Applications and rollouts</span><span class="g-count">13 · <span class="bar" role="img" aria-label="0 available, 1 in progress, 12 planned of 13"><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:12"></span></span></span></summary>
+    <summary><span class="g-name">Applications and rollouts</span><span class="g-count">13 · <span class="bar" role="img" aria-label="0 available, 3 in progress, 10 planned of 13"><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:10"></span></span></span></summary>
     <p class="g-blurb">See and control everything you run, then deliver to it safely.</p>
     <ul class="grid">
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#argo-cd-in-depth">Argo CD in depth</a></h4><p>Application hierarchy views (app-of-apps and ApplicationSet trees) with status, sync, health, history and actions, ready health checks, and a hosted or your own Argo CD. <a class="more" href="./guide/deployments.html">Read more<span class="visually-hidden"> about Argo CD in depth</span> →</a></p></li>
@@ -760,8 +830,8 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#promotion-across-environments">Promotion across environments</a></h4><p>Move a version from one environment to the next with checks and approvals in between.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#post-deploy-watch-and-incidents">Post-deploy watch and incidents</a></h4><p>Keep watching after release, roll back automatically, and tie incidents to the change that caused them.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#ai-analysis-as-an-optional-rollback-gate">AI analysis as an optional rollback gate</a></h4><p>Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production.</p></li>
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#an-http-health-proof-for-verifying-deployments">An HTTP health proof for verifying deployments</a></h4><p>Verify a deployment by calling an address you name and checking the answer, with no metrics store needed.</p></li>
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#gitops-write-back-to-a-hosted-repository">GitOps write-back to a hosted repository</a></h4><p>After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-3.html#an-http-health-proof-for-verifying-deployments">An HTTP health proof for verifying deployments</a></h4><p>Verify a deployment by having the deploy runner call an address you name over HTTP or TCP and check the answer, with no metrics store needed.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-3.html#gitops-write-back-to-a-hosted-repository">GitOps write-back to a hosted repository</a></h4><p>After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, by a direct push or by a pull request, using a credential that belongs to that one deployment.</p></li>
     </ul>
   </details>
   <details class="subgroup">
@@ -949,7 +1019,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-5.html">Open the detail page<span class="visually-hidden"> for Software graph</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="1 available, 0 in progress, 25 planned of 26"><span class="seg st-available" style="flex:1"></span><span class="seg st-planned" style="flex:25"></span></span><span class="m-count">1 available · 0 in progress · 25 planned</span><span class="m-count">26 capabilities in 3 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="1 available, 2 in progress, 24 planned of 27"><span class="seg st-available" style="flex:1"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:24"></span></span><span class="m-count">1 available · 2 in progress · 24 planned</span><span class="m-count">27 capabilities in 3 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">Know what you run</span><span class="g-count">10 · <span class="bar" role="img" aria-label="1 available, 0 in progress, 9 planned of 10"><span class="seg st-available" style="flex:1"></span><span class="seg st-planned" style="flex:9"></span></span></span></summary>
@@ -968,11 +1038,12 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     </ul>
   </details>
   <details class="subgroup">
-    <summary><span class="g-name">Fix it safely</span><span class="g-count">5 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 5 planned of 5"><span class="seg st-planned" style="flex:5"></span></span></span></summary>
+    <summary><span class="g-name">Fix it safely</span><span class="g-count">6 · <span class="bar" role="img" aria-label="0 available, 2 in progress, 4 planned of 6"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:4"></span></span></span></summary>
     <p class="g-blurb">Patch as a normal change, with checks and a controlled rollout.</p>
     <ul class="grid">
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-5.html#automated-patching">Automated patching</a></h4><p>Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD.</p></li>
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-5.html#built-in-dependency-updates">Built-in dependency updates</a></h4><p>Keep common ecosystems' dependencies current, as ordinary reviewable pull requests.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-5.html#built-in-dependency-updates">Built-in dependency updates</a></h4><p>Keep dependencies current as ordinary reviewable pull requests: Go, npm and container images end to end, Python read and checked, and more ecosystems coming.</p></li>
+      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-5.html#lock-files-regenerated-in-a-container-and-checked">Lock files regenerated in a container and checked</a></h4><p>When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-5.html#image-refresh-and-patching-of-base-images">Image refresh and patching of base images</a></h4><p>Rebuild images when their base changes and roll the new ones out.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-5.html#ai-proposed-fixes">AI-proposed fixes</a></h4><p>An optional helper proposes a fix or an upgrade note, flagged as AI, never merged on its own.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-5.html#patch-deadlines-and-evidence">Patch deadlines and evidence</a></h4><p>Track how long each vulnerability has been open and produce evidence of patching within your own deadline.</p></li>
@@ -997,11 +1068,11 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </details>
 </section>
 
-<section class="milestone when-later" id="milestone-6" aria-labelledby="h-milestone-6">
+<section class="milestone when-next" id="milestone-6" aria-labelledby="h-milestone-6">
   <header class="m-head">
     <span class="mnum" aria-hidden="true">6</span>
     <div class="m-title">
-      <p class="when"><span class="when-chip when-later">Later</span> Milestone 6</p>
+      <p class="when"><span class="when-chip when-next">Next</span> Milestone 6</p>
       <h2 id="h-milestone-6">AI as an optional first-class helper</h2>
       <p class="promise">AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-6.html">Open the detail page<span class="visually-hidden"> for AI helper</span> →</a></p>
@@ -1037,22 +1108,22 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </details>
 </section>
 
-<section class="milestone when-later" id="milestone-7" aria-labelledby="h-milestone-7">
+<section class="milestone when-next" id="milestone-7" aria-labelledby="h-milestone-7">
   <header class="m-head">
     <span class="mnum" aria-hidden="true">7</span>
     <div class="m-title">
-      <p class="when"><span class="when-chip when-later">Later</span> Milestone 7</p>
+      <p class="when"><span class="when-chip when-next">Next</span> Milestone 7</p>
       <h2 id="h-milestone-7">The hosted service, the public demo and enterprise controls</h2>
-      <p class="promise">Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.</p>
+      <p class="promise">Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-7.html">Open the detail page<span class="visually-hidden"> for Hosted service</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="0 available, 2 in progress, 39 planned of 41"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:39"></span></span><span class="m-count">0 available · 2 in progress · 39 planned</span><span class="m-count">41 capabilities in 5 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="0 available, 2 in progress, 66 planned of 68"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:66"></span></span><span class="m-count">0 available · 2 in progress · 66 planned</span><span class="m-count">68 capabilities in 11 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">Hosted service and demo</span><span class="g-count">8 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 8 planned of 8"><span class="seg st-planned" style="flex:8"></span></span></span></summary>
     <p class="g-blurb">Use Launchway without running it, on a plan that follows your choices.</p>
     <ul class="grid">
-      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#hosted-service">Hosted service</a></h4><p>Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#hosted-service">Hosted service</a></h4><p>Launchway as a service: sign-up, quotas, usage metering, a free plan with every feature on, pay for use, and data residency.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#free-tier-and-pay-for-use">Free tier and pay for use</a></h4><p>A free tier, and pay-for-use billing from the start, with no extras for basics.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#data-residency">Data residency</a></h4><p>Choose where your data lives.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#runners-on-your-machines">Runners on your machines</a></h4><p>Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network.</p></li>
@@ -1060,6 +1131,69 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#hosted-capacity-that-can-grow">Hosted capacity that can grow</a></h4><p>Everything is portable, so capacity can be added on any provider as demand justifies.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#a-public-demo">A public demo</a></h4><p>A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. <a class="more" href="./demo.html">Read more<span class="visually-hidden"> about A public demo</span> →</a></p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#organizations">Organizations</a></h4><p>Several organizations on one installation, isolated from each other, with the level names you choose.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Sign up and go</span><span class="g-count">7 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 7 planned of 7"><span class="seg st-planned" style="flex:7"></span></span></span></summary>
+    <p class="g-blurb">The first customers are start-ups, freelancers and small teams, so the front door is short and safe.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#sign-up-with-the-least-set-up">Sign up with the least set-up</a></h4><p>One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first project.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#passkeys-authenticator-apps-and-recovery-codes">Passkeys, authenticator apps and recovery codes</a></h4><p>The account is bound to something only its owner has: a passkey, preferably, or an authenticator app, with recovery codes shown once. The owner and every administrator must use one of the strong ones.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#recovery-that-is-not-a-back-door">Recovery that is not a back door</a></h4><p>A lost second factor is recovered through the other factors you set up, or through a waiting period with notices to every session and to the account’s email.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#sign-up-protection-that-respects-privacy">Sign-up protection that respects privacy</a></h4><p>Rate limits, a small puzzle the browser solves and friction for throwaway addresses guard the form, with no tracking, no outside challenge service and no phone numbers.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#a-guided-first-project">A guided first project</a></h4><p>Pick a starter, create or import a repository, push or edit in the browser, see a green build, and invite a teammate with one link.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#protected-both-ways">Protected both ways</a></h4><p>The service is protected from its customers’ code and content, and customers are protected from the operator and from each other.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#leave-completely">Leave completely</a></h4><p>Export a whole Base in an open format, then delete it: after a grace period its keys are destroyed, which makes every copy, including backups, unreadable, and a certificate says so.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Three ways to run, and easy moves between them</span><span class="g-count">8 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 8 planned of 8"><span class="seg st-planned" style="flex:8"></span></span></span></summary>
+    <p class="g-blurb">One product, three places to keep your work. Choose at sign-up, change your mind later, and nothing is held hostage.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#fully-hosted">Fully hosted</a></h4><p>The default: repositories, pipelines, runners, secrets, registry and reports all on the hosted service, with nothing to install.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#hosted-with-your-own-detachment">Hosted with your own Detachment</a></h4><p>The hosted screens and coordination, with builds, secrets and deployments on your side.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#files-on-your-own-machines-through-a-sealed-relay">Files on your own machines, through a sealed relay</a></h4><p>Two people, two houses, no hosted copies: each runs one command, and both reach the files through Launchway over an end-to-end encrypted session that the relay carries but cannot read.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#replicas-across-two-machines">Replicas across two machines</a></h4><p>With two machines, every repository has a full copy on each, pushes go to whichever is reachable, and they catch up with each other when both are online.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#backup-and-recovery-on-your-own-machines">Backup and recovery on your own machines</a></h4><p>The second machine is a live copy, and an optional encrypted backup goes to storage you own, with a walk-through for “my laptop died”.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#self-hosted-the-same-product">Self-hosted, the same product</a></h4><p>Everything on your own machines, installed with the guided installer, with the same features and the same export format.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#guided-moves-between-the-three">Guided moves between the three</a></h4><p>Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#secrets-move-without-being-exposed">Secrets move without being exposed</a></h4><p>Secret values are re-sealed to the destination’s key, exported under a passphrase only you know, or re-entered and rotated, so they are never in the clear on the way.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">A size ceiling, with notices, and nothing held hostage</span><span class="g-count">2 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 2 planned of 2"><span class="seg st-planned" style="flex:2"></span></span></span></summary>
+    <p class="g-blurb">Hosting is for teams that fit; the ones that outgrow it are helped on, never locked out.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#size-ceilings-on-hosted-bases">Size ceilings on hosted Bases</a></h4><p>Each hosted Base has a ceiling. As it approaches, Launchway says what is growing, offers cleanup and offers the guided move, and at the ceiling only the growing kind of data stops.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#nothing-held-hostage">Nothing held hostage</a></h4><p>Every hosted Base can be exported completely, at any time, in an open and documented format with a verifier.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Never a place to park files</span><span class="g-count">5 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 5 planned of 5"><span class="seg st-planned" style="flex:5"></span></span></span></summary>
+    <p class="g-blurb">The hosted service is for your work, not for storing arbitrary files, and it is built so it cannot become that.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#nothing-anonymous-or-public">Nothing anonymous or public</a></h4><p>No repository, artifact, image, page, report or file on the hosted service can be reached without signing in as a member of that Base.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#no-general-file-storage">No general file storage</a></h4><p>The service holds repositories, build results and registry images that pipelines produce, and nothing else: there is no upload-a-file feature.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#identity-checks-in-proportion-to-risk">Identity checks in proportion to risk</a></h4><p>A verified address, a second factor and limits that start low for a new account and rise as it shows normal use.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#abuse-reports-takedown-and-suspension">Abuse reports, takedown and suspension</a></h4><p>A published way to report abuse, a process to act on it, suspension with an appeal, and detection that respects the promise that the operator cannot read your work.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#customer-files-kept-apart-from-the-operator-s-own-systems">Customer files kept apart from the operator’s own systems</a></h4><p>Whatever outsiders store is kept on capacity separate from anything the operator runs for itself, with its own keys per Base.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Opening in stages</span><span class="g-count">4 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 4 planned of 4"><span class="seg st-planned" style="flex:4"></span></span></span></summary>
+    <p class="g-blurb">Outsiders are let in a step at a time, and a step opens only when every check for it and for the earlier ones is green.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#stage-1-invited-people">Stage 1: invited people</a></h4><p>A handful of people the operator knows use the hosted service under a short plain agreement, with their own runners.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#stage-2-files-on-your-own-machines">Stage 2: files on your own machines</a></h4><p>The first public opening offers only the mode where files stay on your machines. Fully hosted is shown as coming, never as a choice that fails.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#stage-3-fully-hosted-on-rented-capacity">Stage 3: fully hosted, on rented capacity</a></h4><p>Public sign-up with hosted storage, your own runners and takedown tools, on capacity rented for the purpose.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#stage-4-hosted-runners">Stage 4: hosted runners</a></h4><p>Public sign-up with sandboxed runners run by the service.</p></li>
+    </ul>
+  </details>
+  <details class="subgroup">
+    <summary><span class="g-name">Plans that follow your choices</span><span class="g-count">1 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 1 planned of 1"><span class="seg st-planned" style="flex:1"></span></span></span></summary>
+    <p class="g-blurb">A free plan with every feature, and no surprises on the bill.</p>
+    <ul class="grid">
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-7.html#every-feature-on-the-spend-limit-at-zero">Every feature on, the spend limit at zero</a></h4><p>The free plan turns every feature on. A plan changes limits, never features, and a new account’s spend limit starts at zero, so nothing can be charged until its owner raises it.</p></li>
     </ul>
   </details>
   <details class="subgroup">
@@ -1403,7 +1537,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-12.html">Open the detail page<span class="visually-hidden"> for Security and trust</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="2 available, 2 in progress, 32 planned of 36"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:32"></span></span><span class="m-count">2 available · 2 in progress · 32 planned</span><span class="m-count">36 capabilities in 5 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="2 available, 2 in progress, 34 planned of 38"><span class="seg st-available" style="flex:2"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:34"></span></span><span class="m-count">2 available · 2 in progress · 34 planned</span><span class="m-count">38 capabilities in 5 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">Encryption at rest</span><span class="g-count">9 · <span class="bar" role="img" aria-label="0 available, 2 in progress, 7 planned of 9"><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:7"></span></span></span></summary>
@@ -1453,7 +1587,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     </ul>
   </details>
   <details class="subgroup">
-    <summary><span class="g-name">The same standards for every repository</span><span class="g-count">13 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 13 planned of 13"><span class="seg st-planned" style="flex:13"></span></span></span></summary>
+    <summary><span class="g-name">The same standards for every repository</span><span class="g-count">15 · <span class="bar" role="img" aria-label="0 available, 0 in progress, 15 planned of 15"><span class="seg st-planned" style="flex:15"></span></span></span></summary>
     <p class="g-blurb">The scans Launchway holds itself to are offered to every repository it hosts or builds, built in, with nothing to install and every check a switch.</p>
     <ul class="grid">
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#a-profile-for-each-repository">A profile for each repository</a></h4><p>Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended.</p></li>
@@ -1466,6 +1600,8 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#exceptions-with-an-owner-and-an-expiry">Exceptions with an owner and an expiry</a></h4><p>Waive a finding with a reason, an owner and an end date, and optionally say why it cannot be exploited, in a format you can publish.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#stored-parts-lists-rechecked-against-new-advisories">Stored parts lists rechecked against new advisories</a></h4><p>When a new advisory is published, Launchway says which repositories and running versions are affected without anyone pushing a commit.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#patch-everything-affected-by-an-advisory">Patch everything affected by an advisory</a></h4><p>Start a campaign that opens one fix per affected repository and tracks it until the new version is seen running.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#standards-kept-in-git-edited-in-either-place">Standards kept in Git, edited in either place</a></h4><p>A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step.</p></li>
+      <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#adapters-for-the-tools-teams-already-pay-for">Adapters for the tools teams already pay for</a></h4><p>The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#a-standards-home-and-a-posture-view">A standards home and a posture view</a></h4><p>See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#evidence-for-auditors">Evidence for auditors</a></h4><p>A report for a period shows which checks were on, evidence that they ran, findings and fixes, and exceptions.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-12.html#checks-that-run-on-your-side">Checks that run on your side</a></h4><p>On the hosted service checks run on your runners, so source code and finding detail stay with you.</p></li>

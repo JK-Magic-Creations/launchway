@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 25 planned · 26 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 2 in progress · 24 planned · 27 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -48,7 +48,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Know what you run](#g-know-what-you-run) | 10 | 1 | 0 | 9 |
-| [Fix it safely](#g-fix-it-safely) | 5 | 0 | 0 | 5 |
+| [Fix it safely](#g-fix-it-safely) | 6 | 0 | 2 | 4 |
 | [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
 
 ### Know what you run {#g-know-what-you-run}
@@ -167,11 +167,21 @@ Off by default and turned on per zone: updates open as changes, pass tests and c
 
 #### Built-in dependency updates {#built-in-dependency-updates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Keep common ecosystems' dependencies current, as ordinary reviewable pull requests. Updates carry their release notes and test results.
+Keep dependencies current as ordinary reviewable pull requests: Go, npm and container images end to end, Python read and checked, and more ecosystems coming. Built and tested, in final integration; not yet on the main branch. Updates come from Launchway itself, not from a robot on someone else’s code host, with a preview, policy levels with locks, grouping and limits, and release notes with each proposal.
 
 **Depends on:** Pull requests on the built-in host.
+
+[Area page](software-graph.md)
+
+#### Lock files regenerated in a container and checked {#lock-files-regenerated-in-a-container-and-checked}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
+
+**Depends on:** Built-in dependency updates.
 
 [Area page](software-graph.md)
 

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 47 planned · 55 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 54 planned · 62 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -47,6 +47,8 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Write pipelines your way](#g-write-pipelines-your-way) | 15 | 0 | 0 | 15 |
+| [Builds use every machine sensibly](#g-builds-use-every-machine-sensibly) | 6 | 0 | 0 | 6 |
+| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 0 | 1 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
 | [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
@@ -202,6 +204,84 @@ Each step has a page: where its code lives, its inputs and types, and which pipe
 **Depends on:** Custom steps in your own language.
 
 [Area page](pipelines.md)
+
+### Builds use every machine sensibly {#g-builds-use-every-machine-sensibly}
+
+A team’s machines share the work by what is free, and nobody’s laptop is taken over.
+
+#### Builds placed by free processor and memory {#builds-placed-by-free-processor-and-memory}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A build can run on any of a team’s machines and is placed on one with room for it. Today a runner takes work when it has a free slot; placement by what is really free comes next.
+
+**Depends on:** Runner identity and pools.
+
+[Area page](pipelines.md)
+
+#### Runners on personal machines hold back when busy {#runners-on-personal-machines-hold-back-when-busy}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A runner on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets. This is the first piece of placement to be built, because it makes lending a personal machine safe.
+
+**Depends on:** Runner identity and pools.
+
+[Area page](pipelines.md)
+
+#### A build’s parallel steps spread across machines {#a-build-s-parallel-steps-spread-across-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The parallel steps of one build can run on different machines, with their shared files moved safely between them. The pipeline stays one pipeline, drawn as it is; only where each step runs changes.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+#### Size hints for steps {#size-hints-for-steps}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier runs, to place it. The hints are advice; a wrong hint wastes time but never breaks a build.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+#### Windows and macOS runners {#windows-and-macos-runners}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Runners that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run. This is a gap, listed honestly.
+
+**Depends on:** Matrix builds.
+
+[Area page](build-tools-caches.md)
+
+#### Fair use between the people lending machines {#fair-use-between-the-people-lending-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Work is shared out so that no one person’s machines carry the whole team, and everyone can see how much each machine did. The report is about machines and fairness, never a ranking of people.
+
+**Depends on:** Builds placed by free processor and memory.
+
+[Area page](pipelines.md)
+
+### Reports people want to read {#g-reports-people-want-to-read}
+
+Test results that are a pleasure to read and easy to hand to someone else.
+
+#### Polished test reports as HTML and PDF {#polished-test-reports-as-html-and-pdf}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
+
+**Depends on:** Test, coverage and HTML reports.
+
+[Area page](developer-experience.md)
 
 ### Design visually {#g-design-visually}
 
@@ -471,7 +551,7 @@ A VS Code extension shows your work, the launch line, run details and logs, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Pipeline files get completion and inline checks in any editor that speaks the language-server standard. Generated from the same parser the server uses, so they cannot disagree.
+Pipeline files get completion and inline checks in any editor that speaks the language-server standard. The schema half is being built now (see the editor schema in Milestone 1); the language server follows. Both are generated from the same parser the server uses, so they cannot disagree.
 
 [Area page](developer-experience.md)
 

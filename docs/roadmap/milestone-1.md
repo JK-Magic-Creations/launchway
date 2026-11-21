@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 16 available · 19 in progress · 62 planned · 97 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 16 available · 31 in progress · 60 planned · 107 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -54,7 +54,8 @@ flowchart TD
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 12 | 4 | 3 | 5 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 12 | 4 | 5 | 3 |
+| [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 10 | 0 | 10 | 0 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
 | [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 6 | 1 | 3 | 2 |
@@ -258,7 +259,7 @@ Send repository events to chat tools and any web address, with a delivery log, r
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. Sending mail is optional and off until configured. The same preferences cover review, work item and pipeline events.
+An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events.
 
 **Depends on:** Built-in Git hosting.
 
@@ -660,11 +661,11 @@ Services with readiness checks and logs, a runner and workspace of their own per
 
 [Area page](pipelines.md)
 
-#### Platform matrices {#platform-matrices}
+#### Matrix builds {#matrix-builds}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Run the same steps across operating systems and architectures from one definition. Results show as one grid with a failure marked where it happened. Runners with the right platform are chosen automatically.
+Run the same steps across operating systems, architectures and versions from one definition. Being built now. Results show as one grid with a failure marked where it happened, and runners with the right platform are chosen automatically. Windows and macOS runners are separate work.
 
 [Area page](pipelines.md)
 
@@ -712,7 +713,7 @@ The user a step runs as is known to the system inside the step, so tools that lo
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing. Being built: the run page, API and command line say what the step waits for and where it stands in line.
+A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing. Built and tested, in final integration; not yet on the main branch. The run page, API and command line say what the step waits for and where it stands in line.
 
 [Area page](pipelines.md)
 
@@ -720,15 +721,99 @@ A step with no room in its namespace or on any node waits in line with a plain r
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Set which runs go first and how many may run at once, per installation or project. Being built, together with waiting for room.
+Set which runs go first and how many may run at once, per installation or project. Built and tested, in final integration; not yet on the main branch. Fair queues keep one project from using every runner.
 
 [Area page](pipelines.md)
 
 #### Path filters {#path-filters}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Start a pipeline only when the files that changed match, or do not match, paths you name. Next in line after queueing.
+Start a pipeline only when the files that changed match, or do not match, paths you name. Built and tested, in final integration; not yet on the main branch. Start a pipeline only for the paths that matter, so a change to the docs does not rebuild the service.
+
+[Area page](pipelines.md)
+
+### Easy to start, easy to write {#g-easy-to-start-easy-to-write}
+
+Write a pipeline from a starter, from detection, or from nothing at all, and have the editor help. Being built now.
+
+#### Shared step templates {#shared-step-templates}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Write a step once as a template and use it in many pipelines, with its inputs checked. Being built now. Templates declare what they need and what they offer, so a mistake is caught before a run.
+
+[Area page](pipelines.md)
+
+#### A built-in starter library for each language {#a-built-in-starter-library-for-each-language}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file. Being built now. Each starter builds, tests and scans; a team can change any part.
+
+[Area page](developer-experience.md)
+
+#### A pipeline with no file, by detection {#a-pipeline-with-no-file-by-detection}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Push a repository with no pipeline file and Launchway looks at what it holds and proposes the right pipeline, which you accept as it is or save into the repository to edit. Being built now. The proposal is shown in full before anything runs, and nothing is hidden.
+
+[Area page](developer-experience.md)
+
+#### A gallery of examples {#a-gallery-of-examples}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Browse working example pipelines for common jobs, copy one and see it run. Being built now. Every example is tested, so a copied example works.
+
+[Area page](developer-experience.md)
+
+#### launchway init {#launchway-init}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+One command in a repository that writes a first pipeline from what it finds there. Being built now. It explains each choice in plain words and never overwrites a file you already have.
+
+[Area page](developer-experience.md)
+
+#### An editor schema for pipeline files {#an-editor-schema-for-pipeline-files}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A published description of the pipeline format that gives completion and inline errors in common editors. Being built now. It is generated from the same definition the server checks, so they cannot disagree.
+
+[Area page](developer-experience.md)
+
+#### Validate pipelines offline {#validate-pipelines-offline}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server. Built and tested, in final integration. You can name a library and a directory to check against, and see the fully resolved result.
+
+[Area page](pipelines.md)
+
+#### More power in templates {#more-power-in-templates}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Template defaults derived from other inputs, conditions on every kind of step and optional list entries. Built and tested, in final integration. These close the gaps that forced copy-and-paste.
+
+[Area page](pipelines.md)
+
+#### Notifications to webhooks and chat services {#notifications-to-webhooks-and-chat-services}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Rules that send a signed webhook or a chat message when a run, a gate or a deployment changes, with a delivery log and retries. Built and tested, in final integration. Email is separate and still planned.
+
+[Area page](pipelines.md)
+
+#### Restricted mode for untrusted pull requests {#restricted-mode-for-untrusted-pull-requests}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A pull request from outside the team runs in a restricted mode: no secrets, no writes to shared caches and no deployment. Built and tested, in final integration. A maintainer can approve a full run after reading the change.
 
 [Area page](pipelines.md)
 

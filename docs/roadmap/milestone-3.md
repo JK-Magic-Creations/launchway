@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 89 planned · 92 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 5 in progress · 87 planned · 92 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -50,7 +50,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 13 | 0 | 1 | 12 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 13 | 0 | 3 | 10 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
 | [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
@@ -178,17 +178,17 @@ Let a verification step use AI analysis of metrics and logs to trigger automatic
 
 #### An HTTP health proof for verifying deployments {#an-http-health-proof-for-verifying-deployments}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Verify a deployment by calling an address you name and checking the answer, with no metrics store needed. Next in line.
+Verify a deployment by having the deploy runner call an address you name over HTTP or TCP and check the answer, with no metrics store needed. Built and tested, in final integration; not yet on the main branch.
 
 [Area page](delivery.md)
 
 #### GitOps write-back to a hosted repository {#gitops-write-back-to-a-hosted-repository}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice. Next in line.
+After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, by a direct push or by a pull request, using a credential that belongs to that one deployment. Built and tested, in final integration; not yet on the main branch. The image tag and its digest are written together, and a race with another writer is retried safely.
 
 [Area page](delivery.md)
 

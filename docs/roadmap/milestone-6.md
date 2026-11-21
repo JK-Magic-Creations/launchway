@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 6 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 0 in progress · 13 planned · 15 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 13 planned · 15 capabilities</p>
 
 AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.
 

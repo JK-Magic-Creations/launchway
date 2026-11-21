@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 2 in progress · 32 planned · 36 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 2 in progress · 34 planned · 38 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -48,7 +48,7 @@ flowchart TD
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 13 | 0 | 0 | 13 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 0 | 15 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -359,6 +359,26 @@ When a new advisory is published, Launchway says which repositories and running 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Start a campaign that opens one fix per affected repository and tracks it until the new version is seen running. A page shows each repository’s state, owner and deadline.
+
+[Area page](repository-standards.md)
+
+#### Standards kept in Git, edited in either place {#standards-kept-in-git-edited-in-either-place}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor.
+
+**Depends on:** Every check on, advice or block.
+
+[Area page](repository-standards.md)
+
+#### Adapters for the tools teams already pay for {#adapters-for-the-tools-teams-already-pay-for}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
+
+**Depends on:** Findings in one list.
 
 [Area page](repository-standards.md)
 
