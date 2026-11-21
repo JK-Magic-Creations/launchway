@@ -461,6 +461,19 @@ of ended entries are removed by the pruner of any server of schema 25; a server 
 does not remove them, and they stay until a newer one runs. The startup check covers the three
 tables (`schemaMarkersCache`).
 
+Schema 35 brings build cache correctness (33 and 34 are held for other branches, as empty stand-ins
+in `schema33.go` and `schema34.go`, until those merge). It is additive: `caches` gains `pipeline`
+(whose entry it is: `pipeline:<name>`, or `shared:<name>` for a group of caches pipelines share),
+`sensitive` (never read outside the scope that wrote it), `generation` (a key saved again is the next
+generation; the newest is restored and the older ends), `content` (a digest of what the entry holds)
+and `born_at` (when the contents were started from scratch, carried over to what a save started
+from, so a chain of refreshes ends at the maximum age); `cache_policy` gains `max_age_days`. The
+unique index over a key now covers the generation and the pipeline. Entries written before have
+`pipeline ''` and no run reads them: their keys changed in the same release (the key now includes
+the step's image digest), so none could have been restored anyway, and they end under the idle rule.
+A server of an older schema ignores the columns and, writing entries without them, writes entries a
+server of schema 35 never reads. The startup check covers the columns (`schemaMarkersCacheTrust`).
+
 Schema 26 brings forges (`internal/forge`), additive: four new tables and nothing else.
 `forge_connections` and `forge_repositories` hold a connection (a link to a Git host; the kind `plain`
 is today's watcher of a Git address) and its repositories, and every watched project becomes a
