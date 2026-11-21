@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"strings"
+	"time"
 )
 
 // An alphabet without the characters that are easy to confuse when read
@@ -84,3 +85,6 @@ func NewRecoveryCodes(n int) []string {
 
 // NewInviteToken returns the secret part of a one-time link: 32 characters.
 func NewInviteToken() string { return randomFrom(codeAlphabet, 32) }
+
+// DefaultSetupTTL is how long a setup code is good for unless configured.
+const DefaultSetupTTL = 24 * time.Hour

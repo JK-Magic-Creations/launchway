@@ -169,6 +169,9 @@ func (s *Server) guard(rt route) http.Handler {
 		return s.runnerAuth(rt.handler)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.refuseUntilSetup(w) {
+			return
+		}
 		if r.Header.Get("Authorization") != "" && s.tooManyFailures(w, r) {
 			return
 		}
@@ -444,6 +447,9 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	mode := "none"
 	if s.Auth != nil {
 		mode = "oidc"
+		if s.Auth.OIDC == nil {
+			mode = "local"
+		}
 	}
 	groups := id.Groups
 	if groups == nil {

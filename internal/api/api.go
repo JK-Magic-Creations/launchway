@@ -90,6 +90,7 @@ type Server struct {
 	dbState  func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
+	local    localRuntime  // built-in accounts: throttle and setup state (local_auth.go)
 }
 
 // Auth configures sign-in.
@@ -102,6 +103,8 @@ type Auth struct {
 	// like HTTPS, because the site is served over HTTPS (its redirect URL
 	// is https).
 	SecureCookies bool
+	// Local turns on built-in accounts (see local_auth.go); nil: off.
+	Local *LocalAuth
 }
 
 // access says who may call a route; see guard.
@@ -130,7 +133,12 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return append(append(append(append(append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...), s.launchRoutes()...), s.approvalSettingsRoutes()...), s.forgeRoutes()...), s.rollbackRoutes()...)
+	var all []route
+	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.flowRoutes(), s.cacheRoutes(), s.launchRoutes(),
+		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.localRoutes()} {
+		all = append(all, part...)
+	}
+	return all
 }
 
 func (s *Server) mainRoutes() []route {
@@ -603,7 +611,9 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	} else {
 		out["schema"] = map[string]int{"code": schema.Code}
 	}
-	if s.Auth != nil {
+	if s.Auth != nil && s.Auth.Local != nil {
+		s.localInfo(out)
+	} else if s.Auth != nil {
 		out["auth_mode"] = "oidc"
 	} else {
 		out["auth_mode"], out["actor"], out["projects"] = "none", s.Actor, len(s.projects())

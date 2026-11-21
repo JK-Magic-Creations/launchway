@@ -66,6 +66,7 @@ func readServerSetup(args []string) (*serverSetup, error) {
 	if *data != "" {
 		cfg.Data = *data
 	}
+	cfg.ApplyAuthDefault(cfg.Listen)
 	if err := cfg.CheckExposure(cfg.Listen); err != nil {
 		return nil, err
 	}
@@ -229,7 +230,7 @@ func setupAI(srv *api.Server, cfg *config.Config, cfgPath string) error {
 // warmUpSignIn finds the identity provider now, so a mistake shows at once;
 // sign-in tries again later if it is unreachable.
 func warmUpSignIn(authOpts *api.Auth, log *slog.Logger) {
-	if authOpts == nil {
+	if authOpts == nil || authOpts.OIDC == nil {
 		return
 	}
 	dctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

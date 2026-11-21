@@ -115,6 +115,7 @@ var commands = map[string]func([]string) error{
 	"caches":         cmdCaches,
 	"variables":      cmdVariables,
 	"doctor":         cmdDoctor,
+	"users":          cmdUsers,
 }
 
 func main() {
@@ -249,6 +250,9 @@ func cmdServer(args []string) error {
 		}
 	}
 	warmUpSignIn(authOpts, log)
+	if err := announceSetup(srv, cfg, log); err != nil {
+		return err
+	}
 
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -383,12 +387,8 @@ func serverLive(c *config.Config, runnerToken string, auth *api.Auth) (api.Live,
 
 // serverAuth builds the sign-in settings, or returns nil if sign-in is off.
 func serverAuth(cfg *config.Config) (*api.Auth, error) {
-	if cfg.Auth.Mode != config.AuthOIDC {
+	if cfg.Auth.Mode != config.AuthOIDC && cfg.Auth.Mode != config.AuthLocal {
 		return nil, nil
-	}
-	secret, err := cfg.Auth.OIDC.ClientSecret()
-	if err != nil {
-		return nil, err
 	}
 	policy, err := cfg.Auth.Policy()
 	if err != nil {
@@ -398,13 +398,29 @@ func serverAuth(cfg *config.Config) (*api.Auth, error) {
 	if err != nil {
 		return nil, err
 	}
+	out := &api.Auth{Policy: policy, IdleTimeout: idle, Lifetime: lifetime}
+	if cfg.Auth.LocalAccounts() {
+		ttl := time.Duration(0)
+		if cfg.Auth.Local.SetupCodeTTL != "" {
+			if ttl, err = time.ParseDuration(cfg.Auth.Local.SetupCodeTTL); err != nil || ttl < time.Minute {
+				return nil, fmt.Errorf("auth.local.setup_code_ttl %q must be a duration of at least 1m, such as 24h", cfg.Auth.Local.SetupCodeTTL)
+			}
+		}
+		out.Local = &api.LocalAuth{Required: cfg.Auth.Mode == config.AuthLocal, SecondFactor: cfg.Auth.Local.SecondFactorRule(),
+			SetupCodeFile: cfg.Auth.Local.SetupCodeFile, SetupTTL: ttl}
+	}
+	if cfg.Auth.Mode == config.AuthLocal {
+		return out, nil
+	}
+	secret, err := cfg.Auth.OIDC.ClientSecret()
+	if err != nil {
+		return nil, err
+	}
 	o := cfg.Auth.OIDC
-	return &api.Auth{
-		OIDC: auth.NewOIDC(auth.OIDCOptions{Issuer: o.Issuer, ClientID: o.ClientID, ClientSecret: secret,
-			RedirectURL: o.RedirectURL, Scopes: o.Scopes, UsernameClaim: o.UsernameClaim, GroupsClaim: o.GroupsClaim}),
-		Policy: policy, IdleTimeout: idle, Lifetime: lifetime,
-		SecureCookies: strings.HasPrefix(o.RedirectURL, "https://"),
-	}, nil
+	out.OIDC = auth.NewOIDC(auth.OIDCOptions{Issuer: o.Issuer, ClientID: o.ClientID, ClientSecret: secret,
+		RedirectURL: o.RedirectURL, Scopes: o.Scopes, UsernameClaim: o.UsernameClaim, GroupsClaim: o.GroupsClaim})
+	out.SecureCookies = strings.HasPrefix(o.RedirectURL, "https://")
+	return out, nil
 }
 
 // runnerOptions is what `launchway runner` runs with.

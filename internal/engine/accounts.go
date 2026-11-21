@@ -302,3 +302,17 @@ func (e *Engine) RecoveryCodesLeft(name string) (int, error) {
 	err := e.db.QueryRow(`SELECT count(*) FROM local_recovery_codes WHERE username = ? AND used_at = 0`, name).Scan(&n)
 	return n, err
 }
+
+// ProviderSignInSeen says whether anyone who is not a built-in account has
+// signed in (through an identity provider), which is what "the provider
+// works" means before the last built-in administrator may be removed.
+func (e *Engine) ProviderSignInSeen() (bool, error) {
+	var n int
+	err := e.db.QueryRow(`SELECT count(*) FROM users WHERE username NOT IN (SELECT username FROM local_accounts)`).Scan(&n)
+	return n > 0, err
+}
+
+// UnlockLocal clears the failure count and the lock of an account.
+func (e *Engine) UnlockLocal(name string) error {
+	return e.updateAccount(name, `failed_count = 0, locked_until = 0`)
+}

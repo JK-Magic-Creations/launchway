@@ -67,7 +67,7 @@ func CheckMCPOAuth(o *MCPOAuth, a *Auth) error {
 // protectedResourceMetadata serves RFC 9728 metadata for /mcp: 404 unless
 // OAuth is configured.
 func (s *Server) protectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
-	if s.mcpNow().OAuth == nil || s.Auth == nil {
+	if s.mcpNow().OAuth == nil || s.Auth == nil || s.Auth.OIDC == nil {
 		writeErr(w, http.StatusNotFound, "this server does not accept OAuth access tokens at /mcp; use a Launchway API token")
 		return
 	}

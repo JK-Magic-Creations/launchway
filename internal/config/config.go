@@ -539,8 +539,9 @@ type ServerConfig struct {
 
 // AuthConfig controls sign-in and who may do what.
 type AuthConfig struct {
-	// Mode is none (the default: no sign-in, everyone acts as User with
-	// full rights) or oidc.
+	// Mode is local (built-in accounts; the default for a server that listens
+	// beyond loopback), oidc, or none (no sign-in, everyone acts as User with
+	// full rights; the default on loopback, refused elsewhere).
 	Mode string `yaml:"mode"`
 	// AllowAnonymous lets a server with mode none listen on an address
 	// other than loopback. Without it, such a server refuses to start.
@@ -558,7 +559,12 @@ type AuthConfig struct {
 	Admins AdminsConfig `yaml:"admins"`
 	// Tokens limits API tokens.
 	Tokens TokensConfig `yaml:"tokens"`
+	// Local is the built-in accounts (see auth_local.go).
+	Local LocalAuthConfig `yaml:"local"`
 
+	// modeDefaulted: mode was not written, so it is local when the server
+	// listens beyond loopback (see ApplyAuthDefault).
+	modeDefaulted bool
 	// accessInDatabase: the role bindings are in the database, so an empty
 	// access here is not a mistake (see LoadBootstrap).
 	accessInDatabase bool
