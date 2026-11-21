@@ -64,7 +64,7 @@ LAUNCHWAY_TEST_POSTGRES ?= postgres://launchway:launchway@127.0.0.1:55432/launch
 test-postgres:
 	LAUNCHWAY_TEST_POSTGRES='$(LAUNCHWAY_TEST_POSTGRES)' go test -race -count=1 -timeout 60m ./internal/engine/ ./internal/source/ ./internal/api/
 
-# Runs the vault secret store against a real server. A throwaway OpenBao in
+# Runs the vault secret store, and the transit root key holder of encryption at rest, against a real server. A throwaway OpenBao in
 # dev mode (KV version 2 at secret/):
 #   podman run --rm -d --name launchway-bao -p 127.0.0.1:58200:8200 \
 #     -e BAO_DEV_ROOT_TOKEN_ID=dev-root quay.io/openbao/openbao:latest \

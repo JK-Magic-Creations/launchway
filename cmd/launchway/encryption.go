@@ -38,6 +38,10 @@ See the guide "Encryption at rest".
 `
 
 func cmdEncryption(args []string) error {
+	return runClient(func() error { return encryptionCommand(args) })
+}
+
+func encryptionCommand(args []string) error {
 	if len(args) == 0 {
 		fmt.Fprint(os.Stderr, encryptionUsage)
 		return cliErr{exitUsage, ""}
@@ -50,13 +54,11 @@ func cmdEncryption(args []string) error {
 	case "rewrap":
 		return encryptionRewrap(args[1:])
 	case "status":
-		return runClient(func() error {
-			c, err := loadCredentials()
-			if err != nil {
-				return err
-			}
-			return newClient(c, os.Stdout).encryptionStatus(args[1:])
-		})
+		c, err := loadCredentials()
+		if err != nil {
+			return err
+		}
+		return newClient(c, os.Stdout).encryptionStatus(args[1:])
 	}
 	return usageErr("unknown command encryption %s\n\n%s", args[0], encryptionUsage)
 }
