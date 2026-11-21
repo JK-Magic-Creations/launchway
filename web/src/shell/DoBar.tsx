@@ -32,9 +32,10 @@ export function DoBar({ ctx, projects, onClose }: { ctx: Ctx; projects: Project[
   return (
     <Dialog label="What do you want to do?" onClose={onClose}>
       <div className="mi">
-        <input type="text" role="combobox" aria-expanded="true" aria-controls="do-results" aria-activedescendant={found[at] ? "do-" + found[at].id : undefined}
+        <input type="text" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="do-results" aria-activedescendant={found[at] ? "do-" + found[at].id : undefined}
           data-autofocus placeholder="What do you want to do?" value={q} onChange={(e) => { setQ(e.target.value); setAt(0); }} onKeyDown={key} aria-label="What do you want to do?" autoComplete="off" />
       </div>
+      <div className="visually-hidden" role="status" aria-live="polite">{found.length === 0 ? "No results" : `${found.length} ${found.length === 1 ? "result" : "results"}`}</div>
       <div className="res" id="do-results" role="listbox" aria-label="Results">
         {found.length === 0 && <p className="faint nores">Nothing matches "{q}". Try a project's name, "add", "approve" or the name of a page.</p>}
         {found.map((it, i) => (

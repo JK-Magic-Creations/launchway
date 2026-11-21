@@ -31,7 +31,7 @@
 .vcell svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .vcell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .vcell-passed { border: 1.5px solid var(--ok); background: var(--ok-soft); color: var(--ok-ink); }
-.vcell-failed { border: 1.5px solid var(--bad); background: var(--bad); color: #fff; }
+.vcell-failed { border: 1.5px solid var(--bad); background: var(--bad); color: var(--on-solid); }
 .vcell-no_data { border: 1.5px solid var(--warn); background: var(--warn-soft); color: var(--warn-ink); }
 .vcell-now { border: 2px solid var(--run); background: var(--run-soft); color: var(--run-ink); }
 .vcell-now svg { fill: currentColor; animation: pulse 1.4s ease-in-out infinite; }

@@ -50,7 +50,7 @@
 .cstep-done { color: var(--text-2); background: var(--surface-2); }
 .cstep-done .cstep-n { background: var(--ok-soft); color: var(--ok-ink); }
 .cstep-now { border: 2px solid var(--accent); color: var(--text); font-weight: 700; background: var(--accent-soft); }
-.cstep-now .cstep-n { background: var(--accent); color: #fff; }
+.cstep-now .cstep-n { background: var(--accent); color: var(--on-signal); }
 .cstep-end { padding: 3px 10px; font-style: italic; }
 .dep-analysis { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0 12px; border-left: 2px solid var(--border); }
 .dep-metrics td, .dep-metrics th { white-space: nowrap; }
@@ -108,7 +108,7 @@
 }
 
 /* ---- controlling a deployment's rollout ---- */
-.btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn-danger { background: var(--bad); border-color: var(--bad); color: var(--on-solid); }
 .btn-danger:hover { background: var(--bad-ink); }
 .dctl { display: flex; flex-direction: column; gap: 14px; padding-top: 12px; border-top: 1px solid var(--border); min-width: 0; }
 .dctl .h-xs { margin: 0; }

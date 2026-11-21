@@ -40,7 +40,7 @@ export function TabBar({ ctx, on, needs, onAreas }: { ctx: Ctx; on: SectionId | 
   const ids: SectionId[] = ["home", "projects", "deployments", "traffic", "changes"];
   const list = visibleSections(ctx).filter((s) => ids.includes(s.id));
   return (
-    <nav className="tabbar" aria-label="Areas">
+    <nav className="tabbar" aria-label="Areas, bottom bar">
       {list.map((s) => (
         <a key={s.id} href={s.href} onClick={onLink} aria-current={on === s.id ? "page" : undefined}>
           <Icon name={s.icon} />{s.label}

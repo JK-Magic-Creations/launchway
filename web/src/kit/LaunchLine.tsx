@@ -15,25 +15,28 @@ export function toStations(list: { key: string; label: string; state: string; de
 export function LaunchLine({ stations, big, compact, selected, onSelect, label }: {
   stations: LineStation[]; big?: boolean; compact?: boolean; selected?: string; onSelect?: (key: string) => void; label?: string;
 }) {
+  if (stations.length === 0) return null;
   const at = stations.findIndex((s) => s.state !== "ok" && s.state !== "skip");
-  const summary = label ?? stations.map((s) => `${s.label}: ${WORDS[s.state]}`).join(", ");
+  const summary = label ?? "Launch line: " + stations.map((s) => `${s.label} ${WORDS[s.state]}`).join(", ");
   const cls = ["lline", big && "big", compact && "compact"].filter(Boolean).join(" ");
+  // The text alternative is the line itself as a list: each station with its state in words and its detail, whether or not
+  // the picture shows the words (a compact line hides them). The drawing is hidden from assistive technology.
   return (
     <div className={cls} style={{ gridTemplateColumns: `repeat(${Math.max(stations.length, 1)}, ${compact ? "minmax(0, 84px)" : "minmax(0, 1fr)"})` }}
-      role={onSelect ? "group" : "img"} aria-label={summary}>
+      role={onSelect ? "group" : "list"} aria-label={summary}>
       {stations.map((s, i) => {
         const inner = (
           <>
-            <span className="p">{pin(s.state)}</span>
-            <span className="t">{s.label}</span>
-            <span className="u" title={s.detail}>{s.detail ?? ""}</span>
-            {i === at && s.state !== "idle" && <span className="visually-hidden"> (now)</span>}
+            <span className="p" aria-hidden="true">{pin(s.state)}</span>
+            <span className="t" aria-hidden="true">{s.label}</span>
+            <span className="u" title={s.detail} aria-hidden="true">{s.detail ?? ""}</span>
+            <span className="visually-hidden">{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</span>
           </>
         );
         const c = `ls ${s.state}${i === stations.length - 1 && s.state === "ok" ? " last" : ""}`;
         return onSelect
-          ? <button key={s.key} type="button" className={c} aria-pressed={selected === s.key} aria-label={`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}`} onClick={() => onSelect(s.key)}>{inner}</button>
-          : <div key={s.key} className={c}>{inner}</div>;
+          ? <button key={s.key} type="button" className={c} aria-pressed={selected === s.key} onClick={() => onSelect(s.key)}>{inner}</button>
+          : <div key={s.key} className={c} role="listitem">{inner}</div>;
       })}
     </div>
   );

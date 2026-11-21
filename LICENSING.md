@@ -53,3 +53,12 @@ The web interface bundles three fonts, so it looks the same everywhere and never
 from a network: Inter, Montserrat and JetBrains Mono. All three are licensed under the SIL Open
 Font License 1.1, which allows bundling and redistribution with software. Their copyright notices
 and the licence text are in [web/src/assets/fonts/LICENSES.txt](web/src/assets/fonts/LICENSES.txt).
+
+## Tools used only to build and test
+
+The accessibility checks use two npm packages that are development dependencies of the web
+interface. They are never part of the interface's bundle, the binary or a release:
+axe-core (Mozilla Public License 2.0, the scanner that finds accessibility problems) and
+playwright-core (Apache License 2.0, which drives a browser for the browser scans). The MPL-2.0 is
+a file-level licence: it asks that changes to axe-core's own files be shared, and does not reach
+code that only runs it. `web/package.json` pins both versions exactly.

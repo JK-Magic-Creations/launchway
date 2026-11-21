@@ -20,6 +20,10 @@ import (
 // starts it.
 func TestMain(m *testing.M) {
 	testlib.NoPrompt()
+	if os.Getenv("LAUNCHWAY_TEST_RUN_CLI") == "1" {
+		main() // a test runs the command line as a program: see quality_test.go
+		os.Exit(0)
+	}
 	if os.Getenv("LAUNCHWAY_TEST_RUN_MCP") == "1" {
 		if err := cmdMCP(nil); err != nil {
 			os.Exit(1)

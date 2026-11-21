@@ -15,7 +15,7 @@
 
 .toolbar2 { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .pillbtns { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-.pillbtns button { height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line-2); background: var(--sheet); color: var(--ink-2); font: 600 13px var(--font); cursor: pointer; }
+.pillbtns button { height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--control-line); background: var(--sheet); color: var(--ink-2); font: 600 13px var(--font); cursor: pointer; }
 .pillbtns button[aria-pressed="true"] { background: var(--signal-wash); color: var(--signal-ink); border-color: var(--signal); }
 .pillbtns button .n { margin-left: 6px; font-variant-numeric: tabular-nums; color: var(--ink-3); }
 .pillbtns button[aria-pressed="true"] .n { color: var(--signal-ink); }

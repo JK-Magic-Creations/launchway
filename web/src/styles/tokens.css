@@ -4,9 +4,9 @@
    so on) are aliases of these, so every existing page is drawn in the same palette. */
 :root {
   --bg: #f3f4f6; --sheet: #ffffff; --sheet-2: #f7f8fa; --sheet-3: #eceef2;
-  --line: #e0e3e8; --line-2: #c9ced6;
+  --line: #e0e3e8; --line-2: #c9ced6; --control-line: #788190;
   --ink: #171a21; --ink-2: #434a57; --ink-3: #5a6270;
-  --signal: #3e5bd1; --signal-ink: #2c43a6; --signal-wash: #e8ecfa; --on-signal: #ffffff;
+  --signal: #3e5bd1; --signal-ink: #2c43a6; --signal-wash: #e8ecfa; --on-signal: #ffffff; --on-solid: #ffffff;
   --done: #5a6270;
   --ok: #23804a; --ok-wash: #e3f1e8; --ok-ink: #17612f;
   --bad: #c0302a; --bad-wash: #fce6e3; --bad-ink: #99231e;
@@ -20,9 +20,9 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f1115; --sheet: #171a20; --sheet-2: #1c2027; --sheet-3: #242932;
-    --line: #2a2f38; --line-2: #3a414d;
+    --line: #2a2f38; --line-2: #3a414d; --control-line: #6f7785;
     --ink: #e8eaee; --ink-2: #b0b6c1; --ink-3: #8f97a5;
-    --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430;
+    --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430; --on-solid: #0d1114;
     --done: #939bab;
     --ok: #52c883; --ok-wash: #14301f; --ok-ink: #86dca8;
     --bad: #ff7d73; --bad-wash: #3a1816; --bad-ink: #ffaba4;
@@ -34,9 +34,9 @@
 }
 :root[data-theme="dark"] {
   --bg: #0f1115; --sheet: #171a20; --sheet-2: #1c2027; --sheet-3: #242932;
-  --line: #2a2f38; --line-2: #3a414d;
+  --line: #2a2f38; --line-2: #3a414d; --control-line: #6f7785;
   --ink: #e8eaee; --ink-2: #b0b6c1; --ink-3: #8f97a5;
-  --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430;
+  --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430; --on-solid: #0d1114;
   --done: #939bab;
   --ok: #52c883; --ok-wash: #14301f; --ok-ink: #86dca8;
   --bad: #ff7d73; --bad-wash: #3a1816; --bad-ink: #ffaba4;
@@ -59,7 +59,7 @@
 
   /* Names the older pages use. */
   --surface: var(--sheet); --surface-2: var(--sheet-2);
-  --border: var(--line); --border-strong: var(--line-2);
+  --border: var(--line); --border-strong: var(--control-line);
   --text: var(--ink); --text-2: var(--ink-2); --text-3: var(--ink-3);
   --accent: var(--signal); --accent-ink: var(--signal-ink); --accent-soft: var(--signal-wash);
   --ok-soft: var(--ok-wash); --bad-soft: var(--bad-wash); --warn-soft: var(--warn-wash); --idle-soft: var(--idle-wash); --idle-ink: var(--ink-2);
@@ -77,6 +77,11 @@ body {
 }
 a { color: var(--signal-ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
+/* A link inside a sentence is underlined: color alone must not be what marks it (WCAG 1.4.1). Buttons, cards and
+   navigation, whose shape says they are links, stay plain. */
+.entity-link, :where(p, li, dd, td, blockquote, .sub, .sentence, .small, .faint, .hint, .notice, .callout) a:not([class*="btn"]):not(.lg-h):not(.brand) { text-decoration: underline; text-underline-offset: 2px; }
+/* Check boxes and radio buttons are at least 24 by 24 CSS px (WCAG 2.5.8) and take the accent. */
+input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; margin: 0; accent-color: var(--signal); vertical-align: middle; }
 button { font: inherit; color: inherit; }
 h1 { margin: 0; font: 650 28px / 1.15 var(--display); letter-spacing: -.025em; }
 h2 { margin: 0; font: 650 var(--fs-section) / 1.25 var(--display); letter-spacing: -.02em; }

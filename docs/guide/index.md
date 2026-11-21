@@ -27,5 +27,6 @@ key and setting see the [reference](../reference/index.md).
 | [Sign-in and access](access.md) | OpenID Connect, roles, sessions, API tokens, audit trail |
 | [Runners on other machines](runner-identity.md) | Pools, join tokens, runner identities, the runner's own limits |
 | [Agents (MCP)](agents.md) | The MCP endpoint, tools, rights, limits |
+| [Accessibility](accessibility.md) | What is tested for keyboard, screen reader and contrast use, and the known gaps |
 | [Running several servers](high-availability.md) | One database, several servers, Kubernetes |
 | [Using the command line](commands.md) | The `launchway` command |

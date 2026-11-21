@@ -101,6 +101,8 @@ func main() {
 	}
 	args := os.Args[2:]
 	var err error
+	// -h or --help on any command prints its help and exits 0, signed in or not: help must not need a server.
+	helping := prepareHelp(os.Args[1], args)
 	switch os.Args[1] {
 	case "server":
 		err = cmdServer(args)
@@ -160,7 +162,7 @@ func main() {
 		os.Exit(unknownCommand(os.Args[1]))
 	}
 	if err != nil {
-		exitOn(err)
+		exitAfter(err, helping)
 	}
 }
 

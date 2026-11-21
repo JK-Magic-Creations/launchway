@@ -216,6 +216,7 @@ func (cl *client) call(method, path string, body, v any) error {
 	if resp.StatusCode >= 400 {
 		var e struct {
 			Error    string            `json:"error"`
+			Next     string            `json:"next"`
 			Fields   map[string]string `json:"fields"`
 			Problems []struct {
 				Line    int    `json:"line"`
@@ -252,6 +253,10 @@ func (cl *client) call(method, path string, body, v any) error {
 			}
 		case resp.StatusCode == http.StatusUnauthorized:
 			msg += " (the token may have expired or been revoked: make a new one and run launchway login again)"
+		}
+		// The server says what to do about it (docs/development/interface-quality.md): say it on its own line.
+		if e.Next != "" && resp.StatusCode != http.StatusUnauthorized {
+			msg += "\nWhat to do: " + e.Next
 		}
 		return apiErr("%s", msg)
 	}

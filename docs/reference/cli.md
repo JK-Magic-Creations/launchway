@@ -36,7 +36,7 @@ launchway version
 
 ## Flags
 
-Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`; they mean the same. A boolean flag takes no value (`--wait`), or `--wait=false`. For `runs`, `policy` and `waivers`, flags may come before or after the positional arguments. `-h` on `server`, `runner` and `run` prints their flags.
+Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`; they mean the same. A boolean flag takes no value (`--wait`), or `--wait=false`. For `runs`, `policy` and `waivers`, flags may come before or after the positional arguments. `-h` or `--help` on any command prints its help and exits `0`, without a server and without signing in.
 
 ## Exit codes
 

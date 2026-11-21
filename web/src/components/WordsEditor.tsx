@@ -34,7 +34,7 @@ export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: 
         <legend className="cf-section-title">Every word, one by one</legend>
         <p className="cf-help">Leave a box empty to use the set's word. Words everyone knows (project, pipeline, step, run, environment, template, variable, branch, commit) are not listed: they are never renamed.</p>
         <table className="table words-table">
-          <thead><tr><th>What it is</th><th>In this set</th><th>Your word</th>{<th className="words-pl">Several</th>}<th /></tr></thead>
+          <thead><tr><th>What it is</th><th>In this set</th><th>Your word</th>{<th className="words-pl">Several</th>}<th><span className="visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             {TERM_META.map((m) => {
               const own = value.overrides[m.key] ?? "";

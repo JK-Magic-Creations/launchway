@@ -310,7 +310,7 @@ GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
 QUALITY_DIR := $(CURDIR)/quality
 
 .PHONY: tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
-	web-lint web-test web-size coverage coverage-check coverage-update check check-all
+	web-lint web-test web-size web-a11y coverage coverage-check coverage-update check check-all
 
 tools: $(GOLANGCI_LINT)
 
@@ -357,6 +357,20 @@ web-test:
 
 web-size:
 	cd web && npm ci --no-audit --no-fund --prefer-offline >/dev/null && npm run size
+
+# The accessibility scans in a real browser (docs/guide/accessibility.md). The fast part runs in
+# make check (web-test: axe-core in jsdom over every kit part and routed page, and the token contrast test). This
+# is the deeper part: axe-core in Chromium over the main pages at 1440 and 390 wide, light and dark, with color
+# contrast and target size, reflow at 320 px and the focus ring; then the keyboard-only journeys. Each starts a
+# throwaway server with demo data (scripts/a11y-server.sh). Needs a Chromium in ~/.cache/ms-playwright
+# (npx playwright-core install chromium) or LAUNCHWAY_A11Y_CHROME, and make all first. Writes the results the
+# conformance statement is built from to bin/a11y-report.json, and refreshes web/a11y-last-run.json and
+# docs/reference/accessibility-conformance.md from them (commit both).
+web-a11y: all
+	@mkdir -p bin
+	LAUNCHWAY_A11Y_REPORT=$(CURDIR)/bin/a11y-report.json scripts/a11y-server.sh node web/scripts/a11y-browser.mjs
+	LAUNCHWAY_A11Y_KEYBOARD_REPORT=$(CURDIR)/bin/a11y-keyboard.json scripts/a11y-server.sh node web/scripts/a11y-keyboard.mjs
+	node web/scripts/a11y-conformance.mjs --snapshot bin/a11y-report.json bin/a11y-keyboard.json
 
 # Writes per-package coverage (no race detector) to bin/coverage.txt.
 coverage:

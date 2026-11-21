@@ -93,7 +93,7 @@ describe("Home, v2", () => {
   it("draws each recent change as a launch line with one sentence", () => {
     render(<Home {...base()} lines={[line()]} images={2} />);
     const sheet = screen.getByRole("heading", { name: "Changes on their way" }).closest("section")!;
-    expect(within(sheet).getByRole("img", { name: /Tests: failed/ })).toBeInTheDocument();
+    expect(within(sheet).getByRole("list", { name: /Tests failed/ })).toBeInTheDocument();
     expect(within(sheet).getByText("Stopped at tests. unit-tests ended with exit code 1")).toBeInTheDocument();
     expect(within(sheet).getByRole("link", { name: /Round refunds per line item/ })).toHaveAttribute("href", "/runs/run_412");
   });

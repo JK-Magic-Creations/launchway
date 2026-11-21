@@ -14,6 +14,7 @@ behind it.
 | [HTTP API](http-api.md) | every route, who may call it, and what it returns |
 | [Configuration objects](config-objects.md) | the kinds of configuration kept in the database, their settings, and how the API, CLI, MCP and Terraform name them |
 | [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
+| [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
 | [Events and audit actions](events.md) | the run event log, the live stream and the audit trail |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
 | [Policy rules](policy-rules.md) | the policy rule catalogue |

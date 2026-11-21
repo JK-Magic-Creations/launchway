@@ -3,7 +3,7 @@
 .card-flush { padding: 0; overflow: hidden; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 14px;
-  border-radius: var(--r1); border: 1px solid var(--line-2); background: var(--sheet); color: var(--ink);
+  border-radius: var(--r1); border: 1px solid var(--control-line); background: var(--sheet); color: var(--ink);
   font: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; white-space: nowrap;
   transition: background var(--t-fast), border-color var(--t-fast), transform 60ms;
 }
@@ -11,10 +11,10 @@
 .btn:active { transform: translateY(1px); }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: .45; cursor: default; pointer-events: none; }
 .btn-primary { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
-.btn-primary:hover { background: var(--signal-ink); border-color: var(--signal-ink); color: #fff; }
+.btn-primary:hover { background: var(--signal-ink); border-color: var(--signal-ink); color: var(--on-signal); }
 .btn-danger-outline { color: var(--bad-ink); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
 .btn-danger-outline:hover { background: var(--bad-wash); }
-.btn-ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+.btn-ok { background: var(--ok); border-color: var(--ok); color: var(--on-solid); }
 .btn-ok:hover { background: var(--ok-ink); }
 .btn-ghost { border-color: transparent; background: none; }
 .btn-ghost:hover { background: var(--sheet-3); }
@@ -29,9 +29,9 @@
 .pill-wait { background: var(--warn-soft); color: var(--warn-ink); }
 
 .ic { flex: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.ic-ok { fill: var(--ok); stroke: #fff; }
-.ic-bad { fill: var(--bad); stroke: #fff; }
-.ic-warn { fill: var(--warn); stroke: #fff; }
+.ic-ok { fill: var(--ok); stroke: var(--on-solid); }
+.ic-bad { fill: var(--bad); stroke: var(--on-solid); }
+.ic-warn { fill: var(--warn); stroke: var(--on-solid); }
 .ic-wait { fill: var(--warn); stroke: var(--surface); stroke-width: 2.2; }
 .ic-run { stroke: var(--run); fill: none; }
 .ic-idle { stroke: var(--idle); fill: none; }
@@ -64,6 +64,6 @@
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { min-height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font: inherit; font-weight: 600; cursor: pointer; }
 .chip:hover { background: var(--surface-2); }
-.chip-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip-on { background: var(--accent); border-color: var(--accent); color: var(--on-signal); }
 .chip-on:hover { background: var(--accent-ink); }
 .select select { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; }

@@ -318,7 +318,7 @@ func (s *Server) longLived(r *http.Request) (context.Context, context.CancelFunc
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(withErrorShape(code, v))
 }
 
 func writeErr(w http.ResponseWriter, code int, msg string) {

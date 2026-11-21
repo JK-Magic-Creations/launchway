@@ -62,7 +62,7 @@
 .agents { display: flex; flex-direction: column; gap: 16px; }
 .agents-step { display: flex; flex-direction: column; gap: 12px; }
 .agents-step .h-sm { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 0; }
-.agents-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; flex: none; }
+.agents-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--on-signal); font-size: 13px; font-weight: 700; flex: none; }
 .agents-step .sub { margin: 0; }
 .agents-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
 .agents-facts dt { color: var(--text-3); }

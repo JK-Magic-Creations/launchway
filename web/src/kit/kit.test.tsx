@@ -54,13 +54,15 @@ describe("the launch line", () => {
   ]);
   it("describes itself in words for a screen reader", () => {
     render(<LaunchLine stations={stations} />);
-    expect(screen.getByRole("img", { name: "Commit: passed, Tests: failed, Verified: not yet" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Launch line: Commit passed, Tests failed, Verified not yet" })).toBeInTheDocument();
+    // The list is the text alternative: every station, its state in words and its detail.
+    expect(screen.getAllByRole("listitem").map((i) => i.textContent)).toEqual(["Commita41fCommit: passed. a41f", "Tests1 failedTests: failed. 1 failed (now)", "VerifiedVerified: not yet"]);
   });
   it("makes each station a button when it can be chosen, and says which is chosen", async () => {
     const user = userEvent.setup();
     const pick = vi.fn();
     render(<LaunchLine stations={stations} big selected="tests" onSelect={pick} />);
-    expect(screen.getByRole("button", { name: "Tests: failed. 1 failed" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Tests: failed\. 1 failed/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: /Commit/ }));
     expect(pick).toHaveBeenCalledWith("commit");
   });

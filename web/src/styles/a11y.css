@@ -1,0 +1,58 @@
+/* Accessibility rules that sit above the pages (docs/development/design-principles.md). Loaded last. */
+
+/* A search field drawn inside a frame has no outline of its own: the frame shows where focus is (2.4.7, 2.4.11). */
+.modal .mi:focus-within, .learn-search:focus-within, .search:focus-within { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+/* The skip link is the first stop; it shows itself with the same ring as everything else. */
+.skip-link:focus-visible { outline: 2px solid var(--on-signal); outline-offset: -4px; }
+
+/* A list item that is only a link is a target of its own: at least 24 px tall (2.5.8). */
+main li > a:only-child { display: inline-block; min-height: 24px; padding-block: 3px; }
+
+/* Touch: controls are comfortable to hit (the floor of 24 px is checked by the scan). */
+@media (pointer: coarse) {
+  .btn, .iconbtn, .tabbar a, .tabbar button, .side a, .route a { min-height: 44px; }
+  .iconbtn { min-width: 44px; }
+}
+
+/* Motion: nothing essential moves. A running state is also a shape and a word; the comet and spinners stop. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .pulse .p-run, .st.run, .spinner, .spin { animation: none !important; }
+}
+
+/* More contrast, when the person asks the system for it: quieter text and hairlines take the stronger values. */
+@media (prefers-contrast: more) {
+  :root:root:root { --ink-2: var(--ink); --ink-3: var(--ink); --log-dim: var(--log-ink); --line: var(--control-line); --line-2: var(--control-line); }
+  :focus-visible { outline-width: 3px; }
+  .sheet, .card, .band, .modal { border-color: var(--control-line); }
+  a { text-decoration: underline; }
+}
+
+/* High-contrast mode (forced colors): the system's colors replace ours, so what colors drew must also have an edge or a shape. */
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+  .st { forced-color-adjust: none; border: 2px solid CanvasText; background: Canvas; color: CanvasText; }
+  .st.bad { border-style: double; } .st.wait { border-style: dashed; border-width: 3px; } .st.warn { border-style: dotted; border-width: 3px; }
+  .st.run { border-top-color: Highlight; }
+  .lline .ls .p { forced-color-adjust: none; background: Canvas; border-color: CanvasText; color: CanvasText; }
+  .lline .ls.bad .p { border-style: double; } .lline .ls.wait .p { border-style: dashed; }
+  .lline .ls .p svg.i { color: CanvasText; }
+  .lline .ls::before { background: CanvasText; }
+  .vchip, .pill, .dpill, .dchip, .tbadge, .sevbadge, .badge { border: 1px solid CanvasText; }
+  .btn, .iconbtn, .dobar { border: 1px solid ButtonText; }
+  .btn-primary { border-width: 2px; }
+  .route a[aria-current="page"], .side a[aria-current="page"], .tabbar a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 3px; }
+  .route a[aria-current="page"]::after { background: Highlight; }
+  .vtabs [role="tab"][aria-selected="true"] { border-bottom: 3px solid Highlight; }
+  .ls[aria-pressed="true"] .p, .btn[aria-pressed="true"], .btn.on { outline: 3px solid Highlight; }
+  button[aria-pressed="true"], [role="tab"][aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .pulse { display: none; }
+  .skip-link { border: 2px solid ButtonText; }
+}
+
+/* A focused control is never hidden behind the sticky top bar or the phone's bottom bar (2.4.11). */
+html { scroll-padding-top: 76px; scroll-padding-bottom: 20px; }
+@media (max-width: 760px) { html { scroll-padding-bottom: 84px; } }
+.usermenu-pref { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; min-height: 24px; font-size: 13.5px; }
+.usermenu-pref kbd { font: 11px var(--mono); border: 1px solid var(--control-line); border-radius: 4px; padding: 0 5px; }

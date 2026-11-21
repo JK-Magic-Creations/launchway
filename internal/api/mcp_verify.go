@@ -108,7 +108,7 @@ func getVerification(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 }
 
 type markIn struct {
-	RunID   string `json:"run_id"`
+	RunID   string `json:"run_id" jsonschema:"the run's ID (run_…)"`
 	Step    string `json:"step" jsonschema:"the verify step"`
 	Outcome string `json:"outcome" jsonschema:"passed or failed"`
 	Reason  string `json:"reason" jsonschema:"why, kept with the verification and in the audit trail"`

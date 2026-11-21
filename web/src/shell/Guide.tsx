@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useModels } from "../components/Explain";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
@@ -21,14 +21,24 @@ export function useRegisterExplainer(e: Explainer | null): void {
 
 /** Guide is the calm right-hand column: where you are, in plain words, and what you can do next. The
  * optional AI help shows only when a model is configured. */
-export function Guide({ ctx, path, explainer, onClose }: { ctx: Ctx; path: string; explainer: Explainer | null; onClose: () => void }) {
+export function Guide({ ctx, path, explainer, onClose, focusOnOpen }: { ctx: Ctx; path: string; explainer: Explainer | null; onClose: () => void; focusOnOpen?: boolean }) {
+  // Escape closes the panel from anywhere inside it; focus goes back to the button that opened it (Frame does that).
+  const rail = useRef<HTMLElement>(null);
+  // As a sheet over the page (a narrow screen) it takes focus, as any panel that covers the page does; docked beside it, it does not.
+  useEffect(() => { if (focusOnOpen) rail.current?.querySelector<HTMLElement>("button")?.focus(); }, [focusOnOpen]);
+  useEffect(() => {
+    const el = rail.current;
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    el?.addEventListener("keydown", key);
+    return () => el?.removeEventListener("keydown", key);
+  }, [onClose]);
   const at = locate(path);
   const s = at ? section(at.info.section) : null;
   const coming = comingFor(path);
   const g = at ? guideFor(at.info.pattern, s?.label ?? "Launchway", s?.promise ?? "") : guideFor("", "Not here", "This page does not exist.");
   const text = coming ? `${coming.does} It is not built yet.` : g.text;
   return (
-    <aside className="rail" aria-label={terms().label("guide")}>
+    <aside className="rail" aria-label={terms().label("guide")} ref={rail}>
       <div className="rail-top"><span className="tag">{terms().label("guide")}</span><button type="button" className="iconbtn" onClick={onClose} aria-label={`Close the ${terms().lower("guide")}`}><Icon name="x" /></button></div>
       <h2>{coming ? coming.title : g.title}</h2>
       <p>{text}</p>
