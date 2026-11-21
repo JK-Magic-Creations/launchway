@@ -262,7 +262,7 @@ func (e *Engine) AddDecision(eventID string, d EventDecision) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var project string
 	if err := tx.QueryRow(`SELECT project FROM event_log WHERE id = ?`, eventID).Scan(&project); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -362,21 +362,8 @@ func (e *Engine) EventLog(f EventFilter) ([]EventRecord, error) {
 	}
 	q += " ORDER BY at DESC, id DESC LIMIT ?"
 	args = append(args, f.Limit)
-	rows, err := e.db.Query(q, args...)
+	out, err := e.queryEvents(q, args...)
 	if err != nil {
-		return nil, err
-	}
-	out := []EventRecord{}
-	for rows.Next() {
-		ev, err := scanEvent(rows)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		out = append(out, ev)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for i := range out {
@@ -387,24 +374,37 @@ func (e *Engine) EventLog(f EventFilter) ([]EventRecord, error) {
 	return out, nil
 }
 
+// queryEvents reads events (without their decisions).
+func (e *Engine) queryEvents(q string, args ...any) ([]EventRecord, error) {
+	rows, err := e.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []EventRecord{}
+	for rows.Next() {
+		ev, err := scanEvent(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ev)
+	}
+	return out, rows.Err()
+}
+
 // EventLogEntry returns one event with its decisions.
 func (e *Engine) EventLogEntry(id string) (*EventRecord, error) {
 	if !e.knows(schemaEvents) {
 		return nil, ErrNotFound
 	}
-	rows, err := e.db.Query(`SELECT id, project, at, source, source_name, verified, summary, ref, sha, dedupe_key, payload, replay, replay_of, actor FROM event_log WHERE id = ?`, id)
+	found, err := e.queryEvents(`SELECT id, project, at, source, source_name, verified, summary, ref, sha, dedupe_key, payload, replay, replay_of, actor FROM event_log WHERE id = ?`, id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	if !rows.Next() {
+	if len(found) == 0 {
 		return nil, fmt.Errorf("%w: event %s", ErrNotFound, id)
 	}
-	ev, err := scanEvent(rows)
-	if err != nil {
-		return nil, err
-	}
-	rows.Close()
+	ev := found[0]
 	if ev.Decisions, err = e.eventDecisions(id); err != nil {
 		return nil, err
 	}
@@ -499,13 +499,13 @@ type EventLink struct {
 	ReplayOf string
 }
 
-// supersededEvent notes on the event that started the run o is about that a
+// supersededEvent notes on the event that started the run c is about that a
 // newer one took its place (a no-op before schema 42).
-func (o *cmd) supersededEvent(reason string) error {
-	if !o.e.knows(schemaEvents) {
+func (c *cmd) supersededEvent(reason string) error {
+	if !c.e.knows(schemaEvents) {
 		return nil
 	}
-	return noteSuperseded(o.tx, o.runID, reason, o.now)
+	return noteSuperseded(c.tx, c.runID, reason, c.now)
 }
 
 // startEvent is the event and decision for a run that CreateRun made, for
@@ -517,7 +517,7 @@ func (c *cmd) startEvent(nr *NewRun, number int, goes bool, laneNote string, sup
 	}
 	t := nr.Trigger
 	ev := EventRecord{Project: nr.Project, Verified: true, Ref: t.Ref, SHA: t.SHA, Actor: t.Actor}
-	trig := t.Event
+	var trig string
 	switch {
 	case nr.Push != nil && strings.HasPrefix(nr.Push.Ref, "refs/pull/"):
 		ev.Source, trig = SourcePullRequest, "pull_request"

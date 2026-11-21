@@ -314,21 +314,16 @@ func (e *Engine) ResultsAfter(seq int64, limit int) ([]ResultEvent, error) {
 	if !e.knows(schemaEvents) {
 		return nil, nil
 	}
-	rows, err := e.db.Query(`SELECT seq, run_id, type, data FROM events WHERE seq > ? AND type IN (?, ?) ORDER BY seq LIMIT ?`, seq, string(RunFinished), string(DeployClosed), limit)
+	raw, err := e.rawResults(seq, limit)
 	if err != nil {
 		return nil, err
 	}
-	var out []ResultEvent
-	for rows.Next() {
-		var r ResultEvent
-		var typ, data string
-		if err := rows.Scan(&r.Seq, &r.RunID, &typ, &data); err != nil {
-			rows.Close()
-			return nil, err
-		}
+	out := make([]ResultEvent, 0, len(raw))
+	for _, x := range raw {
+		r := ResultEvent{Seq: x.seq, RunID: x.runID}
 		var p Payload
-		_ = json.Unmarshal([]byte(data), &p)
-		if typ == string(RunFinished) {
+		_ = json.Unmarshal([]byte(x.data), &p)
+		if x.typ == string(RunFinished) {
 			r.Kind, r.Verdict = TriggerOnRun, p.Status
 		} else if p.Deploy != nil {
 			r.Kind, r.Verdict = TriggerOnLaunch, p.Deploy.Verdict
@@ -336,7 +331,29 @@ func (e *Engine) ResultsAfter(seq int64, limit int) ([]ResultEvent, error) {
 		}
 		out = append(out, r)
 	}
-	rows.Close()
+	return out, nil
+}
+
+type rawResult struct {
+	seq              int64
+	runID, typ, data string
+}
+
+// rawResults reads the events of runs and deployments that ended.
+func (e *Engine) rawResults(seq int64, limit int) ([]rawResult, error) {
+	rows, err := e.db.Query(`SELECT seq, run_id, type, data FROM events WHERE seq > ? AND type IN (?, ?) ORDER BY seq LIMIT ?`, seq, string(RunFinished), string(DeployClosed), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []rawResult
+	for rows.Next() {
+		var x rawResult
+		if err := rows.Scan(&x.seq, &x.runID, &x.typ, &x.data); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
 	return out, rows.Err()
 }
 
@@ -354,8 +371,12 @@ func (e *Engine) deployFacts(runID, deployID string) (env, service, version stri
 		}
 		var p Payload
 		if json.Unmarshal([]byte(data), &p) == nil && p.Deploy != nil && p.Deploy.ID == deployID {
-			return p.Deploy.Environment, p.Deploy.Service, p.Deploy.Version
+			env, service, version = p.Deploy.Environment, p.Deploy.Service, p.Deploy.Version
+			break
 		}
+	}
+	if rows.Err() != nil {
+		return "", "", ""
 	}
 	return
 }

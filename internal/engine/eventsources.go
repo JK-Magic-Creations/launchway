@@ -116,7 +116,7 @@ func (e *Engine) CreateEventSource(s EventSource, secretSealed string) (*EventSo
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var n int
 	if err := tx.QueryRow(`SELECT COUNT(*) FROM event_sources WHERE project = ?`, s.Project).Scan(&n); err != nil {
 		return nil, err
@@ -219,7 +219,7 @@ func (e *Engine) DeleteEventSource(project, name string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var id string
 	if err := tx.QueryRow(`SELECT id FROM event_sources WHERE project = ? AND name = ?`, project, name).Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -264,7 +264,7 @@ func (e *Engine) ClaimKey(project, scope, key, eventID string, memory time.Durat
 	if err != nil {
 		return false, "", err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	now := e.now().UnixMilli()
 	res, err := tx.Exec(`INSERT INTO event_dedupe(project, scope, dkey, at, event_id) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING`, project, scope, key, now, eventID)
 	if err != nil {
@@ -331,7 +331,7 @@ func (e *Engine) AddToWindow(project, source, mode string, window time.Duration,
 	if err != nil {
 		return nil, "", err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	now := e.now().UnixMilli()
 	in, _ := json.Marshal(inputs)
 	var w EventWindow

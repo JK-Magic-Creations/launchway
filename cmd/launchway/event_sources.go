@@ -165,7 +165,7 @@ func (cl *client) sourcesWrite(verb string, args []string) error {
 		in["enabled"] = *enable
 	}
 	if *schemaFile != "" {
-		b, err := os.ReadFile(*schemaFile)
+		b, err := os.ReadFile(*schemaFile) //nolint:gosec // G703: the person's own flag, read as the person
 		if err != nil {
 			return err
 		}

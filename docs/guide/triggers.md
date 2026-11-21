@@ -1,6 +1,6 @@
 # Triggers
 
-What starts a Sortie (run) besides a person: pushes and pull requests found by polling, schedules, and webhooks.
+What starts a Sortie besides a person: pushes and pull requests found by polling, schedules, and webhooks. Whatever started (or did not start) a Sortie is recorded: see [Events](events.md). Systems that are not Git hosts can start runs through [event sources](event-sources.md), and one project's result can start another's through [triggers on results](result-triggers.md).
 
 ## Path filters
 

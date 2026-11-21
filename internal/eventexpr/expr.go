@@ -191,68 +191,88 @@ func (p *parser) next() {
 	c := p.src[p.pos]
 	switch {
 	case c == '"' || c == '\'':
-		q := c
-		p.pos++
-		var sb strings.Builder
-		for p.pos < len(p.src) && p.src[p.pos] != q {
-			if p.src[p.pos] == '\\' && p.pos+1 < len(p.src) {
-				p.pos++
-				switch p.src[p.pos] {
-				case 'n':
-					sb.WriteByte('\n')
-				case 't':
-					sb.WriteByte('\t')
-				default:
-					sb.WriteByte(p.src[p.pos])
-				}
-			} else {
+		p.scanString(start, c)
+	case isDigit(c) || (c == '-' && p.pos+1 < len(p.src) && isDigit(p.src[p.pos+1])):
+		p.scanNumber(start)
+	case unicode.IsLetter(rune(c)) || c == '_':
+		p.scanIdent(start)
+	default:
+		p.scanOp(start, c)
+	}
+}
+
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
+func (p *parser) scanString(start int, q byte) {
+	p.pos++
+	var sb strings.Builder
+	for p.pos < len(p.src) && p.src[p.pos] != q {
+		if p.src[p.pos] == '\\' && p.pos+1 < len(p.src) {
+			p.pos++
+			switch p.src[p.pos] {
+			case 'n':
+				sb.WriteByte('\n')
+			case 't':
+				sb.WriteByte('\t')
+			default:
 				sb.WriteByte(p.src[p.pos])
 			}
-			p.pos++
-		}
-		if p.pos >= len(p.src) {
-			p.tok = token{kind: tOp, text: "unterminated", pos: start}
-			p.err = fmt.Errorf("%w: the text starting at character %d is not closed", ErrSyntax, start+1)
-			return
+		} else {
+			sb.WriteByte(p.src[p.pos])
 		}
 		p.pos++
-		p.tok = token{kind: tString, text: sb.String(), pos: start}
-	case c >= '0' && c <= '9' || (c == '-' && p.pos+1 < len(p.src) && p.src[p.pos+1] >= '0' && p.src[p.pos+1] <= '9'):
+	}
+	if p.pos >= len(p.src) {
+		p.tok = token{kind: tOp, text: "unterminated", pos: start}
+		p.err = fmt.Errorf("%w: the text starting at character %d is not closed", ErrSyntax, start+1)
+		return
+	}
+	p.pos++
+	p.tok = token{kind: tString, text: sb.String(), pos: start}
+}
+
+func (p *parser) scanNumber(start int) {
+	p.pos++
+	for p.pos < len(p.src) && (isDigit(p.src[p.pos]) || p.src[p.pos] == '.') {
 		p.pos++
-		for p.pos < len(p.src) && (p.src[p.pos] >= '0' && p.src[p.pos] <= '9' || p.src[p.pos] == '.') {
-			p.pos++
+	}
+	f, err := strconv.ParseFloat(p.src[start:p.pos], 64)
+	if err != nil {
+		p.err = fmt.Errorf("%w: %q is not a number", ErrSyntax, p.src[start:p.pos])
+	}
+	p.tok = token{kind: tNumber, num: f, text: p.src[start:p.pos], pos: start}
+}
+
+func (p *parser) scanIdent(start int) {
+	for p.pos < len(p.src) {
+		c := rune(p.src[p.pos])
+		hyphen := c == '-' && p.pos+1 < len(p.src) && unicode.IsLetter(rune(p.src[p.pos+1]))
+		if !unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '_' && !hyphen {
+			break
 		}
-		f, err := strconv.ParseFloat(p.src[start:p.pos], 64)
-		if err != nil {
-			p.err = fmt.Errorf("%w: %q is not a number", ErrSyntax, p.src[start:p.pos])
-		}
-		p.tok = token{kind: tNumber, num: f, text: p.src[start:p.pos], pos: start}
-	case unicode.IsLetter(rune(c)) || c == '_':
-		for p.pos < len(p.src) && (unicode.IsLetter(rune(p.src[p.pos])) || unicode.IsDigit(rune(p.src[p.pos])) || p.src[p.pos] == '_' || p.src[p.pos] == '-' && p.pos+1 < len(p.src) && unicode.IsLetter(rune(p.src[p.pos+1]))) {
-			p.pos++
-		}
-		p.tok = token{kind: tIdent, text: p.src[start:p.pos], pos: start}
-	default:
-		two := ""
-		if p.pos+1 < len(p.src) {
-			two = p.src[p.pos : p.pos+2]
-		}
-		switch two {
+		p.pos++
+	}
+	p.tok = token{kind: tIdent, text: p.src[start:p.pos], pos: start}
+}
+
+func (p *parser) scanOp(start int, c byte) {
+	if p.pos+1 < len(p.src) {
+		switch two := p.src[p.pos : p.pos+2]; two {
 		case "==", "!=", "<=", ">=", "&&", "||":
 			p.pos += 2
 			p.tok = token{kind: tOp, text: two, pos: start}
 			return
 		}
-		if strings.ContainsRune("<>!()[],.", rune(c)) {
-			p.pos++
-			p.tok = token{kind: tOp, text: string(c), pos: start}
-			return
-		}
-		p.pos++
-		p.tok = token{kind: tOp, text: string(c), pos: start}
+	}
+	p.pos++
+	p.tok = token{kind: tOp, text: string(c), pos: start}
+	if !strings.ContainsRune("<>!()[],.", rune(c)) {
 		p.err = fmt.Errorf("%w: unexpected %q at character %d", ErrSyntax, string(c), start+1)
 	}
 }
+
+// is reports whether the current token is the punctuation or operator s.
+func (p *parser) is(s string) bool { return p.tok.kind == tOp && p.tok.text == s }
 
 type node interface{}
 
@@ -285,7 +305,7 @@ func (p *parser) or(depth int) (node, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.tok.kind == tOp && p.tok.text == "||" {
+	for p.is("||") {
 		p.next()
 		r, err := p.and(depth)
 		if err != nil {
@@ -301,7 +321,7 @@ func (p *parser) and(depth int) (node, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.tok.kind == tOp && p.tok.text == "&&" {
+	for p.is("&&") {
 		p.next()
 		r, err := p.not(depth)
 		if err != nil {
@@ -313,7 +333,7 @@ func (p *parser) and(depth int) (node, error) {
 }
 
 func (p *parser) not(depth int) (node, error) {
-	if p.tok.kind == tOp && p.tok.text == "!" {
+	if p.is("!") {
 		p.next()
 		x, err := p.not(depth + 1)
 		if err != nil {
@@ -322,6 +342,14 @@ func (p *parser) not(depth int) (node, error) {
 		return &unary{x}, nil
 	}
 	return p.cmp(depth)
+}
+
+func isCompare(op string) bool {
+	switch op {
+	case "==", "!=", "<", "<=", ">", ">=":
+		return true
+	}
+	return false
 }
 
 var wordOps = map[string]bool{"in": true, "contains": true, "startsWith": true, "endsWith": true, "glob": true}
@@ -333,7 +361,7 @@ func (p *parser) cmp(depth int) (node, error) {
 	}
 	op := ""
 	switch {
-	case p.tok.kind == tOp && (p.tok.text == "==" || p.tok.text == "!=" || p.tok.text == "<" || p.tok.text == "<=" || p.tok.text == ">" || p.tok.text == ">="):
+	case p.tok.kind == tOp && isCompare(p.tok.text):
 		op = p.tok.text
 	case p.tok.kind == tIdent && wordOps[p.tok.text]:
 		op = p.tok.text
@@ -364,101 +392,114 @@ func (p *parser) primary(depth int) (node, error) {
 	case t.kind == tNumber:
 		p.next()
 		return &lit{t.num}, nil
-	case t.kind == tOp && t.text == "(":
+	case p.is("("):
 		p.next()
 		n, err := p.or(depth + 1)
 		if err != nil {
 			return nil, err
 		}
-		if p.tok.kind != tOp || p.tok.text != ")" {
+		if !p.is(")") {
 			return nil, p.errf("expected ) but found %q", p.tok.text)
 		}
 		p.next()
 		return n, nil
-	case t.kind == tOp && t.text == "[":
+	case p.is("["):
 		p.next()
-		var items []node
-		for !(p.tok.kind == tOp && p.tok.text == "]") {
-			n, err := p.or(depth + 1)
-			if err != nil {
-				return nil, err
-			}
-			items = append(items, n)
-			if p.tok.kind == tOp && p.tok.text == "," {
-				p.next()
-			} else if !(p.tok.kind == tOp && p.tok.text == "]") {
-				return nil, p.errf("expected , or ] but found %q", p.tok.text)
-			}
+		items, err := p.sequence(depth, "]")
+		if err != nil {
+			return nil, err
 		}
-		p.next()
 		return &list{items}, nil
 	case t.kind == tIdent:
 		p.next()
-		switch t.text {
-		case "true":
-			return &lit{true}, nil
-		case "false":
-			return &lit{false}, nil
-		case "null":
-			return &lit{nil}, nil
-		}
-		if p.tok.kind == tOp && p.tok.text == "(" {
-			p.next()
-			var args []node
-			for !(p.tok.kind == tOp && p.tok.text == ")") {
-				n, err := p.or(depth + 1)
-				if err != nil {
-					return nil, err
-				}
-				args = append(args, n)
-				if p.tok.kind == tOp && p.tok.text == "," {
-					p.next()
-				} else if !(p.tok.kind == tOp && p.tok.text == ")") {
-					return nil, p.errf("expected , or ) but found %q", p.tok.text)
-				}
-			}
-			p.next()
-			if _, ok := funcs[t.text]; !ok {
-				return nil, fmt.Errorf("%w: there is no function %s (there are %s)", ErrSyntax, t.text, funcNames())
-			}
-			return &call{t.text, args}, nil
-		}
-		r := &ref{steps: []step{{name: t.text}}}
-		for {
-			switch {
-			case p.tok.kind == tOp && p.tok.text == ".":
-				p.next()
-				if p.tok.kind != tIdent && p.tok.kind != tNumber {
-					return nil, p.errf("expected a field name after .")
-				}
-				r.steps = append(r.steps, step{name: p.tok.text})
-				p.next()
-			case p.tok.kind == tOp && p.tok.text == "[":
-				p.next()
-				if p.tok.kind == tString {
-					r.steps = append(r.steps, step{name: p.tok.text})
-				} else if p.tok.kind == tNumber {
-					r.steps = append(r.steps, step{index: int(p.tok.num), isIdx: true})
-				} else {
-					return nil, p.errf("expected a number or text in []")
-				}
-				p.next()
-				if p.tok.kind != tOp || p.tok.text != "]" {
-					return nil, p.errf("expected ]")
-				}
-				p.next()
-			default:
-				if len(r.steps) > 24 {
-					return nil, p.errf("a path of more than 24 fields")
-				}
-				return r, nil
-			}
-		}
-	}
-	if p.tok.kind == tEOF {
+		return p.word(t, depth)
+	case t.kind == tEOF:
 		return nil, p.errf("the expression ends too soon")
 	}
 	return nil, p.errf("unexpected %q", p.tok.text)
+}
+
+// sequence reads comma separated expressions up to the closing punctuation.
+func (p *parser) sequence(depth int, closing string) ([]node, error) {
+	var items []node
+	for !p.is(closing) {
+		n, err := p.or(depth + 1)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, n)
+		switch {
+		case p.is(","):
+			p.next()
+		case !p.is(closing):
+			return nil, p.errf("expected , or %s but found %q", closing, p.tok.text)
+		}
+	}
+	p.next()
+	return items, nil
+}
+
+// word reads what follows a name: a literal word, a call, or a path.
+func (p *parser) word(t token, depth int) (node, error) {
+	switch t.text {
+	case "true":
+		return &lit{true}, nil
+	case "false":
+		return &lit{false}, nil
+	case "null":
+		return &lit{nil}, nil
+	}
+	if p.is("(") {
+		p.next()
+		args, err := p.sequence(depth, ")")
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := funcs[t.text]; !ok {
+			return nil, fmt.Errorf("%w: there is no function %s (there are %s)", ErrSyntax, t.text, funcNames())
+		}
+		return &call{t.text, args}, nil
+	}
+	r := &ref{steps: []step{{name: t.text}}}
+	for {
+		switch {
+		case p.is("."):
+			p.next()
+			if p.tok.kind != tIdent && p.tok.kind != tNumber {
+				return nil, p.errf("expected a field name after .")
+			}
+			r.steps = append(r.steps, step{name: p.tok.text})
+			p.next()
+		case p.is("["):
+			if err := p.index(r); err != nil {
+				return nil, err
+			}
+		default:
+			if len(r.steps) > 24 {
+				return nil, p.errf("a path of more than 24 fields")
+			}
+			return r, nil
+		}
+	}
+}
+
+// index reads [n] or ["name"] on a path.
+func (p *parser) index(r *ref) error {
+	p.next()
+	switch p.tok.kind {
+	case tString:
+		r.steps = append(r.steps, step{name: p.tok.text})
+	case tNumber:
+		r.steps = append(r.steps, step{index: int(p.tok.num), isIdx: true})
+	default:
+		return p.errf("expected a number or text in []")
+	}
+	p.next()
+	if !p.is("]") {
+		return p.errf("expected ]")
+	}
+	p.next()
+	return nil
 }
 
 // ---- evaluation ----
@@ -547,17 +588,13 @@ func (ev *evaluator) boolOf(n node, op string) (bool, error) {
 }
 
 func (ev *evaluator) binary(x *binary) (any, error) {
-	switch x.op {
-	case "&&", "||":
+	if x.op == "&&" || x.op == "||" {
 		l, err := ev.boolOf(x.l, x.op)
 		if err != nil {
 			return nil, err
 		}
-		if x.op == "&&" && !l {
-			return false, nil
-		}
-		if x.op == "||" && l {
-			return true, nil
+		if (x.op == "&&" && !l) || (x.op == "||" && l) {
+			return l, nil
 		}
 		return ev.boolOf(x.r, x.op)
 	}
@@ -575,23 +612,34 @@ func (ev *evaluator) binary(x *binary) (any, error) {
 	case "!=":
 		return !equal(l, r), nil
 	case "<", "<=", ">", ">=":
-		lf, lok := number(l)
-		rf, rok := number(r)
-		if !lok || !rok {
-			if l == nil || r == nil {
-				return false, nil
-			}
-			ls, rs := Stringify(l), Stringify(r)
-			c := strings.Compare(ls, rs)
-			return cmpResult(x.op, c), nil
-		}
+		return order(x.op, l, r), nil
+	}
+	return wordOp(x.op, l, r)
+}
+
+// order compares two values: as numbers when both are, else as text; a
+// missing value is smaller and larger than nothing.
+func order(op string, l, r any) bool {
+	lf, lok := number(l)
+	rf, rok := number(r)
+	if lok && rok {
 		c := 0
 		if lf < rf {
 			c = -1
 		} else if lf > rf {
 			c = 1
 		}
-		return cmpResult(x.op, c), nil
+		return cmpResult(op, c)
+	}
+	if l == nil || r == nil {
+		return false
+	}
+	return cmpResult(op, strings.Compare(Stringify(l), Stringify(r)))
+}
+
+// wordOp is in, contains, startsWith, endsWith and glob.
+func wordOp(op string, l, r any) (any, error) {
+	switch op {
 	case "in":
 		items, ok := r.([]any)
 		if !ok {
@@ -612,10 +660,7 @@ func (ev *evaluator) binary(x *binary) (any, error) {
 			}
 			return false, nil
 		}
-		if l == nil || r == nil {
-			return false, nil
-		}
-		return strings.Contains(Stringify(l), Stringify(r)), nil
+		return l != nil && r != nil && strings.Contains(Stringify(l), Stringify(r)), nil
 	case "startsWith":
 		return l != nil && r != nil && strings.HasPrefix(Stringify(l), Stringify(r)), nil
 	case "endsWith":
@@ -630,7 +675,7 @@ func (ev *evaluator) binary(x *binary) (any, error) {
 		}
 		return ok, nil
 	}
-	return nil, fmt.Errorf("unknown operator %s", x.op)
+	return nil, fmt.Errorf("unknown operator %s", op)
 }
 
 func cmpResult(op string, c int) bool {
