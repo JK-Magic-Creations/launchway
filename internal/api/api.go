@@ -950,8 +950,12 @@ func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "the search text is longer than 200 bytes")
 		return
 	}
+	if msg := engine.CheckLogStream(q.Get("stream"), q.Get("service")); msg != "" {
+		writeErr(w, http.StatusBadRequest, msg)
+		return
+	}
 	lines, att, err := s.Engine.QueryLogs(r.PathValue("id"), r.PathValue("step"),
-		engine.LogQuery{Attempt: attempt, After: after, Limit: limit, Tail: q.Get("tail") == "1", Search: search})
+		engine.LogQuery{Attempt: attempt, After: after, Limit: limit, Tail: q.Get("tail") == "1", Search: search, Stream: q.Get("stream"), Service: q.Get("service")})
 	if err != nil {
 		s.fail(w, err)
 		return

@@ -291,6 +291,36 @@ are reserved.
 | `memory` | quantity | the runner's | A memory request on Kubernetes, such as `512Mi` or `2Gi` |
 | `service` | boolean | `false` | Run the container's own command for the whole run instead of running steps in it. Steps cannot use a service as their `container` |
 | `command` | one value or a list | the image's own | Services only: the command to run |
+| `ready` | mapping | ready once started | Services only: when the service is ready; see [Service readiness](#service-readiness) |
+
+### Service readiness
+
+Without `ready` a service is used as soon as it has started, so a test can race a database that is
+still initialising. With it, the first step starts only when the service is ready:
+
+<!-- keys: container-ready -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `run` | text | | A command run inside the service's container, with no extra privileges; ready when it exits 0. Exactly one of `run`, `tcp` or `http` |
+| `tcp` | port | | A port on `localhost` that accepts connections |
+| `http` | mapping | | `{ path: /health, port: 8080 }`: a GET on `localhost` that answers 2xx |
+| `every` | duration | `2s` | How often to check, at least `1s` |
+| `within` | duration | `60s` | How long to wait, at most `10m` |
+
+<!-- keys: container-ready-http -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `path` | text | `/` | Starts with `/`, with no spaces or shell characters |
+| `port` | port | required | The port on `localhost` |
+
+On Kubernetes the check is the container's `readinessProbe` (`exec`, `tcpSocket` or `httpGet`; the
+period is `every`, the failure threshold `within / every`) and the pod is waited for until it is
+ready. On Podman it is the container's health check (`--health-cmd`), run inside the service's
+container: a `run` check needs its command in the image, a `tcp` check needs `nc` or `bash`, and an
+`http` check needs `wget` or `curl`. The Docker and host executors do not support services; the
+error says to use Podman or Kubernetes. The step log says `Waiting for service postgres...` and
+`Service postgres ready after 6 s`. A service that is not ready within `within` fails the step as an
+infrastructure problem, with the check and the last lines of the service's output.
 
 <!-- validate -->
 ```yaml

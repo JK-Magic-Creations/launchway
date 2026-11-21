@@ -204,6 +204,7 @@ libraries:
   platform: { repo: ci-templates, version: v3 }
 containers:
   py: { image: python:3.13 }
+  db: { image: postgres:17, service: true, ready: { http: { path: /health, port: 8080 }, every: 2s, within: 60s } }
 runner: { pool: gpu, labels: [cuda] }
 lane: { name: probe, per: [ref], when_busy: wait }
 steps:
@@ -365,6 +366,8 @@ var probes = []probe{
 	{table: "reports-coverage", path: []any{"steps", "build", "reports", "coverage"}},
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
+	{table: "container-ready", path: []any{"containers", "db", "ready"}},
+	{table: "container-ready-http", path: []any{"containers", "db", "ready", "http"}},
 	{table: "runner", path: []any{"runner"}},
 	{table: "step-runner", path: []any{"steps", "build", "runner"}},
 	{table: "lane", path: []any{"lane"}},

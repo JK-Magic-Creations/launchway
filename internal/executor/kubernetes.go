@@ -511,6 +511,7 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 		if sp.Service {
 			c.Command = sp.Command // nil: the image's own entrypoint
 			c.WorkingDir = ""
+			c.ReadinessProbe = readinessProbe(sp.Ready)
 			keys := make([]string, 0, len(sp.Env))
 			for key := range sp.Env {
 				keys = append(keys, key)
@@ -590,13 +591,18 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 	}
 	deadline := time.Now().Add(k.startWait)
 	lastNote := ""
+	readySince, noted := map[string]time.Time{}, map[string]bool{}
 	for {
 		pod, err := k.client.CoreV1().Pods(k.o.Namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return infra("waiting for pod %s: %v", name, err)
 		}
 		if pod.Status.Phase == corev1.PodRunning && allReady(pod) {
+			k.noteReady(sys, readySince, noted)
 			return nil
+		}
+		if err := k.waitForServices(ctx, pod, specs, sys, readySince, noted); err != nil {
+			return err
 		}
 		if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
 			return cannotStart("the pod stopped: %s", podProblem(pod))
@@ -632,16 +638,6 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 	}
 }
 
-// tail returns the last lines a container printed, for explaining failures.
-func (k *Kubernetes) tail(ctx context.Context, pod, container string) string {
-	n := int64(15)
-	b, err := k.client.CoreV1().Pods(k.o.Namespace).GetLogs(pod, &corev1.PodLogOptions{Container: container, TailLines: &n}).DoRaw(ctx)
-	if err != nil || len(bytes.TrimSpace(b)) == 0 {
-		return "no output"
-	}
-	return strings.TrimSpace(string(b))
-}
-
 // withDefaultContainer fills in a single container for callers that only
 // give an image.
 func withDefaultContainer(s Spec) Spec {
@@ -650,18 +646,6 @@ func withDefaultContainer(s Spec) Spec {
 		s.Container = "image-1"
 	}
 	return s
-}
-
-func allReady(p *corev1.Pod) bool {
-	if len(p.Status.ContainerStatuses) != len(p.Spec.Containers) {
-		return false
-	}
-	for _, st := range p.Status.ContainerStatuses {
-		if st.State.Running == nil {
-			return false
-		}
-	}
-	return true
 }
 
 func podProblem(p *corev1.Pod) string {

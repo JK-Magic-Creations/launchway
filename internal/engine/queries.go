@@ -740,6 +740,11 @@ type LogQuery struct {
 	Tail bool
 	// Search, if set, reads only lines that contain it, ignoring case.
 	Search string
+	// Stream, if set, reads only that stream: stdout, stderr, system or
+	// service (the services beside the steps; schema 27); Service, with
+	// stream service, only that service's lines, which start with its name
+	// and a colon. Without Stream, service lines are left out.
+	Stream, Service string
 }
 
 // QueryLogs returns log lines for one step attempt, and the attempt they
@@ -763,6 +768,7 @@ func (e *Engine) QueryLogs(runID, stepID string, q LogQuery) ([]LogLine, int, er
 		where += ` AND LOWER(text) LIKE ? ESCAPE '\'`
 		args = append(args, "%"+strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(strings.ToLower(s))+"%")
 	}
+	where, args = q.streamFilter(where, args)
 	order := "seq"
 	if q.Tail {
 		order = "seq DESC"

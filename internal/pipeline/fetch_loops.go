@@ -144,3 +144,14 @@ func fromTemplateLoop(from string, ids map[string]*Step) *Step {
 	}
 	return nil
 }
+
+// templateLoopFetchProblem checks a fetch of use/loop: the fetching step must
+// need the step that uses the template. The loop itself is checked once the
+// template is read.
+func templateLoopFetchProblem(from string, upstream map[string]bool, ids map[string]*Step) string {
+	use := fromTemplateLoop(from, ids).ID
+	if !upstream[use] {
+		return "fetches from " + from + ", which this step does not need; add " + use + " to needs so it has run first"
+	}
+	return ""
+}

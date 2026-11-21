@@ -107,6 +107,9 @@ func (e *Engine) waitingFor(st *RunState, def *pipeline.Step) string {
 			return ""
 		}
 	}
+	if rows.Err() != nil {
+		return ""
+	}
 	want := "a runner"
 	if def.Runner.Pool != "" {
 		want += " of pool " + def.Runner.Pool

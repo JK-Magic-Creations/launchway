@@ -770,11 +770,13 @@ type logIn struct {
 	Lines    int    `json:"lines,omitempty" jsonschema:"how many lines, at most 500; default 100"`
 	AfterSeq int    `json:"after_seq,omitempty" jsonschema:"head and search: only lines after this sequence number"`
 	Query    string `json:"query,omitempty" jsonschema:"search: the text to look for, ignoring case (at most 200 bytes)"`
+	Stream   string `json:"stream,omitempty" jsonschema:"only this stream: stdout, stderr, system or service (the output of the services beside the steps, each line starting with the service's name); default all but service"`
+	Service  string `json:"service,omitempty" jsonschema:"with stream service: only this service's lines"`
 }
 
 type logLineOut struct {
 	Seq    int    `json:"seq"`
-	Stream string `json:"stream" jsonschema:"stdout, stderr or system (written by Launchway)"`
+	Stream string `json:"stream" jsonschema:"stdout, stderr, system (written by Launchway) or service (a service container's output)"`
 	Text   string `json:"text"`
 }
 
@@ -816,6 +818,7 @@ func getStepLog(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in logI
 	if in.Attempt > 0 {
 		q.Set("attempt", strconv.Itoa(in.Attempt))
 	}
+	setLogStream(q, in.Stream, in.Service)
 	if in.AfterSeq > 0 {
 		q.Set("after", strconv.Itoa(in.AfterSeq))
 	}

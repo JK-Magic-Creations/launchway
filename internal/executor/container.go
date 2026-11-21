@@ -143,7 +143,7 @@ func (c *Container) podName(runID string) string {
 // reach them at localhost, the same as on Kubernetes.
 func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, error) {
 	if !c.isPodman() {
-		return "", errors.New("services need Podman or Kubernetes; Docker is not supported for services yet")
+		return "", errors.New("services need Podman or Kubernetes: Docker is not supported for services, so run this on a runner that uses Podman (executor: podman) or Kubernetes")
 	}
 	c.mu.Lock()
 	if c.locks == nil {
@@ -188,6 +188,7 @@ func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, er
 			args = append(args, "-e", k)
 			env = append(env, k+"="+svc.Env[k])
 		}
+		args = append(args, podmanHealthArgs(svc.Ready)...)
 		args = append(args, svc.Image)
 		args = append(args, svc.Command...)
 		cmd := exec.CommandContext(ctx, c.Bin, args...)
@@ -196,6 +197,11 @@ func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, er
 			return "", fmt.Errorf("starting service %s: %s", svc.Name, lastLine(string(b)))
 		}
 		out("system", fmt.Sprintf("Started service %s (%s); reach it at localhost", svc.Name, svc.Image))
+		if svc.Ready != nil {
+			if err := c.waitHealthy(ctx, name, svc.Name, svc.Ready, out); err != nil {
+				return "", err
+			}
+		}
 	}
 	return pod, nil
 }

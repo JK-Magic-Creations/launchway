@@ -329,7 +329,7 @@ var (
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
-	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
+	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command", "ready"}
 	containerRe   = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`)
 	quantityRe    = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?(m|k|M|G|T|Ki|Mi|Gi|Ti)?$`)
 	reservedNames = map[string]bool{"workspace": true}
@@ -382,10 +382,15 @@ func (ps *parser) parseContainers(n *yaml.Node, p *Pipeline) {
 				}
 			case "command":
 				c.Command = ps.strList(v2, where)
+			case "ready":
+				c.Ready = ps.parseReady(v2, where)
 			}
 		})
 		if strings.TrimSpace(c.Image) == "" {
 			ps.add(k, at+".image", "an image is required")
+		}
+		if c.Ready != nil && !c.Service {
+			ps.add(k, at+".ready", "only a service is waited for: a container steps run in is ready when it starts; add service: true, or take ready out")
 		}
 		if len(c.Command) > 0 && !c.Service {
 			ps.add(k, at+".command", "only a service has its own command; steps say what to run with run")

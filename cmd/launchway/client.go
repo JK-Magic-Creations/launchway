@@ -44,7 +44,7 @@ const clientUsage = `Usage:
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
   launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
-  launchway runs logs <run-id> [--step S] [--follow]
+  launchway runs logs <run-id> [--step S] [--service NAME] [--follow]   --service: a service container's output
   launchway runs cancel <run-id>
   launchway approvals list|approve|reject          see launchway approvals
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
@@ -733,12 +733,13 @@ func (cl *client) logs(args []string) error {
 	fs := flag.NewFlagSet("runs logs", flag.ContinueOnError)
 	step := fs.String("step", "", "only this step")
 	follow := fs.Bool("follow", false, "keep printing new lines until the run finishes")
+	service := fs.String("service", "", "print this service container's output instead of the steps'")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which run: launchway runs logs <run-id> [--step S] [--follow]")
+		return usageErr("say which run: launchway runs logs <run-id> [--step S] [--service NAME] [--follow]")
 	}
 	id := pos[0]
 	type progress struct {
@@ -770,7 +771,7 @@ func (cl *client) logs(args []string) error {
 					Attempt int       `json:"attempt"`
 					Lines   []logLine `json:"lines"`
 				}
-				path := fmt.Sprintf("/api/v1/runs/%s/steps/%s/logs?attempt=%d&after=%d&limit=1000", url.PathEscape(id), url.PathEscape(s.ID), p.attempt, p.after)
+				path := fmt.Sprintf("/api/v1/runs/%s/steps/%s/logs?attempt=%d&after=%d&limit=1000", url.PathEscape(id), url.PathEscape(s.ID), p.attempt, p.after) + serviceQuery(*service)
 				if err := cl.call("GET", path, nil, &page); err != nil {
 					return err
 				}

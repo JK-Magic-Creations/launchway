@@ -85,6 +85,9 @@ type Container struct {
 	Memory  string            `json:"memory,omitempty"`  // e.g. 512Mi or 2Gi
 	Service bool              `json:"service,omitempty"` // runs its own command for the whole run
 	Command []string          `json:"command,omitempty"` // services only; default: the image's own
+	// Ready, for a service, says when it is ready; the first step waits for
+	// it (schema 27; see ready.go).
+	Ready *Ready `json:"ready,omitempty"`
 
 	// What the server works out for a run's container from its steps'
 	// resources and the installation's defaults, and hands the runner with

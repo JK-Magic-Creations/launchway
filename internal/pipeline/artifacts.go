@@ -393,10 +393,7 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 			case f.From == s.ID:
 				problem = "a step cannot fetch its own artifacts; they are kept after it runs"
 			case from == nil && fromTemplateLoop(f.From, ids) != nil:
-				// A loop inside a template, such as ci/build: checked once the template is read.
-				if !upstream[fromTemplateLoop(f.From, ids).ID] {
-					problem = "fetches from " + f.From + ", which this step does not need; add " + fromTemplateLoop(f.From, ids).ID + " to needs so it has run first"
-				}
+				problem = templateLoopFetchProblem(f.From, upstream, ids)
 			case from == nil:
 				problem = "fetches from " + quoteText(f.From) + ", but there is no step with that name"
 			case f.Member != nil && from.ForEach == nil:

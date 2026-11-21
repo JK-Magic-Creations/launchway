@@ -15,7 +15,6 @@ package pipeline
 // step at once.
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
@@ -103,12 +102,4 @@ func (ps *parser) approverNames(n *yaml.Node, at string) []string {
 		}
 	}
 	return out
-}
-
-// approverSummary is what the pipeline's approvers say, for views.
-func (s *Step) approverSummary() string {
-	if s.Approvers == nil {
-		return ""
-	}
-	return fmt.Sprintf("%d of %s", s.Approvers.Count, s.Approvers.Describe())
 }

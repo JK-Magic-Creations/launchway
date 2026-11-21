@@ -20,9 +20,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// loopExtraKeys are the loop keys of schema 27.
-var loopExtraKeys = []string{"add", "continue_for"}
-
 // loopEntry is one entry of add or continue_for, with where it was written.
 type loopEntry struct {
 	values map[string]string

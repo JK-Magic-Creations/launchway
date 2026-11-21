@@ -164,3 +164,11 @@ func nonEmptyText(s, def string) string {
 	}
 	return s
 }
+
+// serviceQuery asks the logs route for one service's lines.
+func serviceQuery(service string) string {
+	if service == "" {
+		return ""
+	}
+	return "&stream=service&service=" + url.QueryEscape(service)
+}

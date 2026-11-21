@@ -11,6 +11,9 @@ const SchemaParity2 = 27
 // UsesSchemaParity2 reports whether the pipeline uses a key servers older
 // than schema 27 do not know.
 func (p *Pipeline) UsesSchemaParity2() bool {
+	if p.usesReady() {
+		return true
+	}
 	for _, s := range p.Steps {
 		if s.Approvers != nil || s.Runner != nil {
 			return true

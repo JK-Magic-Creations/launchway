@@ -762,7 +762,7 @@ func containerSpecs(job *engine.Job) []executor.ContainerSpec {
 		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
 			Service: c.Service, Command: c.Command,
 			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads,
-			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory}
+			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory, Ready: readySpec(c.Ready)}
 	}
 	return out
 }

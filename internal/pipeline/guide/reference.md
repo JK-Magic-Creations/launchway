@@ -150,6 +150,7 @@ steps:
 | `cpu`, `memory` | Requests, as Kubernetes quantities (`500m`, `2Gi`) |
 | `service` | `true`: runs beside the steps for the whole run, reachable at `localhost` |
 | `command` | For a service: the command to run instead of the image's own |
+| `ready` | For a service: `{ run: "pg_isready", every: 2s, within: 60s }`, `{ tcp: 6379 }` or `{ http: { path: /health, port: 8080 } }`; the first step waits until it is ready |
 
 Every container of a run shares the workspace. All of a run's steps go to one runner while it
 keeps in touch; if another runner takes over, files earlier steps wrote are gone (outputs and
