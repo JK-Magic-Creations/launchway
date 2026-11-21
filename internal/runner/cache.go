@@ -509,7 +509,10 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": "))
 		return
 	}
-	cr.warnSecretLike(name, staged.Files)
+	if why := cr.refuseCredentials(staged.Files); why != "" {
+		cr.notSaved(t, why)
+		return
+	}
 	archive, err := executor.PackCache(staged.Files, filepath.Join(dir, "archive"))
 	if err != nil {
 		cr.notSaved(t, "packing the files failed: "+err.Error())
@@ -562,23 +565,24 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	cr.sys("Cache %s: saved %s as key %s", name, cacheSize(archive.Bytes), shortKey(t.key))
 }
 
-// warnSecretLike says in the step's log that a cache is about to keep files
-// named like credentials: every run that may restore the entry gets them.
-func (cr *cacheRun) warnSecretLike(name string, files []executor.StagedFile) {
-	names := executor.SecretLikeFiles(files)
-	if len(names) == 0 {
-		return
+// refuseCredentials is the message for a cache that holds files that look
+// like credentials, or "". Such a cache is never saved: every run that may
+// restore it would receive them.
+func (cr *cacheRun) refuseCredentials(files []executor.StagedFile) string {
+	found := executor.CredentialFiles(files)
+	if len(found) == 0 {
+		return ""
 	}
-	shown := names
-	if len(shown) > 5 {
-		shown = shown[:5]
+	var shown []string
+	for i, f := range found {
+		if i == 5 {
+			shown = append(shown, fmt.Sprintf("and %d more", len(found)-5))
+			break
+		}
+		shown = append(shown, f.Path+" ("+f.Why+")")
 	}
-	more := ""
-	if len(names) > len(shown) {
-		more = fmt.Sprintf(" and %d more", len(names)-len(shown))
-	}
-	cr.sys("Cache %s: warning: %d file(s) named like credentials are saved in this cache (%s%s); every run that may restore it can read them. Keep secrets out of cached paths.",
-		name, len(names), cr.mask(strings.Join(shown, ", ")), more)
+	return fmt.Sprintf("it holds %d file(s) that look like credentials: %s. Every run that may restore a cache receives what is in it, so it is not saved. Narrow the cache's paths so they leave the file out (cache .m2/repository, not the whole .m2), and use short-lived registry credentials that are not written into the workspace",
+		len(found), strings.Join(shown, ", "))
 }
 
 func maxInt64(a, b int64) int64 {

@@ -520,15 +520,3 @@ func TestStagingForACacheLeavesOutGitDirectories(t *testing.T) {
 		t.Fatalf("%v %v", staged, err)
 	}
 }
-
-func TestSecretLikeFiles(t *testing.T) {
-	var files []StagedFile
-	for _, p := range []string{".cache/a.txt", "x/.env", ".env.production", "keys/server.pem", "id_ed25519", "id_ed25519.pub", ".npmrc", "node_modules/y/index.js", "deploy/prod.tfvars", "cert.key"} {
-		files = append(files, StagedFile{Path: p})
-	}
-	got := strings.Join(SecretLikeFiles(files), " ")
-	want := "x/.env .env.production keys/server.pem id_ed25519 .npmrc deploy/prod.tfvars cert.key"
-	if got != want {
-		t.Errorf("got  %s\nwant %s", got, want)
-	}
-}

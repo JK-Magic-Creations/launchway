@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -414,37 +413,4 @@ func StageWorkspace(ctx context.Context, ex Executor, s Spec, globs []string, li
 // as a worktree has) in it.
 func inGitDir(name string) bool {
 	return slices.Contains(strings.Split(name, "/"), ".git")
-}
-
-// secretNames and secretPatterns are the names of files that hold
-// credentials in most projects. A cache is restored by every run that may
-// read it, so a secret kept in one reaches more places than it was written
-// for.
-var (
-	secretNames = []string{".env", ".npmrc", ".pypirc", ".netrc", ".git-credentials", ".htpasswd", ".dockercfg", ".pgpass", ".my.cnf",
-		"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials", "credentials.json", "service-account.json", "secrets.json", "secrets.yaml", "secrets.yml",
-		"terraform.tfvars"}
-	secretPatterns = []string{".env.*", "*.pem", "*.key", "*.p12", "*.pfx", "*.jks", "*.keystore", "*.kdbx", "*.tfvars", "*_rsa", "*_ed25519", "*_ecdsa", "*.ppk"}
-)
-
-// SecretLikeFiles returns the paths of the staged files whose names are
-// those of files that usually hold credentials (.env, private keys,
-// .npmrc, ...). The caller warns; the files are still kept, as a project
-// may cache a directory that holds such a file for a reason of its own.
-func SecretLikeFiles(files []StagedFile) []string {
-	var out []string
-	for _, f := range files {
-		base := path.Base(f.Path)
-		match := slices.Contains(secretNames, base)
-		for _, p := range secretPatterns {
-			if ok, _ := path.Match(p, base); ok {
-				match = true
-				break
-			}
-		}
-		if match && !strings.HasSuffix(base, ".pub") {
-			out = append(out, f.Path)
-		}
-	}
-	return out
 }
