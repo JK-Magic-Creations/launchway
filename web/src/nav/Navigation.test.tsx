@@ -63,11 +63,11 @@ describe("the left column", () => {
 
 describe("Breadcrumbs", () => {
   it("links back up and marks the page itself", () => {
-    render(<Breadcrumbs path="/projects/shop/pipeline" />);
+    render(<Breadcrumbs path="/projects/shop/pipeline/edit" />);
     expect(screen.getByRole("navigation", { name: "You are here" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Code" })).toHaveAttribute("href", "/projects");
-    expect(screen.getByRole("link", { name: "shop" })).toHaveAttribute("href", "/projects/shop");
-    expect(screen.getByText("Pipeline")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Pipelines" })).toHaveAttribute("href", "/pipelines");
+    expect(screen.getByRole("link", { name: "shop" })).toHaveAttribute("href", "/projects/shop/pipeline");
+    expect(screen.getByText("Edit")).toHaveAttribute("aria-current", "page");
   });
   it("is not drawn on an area's own page", () => {
     const { container } = render(<Breadcrumbs path="/projects" />);

@@ -106,3 +106,26 @@ describe("the kit page", () => {
     expect(screen.getAllByRole("img").length).toBeGreaterThan(5);
   });
 });
+
+import { Tabs } from "./Tabs";
+import { TrendStrip } from "./Trend";
+import { trendOf } from "../guided/decide";
+
+describe("Tabs and Trend", () => {
+  it("moves between tabs with the arrow keys and marks the chosen one", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    let on = "a";
+    const { rerender } = render(<Tabs label="Views" on={on} onChange={(id) => { on = id; }} tabs={[{ id: "a", label: "Live" }, { id: "b", label: "Text" }, { id: "c", label: "Draw", soon: true }]} />);
+    expect(screen.getByRole("tab", { name: "Live" })).toHaveAttribute("aria-selected", "true");
+    screen.getByRole("tab", { name: "Live" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(on).toBe("b");
+    rerender(<Tabs label="Views" on={on} onChange={() => {}} tabs={[{ id: "a", label: "Live" }, { id: "b", label: "Text" }]} />);
+    expect(screen.getByRole("tab", { name: "Text" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "Live" })).toHaveAttribute("tabindex", "-1");
+  });
+  it("describes a trend in words, never by colour alone", () => {
+    render(<TrendStrip trend={trendOf([{ status: "failed", waiting: [], started_at: 1, created_at: 1, finished_at: 2 }, { status: "succeeded", waiting: [], started_at: 1, created_at: 1, finished_at: 2 }])} label="Last runs of shop" />);
+    expect(screen.getByRole("img", { name: "Last runs of shop: 1 passed, 1 failed" })).toBeInTheDocument();
+  });
+});

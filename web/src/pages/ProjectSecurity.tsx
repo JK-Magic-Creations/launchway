@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ProjectHead } from "./PipelineChrome";
 import { api, ApiError, type FindingView, type ProjectSecurity, type SecurityRun, type Severity } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate, onLink } from "../router";
@@ -41,20 +42,15 @@ export function ProjectSecurityPage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <header className="page-head">
-        <div>
-          <h1>Security of {name}</h1>
-          <p className="sub">{data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the findings move, and those still open.</> : "What the scanners its steps run have found."}</p>
-        </div>
-        {data && data.refs.length > 0 && (
+      <ProjectHead name={name} on="security" title={<>Security of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the findings move, and those still open.</> : "What the scanners its steps run have found."}
+        actions={data && data.refs.length > 0 && (
           <div className="chips" role="group" aria-label="Branch">
             {(data.refs.includes(data.ref) || !data.ref ? data.refs : [data.ref, ...data.refs]).slice(0, 8).map((r) => (
               <button key={r} type="button" className={"chip" + (r === data.ref ? " chip-on" : "")} aria-pressed={r === data.ref}
                 onClick={() => go(r.startsWith("refs/heads/") ? refName(r) : r)}>{refName(r)}</button>
             ))}
           </div>
-        )}
-      </header>
+        )} />
 
       <ErrorBox error={error instanceof ApiError && error.status === 404 ? `There is no project called ${name}, or you may not see it.` : error} />
       {!data && !error && <div className="loading">Loading…</div>}

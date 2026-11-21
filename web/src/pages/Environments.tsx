@@ -6,6 +6,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../components/Deployment";
 import { VerifyPill } from "../components/Verification";
+import { PageHead } from "../kit/layout";
 
 // EnvironmentsPage shows, for every service of every project, what each
 // environment runs, what is being deployed there now, and who holds or waits
@@ -33,13 +34,9 @@ export function EnvironmentsPage() {
 
   return (
     <div className="page page-wide">
-      <header className="page-head">
-        <div>
-          <h1>Environments</h1>
-          <p className="sub">What each environment runs, by service, and what is being deployed there now. Checked every 5 seconds.</p>
-        </div>
-        {envs && envs.length > 0 && <WizardButton wizard="add-environment" label="Add an environment" />}
-      </header>
+      <PageHead eyebrow="Deployments" title="Environments"
+        sentence="What each environment runs, by service, and what is being deployed there now. Checked every 5 seconds."
+        actions={envs && envs.length > 0 ? <WizardButton wizard="add-environment" label="Add an environment" /> : undefined} />
       <ErrorBox error={error} />
       {envs === null && !error && <div className="loading">Loading…</div>}
       {envs && envs.length === 0 && <NoEnvironments />}

@@ -19,7 +19,7 @@ vi.mock("../api", async (orig) => {
     ...real,
     api: {
       ...real.api,
-      projects: vi.fn(), runs: vi.fn(), runners: vi.fn(), environments: vi.fn(), project: vi.fn(),
+      projects: vi.fn(), runs: vi.fn(), runners: vi.fn(), environments: vi.fn(), project: vi.fn(), refs: vi.fn().mockResolvedValue([]),
     },
   };
 });
@@ -34,11 +34,11 @@ vi.mock("../triggers", async (orig) => {
 
 import { api } from "../api";
 import { configApi } from "../configApi";
-import { ApplicationsPage } from "./Applications";
-import { DeploymentsPage } from "./Deployments";
+import { ApplicationsListPage as ApplicationsPage } from "./ApplicationsList";
+import { DeploymentsOverviewPage as DeploymentsPage } from "./DeploymentsOverview";
 import { TemplatesPage } from "./Library";
-import { ProjectPage } from "./ProjectPage";
-import { ProjectsPage } from "./Projects";
+import { RepoPage as ProjectPage } from "./RepoPage";
+import { CodeListPage as ProjectsPage } from "./CodeList";
 
 const NAMES = ["shop-api", "shop-api-staging", "staging", "platform", "go-service", "build-1"];
 
@@ -66,8 +66,7 @@ describe("every name is a link", () => {
   });
   it("on a project's page", async () => {
     const { container } = app(<ProjectPage name="shop-api" />);
-    await screen.findByText("At a glance", { selector: "section" }).catch(() => null);
-    await waitFor(() => expect(screen.getByText("Who uses it?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Deployed to")).toBeInTheDocument());
     await screen.findByRole("link", { name: "staging" });
     expectEntitiesLinked(container, ["staging", "build-1"]);
   });
