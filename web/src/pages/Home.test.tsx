@@ -121,3 +121,17 @@ describe("Home, v2", () => {
     expect(within(screen.getByRole("region", { name: "Explore" })).getByRole("link", { name: /Waiting/ })).toHaveTextContent("2decisions");
   });
 });
+
+describe("Home lists the pull requests that wait on a person", () => {
+  it("as entries of Needs you, each with a link to the pull request", () => {
+    render(<Home {...props({ pullInbox: [
+      { repository: "acme/shop", number: 3, title: "Round prices", kind: "review_requested", why: "ada asked you to review it" },
+      { repository: "acme/shop", number: 4, title: "Add tests", kind: "queue_failed", why: "the merge queue took it out: `test` failed" },
+    ] })} />);
+    const need = screen.getByRole("region", { name: "Needs your attention" });
+    expect(within(need).getByText("Review wanted on acme/shop#3")).toBeInTheDocument();
+    expect(within(need).getByText("acme/shop#4 left the merge queue")).toBeInTheDocument();
+    expect(within(need).getByRole("link", { name: "Review" })).toHaveAttribute("href", "/repositories/acme/shop/pulls/3");
+    expect(within(need).getByRole("link", { name: "See why" })).toHaveAttribute("href", "/repositories/acme/shop/pulls/4");
+  });
+});

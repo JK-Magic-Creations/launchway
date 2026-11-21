@@ -8,6 +8,7 @@ import { ago } from "../format";
 import { checklist, nextStep, type CheckItem, type AppRow } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
 import { headline, needsYou, type Need } from "../guided/needs";
+import { pullNeeds, usePullInbox, type InboxItem } from "../guided/pullNeeds";
 import { useImageCount, useLaunchLines } from "../guided/useLaunchLines";
 import { Icon } from "../kit/Icon";
 import { LaunchLine, toStations } from "../kit/LaunchLine";
@@ -26,10 +27,11 @@ export function HomePage() {
   const now = useNow(30000);
   const lines = useLaunchLines();
   const images = useImageCount(inst.projects);
+  const pullInbox = usePullInbox();
   if (!me) return null;
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   return <Home me={me} projects={inst.projects} runs={inst.runs} runners={inst.runners} environments={inst.environments}
-    applications={inst.applications} approvals={inst.approvals} now={now} lines={lines ?? []} images={images} />;
+    applications={inst.applications} approvals={inst.approvals} now={now} lines={lines ?? []} images={images} pullInbox={pullInbox} />;
 }
 
 export interface HomeProps {
@@ -45,12 +47,14 @@ export interface HomeProps {
   lines?: LaunchLineView[];
   /** Different images found, or null while it is not known. */
   images?: number | null;
+  /** Pull requests waiting on this person (reviews asked, changes asked, a queue that failed). */
+  pullInbox?: InboxItem[];
 }
 
-export function Home({ me, projects, runs, runners, environments, applications, approvals, now, lines = [], images = null }: HomeProps) {
+export function Home({ me, projects, runs, runners, environments, applications, approvals, now, lines = [], images = null, pullInbox = [] }: HomeProps) {
   const items = me.admin ? checklist(me, { projects, runners, runs, environments }) : [];
   const next = nextStep(items);
-  const needs = needsYou({ projects, approvals, runners, applications, me }, lines, now);
+  const needs = [...needsYou({ projects, approvals, runners, applications, me }, lines, now), ...pullNeeds(pullInbox)];
   const finished = items.length > 0 && next.item === null;
   const fresh = items.length > 0 && next.done === 0 && runs.length === 0;
   const onTheirWay = lines.filter((l) => l.tone !== "ok" && l.tone !== "idle").length;
