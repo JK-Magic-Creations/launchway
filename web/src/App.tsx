@@ -3,6 +3,7 @@ import { api, ApiError, SIGNED_OUT, type Me } from "./api";
 import { MeContext } from "./auth";
 import { useApprovals } from "./live";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
+import { useOverview } from "./configApi";
 import { ErrorBox } from "./components/ui";
 import { InstallationProvider } from "./guided/facts";
 import { Frame } from "./shell/Frame";
@@ -40,6 +41,9 @@ export function App() {
 
 function Shell({ me }: { me: Me }) {
   const approvals = useApprovals();
+  // The words come with the settings: they are known before the first page is drawn.
+  const { overview, error } = useOverview();
+  if (!overview && !error) return <div className="page"><div className="loading">Loading…</div></div>;
   return (
     <InstallationProvider me={me} approvals={approvals.list ?? []}>
       <Frame me={me} approvals={approvals} />

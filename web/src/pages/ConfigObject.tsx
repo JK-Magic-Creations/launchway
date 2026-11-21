@@ -11,6 +11,7 @@ import { ConfigNav, wizardFor } from "../components/ConfigNav";
 import { PolicyRules } from "../components/PolicyRules";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../config.css";
+import { terms } from "../terms";
 
 // ConfigObjectPage shows one configuration object: a form for its settings
 // with an explanation under each, a raw tab for anything without a field,
@@ -202,7 +203,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
                 {k.name === "policy" && (
                   catalogue.length ? <PolicyRules catalogue={catalogue} rules={(spec.rules as Record<string, unknown>) ?? {}} problems={by}
                     onChange={(r) => setSpec({ ...spec, rules: Object.keys(r).length ? r : undefined } as Spec)} />
-                    : <p className="faint">Loading the rule catalogue…</p>
+                    : <p className="faint">Loading the rule catalog…</p>
                 )}
                 <Unformed kind={k.name} spec={spec} />
               </>
@@ -272,15 +273,15 @@ function RawEditor({ spec, onChange }: { spec: Spec; onChange: (s: Spec) => void
   );
 }
 
-const FROM: Record<string, string> = { default: "built-in default", installation: "installation setting", project: "this project" };
+const FROM: Record<string, string> = { default: "built-in default", project: "this project" };
 
 /** EffectiveCard says what applies to a project and where each comes from. */
 function EffectiveCard({ project, overview }: { project: string; overview: ConfigOverview }) {
   const [ef, setEf] = useState<Effective | null>(null);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => { configApi.effective(project).then(setEf).catch(setError); }, [project]);
-  const from = (f: string, unit?: string) => f === "organisation" ? `${overview.levels.organisation.singular}`
-    : f === "unit" ? levelOf(overview, unit ?? "") : f === "installation" ? `${overview.levels.installation.singular} setting` : FROM[f] ?? f;
+  const from = (f: string, unit?: string) => f === "organisation" ? terms().label("organization")
+    : f === "unit" ? levelOf(overview, unit ?? "") : f === "installation" ? `${terms().label("installation")} setting` : FROM[f] ?? f;
   return (
     <section className="card" aria-labelledby="cf-eff-h">
       <h2 id="cf-eff-h" className="cf-h">What applies to this {overview.levels.project.singular.toLowerCase()}</h2>

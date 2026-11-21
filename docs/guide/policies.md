@@ -1,8 +1,8 @@
 # Policies
 
-Rules an organisation sets for every pipeline, judged at run start, before deploying and before pushing an image. The full catalogue is in the [policy rules reference](../reference/policy-rules.md).
+Rules an organization sets for every pipeline, judged at run start, before deploying and before pushing an image. The full catalogue is in the [policy rules reference](../reference/policy-rules.md).
 
-Policies are rules an organisation sets for every pipeline, which the pipeline's authors cannot
+Policies are rules an organization sets for every pipeline, which the pipeline's authors cannot
 switch off: they live in the server's configuration, or in a Git repository the server reads at a
 pinned tag, never in the pipeline file. Each policy is a name, a scope, a mode and rules taken from
 a fixed catalogue. There is no policy language: a rule is a typed setting with a fixed meaning,

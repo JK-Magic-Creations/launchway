@@ -524,6 +524,9 @@ func checkOwn(k *Kind, v any) error {
 		if t.Reports.Origin != "" {
 			return errors.New("reports.origin stays in the configuration file: it is part of how the server is reached")
 		}
+		if err := t.Terms.check(); err != nil {
+			return err
+		}
 		return t.Levels.check()
 	case *config.ProjectConfig:
 		if err := checkAddress("repo", t.Repo); err != nil {

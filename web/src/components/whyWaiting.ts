@@ -6,6 +6,7 @@
 import type { RunDetail, StepView } from "../api";
 import { clock, duration } from "../format";
 import { deploymentOf, environmentOf } from "./Deployment";
+import { terms } from "../terms";
 
 export interface Why { text: string; /** The same in a few words, for a station of the line. */ short: string; /** What the wait is for: a person, a runner, another step, the environment, the timer. */ kind: "person" | "runner" | "step" | "environment" | "timer" | "engine" }
 
@@ -40,8 +41,8 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
 
 function waitingWhy(run: RunDetail, step: StepView): Why {
   if (step.kind === "approval") {
-    const by = step.deadline > 0 ? ` Decide before ${clock(step.deadline)}, or it is rejected.` : "";
-    return { kind: "person", short: "Waiting for a person", text: `Waiting for a person to approve${step.message ? `: ${step.message}` : "."}${by}` };
+    const by = step.deadline > 0 ? ` Say ${terms().label("go")} or ${terms().label("no_go")} before ${clock(step.deadline)}, or it is refused.` : "";
+    return { kind: "person", short: "Waiting for a person", text: `Waiting for a person to give ${terms().lower("clearance")}${step.message ? `: ${step.message}` : "."}${by}` };
   }
   if (step.kind === "verify" || step.wait_kind === "verify") {
     return { kind: "person", short: "Waiting for a person", text: "The checks could not decide whether the deployment is healthy, so a person must mark it passed or failed." };

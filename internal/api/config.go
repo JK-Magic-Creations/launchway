@@ -82,7 +82,7 @@ func (s *Server) configFail(w http.ResponseWriter, err error) {
 // GET /api/v1/config: the kinds, the levels and their names, and the
 // revision this server runs with.
 func (s *Server) configOverview(w http.ResponseWriter, r *http.Request) {
-	out := map[string]any{"available": false, "kinds": settings.Kinds(), "levels": settings.DefaultLevels}
+	out := map[string]any{"available": false, "kinds": settings.Kinds(), "levels": settings.DefaultLevels, "terms": settings.Terms{Set: "aviation", Overrides: map[string]string{}}}
 	if s.Settings != nil && s.Settings.Available() {
 		lay, err := s.Settings.Levels()
 		if err != nil {
@@ -93,6 +93,7 @@ func (s *Server) configOverview(w http.ResponseWriter, r *http.Request) {
 		admin := s.authorize(id, auth.Administer, "")
 		out["available"] = true
 		out["levels"] = lay.Levels
+		out["terms"] = lay.Terms
 		out["organisation"] = lay.Organisation
 		out["admin"] = admin
 		if admin {

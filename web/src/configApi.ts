@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError, call } from "./api";
+import { setTerms, terms } from "./terms";
 
 export interface LevelName { singular: string; plural: string }
 export interface Levels { installation: LevelName; organisation: LevelName; unit: LevelName; project: LevelName }
@@ -28,6 +29,8 @@ export interface ConfigOverview {
   available: boolean;
   kinds: ConfigKind[];
   levels: Levels;
+  /** The chosen set of words and the renamed ones (display labels only). */
+  terms?: { set: string; overrides: Record<string, string> };
   organisation?: { display_name?: string; description?: string };
   units?: UnitView[];
   units_in_use?: boolean;
@@ -165,6 +168,7 @@ export function loadOverview(force = false): Promise<ConfigOverview> {
   if (!force && overviewWait) return overviewWait;
   overviewWait = configApi.overview().then((o) => {
     overviewCache = o; overviewWait = null;
+    setTerms({ set: o.terms?.set, overrides: o.terms?.overrides ?? {}, levels: o.levels });
     listeners.forEach((l) => l(o));
     return o;
   }, (e) => { overviewWait = null; throw e; });
@@ -188,14 +192,12 @@ export function kindOf(o: ConfigOverview | null, pathOrName: string): ConfigKind
 }
 
 /** The name people read for a kind: the levels' names where a kind is a level. */
-export function kindLabel(o: ConfigOverview | null, k: ConfigKind, plural = true): string {
-  const lv = o?.levels;
-  if (lv) {
-    if (k.name === "project") return plural ? lv.project.plural : lv.project.singular;
-    if (k.name === "unit") return plural ? lv.unit.plural : lv.unit.singular;
-    if (k.name === "organisation") return lv.organisation.singular;
-    if (k.name === "installation") return `${lv.installation.singular} settings`;
-  }
+export function kindLabel(_o: ConfigOverview | null, k: ConfigKind, plural = true): string {
+  const t = terms();
+  if (k.name === "project") return plural ? t.plural("project") : t.label("project");
+  if (k.name === "unit") return plural ? t.plural("unit") : t.label("unit");
+  if (k.name === "organisation") return t.label("organization");
+  if (k.name === "installation") return `${t.label("installation")} settings`;
   return plural ? k.plural : k.title;
 }
 
@@ -206,7 +208,19 @@ export function kindShown(o: ConfigOverview | null, k: ConfigKind): boolean {
 
 /** The display name of the level an object is defined at. */
 export function levelOf(o: ConfigOverview | null, unit: string): string {
-  if (!unit) return o?.organisation?.display_name || o?.levels.organisation.singular || "Organisation";
+  const t = terms();
+  if (!unit) return o?.organisation?.display_name || t.label("organization");
   const u = o?.units?.find((x) => x.name === unit);
-  return `${o?.levels.unit.singular ?? "Unit"} ${u?.display_name || unit}`;
+  return `${t.label("unit")} ${u?.display_name || unit}`;
+}
+
+/** The levels above a project, as breadcrumbs: the organization when it has a name, and the unit the project is in. */
+export function levelCrumbs(o: ConfigOverview | null, project: string): { label: string; href?: string }[] {
+  if (!o?.available) return [];
+  const t = terms();
+  const out: { label: string; href?: string }[] = [];
+  const unit = o.units?.find((u) => u.projects.includes(project));
+  if (o.organisation?.display_name || unit) out.push({ label: `${t.label("organization")}: ${o.organisation?.display_name || t.label("organization")}`, href: "/config/organisation/default" });
+  if (unit) out.push({ label: `${t.label("unit")}: ${unit.display_name || unit.name}`, href: `/config/units/${encodeURIComponent(unit.name)}` });
+  return out;
 }

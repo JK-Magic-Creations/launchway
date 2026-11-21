@@ -2,6 +2,8 @@
 // there and what makes it appear, in plain words, and offers the one action that exists today. They
 // are real pages, not mock-ups: nothing on them is invented data.
 
+import { terms } from "../terms";
+
 export interface Coming {
   title: string;
   /** The area's name, for the eyebrow. */
@@ -76,37 +78,45 @@ export const COMING: Record<string, Coming> = {
   },
   "/changes": {
     title: "Calendar", area: "Changes",
-    does: "Lay out what is changing and when: planned releases, freeze windows and what already happened, so a team does not release into a bad hour.",
+    does: "Lay out what is changing and when: planned releases, {hold} windows and what already happened, so a team does not release into a bad hour.",
     appears: "Changes appear on the calendar when a release is planned. Today the runs that deploy are listed under Activity and each deployment under Deployments.",
     action: { label: "See runs", href: "/activity" },
   },
   "/changes/records": {
     title: "Change records", area: "Changes",
-    does: "Keep one record per change: what, why, who approved it, what the evidence said and how it went. Auditors read it; nobody has to write it by hand.",
-    appears: "A record is made for every release that goes through an approval rule. Approvals already taken are in the audit trail today.",
-    action: { label: "Open the audit trail", href: "/settings/audit" },
+    does: "Keep one record per change: what, why, who gave {clearance}, what the evidence said and how it went. Auditors read it; nobody has to write it by hand.",
+    appears: "A record is made for every release that goes through a {clearance} rule. Decisions already taken are in the {logbook} today.",
+    action: { label: "Open the {logbook}", href: "/settings/audit" },
   },
   "/changes/freezes": {
-    title: "Freeze windows", area: "Changes",
+    title: "{Hold} windows", area: "Changes",
     does: "Say when nothing may be released, such as month end or a holiday, and show the window on the calendar and on every deploy that it blocks.",
-    appears: "A window you add here blocks deploys to the places you choose. No freeze windows are defined yet.",
+    appears: "A window you add here blocks deploys to the places you choose. No {hold} windows are defined yet.",
   },
   "/changes/rules": {
-    title: "Approval rules", area: "Changes",
-    does: "Say which changes need whose approval, by risk and by place, in plain sentences, and show a person exactly which rule applies to their change.",
-    appears: "A rule appears here when you write one. Approval steps in a pipeline, and the rules that judge a run, work today.",
+    title: "{Clearance} rules", area: "Changes",
+    does: "Say which changes need whose {clearance}, by risk and by place, in plain sentences, and show a person exactly which rule applies to their change.",
+    appears: "A rule appears here when you write one. Steps that wait for {clearance} in a pipeline, and the rules that judge a run, work today.",
     action: { label: "Open the rules", href: "/settings/rules" },
   },
   "/changes/tickets": {
     title: "Ticket system", area: "Changes",
-    does: "Connect the system where your organisation records change requests, so a release links to its request and a request closes itself when the release is healthy.",
+    does: "Connect the system where your {organization} records change requests, so a release links to its request and a request closes itself when the release is healthy.",
     appears: "Connected tickets appear on each change record. Nothing is connected yet, and the connection is not built yet.",
   },
 };
 
 /** The title of a coming page, or the last word of its address when there is none. */
+/** The page's entry with the words in effect filled in. */
+export function comingFor(path: string): Coming | undefined {
+  const c = COMING[path];
+  if (!c) return undefined;
+  const t = terms();
+  return { ...c, title: t.say(c.title), does: t.say(c.does), appears: t.say(c.appears), action: c.action && { ...c.action, label: t.say(c.action.label) } };
+}
+
 export function comingTitle(path: string): string {
-  return COMING[path]?.title ?? path.split("/").pop()?.replace(/-/g, " ") ?? "Not here";
+  return comingFor(path)?.title ?? path.split("/").pop()?.replace(/-/g, " ") ?? "Not here";
 }
 
 /** The addresses that have a coming page. */

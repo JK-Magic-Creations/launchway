@@ -19,7 +19,7 @@ These are read by the `launchway` binary itself: the server, a runner, or the co
 | `LAUNCHWAY_TOKEN` | `launchway login` | The API token to store. Without it, `login` reads the token from the terminal (hidden) or from standard input. |
 | `LAUNCHWAY_TOKEN` | `launchway runs`, `policy`, `waivers`, `mcp`, `runners`, `verifications`, `health-sources`, `models` | The API token, instead of the one stored by `login`. |
 | `LAUNCHWAY_CONFIG_DIR` | `launchway login`, `runs`, `policy`, `waivers` | The directory that holds `credentials.json`. The default is `launchway` in your user configuration directory (`~/.config/launchway` on Linux). |
-| `NO_COLOR` | `launchway run` | Any value turns off coloured output. Colour is also off when standard output is not a terminal. |
+| `NO_COLOR` | `launchway run` | Any value turns off colored output. Color is also off when standard output is not a terminal. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `launchway server` | Credentials of the S3 artifact store. Each may instead be given as a file named by `AWS_ACCESS_KEY_ID_FILE` or `AWS_SECRET_ACCESS_KEY_FILE`; setting both forms of one is refused. |
 | `AWS_SESSION_TOKEN` | `launchway server` | An optional session token for the S3 artifact store. |
 | `KUBECONFIG` | the Kubernetes executor, deploy runners | Where the Kubernetes client looks for its kubeconfig, as with `kubectl`. |

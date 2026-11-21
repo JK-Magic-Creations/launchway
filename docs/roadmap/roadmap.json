@@ -51,7 +51,7 @@
     {
       "theme": "Platform",
       "title": "Four levels",
-      "value": "Installation, organisation, unit and project, with names you choose and levels nobody uses kept out of sight.",
+      "value": "Base, Wing, Squadron and Project (or the plain Installation, Organization, Team and Project), with words you choose and levels nobody uses kept out of sight.",
       "link": "guide/configuration#levels"
     },
     {
@@ -135,7 +135,7 @@
     {
       "theme": "Security",
       "title": "Security findings and SBOMs",
-      "value": "Secret, code, dependency, licence and image findings (SARIF), new and fixed across runs, and a component search.",
+      "value": "Secret, code, dependency, license and image findings (SARIF), new and fixed across runs, and a component search.",
       "link": "guide/security-findings"
     },
     {
@@ -177,7 +177,7 @@
     {
       "theme": "Project",
       "title": "Open source",
-      "value": "Free software under the AGPL-3.0, with a commercial licence for those who cannot use it, and this documentation site with its roadmap.",
+      "value": "Free software under the AGPL-3.0, with a commercial license for those who cannot use it, and this documentation site with its roadmap.",
       "link": "https://github.com/JK-Magic-Creations/launchway/blob/main/LICENSING.md"
     },
     {
@@ -371,7 +371,7 @@
             {
               "status": "planned",
               "title": "Repository quotas and size limits",
-              "value": "Limits on repository size, large-file storage and per-organisation usage, shared with artifact and log quotas.",
+              "value": "Limits on repository size, large-file storage and per-organization usage, shared with artifact and log quotas.",
               "detail": "One quota model for everything that takes space, with warnings before a limit is reached.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
@@ -583,11 +583,11 @@
         },
         {
           "name": "People and access on the host",
-          "blurb": "Accounts, organisations, tokens and administration for the built-in host.",
+          "blurb": "Accounts, organizations, tokens and administration for the built-in host.",
           "items": [
             {
               "status": "planned",
-              "title": "Organisations, teams and collaborators",
+              "title": "Organizations, teams and collaborators",
               "value": "Teams with their own permissions on repositories, and invitations for people from outside.",
               "detail": "One permission model covers code, work items, pipelines and environments, so there is no second set of users to maintain.",
               "needs": "Built-in Git hosting.",
@@ -773,7 +773,7 @@
             {
               "status": "in-progress",
               "title": "Follow a change on its launch line",
-              "value": "A single line that shows one change travelling from idea to running software, with each station opening its evidence.",
+              "value": "A single line that shows one change traveling from idea to running software, with each station opening its evidence.",
               "detail": "Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.",
               "needs": "The guided interface.",
               "area": "guided-interface"
@@ -836,7 +836,7 @@
               "status": "planned",
               "title": "Light, dark and phone widths",
               "value": "The same interface in light and dark and on a phone, with an accessibility check as a build gate.",
-              "detail": "Charts say where they came from and never rely on colour alone.",
+              "detail": "Charts say where they came from and never rely on color alone.",
               "needs": "The guided interface.",
               "area": "guided-interface"
             }
@@ -1861,7 +1861,7 @@
         "Automatic patching is switched on for one zone; a dependency update arrives as a change, passes its tests and rolls out.",
         "An agent asks which services use a library and gets an answer from the graph, not from reading files."
       ],
-      "diagram": "flowchart TD\n  Code[\"Code and commits\"] --> Graph[(\"Software graph\")]\n  Deps[\"Packages and licences\"] --> Graph\n  Img[\"Images and charts\"] --> Graph\n  Dep[\"Deployments and hosts\"] --> Graph\n  Adv[\"Advisories\"] --> Graph\n  Graph --> Q[\"Questions<br/>what, where, who, how bad\"]\n  Graph --> Patch[\"Patch proposal\"]\n  Patch --> Review[\"Tests and change management\"]\n  Review --> Roll[\"Rollout and verification\"]\n  Roll --> Dep",
+      "diagram": "flowchart TD\n  Code[\"Code and commits\"] --> Graph[(\"Software graph\")]\n  Deps[\"Packages and licenses\"] --> Graph\n  Img[\"Images and charts\"] --> Graph\n  Dep[\"Deployments and hosts\"] --> Graph\n  Adv[\"Advisories\"] --> Graph\n  Graph --> Q[\"Questions<br/>what, where, who, how bad\"]\n  Graph --> Patch[\"Patch proposal\"]\n  Patch --> Review[\"Tests and change management\"]\n  Review --> Roll[\"Rollout and verification\"]\n  Roll --> Dep",
       "diagramNote": "The graph is built from facts Launchway already records, keyed by what is deployed.",
       "done": [
         "For any running image Launchway can show its commit, run, components and findings.",
@@ -1920,8 +1920,8 @@
             },
             {
               "status": "planned",
-              "title": "Advisories, exceptions and licences",
-              "value": "Record which vulnerabilities apply, import vendor statements that they do not, and check licences.",
+              "title": "Advisories, exceptions and licenses",
+              "value": "Record which vulnerabilities apply, import vendor statements that they do not, and check licenses.",
               "detail": "A finding can be waived with a reason and an expiry.",
               "needs": "Continuous scanning of what runs.",
               "area": "software-graph"
@@ -2191,17 +2191,17 @@
       "short": "Hosted service",
       "promise": "Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.",
       "audience": "Teams that want Launchway as a service, evaluators who want to try it, and enterprises and regulated teams that need strong identity, audit and compliance.",
-      "what": "Milestone 7 lets you use Launchway without running it. Organisations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.",
+      "what": "Milestone 7 lets you use Launchway without running it. Organizations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.",
       "scenarios": [
         "You sign up, connect a runner on your own cluster and run a pipeline without any of your code leaving your network.",
         "A regulated team enables encryption keys with rotation and a retention rule.",
         "An auditor exports a tamper-evident audit trail to the security tools.",
         "A visitor explores the public demo with realistic data."
       ],
-      "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organisation<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted runners\"]\n  Engine <-->|outbound only| Own[\"Runners on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
+      "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organization<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted runners\"]\n  Engine <-->|outbound only| Own[\"Runners on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
       "diagramNote": "Two ways to run steps: hosted in a sandbox, or on your own machines connected outward.",
       "done": [
-        "Organisations cannot see each other, proven by a test.",
+        "Organizations cannot see each other, proven by a test.",
         "A step in a sandbox cannot reach anything but the internet.",
         "Usage is metered and shown before it is billed.",
         "Audit entries are chained and exportable.",
@@ -2229,7 +2229,7 @@
               "title": "Hosted service",
               "value": "Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency.",
               "detail": "Price follows your choices, such as availability and users, and no feature is held back by plan.",
-              "needs": "Organisations.",
+              "needs": "Organizations.",
               "area": "hosted-service"
             },
             {
@@ -2276,15 +2276,15 @@
               "status": "planned",
               "title": "A public demo",
               "value": "A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start.",
-              "detail": "Try it with your own runner follows once organisation isolation exists.",
-              "needs": "Organisations.",
+              "detail": "Try it with your own runner follows once organization isolation exists.",
+              "needs": "Organizations.",
               "area": "hosted-service",
               "link": "demo"
             },
             {
               "status": "planned",
-              "title": "Organisations",
-              "value": "Several organisations on one installation, isolated from each other, with the level names you choose.",
+              "title": "Organizations",
+              "value": "Several organizations on one installation, isolated from each other, with the level names you choose.",
               "detail": "Isolation is tested.",
               "area": "hosted-service"
             }

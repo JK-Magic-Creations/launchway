@@ -40,8 +40,8 @@ steps:
   rule, its description, the location and a link to the rule's documentation. Run lists show the
   counts. **A project's Security page** shows the counts over a branch's recent runs, and the
   findings still open, each with the run where it was first seen.
-- **SBOMs** are kept whole as the step's artifact `sbom` and summarised: the number of components
-  and the licences. **Components** can be searched across projects (`/components` in the UI): which
+- **SBOMs** are kept whole as the step's artifact `sbom` and summarized: the number of components
+  and the licenses. **Components** can be searched across projects (`/components` in the UI): which
   runs and projects contain a package, at a version.
 - **API** (anyone who may see the run or project):
   `GET /api/v1/runs/{id}/findings?severity=&tool=&status=new|existing|fixed&q=&step=&limit=&offset=`,
@@ -56,7 +56,7 @@ steps:
 | `findings.max_per_project` | 500000 | findings a project keeps; the oldest runs' go first |
 | `findings.max_components_per_run` | 20000 | SBOM components one run keeps for searching |
 | `findings.max_components_per_project` | 1000000 | SBOM components a project keeps |
-| `findings.max_sbom_mib` | 64 | MiB of a step's SBOM files read to summarise them |
+| `findings.max_sbom_mib` | 64 | MiB of a step's SBOM files read to summarize them |
 
 With the Helm chart these are `config.artifacts.*` and `config.findings.*` in the values, unset by
 default. A server older than the one that brought these keys cannot read a pipeline that uses

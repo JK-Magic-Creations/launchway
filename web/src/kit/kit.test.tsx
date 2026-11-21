@@ -102,7 +102,7 @@ describe("the kit page", () => {
   it("shows every part", () => {
     render(<KitPage />);
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    for (const h of ["Colour and state", "Buttons and chips", "The launch line", "Empty state"]) expect(screen.getByRole("heading", { name: h })).toBeInTheDocument();
+    for (const h of ["Color and state", "Buttons and chips", "The launch line", "Empty state"]) expect(screen.getByRole("heading", { name: h })).toBeInTheDocument();
     expect(screen.getAllByRole("img").length).toBeGreaterThan(5);
   });
 });

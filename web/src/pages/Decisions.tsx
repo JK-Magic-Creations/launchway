@@ -11,11 +11,13 @@ import { useLoad } from "../guided/useLoad";
 import { Button, Decision, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
+import { terms } from "../terms";
 import { useNow, type Approvals } from "../live";
 
 /** The approvals waiting for a decision, each as a card: what is asked, the evidence available today,
  * what happens next, and the decision with a reason. A person who may not decide is told exactly why. */
 export function DecisionsPage({ approvals }: { approvals: Approvals }) {
+  const t = terms();
   const me = useMe();
   const inst = useInstallation();
   const now = useNow(1000, !!approvals.list?.length);
@@ -25,12 +27,12 @@ export function DecisionsPage({ approvals }: { approvals: Approvals }) {
   return (
     <div className="page">
       <PageHead eyebrow="Activity" title="Waiting for a decision"
-        sentence={list === null ? "Loading." : list.length === 0 ? "Nothing is waiting for a person." : <><b>{list.length} {list.length === 1 ? "run is" : "runs are"} waiting.</b> Each card says what is asked and what you can see before you decide.</>} />
+        sentence={list === null ? "Loading." : list.length === 0 ? "Nothing is waiting for a person." : <><b>{list.length} {list.length === 1 ? "run is" : "runs are"} waiting.</b> Each card says what is asked and what you can see before you say {t.label("go")} or {t.label("no_go")}.</>} />
       <ErrorBox error={approvals.error} />
       {list === null && !approvals.error && <div className="loading">Loading…</div>}
       {list && list.length === 0 && (
         <Sheet><EmptyState title="All clear" action={<LinkButton href="/activity" icon="arrow">See the runs</LinkButton>}>
-          A run waits here when it reaches an approval step. Nothing is waiting now.
+          A run waits here when it reaches a step that needs {t.lower("clearance")}. Nothing is waiting now.
         </EmptyState></Sheet>
       )}
       {list && list.length > 0 && (
@@ -47,6 +49,7 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
   const run = useLoad<RunDetail>(runFn);
   const detail = run.data;
   const step = detail?.step_list.find((s) => s.id === a.step_id);
+  const t = terms();
   const refusal = approvalRefusal(a, me, settings);
   const next = consequences(detail, a.step_id);
   const diff = commitLink(project, detail?.sha ?? "");
@@ -62,13 +65,13 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
     { key: "left", label: "Expires", value: left > 0 ? duration(left) : "now", note: `asked ${ago(a.waiting_since, now)}` },
   ];
   return (
-    <Decision icon="gate" tone="warn" title={a.message || `Run #${a.run_number} of ${a.project} needs a decision`} evidence={evidence}
+    <Decision icon="gate" tone="warn" title={a.message || `Run #${a.run_number} of ${a.project} needs ${t.lower("clearance")}`} evidence={evidence}
       children={`Run #${a.run_number} of ${a.project} stopped at ${a.step_id} and waits for a person.`}
       actions={
         <div className="decide-form">
           <dl className="then">
-            <div><b>If you approve</b>{next.approve}</div>
-            <div><b>If you reject</b>{next.reject}</div>
+            <div><b>If you say {t.label("go")}</b>{next.approve}</div>
+            <div><b>If you say {t.label("no_go")}</b>{next.reject}</div>
           </dl>
           <p className="small faint" style={{ margin: 0 }}>
             <EntityLink kind="project" name={a.project} /> · <EntityLink kind="run" name={`run #${a.run_number}`} id={a.run_id} />
@@ -92,11 +95,12 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState("");
+  const t = terms();
   const decide = async (approve: boolean) => {
     setBusy(true); setError(null);
     try {
       await (approve ? api.approve : api.reject)(a.run_id, a.step_id, reason.trim());
-      setDone(approve ? "Approved. The run goes on." : "Rejected. The run stopped here.");
+      setDone(approve ? `${t.label("go")}. The run goes on.` : `${t.label("no_go")}. The run stopped here.`);
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
   if (done) return <div className="note" role="status"><Icon name="check" />{done}</div>;
@@ -112,12 +116,12 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
       )}
       {!noReject && (
         <>
-          <label htmlFor={`why-${a.run_id}-${a.step_id}`}>Reason <span className="faint">(kept with the decision{noApprove ? "" : "; needed to reject"})</span></label>
+          <label htmlFor={`why-${a.run_id}-${a.step_id}`}>Reason <span className="faint">(kept with the decision{noApprove ? "" : `; needed for ${t.lower("no_go")}`})</span></label>
           <textarea id={`why-${a.run_id}-${a.step_id}`} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} placeholder="For example: tests pass and the release notes are ready." />
           <ErrorBox error={error} />
           <div className="acts decide">
-            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? "You cannot approve this: see the note above" : undefined}>Approve</Button>
-            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? "Say why, then reject" : undefined}>Reject</Button>
+            <Button kind="ok" icon="check" disabled={busy || noApprove} onClick={() => decide(true)} title={noApprove ? `You cannot say ${t.label("go")} to this: see the note above` : `${t.label("go")}: ${t.lower("clearance")} is given and the run goes on`}>{t.label("go")}</Button>
+            <Button kind="bad" icon="x" disabled={busy || reason.trim() === ""} onClick={() => decide(false)} title={reason.trim() === "" ? `Say why, then ${t.lower("no_go")}` : `${t.label("no_go")}: ${t.lower("clearance")} is refused and the run stops here`}>{t.label("no_go")}</Button>
           </div>
         </>
       )}

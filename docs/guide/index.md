@@ -22,6 +22,7 @@ key and setting see the [reference](../reference/index.md).
 | [Verifying a deployment](verification.md) | Metrics and logs after a deploy, health sources, how the verdict is decided |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Secrets](secrets.md) | Secret references, stores, masking |
+| [The words Launchway uses](words.md) | Base, Wing, Squadron, Wingman, Logbook and the rest, in plain terms, and how to change them |
 | [Sign-in and access](access.md) | OpenID Connect, roles, sessions, API tokens, audit trail |
 | [Runners on other machines](runner-identity.md) | Pools, join tokens, runner identities, the runner's own limits |
 | [Agents (MCP)](agents.md) | The MCP endpoint, tools, rights, limits |

@@ -6,6 +6,7 @@ import { useNow } from "../live";
 import { ErrorBox, Link, Mono } from "../components/ui";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { ModeBadge, ResultBadge, ScopeText, ShieldIcon, WaiverForm, WaiverList, type WaiverDraft } from "../components/Policy";
+import { terms } from "../terms";
 
 const POINT_WORDS: Record<string, string> = { run: "run start", deploy: "before deploying", image: "before an image push" };
 
@@ -49,7 +50,7 @@ export function PolicyPage() {
 
       {!o.sources.length && (
         <WizardEmpty title="No policies" wizard="add-policy" label="Add a policy"
-          text="A policy is a set of rules every run must meet before it deploys or finishes, such as tests passing or a second person's approval; pipelines cannot switch it off." />
+          text={`A policy is a set of rules every run must meet before it deploys or finishes, such as tests passing or a second person's ${terms().lower("clearance")}; pipelines cannot switch it off.`} />
       )}
 
       {o.sources.map((s) => (
@@ -83,7 +84,7 @@ export function PolicyPage() {
           </div>
         </div>
         <p className="sub small">A waiver lets one rule of one policy pass for a project (or one run, environment or finding) until it expires.
-          Every waiver is in the audit trail and shown wherever the verdict it changed is.</p>
+          Every waiver is in the {terms().lower("logbook")} and shown wherever the verdict it changed is.</p>
         {waivers.waivers.length
           ? <WaiverList waivers={waivers.waivers} mayRevoke={(w) => waivers.waive_projects.includes(w.project)} onChange={load} />
           : <p className="faint">{active ? "No waiver is in force." : "No waivers."}</p>}
@@ -94,7 +95,7 @@ export function PolicyPage() {
         )}
       </section>
 
-      <section className="card" aria-label="Rule catalogue">
+      <section className="card" aria-label="Rule catalog">
         <h2 className="h-sm">The rules a policy can use</h2>
         <div className="table-scroll">
           <table className="inputs-table pol-catalogue">

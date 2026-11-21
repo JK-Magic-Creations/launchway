@@ -16,6 +16,7 @@ import { Pulse, Route, TabBar, type PulseState } from "./Route";
 import { SideNav } from "./SideNav";
 import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
+import { terms, useTerms } from "../terms";
 
 const GUIDE_KEY = "lw-guide";
 
@@ -54,6 +55,7 @@ function useWide(): boolean {
  * of the area, breadcrumbs, the page, the Guide, and on a phone the bottom bar. */
 export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   const path = usePath();
+  useTerms(); // the page draws again when the words change
   const inst = useInstallation();
   const [version, setVersion] = useState("");
   const [crumb, setCrumb] = useState<string | undefined>();
@@ -107,7 +109,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <DoBarButton onOpen={() => setLayer("do")} />
           <div className="top-r">
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
-            <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label="Guide"><Icon name="info" size="s" /><span className="hide-s">Guide</span></button>
+            <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")}><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>
             <button type="button" className="iconbtn" onClick={flip} aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
             <UserMenu me={me} />
           </div>

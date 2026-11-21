@@ -159,7 +159,7 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.mcp.oauth.scopes` | list | `[]` | Scopes a token must carry, if any |
 | `config.runnerAdmin` | string or null | unset (`admin`) | The role needed on every project to make join tokens and to revoke or rotate runners: `admin`, `operator` or `none`. Written as `runner_admin` only when set |
 | `config.runnerPools` | list or null | unset | [Runner pools](server-config.md#runner-pools), written as `runner_pools` in the configuration's own keys, after the deploy pool `delivery.*` makes. Unset, every build runner is in the default pool, which serves every project. Set it only once every server and runner runs a release that knows it, and take it out before rolling back. For example `[{ name: web, kind: build, projects: ["web-*"] }]` |
-| `config.findings.maxSbomMiB` | integer or null | unset (64) | MiB of a step's SBOM files read to summarise them |
+| `config.findings.maxSbomMiB` | integer or null | unset (64) | MiB of a step's SBOM files read to summarize them |
 | `config.loops.maxMembers` | integer or null | unset (64) | Combinations one `for_each` loop may have, at most 500. Written as `loops.max_members` |
 | `config.schedules.enabled` | boolean or null | unset (on) | `false` turns every project's schedules off. Written as `schedules.enabled` |
 | `config.tokens.maxDays` | integer or null | unset (365) | The longest an API token may last, in days, at most 3650. Written as `auth.tokens.max_days` |
@@ -262,7 +262,7 @@ Kubernetes API.
 | `runner.kubernetes.memory` | string or number | `""` (`64Mi`) | Memory request of each step container, unless the pipeline asks |
 | `runner.kubernetes.memoryLimit` | string or number | `""` (none) | Memory limit of each step container that does not ask for memory |
 | `runner.kubernetes.maxCpu` | string or number | `""` (no cap) | The most CPU one step container may ask for, as a request or a limit; server defaults are lowered to it, an explicit ask above it fails the step. See [`kubernetes.max_cpu`](runner-config.md#kubernetes) |
-| `runner.kubernetes.maxMemory` | string or number | `""` (no cap) | The most memory one step container may ask for; same behaviour as `maxCpu` |
+| `runner.kubernetes.maxMemory` | string or number | `""` (no cap) | The most memory one step container may ask for; same behavior as `maxCpu` |
 | `runner.kubernetes.imagePullSecrets` | list | `[]` | Secrets in the step namespace for pulling step images |
 | `runner.kubernetes.keepFailed` | string | `""` (`0`) | A grace period before a failed or cancelled run's pod is removed; by default it goes when the run ends. See [What happens to a run's pod](runner-config.md#what-happens-to-a-runs-pod) |
 | `runner.kubernetes.maxPodAge` | string | `""` (`24h`) | The longest a step pod lives unless a step of it is executing; the reaper's bound for pods left by a crashed runner. `0` turns it off |

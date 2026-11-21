@@ -47,9 +47,9 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
       id: "rules", title: "What it checks",
       fields: (catalogue ?? []).map((r) => ({ path: r.name, value: rules[r.name] })),
       local: () => !Object.keys(rules).length ? "Tick at least one rule." : null,
-      render: (by) => catalogue === null ? <p className="faint">Reading the rule catalogue…</p> : (
+      render: (by) => catalogue === null ? <p className="faint">Reading the rule catalog…</p> : (
         <>
-          {catError && <p className="cf-problem">The catalogue could not be read: {catError}</p>}
+          {catError && <p className="cf-problem">The catalog could not be read: {catError}</p>}
           <p>A policy is a set of rules every run it applies to must meet. There is no policy language to learn: each rule checks one thing, and the pipeline's authors cannot switch it off.</p>
           <PolicyRules catalogue={catalogue} rules={rules} onChange={setRules} problems={by} />
         </>

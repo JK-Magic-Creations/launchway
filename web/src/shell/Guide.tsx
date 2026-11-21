@@ -3,7 +3,8 @@ import { useModels } from "../components/Explain";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
 import { locate, section, visibleSections, type Ctx } from "../nav/model";
-import { COMING } from "./comingData";
+import { comingFor } from "./comingData";
+import { terms } from "../terms";
 import { guideFor } from "./guideData";
 
 /** A page that can offer its own explanation (the run page, for a failed step) puts it here; the Guide
@@ -21,12 +22,12 @@ export function useRegisterExplainer(e: Explainer | null): void {
 export function Guide({ ctx, path, explainer, onClose }: { ctx: Ctx; path: string; explainer: Explainer | null; onClose: () => void }) {
   const at = locate(path);
   const s = at ? section(at.info.section) : null;
-  const coming = COMING[path];
+  const coming = comingFor(path);
   const g = at ? guideFor(at.info.pattern, s?.label ?? "Launchway", s?.promise ?? "") : guideFor("", "Not here", "This page does not exist.");
   const text = coming ? `${coming.does} It is not built yet.` : g.text;
   return (
-    <aside className="rail" aria-label="Guide">
-      <div className="rail-top"><span className="tag">Guide</span><button type="button" className="iconbtn" onClick={onClose} aria-label="Close the guide"><Icon name="x" /></button></div>
+    <aside className="rail" aria-label={terms().label("guide")}>
+      <div className="rail-top"><span className="tag">{terms().label("guide")}</span><button type="button" className="iconbtn" onClick={onClose} aria-label={`Close the ${terms().lower("guide")}`}><Icon name="x" /></button></div>
       <h2>{coming ? coming.title : g.title}</h2>
       <p>{text}</p>
       {(g.does?.length ?? 0) > 0 && !coming && (

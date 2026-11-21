@@ -42,6 +42,6 @@ Each layer assumes the one before it can fail. The same profile is available to 
 
 ## Identity and audit
 
-Organisations are isolated and tested for it. Directory groups, built-in accounts with passkeys, a tamper-evident audit trail, retention and legal hold, encryption at rest and a PCI DSS and HIPAA evidence pack are in the same milestone. Launchway supports compliance work; it is not a certification.
+Organizations are isolated and tested for it. Directory groups, built-in accounts with passkeys, a tamper-evident audit trail, retention and legal hold, encryption at rest and a PCI DSS and HIPAA evidence pack are in the same milestone. Launchway supports compliance work; it is not a certification.
 
 Go back to the [Roadmap](../public/roadmap.html).

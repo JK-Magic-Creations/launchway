@@ -10,7 +10,7 @@ Use Launchway without running it, on a plan that follows your choices, with the 
 
 ## What it is, and who it is for
 
-Milestone 7 lets you use Launchway without running it. Organisations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.
+Milestone 7 lets you use Launchway without running it. Organizations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.
 
 **Who it is for.** Teams that want Launchway as a service, evaluators who want to try it, and enterprises and regulated teams that need strong identity, audit and compliance.
 
@@ -25,7 +25,7 @@ Milestone 7 lets you use Launchway without running it. Organisations are isolate
 
 ```mermaid
 flowchart TD
-  User["Your team"] --> Org["Your organisation<br/>isolated"]
+  User["Your team"] --> Org["Your organization<br/>isolated"]
   Org --> Engine["Hosted engine"]
   Engine --> Sand["Sandboxed hosted runners"]
   Engine <-->|outbound only| Own["Runners on your machines"]
@@ -56,7 +56,7 @@ Use Launchway without running it, on a plan that follows your choices.
 
 Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency. Price follows your choices, such as availability and users, and no feature is held back by plan.
 
-**Depends on:** Organisations.
+**Depends on:** Organizations.
 
 [Area page](hosted-service.md)
 
@@ -114,17 +114,17 @@ Everything is portable, so capacity can be added on any provider as demand justi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once organisation isolation exists.
+A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once organization isolation exists.
 
-**Depends on:** Organisations.
+**Depends on:** Organizations.
 
 [Read the documentation](../demo.md) · [Area page](hosted-service.md)
 
-#### Organisations {#organisations}
+#### Organizations {#organizations}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Several organisations on one installation, isolated from each other, with the level names you choose. Isolation is tested.
+Several organizations on one installation, isolated from each other, with the level names you choose. Isolation is tested.
 
 [Area page](hosted-service.md)
 
@@ -188,7 +188,7 @@ Every service, runner and person proves identity on every call. No shared secret
 
 This milestone is done when all of these are true.
 
-- Organisations cannot see each other, proven by a test.
+- Organizations cannot see each other, proven by a test.
 - A step in a sandbox cannot reach anything but the internet.
 - Usage is metered and shown before it is billed.
 - Audit entries are chained and exportable.

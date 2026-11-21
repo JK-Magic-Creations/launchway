@@ -50,7 +50,7 @@ Replace the `test` step in `.launchway/pipeline.yaml`:
 `reports.tests` names the files the step writes, relative to the workspace. Launchway reads them
 when the step ends, **whether it passed or failed**. It understands JUnit XML (written by pytest,
 Maven Surefire, Gradle, Jest, Vitest, gotestsum and most other tools) and the output of
-`go test -json`, recognised by content, not by name.
+`go test -json`, recognized by content, not by name.
 
 Commit:
 

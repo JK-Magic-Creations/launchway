@@ -3,6 +3,7 @@
 
 import type { Approval, Me, Project, RunDetail, RunSummary, StepView } from "../api";
 import type { ApprovalSettings } from "../api/v2b";
+import { terms } from "../terms";
 import { canOperate } from "../auth";
 import { hostBase } from "./code";
 
@@ -21,15 +22,15 @@ export function approvalRefusal(a: Pick<Approval, "project" | "started_by">, me:
   if (!canOperate(me, a.project)) {
     const role = me.roles[a.project];
     return {
-      text: `You are signed in as ${me.user || "a guest"}, ${role ? `with the ${role} role` : "without a role"} on ${a.project}. Approving needs the operator role there. An administrator can give it in Settings → People and access.`,
+      text: terms().say(`You are signed in as ${me.user || "a guest"}, ${role ? `with the ${role} role` : "without a role"} on ${a.project}. Giving {clearance} needs the operator role there. An administrator can give it in Settings → People and access.`),
       link: { href: "/settings/access", label: "People and access" }, mayReject: false,
     };
   }
   const starter = a.started_by !== "" && a.started_by === me.user;
   if (starter && s && !s.allow_self) {
     return {
-      text: `You started this run. On this installation the person who starts a run cannot approve it, so someone else must. You may still reject it. An administrator can change this in Settings → Approvals.`,
-      link: { href: "/settings/approvals", label: "Settings → Approvals" }, mayReject: true,
+      text: terms().say(`You started this run. On this {installation} the person who starts a run cannot give {clearance} for it, so someone else must. You may still say {No_go}. An administrator can change this in Settings → {Clearances}.`),
+      link: { href: "/settings/approvals", label: terms().say("Settings → {Clearances}") }, mayReject: true,
     };
   }
   return null;

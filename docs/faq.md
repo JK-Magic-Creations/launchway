@@ -22,7 +22,7 @@ servers and real Kubernetes, PostgreSQL, OpenBao, BuildKit and Argo CD. Read the
 ## Is Launchway PCI DSS or HIPAA compliant
 
 Software is not compliant on its own and Launchway is not certified. It provides controls and
-evidence that can support an organisation's own compliance. See
+evidence that can support an organization's own compliance. See
 [Controls and compliance](security/controls-and-compliance.md).
 
 ## Does the server see my secrets

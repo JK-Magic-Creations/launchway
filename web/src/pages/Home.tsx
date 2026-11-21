@@ -16,6 +16,7 @@ import { Status, StateChip, type State } from "../kit/Status";
 import { useNow } from "../live";
 import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
+import { terms } from "../terms";
 
 /** Home answers one question: what should I do next? A new installation sees what to set up, in order;
  * a busy one sees what needs it today, then the changes on their way. Everything on it comes from the server's own state. */
@@ -98,7 +99,7 @@ export function Checklist({ items, done }: { items: CheckItem[]; done: number })
   const finished = items.filter((i) => i.done);
   return (
     <section className="card" aria-labelledby="check-h">
-      <h2 id="check-h" className="h-sm">Setup checklist <span className="faint">({done} of {items.length} done)</span></h2>
+      <h2 id="check-h" className="h-sm">{terms().say("Setup {checklist}")} <span className="faint">({done} of {items.length} done)</span></h2>
       {finished.length > 0 && <p className="faint guided-doneline">Done: {finished.map((i) => i.title).join(", ")}.</p>}
       <ol className="guided-check">
         {left.map((i) => (

@@ -4,6 +4,7 @@ import { api, type AuditEntry, type AuditQuery } from "../api";
 import { clock } from "../format";
 import { useMe } from "../auth";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { terms } from "../terms";
 
 const ACTIONS = [
   "auth.sign_in", "auth.sign_out", "run.start", "run.cancel", "run.resume",
@@ -43,13 +44,13 @@ export function AuditPage() {
   useEffect(() => { if (me?.admin) load(0); }, [load, me?.admin]);
 
   if (!me?.admin) {
-    return <div className="page"><Empty title="Only admins can see the audit trail" /></div>;
+    return <div className="page"><Empty title={`Only admins can see the ${terms().lower("logbook")}`} /></div>;
   }
   const set = (k: keyof Filters) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setDraft({ ...draft, [k]: e.target.value });
 
   return (
     <div className="page page-wide">
-      <PageHead eyebrow="Settings" title={<>Audit trail</>} sentence={<>Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</>} />
+      <PageHead eyebrow="Settings" title={<>{terms().label("logbook")}</>} sentence={<>Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</>} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
         <label className="field"><span>User</span><input value={draft.user} onChange={set("user")} /></label>
         <label className="field"><span>Project</span><input value={draft.project} onChange={set("project")} /></label>

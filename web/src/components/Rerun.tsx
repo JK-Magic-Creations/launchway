@@ -5,6 +5,7 @@ import { shortSha } from "../format";
 import { navigate } from "../router";
 import { ErrorBox, Mono } from "./ui";
 import { RerunInputsNote } from "./RunTrigger";
+import { terms } from "../terms";
 
 // RerunButton offers a new run of a finished run from the step shown, with
 // a preview of what runs again and what is reused.
@@ -71,7 +72,7 @@ function RerunDialog({ run, from, onClose }: { run: RunDetail; from: RerunFrom; 
             <div><h3 className="h-sm">Will be reused from #{run.number}</h3>
               {plan.reuse.length ? <ul>{plan.reuse.map((id) => {
                 const s = run.step_list.find((x) => x.id === id);
-                return <li key={id}><Mono>{id}</Mono>{s?.kind === "approval" && s.decided_by ? <span className="faint"> (approved by {s.decided_by})</span> : s?.status === "skipped" ? <span className="faint"> (skipped)</span> : null}</li>;
+                return <li key={id}><Mono>{id}</Mono>{s?.kind === "approval" && s.decided_by ? <span className="faint"> ({terms().lower("go")} from {s.decided_by})</span> : s?.status === "skipped" ? <span className="faint"> (skipped)</span> : null}</li>;
               })}</ul> : <p className="sub">Nothing: every step runs again.</p>}
             </div>
           </div>

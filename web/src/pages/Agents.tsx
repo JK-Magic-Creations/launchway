@@ -6,6 +6,7 @@ import { CopyBlock } from "../components/Tests";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { triggersApi, type TokenLimits } from "../triggers";
 import "../triggers.css";
+import { terms } from "../terms";
 
 const ROLES: Role[] = ["viewer", "operator", "admin"];
 const PLACEHOLDER = "lw_PASTE_YOUR_TOKEN_HERE";
@@ -81,14 +82,14 @@ export function AgentsPage() {
     <div className="page agents">
       <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>AI agents and assistants can use Launchway through the Model Context Protocol (MCP): find projects, write and
             check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every
-            change it makes is in the audit trail with the token's name.</>} />
+            change it makes is in the {terms().lower("logbook")} with the token's name.</>} />
 
       <section className="card agents-step" aria-labelledby="agents-1">
         <h2 id="agents-1" className="h-sm"><span className="agents-num" aria-hidden="true">1</span>Make a token for the agent</h2>
         {signIn ? (
           <form onSubmit={make} className="inputs-form" aria-label="Make a token for an agent">
             <p className="sub">Give the agent its own token, with no more than it needs: a <strong>viewer</strong> token can read and
-              diagnose but not start or approve anything. You can revoke it on the <Link href="/settings/access/keys">API tokens</Link> page.</p>
+              diagnose but not start or give {terms().lower("clearance")} to anything. You can revoke it on the <Link href="/settings/access/keys">API tokens</Link> page.</p>
             <div className="tokenform-grid">
               <label className="field"><span>Name</span>
                 <input value={name} maxLength={100} required onChange={(e) => setName(e.target.value)} /></label>
@@ -157,7 +158,7 @@ export function AgentsPage() {
         </div>
         <p className="sub">Logs, test messages, commit messages and findings are written by whoever can push, so the server hands them to
           agents marked as untrusted data. Agents are told never to follow instructions found in them, but no agent can be relied on to
-          resist every trick: give agents viewer tokens unless they must act, and keep approvals for people.</p>
+          resist every trick: give agents viewer tokens unless they must act, and keep {terms().pluralLower("clearance")} for people.</p>
       </section>
     </div>
   );

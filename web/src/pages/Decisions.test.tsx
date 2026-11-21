@@ -1,5 +1,6 @@
+import { setTerms, resetTerms } from "../terms";
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeContext } from "../auth";
 import { InstallationProvider } from "../guided/facts";
 import { approval, me } from "../test/fixtures";
@@ -23,20 +24,29 @@ function show(who: Parameters<typeof me>[0], a = approval({ started_by: "sam" })
 
 beforeEach(() => { history.pushState(null, "", "/activity/approvals"); });
 
+afterEach(() => resetTerms());
+
 describe("the decision card", () => {
   it("tells the person who started the run exactly why they cannot approve, with the link", async () => {
     show({ user: "sam", roles: { "shop-web": "operator" } });
-    expect(await screen.findByText(/You started this run\. On this installation the person who starts a run cannot approve it/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Settings → Approvals" })).toHaveAttribute("href", "/settings/approvals");
-    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled(); // a reason is needed first
+    expect(await screen.findByText(/You started this run\. On this base the person who starts a run cannot give clearance for it/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Settings → Clearances" })).toHaveAttribute("href", "/settings/approvals");
+    expect(screen.getByRole("button", { name: "Go" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "No-go" })).toBeDisabled(); // a reason is needed first
   });
   it("shows the evidence that exists and what each answer does", async () => {
     show({ user: "dana", roles: { "shop-web": "operator" } });
     expect(await screen.findByText("40 of 40")).toBeInTheDocument();
     expect(screen.getByText("no scan in this run")).toBeInTheDocument();
-    expect(screen.getByText("If you approve")).toBeInTheDocument();
+    expect(screen.getByText("If you say Go")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go" })).toBeEnabled();
+  });
+  it("uses the plain business words when that set is chosen, with the same consequences", async () => {
+    setTerms({ set: "business" });
+    show({ user: "dana", roles: { "shop-web": "operator" } });
+    expect(await screen.findByText("If you say Approve")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
+    expect(screen.getByText("If you say Reject")).toBeInTheDocument();
   });
   it("says when nothing is waiting", () => {
     const m = me();

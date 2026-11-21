@@ -3,6 +3,7 @@ import { clock, duration } from "../format";
 import { Link, Mono } from "./ui";
 import { triggersApi, type ScheduleView, type SchedulesView } from "../triggers";
 import "../triggers.css";
+import { terms } from "../terms";
 
 // ProjectTriggers shows what starts a project's runs besides pushes: the
 // schedules of its default branch's pipeline, with when each fires next
@@ -30,7 +31,7 @@ export function ProjectTriggers({ project }: { project: string }) {
         before it first appeared; if no server was running when it should have fired, it fires once, for the latest time missed.</p>
       {v.problem && <div className="callout callout-bad">{v.problem}</div>}
       {!v.enabled && v.schedules.length > 0 && (
-        <div className="callout callout-draft">Schedules are turned off for this project in its settings (or the installation's): their firings are recorded as skipped and start nothing.</div>
+        <div className="callout callout-draft">Schedules are turned off for this project in its settings (or the {terms().lower("installation")}'s): their firings are recorded as skipped and start nothing.</div>
       )}
       {v.schedules.length > 0 && (
         <table className="table sched-table">

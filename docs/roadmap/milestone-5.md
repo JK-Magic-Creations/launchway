@@ -26,7 +26,7 @@ Milestone 5 connects code, dependencies, images and deployments in one graph kep
 ```mermaid
 flowchart TD
   Code["Code and commits"] --> Graph[("Software graph")]
-  Deps["Packages and licences"] --> Graph
+  Deps["Packages and licenses"] --> Graph
   Img["Images and charts"] --> Graph
   Dep["Deployments and hosts"] --> Graph
   Adv["Advisories"] --> Graph
@@ -92,11 +92,11 @@ Scan deployed software for new vulnerabilities and best-practice gaps, not only 
 
 [Area page](software-graph.md)
 
-#### Advisories, exceptions and licences {#advisories-exceptions-and-licences}
+#### Advisories, exceptions and licenses {#advisories-exceptions-and-licenses}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Record which vulnerabilities apply, import vendor statements that they do not, and check licences. A finding can be waived with a reason and an expiry.
+Record which vulnerabilities apply, import vendor statements that they do not, and check licenses. A finding can be waived with a reason and an expiry.
 
 **Depends on:** Continuous scanning of what runs.
 

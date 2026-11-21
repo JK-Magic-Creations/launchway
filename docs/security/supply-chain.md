@@ -24,7 +24,7 @@ flowchart LR
 | Pinned libraries | Templates and scripts come from one Git commit, recorded with the run. A policy can require tags or commits. | [Shared libraries](../guide/libraries.md) |
 | Image builds | Rootless BuildKit, apart from the steps; build secrets reach only `RUN --mount=type=secret`. | [Container images](../guide/images.md) |
 | Vulnerability scans | Trivy, pinned, run on exactly what was built; `mode: enforce` fails the step before anything is pushed. | [Container images](../guide/images.md) |
-| SBOMs | CycloneDX SBOMs from image steps or any tool, summarised and searchable by component. | [Security findings and SBOMs](../guide/security-findings.md) |
+| SBOMs | CycloneDX SBOMs from image steps or any tool, summarized and searchable by component. | [Security findings and SBOMs](../guide/security-findings.md) |
 | Findings | SARIF from any scanner; new, still there or fixed across runs; secrets that scanners find are never stored. | [Security findings and SBOMs](../guide/security-findings.md) |
 | Provenance | in-toto statements with SLSA provenance v1 predicates: Launchway's own and the builder's. | [Container images](../guide/images.md) |
 | Signing | Signatures of images, provenance and SBOMs in the form cosign verifies, with the runner's own key. Nothing is sent to a public transparency log. | [Container images](../guide/images.md) |

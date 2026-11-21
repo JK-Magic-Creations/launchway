@@ -167,7 +167,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `--images-config` | none | A file with an `images:` section (builders and registries), as in a runner's configuration. Required if a step builds an image. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 
-The run is recorded as project `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns colour off.
+The run is recorded as project `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.
 
 ```sh
 launchway run -i target=prod
@@ -678,7 +678,7 @@ launchway config check-repository URL [--branch B] [--json]
 launchway config check-signin --issuer URL --client-id ID --redirect-url URL --secret-env VAR [--admin-group G] [--admin-user U] [--json]
 ```
 
-KIND is `projects`, `libraries`, `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`, `models`, `secret-stores`, `step-resources`, `units`, `installation` or `organisation`. Each kind except the last three also has its own command: `launchway projects`, `launchway libraries`, `launchway environments`, `launchway policies`, `launchway runner-pools`, `launchway role-bindings`, `launchway policy-sources`, `launchway secret-stores`, `launchway units`, and `launchway health-sources` and `launchway models` (which still list when given no verb) take the same verbs without KIND: `launchway projects set shop -f shop.yaml`. A spec is the object's settings with the keys the configuration file uses (see the kinds' pages in [Configuration objects](config-objects.md)); `-` reads standard input.
+KIND is `projects`, `libraries`, `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`, `models`, `secret-stores`, `step-resources`, `units`, `installation` or `organisation` (fixed names, whatever the installation calls its levels; `organization` is accepted too). Each kind except the last three also has its own command: `launchway projects`, `launchway libraries`, `launchway environments`, `launchway policies`, `launchway runner-pools`, `launchway role-bindings`, `launchway policy-sources`, `launchway secret-stores`, `launchway units`, and `launchway health-sources` and `launchway models` (which still list when given no verb) take the same verbs without KIND: `launchway projects set shop -f shop.yaml`. A spec is the object's settings with the keys the configuration file uses (see the kinds' pages in [Configuration objects](config-objects.md)); `-` reads standard input.
 
 | Command | What it does |
 |---|---|

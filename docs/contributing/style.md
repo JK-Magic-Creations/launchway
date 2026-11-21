@@ -21,7 +21,7 @@ How to write Launchway's documentation so that it stays clear, honest and consis
 
 - Plain words and short sentences. Define a term the first time, or link to the
   [glossary](../glossary.md).
-- British spelling: organisation, behaviour, licence (the noun).
+- British spelling: organization, behavior, license (the noun).
 - Second person and the imperative for instructions: "Create a file", not "The user creates".
 - Say what happens and why, not only what to type.
 
@@ -42,7 +42,7 @@ How to write Launchway's documentation so that it stays clear, honest and consis
 ## Diagrams
 
 - Mermaid in fenced `mermaid` blocks. GitHub and the site both render them.
-- No colours, `style`, `classDef` or `%%{init}` themes: the site picks light or dark.
+- No colors, `style`, `classDef` or `%%{init}` themes: the site picks light or dark.
 - Quote labels with punctuation: `A["Server (API)"]`. Keep to about fifteen nodes.
 
 ## Notes and warnings

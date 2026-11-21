@@ -372,7 +372,7 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 | `findings.max_per_project` | whole number | `500000` | Findings a project keeps, the oldest runs' removed first. At least `max_per_run` |
 | `findings.max_components_per_run` | whole number | `20000` | SBOM components one run keeps for searching |
 | `findings.max_components_per_project` | whole number | `1000000` | SBOM components a project keeps. At least `max_components_per_run` |
-| `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarise them. At most 1024 |
+| `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarize them. At most 1024 |
 
 ## Loops
 

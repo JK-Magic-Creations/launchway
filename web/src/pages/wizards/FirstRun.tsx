@@ -11,6 +11,9 @@ import { configApi, notOffered, type ChangeRequest, type ConfigOverview, type Si
 import { Choices, ListInput, TextInput } from "../../components/ConfigForm";
 import { AllowHost } from "../../components/AllowHost";
 import { Link } from "../../components/ui";
+import { WordsEditor, wordsProblems, type WordsValue } from "../../components/WordsEditor";
+import { withWords } from "../SettingsWords";
+import { makeTerms, terms } from "../../terms";
 import { PipelineToCommit, RunItNow, useRepoFlow } from "./ConnectRepo";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
 
@@ -25,10 +28,10 @@ const PROVIDERS = [
 
 export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   const me = useContext(MeContext);
-  const lv = overview.levels;
   const [orgName, setOrgName] = useState(overview.organisation?.display_name ?? "");
-  const [naming, setNaming] = useState<"usual" | "own">("usual");
-  const [names, setNames] = useState({ projectS: lv.project.singular, projectP: lv.project.plural, unitS: lv.unit.singular, unitP: lv.unit.plural, orgS: lv.organisation.singular });
+  const [words, setWords] = useState<WordsValue>(() => ({ set: terms().set, overrides: { ...terms().overrides } }));
+  const wordsAtStart = useState(() => JSON.stringify({ set: terms().set, overrides: terms().overrides }))[0];
+  const wt = makeTerms(words);
   const [useUnits, setUseUnits] = useState<"no" | "yes">(overview.units_in_use ? "yes" : "no");
   const [unitName, setUnitName] = useState("");
   const [unitDisplay, setUnitDisplay] = useState("");
@@ -67,16 +70,8 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   };
 
   const changes: ChangeRequest[] = [];
-  if (inst) {
-    const levels = naming === "own" || useUnits === "yes" ? {
-      organisation: { singular: names.orgS.trim() },
-      unit: { singular: names.unitS.trim(), plural: names.unitP.trim() },
-      project: { singular: names.projectS.trim(), plural: names.projectP.trim() },
-    } : null;
-    if (levels && naming === "own") {
-      const cur = (inst.spec.levels as Spec | undefined) ?? {};
-      changes.push({ kind: "installation", name: "installation", spec: { ...inst.spec, levels: { ...cur, ...levels } }, version: inst.version });
-    }
+  if (inst && JSON.stringify({ set: words.set, overrides: words.overrides }) !== wordsAtStart) {
+    changes.push({ kind: "installation", name: "installation", spec: withWords(inst.spec, words) as Spec, version: inst.version });
   }
   if (org && orgName.trim() && orgName.trim() !== (org.spec.display_name ?? "")) {
     changes.push({ kind: "organisation", name: "default", spec: { ...org.spec, display_name: orgName.trim() }, version: org.version });
@@ -92,42 +87,37 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   }
   if (flow.name) changes.push({ ...flow.change, unit: useUnits === "yes" && unitName.trim() ? unitName.trim() : flow.change.unit });
 
-  const unitWord = (naming === "own" ? names.unitS : lv.unit.singular) || "Unit";
-  const projWord = (naming === "own" ? names.projectS : lv.project.singular) || "Project";
+  const unitWord = wt.label("unit");
+  const projWord = wt.label("project");
+
+  const wordsStep: StepDef = {
+    id: "words", title: "The words Launchway uses",
+    fields: [{ path: "terms", match: ["terms", "levels"] }],
+    local: () => wordsProblems(words),
+    render: () => (
+      <>
+        <p className="cf-help">Launchway names its levels and parts. Choose the aviation words or plain business ones, see them in the preview, and rename any single word. You can change them any time in Settings.</p>
+        <WordsEditor value={words} onChange={setWords} />
+      </>
+    ),
+  };
 
   const namesStep: StepDef = {
-    id: "names", title: "What to call things",
-    fields: [{ path: "levels", match: ["levels"] }, { path: "display_name", match: ["display_name", "organisation"], value: orgName }, { path: "unit", match: ["unit"], value: unitName }],
+    id: "names", title: `Your ${wt.lower("organization")} and its ${wt.pluralLower("unit")}`,
+    fields: [{ path: "display_name", match: ["display_name", "organisation"], value: orgName }, { path: "unit", match: ["unit"], value: unitName }],
     local: () => useUnits === "yes" && !unitName.trim() && !overview.units_in_use ? `Name the first ${unitWord.toLowerCase()}, or choose not to use them.` : null,
     render: (by) => (
       <>
         <div className="cf-grid">
-          <TextInput label="Your organisation's name" value={orgName} onChange={setOrgName} placeholder="Acme" focusOnMount problems={by.display_name}
+          <TextInput label={`Your ${wt.lower("organization")}'s name`} value={orgName} onChange={setOrgName} placeholder="Acme" focusOnMount problems={by.display_name}
             help="Shown at the top of the configuration and where it helps people know where they are. Optional." />
         </div>
-        <Choices legend="What should the things Launchway manages be called?" value={naming} onChange={(v) => setNaming(v as "usual" | "own")}
-          help="Launchway has levels: the installation, an organisation that owns everything, optional groups, and the projects (one per repository). Their names are only words on the screen; you can change them later."
+        <Choices legend={`Do you want to group ${wt.pluralLower("project")}?`} value={useUnits} onChange={(v) => setUseUnits(v as "no" | "yes")}
+          help={`The levels are the ${wt.lower("installation")}, the ${wt.lower("organization")} that owns everything, optional ${wt.pluralLower("unit")}, and the ${wt.pluralLower("project")} (one per repository).`}
           options={[
-            { value: "usual", label: `Keep these names: ${lv.organisation.singular}, ${lv.unit.plural}, ${lv.project.plural}`, help: "Nothing to decide now." },
-            { value: "own", label: "Our own words", help: "For example Company, Teams and Services, so the screens use your organisation's language." },
-          ]} />
-        {naming === "own" && (
-          <fieldset className="cf-section">
-            <legend className="cf-section-title">Names</legend>
-            <div className="cf-grid">
-              <TextInput label="The organisation is a…" value={names.orgS} onChange={(v) => setNames({ ...names, orgS: v })} problems={by.levels} help="Such as Company." />
-              <TextInput label="One repository is a…" value={names.projectS} onChange={(v) => setNames({ ...names, projectS: v })} help="Such as Service, Application or Project." />
-              <TextInput label="Several are…" value={names.projectP} onChange={(v) => setNames({ ...names, projectP: v })} help="The plural." />
-              {useUnits === "yes" && <TextInput label="A group of them is a…" value={names.unitS} onChange={(v) => setNames({ ...names, unitS: v })} help="Such as Team or Department." />}
-              {useUnits === "yes" && <TextInput label="Several groups are…" value={names.unitP} onChange={(v) => setNames({ ...names, unitP: v })} help="The plural." />}
-            </div>
-          </fieldset>
-        )}
-        <Choices legend={`Do you want to group ${(naming === "own" ? names.projectP : lv.project.plural).toLowerCase()}?`} value={useUnits} onChange={(v) => setUseUnits(v as "no" | "yes")}
-          options={[
-            { value: "no", label: "No, not now", help: `Every ${projWord.toLowerCase()} shares the organisation's settings. The simplest start; you can add groups any time and the screens then show them.` },
-            { value: "yes", label: `Yes, into ${(naming === "own" ? names.unitP : lv.unit.plural).toLowerCase()}`,
-              help: `Each team gets its own roles, libraries, policies, environments, runner pools and secret stores, which apply only to its ${(naming === "own" ? names.projectP : lv.project.plural).toLowerCase()}. One level, never nested.` },
+            { value: "no", label: "No, not now", help: `Every ${projWord.toLowerCase()} shares the ${wt.lower("organization")}'s settings. The simplest start; you can add ${wt.pluralLower("unit")} any time and the screens then show them.` },
+            { value: "yes", label: `Yes, into ${wt.pluralLower("unit")}`,
+              help: `Each ${unitWord.toLowerCase()} gets its own roles, libraries, policies, environments, runner pools and secret stores, which apply only to its ${wt.pluralLower("project")}. One level, never nested.` },
           ]} />
         {useUnits === "yes" && !overview.units_in_use && (
           <div className="cf-grid">
@@ -200,8 +190,8 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
 
   return (
     <WizardRunner title="First-run setup" overview={overview}
-      intro="Three short parts: what to call things, how people sign in, and your first repository. Nothing is created until you confirm at the end."
-      steps={[namesStep, signinStep, ...flow.steps]} changes={changes}
+      intro={`Four short parts: the words Launchway uses, your ${wt.lower("organization")}, how people sign in, and your first repository. Nothing is created until you confirm at the end.`}
+      steps={[wordsStep, namesStep, signinStep, ...flow.steps]} changes={changes}
       summaryExtra={<>
         <PipelineToCommit flow={flow} />
         {signin === "oidc" && <p className="cf-help">The sign-in answers are saved, not switched on: that waits for a test sign-in, which this version cannot do yet.</p>}

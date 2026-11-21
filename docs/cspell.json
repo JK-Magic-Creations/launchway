@@ -1,6 +1,6 @@
 {
   "version": "0.2",
-  "language": "en,en-GB",
+  "language": "en-US",
   "ignorePaths": [
     "node_modules/**",
     ".vitepress/**",
@@ -80,6 +80,18 @@
     "unconfigured",
     "userinfo",
     "VitePress",
-    "xunit"
+    "xunit",
+    "rollouts",
+    "Rollouts",
+    "sandboxed",
+    "Sandboxed",
+    "browsable",
+    "tolerations",
+    "unreviewed",
+    "Streamable",
+    "subtests",
+    "Wingman",
+    "Squadron",
+    "Squadrons"
   ]
 }

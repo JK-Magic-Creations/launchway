@@ -24,7 +24,7 @@ describe("tone", () => {
 
 describe("stepLabel", () => {
   it("explains what a waiting step waits for", () => {
-    expect(stepLabel({ status: "waiting", kind: "approval" })).toBe("Waiting for approval");
+    expect(stepLabel({ status: "waiting", kind: "approval" })).toBe("Waiting for clearance");
     expect(stepLabel({ status: "waiting", kind: "deploy", wait_kind: "lock", environment: "prod" })).toBe("Waiting for prod's lock");
     expect(stepLabel({ status: "failed", policy_blocked: true })).toBe("Blocked by policy");
   });

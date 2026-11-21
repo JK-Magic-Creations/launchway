@@ -396,7 +396,7 @@ or `version` in the body); `412` says someone changed the object meanwhile. `X-L
 terraform` (or `git`), sent with an API token, says a tool manages the object; only that
 manager may change it afterwards, unless the caller sends `take_ownership: true`, which is audited. `{kind}` is one of `projects`, `libraries`,
 `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`,
-`models`, `secret-stores`, `step-resources`, `units`, `installation` and `organisation`.
+`models`, `secret-stores`, `step-resources`, `units`, `installation` and `organisation` (the kind names are fixed, whatever the installation calls its levels; `organization` is accepted as an alias). `GET /api/v1/config` also returns the chosen `terms` (`set` and `overrides`) and the level names they give.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
@@ -409,7 +409,7 @@ manager may change it afterwards, unless the caller sends `take_ownership: true`
 | `POST /api/v1/config/check/repository` | `admin` | `config.check_repository` | `{"repo", "branch"}`: reads a repository with the server's own Git credentials and keeps nothing. Internal addresses and local paths are refused (`blocked`, `blocked_host`; see Egress in the server settings). Audited and limited to a few a minute per caller. Answers `ok`, a plain `problem`, the `default_branch`, the `branches` and whether the branch has a pipeline file |
 | `POST /api/v1/config/check/signin` | `admin` | `config.check_signin` | `{"issuer", "client_id", "redirect_url", "client_secret_env", "groups_claim", "admin_groups", "admin_users"}`: checks the answers against the identity provider and returns the `auth:` block for the configuration file (`snippet`). Sign-in stays in the file |
 | `POST /api/v1/config/apply` | `admin` | `config.apply` | `{"changes": [{"kind", "name", "action", "unit", "spec", "version", "comment"}]}`, at most 200: all or none. `action` is `put` (the default), `delete` or `restore`; `version` -1 means the object must not exist yet |
-| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the installation, the organisation, a unit or the project |
+| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the installation, the organization, a unit or the project |
 | `GET /api/v1/config/{kind}` | `admin` | — | The objects of a kind; `?deleted=1` lists the deleted ones |
 | `POST /api/v1/config/{kind}` | `admin` | `config.create` | `{"name", "unit", "spec", "comment"}`: creates an object; `409` if it exists |
 | `GET /api/v1/config/{kind}/{obj}` | `admin` | — | One object: `spec`, `version` (also the `ETag`), `managed_by`, who created and last changed it, and `deleted` |
