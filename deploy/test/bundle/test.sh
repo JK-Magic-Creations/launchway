@@ -76,7 +76,7 @@ node=$(k get nodes -o jsonpath='{.items[0].metadata.name}')
 names=$(podman exec "$node" crictl images -o json 2>/dev/null | jq -r '.images[].repoTags[]' | grep -E "/launchway(-runner)?:$ver$" || :)
 server_ref=$(printf '%s\n' "$names" | grep -E "/launchway:$ver$" | head -n 1)
 runner_ref=$(printf '%s\n' "$names" | grep -E "/launchway-runner:$ver$" | head -n 1)
-[ -n "$server_ref" ] && [ -n "$runner_ref" ] || fail "the images are not on the node: $names"
+if [ -z "$server_ref" ] || [ -z "$runner_ref" ]; then fail "the images are not on the node: $names"; fi
 pass "images loaded into the node: $server_ref, $runner_ref"
 
 h uninstall runners -n $RUN --wait >/dev/null 2>&1 || :

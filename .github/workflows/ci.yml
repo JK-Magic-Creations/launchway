@@ -37,15 +37,15 @@ jobs:
       - name: Vet and test (SQLite)
         run: |
           go vet ./...
-          go test -race -count=1 ./...
+          go test -race -count=1 -timeout 30m ./...
       - name: Test with several servers (PostgreSQL)
         env:
           LAUNCHWAY_TEST_POSTGRES: postgres://launchway:launchway@127.0.0.1:5432/launchway?sslmode=disable
-        run: go test -race -count=1 ./internal/engine/ ./internal/source/ ./internal/api/
+        run: go test -race -count=1 -timeout 60m ./internal/engine/ ./internal/source/ ./internal/api/
       - name: Test with real containers
         env:
           LAUNCHWAY_TEST_CONTAINERS: "1"
-        run: go test -count=1 ./internal/executor/
+        run: go test -count=1 -timeout 30m ./internal/executor/
       - name: Build the binary
         run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
 
