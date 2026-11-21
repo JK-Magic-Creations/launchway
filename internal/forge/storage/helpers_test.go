@@ -86,7 +86,7 @@ func newClient(t testing.TB) *client {
 }
 
 func (c *client) run(env []string, args ...string) (string, error) {
-	res, err := gitexec.Run(context.Background(), gitexec.Spec{Dir: c.dir, Args: args, Env: append(append([]string{}, ident...), env...), Timeout: 90 * time.Second, IdleTimeout: 45 * time.Second})
+	res, err := gitexec.Run(context.Background(), gitexec.Spec{Dir: c.dir, Args: args, Env: append(append([]string{}, ident...), env...), Timeout: clientTimeout(), IdleTimeout: 45 * time.Second})
 	if err != nil {
 		var ee *gitexec.ExitError
 		if errors.As(err, &ee) {
@@ -228,3 +228,11 @@ func envInt(name string, def int) int {
 }
 
 func newRand(seed int64) *rand.Rand { return rand.New(rand.NewSource(seed)) }
+
+// clientTimeout bounds every git client call of a test.
+func clientTimeout() time.Duration {
+	if v, err := time.ParseDuration(os.Getenv("STORAGE_CLIENT_TIMEOUT")); err == nil {
+		return v
+	}
+	return 90 * time.Second
+}

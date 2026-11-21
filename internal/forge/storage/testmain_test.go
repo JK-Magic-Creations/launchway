@@ -35,7 +35,23 @@ func TestMain(m *testing.M) {
 		runTestServer()
 		return
 	}
-	os.Exit(m.Run())
+	if testing.CoverMode() != "" && os.Getenv("ST_HOOKBIN") == "" {
+		// Git's hooks are this binary, started by git. A coverage-instrumented
+		// binary hangs when it is started that way (seen: every push stalls),
+		// so under -cover the hooks are the real, uninstrumented launchway.
+		dir, err := os.MkdirTemp("", "lw-hookbin-")
+		if err == nil {
+			bin := filepath.Join(dir, "launchway")
+			if out, err := exec.Command("go", "build", "-o", bin, "github.com/jk-magic-creations/launchway/cmd/launchway").CombinedOutput(); err != nil {
+				fmt.Fprintf(os.Stderr, "building the hook binary: %v\n%s", err, out)
+				os.Exit(1)
+			}
+			os.Setenv("ST_HOOKBIN", bin)
+			defer os.RemoveAll(dir)
+		}
+	}
+	code := m.Run()
+	os.Exit(code)
 }
 
 type serverEnv struct {
@@ -73,7 +89,7 @@ func openStore(ctx context.Context, e serverEnv) (*Store, *engine.Engine, error)
 		blobs = db
 	}
 	st, err := New(ctx, Options{DB: eng.Database(), Blobs: &faultyBlobs{Store: blobs}, CacheDir: e.Cache, Server: e.Name,
-		NoVerifyUpload: e.NoVerify, MaxRepoBytes: e.MaxRepo, MaxPackBytes: e.MaxPack})
+		Binary: os.Getenv("ST_HOOKBIN"), NoVerifyUpload: e.NoVerify, MaxRepoBytes: e.MaxRepo, MaxPackBytes: e.MaxPack})
 	return st, eng, err
 }
 
@@ -306,6 +322,10 @@ func startServer(t testing.TB, e serverEnv) *proc {
 	t.Helper()
 	cmd := exec.Command(os.Args[0])
 	cmd.Env = e.environ()
+	if testing.CoverMode() != "" {
+		// A coverage-instrumented server writes its counters when it exits.
+		cmd.Env = append(cmd.Env, "GOCOVERDIR="+t.TempDir())
+	}
 	cmd.Stderr = os.Stderr
 	out, err := cmd.StdoutPipe()
 	if err != nil {

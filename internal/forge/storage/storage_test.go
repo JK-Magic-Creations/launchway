@@ -106,14 +106,6 @@ func TestKillTheServerAtEveryStepOfAPush(t *testing.T) {
 // kill -9 of git itself, at the points where it holds ref locks, leaves lock
 // files behind; the next push removes them and goes through.
 func TestKillingGitLeavesNoStuckLocks(t *testing.T) {
-	if testing.CoverMode() != "" {
-		// Observed, not explained: with a coverage-instrumented server (slower
-		// hooks) the git client's send-pack and remote-http deadlocked on each
-		// other after the server's git was killed mid-push. The test passes in
-		// every uninstrumented run. The lesson for the HTTP front (S34-12) is
-		// to put deadlines on handlers and low-speed limits on clients.
-		t.Skip("see the comment: a client hang seen only under -cover")
-	}
 	w := newWorld(t, "fs", false)
 	srv := w.server("a")
 	c := newClient(t)
