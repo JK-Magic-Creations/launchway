@@ -35,7 +35,7 @@ How a request is authenticated depends on the server's `auth.mode` and on the ro
 |---|---|---|
 | Sign-in off (`auth.mode: none`) | anyone | No credentials. Every request acts as the configured `user`, with every right. An `Authorization` header is ignored. |
 | Sign-in on (`auth.mode: oidc`) | a browser | The `launchway_session` cookie set by [`GET /auth/callback`](#sign-in). |
-| Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens). A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
+| Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens); `Authorization: token lw_…` and HTTP Basic with the token as the password are accepted too, for clients written for other Git hosts. A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
 | Either | a runner | `Authorization: Bearer <runner token>`: the shared runner token, a deploy runner pool's token, or the short-lived access token of an enrolled runner. Only the [runner API](#runner-api) accepts these. |
 | Either | a webhook caller | A secret the project's configuration names. See [Webhooks](#webhooks). |
 

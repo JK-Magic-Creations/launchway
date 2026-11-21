@@ -113,7 +113,7 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 	now := s.Now()
 	if h := r.Header.Get("Authorization"); h != "" {
 		// A request that names a token is judged by the token alone.
-		tok, ok := strings.CutPrefix(h, "Bearer ")
+		tok, ok := apiToken(h)
 		if !ok || !strings.HasPrefix(tok, tokenPrefix) {
 			s.tokenDenied(r, touch, "", "", "the Authorization header holds no Launchway API token")
 			return nil, nil
@@ -585,4 +585,27 @@ func (s *Server) tokenIdentity(r *http.Request, tok string, touch bool) (*identi
 		}
 	}
 	return id, nil
+}
+
+// apiToken reads a token from an Authorization header: "Bearer <token>", the
+// "token <token>" Gitea's clients send, or Basic where the password (or, with
+// no password, the user name) is the token.
+func apiToken(h string) (string, bool) {
+	scheme, rest, _ := strings.Cut(h, " ")
+	rest = strings.TrimSpace(rest)
+	switch strings.ToLower(scheme) {
+	case "bearer", "token":
+		return rest, rest != ""
+	case "basic":
+		req := &http.Request{Header: http.Header{"Authorization": {h}}}
+		user, pass, ok := req.BasicAuth()
+		if !ok {
+			return "", false
+		}
+		if pass == "" {
+			pass = user
+		}
+		return pass, pass != ""
+	}
+	return "", false
 }

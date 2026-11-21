@@ -162,7 +162,7 @@ func TestGiteaStyleRepositoryCalls(t *testing.T) {
 	e, _ := hostedEnv(t, envOpts{})
 	ada := e.signIn(t, "ada")
 	var me struct{ Login string }
-	ada.get(e.srv.URL + "/api/v1/user").json(t, &me)
+	ada.get(e.srv.URL+"/api/v1/user").json(t, &me)
 	if me.Login != "ada" {
 		t.Fatalf("login %q", me.Login)
 	}
