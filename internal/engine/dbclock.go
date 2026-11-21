@@ -18,6 +18,15 @@ type dbClock struct {
 	real     func() time.Time
 }
 
+// newDBClock starts a clock whose last good moment is now: a server whose
+// first tick meets an outage must apply the rule as much as one that had
+// ticked before.
+func newDBClock() *dbClock {
+	c := &dbClock{}
+	c.lastGood.Store(time.Now().UnixNano())
+	return c
+}
+
 func (c *dbClock) wrap(now func() time.Time) func() time.Time {
 	if now != nil {
 		return now

@@ -169,6 +169,13 @@ versions share a database.
 **No duplication.** Search for an existing package or helper before writing one; reuse `testdb`,
 `testlib`, `redact` and `secrets`.
 
+**Outages.** Code that talks to the database or the server must survive a brief outage of either.
+`testdb.ThroughProxy` puts a TCP proxy in front of PostgreSQL that drops every connection or delays
+what passes; the engine tests have a wrapper that refuses or breaks SQLite connections, fails one
+statement or loses the answer to a commit; the API tests have a switch that makes the server answer
+503 or drop connections, a transport that sends every runner write twice, and a server that is
+restarted behind a fixed address. Writes a runner makes must be safe to repeat.
+
 **Dependencies.** A new module needs an approved licence, a reason in the pull request, and passes
 `govulncheck`.
 

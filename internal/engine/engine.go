@@ -378,7 +378,7 @@ func Open(o Options) (*Engine, error) {
 	if o.RunnerTimeout == 0 {
 		o.RunnerTimeout = 3 * o.LeaseTTL
 	}
-	clk := &dbClock{}
+	clk := newDBClock()
 	o.Now = clk.wrap(o.Now)
 	if o.Logger == nil {
 		o.Logger = slog.Default()
