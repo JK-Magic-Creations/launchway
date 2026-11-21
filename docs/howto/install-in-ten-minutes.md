@@ -14,7 +14,7 @@ helm install launchway ./deploy/helm/launchway \
   --namespace launchway --create-namespace \
   --set externalURL=https://launchway.example.com
 kubectl -n launchway get secret launchway-setup-code -o jsonpath='{.data.code}' | base64 -d
-kubectl -n launchway port-forward svc/launchway 8080:80    # until your Ingress or Gateway is set up
+kubectl -n launchway port-forward svc/launchway 8080:8080    # until your Ingress or Gateway is set up
 ```
 
 What the chart does by itself:
