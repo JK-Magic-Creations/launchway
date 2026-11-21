@@ -199,6 +199,12 @@ export const PAGES: PageInfo[] = [
   page("/deployments/applications/:name", "deployments", "applications", (p) => `Application ${p.name}`,
     (p) => [{ label: "Applications", href: "/deployments/applications" }, { label: p.name }]),
 
+  page("/repositories", "projects", undefined, () => "Repositories", () => [{ label: "Repositories" }]),
+  page("/repositories/:owner/:name", "projects", undefined, (p) => `Repository ${p.owner}/${p.name}`,
+    (p) => [{ label: "Repositories", href: "/repositories" }, { label: `${p.owner}/${p.name}` }]),
+  page("/owners/:owner", "projects", undefined, (p) => `Owner ${p.owner}`,
+    (p) => [{ label: "Repositories", href: "/repositories" }, { label: p.owner }]),
+
   page("/activity", "activity", "runs", () => "Runs", () => [{ label: "Runs" }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
   page("/runs/:id", "activity", "runs", (p) => `Run ${p.id}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}` }]),
@@ -230,6 +236,8 @@ export const PAGES: PageInfo[] = [
   page("/settings/access", "settings", "access", () => "People and access", () => [{ label: "People and access" }]),
   page("/settings/access/keys", "settings", "access", () => "Keys for scripts",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Keys for scripts" }]),
+  page("/settings/access/ssh-keys", "settings", "access", () => "SSH keys",
+    () => [{ label: "People and access", href: "/settings/access" }, { label: "SSH keys" }]),
   page("/settings/access/agents", "settings", "access", () => "Connect an agent",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Connect an agent" }]),
   page("/settings/approvals", "settings", "approvals", () => say("{Clearances}"), () => [{ label: say("{Clearances}") }]),

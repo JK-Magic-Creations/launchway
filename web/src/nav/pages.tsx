@@ -1,3 +1,5 @@
+import { SshKeysPage } from "../pages/SshKeys";
+import { RepositoriesPage, RepositoryPage, OwnerPage } from "../pages/Repositories";
 import { lazy } from "react";
 import type { Approvals } from "../live";
 import { Empty, Link } from "../components/ui";
@@ -94,7 +96,11 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/runners": return <RunnersPage />;
     case "/settings/access": return <AccessPage />;
     case "/settings/access/keys": return <TokensPage />;
+    case "/settings/access/ssh-keys": return <SshKeysPage />;
     case "/settings/access/agents": return <AgentsPage />;
+    case "/repositories": return <RepositoriesPage />;
+    case "/repositories/:owner/:name": return <RepositoryPage key={p.owner + "/" + p.name} owner={p.owner} name={p.name} />;
+    case "/owners/:owner": return <OwnerPage key={p.owner} owner={p.owner} />;
     case "/settings/approvals": return <SettingsApprovalsPage />;
     case "/settings/rules": return <PolicyPage />;
     case "/settings/audit": return <AuditPage />;
