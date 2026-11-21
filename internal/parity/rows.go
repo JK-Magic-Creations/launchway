@@ -48,6 +48,7 @@ var rows = []Row{
 	{Route: "POST /api/v1/runs/{id}/rerun", MCP: "retry_run", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no runs retry command yet"},
 	{Route: "POST /api/v1/runs/{id}/steps/{step}/approve", MCP: "decide_approval", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no approvals command yet"},
 	{Route: "POST /api/v1/runs/{id}/steps/{step}/reject", MCP: "decide_approval", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no approvals command yet"},
+	{Route: "GET /api/v1/notifications", MCP: "list_notifications", CLI: "notifications", Terraform: "", Status: Equal},
 	{Route: "GET /api/v1/approvals", MCP: "list_approvals", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no approvals command yet"},
 	{Route: "GET /api/v1/runners", MCP: "", CLI: "runners list", Terraform: "", Status: Gap, Reason: "no MCP tool lists runners yet"},
 	{Route: "GET /api/v1/runner-pools", MCP: "list_config (kind runner-pools)", CLI: "runner-pools list", Terraform: "launchway_runner_pool", Status: Equal, Reason: ""},

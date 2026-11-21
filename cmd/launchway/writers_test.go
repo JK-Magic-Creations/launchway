@@ -7,8 +7,8 @@ import (
 
 func TestWriterFlag(t *testing.T) {
 	var w writerFlag
-	if err := w.Set("main=mcp-*,jkma=apps/mcp-servers/base.yaml,apps/jkma/**"); err == nil {
-		t.Fatal("two equals signs were needed")
+	if err := w.Set("main=mcp-*"); err == nil {
+		t.Fatal("three parts were needed")
 	}
 	if err := w.Set("main=mcp-*,jkma=apps/mcp-servers/base.yaml"); err != nil {
 		t.Fatal(err)

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/notify"
 	"reflect"
 	"regexp"
 	"slices"
@@ -188,6 +189,9 @@ type Installation struct {
 	// Forge is Git hosting: off by default. A change takes effect when each
 	// server next restarts.
 	Forge config.ForgeConfig `yaml:"forge"`
+	// Notifications are the channels and rules that tell people an approval
+	// waits or something went wrong.
+	Notifications notify.Config `yaml:"notifications"`
 }
 
 // EgressAllow is the allowed hosts of the installation.

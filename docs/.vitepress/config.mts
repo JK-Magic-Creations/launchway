@@ -220,6 +220,7 @@ export default defineConfig({
           { text: 'GitOps write-back', link: '/guide/gitops-write-back' },
           { text: 'Policies', link: '/guide/policies' },
           { text: 'Verifying a deployment', link: '/guide/verification' },
+          { text: 'Notifications', link: '/guide/notifications' },
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Git over SSH', link: '/guide/git-over-ssh' },
           { text: 'Pull requests and code review', link: '/guide/pull-requests' },

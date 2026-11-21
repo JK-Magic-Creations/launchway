@@ -277,6 +277,7 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/approvals` | `signed-in` | — | Approval steps waiting for a decision, in the projects the caller may see. |
+| `GET /api/v1/notifications` | `signed-in` | — | The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. `limit` (at most 500). |
 | `POST /api/v1/runs/{id}/steps/{step}/approve` | `run-operator` | `approval.approve` | Approves a waiting approval step. |
 | `POST /api/v1/runs/{id}/steps/{step}/reject` | `run-operator` | `approval.reject` | Rejects it. |
 

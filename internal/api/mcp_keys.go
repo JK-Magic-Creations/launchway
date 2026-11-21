@@ -33,6 +33,9 @@ func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_deploy_keys", Annotations: readOnly("List the deploy keys of a repository"),
 		Description: "The deploy keys of one repository (its administrators only): name, fingerprint, whether the key may push, expiry, last use."},
 		mcpCallTimeout, listDeployKeys)
+	addTool(srv, c, &mcp.Tool{Name: "list_notifications", Annotations: readOnly("List notifications"),
+		Description: "The log of notifications Launchway sent or tried to send (an approval waiting, a failed run or deployment, a rollback): channel, event, status (sent, pending a retry, or failed), attempts and why one failed. Never an address or key of a channel."},
+		mcpCallTimeout, listNotifications)
 	addTool(srv, c, &mcp.Tool{Name: "get_protected_branches", Annotations: readOnly("Get the protected branches of a repository"),
 		Description: "The branch names and patterns (such as main or release/*) that take no direct push except from the repository's administrators and cannot be deleted."},
 		mcpCallTimeout, getProtectedBranches)

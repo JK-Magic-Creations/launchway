@@ -1983,6 +1983,29 @@ paths:
             tags:
                 - mirrors
             x-launchway-access: signed-in
+    /api/v1/notifications:
+        get:
+            description: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. limit (at most 500).'
+            operationId: get_api_v1_notifications
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read.'
+            tags:
+                - notifications
+            x-launchway-access: signed-in
     /api/v1/owners/{owner}/hooks:
         get:
             description: As for a repository, for every repository of the owner.

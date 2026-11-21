@@ -488,7 +488,7 @@ Unset, verify steps are refused.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `verification.sources[].name` | name | required | What pipelines call the source |
-| `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres` or `http` |
+| `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres`, `http` or `check` |
 | `verification.sources[].projects` | list of patterns | none | The projects that may use it |
 
 ## AI models
@@ -625,3 +625,25 @@ policy:
   targets.
 - [Helm values](helm-values.md): the same settings when Launchway runs on Kubernetes.
 - [Back up, restore and upgrade](../howto/backup-restore-upgrade.md).
+
+## Notifications
+
+Who is told when an approval waits or something went wrong, and where. See [Notifications](../guide/notifications.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `notifications.channels[].name` | name | required | What rules call the channel |
+| `notifications.channels[].kind` | text | required | `webhook` (a JSON body, signed when there is a `secret`), `slack`, `discord` or `teams` (the incoming-webhook address of that chat service) |
+| `notifications.channels[].url.store` | name | required | The server's secret store (`ai.secrets`) that holds the channel's address. The address of a chat webhook is a credential, so it is only ever a reference |
+| `notifications.channels[].url.key` | text | required | The key in the store |
+| `notifications.channels[].url.field` | text | | The field of the key |
+| `notifications.channels[].secret.store` | name | none | `webhook` only: the store that holds the key the body is signed with (`X-Launchway-Signature-256`, as repository webhooks are) |
+| `notifications.channels[].secret.key` | text | | The key in the store |
+| `notifications.channels[].secret.field` | text | | The field of the key |
+| `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long` |
+| `notifications.rules[].to` | list | required | The names of the channels that get them |
+| `notifications.rules[].projects` | list of patterns | all | Only events of these projects |
+| `notifications.rules[].environments` | list of patterns | all | Only events of these environments (deployments and rollbacks) |
+| `notifications.rules[].branches` | list of patterns | all | Only runs made from these branches |
+| `notifications.rules[].after` | duration | `1h` | For `step.waiting_long`: how long a step waits before it is reported, at least `1m` |

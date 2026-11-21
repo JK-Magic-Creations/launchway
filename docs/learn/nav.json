@@ -218,6 +218,7 @@
         "tutorials/deploy-with-approval",
         "guide/verification",
         "guide/approvals-and-reruns",
+        "guide/notifications",
         "howto/troubleshooting"
       ]
     },
