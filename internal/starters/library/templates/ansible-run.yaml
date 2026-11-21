@@ -1,0 +1,90 @@
+# MANEUVER: run one Ansible playbook, in a pinned execution image, with the result read into a run report.
+#
+#   configure:
+#     uses: launchway/ansible-run
+#     with:
+#       playbook: site.yml
+#       hosts: "web1=10.0.0.11,web2=10.0.0.12"
+#       known_hosts: "web1 ssh-ed25519 AAAA...\nweb2 ssh-ed25519 AAAA..."
+#       auth: key
+#       ssh_key_store: vault
+#       ssh_key_key: ansible/deploy
+#       ssh_key_field: private_key
+#
+# The key is a reference: Launchway never holds it, the runner looks it up, writes it to memory-backed storage for the run and removes it, and masks it in every log. Host keys are pinned: with no known_hosts the run refuses to connect. The tool runs in the image you name (build packaging/ansible-ee, or bring your own with ansible-core); Launchway does not bundle it.
+# The run report (hosts by plays, what changed, the failed task, drift in check mode) is the artifact launchway-config.
+# To run again on the hosts that failed, give the pipeline an input named limit and pass it: limit: { input: limit }.
+template: ansible-run
+description: "Maneuver: run an Ansible playbook; result as a run report (check mode, diff, batches, retry on failed hosts)"
+params:
+  image: { type: string, default: "localhost/ansible-ee:2.19", description: "The execution image: ansible-core and what your playbooks need (packaging/ansible-ee/Containerfile builds the default); pin it by digest in production" }
+  playbook: { type: string, default: "site.yml", description: "The playbook, relative to the repository" }
+  inventory: { type: string, default: "inline", description: "An inventory file or directory in the repository, an inventory plugin or script, or inline to use the hosts parameter" }
+  hosts: { type: string, default: "", description: "With inventory inline: name=address[:port], separated by commas" }
+  limit: { type: string, default: "", description: "Only these hosts or groups (ansible --limit); the retry of failed hosts sets it" }
+  tags: { type: string, default: "", description: "Only tasks with these tags" }
+  skip_tags: { type: string, default: "", description: "Skip tasks with these tags" }
+  extra_vars: { type: string, default: "{}", description: "Variables as a JSON object: typed inputs and variables by level; written to a file in memory, never to the command line" }
+  secret_vars: { type: string, default: "", description: "name=ENVIRONMENT_VARIABLE pairs: variables whose values the step was given by secret reference" }
+  check: { type: boolean, default: false, description: "Check mode: report what would change, change nothing (the drift run)" }
+  diff: { type: boolean, default: true, description: "Show the change of files (secrets and no_log tasks are hidden)" }
+  become: { type: boolean, default: false, description: "Become another user on the host (sudo)" }
+  become_user: { type: string, default: "", description: "The user to become; empty is root" }
+  forks: { type: string, default: "", description: "Hosts at once" }
+  user: { type: string, default: "", description: "The SSH user" }
+  known_hosts: { type: string, default: "", description: "The hosts' public keys in known_hosts format: pinned; a changed key fails the run" }
+  host_key_checking: { type: boolean, default: true, description: "Only false in a lab: it stops authenticating the hosts" }
+  connect_timeout: { type: string, default: "15", description: "SSH connect timeout in seconds" }
+  requirements: { type: string, default: "requirements.yml", description: "Collections and roles to install; kept in a cache keyed by the file's hash and the image" }
+  environment: { type: string, default: "", description: "The Airfield this configures, for the Configuration page and drift" }
+  auth: { type: string, default: "none", options: ["none", "key", "key+vault"], description: "How the run authenticates: none (no private key from a store: an agent, a local connection), key (an SSH private key by reference) or key+vault (and the Ansible vault password by reference)" }
+  ssh_key_store: { type: string, default: "vault", description: "With auth key: the secret store holding the SSH private key" }
+  ssh_key_key: { type: string, default: "ansible/ssh", description: "The key's name in that store" }
+  ssh_key_field: { type: string, default: "private_key", description: "The field of the secret" }
+  vault_store: { type: string, default: "vault", description: "With auth key+vault: the secret store holding the Ansible vault password" }
+  vault_key: { type: string, default: "ansible/vault", description: "The vault password's name" }
+  vault_field: { type: string, default: "password", description: "The field of the secret" }
+containers:
+  ee: { image: { param: image } }
+steps:
+  run-plain:
+    description: Run the playbook
+    if: { param: auth, equals: "none" }
+    container: ee
+    cache:
+      - name: ansible-galaxy
+        paths: [.cache/ansible-galaxy]
+        key: { files: ["requirements.yml", "collections/requirements.yml"], text: { param: image, format: "ee-%s" } }
+        fallback: latest
+    artifacts:
+      - { name: launchway-config, paths: [.launchway/ansible], when: always }
+    run: "$LAUNCHWAY_LIB/scripts/ansible/run.sh"
+  run-key:
+    description: Run the playbook
+    if: { param: auth, equals: "key" }
+    container: ee
+    cache:
+      - name: ansible-galaxy
+        paths: [.cache/ansible-galaxy]
+        key: { files: ["requirements.yml", "collections/requirements.yml"], text: { param: image, format: "ee-%s" } }
+        fallback: latest
+    secrets:
+      ANSIBLE_SSH_KEY: { store: { param: ssh_key_store }, key: { param: ssh_key_key }, field: { param: ssh_key_field } }
+    artifacts:
+      - { name: launchway-config, paths: [.launchway/ansible], when: always }
+    run: "$LAUNCHWAY_LIB/scripts/ansible/run.sh"
+  run-key-vault:
+    description: Run the playbook
+    if: { param: auth, equals: "key+vault" }
+    container: ee
+    cache:
+      - name: ansible-galaxy
+        paths: [.cache/ansible-galaxy]
+        key: { files: ["requirements.yml", "collections/requirements.yml"], text: { param: image, format: "ee-%s" } }
+        fallback: latest
+    secrets:
+      ANSIBLE_SSH_KEY: { store: { param: ssh_key_store }, key: { param: ssh_key_key }, field: { param: ssh_key_field } }
+      ANSIBLE_VAULT_PASSWORD: { store: { param: vault_store }, key: { param: vault_key }, field: { param: vault_field } }
+    artifacts:
+      - { name: launchway-config, paths: [.launchway/ansible], when: always }
+    run: "$LAUNCHWAY_LIB/scripts/ansible/run.sh"

@@ -1,0 +1,21 @@
+# MANEUVER: format check and validation of OpenTofu or Terraform code, with no state and no credentials.
+#
+#   check: { uses: launchway/tofu-check }
+template: tofu-check
+description: "Maneuver: tofu fmt -check and validate (no state, no credentials)"
+params:
+  tool: { type: string, default: "tofu", options: ["tofu", "terraform"], description: "The binary" }
+  image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "An image with the tool and a shell" }
+  directory: { type: string, default: ".", description: "The directory with the configuration" }
+containers:
+  tf: { image: { param: image } }
+steps:
+  check:
+    description: Format and validate
+    container: tf
+    run: |
+      set -e
+      cd "$PARAM_DIRECTORY"
+      "$PARAM_TOOL" fmt -check -recursive -diff || { echo "launchway: not formatted; run: $PARAM_TOOL fmt -recursive" >&2; exit 1; }
+      "$PARAM_TOOL" init -backend=false -input=false -no-color
+      "$PARAM_TOOL" validate -no-color

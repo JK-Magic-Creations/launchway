@@ -1,0 +1,23 @@
+# MANEUVER: lint Ansible content with ansible-lint, in the same execution image.
+#
+#   lint: { uses: launchway/ansible-lint }
+#
+# ansible-lint is GPL-3.0 and runs here as a tool; nothing of it is shipped by Launchway.
+template: ansible-lint
+description: "Maneuver: ansible-lint over the playbooks and roles"
+params:
+  image: { type: string, default: "localhost/ansible-ee:2.19", description: "The execution image; it holds ansible-lint (packaging/ansible-ee)" }
+  paths: { type: string, default: ".", description: "What to lint, separated by spaces" }
+  mode: { type: string, default: "advise", options: ["advise", "enforce"], description: "advise prints findings; enforce fails the run" }
+containers:
+  ee: { image: { param: image } }
+steps:
+  lint:
+    description: Lint playbooks and roles
+    container: ee
+    run: |
+      set +e
+      ansible-lint -f pep8 $PARAM_PATHS
+      rc=$?
+      if [ "$rc" -ne 0 ] && [ "$PARAM_MODE" = advise ]; then echo "launchway: the findings above are advice (mode: advise); set mode: enforce to block on them"; exit 0; fi
+      exit $rc

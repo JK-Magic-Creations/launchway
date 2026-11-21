@@ -1,0 +1,83 @@
+# FLIGHT PLAN for a playbook: lint, a check-mode run that shows what would change, a Clearance where the Airfield is protected, then the real run. The check-mode run is the drift report; schedule it as a Patrol with apply off.
+#
+#   configure:
+#     uses: launchway/ansible-playbook
+#     with:
+#       environment: prod
+#       playbook: site.yml
+#       hosts: "web1=10.0.0.11,web2=10.0.0.12"
+#       known_hosts: "web1 ssh-ed25519 AAAA..."
+#       auth: key
+#       ssh_key_store: vault
+#
+# Safe by default: lint advises, the check run changes nothing, and the apply waits for Clearance where the environment is protected. To run on the hosts that failed, give the pipeline an input named limit and pass limit: { input: limit }.
+template: ansible-playbook
+description: "Flight plan: lint, check-mode run, Clearance where protected, then apply a playbook"
+params:
+  image: { type: string, default: "localhost/ansible-ee:2.19", description: "The execution image (packaging/ansible-ee)" }
+  environment: { type: string, default: "", description: "The Airfield this is for, as the Configuration page names it" }
+  playbook: { type: string, default: "site.yml", description: "The playbook" }
+  inventory: { type: string, default: "inline", description: "An inventory in the repository, or inline" }
+  hosts: { type: string, default: "", description: "With inline: name=address[:port], separated by commas" }
+  limit: { type: string, default: "", description: "Only these hosts" }
+  extra_vars: { type: string, default: "{}", description: "Variables as a JSON object" }
+  known_hosts: { type: string, default: "", description: "Pinned host keys" }
+  user: { type: string, default: "", description: "The SSH user" }
+  become: { type: boolean, default: false, description: "Become root on the host" }
+  auth: { type: string, default: "none", options: ["none", "key", "key+vault"], description: "none, key (an SSH key by reference) or key+vault" }
+  ssh_key_store: { type: string, default: "vault", description: "The secret store of the SSH key" }
+  ssh_key_key: { type: string, default: "ansible/ssh", description: "The key's name" }
+  vault_store: { type: string, default: "vault", description: "The secret store of the vault password" }
+  clearance: { type: boolean, default: true, description: "A person gives Clearance between the check run and the apply" }
+  apply_branch: { type: string, default: "main", description: "The branch whose commits are applied" }
+  lint: { type: boolean, default: true, description: "Run ansible-lint (advice)" }
+steps:
+  lint:
+    if: { param: lint }
+    uses: ansible-lint
+    with: { image: { param: image } }
+  check:
+    uses: ansible-run
+    needs: [lint]
+    with:
+      image: { param: image }
+      environment: { param: environment }
+      playbook: { param: playbook }
+      inventory: { param: inventory }
+      hosts: { param: hosts }
+      limit: { param: limit }
+      extra_vars: { param: extra_vars }
+      known_hosts: { param: known_hosts }
+      user: { param: user }
+      become: { param: become }
+      auth: { param: auth }
+      ssh_key_store: { param: ssh_key_store }
+      ssh_key_key: { param: ssh_key_key }
+      vault_store: { param: vault_store }
+      check: true
+  clearance:
+    kind: approval
+    description: A person gives Clearance for the change the check run showed
+    if: { param: clearance }
+    needs: [check]
+    when: { branch: [main] }
+    message: Apply this configuration? The check run's page shows exactly what will change, host by host.
+  apply:
+    uses: ansible-run
+    needs: [check, clearance]
+    when: { branch: [main], event: [push, manual] }
+    with:
+      image: { param: image }
+      environment: { param: environment }
+      playbook: { param: playbook }
+      inventory: { param: inventory }
+      hosts: { param: hosts }
+      limit: { param: limit }
+      extra_vars: { param: extra_vars }
+      known_hosts: { param: known_hosts }
+      user: { param: user }
+      become: { param: become }
+      auth: { param: auth }
+      ssh_key_store: { param: ssh_key_store }
+      ssh_key_key: { param: ssh_key_key }
+      vault_store: { param: vault_store }

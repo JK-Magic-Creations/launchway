@@ -541,6 +541,9 @@ func (s *Server) syncConfigReports(ctx context.Context, runID string) error {
 					break
 				}
 				rep.Status, rep.Recap = "planned", p.Summary
+				if meta["state_backend"] == "none" {
+					rep.Recap += " (made without state: every resource looks new)"
+				}
 				if p.Risk.Level == "none" {
 					rep.Status = "no-changes"
 				}

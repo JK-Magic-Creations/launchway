@@ -1,0 +1,40 @@
+# FLIGHT PLAN for infrastructure as code (OpenTofu by default, Terraform supported): check on every change, a plan on every pull request, a plan, a Clearance and the apply on the main branch, and (as a separate Patrol) drift detection.
+#
+#   infra:
+#     uses: launchway/infrastructure
+#     with: { environment: prod, workspace: prod }
+#
+# The plan is the reviewed artifact: the apply uses exactly that plan file and refuses it if the commit or the state moved. Where the environment is protected, a person gives Clearance first, and the plan summary is in the request. State is Launchway's own: no bucket to set up. For drift, run the same plan on a schedule with the plan's fail_on_changes: true (see the guide).
+template: infrastructure
+description: "Flight plan: infrastructure as code: check, plan on pull requests, Clearance and apply on the main branch"
+params:
+  tool: { type: string, default: "tofu", options: ["tofu", "terraform"], description: "The binary: tofu (open, default) or terraform (source-available)" }
+  image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "An image with the tool and a shell; pin it by digest in production" }
+  directory: { type: string, default: ".", description: "The directory with the configuration" }
+  environment: { type: string, default: "", description: "The Airfield this is for, as the Configuration page names it" }
+  workspace: { type: string, default: "default", description: "The state workspace" }
+  vars: { type: string, default: "{}", description: "Variables as a JSON object" }
+  var_files: { type: string, default: "", description: "Variable files, separated by spaces" }
+  clearance: { type: boolean, default: true, description: "A person gives Clearance between the plan and the apply; turn off only for an Airfield nobody needs protected" }
+  apply_branch: { type: string, default: "main", description: "The branch whose commits are applied" }
+  scan: { type: boolean, default: true, description: "Scan the definitions for misconfigurations" }
+steps:
+  check:
+    uses: tofu-check
+    with: { tool: { param: tool }, image: { param: image }, directory: { param: directory } }
+  scan:
+    if: { param: scan }
+    uses: iac-scan
+  apply:
+    uses: tofu-apply
+    needs: [check]
+    with:
+      tool: { param: tool }
+      image: { param: image }
+      directory: { param: directory }
+      workspace: { param: workspace }
+      environment: { param: environment }
+      vars: { param: vars }
+      var_files: { param: var_files }
+      clearance: { param: clearance }
+      apply_branch: { param: apply_branch }

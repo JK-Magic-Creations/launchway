@@ -3,7 +3,7 @@
 # in the tool's own image. POSIX sh and nothing else: the official images
 # have no Python or jq.
 #
-#   PARAM_MODE   plan | apply
+#   LW_MODE      plan | apply
 #   PARAM_TOOL   tofu (default) | terraform
 #
 # State: when the step was given a state credential (TF_HTTP_ADDRESS, from a
@@ -18,7 +18,8 @@
 set -eu
 umask 077
 
-mode="${PARAM_MODE:?mode is plan or apply}"
+mode="${LW_MODE:-${PARAM_MODE:-}}"
+[ -n "$mode" ] || { echo "launchway: mode is plan or apply" >&2; exit 2; }
 tool="${PARAM_TOOL:-tofu}"
 dir="${PARAM_DIRECTORY:-.}"
 out="$(pwd)/.launchway/tofu"
@@ -55,15 +56,21 @@ mkdir -p "$TF_PLUGIN_CACHE_DIR"
 export TF_IN_AUTOMATION=1 TF_INPUT=0 TF_CLI_ARGS=""
 
 # ---- state backend ----
+backend=none
 if [ -n "${TF_HTTP_ADDRESS:-}" ]; then
   if grep -Eqs '^[[:space:]]*backend[[:space:]]+"' ./*.tf 2>/dev/null; then
     say "this repository declares a backend of its own, so Launchway's built-in state is not used: Launchway cannot lock, version, show or roll back that state"
+    backend=own
   else
+    backend=builtin
     printf 'terraform {\n  backend "http" {}\n}\n' > launchway_backend_override.tf
     say "state: the built-in backend for this project, workspace ${PARAM_WORKSPACE:-default}"
   fi
 fi
 
+if [ "$backend" = none ] && ! grep -Eqs '^[[:space:]]*backend[[:space:]]+"' ./*.tf 2>/dev/null; then
+  say "no state credential: pull request and draft runs get none, so this plan starts from EMPTY state and every resource will look new. Treat it as a check that the code is valid, not as what will change."
+fi
 say "$tool init"
 "$tool" init -input=false -no-color ${PARAM_INIT_ARGS:-} || die "init failed" 3
 
@@ -85,8 +92,8 @@ plan)
   "$tool" show -json "$base/plan.bin" > "$base/plan.json"
   ver=$("$tool" version | head -1)
   {
-    printf '{"tool":"%s","tool_version":"%s","workspace":"%s","environment":"%s","exit_code":%s,"state_serial":"%s","commit":"%s"}\n' \
-      "$tool" "$ver" "${PARAM_WORKSPACE:-default}" "${PARAM_ENVIRONMENT:-}" "$rc" "${cur:-}" "${LAUNCHWAY_COMMIT:-}"
+    printf '{"tool":"%s","tool_version":"%s","workspace":"%s","environment":"%s","exit_code":%s,"state_serial":"%s","commit":"%s","state_backend":"%s"}\n' \
+      "$tool" "$ver" "${PARAM_WORKSPACE:-default}" "${PARAM_ENVIRONMENT:-}" "$rc" "${cur:-}" "${LAUNCHWAY_COMMIT:-}" "$backend"
   } > "$base/meta.json"
   if [ "$rc" -eq 2 ]; then
     say "the plan has changes"

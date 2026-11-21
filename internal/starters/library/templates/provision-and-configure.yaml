@@ -1,0 +1,47 @@
+# FLIGHT PLAN: create the machines, wait until they answer, configure them, and check they came out right.
+#
+#   deliver:
+#     uses: launchway/provision-and-configure
+#     with: { environment: prod, workspace: prod, playbook: site.yml, known_hosts: "...", auth: key }
+#
+# infrastructure (plan, Clearance, apply) -> wait for the hosts to accept SSH -> configure with Ansible (check, Clearance, apply) -> verify with a check-mode run that must report no drift. The hosts come from the infrastructure's output named hosts (name=address pairs, comma separated).
+template: provision-and-configure
+description: "Flight plan: apply infrastructure, wait for the hosts, configure with Ansible, verify no drift"
+params:
+  environment: { type: string, default: "", description: "The Airfield" }
+  workspace: { type: string, default: "default", description: "The state workspace" }
+  tool_image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "The OpenTofu image" }
+  image: { type: string, default: "localhost/ansible-ee:2.19", description: "The Ansible execution image" }
+  playbook: { type: string, default: "site.yml", description: "The playbook" }
+  hosts: { type: string, default: "", description: "name=address[:port] pairs; empty reads them from the plan's workspace outputs by hand: give them here until the output step exists" }
+  known_hosts: { type: string, default: "", description: "Pinned host keys" }
+  user: { type: string, default: "", description: "The SSH user" }
+  auth: { type: string, default: "none", options: ["none", "key", "key+vault"], description: "How Ansible authenticates" }
+  ssh_key_store: { type: string, default: "vault", description: "The secret store of the SSH key" }
+  wait_seconds: { type: string, default: "300", description: "How long to wait for each host to accept SSH" }
+steps:
+  infrastructure:
+    uses: infrastructure
+    with: { image: { param: tool_image }, environment: { param: environment }, workspace: { param: workspace } }
+  wait:
+    description: Wait until every host accepts SSH
+    image: { param: image }
+    needs: [infrastructure]
+    run: |
+      for pair in $(echo "$PARAM_HOSTS" | tr ',' ' '); do
+        addr=${pair#*=}; host=${addr%%:*}; port=22; case "$addr" in *:*) port=${addr##*:};; esac
+        end=$(( $(date +%s) + PARAM_WAIT_SECONDS ))
+        until python3 -c "import socket,sys; s=socket.create_connection((sys.argv[1], int(sys.argv[2])), 5); s.close()" "$host" "$port" 2>/dev/null; do
+          [ "$(date +%s)" -lt "$end" ] || { echo "launchway: $host:$port did not answer in ${PARAM_WAIT_SECONDS}s" >&2; exit 1; }
+          sleep 5
+        done
+        echo "launchway: $host:$port answers"
+      done
+  configure:
+    uses: ansible-playbook
+    needs: [wait]
+    with: { image: { param: image }, environment: { param: environment }, playbook: { param: playbook }, hosts: { param: hosts }, known_hosts: { param: known_hosts }, user: { param: user }, auth: { param: auth }, ssh_key_store: { param: ssh_key_store }, lint: false }
+  verify:
+    uses: ansible-run
+    needs: [configure]
+    with: { image: { param: image }, environment: { param: environment }, playbook: { param: playbook }, hosts: { param: hosts }, known_hosts: { param: known_hosts }, user: { param: user }, auth: { param: auth }, ssh_key_store: { param: ssh_key_store }, check: true }

@@ -60,7 +60,7 @@ type tofuRun struct {
 func (r *tofuRun) run(mode string, env ...string) (string, error) {
 	r.t.Helper()
 	args := []string{"run", "--rm", "--network=host", "-v", r.ws + ":/work:Z", "-v", r.lib + ":/lw:ro,Z", "-w", "/work",
-		"-e", "PARAM_MODE=" + mode, "-e", "PARAM_WORKSPACE=prod", "-e", "LAUNCHWAY_COMMIT=" + commitOf(env),
+		"-e", "LW_MODE=" + mode, "-e", "PARAM_WORKSPACE=prod", "-e", "LAUNCHWAY_COMMIT=" + commitOf(env),
 		"-e", "TF_HTTP_ADDRESS=" + r.addr, "-e", "TF_HTTP_LOCK_ADDRESS=" + r.addr + "/lock", "-e", "TF_HTTP_UNLOCK_ADDRESS=" + r.addr + "/lock",
 		"-e", "TF_HTTP_LOCK_METHOD=LOCK", "-e", "TF_HTTP_UNLOCK_METHOD=UNLOCK", "-e", "TF_HTTP_USERNAME=launchway", "-e", "TF_HTTP_PASSWORD=" + r.pass}
 	for _, e := range env {

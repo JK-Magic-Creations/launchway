@@ -1,0 +1,59 @@
+# MANEUVER: plan, ask for Clearance, and apply exactly that plan, nothing else.
+#
+#   infra:
+#     uses: launchway/tofu-apply
+#     with: { workspace: prod, environment: prod }
+#
+# On a pull request only the plan runs (its summary is the pull request's required check). On the apply branch the plan is followed by a Clearance (a person approves, with the plan on the request) and then the apply, which fetches the plan file and refuses it when it is stale: made for another commit, or against a state whose serial has changed since. A refused apply means plan again, so the review always matches what happens.
+# State is Launchway's own (no bucket, no backend block). The plan file is the artifact launchway-plan.
+template: tofu-apply
+description: "Maneuver: plan, Clearance, then apply exactly the reviewed plan; refused when stale"
+params:
+  tool: { type: string, default: "tofu", options: ["tofu", "terraform"], description: "The binary: tofu (open, default) or terraform (source-available)" }
+  image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "An image with the tool and a shell; pin it by digest in production" }
+  directory: { type: string, default: ".", description: "The directory with the configuration" }
+  workspace: { type: string, default: "default", description: "The state workspace of this project" }
+  environment: { type: string, default: "", description: "The Airfield, for the Configuration page" }
+  vars: { type: string, default: "{}", description: "Variables as a JSON object" }
+  var_files: { type: string, default: "", description: "Variable files, separated by spaces" }
+  clearance: { type: boolean, default: true, description: "A person gives Clearance between the plan and the apply" }
+  apply_branch: { type: string, default: "main", description: "The branch whose commits are applied" }
+  lock_timeout: { type: string, default: "120s", description: "How long to wait for another run's lock" }
+containers:
+  tf: { image: { param: image } }
+steps:
+  plan:
+    description: Plan, report and keep the plan file
+    container: tf
+    env: { LW_MODE: plan }
+    cache:
+      - name: tf-plugins
+        paths: [.cache/tf-plugins]
+        key: { files: ["**/.terraform.lock.hcl"], text: { param: image, format: "tf-%s" } }
+        fallback: latest
+    secrets:
+      TF_HTTP_PASSWORD: { store: launchway, key: state, field: { param: workspace } }
+    artifacts:
+      - { name: launchway-config, paths: [".launchway/tofu/plan.json", ".launchway/tofu/meta.json"], when: always }
+      - { name: launchway-plan, paths: [".launchway/tofu/plan.bin", ".launchway/tofu/meta.json"] }
+    run: "$LAUNCHWAY_LIB/scripts/tofu/run.sh"
+  clearance:
+    kind: approval
+    description: A person gives Clearance for this plan
+    if: { param: clearance }
+    needs: [plan]
+    when: { branch: [main] }
+    message: Apply this plan? The plan summary, with destroys and replacements first, is on the plan step's page.
+  apply:
+    description: Apply the reviewed plan
+    container: tf
+    needs: [plan, clearance]
+    when: { branch: [main], event: [push, manual] }
+    env: { LW_MODE: apply }
+    fetch:
+      - { from: plan, name: launchway-plan }
+    secrets:
+      TF_HTTP_PASSWORD: { store: launchway, key: state, field: { param: workspace } }
+    artifacts:
+      - { name: launchway-config, paths: [".launchway/tofu/apply-meta.json"], when: always }
+    run: "$LAUNCHWAY_LIB/scripts/tofu/run.sh"
