@@ -80,8 +80,8 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 	// A sync of our commit that failed is final: Argo CD does not retry a
 	// failed operation by itself unless the application syncs on its own,
 	// and then it fails the same way.
-	if op := app.Operation; op != nil && isTrue(op.Contains) && (op.Phase == "Failed" || op.Phase == "Error") {
-		return fail(PhaseSyncFailed, "Argo CD could not sync %s: %s", short(op.Revision), nonEmpty(op.Message, "no reason given"))
+	if v := syncFailure(app); v != nil {
+		return *v
 	}
 	if blocked := windowBlock(app); blocked != "" {
 		if spec.Windows == "fail" {
@@ -108,16 +108,11 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 	if ro := s.Rollout; spec.Kind == "rollback" && ro != nil && ro.Found && ro.Aborted {
 		return cont(PhaseAborted, "the rollout is aborted; waiting for it to return to the previous version%s", colon(ro.Message))
 	}
-	// Pods that keep crashing will not become healthy by waiting.
-	if app.Health != "Healthy" {
-		if v, ok := crashLoop(s.Evidence); ok {
-			return v
-		}
-	}
-	// Objects an earlier render made, still there because pruning is off.
-	lf, lfWarn := leftoverVerdict(spec, app)
-	if lf != nil {
-		return *lf
+	// Pods that keep crashing will not become healthy by waiting; objects an
+	// earlier render made may still be there because pruning is off.
+	early, lfWarn := earlyVerdict(spec, s)
+	if early != nil {
+		return *early
 	}
 	// Now the judged resources, or the application.
 	if spec.Health == "resources" && len(spec.Resources) > 0 {
@@ -137,7 +132,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		}
 	} else {
 		switch {
-		case app.Sync != "Synced" && !app.SyncedExceptLeftovers:
+		case !app.settled():
 			return cont(PhaseSyncing, "the application is %s at %s", nonEmpty(app.Sync, "not synced"), short(app.Revision))
 		case app.Health == "Degraded":
 			if v, ok := rolloutFailure(s); ok {
@@ -419,4 +414,30 @@ func crashLoop(ev []PodEvidence) (Verdict, bool) {
 		return fail(PhaseCrashLoop, "new pods are crash-looping: %q (pod %s, %s, restarted %d times)", why, e.Pod, e.Reason, e.Restarts), true
 	}
 	return Verdict{}, false
+}
+
+// earlyVerdict is what a snapshot already says about a deployment whose
+// revision is synced, before health is judged: crash-looping pods, and
+// leftovers of an earlier render. The second result is the warning for a
+// deployment that passes with leftovers.
+func earlyVerdict(spec Spec, s Snapshot) (*Verdict, string) {
+	if s.App.Health != "Healthy" {
+		if v, ok := crashLoop(s.Evidence); ok {
+			return &v, ""
+		}
+	}
+	return leftoverVerdict(spec, s.App)
+}
+
+// settled says the application is Synced, or OutOfSync only because of
+// leftovers (objects an earlier render made, which pruning would remove).
+func (a *App) settled() bool { return a.Sync == "Synced" || a.SyncedExceptLeftovers }
+
+// syncFailure is the verdict for a sync of the deployment's commit that failed.
+func syncFailure(app *App) *Verdict {
+	if op := app.Operation; op != nil && isTrue(op.Contains) && (op.Phase == "Failed" || op.Phase == "Error") {
+		v := fail(PhaseSyncFailed, "Argo CD could not sync %s: %s", short(op.Revision), nonEmpty(op.Message, "no reason given"))
+		return &v
+	}
+	return nil
 }

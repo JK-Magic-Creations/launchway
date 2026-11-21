@@ -98,17 +98,7 @@ func ReduceApplication(obj map[string]any, spec Spec, repoURL string, contains C
 		app.Operation = op
 	}
 
-	outOfSync := 0
-	for _, x := range list(status, "resources") {
-		xm := asMap(x)
-		if pr, _ := xm["requiresPruning"].(bool); pr {
-			app.Leftovers = append(app.Leftovers, Leftover{Group: str(xm, "group"), Kind: str(xm, "kind"), Namespace: str(xm, "namespace"),
-				Name: str(xm, "name"), Security: securityKinds[str(xm, "kind")]})
-		} else if str(xm, "status") == "OutOfSync" {
-			outOfSync++
-		}
-	}
-	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && len(app.Leftovers) > 0
+	reduceLeftovers(app, status)
 	if spec.Health == "resources" {
 		for _, want := range spec.Resources {
 			r := Resource{Group: want.Group, Kind: want.Kind, Namespace: want.Namespace, Name: want.Name}
@@ -469,4 +459,20 @@ func reduceMeasurements(m *Metric, items []any, ns string) {
 	if len(m.Measurements) > maxMeasurements {
 		m.Measurements = m.Measurements[len(m.Measurements)-maxMeasurements:]
 	}
+}
+
+// reduceLeftovers finds the objects Argo CD says require pruning: no longer
+// rendered, still in the cluster.
+func reduceLeftovers(app *App, status map[string]any) {
+	outOfSync := 0
+	for _, x := range list(status, "resources") {
+		xm := asMap(x)
+		if pr, _ := xm["requiresPruning"].(bool); pr {
+			app.Leftovers = append(app.Leftovers, Leftover{Group: str(xm, "group"), Kind: str(xm, "kind"), Namespace: str(xm, "namespace"),
+				Name: str(xm, "name"), Security: securityKinds[str(xm, "kind")]})
+		} else if str(xm, "status") == "OutOfSync" {
+			outOfSync++
+		}
+	}
+	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && len(app.Leftovers) > 0
 }

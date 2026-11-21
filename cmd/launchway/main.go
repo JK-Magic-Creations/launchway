@@ -225,13 +225,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	if msg, warn := config.ChartNotice(os.Getenv, os.Getenv("KUBERNETES_SERVICE_HOST") != ""); msg != "" {
-		if warn {
-			log.Warn(msg, "binary_version", version)
-		} else {
-			log.Info(msg, "binary_version", version)
-		}
-	}
+	logChartNotice(log)
 	secretsSvc, token, err := su.secretsAndToken(eng)
 	if err != nil {
 		return err
@@ -899,4 +893,16 @@ func currentUser() string {
 		return u.Username
 	}
 	return "local"
+}
+
+// logChartNotice says which chart revision rendered this server, against the one the binary expects.
+func logChartNotice(log *slog.Logger) {
+	msg, warn := config.ChartNotice(os.Getenv, os.Getenv("KUBERNETES_SERVICE_HOST") != "")
+	switch {
+	case msg == "":
+	case warn:
+		log.Warn(msg, "binary_version", version)
+	default:
+		log.Info(msg, "binary_version", version)
+	}
 }

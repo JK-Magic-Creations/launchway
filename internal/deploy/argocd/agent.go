@@ -181,39 +181,7 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 	if err != nil {
 		return nil, err
 	}
-	editFor := func(c engine.DeployChange) gitops.FileEdit {
-		return gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
-			if data == nil {
-				return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
-			}
-			if c.Image != "" && c.Digest != "" && c.Tag != "" {
-				out, n, err := edit.ImageTagDigest(data, c.Image, c.Tag, c.Digest)
-				if err == nil {
-					log("%s: %d reference(s) to %s set to %s and pinned to %s", path, n, c.Image, c.Tag, c.Digest)
-				}
-				return out, err
-			}
-			if c.Image != "" && c.Digest != "" {
-				out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
-				if err == nil {
-					log("%s: %d reference(s) to %s pinned to %s", path, n, c.Image, c.Digest)
-				}
-				return out, err
-			}
-			if c.Image != "" {
-				out, n, err := edit.Image(data, c.Image, c.Tag)
-				if err == nil {
-					log("%s: %d reference(s) to %s set to %s", path, n, c.Image, c.Tag)
-				}
-				return out, err
-			}
-			out, err := edit.Set(data, c.Set, c.Value)
-			if err == nil {
-				log("%s: %s set to %s", path, c.Set, c.Value)
-			}
-			return out, err
-		}}
-	}
+	editFor := func(c engine.DeployChange) gitops.FileEdit { return fileEdit(d, c, log) }
 	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
 	for _, c := range d.Changes {
 		cs.Files = append(cs.Files, editFor(c))
@@ -264,6 +232,40 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		}
 	}
 	return facts, err
+}
+
+func fileEdit(d *engine.DeployJob, c engine.DeployChange, log func(string, ...any)) gitops.FileEdit {
+	return gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
+		if data == nil {
+			return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
+		}
+		if c.Image != "" && c.Digest != "" && c.Tag != "" {
+			out, n, err := edit.ImageTagDigest(data, c.Image, c.Tag, c.Digest)
+			if err == nil {
+				log("%s: %d reference(s) to %s set to %s and pinned to %s", path, n, c.Image, c.Tag, c.Digest)
+			}
+			return out, err
+		}
+		if c.Image != "" && c.Digest != "" {
+			out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
+			if err == nil {
+				log("%s: %d reference(s) to %s pinned to %s", path, n, c.Image, c.Digest)
+			}
+			return out, err
+		}
+		if c.Image != "" {
+			out, n, err := edit.Image(data, c.Image, c.Tag)
+			if err == nil {
+				log("%s: %d reference(s) to %s set to %s", path, n, c.Image, c.Tag)
+			}
+			return out, err
+		}
+		out, err := edit.Set(data, c.Set, c.Value)
+		if err == nil {
+			log("%s: %s set to %s", path, c.Set, c.Value)
+		}
+		return out, err
+	}}
 }
 
 // Revert reverts a deployment's commit (unless an earlier try did) and asks

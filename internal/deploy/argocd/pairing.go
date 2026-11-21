@@ -313,7 +313,7 @@ func (a *Agent) waitForPin(ctx context.Context, job *engine.Job, pins []pinned, 
 		app, err = cl.Application(ctx, d.Application)
 	}
 	if err != nil || app == nil || len(pins) == 0 {
-		why := "the cluster cannot be read"
+		var why string
 		if err == nil && app == nil {
 			why = "the application was not found"
 		} else if err == nil {

@@ -62,6 +62,60 @@ next commit, only if you need them:
 3. **`externalURL`** is required only for a new installation with built-in accounts, or with `ingress` or
    `httpRoute`; an installation with its own sign-in that publishes nothing through the chart needs none.
 
+## Image and chart must move together
+
+The server image and the Helm chart are one release: the chart gives the server what the new image relies on
+(the mounted root key, environment variables, network policies). A pod with the **new image rendered by the
+old chart** has none of that. For example, it has no root key and no `LAUNCHWAY_ENCRYPTION_REQUIRE`, and the
+next pods, rendered by the new chart, refuse to start.
+
+**What Launchway does about it.**
+
+- *The server never invents a key where it could be lost.* With no root key configured, a server on PostgreSQL, or
+  on a database that already holds data, creates no key and runs not encrypted, with a warning (see
+  [Encryption at rest](encryption-at-rest.md)). An image-only upgrade under an old chart therefore keeps
+  working, and `launchway encryption recover` repairs an installation that already created a throwaway key.
+- *The server says which chart rendered it.* At start it logs the chart revision (`LAUNCHWAY_CHART_REVISION`,
+  set by the chart) against the revision it expects, and warns when the chart is older or does not say:
+  "this server was rendered by an older chart: encryption and network settings from the new chart are not
+  applied yet".
+- *The deploy step orders the two changes.* When one deployment changes an Argo CD application's **own manifest**
+  (its chart pin, `targetRevision`, applied by a parent application in an app-of-apps layout) and its **values**
+  (the image tag and digest), the deploy runner no longer writes one commit. It writes the manifest first,
+  asks the parent application to refresh (and to sync, when it does not sync by itself and the runner may sync
+  it), **waits until the cluster shows the new pin in the application's spec**, and only then writes the values.
+  After the sync it checks that every source was synced at what the deployment intended; a sync that ran with a
+  mixed set is reported plainly and followed by a corrective sync. The step log says which mode is in use:
+  *CONTROLLER-ORDERED*, or *FALLBACK, two commits with a pause* where the cluster cannot be read (the runner then
+  waits a fixed time instead of watching the pin arrive). If the parent never applies the pin, the step fails
+  and **the values are not written**, so nothing mixed can happen; run it again after syncing the parent.
+  An ApplicationSet is refused with a plain message. An application without a parent and a deployment that
+  changes only values or only the manifest keep the old behavior: one commit.
+- What the runner needs: get and patch on the application (refresh, sync) and get on the parent; syncing a parent
+  also needs the parent to be listed in `deploy.targets.<name>.applications` for the project. Without the right
+  to patch, the runner waits for the parent to apply the pin itself.
+- Alternatives considered: pinning the values to a commit in the application (no race, but every release then
+  edits the application manifest too); disabling automated sync around a release (fights the parent's self-heal);
+  one commit (the race this section is about).
+
+**What "compatible" means.** Between the two commits the application may sync the **new chart with the old
+image**. A chart must therefore work with the image of the release before it (the rule for every chart change:
+additive values, no required new mount). Where a release cannot do that (the chart removes something the old image
+needs), neither order is safe: schedule it with the application's automated sync paused, or deploy with
+a window in which the application is not serving.
+
+**If you deploy by hand** (no deploy step): change the chart pin (the Application manifest) first, wait until the
+parent has applied it (the application's spec shows the new `targetRevision`), and only then change the image tag
+or digest. Never in one commit and never the other way round. Roll back in the reverse order. A rollback by Launchway
+reverts the values commit only; the chart pin stays at the new revision, which is safe for the same
+compatibility reason.
+
+**Leftovers.** With pruning off, objects the new render no longer includes (a NetworkPolicy after
+`networkPolicy.enabled` became false) stay in the cluster. The deploy step names them ("2 objects from an earlier
+render are still present and are no longer part of the release") and **fails** when any is a security-relevant kind
+(NetworkPolicy, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ServiceAccount, Ingress and route kinds,
+Secret) unless the step sets `sync.leftovers: warn`; other kinds only warn. Nothing is deleted for you.
+
 ## Rolling back
 
 Going back to the previous image and chart is clean **until the sealing has finished**: nothing was changed that
