@@ -376,7 +376,7 @@ export function SettingsStandardsPage() {
             <label className="st-switch"><input type="checkbox" checked={off} onChange={(e) => set((s) => { s.off = e.target.checked; if (!e.target.checked) s.off_reason = ""; return s; })} /> Switch Standing orders off for everything below {w[level] ?? level}</label>
             {off && (
               <div className="callout callout-draft">
-                Nothing will be scanned and no finding recorded. This is written to the Logbook, and a reminder is shown on the Security pages while it is off.
+                Nothing will be scanned and no finding recorded. This is written to the {terms().say("{Logbook}")}, and a reminder is shown on the Security pages while it is off.
                 <label htmlFor="st-offr">Why? (at least 10 characters)</label>
                 <input id="st-offr" value={draft.off_reason ?? ""} onChange={(e) => set((s) => { s.off_reason = e.target.value; return s; })} />
               </div>
