@@ -101,7 +101,7 @@ echo "test-like-ci: running the pipeline's test step command from $pipeline"
 status=0
 # shellcheck disable=SC2086
 "$tool" run --rm --user 1000:1000 $pass --memory "$mem" --cpus "$cpus" --read-only --security-opt no-new-privileges --cap-drop ALL \
-	-e HOME=/home/launchway -e GOCACHE=/home/launchway/.cache/go-build -e PIP_CACHE_DIR=/home/launchway/.cache/pip -e npm_config_cache=/home/launchway/.npm \
+	-e HOME=/home/launchway -e GOMODCACHE=/go/pkg/mod -e GOCACHE=/home/launchway/.cache/go-build -e PIP_CACHE_DIR=/home/launchway/.cache/pip -e npm_config_cache=/home/launchway/.npm \
 	-e GOMAXPROCS="$cpus" -e GIT_TERMINAL_PROMPT=0 \
 	-v "$work/src":/work/src:z -v "$work/home":/home/launchway:z -v "$work/cmd.sh":/work/cmd.sh:ro,z \
 	$account -v "$mods":/go/pkg/mod:ro,z -w /work/src "$image" sh -e /work/cmd.sh || status=$?

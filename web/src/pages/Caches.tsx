@@ -1,6 +1,6 @@
 import { ProjectHead } from "./PipelineChrome";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cacheApi, type CacheEntry, type CacheList } from "../cacheApi";
+import { cacheApi, type CacheEntry, type CacheList, type CacheUse } from "../cacheApi";
 import { useMe, canOperate } from "../auth";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
@@ -40,6 +40,44 @@ function gib(n: number): string {
 // lets those who may operate the project end an entry, or every entry of a
 // cache. The server decides who may; the buttons are only hidden from
 // people who would be refused.
+/** The empty page says why it is empty: no step asks for a cache (with the lines to add), or none has run since. */
+function NothingCached({ use, project }: { use?: CacheUse; project: string }) {
+  const none = !!use && use.run > 0 && use.steps.length === 0;
+  const layers = use?.layers ?? [];
+  const where = layers.length > 0 ? (
+    <p className="faint small">
+      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} build layers in the registry
+      ({layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}), apart from this list: the registry holds them, and the Images pages show what it holds.{" "}
+      <Link href={`/projects/${encodeURIComponent(project)}/pipeline`}>See the pipeline</Link>.
+    </p>
+  ) : null;
+  if (none) {
+    return (
+      <Empty title="No step in this pipeline uses a cache">
+        Nothing is kept between runs, so every run downloads its dependencies again. To keep a directory, give a step a <Mono>cache</Mono>, with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:
+        <pre className="code">{`cache:
+  - name: go
+    paths: [.cache/go-mod, .cache/go-build]
+    key: { files: ["**/go.sum"], text: go-1.27 }
+    fallback: latest
+    max_age: 7d`}</pre>
+        {where}
+      </Empty>
+    );
+  }
+  return (
+    <Empty title="Nothing is cached yet">
+      A step keeps a directory between runs with a <Mono>cache</Mono> {terms().say("key; the first {run} saves it and the next restores it.")}
+      {use && use.steps.length > 0 && <> Steps that ask for one: {use.steps.map((s) => <Mono key={s.step}>{s.step} ({s.caches.join(", ")})</Mono>)}.</>}
+      <pre className="code">{`cache:
+  - name: pip
+    paths: [.cache/pip]
+    key: { files: [requirements.txt] }`}</pre>
+      {where}
+    </Empty>
+  );
+}
+
 export function ProjectCachesPage({ name }: { name: string }) {
   const me = useMe();
   const mayDelete = canOperate(me, name);
@@ -129,15 +167,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
         </section>
       )}
 
-      {list && list.entries.length === 0 && (
-        <Empty title="Nothing is cached yet">
-          A step keeps a directory between runs with a <Mono>cache</Mono> {terms().say("key; the first {run} saves it and the next restores it.")}
-          <pre className="code">{`cache:
-  - name: pip
-    paths: [.cache/pip]
-    key: { files: [requirements.txt] }`}</pre>
-        </Empty>
-      )}
+      {list && list.entries.length === 0 && <NothingCached use={list.use} project={name} />}
 
       {names.length > 0 && (
         <>

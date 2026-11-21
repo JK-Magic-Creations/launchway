@@ -206,3 +206,52 @@ func TestMCPRunBriefHasTheCaches(t *testing.T) {
 		t.Errorf("%+v", c[1])
 	}
 }
+
+// The list says which steps of the latest pipeline keep a cache and which image steps keep layers in a registry,
+// so an empty list can say why it is empty.
+func TestCacheListSaysWhatThePipelineAsksFor(t *testing.T) {
+	e := setupStore(t)
+	create := func(project, text string, cache bool) {
+		t.Helper()
+		p, err := pipeline.Parse([]byte(text))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cache {
+			p.Steps[0].Cache = []*pipeline.Cache{{Name: "go", Paths: []string{".cache/go-build"}, Key: pipeline.CacheKey{Files: []string{"**/go.sum"}, Text: "go-1.27"}}}
+		}
+		if _, err := e.eng.CreateRun(engine.NewRun{Project: project, Pipeline: p, Trigger: engine.Trigger{Event: pipeline.EventManual}, Source: engine.Source{Kind: "dir", Path: "/tmp"}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	get := func(project string) CacheUse {
+		t.Helper()
+		var out struct {
+			Use CacheUse `json:"use"`
+		}
+		resp, err := http.Get(e.srv.URL + "/api/v1/projects/" + project + "/caches")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil || resp.StatusCode != 200 {
+			t.Fatalf("%d %v", resp.StatusCode, err)
+		}
+		return out.Use
+	}
+	if u := get("never-ran"); u.Run != 0 || len(u.Steps) != 0 {
+		t.Fatalf("a project with no run: %+v", u)
+	}
+	create("plain", "pipeline: plain\non:\n  pull_request: {}\nsteps:\n  build:\n    image: x\n    run: make\n", false)
+	if u := get("plain"); u.Run != 1 || len(u.Steps) != 0 || len(u.Layers) != 0 {
+		t.Fatalf("a pipeline without a cache: %+v", u)
+	}
+	create("cached", "pipeline: cached\non:\n  pull_request: {}\nsteps:\n  build:\n    image: x\n    run: make\n", true)
+	if u := get("cached"); u.Run != 1 || len(u.Steps) != 1 || u.Steps[0].Step != "build" || u.Steps[0].Caches[0] != "go" {
+		t.Fatalf("a pipeline with a cache: %+v", u)
+	}
+	create("layers", "pipeline: layers\non:\n  pull_request: {}\nsteps:\n  image:\n    kind: image\n    context: .\n    file: Dockerfile\n    tags:\n      - { registry: harbor, repository: team/app, tag: latest }\n    cache: { registry: harbor, repository: team/cache }\n", false)
+	if u := get("layers"); len(u.Steps) != 0 || len(u.Layers) != 1 || u.Layers[0].Repository != "team/cache" || u.Layers[0].Step != "image" {
+		t.Fatalf("an image step's layer cache: %+v", u)
+	}
+}

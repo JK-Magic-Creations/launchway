@@ -69,8 +69,16 @@ export interface CacheEntry {
   run_number: number;
 }
 
+/** Which steps of the project's latest pipeline keep a cache, and which image steps keep layers in a registry. */
+export interface CacheUse {
+  run: number;
+  steps: { step: string; caches: string[] }[];
+  layers: { step: string; registry: string; repository: string }[];
+}
+
 export interface CacheList {
   project: string;
+  use?: CacheUse;
   entries: CacheEntry[];
   totals: { entries: number; bytes: number; quota_bytes: number; max_entry_bytes: number; idle_days: number };
   policy: CachePolicy;

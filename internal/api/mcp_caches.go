@@ -72,7 +72,10 @@ func listCaches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cach
 	if in.Project == "" {
 		return cachesOut{}, errors.New("say which project")
 	}
-	var l engine.CacheList
+	var l struct {
+		engine.CacheList
+		Use CacheUse `json:"use"`
+	}
 	if err := c.apiJSON(ctx, "list_caches", http.MethodGet, apiPath("/api/v1/projects/%s/caches", in.Project), nil, &l); err != nil {
 		return cachesOut{}, err
 	}
@@ -84,6 +87,11 @@ func listCaches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cach
 	switch {
 	case !l.Policy.Enabled:
 		out.Summary = "Caching is turned off for this project (cache policy)."
+	case len(out.Entries) == 0 && l.Use.Run > 0 && len(l.Use.Steps) == 0:
+		out.Summary = "No step in this pipeline uses a cache, so nothing is kept. Add a cache: to a step (name, paths and a key made of the lock files) to keep a directory between runs."
+		if len(l.Use.Layers) > 0 {
+			out.Summary += " The image step's layers are cached in the registry (" + l.Use.Layers[0].Repository + "), apart from this list."
+		}
 	case len(out.Entries) == 0:
 		out.Summary = "Nothing is cached yet."
 	default:

@@ -19,3 +19,6 @@ server.pid
 
 # A stray build of the command in its own directory
 /cmd/launchway/launchway
+
+# Package caches the pipeline's steps keep in the workspace (see .launchway/pipeline.yaml)
+/.cache/

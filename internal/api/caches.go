@@ -186,13 +186,68 @@ func (s *Server) cacheDiscard(w http.ResponseWriter, r *http.Request) {
 
 // ---- entries ----
 
+// CacheUse says which steps of a project's latest pipeline keep a cache, so that an empty cache page can say
+// why it is empty instead of leaving a person to guess.
+type CacheUse struct {
+	Run    int            `json:"run"` // the run the pipeline was read from (0: the project has had none)
+	Steps  []CacheUseStep `json:"steps"`
+	Layers []LayerCache   `json:"layers"`
+}
+
+// CacheUseStep is a step with caches of its own (paths kept between runs).
+type CacheUseStep struct {
+	Step   string   `json:"step"`
+	Caches []string `json:"caches"`
+}
+
+// LayerCache is an image step's layer cache: the registry repository the image builder keeps its layers in. It is
+// not an entry of the list below: the registry keeps it.
+type LayerCache struct {
+	Step       string `json:"step"`
+	Registry   string `json:"registry"`
+	Repository string `json:"repository"`
+}
+
+type cachesWithUse struct {
+	*engine.CacheList
+	Use CacheUse `json:"use"`
+}
+
 func (s *Server) listCaches(w http.ResponseWriter, r *http.Request) {
-	out, err := s.Engine.Caches(r.PathValue("name"))
+	name := r.PathValue("name")
+	out, err := s.Engine.Caches(name)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeJSON(w, http.StatusOK, cachesWithUse{out, s.cacheUse(name)})
+}
+
+// cacheUse reads the caches the project's latest run's pipeline asks for.
+func (s *Server) cacheUse(project string) CacheUse {
+	use := CacheUse{Steps: []CacheUseStep{}, Layers: []LayerCache{}}
+	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: project, Limit: 1})
+	if err != nil || len(runs) == 0 {
+		return use
+	}
+	d, err := s.Engine.GetRun(runs[0].ID)
+	if err != nil || d.Graph == nil {
+		return use
+	}
+	use.Run = d.Number
+	for _, st := range d.Graph.Steps {
+		if len(st.Cache) > 0 {
+			u := CacheUseStep{Step: st.ID}
+			for _, c := range st.Cache {
+				u.Caches = append(u.Caches, c.Name)
+			}
+			use.Steps = append(use.Steps, u)
+		}
+		if st.ImageBuild != nil && st.ImageBuild.Cache != nil {
+			use.Layers = append(use.Layers, LayerCache{Step: st.ID, Registry: st.ImageBuild.Cache.Registry, Repository: st.ImageBuild.Cache.Repository})
+		}
+	}
+	return use
 }
 
 func (s *Server) deleteCache(w http.ResponseWriter, r *http.Request) {

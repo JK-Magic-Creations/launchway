@@ -27,7 +27,14 @@ steps:
   docs:
     description: Build the documentation site
     image: docker.io/library/node:24-alpine
+    cache:
+      - name: npm
+        paths: [.cache/npm]
+        key: { files: ["docs/package-lock.json"], text: node-24 }
+        fallback: latest
+        max_age: 7d
     run: |
+      export npm_config_cache="$PWD/.cache/npm"
       cd docs
       npm ci --no-audit --no-fund
       npx vitepress build .
@@ -36,8 +43,18 @@ steps:
   check-code:
     description: Look for common mistakes with go vet
     image: docker.io/library/golang:1.27
-    run: go vet ./...
+    run: |
+      # The module and build caches live in the workspace, where the step's cache saves them (the key is the
+      # lock files and the toolchain, so a changed dependency or Go version starts a new one).
+      export GOMODCACHE="${GOMODCACHE:-$PWD/.cache/go-mod}" GOCACHE="$PWD/.cache/go-build" GOFLAGS="${GOFLAGS:-} -modcacherw"
+      go vet ./...
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum"], text: go-1.27 }
+        fallback: latest
+        max_age: 7d
     resources: { cpu: 1, memory: 2Gi }
 
   test:
@@ -47,6 +64,9 @@ steps:
     # The results go to a report file as go test -json; the step still fails
     # when a test fails (the exit status is kept, not lost in a pipe).
     run: |
+      # The module and build caches live in the workspace, where the step's cache saves them (the key is the
+      # lock files and the toolchain, so a changed dependency or Go version starts a new one).
+      export GOMODCACHE="${GOMODCACHE:-$PWD/.cache/go-mod}" GOCACHE="$PWD/.cache/go-build" GOFLAGS="${GOFLAGS:-} -modcacherw"
       mkdir -p reports
       status=0
       go test -count=1 -json ./... > reports/go-test.json || status=$?
@@ -57,6 +77,12 @@ steps:
       exit $status
     reports:
       tests: reports/go-test.json
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum"], text: go-1.27 }
+        fallback: latest
+        max_age: 7d
     # Killed for memory twice as the suite grew (last at 6Gi); 8Gi is what the local pipeline-like run uses.
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 8Gi }
@@ -70,9 +96,18 @@ steps:
     image: docker.io/library/golang:1.27
     needs: check-code
     run: |
+      # The module and build caches live in the workspace, where the step's cache saves them (the key is the
+      # lock files and the toolchain, so a changed dependency or Go version starts a new one).
+      export GOMODCACHE="${GOMODCACHE:-$PWD/.cache/go-mod}" GOCACHE="$PWD/.cache/go-build" GOFLAGS="${GOFLAGS:-} -modcacherw"
       go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
       FUZZTIME=20s scripts/security/fuzz.sh
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum"], text: go-1.27 }
+        fallback: latest
+        max_age: 7d
     resources: { cpu: 2, memory: 3Gi }
     timeout: 20m
 
@@ -91,10 +126,17 @@ steps:
     image: docker.io/library/node:24-alpine
     needs: test   # after test, because building the UI rewrites web/dist
     run: |
+      export npm_config_cache="$PWD/.cache/npm"
       cd web
       npm ci --no-audit --no-fund
       npm run build
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
+    cache:
+      - name: npm
+        paths: [.cache/npm]
+        key: { files: ["web/package-lock.json"], text: node-24 }
+        fallback: latest
+        max_age: 7d
     resources: { cpu: 1, memory: 2Gi }
 
   build-binary:
@@ -102,11 +144,20 @@ steps:
     image: docker.io/library/golang:1.27
     needs: build-ui
     run: |
+      # The module and build caches live in the workspace, where the step's cache saves them (the key is the
+      # lock files and the toolchain, so a changed dependency or Go version starts a new one).
+      export GOMODCACHE="${GOMODCACHE:-$PWD/.cache/go-mod}" GOCACHE="$PWD/.cache/go-build" GOFLAGS="${GOFLAGS:-} -modcacherw"
       version=$(echo "$LAUNCHWAY_COMMIT" | cut -c1-8)
       CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/launchway ./cmd/launchway
       ls -lh bin/launchway
       echo "size=$(du -h bin/launchway | cut -f1)" >> "$LAUNCHWAY_OUTPUTS"
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum"], text: go-1.27 }
+        fallback: latest
+        max_age: 7d
     resources: { cpu: 2, memory: 3Gi }
 
   # The new binary checks the pipeline files that ship with it. (The design also asks the RUNNING
