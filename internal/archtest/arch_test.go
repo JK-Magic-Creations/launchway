@@ -104,6 +104,7 @@ var allowedImports = map[string][]string{
 	"internal/testdb":                    {},
 	"internal/testlib":                   {},
 	"internal/testreport":                {},
+	"internal/work":                      {"internal/ids"},
 	"internal/verify":                    {},
 	"internal/verify/source":             {"internal/egress", "internal/pipeline", "internal/verify"},
 	"internal/verify/source/sourcetest":  {},
