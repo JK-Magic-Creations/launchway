@@ -9,13 +9,13 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/google/go-containerregistry v0.22.1
 	github.com/jackc/pgx/v5 v5.13.0
-	github.com/klauspost/compress v1.20.2
+	github.com/klauspost/compress v1.20.4
 	github.com/moby/buildkit v0.35.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/sigstore/sigstore v1.11.3
 	github.com/tonistiigi/fsutil v0.0.0-20261103125000-e075fd9305eb
 	golang.org/x/crypto v0.59.0
-	golang.org/x/net v0.62.0
+	golang.org/x/net v0.63.0
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
 	golang.org/x/term v0.48.0
