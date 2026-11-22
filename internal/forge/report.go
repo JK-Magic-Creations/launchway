@@ -6,7 +6,7 @@ import "time"
 type PermissionCheck struct {
 	Feature string `json:"feature"`
 	// Needs is the permission to grant, in the host's words.
-	Needs  string `json:"needs"`
+	Needs string `json:"needs"`
 	// OK is true only for a permission the test verified. NotChecked says the test could not tell (the host's
 	// API names no scopes and Launchway writes nothing to test): then OK is false and the permission is neither
 	// claimed nor reported missing. Three states: ok, lacking (both false), not checked.

@@ -179,9 +179,12 @@ func (c *Client) DoWith(ctx context.Context, method, raw string, body io.Reader,
 		return Answer{}, k.errf("the host cannot be reached: %v", err)
 	}
 	defer resp.Body.Close()
-	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxAnswer))
+	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxAnswer+1))
 	if err != nil {
 		return Answer{}, k.errf("reading the host's answer: %v", err)
+	}
+	if len(b) > MaxAnswer {
+		return Answer{}, k.errf("the host's answer is larger than the %d MiB Launchway reads; it is refused, not cut", MaxAnswer>>20)
 	}
 	a := Answer{Status: resp.StatusCode, Body: b, Header: resp.Header, secret: tok, msg: c.Message}
 	switch {

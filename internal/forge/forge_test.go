@@ -17,6 +17,7 @@ var providerNames = []string{"github", "gitlab", "bitbucket", "azure", "devops",
 // modelTypes is every exported domain type. A new type is added here, or the
 // completeness test below fails.
 var modelTypes = []any{
+	TrashedRepository{}, PurgeSummary{},
 	Connection{}, SecretRef{}, Repository{}, CloneAddresses{}, Ref{}, Result{}, Details{}, TestCounts{},
 	Principal{}, Mergeability{}, Proposal{}, Revision{}, Review{}, Thread{}, Message{}, Commit{}, TreeEntry{},
 	Comparison{}, RefRule{}, Event{}, Whoami{}, NewRepository{}, NewProposal{}, ProposalPatch{}, Credential{},
