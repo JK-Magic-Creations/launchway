@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"os"
 	"os/exec"
 	"strings"
@@ -75,7 +76,7 @@ func exercise(t *testing.T, ex Executor) {
 		if err == nil {
 			t.Fatal("expected the context error")
 		}
-		if time.Since(start) > 30*time.Second {
+		if time.Since(start) > testlib.Slow(30*time.Second) {
 			t.Fatalf("took %s to stop", time.Since(start))
 		}
 	})
@@ -229,7 +230,7 @@ func TestPartialLineAppearsWithoutNewline(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if d := time.Since(start); d > 1500*time.Millisecond {
+	if d := time.Since(start); d > testlib.Slow(1500*time.Millisecond) {
 		t.Fatalf("took %s", d)
 	}
 	_, _ = pw.Write([]byte("\nnext\n")) // the newline adds no empty line

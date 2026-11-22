@@ -16,6 +16,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // fake is a Backend that runs a function, so the transport is tested without git.
@@ -156,7 +157,7 @@ func TestAdvertiseHasADeadline(t *testing.T) {
 	_, _ = io.ReadAll(resp.Body) // headers arrive at once; the body ends at the deadline
 	resp.Body.Close()
 	// The service header was already written, so the status is 200 or the timeout's; what matters is it ended.
-	if d := time.Since(start); d < 90*time.Millisecond || d > 3*time.Second {
+	if d := time.Since(start); d < 90*time.Millisecond || d > testlib.Slow(3*time.Second) {
 		t.Errorf("the advertisement did not stop at its deadline: %s", time.Since(start))
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // freeAddr returns a local address that nothing listens on.
@@ -115,7 +116,7 @@ func TestOpenGivesUpOnTheDatabase(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "connecting to the database") {
 		t.Fatalf("got %v", err)
 	}
-	if took := time.Since(start); took < time.Second || took > 10*time.Second {
+	if took := time.Since(start); took < time.Second || took > testlib.Slow(10*time.Second) {
 		t.Fatalf("gave up after %s, want about 1s", took)
 	}
 }

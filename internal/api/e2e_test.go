@@ -18,6 +18,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 func quiet() *slog.Logger {
@@ -212,7 +213,7 @@ func TestCancelStopsRunningStep(t *testing.T) {
 	if d.Status != "canceled" {
 		t.Fatalf("run %s", d.Status)
 	}
-	if time.Since(start) > 10*time.Second {
+	if time.Since(start) > testlib.Slow(10*time.Second) {
 		t.Fatalf("cancel took %s", time.Since(start))
 	}
 }

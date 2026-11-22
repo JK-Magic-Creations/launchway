@@ -10,6 +10,7 @@ import (
 	dynfake "k8s.io/client-go/dynamic/fake"
 
 	"github.com/jk-magic-creations/launchway/internal/deploy/inspect/inspectfake"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // A release of 300 pods builds into one tree quickly, and a tree of that size
@@ -35,7 +36,7 @@ func TestTreeOfThreeHundredPods(t *testing.T) {
 		t.Fatalf("%d pods in the tree", pods)
 	}
 	t.Logf("tree of %d objects (%d pods) built in %s", len(tr.Nodes), pods, took)
-	if took > 3*time.Second {
+	if took > testlib.Slow(3*time.Second) {
 		t.Fatalf("building a tree of %d pods took %s", pods, took)
 	}
 }

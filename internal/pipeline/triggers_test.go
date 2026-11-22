@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 const withInputs = `
@@ -547,7 +549,7 @@ func TestCron(t *testing.T) {
 	if got := m.Latest(from, from.AddDate(1, 0, 0)); got.IsZero() {
 		t.Fatal("no latest")
 	}
-	if time.Since(start) > 10*time.Second {
+	if time.Since(start) > testlib.Slow(10*time.Second) {
 		t.Fatalf("catching up a year took %s", time.Since(start))
 	}
 }

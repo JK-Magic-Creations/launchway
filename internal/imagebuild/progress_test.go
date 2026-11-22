@@ -8,6 +8,8 @@ import (
 
 	"github.com/moby/buildkit/client"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 type lineLog struct {
@@ -107,7 +109,7 @@ func TestProgressPrinterPartialLineAndLiveDrain(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	if d := time.Since(sent); d > 2*time.Second {
+	if d := time.Since(sent); d > testlib.Slow(2*time.Second) {
 		t.Fatalf("the partial line took %s", d)
 	}
 	close(ch)

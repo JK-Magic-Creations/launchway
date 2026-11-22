@@ -164,6 +164,9 @@ steps:
 // environment waits for a person; the health check calls a local fake
 // service; and a version whose check fails is put back.
 func TestServicePlanDeliversEndToEnd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a long end-to-end delivery (3 minutes without the race detector); the full run (without -short) runs it")
+	}
 	need(t, "go", "gofmt", "git")
 	dir := t.TempDir()
 	db := testdb.New(t)

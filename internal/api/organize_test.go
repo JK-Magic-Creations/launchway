@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 func TestHomeNeverLeaksAnotherTeamsProjects(t *testing.T) {
@@ -370,7 +371,7 @@ func TestNameRankingIsBounded(t *testing.T) {
 	}
 	took := time.Since(start)
 	t.Logf("20 queries over %d names: %v (%d scored)", len(names), took, hits)
-	if took > 300*time.Millisecond {
+	if took > testlib.Slow(300*time.Millisecond) {
 		t.Errorf("ranking took %v, want under 300ms", took)
 	}
 }

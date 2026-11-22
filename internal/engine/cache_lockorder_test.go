@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // Every change of a project's cache entries takes the project's usage row
@@ -56,7 +57,7 @@ func TestCacheTrimTakesTheUsageRowBeforeTheEntry(t *testing.T) {
 	if _, err := tx.Exec(`UPDATE caches SET hits = hits WHERE id = ?`, id); err != nil {
 		t.Fatalf("the entry was taken by the pruner, which waits for the usage row this transaction holds: %v", err)
 	}
-	if d := time.Since(start); d > 500*time.Millisecond {
+	if d := time.Since(start); d > testlib.Slow(500*time.Millisecond) {
 		t.Fatalf("reaching the entry took %v: the pruner holds it while it waits for the usage row, so the two wait for each other", d)
 	}
 	if err := tx.Commit(); err != nil {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 func TestLogBufferBackpressureIsBoundedAndLosesNothing(t *testing.T) {
@@ -38,7 +40,7 @@ func TestLogBufferNeverBlocksForever(t *testing.T) {
 	for i := 0; i < logBufferMax+1; i++ {
 		b.add("stdout", "x") // nobody drains
 	}
-	if d := time.Since(start); d > logBufferWait+2*time.Second {
+	if d := time.Since(start); d > testlib.Slow(logBufferWait+2*time.Second) {
 		t.Fatalf("held for %s", d)
 	}
 	if n := len(b.take(logBufferMax + 10)); n != logBufferMax+1 {
