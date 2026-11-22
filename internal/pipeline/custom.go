@@ -32,7 +32,8 @@ const SelfLibrary = "self"
 // at run time can widen it.
 type CustomStep struct {
 	Name     string `json:"name"`
-	Library  string `json:"library,omitempty"` // SelfLibrary for a step of the same repository
+	Library  string `json:"library,omitempty"` // what the pipeline calls the library; SelfLibrary for a step of the same repository
+	Repo     string `json:"repo,omitempty"`    // the server's name for the library, which its step pages and the record of uses go by
 	Commit   string `json:"commit,omitempty"`  // the commit of the library the manifest was read at
 	Contract int    `json:"contract"`
 	Digest   string `json:"digest"` // sha256 of the manifest
@@ -128,7 +129,7 @@ func (c *CustomStep) setSource(lib *Library) {
 	if lib == nil {
 		return
 	}
-	c.Library, c.Commit = lib.Name, lib.Commit
+	c.Library, c.Repo, c.Commit = lib.Name, lib.Repo, lib.Commit
 }
 
 // IsCustom reports whether the step came from a custom step.
@@ -229,4 +230,13 @@ func (p *Pipeline) usesSelf() bool {
 		}
 	}
 	return false
+}
+
+// RecordedLibrary is the library's name in the record of uses and on the step's page: the server's name for it,
+// not the alias a pipeline gave it (the alias is only what that pipeline calls it).
+func (c *CustomStep) RecordedLibrary() string {
+	if c.Repo != "" {
+		return c.Repo
+	}
+	return c.Library
 }

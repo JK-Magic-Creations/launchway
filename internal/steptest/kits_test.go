@@ -64,3 +64,30 @@ func TestScaffoldedStepsConformInEveryLanguage(t *testing.T) {
 		})
 	}
 }
+
+// The kits' own tests (sdk/steps/*/test*) run with the rest, for the languages whose tools are here.
+func TestKitsOwnTests(t *testing.T) {
+	root, err := filepath.Abs("../../sdk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		tool string
+		dir  string
+		args []string
+	}{
+		{"sh", "steps/sh", []string{"sh", "test.sh"}},
+		{"python3", "steps/python", []string{"python3", "-B", "-m", "unittest", "discover", "-p", "test_*.py"}},
+	} {
+		t.Run(c.tool, func(t *testing.T) {
+			if _, err := exec.LookPath(c.tool); err != nil {
+				t.Skipf("%s is not installed", c.tool)
+			}
+			cmd := exec.Command(c.args[0], c.args[1:]...)
+			cmd.Dir = filepath.Join(root, c.dir)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("%v\n%s", err, out)
+			}
+		})
+	}
+}

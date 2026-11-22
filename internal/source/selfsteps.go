@@ -50,8 +50,8 @@ func (m *Manager) selfSource(ctx context.Context) *pipeline.SelfSource {
 	return &pipeline.SelfSource{
 		Library: &pipeline.Library{Name: pipeline.SelfLibrary, Version: r.sha, Commit: r.sha, RefKind: "commit"},
 		Read: func(path string) ([]byte, error) {
-			p.mu.Lock()
-			defer p.mu.Unlock()
+			// No lock: callers that start runs hold the project's, and reading a commit that is already
+			// there does not need it.
 			data, err := gitOut(ctx, p.dir, "show", r.sha+":"+path)
 			if err != nil {
 				if strings.Contains(err.Error(), "does not exist") || strings.Contains(err.Error(), "exists on disk, but not in") {

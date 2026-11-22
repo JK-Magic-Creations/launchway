@@ -658,6 +658,15 @@ The same scans and best-practice checks for every repository, on by default (see
 | `POST /api/v1/projects/{name}/findings/{fingerprint}/reopen` | `project-operator` | `finding.reopen` | Ends the decision in force, so the finding counts again. |
 | `GET /api/v1/runs/{id}/inspection` | `run-viewer` | — | A Sortie's Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by `standing`, `check`, `severity`. |
 
+## Custom steps in a Sortie
+
+A step of a Sortie that came from a [custom step](step-manifest.md) has two more fields in `GET /api/v1/runs/{id}`:
+`custom` (`name`, `library` (what the pipeline calls it; `self` for the repository's own), `repo` (the server's name for the library), `commit`, `contract`, `digest` of the manifest, `network`,
+`write`, `secrets`, and `input_types` and `output_types`), which is what the Sortie was made with and what the step
+may do, and `notes`, the summary (Markdown) and the annotations (`level`, `file`, `line`, `text`) the step wrote in its
+latest attempt. Its findings and test results are in the Sortie's findings and tests as if a scanner or test tool
+had reported them. Pipelines that use custom steps need schema 68.
+
 ## Build caches
 
 A step's `cache:` key (see [the pipeline reference](pipeline.md#cache)) keeps directories between runs.

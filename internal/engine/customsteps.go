@@ -21,7 +21,7 @@ func (c *cmd) persistCustomSteps() error {
 				continue
 			}
 			if err := store.SaveCustomStepUse(c.tx, store.CustomStepUseRow{Run: c.st.ID, Step: s.ID, Project: c.st.Project, Name: cs.Name,
-				Library: cs.Library, Commit: cs.Commit, Digest: cs.Digest, Network: strings.Join(cs.Network, ","),
+				Library: cs.RecordedLibrary(), Commit: cs.Commit, Digest: cs.Digest, Network: strings.Join(cs.Network, ","),
 				Write: strings.Join(cs.Write, ","), Secrets: strings.Join(cs.Secrets, ","), At: c.now}); err != nil {
 				return err
 			}

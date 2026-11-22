@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -115,6 +116,7 @@ func (m *Manager) versionsOf(ctx context.Context, lib *project) (tags, all []str
 			branches = append(branches, r.Name)
 		}
 	}
+	sortNewestFirst(tags)
 	all = append(append([]string{}, tags...), branches...)
 	if len(all) > maxLibraryVersions {
 		all = all[:maxLibraryVersions]
@@ -283,4 +285,50 @@ func (m *Manager) StepUpdateNotice(ctx context.Context, library, step, pinnedCom
 	}
 	cs, widens = changes(cur, latest)
 	return tags[0], cs, widens, nil
+}
+
+// sortNewestFirst orders tags such as v1.2, v1.10 and v2 by their numbers, newest first, so that "the newest tag"
+// does not depend on the order Git lists them in (tags made in the same second have no order of their own).
+func sortNewestFirst(tags []string) {
+	sort.SliceStable(tags, func(i, j int) bool { return versionLess(tags[j], tags[i]) })
+}
+
+func versionLess(a, b string) bool {
+	pa, pb := versionParts(a), versionParts(b)
+	for i := 0; i < len(pa) && i < len(pb); i++ {
+		switch {
+		case pa[i].num && pb[i].num && pa[i].n != pb[i].n:
+			return pa[i].n < pb[i].n
+		case !(pa[i].num && pb[i].num) && pa[i].s != pb[i].s:
+			return pa[i].s < pb[i].s
+		}
+	}
+	return len(pa) < len(pb)
+}
+
+type versionPart struct {
+	num bool
+	n   int
+	s   string
+}
+
+func versionParts(v string) []versionPart {
+	var out []versionPart
+	for i := 0; i < len(v); {
+		j := i
+		digit := v[i] >= '0' && v[i] <= '9'
+		for j < len(v) && (v[j] >= '0' && v[j] <= '9') == digit {
+			j++
+		}
+		p := versionPart{s: v[i:j]}
+		if digit && j-i < 9 {
+			p.num = true
+			for _, c := range v[i:j] {
+				p.n = p.n*10 + int(c-'0')
+			}
+		}
+		out = append(out, p)
+		i = j
+	}
+	return out
 }

@@ -124,7 +124,7 @@ steps:
 		}
 	}
 	// The use is recorded for audit, and the step's page says who uses it.
-	uses, err := le.eng.CustomStepUses("platform", "summarize", 10)
+	uses, err := le.eng.CustomStepUses("ci-templates", "summarize", 10)
 	if err != nil || len(uses) != 1 || uses[0].Project != "app" || uses[0].Runs != 1 || len(uses[0].Commit) != 40 {
 		t.Errorf("uses: %+v %v", uses, err)
 	}
