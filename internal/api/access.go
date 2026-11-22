@@ -407,7 +407,7 @@ func (s *Server) cookieSecure(r *http.Request) bool {
 	if s.isHTTPS(r) || (s.Auth != nil && s.Auth.SecureCookies) {
 		return true
 	}
-	return !(loopbackName(r.Host) && loopbackName(peerAddr(r)))
+	return !loopbackName(r.Host) || !loopbackName(peerAddr(r))
 }
 
 // loopbackName reports whether host (with or without a port) is localhost
