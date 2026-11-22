@@ -221,10 +221,11 @@ func (s *Server) outsideViews(r *http.Request, rel *engine.Release) []outsideVie
 // latest releases stand on its outside host.
 func (s *Server) outsideStates(vs []mirror.View) {
 	for i := range vs {
-		if vs[i].Direction != mirror.Push || !vs[i].PublishReleases {
+		v := &vs[i]
+		if v.Direction != mirror.Push || !v.PublishReleases {
 			continue
 		}
-		rows, err := s.Engine.ReleaseOutsideOfMirror(vs[i].ID, 3)
+		rows, err := s.Engine.ReleaseOutsideOfMirror(v.ID, 3)
 		if err != nil {
 			continue
 		}
@@ -234,7 +235,7 @@ func (s *Server) outsideStates(vs []mirror.View) {
 			if rel, err := s.Engine.GetRelease(row.ReleaseID); err == nil {
 				st.Version = rel.Project + " " + rel.Version
 			}
-			vs[i].Outside = append(vs[i].Outside, st)
+			v.Outside = append(v.Outside, st)
 		}
 	}
 }

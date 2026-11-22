@@ -116,7 +116,6 @@ type outsideEnv struct {
 	ada  *browser
 	vic  *browser
 	repo forge.Repository
-	mir  mirror.View
 	seen []string // every answer the API gave, to look for the credential in
 }
 
