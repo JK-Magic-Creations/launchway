@@ -158,6 +158,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
 | `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
+| `GET /api/v1/outside-hosts` | `list_outside_hosts` | `repos host list` | — | equal |
+| `POST /api/v1/outside-hosts` | `add_outside_host` | `repos host add` | — | equal |
+| `DELETE /api/v1/outside-hosts/{name}` | `remove_outside_host` | `repos host remove` | — | equal |
+| `GET /api/v1/outside-hosts/{name}/repositories` | `list_outside_host_repositories` | `repos host repositories` | — | equal |
+| `POST /api/v1/outside-hosts/{name}/test` | `test_outside_host` | `repos host test` | — | equal |
+| `POST /api/v1/outside-hosts/{name}/webhook` | — | — | — | exempt: the outside Git host calls it, proving itself with the connection's webhook secret; a person or agent never does |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
@@ -193,6 +199,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/git-hook` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
 | `GET /api/v1/projects/{name}/inputs` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/lanes` | `list_lanes` | `runs lanes` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/outside` | `detach_project_outside` | `repos outside detach` | — | equal |
+| `GET /api/v1/projects/{name}/outside` | `get_project_outside` | `repos outside show` | — | equal |
+| `PUT /api/v1/projects/{name}/outside` | `set_project_outside` | `repos outside attach` | — | equal |
 | `GET /api/v1/projects/{name}/pipeline` | `get_project` | `config get projects` | — | equal |
 | `POST /api/v1/projects/{name}/pipeline` | — | — | — | gap: the pipeline editor commits to Git; agents and the CLI edit the file in the repository and check it with validate_pipeline and launchway validate |
 | `GET /api/v1/projects/{name}/refs` | — | — | — | exempt: branch and tag picker of the UI; start_run and runs start take the ref as text |

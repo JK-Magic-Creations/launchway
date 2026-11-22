@@ -416,6 +416,14 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |
 | `mirror.sync` | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync`: a mirror run on demand; a failed run is recorded with its redacted error |
 | `mirror.promote` | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` (also `launchway repos mirror stop`): the repository stopped being a mirror and takes pushes; the detail says whether a final sync ran first |
+| `outside_host.create` | `POST /api/v1/outside-hosts` (also `launchway repos host add`): a connection to an outside Git host; the detail says its kind, address, where the credential is read from (never the credential) and the owners allowed |
+| `outside_host.delete` | `DELETE /api/v1/outside-hosts/{name}` |
+| `outside_host.test` | `POST /api/v1/outside-hosts/{name}/test`: the account the credential is and how many permissions it lacks |
+| `project.outside_attach` | `PUT /api/v1/projects/{name}/outside`: a Flight attached to a repository on a connection, or its report switches changed |
+| `project.outside_detach` | `DELETE /api/v1/projects/{name}/outside` |
+| `outside_host.status` | A commit status written to the outside host for a run, by the run (the detail names the status and its state) |
+| `outside_host.comment` | The summary comment of a pull request written or updated on the outside host, by the run |
+| `webhook.outside` | An outside host's webhook: verified, its Flights polled at once (or a refusal, with the caller's address) |
 | `connection.create` | `POST /api/v1/connections` (also `launchway repos connection add`): a server to import from; the detail says its kind, address and where the credential is read from, never the credential |
 | `signin.test_begin` | `POST /api/v1/signin/test` (the setup guide): an administrator started a test sign-in with an identity provider; the target is the provider's address. Nothing about how people sign in changes |
 | `signin.test_result` | the second window's return from the provider (`GET /auth/signin-test`): the detail says whether the test sign-in worked, who the provider said signed in and which groups it sent; recorded for the administrator who started it |
