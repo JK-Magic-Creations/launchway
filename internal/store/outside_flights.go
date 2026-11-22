@@ -1,5 +1,7 @@
 package store
 
+import "database/sql"
+
 // The Flights kept on an outside Git host (schema 57). outside_flights ties a
 // project to one repository on a connection and holds its two report switches;
 // outside_comments remembers the one summary comment of a pull request so it
@@ -115,4 +117,20 @@ func PutSummaryComment(x Execer, project string, number int, key string, now int
 	_, err := x.Exec(`INSERT INTO outside_comments(project, pr_number, comment_id, updated_at) VALUES(?, ?, ?, ?)
 		ON CONFLICT(project, pr_number) DO UPDATE SET comment_id = excluded.comment_id, updated_at = excluded.updated_at`, project, number, key, now)
 	return err
+}
+
+// LastDeliveryAt is when the connection last received a webhook delivery (Unix ms); false when none is on record.
+func LastDeliveryAt(q Queryer, connection string) (int64, bool, error) {
+	rows, err := q.Query(`SELECT MAX(at) FROM forge_deliveries WHERE connection_id = ?`, connection)
+	if err != nil {
+		return 0, false, err
+	}
+	defer rows.Close()
+	var at sql.NullInt64
+	if rows.Next() {
+		if err := rows.Scan(&at); err != nil {
+			return 0, false, err
+		}
+	}
+	return at.Int64, at.Valid, rows.Err()
 }

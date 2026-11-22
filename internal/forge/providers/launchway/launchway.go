@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
@@ -81,6 +82,7 @@ type Provider struct {
 	sto  Storage
 	o    Options
 
+	tags  atomic.Pointer[tagHolder]
 	mu    sync.Mutex
 	stamp []time.Time // recent creations, for the rate limit
 }

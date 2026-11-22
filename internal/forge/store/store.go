@@ -357,19 +357,6 @@ func (s *Store) SeeDelivery(ctx context.Context, connection, delivery string) (b
 	return n > 0, nil
 }
 
-// LastDelivery is when the connection last received a webhook delivery (the
-// deliveries are kept for a while, see PruneDeliveries); false when none is on record.
-func (s *Store) LastDelivery(ctx context.Context, connection string) (time.Time, bool, error) {
-	var at sql.NullInt64
-	if err := s.db.QueryRow(ctx, `SELECT MAX(at) FROM forge_deliveries WHERE connection_id = ?`, connection).Scan(&at); err != nil {
-		return time.Time{}, false, err
-	}
-	if !at.Valid {
-		return time.Time{}, false, nil
-	}
-	return time.UnixMilli(at.Int64).UTC(), true, nil
-}
-
 // PruneDeliveries forgets deliveries older than maxAge.
 func (s *Store) PruneDeliveries(ctx context.Context, maxAge time.Duration) (int64, error) {
 	res, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE at < ?`, ms(s.now().Add(-maxAge)))

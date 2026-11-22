@@ -331,9 +331,9 @@ func (s *Service) QuietFlights(ctx context.Context, cutoff time.Time) ([]Flight,
 		if !c.Enabled {
 			continue
 		}
-		if at, ok, err := s.st.LastDelivery(ctx, c.ID); err != nil {
+		if at, ok, err := s.fl.OutsideLastDelivery(c.ID); err != nil {
 			return nil, err
-		} else if ok && at.After(cutoff) {
+		} else if ok && time.UnixMilli(at).After(cutoff) {
 			continue
 		}
 		rows, err := s.fl.OutsideFlightsOfConnection(c.ID)
@@ -372,5 +372,16 @@ func (s *Service) LastDelivery(ctx context.Context, name string) (time.Time, boo
 	if err != nil {
 		return time.Time{}, false, err
 	}
-	return s.st.LastDelivery(ctx, c.ID)
+	at, ok, err := s.fl.OutsideLastDelivery(c.ID)
+	return time.UnixMilli(at).UTC(), ok, err
+}
+
+// Releases is the write-back group of a Flight's connection, with the
+// Flight's repository on it: what "Cut a release" writes through.
+func (s *Service) Releases(ctx context.Context, project string) (forge.Releases, forge.Repository, error) {
+	p, _, repo, err := s.repoOf(ctx, project)
+	if err != nil {
+		return nil, repo, err
+	}
+	return p.Releases(), repo, nil
 }

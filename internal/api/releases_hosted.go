@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"net/http"
 	"net/http/httptest"
@@ -68,4 +69,60 @@ func (s *Server) refusal(err error) (*engine.Release, int, string) {
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &body)
 	return nil, rec.Code, body.Error
+}
+
+type releaseReqKey struct{}
+
+// hostedTagger is how the built-in provider's Releases group writes a tag into
+// a repository stored here (forge.TagWriter): under the rules of the person
+// cutting the release, whose request rides in the context.
+type hostedTagger struct{ s *Server }
+
+func (h hostedTagger) CreateTag(ctx context.Context, repo forge.Repository, t forge.TagSpec) (string, error) {
+	r, _ := ctx.Value(releaseReqKey{}).(*http.Request)
+	if r == nil {
+		return "", errors.New("a tag of a hosted repository is written on behalf of a signed-in person")
+	}
+	return h.s.createHostedTag(r, repo, t.Name, t.Commit, t.Message)
+}
+
+// releaseGroupOf is the Releases group a Flight's tags and releases are written
+// through, with its repository: the outside host's provider for an attached
+// Flight, the built-in provider for a repository stored here. One path for both.
+func (s *Server) releaseGroupOf(ctx context.Context, project string) (g forge.Releases, repo forge.Repository, outside bool, ok bool, err error) {
+	if s.Hosts != nil && s.Hosts.IsAttached(project) {
+		g, repo, err = s.Hosts.Releases(ctx, project)
+		return g, repo, true, err == nil, err
+	}
+	repo, found := s.hostedRepoOfFlight(ctx, project)
+	if !found || s.Forge == nil {
+		return nil, repo, false, false, nil
+	}
+	p, isProvider := s.Forge.Provider.(interface{ Releases() forge.Releases })
+	if !isProvider {
+		return nil, repo, false, false, nil
+	}
+	if ts, can := s.Forge.Provider.(forge.TagSetter); can {
+		ts.SetTags(hostedTagger{s})
+	}
+	return p.Releases(), repo, false, true, nil
+}
+
+// createTagThroughGroup makes the annotated tag of a release through the
+// Releases group of the Flight's repository, for a hosted and an outside
+// repository alike. outside says which, for the words of a refusal.
+func (s *Server) createTagThroughGroup(r *http.Request, project, tag, sha, message string) (obj string, outside, ok bool, err error) {
+	ctx := context.WithValue(r.Context(), releaseReqKey{}, r)
+	g, repo, outside, ok, err := s.releaseGroupOf(ctx, project)
+	if err != nil || !ok {
+		return "", outside, ok, err
+	}
+	ref, err := g.CreateTag(ctx, repo, forge.TagSpec{Name: tag, Commit: sha, Message: message})
+	return ref.Commit, outside, true, err
+}
+
+// hostedOrOutside says whether a Flight's tags are written through a provider's
+// Releases group: it keeps its code on an outside host, or in a repository stored here.
+func (s *Server) hostedOrOutside(ctx context.Context, project string) bool {
+	return (s.Hosts != nil && s.Hosts.IsAttached(project)) || s.isHosted(ctx, project)
 }

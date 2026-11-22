@@ -85,3 +85,11 @@ func (e *Engine) PutOutsideSummaryComment(project string, number int, key string
 	defer e.writeLock()()
 	return store.PutSummaryComment(e.db, project, number, key, e.now().UnixMilli())
 }
+
+// OutsideLastDelivery is when a connection last received a webhook delivery (Unix ms).
+func (e *Engine) OutsideLastDelivery(connection string) (int64, bool, error) {
+	if !e.knows(schemaHosts) {
+		return 0, false, nil
+	}
+	return store.LastDeliveryAt(e.db, connection)
+}

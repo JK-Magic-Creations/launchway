@@ -40,6 +40,7 @@ type FlightStore interface {
 	OutsideFlightsOfRepository(connection, repo string) ([]engstore.FlightRow, error)
 	OutsideFlightsOfConnection(connection string) ([]engstore.FlightRow, error)
 	OutsideSummaryComment(project string, number int) (string, error)
+	OutsideLastDelivery(connection string) (int64, bool, error)
 	PutOutsideSummaryComment(project string, number int, key string) error
 }
 
