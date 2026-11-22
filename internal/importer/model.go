@@ -82,33 +82,34 @@ type Input struct {
 
 // Job is one unit of work: a Launchway step is made of it.
 type Job struct {
-	ID, Name   string
-	Line       int
-	Needs      []string
-	Image      string
-	Services   []Service
-	Env        []KV
-	SecretEnv  []KV // variable name -> secret name
-	SecretLine map[string]int
-	Steps      []Step
-	Matrix     *Matrix
-	Caches     []Cache
-	Artifacts  []Artifact
-	Tests      []string
-	Coverage   []string
-	Findings   []string // security scanner reports
-	Fetch      []Fetch
-	When       Cond
-	Approval   *Approval
-	Timeout    string // a Go duration
-	Retry      int
-	AllowFail  bool
-	Delivers   bool   // pushes, releases or deploys
-	DeliverWhy string // what made it a delivering step
-	Template   *TemplateUse
-	Image2     *ImageBuild
-	Dir        string
-	NoteLines  []string // comments to write above the step
+	ID, Name     string
+	Line         int
+	Needs        []string
+	Image        string
+	Services     []Service
+	Env          []KV
+	SecretEnv    []KV // variable name -> secret name
+	SecretLine   map[string]int
+	Steps        []Step
+	Matrix       *Matrix
+	Caches       []Cache
+	Artifacts    []Artifact
+	Tests        []string
+	Coverage     []string
+	Findings     []string // security scanner reports
+	Fetch        []Fetch
+	When         Cond
+	Approval     *Approval
+	ApprovalOnly bool   // the job is only the question: it has no steps of its own
+	Timeout      string // a Go duration
+	Retry        int
+	AllowFail    bool
+	Delivers     bool   // pushes, releases or deploys
+	DeliverWhy   string // what made it a delivering step
+	Template     *TemplateUse
+	Image2       *ImageBuild
+	Dir          string
+	NoteLines    []string // comments to write above the step
 }
 
 // Service runs beside a job.

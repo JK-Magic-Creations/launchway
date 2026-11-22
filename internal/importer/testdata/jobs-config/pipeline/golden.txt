@@ -1,0 +1,169 @@
+=== .ci/config.yml (jobs-config)
+# Imported from .ci/config.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: ['*'], tags: [v1, v2]}
+  schedule:
+    - {cron: 0 2 * * *}
+containers:
+  main-test: {image: 'cimg/go:1.22'}
+  main-test-db:
+    image: cimg/postgres:16.0
+    service: true
+    env: {POSTGRES_PASSWORD: test}
+  main-matrixed: {image: 'cimg/go:1.22'}
+  main-matrixed-db:
+    image: cimg/postgres:16.0
+    service: true
+    env: {POSTGRES_PASSWORD: test}
+steps:
+  main-build:
+    image: cimg/go:1.22
+    when: {branch: [main, develop], tag: [v1, v2]}
+    env:
+      GOFLAGS: -mod=readonly
+      MODE: ci
+      GOMODCACHE: .cache/go-mod
+    run: |
+      (
+        cd app
+        echo prep
+      )
+      # Build
+      (
+        cd app
+        export CGO_ENABLED=0
+        go build ./...
+      )
+    cache:
+      - {name: cache-go-mod, paths: [.cache/go-mod], key: {files: ['**/go.sum']}}
+    artifacts:
+      - {name: bin, paths: [bin], when: always}
+      - {name: workspace-main-build, paths: [bin]}
+  main-test:
+    container: main-test
+    needs: main-build
+    for_each:
+      node-index: ["0", "1", "2"]
+    env:
+      CIRCLE_NODE_INDEX: {each: node-index}
+      CIRCLE_NODE_TOTAL: "3"
+    run: |
+      go test ./...
+    reports:
+      tests: [reports/**/*.xml]
+    fetch:
+      - {from: main-build, name: workspace-main-build, into: .}
+  main-hold-approval:
+    kind: approval
+    needs: main-test
+    message: Run the jobs after hold?
+  main-ship:
+    image: cimg/base:stable
+    needs: main-hold-approval
+    run: |
+      docker push registry.example.test/team/shop:$CIRCLE_SHA1
+      echo 'NEEDS A PERSON: the step node/install ran here'; exit 1
+      echo 'NEEDS A PERSON: a conditional block was here'; exit 1
+      echo << parameters.target >>
+  main-matrixed:
+    container: main-matrixed
+    for_each:
+      node-index: ["0", "1", "2"]
+    env:
+      CIRCLE_NODE_INDEX: {each: node-index}
+      CIRCLE_NODE_TOTAL: "3"
+    run: |
+      go test ./...
+    reports:
+      tests: [reports/**/*.xml]
+  nightly-build:
+    image: cimg/go:1.22
+    env:
+      GOFLAGS: -mod=readonly
+      MODE: ci
+      GOMODCACHE: .cache/go-mod
+    run: |
+      (
+        cd app
+        echo prep
+      )
+      # Build
+      (
+        cd app
+        export CGO_ENABLED=0
+        go build ./...
+      )
+    cache:
+      - {name: cache-go-mod, paths: [.cache/go-mod], key: {files: ['**/go.sum']}}
+    artifacts:
+      - {name: bin, paths: [bin], when: always}
+      - {name: workspace-nightly-build, paths: [bin]}
+
+--- findings
+exact     jobs.executor.image          .ci/config.yml:9 The first image became the step's image
+exact     jobs.executor.image          .ci/config.yml:9 The first image became the step's image
+different jobs.executor.resource       .ci/config.yml:12 The machine size large is not carried -> Set cpu and memory on the step's container if the job needs them
+different jobs.executor.resource       .ci/config.yml:12 The machine size large is not carried -> Set cpu and memory on the step's container if the job needs them
+exact     jobs.step.run                .ci/config.yml:17 Commands carry over; environment and working_directory wrap that command
+exact     jobs.step.run                .ci/config.yml:17 Commands carry over; environment and working_directory wrap that command
+exact     jobs.executor.named          .ci/config.yml:21 The named executor was read and its image and variables written into the job
+exact     jobs.job                     .ci/config.yml:21 The job became a step; its steps run in order in one script
+exact     jobs.executor.named          .ci/config.yml:21 The named executor was read and its image and variables written into the job
+exact     jobs.job                     .ci/config.yml:21 The job became a step; its steps run in order in one script
+different jobs.workdir                 .ci/config.yml:22 The job's directory ~/project/app is written as a directory change for each command; the old default was a path in the home directory -> Check relative paths
+different jobs.workdir                 .ci/config.yml:22 The job's directory ~/project/app is written as a directory change for each command; the old default was a path in the home directory -> Check relative paths
+exact     jobs.environment             .ci/config.yml:23 Variables carry over as the environment of the step
+exact     jobs.environment             .ci/config.yml:23 Variables carry over as the environment of the step
+exact     jobs.step.checkout           .ci/config.yml:26 Launchway checks the repository out before the first step
+exact     jobs.step.checkout           .ci/config.yml:26 Launchway checks the repository out before the first step
+exact     jobs.step.command            .ci/config.yml:27 The command's steps were written into the job at the place it was called
+exact     jobs.step.command            .ci/config.yml:27 The command's steps were written into the job at the place it was called
+exact     jobs.step.run                .ci/config.yml:31 Commands carry over; environment and working_directory wrap that command
+exact     jobs.step.run                .ci/config.yml:31 Commands carry over; environment and working_directory wrap that command
+manual    jobs.step.cache_path         .ci/config.yml:36 The cache path ~/.hidden is outside the workspace, and Launchway keeps only paths below it -> Make the tool use a directory below the workspace and cache that
+different jobs.step.cache              .ci/config.yml:36 The cache for .cache/go-mod is kept by Launchway between runs; the key's {{ checksum "file" }} became a file list, and other parts of the key were dropped -> Check the key files and paths
+manual    jobs.step.cache_path         .ci/config.yml:36 The cache path ~/.hidden is outside the workspace, and Launchway keeps only paths below it -> Make the tool use a directory below the workspace and cache that
+different jobs.step.cache              .ci/config.yml:36 The cache for .cache/go-mod is kept by Launchway between runs; the key's {{ checksum "file" }} became a file list, and other parts of the key were dropped -> Check the key files and paths
+exact     jobs.step.artifacts          .ci/config.yml:41 The files became cargo of the step; test results became a tests report
+exact     jobs.step.artifacts          .ci/config.yml:41 The files became cargo of the step; test results became a tests report
+different jobs.step.workspace          .ci/config.yml:43 Files passed to later jobs became cargo that those jobs fetch, kept under the name workspace-main-build, instead of a shared workspace -> Check the paths the later jobs read
+different jobs.step.workspace          .ci/config.yml:43 Files passed to later jobs became cargo that those jobs fetch, kept under the name workspace-nightly-build, instead of a shared workspace -> Check the paths the later jobs read
+exact     jobs.job                     .ci/config.yml:47 The job became a step; its steps run in order in one script
+exact     jobs.job                     .ci/config.yml:47 The job became a step; its steps run in order in one script
+exact     jobs.executor.image          .ci/config.yml:48 The first image became the step's image
+exact     jobs.executor.image          .ci/config.yml:48 The first image became the step's image
+different jobs.executor.services       .ci/config.yml:49 The image db runs as a service beside the step, reached at localhost, not by its name -> Change the host name your tests use to localhost
+different jobs.executor.services       .ci/config.yml:49 The image db runs as a service beside the step, reached at localhost, not by its name -> Change the host name your tests use to localhost
+different jobs.parallelism             .ci/config.yml:53 The job became a loop of 3 members, and the old index and total variables are set as environment variables -> Check how the tests are split between members
+different jobs.parallelism             .ci/config.yml:53 The job became a loop of 3 members, and the old index and total variables are set as environment variables -> Check how the tests are split between members
+exact     jobs.step.checkout           .ci/config.yml:55 Launchway checks the repository out before the first step
+exact     jobs.step.checkout           .ci/config.yml:55 Launchway checks the repository out before the first step
+different jobs.step.workspace          .ci/config.yml:56 Files passed to later jobs became cargo that those jobs fetch, kept under the name workspace-<job>, instead of a shared workspace -> Check the paths the later jobs read
+different jobs.step.workspace          .ci/config.yml:56 Files passed to later jobs became cargo that those jobs fetch, kept under the name workspace-<job>, instead of a shared workspace -> Check the paths the later jobs read
+exact     jobs.step.run                .ci/config.yml:58 Commands carry over; environment and working_directory wrap that command
+exact     jobs.step.run                .ci/config.yml:58 Commands carry over; environment and working_directory wrap that command
+exact     jobs.step.artifacts          .ci/config.yml:59 The files became cargo of the step; test results became a tests report
+exact     jobs.step.artifacts          .ci/config.yml:59 The files became cargo of the step; test results became a tests report
+different jobs.step.remote_docker      .ci/config.yml:61 Not needed: image steps build with the Station's builder -> Replace docker build and docker push in the script with an image step
+different jobs.step.remote_docker      .ci/config.yml:61 Not needed: image steps build with the Station's builder -> Replace docker build and docker push in the script with an image step
+exact     jobs.job                     .ci/config.yml:63 The job became a step; its steps run in order in one script
+exact     jobs.executor.image          .ci/config.yml:64 The first image became the step's image
+exact     jobs.step.checkout           .ci/config.yml:66 Launchway checks the repository out before the first step
+exact     jobs.step.run                .ci/config.yml:67 Commands carry over; environment and working_directory wrap that command
+manual    jobs.step.run_when           .ci/config.yml:69 The step setting when is not carried -> Move the command to a step of its own with an upstream condition, or add || true and a timeout in the script
+manual    jobs.step.orb                .ci/config.yml:70 The step node/install comes from a shared package that Launchway does not read -> Replace it with the commands it runs, or a built-in template (launchway templates list)
+manual    jobs.step.when               .ci/config.yml:71 The step block with a condition is not carried; its commands are not in the script -> Write the test in the script, or use a when: filter on a step of its own
+manual    jobs.step.command_params     .ci/config.yml:75 The parameter parameters.target is filled in when the old system runs the job, and is left as written -> Write the values in place, or use run inputs
+exact     jobs.step.run                .ci/config.yml:75 Commands carry over; environment and working_directory wrap that command
+exact     jobs.workflow                .ci/config.yml:79 Each job of a workflow became a step; requires became needs
+exact     jobs.filters.branch          .ci/config.yml:82 The branch names became a when: filter
+exact     jobs.filters.tags            .ci/config.yml:84 The tag names became a when: filter and a tag trigger
+manual    jobs.context                 .ci/config.yml:88 The job uses the context org-shared, which holds variables and secrets in the old system -> Create the variables and secrets it holds in Launchway and name the secrets under the step's secrets
+exact     jobs.approval                .ci/config.yml:90 The approval became an approval step
+manual    jobs.filters.regex           .ci/config.yml:93 The filter branches uses a regular expression or an ignore list, which Launchway patterns cannot express -> List the branch or tag names (a * pattern is allowed), then add a when: filter
+manual    jobs.filters.regex           .ci/config.yml:98 The filter branches uses a regular expression or an ignore list, which Launchway patterns cannot express -> List the branch or tag names (a * pattern is allowed), then add a when: filter
+manual    jobs.matrix                  .ci/config.yml:102 The matrix of job matrixed fills job parameters, which are not carried -> Write for_each on the step with the values the commands read
+exact     jobs.workflow                .ci/config.yml:106 Each job of a workflow became a step; requires became needs
+exact     jobs.schedule                .ci/config.yml:108 The cron time became a schedule trigger

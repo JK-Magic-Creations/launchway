@@ -410,6 +410,11 @@ func (w *writer) job(steps *yaml.Node, j *Job) {
 		}
 		w.addStep(steps, an, m, nil)
 		needsPrev = an
+		if j.ApprovalOnly {
+			w.names[j.ID] = an
+			w.steps = append(w.steps, StepRef{Job: j.ID, Step: an})
+			return
+		}
 	}
 
 	m := ymap()
@@ -623,7 +628,7 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 	}
 	if len(j.Fetch) > 0 {
 		fl := yseq(false)
-		for _, f := range j.Fetch {
+		for _, f := range w.expandFetch(j) {
 			from := w.producer(j, f.Name)
 			if from == "" {
 				w.note("write.fetch.unknown", j.Line, f.Name)
@@ -985,4 +990,34 @@ func tidyScript(s string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// expandFetch turns a fetch of every workspace (Name "*") into one fetch for each
+// workspace artifact kept by a job upstream.
+func (w *writer) expandFetch(j *Job) []Fetch {
+	var out []Fetch
+	for _, f := range j.Fetch {
+		if f.Name != "*" {
+			out = append(out, f)
+			continue
+		}
+		seen := map[string]bool{}
+		var walk func(ids []string)
+		walk = func(ids []string) {
+			for _, id := range ids {
+				if seen[id] || w.jobs[id] == nil {
+					continue
+				}
+				seen[id] = true
+				for _, a := range w.jobs[id].Artifacts {
+					if strings.HasPrefix(a.Name, "workspace-") {
+						out = append(out, Fetch{Name: a.Name, Into: f.Into})
+					}
+				}
+				walk(w.jobs[id].Needs)
+			}
+		}
+		walk(j.Needs)
+	}
+	return out
 }
