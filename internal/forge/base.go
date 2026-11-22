@@ -12,6 +12,9 @@ type Base struct {
 	K    Kind
 	Caps Capabilities
 	Mat  Maturity
+	// Why says, when the label is Experimental for a reason beyond "not yet run
+	// against the live service", what that reason is (shown with the label).
+	Why string
 	// Adds is what the host offers beyond the built-in forge (see Addition).
 	Adds []Addition
 }
@@ -32,6 +35,9 @@ func (b Base) Maturity() Maturity {
 	}
 	return b.Mat
 }
+
+// MaturityReason is the provider's own reason for its label, or "".
+func (b Base) MaturityReason() string { return b.Why }
 
 // ProposalRefs returns the zero layout: no proposal refs.
 func (b Base) ProposalRefs() RefLayout { return RefLayout{} }

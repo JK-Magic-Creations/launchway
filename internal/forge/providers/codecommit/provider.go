@@ -15,6 +15,14 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/restkit"
 )
 
+// MaturityReason is why this provider is labelled experimental beyond the
+// live-service run every provider waits for: the password Git is given is
+// minted in process by the same steps as the vendor's open-source command-line
+// credential helper, and the vendor's documentation pages do not state that
+// format (they describe using the helper, not what it computes). The format is
+// proved here only against this product's own fake, not against the service.
+const MaturityReason = "the Git password is minted in process following the vendor's open-source credential helper; no documentation page states its exact format, so only a run against the live service can prove it"
+
 // Capabilities declares what this provider does.
 func Capabilities() forge.Capabilities {
 	c := forge.NoCapabilities("this is not built for this host yet", "Do this on the Git host itself")
@@ -175,7 +183,7 @@ func New(c forge.Connection, g *egress.Guard) (*Provider, error) {
 
 // NewAt makes a provider over explicit endpoints (the tests' fake host).
 func NewAt(c forge.Connection, ep Endpoints, g *egress.Guard) *Provider {
-	p := &Provider{Base: forge.Base{K: forge.KindCodeCommit, Caps: Capabilities(), Mat: forge.Experimental, Adds: Additions()}, conn: c, ep: ep, g: g, now: time.Now}
+	p := &Provider{Base: forge.Base{K: forge.KindCodeCommit, Caps: Capabilities(), Mat: forge.Experimental, Why: MaturityReason, Adds: Additions()}, conn: c, ep: ep, g: g, now: time.Now}
 	// The token is only what must be kept out of messages: the secret access key.
 	cl := restkit.NewClient(ep.Endpoints, g, p.secretKey, nil)
 	cl.Message = message

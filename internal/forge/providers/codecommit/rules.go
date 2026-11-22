@@ -37,7 +37,10 @@ func (r rules) List(ctx context.Context, repo forge.Repository) ([]forge.RefRule
 	}
 	out := []forge.RefRule{}
 	next := ""
-	for {
+	for pages := 0; ; pages++ {
+		if pages >= maxPages {
+			return nil, errTooManyPages
+		}
 		in := map[string]any{"repositoryName": name}
 		if next != "" {
 			in["nextToken"] = next

@@ -2,6 +2,7 @@ package codecommit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -155,7 +156,10 @@ func (p *Provider) repoName(repo forge.Repository) (string, error) {
 func (p *Provider) branches(ctx context.Context, name string) ([]forge.Ref, error) {
 	var refs []forge.Ref
 	next := ""
-	for {
+	for pages := 0; ; pages++ {
+		if pages >= maxPages {
+			return nil, errTooManyPages
+		}
 		in := map[string]any{"repositoryName": name}
 		if next != "" {
 			in["nextToken"] = next
@@ -179,6 +183,12 @@ func (p *Provider) branches(ctx context.Context, name string) ([]forge.Ref, erro
 		}
 	}
 }
+
+// maxPages bounds every loop that follows a host's continuation token: a host
+// that keeps answering with a token (and no data) cannot hold a call forever.
+const maxPages = 200
+
+var errTooManyPages = errors.New("the host keeps sending more pages than a repository has; the listing is stopped")
 
 // tip is the commit a branch ends at: GetBranch.
 func (p *Provider) tip(ctx context.Context, name, branch string) (string, error) {

@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/awssig"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 )
 
 // target is the prefix of X-Amz-Target: the service and its API version
@@ -116,7 +118,13 @@ func (p *Provider) invoke(ctx context.Context, action string, in, out any) error
 		return err
 	}
 	if a.Status != http.StatusOK {
-		return parseAPIError(a.Status, a.Body)
+		e := parseAPIError(a.Status, a.Body)
+		var held []awssig.Credentials
+		if s, err := p.session(ctx); err == nil {
+			held = append(held, s.creds)
+		}
+		e.Msg, e.Type = p.scrub(e.Msg, held...), p.scrub(e.Type, held...)
+		return e
 	}
 	if out != nil && len(a.Body) > 0 {
 		if err := json.Unmarshal(a.Body, out); err != nil {
@@ -163,4 +171,31 @@ func login(arn string) string {
 		return arn
 	}
 	return rest
+}
+
+// scrub makes the host's own words safe to return to a caller: the secret
+// access keys and session tokens of the credential (and of any given
+// credentials) are blanked, addresses lose their credentials, and the text is
+// one line of at most 400 characters. Every message that came from a host's
+// answer goes through here.
+func (p *Provider) scrub(msg string, held ...awssig.Credentials) string {
+	secrets := []string{}
+	if raw, err := p.conn.Credential.Resolve(); err == nil {
+		if d, err := parseCreds(raw); err == nil {
+			secrets = append(secrets, d.SecretAccessKey, d.SessionToken)
+		}
+	}
+	for _, c := range held {
+		secrets = append(secrets, c.SecretAccessKey, c.SessionToken)
+	}
+	for _, s := range secrets {
+		if len(s) > 3 {
+			msg = strings.ReplaceAll(msg, s, "***")
+		}
+	}
+	msg = strings.Join(strings.Fields(redact.URLs(msg)), " ")
+	if r := []rune(msg); len(r) > 400 {
+		msg = string(r[:400]) + "…"
+	}
+	return msg
 }

@@ -3,6 +3,10 @@ package codecommit
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -87,18 +91,74 @@ type session struct {
 // refreshBefore is how long before expiry temporary credentials are renewed.
 const refreshBefore = 5 * time.Minute
 
-// The assumed-role sessions of every connection, in memory only, until shortly
-// before they expire. Providers are made for each call, so the cache is shared;
-// its key is a digest of what the session was made from, never a secret in the clear.
+// The assumed-role sessions of every connection, in memory only and sealed
+// (AES-256-GCM under a key made at the process's start and never written
+// anywhere), until shortly before they expire. Providers are made for each
+// call, so the cache is shared; its key is an HMAC under the same process key
+// of what the session was made from, never a secret in the clear, and what is
+// held is the sealed credentials with the (not secret) expiry and name.
 var (
 	cacheMu  sync.Mutex
-	cacheMap = map[string]session{}
+	cacheMap = map[string]sealedSession{}
+
+	sealOnce sync.Once
+	sealAEAD cipher.AEAD
+	sealMAC  []byte
 )
 
 const cacheLimit = 256
 
+// maxSessionLife bounds how long a role session is trusted, whatever expiry the
+// token service names: the longest a role session can last (43,200 seconds).
+const maxSessionLife = 12 * time.Hour
+
+type sealedSession struct {
+	box     []byte // nonce, then the sealed credentials
+	who     string
+	expires time.Time
+}
+
+// processKey makes the key sealed sessions and cache keys are made with.
+func processKey() (cipher.AEAD, []byte) {
+	sealOnce.Do(func() {
+		k := make([]byte, 64)
+		if _, err := rand.Read(k); err != nil {
+			panic("no randomness for the session cache: " + err.Error())
+		}
+		b, _ := aes.NewCipher(k[:32])
+		sealAEAD, _ = cipher.NewGCM(b)
+		sealMAC = k[32:]
+	})
+	return sealAEAD, sealMAC
+}
+
+func seal(s session) sealedSession {
+	aead, _ := processKey()
+	plain := []byte(s.creds.AccessKeyID + "\x00" + s.creds.SecretAccessKey + "\x00" + s.creds.SessionToken)
+	nonce := make([]byte, aead.NonceSize())
+	_, _ = rand.Read(nonce)
+	return sealedSession{box: aead.Seal(nonce, nonce, plain, nil), who: s.who, expires: s.expires}
+}
+
+func (c sealedSession) open() (session, bool) {
+	aead, _ := processKey()
+	if len(c.box) < aead.NonceSize() {
+		return session{}, false
+	}
+	plain, err := aead.Open(nil, c.box[:aead.NonceSize()], c.box[aead.NonceSize():], nil)
+	if err != nil {
+		return session{}, false
+	}
+	parts := strings.Split(string(plain), "\x00")
+	if len(parts) != 3 {
+		return session{}, false
+	}
+	return session{creds: awssig.Credentials{AccessKeyID: parts[0], SecretAccessKey: parts[1], SessionToken: parts[2]}, who: c.who, expires: c.expires}, true
+}
+
 func (d credDoc) cacheKey(region, sts string) string {
-	h := sha256.New()
+	_, key := processKey()
+	h := hmac.New(sha256.New, key)
 	for _, s := range []string{region, sts, d.AccessKeyID, d.SecretAccessKey, d.SessionToken, d.RoleARN, d.ExternalID, d.SessionName, strconv.Itoa(d.DurationSeconds)} {
 		h.Write([]byte(s))
 		h.Write([]byte{0})
@@ -131,12 +191,14 @@ func (p *Provider) session(ctx context.Context) (session, error) {
 	key := d.cacheKey(p.ep.Region, p.ep.STS.Host)
 	now := p.now()
 	cacheMu.Lock()
-	s, ok := cacheMap[key]
+	hit, ok := cacheMap[key]
 	cacheMu.Unlock()
-	if ok && now.Before(s.expires.Add(-refreshBefore)) {
-		return s, nil
+	if ok && now.Before(hit.expires.Add(-refreshBefore)) {
+		if s, ok := hit.open(); ok {
+			return s, nil
+		}
 	}
-	s, err = p.assume(ctx, d, base)
+	s, err := p.assume(ctx, d, base)
 	if err != nil {
 		return session{}, err
 	}
@@ -148,10 +210,10 @@ func (p *Provider) session(ctx context.Context) (session, error) {
 			}
 		}
 		if len(cacheMap) >= cacheLimit {
-			cacheMap = map[string]session{}
+			cacheMap = map[string]sealedSession{}
 		}
 	}
-	cacheMap[key] = s
+	cacheMap[key] = seal(s)
 	cacheMu.Unlock()
 	return s, nil
 }
@@ -211,8 +273,8 @@ func (p *Provider) assume(ctx context.Context, d credDoc, base awssig.Credential
 	if a.Status != http.StatusOK {
 		var e stsError
 		_ = xml.NewDecoder(bytes.NewReader(a.Body)).Decode(&e)
-		msg := strings.Join(strings.Fields(e.Error.Message), " ")
-		return session{}, fmt.Errorf("the token service refused to assume the role (%d %s): %s. The key pair needs permission to call sts:AssumeRole on the role, and the role's trust policy must trust it", a.Status, e.Error.Code, msg)
+		msg := p.scrub(e.Error.Message, base)
+		return session{}, fmt.Errorf("the token service refused to assume the role (%d %s): %s. The key pair needs permission to call sts:AssumeRole on the role, and the role's trust policy must trust it", a.Status, p.scrub(e.Error.Code, base), msg)
 	}
 	var r assumeResponse
 	if err := xml.NewDecoder(bytes.NewReader(a.Body)).Decode(&r); err != nil || r.Result.Creds.AccessKeyID == "" || r.Result.Creds.SessionToken == "" {
@@ -221,6 +283,11 @@ func (p *Provider) assume(ctx context.Context, d credDoc, base awssig.Credential
 	exp, err := time.Parse(time.RFC3339, r.Result.Creds.Expiration)
 	if err != nil {
 		return session{}, errors.New("the token service's answer names no expiry")
+	}
+	if now := p.now(); !exp.After(now) {
+		return session{}, errors.New("the token service's answer names an expiry that has passed")
+	} else if exp.After(now.Add(maxSessionLife)) {
+		exp = now.Add(maxSessionLife) // never trust a session longer than the longest a role may have
 	}
 	who := r.Result.User.ARN
 	if who == "" {
