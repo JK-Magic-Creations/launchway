@@ -10,6 +10,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 const helloPipeline = `
@@ -89,5 +90,38 @@ func TestPipelineOnAHostedRepositoryNeedsNoCredentials(t *testing.T) {
 	e.api.sourceJobFor(context.Background(), other)
 	if other.Source.Credential != "" {
 		t.Errorf("a credential for an address that is not this installation's: %+v", other.Source)
+	}
+}
+
+// A pipeline that uses a shared library hosted by this same installation runs with nothing configured: the
+// server reads the library from its storage and the Station is handed a credential for it.
+func TestPipelineUsingAHostedLibraryNeedsNoCredentials(t *testing.T) {
+	os.Unsetenv("GIT_CONFIG_COUNT")
+	e, _ := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/ci-templates")
+	tok := e.tokenFor(t, "ada", "pusher")
+	lib := testlib.NewLibrary(t, filepath.Join(e.dir, "lib"))
+	mustGit(t, lib.Bare, "push", "-q", withToken(e.srv.URL, "/acme/ci-templates", tok), "--all")
+	mustGit(t, lib.Bare, "push", "-q", withToken(e.srv.URL, "/acme/ci-templates", tok), "--tags")
+	app := testlib.New(t, filepath.Join(e.dir, "app"), map[string]string{".launchway/pipeline.yaml": libApp("v1", "none")})
+
+	libAddr := e.srv.URL + "/git/acme/ci-templates.git"
+	if err := e.api.Projects.Reconfigure([]source.Project{{Name: "app", URL: app.Bare, Poll: time.Hour}},
+		[]source.Library{{Name: "ci-templates", URL: libAddr}}); err != nil {
+		t.Fatal(err)
+	}
+	e.api.Projects.SetHostedLocal(e.api)
+	e.hostRunner(t, "station-1", nil)
+	r, err := e.api.Projects.StartRun(context.Background(), "app", "main", "someone-else", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := waitRun(t, e.eng, r.ID); d.Status != engine.RunSucceeded {
+		t.Fatalf("the run: %s %+v", d.Status, d.StepList)
+	}
+	job := &engine.Job{RunID: r.ID, Source: engine.Source{Kind: "git", URL: app.Bare, Libraries: []engine.LibrarySource{{Name: "p", URL: libAddr}}}}
+	e.api.sourceJobFor(context.Background(), job)
+	if l := job.Source.Libraries[0]; l.Hosted != "acme/ci-templates" || !strings.HasPrefix(l.Credential, "lwr_") {
+		t.Fatalf("the library's source: %+v", l)
 	}
 }

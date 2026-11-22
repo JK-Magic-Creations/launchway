@@ -487,4 +487,7 @@ type LibrarySource struct {
 	Name   string `json:"name"`   // as the pipeline calls it
 	URL    string `json:"url"`    // what to fetch
 	Commit string `json:"commit"` // the commit the run uses, always
+	// Hosted and Credential: as Source's, set at lease time for a library hosted by this installation.
+	Hosted     string `json:"hosted,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }

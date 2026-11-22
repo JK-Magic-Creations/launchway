@@ -103,6 +103,14 @@ func (s *Server) sourceJobFor(ctx context.Context, job *engine.Job) {
 	if job == nil || job.Source.Kind != "git" || s.Forge == nil || s.Forge.RunTokens.Key == nil {
 		return
 	}
+	for i := range job.Source.Libraries {
+		l := &job.Source.Libraries[i]
+		if lr, ok := s.hostedRepoOf(ctx, l.URL); ok {
+			if tok, err := s.Forge.RunTokens.MintForRun(lr.ID, job.RunID, hostedSourceTTL); err == nil {
+				l.Hosted, l.Credential = lr.Path, tok
+			}
+		}
+	}
 	repo, ok := s.hostedRepoOf(ctx, job.Source.URL)
 	if !ok {
 		return

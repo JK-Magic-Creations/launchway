@@ -101,5 +101,4 @@ and host compared without regard to case. A look-alike on another host is anothe
   any other repository.
 
 Settings you already made (`GIT_CONFIG_*` environment variables on a Station) keep working: they are
-added to, not replaced. Shared libraries hosted here are not yet carried the same way; those still
-need the credentials they needed before.
+added to, not replaced. Shared libraries hosted here are treated the same way: servers read them from their own storage and a Station is handed a read-only credential for each, bound to that library and that run, so a pipeline that uses a hosted library needs nothing configured either.
