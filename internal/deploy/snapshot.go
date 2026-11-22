@@ -90,7 +90,11 @@ type App struct {
 	// (Argo CD reports them as requiring pruning). AutoPrune says the
 	// application prunes by itself; SyncedExceptLeftovers says they are the
 	// only thing keeping it OutOfSync.
-	Leftovers             []Leftover `json:"leftovers,omitempty"`
+	Leftovers []Leftover `json:"leftovers,omitempty"`
+	// Tracked are the objects of the current render, hooks included, as the
+	// application's status and last sync name them; the runner uses them to
+	// tell a real leftover from an object owned by the release. Not sent.
+	Tracked               []Leftover `json:"-"`
 	AutoPrune             bool       `json:"auto_prune,omitempty"`
 	SyncedExceptLeftovers bool       `json:"synced_except_leftovers,omitempty"`
 	// WindowBlocked, for an application that syncs by itself, says why its

@@ -54,6 +54,9 @@ type Agent struct {
 	// ComparisonGrace is how long a ComparisonError must last before the step
 	// fails on it (default 20s).
 	ComparisonGrace time.Duration
+	// ChartSchema, when set, gives the values schema of a chart source at its
+	// revision (nil: not known); default: from a configured Git repository.
+	ChartSchema func(ctx context.Context, source map[string]any) ([]byte, error)
 
 	mu       sync.Mutex
 	seenCmp  map[string]time.Time
@@ -314,6 +317,10 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 		commit = d.Commit
 	}
 	facts := &engine.DeployFacts{Repo: d.Repo, Branch: d.Branch, Commit: commit, Abort: abort}
+	var valueFiles []string
+	if commit != "" {
+		valueFiles, _ = repo.CommitFiles(ctx, commit)
+	}
 	if commit == "" {
 		unlock()
 		log("Deployment %s made no commit on %s, so there is nothing to revert", d.Deployment, d.Branch)
@@ -343,7 +350,7 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 		log("Reverted %s with %s on %s", short(commit), short(res.Commit), d.Branch)
 	}
 	if d.WriteBack == nil || d.WriteBack.Mode != engine.WriteBackPullRequest {
-		pinRevert, perr := a.revertPin(ctx, job, log)
+		pinRevert, perr := a.revertPin(ctx, job, valueFiles, log)
 		if perr != nil {
 			return facts, perr
 		}
@@ -531,9 +538,7 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	snap := deploy.Snapshot{App: deploy.ReduceApplication(app, it.Spec, rc.ArgoCDURL, contains)}
 	unlock()
-	if it.Kind != engine.WatchUnit {
-		a.watchController(ctx, cl, it, app, snap.App)
-	}
+	a.afterReduce(ctx, cl, it, app, snap.App)
 	// An application that syncs by itself shows nothing in its status while
 	// a sync window holds it; say so from the windows themselves.
 	if app != nil && snap.App.Automated {
@@ -582,6 +587,17 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	snap.Rights = a.withWriteRights(snap.Rights, it.Project, it.Repo)
 	return snap
+}
+
+// afterReduce adds what the application's own status cannot say: the real
+// leftovers, and what the controller is stuck on.
+func (a *Agent) afterReduce(ctx context.Context, cl *Cluster, it engine.WatchItem, obj map[string]any, app *deploy.App) {
+	if obj != nil && app.Found {
+		a.realLeftovers(ctx, cl, it.Application, app)
+	}
+	if it.Kind != engine.WatchUnit {
+		a.watchController(ctx, cl, it, obj, app)
+	}
 }
 
 // Watch makes changed fire when what an item watches changes.
@@ -778,7 +794,7 @@ func (a *Agent) watchController(ctx context.Context, cl *Cluster, it engine.Watc
 // the application's own manifest is reverted in a commit of its own, and the
 // runner waits until the cluster shows the old pin. It returns that commit, or
 // "" when the deployment made no pin commit.
-func (a *Agent) revertPin(ctx context.Context, job *engine.Job, log func(string, ...any)) (string, error) {
+func (a *Agent) revertPin(ctx context.Context, job *engine.Job, valueFiles []string, log func(string, ...any)) (string, error) {
 	d := job.Deploy
 	repo, unlock, err := a.repoWrite(ctx, job, log)
 	if err != nil {
@@ -793,6 +809,10 @@ func (a *Agent) revertPin(ctx context.Context, job *engine.Job, log func(string,
 	if err != nil {
 		unlock()
 		return "", err
+	}
+	if held := a.preflightPin(ctx, repo, job, pinCommit, files, valueFiles, log); held != "" {
+		unlock()
+		return "", &HeldError{Msg: held}
 	}
 	res, err := repo.Revert(ctx, d.Deployment+"-pin", pinCommit, d.Message+"\n\n(the application's own manifest, after the values)")
 	var pins []pinned
@@ -809,7 +829,16 @@ func (a *Agent) revertPin(ctx context.Context, job *engine.Job, log func(string,
 	}
 	log("Rollback, step 2 of 2: reverted the application's own manifest %s with %s; waiting for the cluster to show the old chart pin before the sync is judged", short(pinCommit), short(res.Commit))
 	if err := a.waitForPin(ctx, job, pins, res.Commit, log); err != nil {
-		return "", err
+		return "", fmt.Errorf("%w. The pin revert %s is in Git but the cluster does not show it: Git and the cluster may disagree until it does. To put Git back to what is running, revert %s on %s",
+			err, short(res.Commit), short(res.Commit), d.Branch)
+	}
+	if bad := a.watchRender(ctx, job); bad != "" {
+		restored, rerr := a.restorePin(ctx, job, res.Commit, log)
+		if rerr != nil {
+			return "", fmt.Errorf("after the pin revert %s the controller cannot render the application (%s), and Launchway could not put the pin back (%v). Git now names the OLD chart pin but the cluster still runs the new version: revert %s on %s to make Git match, then clear the application's stuck operation (launchway deploy doctor)",
+				short(res.Commit), bad, rerr, short(res.Commit), d.Branch)
+		}
+		return "", &HeldError{Msg: fmt.Sprintf("Rolling back could not be finished: after the pin revert the controller cannot render the application (%s). Launchway put the chart pin back (commit %s), so Git again names what is running: the new chart with the reverted values. The previous image runs under the new chart; the deployment needs a person: fix the values for the old chart and roll back again, or deploy forward", bad, short(restored))}
 	}
 	return res.Commit, nil
 }

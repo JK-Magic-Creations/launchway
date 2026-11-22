@@ -2,6 +2,7 @@ package argocd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -85,7 +86,8 @@ type controller struct {
 	pinNew      bool
 	mixedRender bool // the child synced the new values while still on the old pin
 	revisionsAt func(pinNew bool) []any
-	revertMode  bool // the rollback: the parent applies the OLD pin after the pin revert is in Git
+	cmpErr      string // a ComparisonError shown while the old pin is in the spec
+	revertMode  bool   // the rollback: the parent applies the OLD pin after the pin revert is in Git
 }
 
 func (c *controller) app(wantPin bool) map[string]any {
@@ -93,13 +95,17 @@ func (c *controller) app(wantPin bool) map[string]any {
 	if c.pinNew {
 		pin = "2.0.0"
 	}
+	st := map[string]any{"sync": map[string]any{"status": "OutOfSync", "revisions": c.revisionsAt(c.pinNew)}}
+	if c.cmpErr != "" && !c.pinNew {
+		st["conditions"] = []any{map[string]any{"type": "ComparisonError", "message": c.cmpErr}}
+	}
 	return map[string]any{"apiVersion": "argoproj.io/v1alpha1", "kind": "Application",
 		"metadata": map[string]any{"name": "shop", "namespace": "argocd", "resourceVersion": "7",
 			"annotations": map[string]any{"argocd.argoproj.io/tracking-id": "root:argoproj.io/Application:argocd/shop"}},
 		"spec": map[string]any{"sources": []any{
 			map[string]any{"repoURL": "https://charts.example", "chart": "shop", "targetRevision": pin},
 			map[string]any{"repoURL": c.bare, "targetRevision": "main"}}},
-		"status": map[string]any{"sync": map[string]any{"status": "OutOfSync", "revisions": c.revisionsAt(c.pinNew)}}}
+		"status": st}
 }
 
 func (c *controller) look() {
@@ -391,5 +397,114 @@ func TestRollbackOfAPairedDeploymentRevertsValuesThenThePinAndWaits(t *testing.T
 	}
 	if !strings.Contains(strings.Join(lines, "\n"), "Rollback, step 2 of 2") || !strings.Contains(strings.Join(lines, "\n"), "shows the new pin") {
 		t.Fatalf("log:\n%s", strings.Join(lines, "\n"))
+	}
+}
+
+const oldSchema = `{"type":"object","additionalProperties":false,"properties":{"image":{"type":"object","properties":{"tag":{"type":"string"}}},"replicas":{"type":"integer"}}}`
+
+func TestSchemaRejectsKeysTheOldChartDoesNotKnow(t *testing.T) {
+	bad := schemaRejects([]byte(oldSchema), []byte("image:\n  tag: \"1\"\nnetworkPolicy:\n  enabled: true\n"))
+	if len(bad) != 1 || bad[0] != "networkPolicy" {
+		t.Fatalf("%v", bad)
+	}
+	if bad := schemaRejects([]byte(oldSchema), []byte("image:\n  tag: \"1\"\nreplicas: 2\n")); len(bad) != 0 {
+		t.Fatalf("%v", bad)
+	}
+	// A schema that allows extra properties refuses nothing.
+	if bad := schemaRejects([]byte(`{"type":"object","properties":{}}`), []byte("x: 1\n")); len(bad) != 0 {
+		t.Fatalf("%v", bad)
+	}
+}
+
+// The incident: the values still hold a key only the new chart knows, so the
+// rollback must NOT revert the pin. It says why and leaves Git at the new pin.
+func TestRollbackDoesNotRevertThePinIntoAChartThatRejectsTheValues(t *testing.T) {
+	bare := pairRepo(t)
+	ctl := &controller{t: t, bare: bare, looksAfter: 0, revisionsAt: func(n bool) []any {
+		if n {
+			return []any{"2.0.0", "x"}
+		}
+		return []any{"1.0.0", "x"}
+	}}
+	a, _ := pairSetup(t, ctl)
+	a.ChartSchema = func(context.Context, map[string]any) ([]byte, error) { return []byte(oldSchema), nil }
+	j := pairJob()
+	if _, err := a.Apply(context.Background(), j, func(string, ...any) {}); err != nil {
+		t.Fatal(err)
+	}
+	ctl.mu.Lock()
+	ctl.revertMode, ctl.seen = true, 0
+	ctl.mu.Unlock()
+	rb := j
+	rb.Deploy.Action = engine.ActionRevert
+	// A later commit added a key only the new chart knows: the values revert keeps it.
+	work := filepath.Join(t.TempDir(), "w")
+	for _, args := range [][]string{{"clone", "-q", bare, work}} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("%s", out)
+		}
+	}
+	f := filepath.Join(work, "values", "shop.yaml")
+	cur, _ := os.ReadFile(f)
+	os.WriteFile(f, append([]byte("networkPolicy:\n  enabled: true\n\n\n\n"), cur...), 0o644)
+	for _, args := range [][]string{{"commit", "-qam", "network policy"}, {"push", "-q", "origin", "HEAD:main"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = work
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%s", out)
+		}
+	}
+	facts, err := a.Revert(context.Background(), rb, func(string, ...any) {})
+	var held *HeldError
+	if !errorsAs(err, &held) || !strings.Contains(err.Error(), "does not accept these values") || !strings.Contains(err.Error(), "networkPolicy") || !strings.Contains(err.Error(), "NOT reverted") {
+		t.Fatalf("%v %+v", err, facts)
+	}
+	if strings.Contains(gitLog(t, bare), "Launchway-Revert: dep_1-pin") {
+		t.Fatal("the pin was reverted")
+	}
+}
+
+// A rollback whose pin revert leaves the controller unable to render restores
+// the pin, so Git names what is running, and says so.
+func TestRollbackRestoresThePinWhenTheControllerCannotRender(t *testing.T) {
+	bare := pairRepo(t)
+	ctl := &controller{t: t, bare: bare, revisionsAt: func(n bool) []any {
+		if n {
+			return []any{"2.0.0", "x"}
+		}
+		return []any{"1.0.0", "x"}
+	}, cmpErr: "values don't meet the specifications of the schema(s): additional properties 'networkPolicy' not allowed"}
+	a, _ := pairSetup(t, ctl)
+	a.ComparisonGrace = 50 * time.Millisecond
+	if _, err := a.Apply(context.Background(), pairJob(), func(string, ...any) {}); err != nil {
+		t.Fatal(err)
+	}
+	ctl.mu.Lock()
+	ctl.revertMode, ctl.seen = true, 0
+	ctl.mu.Unlock()
+	rb := pairJob()
+	rb.Deploy.Action = engine.ActionRevert
+	_, err := a.Revert(context.Background(), rb, func(string, ...any) {})
+	var held *HeldError
+	if !errors.As(err, &held) || !strings.Contains(err.Error(), "additional properties 'networkPolicy' not allowed") || !strings.Contains(err.Error(), "Git again names what is running") {
+		t.Fatalf("%v", err)
+	}
+	if !strings.Contains(gitLog(t, bare), "Launchway-Revert: dep_1-pin-restore") {
+		t.Fatal("the pin was not restored in Git")
+	}
+}
+
+func TestDoctorFindsAndClearsAStaleOperationWithNoDeploymentRunning(t *testing.T) {
+	bare, _ := bareRepo(t)
+	dyn, cl := fakeCluster(t, staleApp(bare))
+	a := agentFor(t, bare, cl)
+	dg, err := a.Doctor(context.Background(), "homelab", "shop", false)
+	if err != nil || !strings.Contains(dg.Stale, "started with source 0 at 2.0.0") || dg.Cleared || len(patches(dyn)) != 0 {
+		t.Fatalf("%v %+v %v", err, dg, patches(dyn))
+	}
+	dg, err = a.Doctor(context.Background(), "homelab", "shop", true)
+	if err != nil || !dg.Cleared || len(patches(dyn)) != 1 {
+		t.Fatalf("%v %+v %v", err, dg, patches(dyn))
 	}
 }

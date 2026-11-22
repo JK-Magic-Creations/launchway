@@ -126,9 +126,13 @@ compatibility reason.
 
 **Leftovers.** With pruning off, objects the new render no longer includes (a NetworkPolicy after
 `networkPolicy.enabled` became false) stay in the cluster. The deploy step names them ("2 objects from an earlier
-render are still present and are no longer part of the release") and **fails** when any is a security-relevant kind
-(NetworkPolicy, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ServiceAccount, Ingress and route kinds,
-Secret) unless the step sets `sync.leftovers: warn`; other kinds only warn. Nothing is deleted for you.
+render are still present and are no longer part of the release"). The chart's own hook objects (the bootstrap Job's
+service account, role and binding, annotated `helm.sh/hook`) are not leftovers, and neither are objects owned by
+something the release renders. A real leftover **never fails the step and never rolls the deployment back**: the new
+version is running and healthy, so the deployment ends "delivered, with a problem to fix" (phase `leftovers`) when
+a leftover is a security-relevant kind (NetworkPolicy, Role, RoleBinding, ClusterRole, ClusterRoleBinding,
+ServiceAccount, Ingress and route kinds, Secret), unless the step sets `sync.leftovers: warn`; other kinds only
+warn. Nothing is deleted for you: remove them with `kubectl delete`, or turn pruning on.
 
 ## Rolling back
 
@@ -144,3 +148,8 @@ it starts, and its sign-in, webhook deliveries and Git run tokens fail.
    root key Secret. A Git revert alone does not restore the data. Anything made after the dump is lost: this is the
    price of sealing, and the reason to wait for a quiet period before relying on it.
 3. Do not delete the root key Secret: a database sealed with it cannot be read without it.
+
+The chart refuses values it does not know, so an automatic or manual rollback that pins the previous chart while
+the values file holds a new key (for example `networkPolicy`) cannot render. Launchway's own rollback checks the
+old chart's `values.schema.json` before it reverts the pin; if the old chart refuses the values it does not revert
+the pin, says which keys and why, and leaves Git at the new pin, matching what runs ("held: needs a person").

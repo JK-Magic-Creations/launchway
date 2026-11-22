@@ -465,17 +465,37 @@ func reduceMeasurements(m *Metric, items []any, ns string) {
 // reduceLeftovers finds the objects Argo CD says require pruning: no longer
 // rendered, still in the cluster.
 func reduceLeftovers(app *App, status map[string]any) {
-	outOfSync := 0
-	for _, x := range list(status, "resources") {
-		xm := asMap(x)
-		if pr, _ := xm["requiresPruning"].(bool); pr {
-			app.Leftovers = append(app.Leftovers, Leftover{Group: str(xm, "group"), Kind: str(xm, "kind"), Namespace: str(xm, "namespace"),
-				Name: str(xm, "name"), Security: securityKinds[str(xm, "kind")]})
-		} else if str(xm, "status") == "OutOfSync" {
-			outOfSync++
+	// Hook resources of the current render (helm.sh/hook, the controller's own
+	// hooks) are applied as hooks of the sync, not tracked as resources: they
+	// are never leftovers, whatever their delete policy leaves in place.
+	hooks := map[string]bool{}
+	for _, r := range list(mapAt(mapAt(status, "operationState"), "syncResult"), "resources") {
+		rm := asMap(r)
+		if str(rm, "hookType") != "" {
+			hooks[refKey(str(rm, "group"), str(rm, "kind"), str(rm, "namespace"), str(rm, "name"))] = true
+			app.Tracked = append(app.Tracked, Leftover{Group: str(rm, "group"), Kind: str(rm, "kind"), Namespace: str(rm, "namespace"), Name: str(rm, "name")})
 		}
 	}
-	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && len(app.Leftovers) > 0
+	outOfSync, pruning := 0, 0
+	for _, x := range list(status, "resources") {
+		xm := asMap(x)
+		l := Leftover{Group: str(xm, "group"), Kind: str(xm, "kind"), Namespace: str(xm, "namespace"),
+			Name: str(xm, "name"), Security: securityKinds[str(xm, "kind")]}
+		if pr, _ := xm["requiresPruning"].(bool); pr {
+			pruning++
+			if hook, _ := xm["hook"].(bool); hook || hooks[refKey(l.Group, l.Kind, l.Namespace, l.Name)] {
+				app.Tracked = append(app.Tracked, l)
+				continue
+			}
+			app.Leftovers = append(app.Leftovers, l)
+		} else {
+			app.Tracked = append(app.Tracked, l)
+			if str(xm, "status") == "OutOfSync" {
+				outOfSync++
+			}
+		}
+	}
+	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && pruning > 0
 }
 
 // reduceController words what the controller is doing and finds a sync
@@ -540,3 +560,8 @@ func staleOperation(obj, os map[string]any) string {
 	}
 	return ""
 }
+
+func refKey(group, kind, ns, name string) string { return group + "/" + kind + "/" + ns + "/" + name }
+
+// RefKey names an object the way the leftover check compares them.
+func (l Leftover) RefKey() string { return refKey(l.Group, l.Kind, l.Namespace, l.Name) }
