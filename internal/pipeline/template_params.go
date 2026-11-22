@@ -188,8 +188,8 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 		}
 	case emptyNode != nil:
 		switch {
-		case p.Type != paramTypeList && p.Type != paramTypeString:
-			ps.add(emptyNode, at+".empty", "%s is a %s; empty: is for a list or a text parameter", name, p.Type)
+		case p.Type != paramTypeList && p.Type != paramTypeObjects && p.Type != paramTypeString:
+			ps.add(emptyNode, at+".empty", "%s is a %s; empty: is for a list, a list of objects or a text parameter", name, p.Type)
 		case empty != "true" && empty != "false":
 			ps.add(emptyNode, at+".empty", "write empty: true (keep the step when the list is empty) or empty: false (keep it when the list has something)")
 		default:
@@ -197,6 +197,9 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 			if p.Type == paramTypeList {
 				items, _ := ParseList(ps.tmpl.values[name])
 				isEmpty = len(items) == 0
+			}
+			if p.Type == paramTypeObjects {
+				isEmpty = len(ObjectItems(ps.tmpl.values[name])) == 0
 			}
 			t.keep = isEmpty == (empty == "true")
 		}

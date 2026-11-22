@@ -284,7 +284,7 @@ A step that uses a template takes only `uses`, `with`, `description`, `needs`, `
 List a library's templates and their parameters before writing a `uses` step.
 
 A template file (`templates/<name>.yaml` in the library) has `template`, `description`, `params`
-(`name: { type: string|number|boolean|list, default, description, options, from }`), `containers`,
+(`name: { type: string|number|boolean|list|objects, default, description, options, from, fields }`; `objects` is a list of records, each with a `name`, that a step or a list entry of the template repeats for with `for_each: { app: { param: apps } }` and `{ each: app, field: dockerfile }`), `containers`,
 `steps` and `outputs` (`key: { from: step.key }`). In a template, `{ param: name }` (with `format:`
 for text around it) stands for a parameter's value, and `if: { param: name }` or
 `if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).

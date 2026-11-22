@@ -381,8 +381,8 @@ func (ps *parser) parseBuildSecrets(n *yaml.Node, at string) map[string]SecretRe
 	if len(n.Content) > MaxBuildSecrets {
 		ps.add(n, at, "at most %d build secrets", MaxBuildSecrets)
 	}
-	for i, item := range n.Content {
-		where := fmt.Sprintf("%s[%d]", at, i)
+	for _, e := range ps.expandEntries(n.Content, at) {
+		item, where := e.n, e.at
 		var id string
 		var ref SecretRef
 		var refNode *yaml.Node
@@ -439,12 +439,8 @@ func (ps *parser) parseImageTags(n *yaml.Node, at string, b *ImageBuild) []Image
 		ps.add(n, at, "at most %d tags", MaxImageTags)
 	}
 	var out []ImageTag
-	for i, item := range n.Content {
-		where := fmt.Sprintf("%s[%d]", at, i)
-		item, keep := ps.entry(item, where)
-		if !keep {
-			continue
-		}
+	for _, e := range ps.expandEntries(n.Content, at) {
+		item, where := e.n, e.at
 		var t ImageTag
 		ps.eachKey(item, where, imageTagKeys, func(k, v *yaml.Node) {
 			switch k.Value {

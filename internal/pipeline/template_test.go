@@ -317,7 +317,7 @@ outputs:
 			t.Fatalf("%q: %+v", want, pr)
 		}
 	}
-	inTemplate("the type is string, number, boolean, list, environment, application or output", 3)
+	inTemplate("the type is string, number, boolean, list, objects, environment, application or output", 3)
 	inTemplate(`the default does not fit: b is a number; "lots" is not one`, 4)
 	inTemplate(`the default does not fit: c must be one of "y", "z"`, 5)
 	// The pipeline file says, at the uses step, that the template has problems.

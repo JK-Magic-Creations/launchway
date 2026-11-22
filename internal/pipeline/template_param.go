@@ -20,6 +20,8 @@ type Param struct {
 	DefaultFrom *DefaultFrom `json:"default_from,omitempty"`
 	Description string       `json:"description,omitempty"`
 	Options     []string     `json:"options,omitempty"`
+	// Fields are the fields a record of a parameter of type objects may have besides its name; empty: any.
+	Fields []string `json:"fields,omitempty"`
 	From        string       `json:"from,omitempty"` // the variable it takes (variables.go)
 	// SecretReference says a step takes its secret reference's store, key or
 	// field from the parameter; set when templates are described.
@@ -42,6 +44,10 @@ func (p *Param) check(v string) string {
 	case paramTypeList:
 		if _, msg := ParseList(v); msg != "" {
 			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
+		}
+	case paramTypeObjects:
+		if msg := p.checkObjects(v); msg != "" {
+			return msg
 		}
 	case paramTypeEnvironment, paramTypeApplication:
 		if msg := p.checkName(v); msg != "" {

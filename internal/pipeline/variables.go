@@ -196,9 +196,7 @@ func (b *varBinding) param(p *Param) (text string, found bool, msg string) {
 	if msg != "" {
 		return "", true, fmt.Sprintf("the variable %s (%s) does not fit the parameter %s: %s", p.From, v.Source, p.Name, msg)
 	}
-	if p.Type == paramTypeList {
-		text = canonList(text)
-	}
+	text = canonParam(p, text)
 	return text, true, ""
 }
 
@@ -208,10 +206,7 @@ func (b *varBinding) checkWith(p *Param, written string) string {
 	if msg := p.check(written); msg != "" {
 		return msg
 	}
-	value := written
-	if p.Type == paramTypeList {
-		value = canonList(written)
-	}
+	value := canonParam(p, written)
 	return b.lockedWith(p, value, written)
 }
 

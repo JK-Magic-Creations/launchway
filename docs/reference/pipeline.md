@@ -1657,6 +1657,8 @@ In a step with `for_each`, the `image`, an `env` value or a `with` value may be 
 |---|---|---|---|
 | `each` | loop key | required | A key under the step's `for_each` |
 | `format` | text | none | Text with exactly one `%s`, and no other `%`, such as `"python:%s"` |
+| `field` | field name | none | For a list taken from a template parameter of type `objects`: the member's record's field to take instead of its name (`name` is the name itself). A record without the field is refused when the template is read, unless `default` is given |
+| `default` | text | none | With `field`: what to take when the member's record has no such field |
 
 ### Parameter values
 
@@ -1936,10 +1938,11 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 <!-- keys: template-param -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an Airfield's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the launch runs. Both take `options` and `format` as a string does |
+| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `objects` (a list of records, see [Lists of records](#lists-of-records)), `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an Airfield's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the launch runs. Both take `options` and `format` as a string does |
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
+| `fields` | list of names | any | For `objects`: the fields a record may have besides `name`; a record with another is refused, naming the fields it may have |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
 
 A default can also be worked out. These forms are for string, number, boolean, Airfield and application parameters:
@@ -1995,7 +1998,7 @@ same library by name alone; and they take one more key:
 <!-- keys: template-step-extra -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags`, a deploy step's `write_back.changes`, a verify step's `metrics` and `logs` |
+| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags` and build `secrets`, a deploy step's `write_back.changes` and `sync.resources`, a verify step's `metrics` and `logs`, an ai step's `inputs`. An entry may also carry `for_each`, see [Lists of records](#lists-of-records) |
 
 <!-- keys: template-if -->
 | Key | Type | Default | Description |
@@ -2005,6 +2008,54 @@ same library by name alone; and they take one more key:
 | `in` | list parameter name | none | Keep the step when the parameter's value is one of the list's: `if: { param: environment, in: protected }` |
 | `empty` | boolean | none | For a list or text parameter: `empty: false` keeps the step when it has something, `empty: true` when it has nothing |
 | `all` | list of tests | none | Alone: keep the step when every test holds, each written as above |
+
+#### Lists of records
+
+A parameter of type `objects` is a list of records, each with a `name` and the fields the template lists under `fields`: the images of an
+application, the workloads it runs. A use writes them as a YAML list of mappings:
+
+```yaml
+with:
+  apps:
+    - { name: backend, repository: shop/backend, dockerfile: backend/Dockerfile }
+    - { name: frontend, repository: shop/frontend }
+```
+
+A record's name is unique in the list, and is its value in a loop, so where the list drives a step it is written as a loop value is (letters, digits, `. _ + -`). Every field is
+a single value of at most 512 bytes; at most 32 records. The list is kept as a JSON array with the fields in alphabetical order, so two ways of writing the same
+list are one value, and `if: { param: apps, empty: false }` tests whether it has records.
+
+The list repeats things in two ways, so that one template delivers one workload or several:
+
+- **A step**, with [`for_each`](#for-each): `for_each: { app: { param: apps } }` makes one member for each record, named `step[app=<name>]`, and `{ each: app, field: dockerfile, default: Dockerfile }`
+  (see [Loop values](#loop-values)) puts the record's field in the member's `with`, `env` or `image`.
+- **An entry of a list**: a deploy step's `write_back.changes` and `sync.resources`, a verify step's `metrics` and `logs`, an image step's `tags` and build `secrets`, an ai step's
+  `inputs`, may carry `for_each` with one key and one list (a parameter of type `list` or `objects`, or written in place) and is then written once for each value, with each
+  `{ each: app, field: f }` in it, anywhere in the entry, replaced by the text of that record's field. The reference to another step's output, to the tag of the member's build,
+  is `tag: { output: { each: app, format: "build[app=%s].tag" } }`.
+
+```yaml
+steps:
+  build:
+    uses: build
+    for_each: { app: { param: apps } }
+    with: { repository: { each: app, field: repository } }
+  deploy:
+    kind: deploy
+    needs: [build]
+    argocd:
+      write_back:
+        changes:
+          - for_each: { app: { param: apps } }
+            file: { each: app, field: manifest }
+            image: { each: app, field: repository }
+            tag: { output: { each: app, format: "build[app=%s].tag" } }
+      sync:
+        resources:
+          - for_each: { app: { param: apps } }
+            kind: Rollout
+            name: { each: app, field: workload }
+```
 
 Inside a template, steps refer to each other by the names the template gives them; files of the
 library are at `$LAUNCHWAY_LIB`. Templates may use templates down to 4 levels.

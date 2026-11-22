@@ -591,12 +591,9 @@ func (ps *parser) parseWriteBack(n *yaml.Node, at string) *WriteBack {
 			if len(v.Content) > MaxChanges {
 				ps.add(v, where, "at most %d changes", MaxChanges)
 			}
-			for i, c := range v.Content {
-				c, keep := ps.entry(c, fmt.Sprintf("%s[%d]", where, i))
-				if keep {
-					w.Changes = append(w.Changes, ps.parseChange(c, fmt.Sprintf("%s[%d]", where, i)))
-				}
-			}
+			ps.eachEntry(v.Content, where, func(c *yaml.Node, at string) {
+				w.Changes = append(w.Changes, ps.parseChange(c, at))
+			})
 		}
 	})
 	if n.Kind != yaml.MappingNode {
@@ -767,9 +764,9 @@ func (ps *parser) parseSync(n *yaml.Node, at string, s *Sync) {
 			if len(v.Content) > MaxSyncResources {
 				ps.add(v, where, "at most %d resources", MaxSyncResources)
 			}
-			for i, r := range v.Content {
-				s.Resources = append(s.Resources, ps.parseResource(r, fmt.Sprintf("%s[%d]", where, i)))
-			}
+			ps.eachEntry(v.Content, where, func(r *yaml.Node, at string) {
+				s.Resources = append(s.Resources, ps.parseResource(r, at))
+			})
 		}
 	})
 }

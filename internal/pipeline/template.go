@@ -196,9 +196,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			continue
 		}
 		scope.values[k] = with[k]
-		if p.Type == paramTypeList {
-			scope.values[k] = canonList(with[k])
-		}
+		scope.values[k] = canonParam(p, with[k])
 	}
 	if !fillParams(t.Params, scope.values, with, name, usesLine, withProblem, vb) {
 		withOK = false
@@ -304,7 +302,7 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		p := &Param{Name: k.Value, Type: paramTypeString, Line: k.Line}
 		nodes[k.Value] = k
 		var defNode, optNode *yaml.Node
-		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from"}, func(k2, v2 *yaml.Node) {
+		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from", "fields"}, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
 			switch k2.Value {
 			case "type":
@@ -319,7 +317,9 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 					return
 				}
 				var d string
-				if v2.Kind == yaml.SequenceNode {
+				if v2.Kind == yaml.SequenceNode && p.Type == paramTypeObjects {
+					d = ps.objectsNode(v2, where)
+				} else if v2.Kind == yaml.SequenceNode {
 					d, _ = ps.inputLiteral(v2, where, InputList)
 				} else {
 					d = ps.str(v2, where)
@@ -332,12 +332,22 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 				}
 			case "from":
 				p.From = ps.variableName(v2, where)
+			case "fields":
+				p.Fields = ps.strList(v2, where)
+				for _, f := range p.Fields {
+					if !fieldNameRe.MatchString(f) || f == objectNameField {
+						ps.add(v2, where, "%q is not a field name: use lower-case letters, digits and _, starting with a letter; name is every record's and is not listed", clipText(f, 40))
+					}
+				}
 			case "options":
 				p.Options, optNode = ps.strList(v2, where), v2
 			}
 		})
+		if len(p.Fields) > 0 && p.Type != paramTypeObjects {
+			ps.add(nodes[k.Value], at+".fields", "fields are for a parameter of type objects; %s is a %s", k.Value, p.Type)
+		}
 		if optNode != nil {
-			if p.Type == paramTypeBoolean || p.Type == paramTypeList {
+			if p.Type == paramTypeBoolean || p.Type == paramTypeList || p.Type == paramTypeObjects {
 				ps.add(optNode, at+".options", "options are for strings and numbers")
 			}
 			opts := p.Options
@@ -352,8 +362,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		if defNode != nil {
 			if msg := p.check(*p.Default); msg != "" {
 				ps.add(defNode, at+".default", "the default does not fit: %s", msg)
-			} else if p.Type == paramTypeList {
-				d := canonList(*p.Default)
+			} else if p.Type == paramTypeList || p.Type == paramTypeObjects {
+				d := canonParam(p, *p.Default)
 				p.Default = &d
 			}
 		}

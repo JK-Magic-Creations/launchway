@@ -156,6 +156,9 @@ func Bind(p *Pipeline, values map[string]string, o BindOptions) (*Pipeline, erro
 // list), or in the pipeline { input: name } with an optional format.
 func (ps *parser) withValue(s *Step, key string, v *yaml.Node, where string) string {
 	switch {
+	case v.Kind == yaml.SequenceNode && len(v.Content) > 0 && v.Content[0].Kind == yaml.MappingNode:
+		// A list of records, for a parameter of type objects.
+		return ps.objectsNode(v, where)
 	case v.Kind == yaml.SequenceNode:
 		items := []string{}
 		for _, c := range v.Content {

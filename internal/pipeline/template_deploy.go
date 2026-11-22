@@ -9,7 +9,7 @@ import (
 // strings that mean something: the name of a delivery environment, and of an
 // Argo CD application. A use that passes anything else is refused where it is
 // written, not when the deploy runs.
-var ParamTypes = []string{paramTypeString, paramTypeNumber, paramTypeBoolean, paramTypeList, paramTypeEnvironment, paramTypeApplication, paramTypeOutput}
+var ParamTypes = []string{paramTypeString, paramTypeNumber, paramTypeBoolean, paramTypeList, paramTypeObjects, paramTypeEnvironment, paramTypeApplication, paramTypeOutput}
 
 // checkName returns why v is not an environment's or an application's name,
 // or "".
