@@ -245,6 +245,7 @@ func (s *Server) graphNeighbours(w http.ResponseWriter, r *http.Request) {
 		s.failGraph(w, err)
 		return
 	}
+	out.Fill()
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -289,6 +290,7 @@ func (s *Server) graphImpact(w http.ResponseWriter, r *http.Request) {
 		s.failGraph(w, err)
 		return
 	}
+	out.Fill()
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -346,6 +348,7 @@ func (s *Server) graphOrder(w http.ResponseWriter, r *http.Request) {
 		s.failGraph(w, err)
 		return
 	}
+	out.Fill()
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -367,6 +370,7 @@ func (s *Server) graphRebuildSet(w http.ResponseWriter, r *http.Request) {
 		s.failGraph(w, err)
 		return
 	}
+	out.Fill()
 	writeJSON(w, http.StatusOK, out)
 }
 

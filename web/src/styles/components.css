@@ -57,7 +57,7 @@
 .callout-wait .btn { min-height: 32px; }
 .empty { padding: 48px 24px; text-align: center; border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--text-2); }
 .empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.empty .code { text-align: left; display: inline-block; margin: 12px 0; }
+.empty .code { text-align: left; display: inline-block; margin: 12px 0; max-width: 100%; }
 .code { margin: 0; padding: 12px 14px; background: var(--surface-2); border-radius: 8px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; overflow: auto; white-space: pre; max-height: 520px; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }

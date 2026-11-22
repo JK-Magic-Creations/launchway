@@ -93,3 +93,9 @@
 .st-switch, .st-lockl { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
 .sto th[scope="row"] { text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--text); font-weight: 600; }
 .sto .st-why, .sto .st-hint { text-transform: none; }
+
+/* Narrow screens: a fieldset does not widen to its widest content, and the table of checks wraps. */
+.st-edit fieldset { min-width: 0; }
+.st-edit-table { width: 100%; table-layout: fixed; }
+.st-edit-table th, .st-edit-table td { overflow-wrap: anywhere; }
+.st-cov td, .st-cov th { position: relative; } /* the hidden words of a cell stay in the cell, so they cannot widen the page */

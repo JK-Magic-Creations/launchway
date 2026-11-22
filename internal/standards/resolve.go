@@ -269,7 +269,7 @@ func subset(a, b []string) bool {
 func Resolve(in ResolveInput) Effective {
 	ls := in.layers()
 	var notices []string
-	e := Effective{ProfileVersion: ProfileVersion, Detected: Detect(in.Files)}
+	e := Effective{ProfileVersion: ProfileVersion, Detected: Detect(in.Files), Exemptions: []ExemptionInfo{}}
 	e.Off = pick(in, ls, KeyOff, false, func(s Settings) (bool, bool) { return derefBool(s.Off) },
 		func(proposed, floor bool) bool { return proposed != floor }, showBool, &notices)
 	for _, l := range ls {

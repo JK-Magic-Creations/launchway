@@ -46,3 +46,46 @@ func ids(ctx context.Context, db queryer, q string, args ...any) ([]int64, error
 	})
 	return out, err
 }
+
+// The Fill methods make every list of an answer an empty list, not null, so that a client reads "nothing" as an
+// empty list (a page that loops over null stops drawing).
+
+// Fill makes the lists empty rather than nil.
+func (r *Reach) Fill() {
+	if r.Hits == nil {
+		r.Hits = []Hit{}
+	}
+}
+
+// Fill makes the lists empty rather than nil.
+func (r *ImpactResult) Fill() {
+	if r.ByOwner == nil {
+		r.ByOwner = []OwnerGroup{}
+	}
+	if r.Repositories == nil {
+		r.Repositories = []string{}
+	}
+	if r.Deployments == nil {
+		r.Deployments = []RunningDeployment{}
+	}
+}
+
+// Fill makes the lists empty rather than nil.
+func (r *OrderResult) Fill() {
+	if r.Order == nil {
+		r.Order = []string{}
+	}
+	if r.Levels == nil {
+		r.Levels = [][]string{}
+	}
+	if r.Edges == nil {
+		r.Edges = []RepoEdge{}
+	}
+}
+
+// Fill makes the lists empty rather than nil.
+func (r *RebuildResult) Fill() {
+	if r.Items == nil {
+		r.Items = []RebuildItem{}
+	}
+}

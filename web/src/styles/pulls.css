@@ -68,3 +68,5 @@
 .pr-keys dt { font-family: var(--mono, monospace); font-weight: 600; }
 .pr-keys dd { margin: 0; }
 .pr-file > header [data-owners] { margin-inline-start: auto; }
+/* Narrow screens: the filter buttons wrap instead of widening the page. */
+.seg { flex-wrap: wrap; max-width: 100%; }
