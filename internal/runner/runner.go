@@ -265,7 +265,7 @@ func (b *logBuffer) take(max int) []engine.LogLine {
 
 // resultWithin bounds delivering a finished step's last log lines and its
 // result. It does not bound the step.
-const resultWithin = 5 * time.Minute
+var resultWithin = 5 * time.Minute // a variable only so that a test can shorten it (export_test.go)
 
 func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	log := r.Log.With("run", job.RunID, "step", job.StepID, "attempt", job.Attempt)
@@ -973,17 +973,6 @@ func (r *Runner) reapSoon() {
 	case r.reapKick <- struct{}{}:
 	default:
 	}
-}
-
-func containerSpecs(job *engine.Job) []executor.ContainerSpec {
-	out := make([]executor.ContainerSpec, len(job.Containers))
-	for i, c := range job.Containers {
-		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
-			Service: c.Service, Command: c.Command,
-			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads,
-			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory, Ready: readySpec(c.Ready)}
-	}
-	return out
 }
 
 // git runs git through the one hardened runner. The repositories a runner

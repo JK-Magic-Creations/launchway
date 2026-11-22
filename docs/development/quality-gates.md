@@ -311,3 +311,12 @@ coverage report, point the floor check at that output instead.
 | Architecture and size tests | `internal/archtest/` |
 | Lint and coverage comparers | `scripts/quality/` |
 | Web gates | `web/eslint.config.js`, `web/vitest.config.ts`, `web/scripts/check-bundle.mjs` |
+
+## The image can always be built
+
+The image's web stage (`Dockerfile`) copies `web/`, then the files of the documentation that the interface's type check
+reads from outside `web/`, then runs `npm run build`. A file under `web/src` that reads something outside `web/` fails
+that build unless the stage copies it first; once nothing ran the stage and the image could not be built at all.
+`make image-inputs` (part of `make check`, no container needed) reads every relative import of `web/src` that leaves
+`web/`, and fails unless the Dockerfile's web stage copies that top-level directory before the build.
+`make image-build-check` runs the stage itself (`CONTAINER=podman` or `docker`, and the network for the base image).

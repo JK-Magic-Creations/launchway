@@ -7,8 +7,8 @@
     "internal/api/mcp_tools.go": 1331,
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1028,
-    "internal/engine/db.go": 1560,
-    "internal/engine/engine.go": 2106,
+    "internal/engine/db.go": 1517,
+    "internal/engine/engine.go": 2104,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1408,
     "web/src/api.ts": 1564
@@ -22,7 +22,6 @@
     "internal/pipeline/verify.go:parser.parseVerifyStep": 197,
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,
-    "internal/runner/runner.go:Runner.execute": 151,
     "internal/verify/source/source.go:openOne": 192
   }
 }

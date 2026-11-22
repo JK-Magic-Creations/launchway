@@ -347,7 +347,7 @@ GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
 QUALITY_DIR := $(CURDIR)/quality
 
-.PHONY: tracked-files test-sdks tools lint lint-baseline-update arch ratchet ratchet-update wall-update fmt-check vet \
+.PHONY: tracked-files image-inputs image-build-check test-sdks tools lint lint-baseline-update arch ratchet ratchet-update wall-update fmt-check vet \
 	web-lint web-test web-size web-a11y coverage coverage-check coverage-update check check-all
 
 tools: $(GOLANGCI_LINT)
@@ -385,6 +385,15 @@ vocabulary-update:
 
 tracked-files:
 	sh scripts/check-tracked-files.sh
+
+# The Dockerfile's web stage copies everything the UI's type check reads from outside web/ (fast, no container).
+image-inputs:
+	node scripts/check-image-inputs.mjs
+
+# Runs the image's web stage itself: npm ci and `npm run build` (the type check included) on exactly what the
+# Dockerfile copies. Needs a container tool (CONTAINER=podman or docker) and the network for its base image.
+image-build-check:
+	$(CONTAINER) build --target web -t launchway-web-check -f Dockerfile .
 
 ratchet:
 	go test -count=1 -run TestSizeRatchet ./internal/archtest/
@@ -440,7 +449,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: test-upgrade-fast fmt-check vet lint arch originality vocabulary tracked-files ratchet web-lint web-test learn-check
+check: test-upgrade-fast fmt-check vet lint arch originality vocabulary tracked-files image-inputs ratchet web-lint web-test learn-check
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.
