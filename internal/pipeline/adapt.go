@@ -30,9 +30,21 @@ type Adaptation struct {
 	Skip    []string
 	Extend  []*Extension
 	Replace []*Step
-	Line    int
+	// Stages are the settings of single stages, by stage name, and StageOrder
+	// the order they were written in.
+	Stages     map[string]*StageSettings
+	StageOrder []string
+	Line       int
 
 	skipLines map[string]int
+}
+
+// StageSettings is what a use of a template sets on one stage of it, without
+// replacing the stage: its resources, and which of the run's service
+// containers it starts.
+type StageSettings struct {
+	Resources *Resources
+	Line      int
 }
 
 // Extension is steps added next to a stage: after it (they need it, and what
@@ -44,7 +56,7 @@ type Extension struct {
 	Line          int
 }
 
-// parseAdapt reads skip, extend or replace of a step that uses a template.
+// parseAdapt reads skip, extend, replace or stages of a step that uses a template.
 func (ps *parser) parseAdapt(s *Step, key string, n *yaml.Node, at string) {
 	if s.adapt == nil {
 		s.adapt = &Adaptation{Line: n.Line, skipLines: map[string]int{}}
@@ -95,7 +107,70 @@ func (ps *parser) parseAdapt(s *Step, key string, n *yaml.Node, at string) {
 		}
 	case "replace":
 		a.Replace = append(a.Replace, ps.parseAdded(n, at)...)
+	case "stages":
+		ps.parseStages(a, n, at)
 	}
+}
+
+var stageKeys = []string{"resources"}
+
+// parseStages reads stages: a mapping of stage names to the settings of that
+// stage.
+func (ps *parser) parseStages(a *Adaptation, n *yaml.Node, at string) {
+	if n.Kind != yaml.MappingNode {
+		ps.add(n, at, "stages is a mapping of stage names to settings: stages: { test: { resources: { memory: 4Gi } } }")
+		return
+	}
+	if a.Stages == nil {
+		a.Stages = map[string]*StageSettings{}
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		k, v := n.Content[i], n.Content[i+1]
+		where := at + "." + k.Value
+		if !stepIDRe.MatchString(k.Value) {
+			ps.add(k, where, "%q is not a stage name: write the names the flight plan lists", clipText(k.Value, 40))
+			continue
+		}
+		if a.Stages[k.Value] != nil {
+			ps.add(k, where, "stage %q is written twice", k.Value)
+			continue
+		}
+		st := &StageSettings{Line: k.Line}
+		ps.eachKey(v, where, stageKeys, func(k2, v2 *yaml.Node) {
+			switch k2.Value {
+			case "resources":
+				st.Resources = ps.parseResources(v2, where+".resources")
+			}
+		})
+		a.Stages[k.Value] = st
+		a.StageOrder = append(a.StageOrder, k.Value)
+	}
+}
+
+// overlayResources is own with what it leaves out taken from base. It is nil
+// when both are.
+func overlayResources(own, base *Resources) *Resources {
+	if base == nil || base.IsZero() {
+		return own
+	}
+	if own == nil {
+		c := *base
+		return &c
+	}
+	c := *own
+	if c.CPU == "" {
+		c.CPU = base.CPU
+	}
+	if c.CPULimit == "" {
+		c.CPULimit = base.CPULimit
+	}
+	if c.Memory == "" {
+		c.Memory = base.Memory
+	}
+	if c.MemoryLimit == "" {
+		c.MemoryLimit = base.MemoryLimit
+	}
+	return &c
 }
 
 // parseAdded reads steps written in a use: as the steps of a pipeline, with
@@ -150,6 +225,24 @@ func (x *expander) adapt(sc *scope, use *Step, t *Template, at string) {
 	}
 	unknown := func(line int, path, id string) {
 		x.problem(sc, line, 0, at+"."+path, "the template %s has no stage %q; its stages are %s", t.Name, clipText(id, 40), stages())
+	}
+	for _, id := range a.StageOrder {
+		s, set := find(id), a.Stages[id]
+		switch {
+		case s == nil:
+			unknown(set.Line, "stages", id)
+		case set.Resources != nil && s.ResourceKind() == "":
+			x.problem(sc, set.Line, 0, at+".stages."+id+".resources", "the stage %s of %s runs no script, so it takes no resources", id, t.Name)
+		case set.Resources != nil:
+			c := *s
+			c.Resources = overlayResources(set.Resources, s.Resources)
+			c.resourcesLine = set.Line
+			for i, o := range t.Steps {
+				if o == s {
+					t.Steps[i] = &c
+				}
+			}
+		}
 	}
 	for _, id := range a.Skip {
 		s := find(id)
@@ -261,7 +354,7 @@ func (ps *parser) desugar(root *yaml.Node) {
 		k, v := root.Content[i], root.Content[i+1]
 		have[k.Value] = true
 		switch k.Value {
-		case "uses", "with", "skip", "extend", "replace":
+		case "uses", "with", "skip", "extend", "replace", "stages", "resources":
 			step.Content = append(step.Content, k, v)
 		default:
 			rest = append(rest, k, v)
@@ -290,7 +383,7 @@ func (ps *parser) checkAdaptKeys(at string, keys map[string]*yaml.Node) {
 	if keys["with"] != nil && keys["uses"] == nil {
 		ps.add(keys["with"], at+".with", "with passes values to a template, so it goes with uses")
 	}
-	for _, k := range []string{"skip", "extend", "replace"} {
+	for _, k := range []string{"skip", "extend", "replace", "stages"} {
 		if keys[k] != nil && keys["uses"] == nil {
 			ps.add(keys[k], at+"."+k, "%s changes what a template runs, so it goes with uses", k)
 		}
@@ -299,4 +392,4 @@ func (ps *parser) checkAdaptKeys(at string, keys map[string]*yaml.Node) {
 
 // useKeys are the keys a step that uses a template may have; the template
 // says everything else.
-var useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace"}
+var useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace", "stages", "resources"}

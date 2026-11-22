@@ -110,6 +110,8 @@ lists every variable a step receives.
 | `skip` | list of stage names | none | With `uses`: stages of the Flight plan to leave out; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `extend` | list | none | With `uses`: steps to add before or after a stage |
 | `replace` | mapping | none | With `uses`: stages to take over wholesale |
+| `stages` | mapping | none | With `uses`: settings of single stages by name, such as `stages: { test: { resources: { memory: 6Gi } } }`; see [Changing what a template runs](#changing-what-a-template-runs) |
+| `resources` | mapping | none | With `uses`: the resources of every stage that runs a script and sets none of its own; see [Resources](#resources) |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
 `$LAUNCHWAY_OUTPUTS` instead) and `runs_on` (use [`runner`](#runner)). Names other tools use for
@@ -577,6 +579,8 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `skip` | list of stage names | none | Stages of the template to leave out; what needed one then needs what it needed. A name the template does not have is refused, with the stages it has |
 | `extend` | list | none | Steps to add next to a stage; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
+| `stages` | mapping | none | Settings of single stages, by stage name: `resources` (the stage's CPU and memory, as a step's [`resources`](#resources); what it names wins over the stage's own, key by key). A name the template does not have is refused, with the stages it has; so is a stage that runs no script |
+| `resources` | mapping | none | The [resources](#resources) of every stage of the template that runs a script and sets none of its own (a stage's own keys, and `stages`, win key by key). Reaches stages of templates the template uses as well |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
 `POST /api/v1/validate?project=NAME` expand it. `launchway validate FILE --resolved` shows the steps that result, for the starters that ship with Launchway with no server (`--environment dev --environment prod:protected` and `--project-name NAME` stand in for what a server knows of the Flight, `--variable NAME=VALUE` for variables).
@@ -1229,8 +1233,20 @@ default for its kind, which an administrator keeps in the database (see
 [HTTP API](http-api.md)); the defaults that a new installation starts from are in the table below.
 Only a step that runs a script (kind `step`) takes it: an image step is built by the builder, whose
 memory is set where the builder is deployed, launch, rollout, Return to base, verify and ai steps run in
-the Station itself, and an approval runs nothing. A step that uses a template says nothing of its
-own; the template's steps may.
+the Station itself, and an approval runs nothing. A step that uses a template sets the resources of
+the template's stages in two ways: `resources` on the step is the default of every stage that runs a
+script and writes none of its own, and `stages: { test: { resources: { memory: 6Gi } } }` sets one
+stage's. A key a stage writes itself comes first, then the key under `stages`, then the step's
+`resources`; each key (`cpu`, `cpu_limit`, `memory`, `memory_limit`) is settled on its own.
+
+```yaml
+steps:
+  ci:
+    uses: launchway/go-service
+    resources: { memory: 3Gi }                       # every script stage
+    stages:
+      test: { resources: { cpu: 4, memory: 8Gi } }   # this stage only
+```
 
 Each of CPU and memory has an amount the step is **promised** (`cpu`, `memory`: the scheduler keeps
 that much free for it) and a **limit** (`cpu_limit`, `memory_limit`: the most it may use). A limit

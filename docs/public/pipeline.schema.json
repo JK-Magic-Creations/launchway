@@ -95,11 +95,13 @@
       "type": "string"
     },
     "replace": {},
+    "resources": {},
     "runner": {
       "description": "Which runners may run the steps: a pool, labels or both.",
       "type": "object"
     },
     "skip": {},
+    "stages": {},
     "steps": {
       "additionalProperties": {
         "additionalProperties": false,
@@ -252,6 +254,7 @@
           "service": {},
           "sign": {},
           "skip": {},
+          "stages": {},
           "tags": {},
           "target": {},
           "temperature": {},

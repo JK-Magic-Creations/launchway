@@ -527,6 +527,7 @@ type scope struct {
 	when          *Condition
 	retry         *retryPolicy
 	timeout       *Duration
+	resources     *Resources        // the uses step's resources: what a script stage of the template takes where it sets none of its own
 	each          map[string]string // the loop values of the uses step, and of those around it
 	continueFail  bool              // continue_for selected the loop member of the uses step
 }
@@ -775,6 +776,7 @@ func (x *expander) emit(sc *scope) {
 			child.group = g
 			child.inherit, child.inheritGroups = needs, groups
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
+			child.resources = overlayResources(s.Resources, sc.resources)
 			child.each = mergeEach(sc.each, s.Each)
 			child.continueFail = sc.continueFail || s.continueFail
 			if s.When != nil {
@@ -821,6 +823,15 @@ func (x *expander) emit(sc *scope) {
 		}
 		if !s.timeoutSet && sc.timeout != nil {
 			c.Timeout = *sc.timeout
+		}
+		if sc.resources != nil && c.ResourceKind() != "" {
+			c.Resources = overlayResources(c.Resources, sc.resources)
+			if c.resourcesLine == 0 {
+				c.resourcesLine = s.Line
+			}
+			if _, err := c.Resources.Parse(); err != nil {
+				x.problem(sc, c.resourcesLine, 0, "steps."+s.ID+".resources", "the resources of this stage, with those its use gives the template: %v", err)
+			}
 		}
 		if sc.tmpl != nil && !s.IsApproval() {
 			env := make(map[string]string, len(s.Env)+len(sc.tmpl.Values))

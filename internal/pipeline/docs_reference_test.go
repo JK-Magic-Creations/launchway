@@ -511,8 +511,8 @@ func accepted(t *testing.T, pr probe) []string {
 func kindKeys() map[string][]string {
 	return map[string][]string{
 		// uses makes a step a uses step, and with goes with uses.
-		"step":     minus(stepKeys, approvalOnly, []string{"deployment", "uses", "with", "skip", "extend", "replace"}),
-		"approval": minus(stepKeys, runOnly, loopKeys, []string{"uses", "with", "skip", "extend", "replace"}),
+		"step":     minus(stepKeys, approvalOnly, []string{"deployment", "uses", "with", "skip", "extend", "replace", "stages"}),
+		"approval": minus(stepKeys, runOnly, loopKeys, []string{"uses", "with", "skip", "extend", "replace", "stages"}),
 		"uses":     sortedSet(useKeys),
 		"image":    sortedSet(imageKeys),
 		"deploy":   sortedSet(deployKeys),
