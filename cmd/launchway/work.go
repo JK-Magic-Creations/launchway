@@ -15,7 +15,8 @@ import (
 // (an agent signs in with its own token and uses `work agent`).
 
 const workUsage = `Usage:
-  launchway work items list|show|create|update|move|rank|comment|link|unlink|code-link|history|attach|file|by-code|take-over
+  launchway work items list|show|create|update|move|rank|comment|react|link|unlink|code-link|history|attach|file|by-code|take-over
+  launchway work time start|stop|running|log|show|edit|delete|report|export
   launchway work board|roadmap|release-notes|home|inbox|spend|import|propose|health
   launchway work milestones list|create|update
   launchway work sprints list|show|create|update|start|complete|burndown
@@ -65,6 +66,14 @@ Items:
   launchway work items take-over REF                  a person takes an item an agent holds
   launchway work items react REF REACTION [--remove]   thumbs_up thumbs_down laugh hooray confused heart rocket eyes; one of each per person
   launchway work items react --comment ID REACTION [--remove]
+
+Time:
+  launchway work time start REF | stop [--note T] | running      your one timer (stopping keeps whole minutes, at least one, at most a day)
+  launchway work time log REF MINUTES [--day D] [--note T]       add an entry by hand
+  launchway work time show REF                                   an item's entries, total, and the remaining time when its estimate is in hours
+  launchway work time edit ENTRY_ID [--minutes N] [--day D] [--note T] | delete ENTRY_ID    your own entries
+  launchway work time report [--scope S] [--person P|me] [--from D] [--to D]    totals per person and item
+  launchway work time export [same flags] [--out FILE]           the entries as CSV
 
 Planning:
   launchway work board [--query Q] [--lanes assignee|epic|priority] [--sprint NAME]
@@ -173,6 +182,7 @@ var workGroups = map[string]func(*client, []string) error{
 	"autonomy":      (*client).workAutonomy,
 	"samples":       (*client).workSamples,
 	"agent":         (*client).workAgent,
+	"time":          (*client).workTime,
 }
 
 // ---- one command: flags, a request, an answer ----

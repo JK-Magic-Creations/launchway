@@ -596,6 +596,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `PUT /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `POST /api/v1/work/items/{ref}/take-over` | `take_over_work_item` | `work items take-over` | — | equal |
+| `GET /api/v1/work/items/{ref}/time` | `get_work_time` | `work time show` | — | equal |
+| `POST /api/v1/work/items/{ref}/time` | `log_work_time` | `work time log` | — | equal |
+| `POST /api/v1/work/items/{ref}/timer` | `start_work_timer` | `work time start` | — | equal |
 | `DELETE /api/v1/work/links/{id}` | `unlink_work_items` | `work items unlink` | — | equal |
 | `GET /api/v1/work/milestones` | `list_work_milestones` | `work milestones list` | — | equal |
 | `POST /api/v1/work/milestones` | `create_work_milestone` | `work milestones create` | — | equal |
@@ -620,6 +623,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/sprints/{id}/burndown` | `get_work_burndown` | `work sprints burndown` | — | equal |
 | `POST /api/v1/work/sprints/{id}/complete` | `complete_work_sprint` | `work sprints complete` | — | equal |
 | `POST /api/v1/work/sprints/{id}/start` | `start_work_sprint` | `work sprints start` | — | equal |
+| `GET /api/v1/work/time` | `get_work_time_report` | `work time report` | — | equal |
+| `GET /api/v1/work/time/export` | `export_work_time` | `work time export` | — | equal |
+| `DELETE /api/v1/work/time/{id}` | `delete_work_time` | `work time delete` | — | equal |
+| `PATCH /api/v1/work/time/{id}` | `edit_work_time` | `work time edit` | — | equal |
+| `GET /api/v1/work/timer` | `get_work_timer` | `work time running` | — | equal |
+| `POST /api/v1/work/timer/stop` | `stop_work_timer` | `work time stop` | — | equal |
 | `GET /api/v1/work/views` | `list_work_views` | `work views list` | — | equal |
 | `POST /api/v1/work/views` | `save_work_view` | `work views save` | — | equal |
 | `DELETE /api/v1/work/views/{id}` | `delete_work_view` | `work views delete` | — | equal |

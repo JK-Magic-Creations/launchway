@@ -79,6 +79,21 @@ func TestUpgradeFromSchema70KeepsEverythingAndAddsTheWorkTables(t *testing.T) {
 	if err != nil || len(rows) != 1 || rows[0].Count != 2 || !rows[0].Mine {
 		t.Fatalf("%+v %v", rows, err)
 	}
+	// Time entries: a person has one running timer, and the item's old rows are the ones the new table points at.
+	now := store.TimeRow{ID: "wt_1", Item: "wi_1", Who: "ada", Kind: "timer", Day: "2026-03-01", StartedAt: 5}
+	if err := store.TimeInsert(ctx, db, now); err != nil {
+		t.Fatal(err)
+	}
+	now.ID = "wt_2"
+	if err := store.TimeInsert(ctx, db, now); err == nil {
+		t.Fatal("a second running timer for one person was stored")
+	}
+	if ok, err := store.TimeFinish(ctx, db, "wt_1", 65000, 1, "x"); err != nil || !ok {
+		t.Fatalf("%v %v", ok, err)
+	}
+	if err := store.TimeInsert(ctx, db, now); err != nil {
+		t.Fatalf("a new timer after the first was stopped: %v", err)
+	}
 	cur.Close()
 
 	older := mustOpenAs(t, addr, clk, schemaOverview, &syncBuffer{})

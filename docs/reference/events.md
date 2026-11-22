@@ -531,6 +531,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `work.comment` | `POST /api/v1/work/items/{ref}/comments` |
 | `work.comment_edit` | `PATCH /api/v1/work/comments/{id}`: the earlier text is kept |
 | `work.react` | `PUT` or `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` and `/api/v1/work/comments/{id}/reactions/{reaction}`: a reaction made or taken back |
+| `work.time_log` | `POST /api/v1/work/items/{ref}/time`: an entry added; the detail says how long |
+| `work.timer_start` | `POST /api/v1/work/items/{ref}/timer` |
+| `work.timer_stop` | `POST /api/v1/work/timer/stop`: the detail says how long it counted for |
+| `work.time_edit` | `PATCH /api/v1/work/time/{id}` |
+| `work.time_delete` | `DELETE /api/v1/work/time/{id}` |
 | `work.link` | `POST /api/v1/work/items/{ref}/links`: blocks, relates or duplicates |
 | `work.unlink` | `DELETE /api/v1/work/links/{id}` |
 | `work.code_link` | `POST /api/v1/work/items/{ref}/code`: a commit, branch, pull request or run was tied to an item by hand or by an agent |

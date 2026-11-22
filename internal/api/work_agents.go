@@ -18,7 +18,7 @@ import (
 func (s *Server) workRoutes() []route {
 	const a = "/api/v1/work/agents"
 	const g = "/api/v1/work/agent"
-	routes := append(append(s.workItemRoutes(), s.workPlanRoutes()...), s.workProposalRoutes()...)
+	routes := append(append(append(s.workItemRoutes(), s.workPlanRoutes()...), s.workProposalRoutes()...), s.workTimeRoutes()...)
 	return append(routes, []route{
 		{"GET " + a, signedIn, "", s.agentsList},
 		{"POST " + a, signedIn, "work.agent_create", s.agentCreate},

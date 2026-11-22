@@ -18388,6 +18388,102 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.take_over
+    /api/v1/work/items/{ref}/time:
+        get:
+            description: 'The time logged on an item: {entries, total_minutes, by_person, running, estimate, estimate_unit, remaining_hours, note}. remaining_hours is the estimate less the logged time when the level''s estimate is in hours (negative: over); with points there is none and note says why. Whoever can see the item sees it.'
+            operationId: get_api_v1_work_items_ref_time
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The time logged on an item: {entries, total_minutes, by_person, running, estimate, estimate_unit, remaining_hours, note}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: 'Adds an entry for you: {minutes (1 to 1440), day (default today, not a day to come), note (500 bytes)}. 201. Needs the right to change work in the item''s scope; an agent does not log.'
+            operationId: post_api_v1_work_items_ref_time
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Adds an entry for you: {minutes (1 to 1440), day (default today, not a day to come), note (500 bytes)}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.time_log
+    /api/v1/work/items/{ref}/timer:
+        post:
+            description: 'Starts your timer on the item. One running timer per person: a second is 409 naming the first. 201.'
+            operationId: post_api_v1_work_items_ref_timer
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Starts your timer on the item.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.timer_start
     /api/v1/work/links/{id}:
         delete:
             description: Removes a link.
@@ -19032,6 +19128,166 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.sprint_start
+    /api/v1/work/time:
+        get:
+            description: 'Logged time over the items you may see: ?person= (a name, or me), ?from= and ?to= (days, inclusive), ?scope=. Answers {entries, total_minutes, people: [{who, minutes, items}], truncated}; at most 20,000 entries.'
+            operationId: get_api_v1_work_time
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Logged time over the items you may see: ?person= (a name, or me), ?from= and ?to= (days, inclusive), ?scope=.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/time/{id}:
+        delete:
+            description: Deletes your own entry, or discards your running timer.
+            operationId: delete_api_v1_work_time_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes your own entry, or discards your running timer.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.time_delete
+        patch:
+            description: Changes minutes, day or note of your own finished entry. 403 for another person's.
+            operationId: patch_api_v1_work_time_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes minutes, day or note of your own finished entry.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.time_edit
+    /api/v1/work/time/export:
+        get:
+            description: The same entries as text/csv (day,person,item,title,minutes,hours,kind,note), as an attachment; a cell a spreadsheet could read as a formula starts with an apostrophe.
+            operationId: get_api_v1_work_time_export
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The same entries as text/csv (day,person,item,title,minutes,hours,kind,note), as an attachment; a cell a spreadsheet could read as a formula starts with an apostrophe.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/timer:
+        get:
+            description: 'Your running timer: {"timer": {item, started_at, seconds}}, or {"timer": null}.'
+            operationId: get_api_v1_work_timer
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Your running timer: {"timer": {item, started_at, seconds}}, or {"timer": null}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/timer/stop:
+        post:
+            description: Stops your timer ({note} optional) and keeps whole minutes, at least one and at most a day; a timer left longer counts for a day and the entry says capped. 404 when none runs.
+            operationId: post_api_v1_work_timer_stop
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Stops your timer ({note} optional) and keeps whole minutes, at least one and at most a day; a timer left longer counts for a day and the entry says capped.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.timer_stop
     /api/v1/work/views:
         get:
             description: 'Saved queries you may use: yours, and shared ones.'

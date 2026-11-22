@@ -161,6 +161,21 @@ You may react to an item and to a comment with one of eight: `thumbs_up`, `thumb
 count of each reaction and whether it is yours (`launchway work items react REF heart`, the `react_to_work`
 tool). Taking a reaction back removes only yours.
 
+## Time
+
+Log time on an item with a **timer** or by hand. `launchway work time start PAY-12` starts your timer, `work time
+stop --note "found it"` stops it. A person has one running timer, so a second start is refused and names the
+first. A stopped timer counts whole minutes, at least one and at most a day; a timer left running for longer
+counts for a day and the entry says so, for you to correct with `work time edit`. `work time log PAY-12 90
+--day 2026-03-01 --note "review"` adds an entry by hand (1 to 1440 minutes, not for a day to come).
+
+You change or delete only your own entries. Anyone who can see an item sees its time; logging needs the right to
+change work in its scope, and an agent does not log. An item shows its total, each person's share and the timers
+running on it. **Remaining time** is the estimate less the logged time, and is worked out only where the level's
+estimate unit is hours; with points the item says so rather than turning points into hours. `work time report`
+adds the time up per person and item over the items you may see for a period, and `work time export` writes the
+entries as CSV (cells that a spreadsheet could read as formulas start with an apostrophe).
+
 ## Attachments
 
 A file may be attached to an item. Each file is up to 10 MB and an item holds at most 50. Files are kept in

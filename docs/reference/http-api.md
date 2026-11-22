@@ -1061,6 +1061,15 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` | `signed-in` | `work.react` | Takes your reaction back. |
 | `PUT /api/v1/work/comments/{id}/reactions/{reaction}` | `signed-in` | `work.react` | The same for a comment. Comments carry `reactions` in their list. |
 | `DELETE /api/v1/work/comments/{id}/reactions/{reaction}` | `signed-in` | `work.react` | Takes your reaction to a comment back. |
+| `GET /api/v1/work/items/{ref}/time` | `signed-in` | — | The time logged on an item: `{entries, total_minutes, by_person, running, estimate, estimate_unit, remaining_hours, note}`. `remaining_hours` is the estimate less the logged time when the level's estimate is in hours (negative: over); with points there is none and `note` says why. Whoever can see the item sees it. |
+| `POST /api/v1/work/items/{ref}/time` | `signed-in` | `work.time_log` | Adds an entry for you: `{minutes (1 to 1440), day (default today, not a day to come), note (500 bytes)}`. `201`. Needs the right to change work in the item's scope; an agent does not log. |
+| `POST /api/v1/work/items/{ref}/timer` | `signed-in` | `work.timer_start` | Starts your timer on the item. One running timer per person: a second is `409` naming the first. `201`. |
+| `GET /api/v1/work/timer` | `signed-in` | — | Your running timer: `{"timer": {item, started_at, seconds}}`, or `{"timer": null}`. |
+| `POST /api/v1/work/timer/stop` | `signed-in` | `work.timer_stop` | Stops your timer (`{note}` optional) and keeps whole minutes, at least one and at most a day; a timer left longer counts for a day and the entry says `capped`. `404` when none runs. |
+| `PATCH /api/v1/work/time/{id}` | `signed-in` | `work.time_edit` | Changes `minutes`, `day` or `note` of your own finished entry. `403` for another person's. |
+| `DELETE /api/v1/work/time/{id}` | `signed-in` | `work.time_delete` | Deletes your own entry, or discards your running timer. |
+| `GET /api/v1/work/time` | `signed-in` | — | Logged time over the items you may see: `?person=` (a name, or `me`), `?from=` and `?to=` (days, inclusive), `?scope=`. Answers `{entries, total_minutes, people: [{who, minutes, items}], truncated}`; at most 20,000 entries. |
+| `GET /api/v1/work/time/export` | `signed-in` | — | The same entries as `text/csv` (`day,person,item,title,minutes,hours,kind,note`), as an attachment; a cell a spreadsheet could read as a formula starts with an apostrophe. |
 | `PATCH /api/v1/work/comments/{id}` | `signed-in` | `work.comment_edit` | The author edits a comment; the earlier text is kept. |
 | `GET /api/v1/work/comments/{id}/edits` | `signed-in` | — | The earlier texts of a comment, oldest first. |
 | `GET /api/v1/work/items/{ref}/links` | `signed-in` | — | Links to other items (blocks, relates, duplicates), both directions, hiding items you may not see. |
