@@ -114,7 +114,9 @@ steps:
         key: { files: ["**/go.sum"], text: go-1.27 }
         fallback: latest
         max_age: 7d
-    resources: { cpu: 2, memory: 3Gi }
+    # Each step now has its own pod and so its own limit (it used to share the test step's 8Gi container):
+    # the vulnerability check compiling the whole module was killed at 3Gi.
+    resources: { cpu: 2, memory: 3Gi, memory_limit: 6Gi }
     timeout: 20m
 
   security-web:
@@ -164,7 +166,7 @@ steps:
         key: { files: ["**/go.sum"], text: go-1.27 }
         fallback: latest
         max_age: 7d
-    resources: { cpu: 2, memory: 3Gi }
+    resources: { cpu: 2, memory: 3Gi, memory_limit: 6Gi }
 
   # The new binary checks the pipeline files that ship with it. (The design also asks the RUNNING
   # server to validate them and the previous binary to read the new configuration; neither check
