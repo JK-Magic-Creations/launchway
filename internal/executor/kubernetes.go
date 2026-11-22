@@ -102,7 +102,10 @@ type Kubernetes struct {
 	keepFailed time.Duration
 	maxPodAge  time.Duration
 	startWait  time.Duration
-	started    time.Time // when this process began; pods of this runner older than it are a previous process's
+	// runIn, if set, runs what exec would run in a pod; tests use it to run the
+	// commands on a directory instead of a cluster.
+	runIn   func(ctx context.Context, pod, container string, cmd []string, stdin io.Reader, stdout, stderr io.Writer) error
+	started time.Time // when this process began; pods of this runner older than it are a previous process's
 
 	mu    sync.Mutex
 	pods  map[string]*runPod
@@ -729,6 +732,9 @@ func (k *Kubernetes) deleteAndWait(ctx context.Context, name string) error {
 
 // exec runs a command in a container, streaming its input and output.
 func (k *Kubernetes) exec(ctx context.Context, pod, container string, cmd []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	if k.runIn != nil {
+		return k.runIn(ctx, pod, container, cmd, stdin, stdout, stderr)
+	}
 	req := k.client.CoreV1().RESTClient().Post().Resource("pods").Name(pod).Namespace(k.o.Namespace).SubResource("exec").
 		VersionedParams(&corev1.PodExecOptions{Container: container, Command: cmd,
 			Stdin: stdin != nil, Stdout: stdout != nil, Stderr: stderr != nil}, scheme.ParameterCodec)

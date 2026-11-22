@@ -192,18 +192,19 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 func (r *Runner) buildContext(ctx context.Context, job *engine.Job, spec executor.Spec, ws, work string, sys func(string, ...any)) (string, string, error) {
 	b := job.ImageBuild
 	lim := executor.ExportLimits{MaxBytes: r.Images.MaxContextBytes(), MaxFiles: 1_000_000}
+	cs := executor.ContextSpec{Dir: b.Context, Dockerfile: b.File}
 	if ex, ok := r.Exec.(executor.DirExporter); ok {
 		ctxDir := filepath.Join(work, "context")
 		took := time.Now()
-		got, err := ex.ExportDir(ctx, spec, b.Context, ctxDir, lim)
+		got, err := ex.ExportContext(ctx, spec, cs, ctxDir, lim)
 		if err != nil {
 			if errors.Is(err, executor.ErrTooLarge) {
-				return "", "", fmt.Errorf("the build context %s is too large (%v); see images.max_context_mib, or add a .dockerignore", b.Context, err)
+				return "", "", err
 			}
 			return "", "", fmt.Errorf("copying the build context %s out of the run's pod: %w", b.Context, err)
 		}
 		if got {
-			sys("Copied the build context %s out of the run's pod in %s", b.Context, time.Since(took).Round(100*time.Millisecond))
+			sys("Copied the build context %s out of the run's pod in %s: only what its ignore file keeps", b.Context, time.Since(took).Round(100*time.Millisecond))
 			if rel, ok := within(b.Context, b.File); ok {
 				return ctxDir, filepath.Join(ctxDir, filepath.FromSlash(rel)), nil
 			}
@@ -213,6 +214,10 @@ func (r *Runner) buildContext(ctx context.Context, job *engine.Job, spec executo
 			if _, err := ex.ExportFile(ctx, spec, b.File, df, 1<<20); err != nil {
 				return "", "", fmt.Errorf("the Dockerfile %s: %w", b.File, err)
 			}
+			// The builder looks for <Dockerfile>.dockerignore beside the
+			// Dockerfile, so it goes there too, when there is one.
+			specific, _ := cs.IgnoreFiles()
+			_, _ = ex.ExportFile(ctx, spec, specific, df+".dockerignore", 1<<20)
 			return ctxDir, df, nil
 		}
 		// No pod yet: this is the run's first step, and the checkout is the
@@ -245,6 +250,11 @@ func (r *Runner) buildContext(ctx context.Context, job *engine.Job, spec executo
 	}
 	if fi, err := os.Stat(df); err != nil || !fi.Mode().IsRegular() {
 		return "", "", fmt.Errorf("the Dockerfile %s is not a file in the workspace", b.File)
+	}
+	// The builder sends only what the ignore file keeps; the limits apply to
+	// that, as they do to a context copied out of a pod.
+	if err := executor.CheckLocalContext(root, cs, lim); err != nil {
+		return "", "", err
 	}
 	return ctxDir, df, nil
 }
