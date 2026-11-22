@@ -128,6 +128,16 @@ steps:
 	if str(waited, "run", "status") != "failed" || waited["timed_out"] == true {
 		t.Fatalf("the run: %s", asJSON(waited))
 	}
+	// The client handles a notification on its own goroutine, so it may land just after the call returns.
+	for i := 0; i < 100; i++ {
+		progMu.Lock()
+		n := len(progress)
+		progMu.Unlock()
+		if n > 0 {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	progMu.Lock()
 	if len(progress) == 0 || !strings.Contains(strings.Join(progress, "\n"), "run #") {
 		t.Errorf("no progress notifications: %v", progress)
