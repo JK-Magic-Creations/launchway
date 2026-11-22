@@ -40,6 +40,11 @@ const (
 	CapRules        Capability = "rules"
 	CapForks        Capability = "forks"
 	CapLFS          Capability = "lfs"
+	// The write-back features of the Releases group.
+	CapTags         Capability = "releases.tags"
+	CapReleases     Capability = "releases.publish"
+	CapCommitFile   Capability = "content.write"
+	CapProposalNote Capability = "proposals.summary_comment"
 )
 
 // AllCapabilities is every capability, in a fixed order, so the generated
@@ -48,6 +53,7 @@ var AllCapabilities = []Capability{
 	CapIdentity, CapRepositories, CapRepoCreate, CapContent, CapEvents, CapAccess,
 	CapProposals, CapProposalRef, CapDrafts, CapReviews, CapResults, CapResultsGate,
 	CapLand, CapAutoLand, CapRules, CapForks, CapLFS,
+	CapTags, CapReleases, CapCommitFile, CapProposalNote,
 }
 
 // Declaration is one capability of one provider: how it is provided, why it

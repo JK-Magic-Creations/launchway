@@ -76,9 +76,23 @@ type Connection struct {
 	// Credential is a reference, never a value.
 	Credential SecretRef `json:"credential,omitzero"`
 	Events     EventMode `json:"events,omitempty"`
-	Enabled    bool      `json:"enabled"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	// AuthKind says what the credential is: "token" (a service-account or
+	// personal token, the only kind built). An app-installation credential is
+	// another value later, with AppRef naming its secret; no migration needed.
+	AuthKind string `json:"auth_kind,omitempty"`
+	AppRef   string `json:"app_ref,omitempty"`
+	// Owners is the allow-list of owners or organisations a Flight may use
+	// through this connection. Empty means every owner the credential reaches.
+	Owners []string `json:"owners,omitempty"`
+	// WebhookSecret is a reference to the secret that signs the host's
+	// deliveries to Launchway, never the secret.
+	WebhookSecret SecretRef `json:"webhook_secret,omitzero"`
+	// UploadURL is the host's documented address for release files, when it
+	// differs from the API's.
+	UploadURL string    `json:"upload_url,omitempty"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 var nameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}$`)
@@ -113,6 +127,25 @@ func (c Connection) Validate() error {
 	}
 	if err := c.Credential.Validate(); err != nil {
 		return bad("%v", err)
+	}
+	if err := c.WebhookSecret.Validate(); err != nil {
+		return bad("webhook_secret: %v", err)
+	}
+	switch c.AuthKind {
+	case "", "token":
+	default:
+		return bad("auth_kind %q is not built yet; use token", c.AuthKind)
+	}
+	for _, o := range c.Owners {
+		if o == "" || strings.ContainsAny(o, "/ ,") {
+			return bad("owners lists owner or organisation names, one each, without '/' or spaces")
+		}
+	}
+	if c.UploadURL != "" {
+		u, err := url.Parse(c.UploadURL)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil {
+			return bad("upload_url must be an http or https address without a user name")
+		}
 	}
 	switch c.Events {
 	case "", EventsInProcess, EventsWebhook, EventsPolling:
