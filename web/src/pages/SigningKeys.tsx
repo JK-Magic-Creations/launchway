@@ -56,8 +56,8 @@ export function SigningKeysPage() {
             <label className="field"><span>Stops counting on (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
           </div>
           <label className="field"><span>Public key</span>
-            <textarea value={pub} required rows={3} className="mono" placeholder="ssh-ed25519 AAAA… (the line in your .pub file)" onChange={(e) => setPub(e.target.value)} /></label>
-          <p className="sub">Then tell Git to sign with it: <Mono>git config gpg.format ssh</Mono>, <Mono>git config user.signingkey ~/.ssh/id_ed25519.pub</Mono>, <Mono>git config commit.gpgsign true</Mono>. OpenPGP keys cannot be used yet.</p>
+            <textarea value={pub} required rows={3} className="mono" placeholder="ssh-ed25519 AAAA… (the line in your .pub file), or an OpenPGP public key block" onChange={(e) => setPub(e.target.value)} /></label>
+          <p className="sub">Then tell Git to sign with it: <Mono>git config gpg.format ssh</Mono>, <Mono>git config user.signingkey ~/.ssh/id_ed25519.pub</Mono>, <Mono>git config commit.gpgsign true</Mono>. To sign with an OpenPGP key instead, paste its public key block (<Mono>gpg --armor --export &lt;id&gt;</Mono>) above.</p>
           <div><button type="submit" className="btn btn-primary" disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</button></div>
         </form>
       </Sheet>

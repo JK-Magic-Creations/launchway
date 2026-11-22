@@ -197,11 +197,11 @@ func TestAnnotatedTagAndOpenPGP(t *testing.T) {
 		t.Fatalf("unsigned tag: %+v", r)
 	}
 	pgp := "tree 1\nauthor A <a@x> 1 +0000\ncommitter A <a@x> 1 +0000\ngpgsig -----BEGIN PGP SIGNATURE-----\n \n abc\n -----END PGP SIGNATURE-----\n\nmsg\n"
-	if r := f.svc.verifier().Verify(ctx, "pgp", "commit", []byte(pgp), ""); r.State != Unsupported || !strings.Contains(r.Explanation, "OpenPGP") {
-		t.Fatalf("openpgp: %+v", r)
+	if r := f.svc.verifier().Verify(ctx, "pgp", "commit", []byte(pgp), ""); r.State != BadSignature || r.SignatureType != "openpgp" {
+		t.Fatalf("a damaged OpenPGP signature is a bad signature: %+v", r)
 	}
 	if _, err := f.st.Add(ctx, NewKey{Owner: "dana", PublicKey: "-----BEGIN PGP PUBLIC KEY BLOCK-----"}); err == nil || !strings.Contains(err.Error(), "OpenPGP") {
-		t.Fatalf("a PGP key must be refused for now: %v", err)
+		t.Fatalf("a PGP block with no key in it must be refused: %v", err)
 	}
 }
 

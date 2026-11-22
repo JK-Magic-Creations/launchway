@@ -109,34 +109,72 @@ func (v *Verifier) Verify(ctx context.Context, sha, kind string, raw []byte, pus
 		return res
 	}
 	res.SignatureType = p.SigType
-	if p.SigType != "ssh" {
-		res.State = Unsupported
-		res.Explanation = fmt.Sprintf("This %s is signed with %s, which this Launchway cannot check yet (SSH signatures are supported). It is not counted as verified.", kind, sigLabel(p.SigType))
-		return res
-	}
-	c, ok := v.Dir.GetCached(ctx, sha)
-	if !ok {
-		c = Cached{Object: sha, SigType: "ssh"}
-		sig, perr := ParseSSHSignature(p.Signature)
-		if perr != nil {
-			c.Reason = perr.Error()
-		} else {
-			c.Fingerprint = sig.Fingerprint()
-			if verr := sig.Verify(p.Payload); verr != nil {
-				c.Reason = verr.Error()
+	var (
+		c      Cached
+		native State // what the key's own data says of a good signature (revoked, expired); empty when fine
+	)
+	key, found, kerr := Key{}, false, error(nil)
+	switch p.SigType {
+	case "ssh":
+		var ok bool
+		if c, ok = v.Dir.GetCached(ctx, sha); !ok {
+			c = Cached{Object: sha, SigType: "ssh"}
+			sig, perr := ParseSSHSignature(p.Signature)
+			if perr != nil {
+				c.Reason = perr.Error()
 			} else {
-				c.CryptoOK = true
+				c.Fingerprint = sig.Fingerprint()
+				if verr := sig.Verify(p.Payload); verr != nil {
+					c.Reason = verr.Error()
+				} else {
+					c.CryptoOK = true
+				}
+			}
+			v.Dir.PutCached(ctx, c)
+		}
+		if c.Fingerprint != "" {
+			key, found, kerr = v.Dir.KeyByFingerprint(ctx, c.Fingerprint)
+		}
+	case "openpgp":
+		// The signature does not carry its key: the registered key is found by the fingerprint the signature
+		// names, and the check is made against it (and not cached, because the answer depends on the key).
+		c = Cached{Object: sha, SigType: "openpgp"}
+		sig, perr := parsePGPSignature(p.Signature)
+		switch {
+		case perr != nil:
+			c.Reason = perr.Error()
+		case sig.fingerprint == "":
+			res.State = UnknownKey
+			res.Explanation = "This " + kind + " is signed with OpenPGP, but the signature does not name its key by fingerprint, so Launchway cannot tell which registered key to check it against."
+			return res
+		default:
+			c.Fingerprint = sig.fingerprint
+			key, found, kerr = v.Dir.KeyByFingerprint(ctx, sig.fingerprint)
+			if found && kerr == nil {
+				st, cerr := checkPGP(key.PublicKey, p.Signature, p.Payload, sig.at)
+				switch st {
+				case Verified:
+					c.CryptoOK = true
+				case KeyRevoked, KeyExpired:
+					c.CryptoOK, native = true, st
+				default:
+					c.Reason = cerr.Error()
+				}
 			}
 		}
-		v.Dir.PutCached(ctx, c)
+	default:
+		res.State = Unsupported
+		res.Explanation = fmt.Sprintf("This %s is signed with %s, which this Launchway does not check (SSH and OpenPGP signatures are checked). It is not counted as verified.", kind, sigLabel(p.SigType))
+		return res
 	}
 	res.KeyFingerprint = c.Fingerprint
-	key, found, kerr := Key{}, false, error(nil)
-	if c.Fingerprint != "" {
-		key, found, kerr = v.Dir.KeyByFingerprint(ctx, c.Fingerprint)
-	}
 	if found {
 		res.KeyName, res.Signer, res.Installation = key.Name, key.Owner, key.Installation
+	}
+	if p.SigType == "openpgp" && !found && kerr == nil && c.Reason == "" {
+		res.State = UnknownKey
+		res.Explanation = "This " + kind + " is signed with the OpenPGP key " + c.Fingerprint + ", which nobody has registered on Launchway, so the signature cannot be checked or tied to a person. The key's owner can register the public key under Account, then Signing keys."
+		return res
 	}
 	if !c.CryptoOK {
 		res.State = BadSignature
@@ -151,6 +189,16 @@ func (v *Verifier) Verify(ctx context.Context, sha, kind string, raw []byte, pus
 	if !found {
 		res.State = UnknownKey
 		res.Explanation = "The signature is good, but it was made by a key (" + c.Fingerprint + ") that nobody has registered on Launchway, so it cannot be tied to a person. The key's owner can register it under Account, then Signing keys."
+		return res
+	}
+	switch native {
+	case KeyRevoked:
+		res.State = KeyRevoked
+		res.Explanation = fmt.Sprintf("The signature is good, but the key %q (%s) is revoked in its own data, and the revocation applies to a %s of this date.", key.Name, key.Owner, kind)
+		return res
+	case KeyExpired:
+		res.State = KeyExpired
+		res.Explanation = fmt.Sprintf("The signature is good, but the key %q (%s) had expired, by its own data, when this %s was signed.", key.Name, key.Owner, kind)
 		return res
 	}
 	at := p.Committer.At

@@ -51,6 +51,12 @@ cosign verify-attestation --key cosign.pub --insecure-ignore-tlog --type slsapro
 
 ## Libraries of Git over SSH
 
+Checking OpenPGP signatures on commits and tags ([Verified commits](../guide/verified-commits.md)) uses
+`github.com/ProtonMail/go-crypto` (v1.5.2; BSD 3-Clause license, copyright The Go Authors, with the Go project's
+PATENTS grant, and its one other dependency, `github.com/cloudflare/circl`, BSD 3-Clause). It is the maintained
+continuation of the Go project's frozen `openpgp` package and reads modern keys (Ed25519, ECDSA, current RSA
+key formats). It is used only to read public keys and check signatures; it is never given a private key.
+
 The built-in SSH server for Git ([Git over SSH](../guide/git-over-ssh.md)) uses one library,
 `golang.org/x/crypto/ssh`, from the Go project's `x/crypto` module (BSD 3-Clause license), linked into
 the `launchway` binary. There is no separate SSH server in the image or the chart, and no shell: the

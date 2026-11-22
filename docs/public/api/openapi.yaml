@@ -3779,7 +3779,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/mail:
         get:
-            description: Whether the installation's mail sender is configured and working, the queue length and the last error; with no sender configured it says so and nothing is queued.
+            description: Whether the installation's mail sender is configured and working, the number of messages waiting and the last error; with no sender configured it says so and nothing waits to be sent.
             operationId: get_api_v1_mail
             responses:
                 "200":
@@ -3796,7 +3796,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Whether the installation's mail sender is configured and working, the queue length and the last error; with no sender configured it says so and nothing is queued.
+            summary: Whether the installation's mail sender is configured and working, the number of messages waiting and the last error; with no sender configured it says so and nothing waits to be sent.
             tags:
                 - mail
             x-launchway-access: admin

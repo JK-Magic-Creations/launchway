@@ -71,7 +71,7 @@ func fromMs(n int64) time.Time {
 func ParseKey(text string) (ssh.PublicKey, string, error) {
 	text = strings.TrimSpace(text)
 	if strings.Contains(text, "BEGIN PGP") {
-		return nil, "", fmt.Errorf("%w: OpenPGP keys cannot be registered yet; sign with an SSH key (git config gpg.format ssh)", ErrInvalid)
+		return nil, "", fmt.Errorf("%w: this is an OpenPGP key block; it is registered through Add", ErrInvalid)
 	}
 	if strings.Count(text, "\n") > 0 || text == "" || len(text) > 8192 {
 		return nil, "", fmt.Errorf("%w: paste one line from a .pub file", ErrInvalid)
@@ -104,11 +104,17 @@ type NewKey struct {
 func keyOf(r store.SigningKeyRow) Key {
 	k := Key{ID: r.ID, Owner: r.Owner, Kind: r.Kind, Name: r.Name, Fingerprint: r.Fingerprint, PublicKey: r.PublicText, CreatedAt: fromMs(r.CreatedAt), ExpiresAt: fromMs(r.ExpiresAt), RevokedAt: fromMs(r.RevokedAt)}
 	k.Type, _, _ = strings.Cut(k.PublicKey, " ")
+	if r.Kind == kindPGP || r.Kind == kindPGPSub {
+		k.Type = "openpgp"
+	}
 	return k
 }
 
-// Add registers a signing key for a person.
+// Add registers a signing key for a person: an SSH public key (one line) or an OpenPGP public key block.
 func (s *Store) Add(ctx context.Context, n NewKey) (Key, error) {
+	if strings.Contains(n.PublicKey, "BEGIN PGP") {
+		return s.addPGP(ctx, n)
+	}
 	pk, comment, err := ParseKey(n.PublicKey)
 	if err != nil {
 		return Key{}, err
@@ -267,4 +273,49 @@ func (s *Store) InstallationKey(ctx context.Context) (Key, bool) {
 	}
 	return Key{ID: installationRow, Owner: InstallationOwner, Kind: "ssh", Name: "Launchway installation key", Type: "ssh-ed25519",
 		Fingerprint: r.Fingerprint, PublicKey: r.PublicText, CreatedAt: fromMs(r.CreatedAt), Installation: true}, true
+}
+
+// addPGP registers an OpenPGP public key and, beside it, each of its signing subkeys.
+func (s *Store) addPGP(ctx context.Context, n NewKey) (Key, error) {
+	k, err := ParsePGPKey(n.PublicKey, s.now())
+	if err != nil {
+		return Key{}, err
+	}
+	name := strings.TrimSpace(n.Name)
+	if name == "" {
+		name = k.Name
+	}
+	if name == "" || len(name) > 100 || strings.ContainsAny(name, "\x00\n\r") {
+		return Key{}, fmt.Errorf("%w: give the key a name of up to 100 characters", ErrInvalid)
+	}
+	if !n.ExpiresAt.IsZero() && !n.ExpiresAt.After(s.now()) {
+		return Key{}, fmt.Errorf("%w: the expiry is in the past", ErrInvalid)
+	}
+	have, err := store.CountSigningKeys(ctx, s.db, n.Owner)
+	if err != nil {
+		return Key{}, err
+	}
+	if have >= MaxKeysPerPerson {
+		return Key{}, fmt.Errorf("%w: at most %d signing keys per person", ErrInvalid, MaxKeysPerPerson)
+	}
+	for _, fp := range append([]string{k.Fingerprint}, k.Subkeys...) {
+		if _, ok, err := s.ByFingerprint(ctx, fp); err != nil {
+			return Key{}, err
+		} else if ok {
+			return Key{}, fmt.Errorf("%w: a key can belong to one person only", ErrExists)
+		}
+	}
+	id := ids.New("sgk")
+	if err := store.InsertSigningKey(ctx, s.db, store.SigningKeyRow{ID: id, Owner: n.Owner, Kind: kindPGP, Name: name, Fingerprint: k.Fingerprint,
+		PublicText: k.Armored, CreatedAt: ms(s.now()), ExpiresAt: ms(n.ExpiresAt)}); err != nil {
+		return Key{}, err
+	}
+	for _, fp := range k.Subkeys {
+		if err := store.InsertSigningKey(ctx, s.db, store.SigningKeyRow{ID: ids.New("sgk"), Owner: n.Owner, Kind: kindPGPSub, Name: name + " (subkey " + fp[len(fp)-8:] + ")",
+			Fingerprint: fp, PublicText: k.Armored, CreatedAt: ms(s.now()), ExpiresAt: ms(n.ExpiresAt)}); err != nil {
+			_, _ = store.DeleteSigningKey(ctx, s.db, id)
+			return Key{}, err
+		}
+	}
+	return s.Get(ctx, id)
 }

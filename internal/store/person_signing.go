@@ -35,7 +35,7 @@ func scanSigningKey(r interface{ Scan(...any) error }) (SigningKeyRow, error) {
 
 // CountSigningKeys counts a person's keys.
 func CountSigningKeys(ctx context.Context, db CtxDB, owner string) (n int, err error) {
-	err = db.QueryRow(ctx, `SELECT count(*) FROM signing_keys WHERE owner = ? AND kind = 'ssh'`, owner).Scan(&n)
+	err = db.QueryRow(ctx, `SELECT count(*) FROM signing_keys WHERE owner = ? AND kind IN ('ssh', 'openpgp')`, owner).Scan(&n)
 	return
 }
 
@@ -65,7 +65,7 @@ func SigningKeyByFingerprint(ctx context.Context, db CtxDB, fp string) (SigningK
 
 // SigningKeysOf lists a person's keys, oldest first.
 func SigningKeysOf(ctx context.Context, db CtxDB, owner string) ([]SigningKeyRow, error) {
-	rows, err := db.Query(ctx, `SELECT `+signingKeyCols+` FROM signing_keys WHERE owner = ? ORDER BY created_at, id`, owner)
+	rows, err := db.Query(ctx, `SELECT `+signingKeyCols+` FROM signing_keys WHERE owner = ? AND kind <> 'openpgp-subkey' ORDER BY created_at, id`, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func SigningKeysOf(ctx context.Context, db CtxDB, owner string) ([]SigningKeyRow
 // RevokeSigningKey marks a key revoked from a time, if it is not yet; it
 // reports whether a row changed.
 func RevokeSigningKey(ctx context.Context, db CtxDB, id string, at int64) (bool, error) {
-	res, err := db.Exec(ctx, `UPDATE signing_keys SET revoked_at = ? WHERE id = ? AND revoked_at = 0`, at, id)
+	res, err := db.Exec(ctx, `UPDATE signing_keys SET revoked_at = ? WHERE (id = ? OR (kind = 'openpgp-subkey' AND EXISTS (SELECT 1 FROM signing_keys p WHERE p.id = ? AND p.owner = signing_keys.owner AND p.public_text = signing_keys.public_text))) AND revoked_at = 0`, at, id, id)
 	if err != nil {
 		return false, err
 	}
@@ -94,7 +94,7 @@ func RevokeSigningKey(ctx context.Context, db CtxDB, id string, at int64) (bool,
 
 // DeleteSigningKey removes a key; it reports whether there was one.
 func DeleteSigningKey(ctx context.Context, db CtxDB, id string) (bool, error) {
-	res, err := db.Exec(ctx, `DELETE FROM signing_keys WHERE id = ?`, id)
+	res, err := db.Exec(ctx, `DELETE FROM signing_keys WHERE id = ? OR (kind = 'openpgp-subkey' AND EXISTS (SELECT 1 FROM signing_keys p WHERE p.id = ? AND p.owner = signing_keys.owner AND p.public_text = signing_keys.public_text))`, id, id)
 	if err != nil {
 		return false, err
 	}

@@ -19,7 +19,7 @@ git config --global tag.gpgsign true
 
 Then register the **public** key: Settings, **Signing keys**, `launchway signing keys add --file ~/.ssh/id_ed25519.pub`, or the MCP tool `add_signing_key`. A signing key is not the same as an [SSH key](git-over-ssh.md) you push with (though the same key may serve both). A key belongs to one person. It may have an expiry date.
 
-OpenPGP and X.509 signatures are shown as *Not checked* and never count as verified; registering an OpenPGP key is refused with that reason. (Checking OpenPGP needs a library that this build does not include.)
+OpenPGP signatures (the ones `git commit -S` makes with gpg) are checked too: paste the public key block (`gpg --armor --export <id>`) under Signing keys. RSA (3072 bits or more), ECDSA and Ed25519 keys are accepted, with their signing subkeys; a signature made by a subkey counts for the key it belongs to. A key that has expired or is revoked in its own data shows as *Key expired* or *Key revoked* for what was signed after, and is refused when pasted. Private keys are refused. X.509 (S/MIME) signatures are *Not checked* and never count as verified.
 
 ## What each state means
 
@@ -31,7 +31,7 @@ OpenPGP and X.509 signatures are shown as *Not checked* and never count as verif
 | **Unsigned** | No signature. Anyone can write any name in the author line. |
 | **Key revoked** | The key was revoked, and the object is dated after the revocation. |
 | **Key expired** | The key had expired before the object's date. |
-| **Not checked** | Signed in a format this build cannot check (OpenPGP, X.509). |
+| **Not checked** | Signed with an X.509 certificate, which Launchway does not check. |
 
 The *time* of a commit is the date its author wrote into it, which Git lets anyone choose. That is why revocation is "from now on": commits dated before a key was revoked stay verified. If a key was stolen, **delete** it instead: everything it signed then shows as signed by an unknown key.
 
