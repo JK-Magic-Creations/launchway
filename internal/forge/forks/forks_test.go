@@ -358,7 +358,11 @@ func TestSyncFastForwardsMergesAndSaysWhenItConflicts(t *testing.T) {
 	if _, err := w.svc.Sync(w.ctx, f, "", "", "merge", "ada"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitexec.Run(w.ctx, gitexec.Spec{GitDir: func() string { var d string; _ = w.st.WithCache(w.ctx, f.ID, func(x string) error { d = x; return nil }); return d }(), Args: []string{"cat-file", "-e", secret}, Timeout: time.Minute}); err == nil {
+	if _, err := gitexec.Run(w.ctx, gitexec.Spec{GitDir: func() string {
+		var d string
+		_ = w.st.WithCache(w.ctx, f.ID, func(x string) error { d = x; return nil })
+		return d
+	}(), Args: []string{"cat-file", "-e", secret}, Timeout: time.Minute}); err == nil {
 		t.Error("another branch of the parent came over with the sync")
 	}
 }
