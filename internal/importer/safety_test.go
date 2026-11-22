@@ -136,8 +136,8 @@ func TestDetect(t *testing.T) {
 	cases := map[string]string{
 		".github/workflows/ci.yml": "hosted-workflows",
 		".x-ci.yml":                "stages-yaml",
-		"Pipelinefile":              "groovy-declarative",
-		"web/Pipelinefile":          "groovy-declarative",
+		"Pipelinefile":             "groovy-declarative",
+		"web/Pipelinefile":         "groovy-declarative",
 		".ci/config.yml":           "jobs-config",
 		"azure-pipelines.yml":      "tasks-pipelines",
 	}
