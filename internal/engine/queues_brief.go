@@ -68,6 +68,9 @@ func (e *Engine) decorateWait(v *StepView, st *RunState, def *pipeline.Step) {
 		v.WaitingCode = WaitNoRunner // the step has a runner of its own and none may take it (see waitingFor)
 	case v.NotBefore > e.now().UnixMilli():
 		v.WaitingFor, v.WaitingCode = "waiting out the pause before trying again", WaitBackoff
+	case targetOf(s) != "":
+		// A deploy, rollback or verify step is taken by a deploy runner serving its target, not by a build runner.
+		v.WaitingFor, v.WaitingCode = e.deployWait(targetOf(s))
 	default:
 		v.WaitingFor, v.WaitingCode = e.runnerWait()
 	}
