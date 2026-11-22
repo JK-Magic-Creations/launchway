@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -114,9 +115,47 @@ func (e events) Verify(r *http.Request, secret []byte) ([]forge.Event, error) {
 	return nil, nil
 }
 
-// Poll: this host's changes are found by Launchway's own watcher of the
-// repository's clone (the one plain Git connections use); the provider adds
-// nothing, and returns the cursor it was given.
-func (e events) Poll(_ context.Context, _ forge.Repository, cursor string) ([]forge.Event, string, error) {
-	return []forge.Event{}, cursor, nil
+// Poll finds what changed on pull requests when no webhook arrives: it lists
+// the open pull requests (GET /repos/{o}/{r}/pulls?state=open, one page of 50,
+// https://docs.github.com/en/rest/pulls/pulls#list-pull-requests) and returns
+// proposal.opened for one not seen and proposal.revised for one whose head
+// moved. The cursor is the numbers and heads seen, as text; "" is the first
+// call, which reports every open pull request as opened. Pushes and tags are
+// found by Launchway's own watcher of the repository's clone.
+func (e events) Poll(ctx context.Context, repo forge.Repository, cursor string) ([]forge.Event, string, error) {
+	seen := map[int]string{}
+	if cursor != "" {
+		raw, err := base64.RawURLEncoding.DecodeString(cursor)
+		if err != nil || json.Unmarshal(raw, &seen) != nil {
+			return nil, cursor, fmt.Errorf("%w: bad cursor", forge.ErrInvalid)
+		}
+	}
+	page, err := e.p.Proposals().List(ctx, repo, forge.ProposalOpen, "")
+	if err != nil {
+		return nil, cursor, err
+	}
+	drafts, err := e.p.Proposals().List(ctx, repo, forge.ProposalDraft, "")
+	if err != nil {
+		return nil, cursor, err
+	}
+	page.Items = append(page.Items, drafts.Items...)
+	out := []forge.Event{}
+	next := map[int]string{}
+	for _, pr := range page.Items {
+		next[pr.Number] = pr.Head
+		kind := forge.EventProposalOpened
+		if old, ok := seen[pr.Number]; ok {
+			if old == pr.Head {
+				continue
+			}
+			kind = forge.EventProposalRevised
+		}
+		fork, _ := pr.Ext["fork"].(bool)
+		out = append(out, forge.Event{DeliveryID: fmt.Sprintf("poll-%d-%s", pr.Number, pr.Head), Kind: kind, Repository: repo.Path, Number: pr.Number,
+			Ref: "refs/pull/" + fmt.Sprint(pr.Number) + "/head", Commit: pr.Head, Head: pr.Head, Base: strings.TrimPrefix(pr.Target.Name, "refs/heads/"),
+			Title: pr.Title, Proposal: fmt.Sprint(pr.Number), Draft: pr.State == forge.ProposalDraft, Fork: fork,
+			Actor: forge.Principal{Login: pr.Author.Login, Unlinked: true}, At: e.p.c.Now().UTC()})
+	}
+	b, _ := json.Marshal(next)
+	return out, base64.RawURLEncoding.EncodeToString(b), nil
 }

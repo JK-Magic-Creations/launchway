@@ -389,3 +389,32 @@ func TestLive(t *testing.T) {
 		t.Logf("branch protection read: %v", err)
 	}
 }
+
+// Without a webhook, Poll finds pull requests from the host's API: new ones are opened, a moved head is revised,
+// an unchanged one is not repeated.
+func TestPollFindsPullRequests(t *testing.T) {
+	f := newFixture(t)
+	ctx := t.Context()
+	pr, err := f.p.Proposals().Create(ctx, f.repo, forge.NewProposal{Title: "Add thing", Source: forge.Ref{Name: "refs/heads/feat"}, Target: forge.Ref{Name: "refs/heads/main"}, Draft: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, cur, err := f.p.Events().Poll(ctx, f.repo, "")
+	if err != nil || len(evs) != 1 || evs[0].Kind != forge.EventProposalOpened || evs[0].Number != pr.Number || evs[0].Base != "main" || evs[0].Title != "Add thing" || evs[0].Ref != "refs/pull/1/head" {
+		t.Fatalf("%+v %v", evs, err)
+	}
+	if evs, cur, err = f.p.Events().Poll(ctx, f.repo, cur); err != nil || len(evs) != 0 {
+		t.Fatalf("nothing changed: %+v %v", evs, err)
+	}
+	f.h.Lock()
+	f.h.Pulls[0]["head"].(map[string]any)["sha"] = strings.Repeat("e", 40)
+	f.h.Unlock()
+	evs, _, err = f.p.Events().Poll(ctx, f.repo, cur)
+	if err != nil || len(evs) != 1 || evs[0].Kind != forge.EventProposalRevised || evs[0].Head != strings.Repeat("e", 40) {
+		t.Fatalf("a moved head: %+v %v", evs, err)
+	}
+	if _, _, err := f.p.Events().Poll(ctx, f.repo, "!!"); !errors.Is(err, forge.ErrInvalid) {
+		t.Errorf("a bad cursor: %v", err)
+	}
+	f.noViolations(t)
+}
