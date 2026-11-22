@@ -18,7 +18,7 @@ lists every one.
 
 **Custom steps.** A step can be a directory with a manifest (`steps/<name>/step.yaml`) and code in any language,
 with typed inputs and outputs, the permissions it asks for (network hosts, writable paths, secret inputs), a
-sandbox, and a catalogue page. A step of a library is used as `uses: <library>/<name>`; a step of the repository
+sandbox, and a catalog page. A step of a library is used as `uses: <library>/<name>`; a step of the repository
 itself as `uses: ./steps/<name>`. `launchway step` and `launchway steps` write, test and list them. See
 [Write your own step](write-your-own-step.md) and the [manifest](../reference/step-manifest.md).
 
@@ -36,7 +36,7 @@ renamed or moved keeps its old address working for Git (with a notice) and for t
 GitLab, Gitea or Forgejo, Bitbucket Cloud, Bitbucket Data Center, Azure DevOps, AWS CodeCommit, or any Git server
 over HTTPS. Each host has a declared set of capabilities; the [capability matrix](outside-host-matrix.md) is
 generated from them. "Cut a release" makes the tag and the release through the same group of calls for hosted and
-outside repositories. Deploy write-back works through a connection, including the host's own auto-merge where it has
+outside repositories. Launch write-back works through a connection, including the host's own auto-merge where it has
 one. The connection test tells apart a permission it verified, one that is lacking, and one it could not check.
 
 **Repository pages and work.** Pull-request checks in place, stale branches, a branch made from a work item,
@@ -58,7 +58,7 @@ with sessions, a public profile, teams, an address on a deployment, and decision
 ## New for operators
 
 - **Chart values:** `metrics` (enable, port, token), tracing endpoint values, server `autoscaling` (including
-  `extraMetrics` and `behavior`), and monitor values. The runner chart opens a `metrics` port when metrics are on.
+  `extraMetrics` and `behavior`), and monitor values. The Station chart opens a `metrics` port when metrics are on.
 - **Configuration:** the `observability` section (metrics address and token, tracing endpoint, headers and sample
   ratio, `name_labels`) and a hosting setting for the trash retention.
 - **Commands:** `launchway step`, `launchway steps`, `launchway account`, `launchway repos host ...`,
@@ -88,6 +88,13 @@ but it will not run a pipeline that uses a custom step, show forks or trash, or 
 need the new build. To go back, return the image and chart; nothing needs undoing in the database. Stations should
 be upgraded with the server, because a Station of the previous build is not given custom steps.
 
+A launch step's time limit now starts when a launch Station takes it, not when it was put in the Holding pattern, and a step nobody takes
+fails after `queues.deploy_pickup_wait` (15 minutes by default) with a plain reason. All servers of an installation
+should be upgraded together. A rolling update runs old and new servers side by side for a short time; while a server
+of the previous release is still connected (PostgreSQL), the new server gives launch actions no short pickup
+deadline, so the older server cannot expire a step that was taken and is running. The time limit is then enforced by
+the Station until the update ends.
+
 ## What to watch after the upgrade
 
 - The metrics listener starts only when enabled; if its address cannot be bound the server runs without it and logs
@@ -108,3 +115,12 @@ be upgraded with the server, because a Station of the previous build is not give
 - A pull request from a fork never runs the pipeline it brings, runs restricted, and a
   first contribution waits for approval.
 - A permanent removal of a repository never deletes data another repository still needs.
+
+## For contributors
+
+- Page texts that are long sentences are served as files under `web/src/prose/` and read with
+  `await prose("pages.X")`; their keys are positional (`t0`, `t1`, ...), so a sentence added in the middle of a page is
+  appended as a new key. A later pass should give the keys stable names.
+- The Learn pages and this mechanism are two ways of serving text; they should be joined.
+- Pages that came from several branches in this candidate still carry their texts in the source; opting them into the
+  prose files is a size task for the next pass.
