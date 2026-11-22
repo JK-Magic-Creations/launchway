@@ -144,3 +144,6 @@ func TestEveryConstructHasAFixture(t *testing.T) {
 		t.Errorf("writer: %v", bad)
 	}
 }
+
+func filepathGlob(p string) ([]string, error) { return filepath.Glob(p) }
+func readFile(p string) ([]byte, error)       { return os.ReadFile(p) }
