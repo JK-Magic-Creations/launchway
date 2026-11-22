@@ -15,6 +15,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -217,7 +218,9 @@ func getRunInspection(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 
 type acceptFindingIn struct {
 	Project     string `json:"project" jsonschema:"the project's name"`
-	Fingerprint string `json:"fingerprint" jsonschema:"the finding's fingerprint, from list_findings or get_run_inspection"`
+	Fingerprint string `json:"fingerprint,omitempty" jsonschema:"the finding's fingerprint, from list_findings or get_run_inspection; or give path instead"`
+	Path        string `json:"path,omitempty" jsonschema:"instead of one finding: a path of the repository, such as docs/** or docs/vectors.json; every open finding there gets the decision (for example: these are test vectors, not secrets)"`
+	Check       string `json:"check,omitempty" jsonschema:"with path: only the findings of this check, such as secrets"`
 	Status      string `json:"status,omitempty" jsonschema:"accepted-risk (default) or false-positive"`
 	Reason      string `json:"reason" jsonschema:"why it is safe to live with, or why it is not a problem (at least 10 characters); it is recorded with the caller's name"`
 	Expires     string `json:"expires" jsonschema:"the date the decision ends, YYYY-MM-DD, at most a year away"`
@@ -225,8 +228,17 @@ type acceptFindingIn struct {
 
 func acceptFinding(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in acceptFindingIn) (engine.DecisionView, error) {
 	var out engine.DecisionView
-	if in.Project == "" || in.Fingerprint == "" {
-		return out, errors.New("say which project and which finding")
+	if in.Project == "" || (in.Fingerprint == "") == (in.Path == "") {
+		return out, errors.New("say which project and either which finding (fingerprint) or which path")
+	}
+	if in.Path != "" {
+		var n map[string]any
+		err := c.apiJSON(ctx, "accept_finding", http.MethodPost, apiPath("/api/v1/projects/%s/findings/accept-path", in.Project),
+			map[string]string{"path": in.Path, "check": in.Check, "status": in.Status, "reason": in.Reason, "expires": in.Expires}, &n)
+		if v, ok := n["decided"].(float64); ok {
+			out.Reason, out.Status = fmt.Sprintf("%d findings in %s were decided", int(v), in.Path), in.Status
+		}
+		return out, err
 	}
 	err := c.apiJSON(ctx, "accept_finding", http.MethodPost, apiPath("/api/v1/projects/%s/findings/%s/accept", in.Project, in.Fingerprint),
 		map[string]string{"status": in.Status, "reason": in.Reason, "expires": in.Expires}, &out)

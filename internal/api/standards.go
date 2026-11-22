@@ -40,6 +40,7 @@ func (s *Server) standardsRoutes() []route {
 		{"GET " + p + "/findings/history", projectRead, "", s.projectFindingsHistory},
 		{"GET " + p + "/findings/export", projectRead, "", s.projectFindingsExport},
 		{"GET " + p + "/findings/{fingerprint}", projectRead, "", s.projectFinding},
+		{"POST " + p + "/findings/accept-path", projectOperate, "finding.accept_path", s.acceptFindingsInPath},
 		{"POST " + p + "/findings/{fingerprint}/accept", projectOperate, "finding.accept", s.acceptFinding},
 		{"POST " + p + "/findings/{fingerprint}/reopen", projectOperate, "finding.reopen", s.reopenFinding},
 		{"GET /api/v1/runs/{id}/inspection", runRead, "", s.runInspection},
@@ -362,6 +363,9 @@ type acceptBody struct {
 	Status  string `json:"status"` // accepted-risk (default) or false-positive
 	Reason  string `json:"reason"`
 	Expires string `json:"expires"` // YYYY-MM-DD, or "in 30 days" style is for the clients to turn into a date
+	// Path, for the route that decides by place: a glob of repository paths (docs/**), and Check optionally narrows it.
+	Path  string `json:"path"`
+	Check string `json:"check"`
 }
 
 func (s *Server) acceptFinding(w http.ResponseWriter, r *http.Request) {
@@ -389,6 +393,33 @@ func (s *Server) acceptFinding(w http.ResponseWriter, r *http.Request) {
 	}
 	setAudit(r, fp, in.Status+" until "+in.Expires+": "+d.Reason)
 	writeJSON(w, http.StatusOK, d)
+}
+
+// acceptFindingsInPath records one decision for every open finding in a path: "these are test vectors, not secrets".
+func (s *Server) acceptFindingsInPath(w http.ResponseWriter, r *http.Request) {
+	if !s.standardsOn(w) {
+		return
+	}
+	var in acceptBody
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Status == "" {
+		in.Status = standards.StatusAccepted
+	}
+	exp, err := time.Parse(standards.DateFormat, in.Expires)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "say when the decision ends: expires as YYYY-MM-DD, at most "+strconv.Itoa(standards.MaxExemptionDays)+" days from today")
+		return
+	}
+	exp = exp.Add(24*time.Hour - time.Second)
+	n, err := s.Engine.DecideFindingsInPath(r.PathValue("name"), in.Path, in.Check, in.Status, in.Reason, identityFrom(r).User, exp)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	setAudit(r, in.Path, fmt.Sprintf("%d findings %s until %s: %s", n, in.Status, in.Expires, in.Reason))
+	writeJSON(w, http.StatusOK, map[string]any{"decided": n, "path": in.Path, "status": in.Status, "expires": in.Expires})
 }
 
 func (s *Server) reopenFinding(w http.ResponseWriter, r *http.Request) {

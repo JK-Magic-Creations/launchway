@@ -65,7 +65,7 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
   if (error && !data) return <ErrorBox error={error} />;
   if (!data) return <div className="loading">Loading…</div>;
 
-  const c = data.counts;
+  const c = data.open ?? data.counts;
   if (!c && data.sboms.length === 0) {
     const going = run.step_list.filter((s) => data.declared.includes(s.id) && !ENDED.includes(s.status));
     if (data.declared.length > 0) {
@@ -92,6 +92,7 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
     <div className="tests secview">
       {c && (
         <section className="card tsum" aria-label="Findings summary">
+          {!!data.accepted && <p className="faint small" role="status">{data.accepted} finding{data.accepted === 1 ? " is" : "s are"} accepted as a risk or marked a false positive (with a reason and an end date, on the project's Security page) and {data.accepted === 1 ? "is" : "are"} not counted here.</p>}
           <div className="tsum-top">
             <div className={"tsum-rate " + (n > 0 ? "tsum-rate-bad" : c.total ? "" : "tsum-rate-ok")}>
               <span className="tsum-rate-num">{n > 0 ? n : c.total}</span>

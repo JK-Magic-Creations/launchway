@@ -195,6 +195,9 @@ type FindingView struct {
 	StartColumn int    `json:"start_column,omitempty"`
 	// Secret says the finding is about a secret: its value is never kept.
 	Secret bool `json:"secret,omitempty"`
+	// Decision is the person's decision about it that is in force: accepted risk or false positive.
+	Decision *DecisionView `json:"decision,omitempty"`
+	track    string
 	// Status is new, existing or fixed, compared with the previous run of
 	// the same ref; empty when there is none to compare with.
 	Status string `json:"status,omitempty"`
@@ -282,6 +285,10 @@ type RunFindings struct {
 	// is how many match in all.
 	Findings []FindingView `json:"findings"`
 	Matched  int           `json:"matched"`
+	// Open is what still counts: Counts without the findings a person has accepted as a risk or marked a false
+	// positive (see the project's Standing orders), which are Accepted. Nil when none is decided.
+	Open     *FindingCounts `json:"open,omitempty"`
+	Accepted int            `json:"accepted,omitempty"`
 }
 
 var severityRank = map[string]int{"critical": 0, "high": 1, "medium": 2, "low": 3, "unknown": 4}
@@ -293,7 +300,7 @@ func (e *Engine) loadFindings(ts []triple, extra string, extraArgs ...any) ([]Fi
 	}
 	cond, args := findingTripleFilter(ts)
 	rows, err := e.db.Query(`SELECT id, step_id, attempt, run_id, run_number, fingerprint, tool, rule_id, severity, level, message, file,
-			start_line, end_line, start_column, secret FROM findings f WHERE `+cond+extra+` ORDER BY id`, append(args, extraArgs...)...)
+			start_line, end_line, start_column, secret, track FROM findings f WHERE `+cond+extra+` ORDER BY id`, append(args, extraArgs...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +310,7 @@ func (e *Engine) loadFindings(ts []triple, extra string, extraArgs ...any) ([]Fi
 		var f FindingView
 		var secret int
 		if err := rows.Scan(&f.ID, &f.Step, &f.Attempt, &f.RunID, &f.RunNumber, &f.Fingerprint, &f.Tool, &f.RuleID, &f.Severity, &f.Level,
-			&f.Message, &f.File, &f.StartLine, &f.EndLine, &f.StartColumn, &secret); err != nil {
+			&f.Message, &f.File, &f.StartLine, &f.EndLine, &f.StartColumn, &secret, &f.track); err != nil {
 			return nil, err
 		}
 		f.Secret = secret != 0
@@ -467,6 +474,9 @@ func (e *Engine) RunFindings(runID string, q FindingQuery) (*RunFindings, error)
 		}
 	}
 	out.Statuses.Fixed = len(fixed)
+	if err := e.applyDecisions(st.Project, out, all); err != nil {
+		return nil, err
+	}
 	pool := all
 	if q.Status == FindingFixed {
 		pool = fixed
@@ -896,3 +906,41 @@ var severities = func() []string {
 func ValidSeverity(s string) bool { return slices.Contains(severities, s) }
 
 func isNoRows(err error) bool { return errors.Is(err, sql.ErrNoRows) }
+
+// applyDecisions marks the findings a person has decided about and counts what still counts: accepted findings stop
+// counting as high (or critical) on the run, as they do on the project.
+func (e *Engine) applyDecisions(project string, out *RunFindings, all []FindingView) error {
+	if !e.knows(schemaStandings) || out.Counts == nil || len(all) == 0 {
+		return nil
+	}
+	ds, err := activeDecisions(e.db, project, e.now().UnixMilli())
+	if err != nil || len(ds) == 0 {
+		return err
+	}
+	open := *out.Counts
+	for i := range all {
+		d, ok := ds[all[i].track]
+		if !ok || all[i].track == "" {
+			continue
+		}
+		all[i].Decision = &DecisionView{Status: d.Status, Reason: d.Reason, By: d.By, At: d.At.UnixMilli(), ExpiresAt: d.Expires.UnixMilli(), Active: true}
+		out.Accepted++
+		open.Total--
+		switch all[i].Severity {
+		case "critical":
+			open.Critical--
+		case "high":
+			open.High--
+		case "medium":
+			open.Medium--
+		case "low":
+			open.Low--
+		default:
+			open.Unknown--
+		}
+	}
+	if out.Accepted > 0 {
+		out.Open = &open
+	}
+	return nil
+}

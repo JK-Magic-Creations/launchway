@@ -167,6 +167,46 @@ func (e *Engine) DecideFinding(project, fingerprint, status, reason, by string, 
 	return d, err
 }
 
+// DecideFindingsInPath records one decision for every open finding of the project whose file matches the glob
+// (** crosses folders, * does not cross a slash), optionally only those of one check: the way to say "these are test
+// vectors, not secrets" for a folder in one step. Each finding gets its own decision, with the same reason, person
+// and end date, so each can be ended on its own. It returns how many findings were decided; none is an error, so a
+// misspelt path is never taken for success.
+func (e *Engine) DecideFindingsInPath(project, glob, check, status, reason, by string, expires time.Time) (int, error) {
+	glob = strings.TrimSpace(glob)
+	if glob == "" || strings.HasPrefix(glob, "/") || strings.Contains(glob, "..") {
+		return 0, fmt.Errorf("%w: name a path inside the repository, such as docs/** or docs/assertion_vectors.json", ErrInvalid)
+	}
+	list, err := e.StandingFindings(project, StandingQuery{Status: "open", Check: check, Limit: 500})
+	if err != nil {
+		return 0, err
+	}
+	var fps []string
+	for off := 0; ; off += 500 {
+		page, err := e.StandingFindings(project, StandingQuery{Status: "open", Check: check, Limit: 500, Offset: off})
+		if err != nil {
+			return 0, err
+		}
+		for _, f := range page.Findings {
+			if f.File != "" && standards.GlobMatch(glob, f.File) {
+				fps = append(fps, f.Fingerprint)
+			}
+		}
+		if off+500 >= list.Matched {
+			break
+		}
+	}
+	if len(fps) == 0 {
+		return 0, fmt.Errorf("%w: no open finding of %s is in %s", ErrNotFound, project, glob)
+	}
+	for _, fp := range fps {
+		if _, err := e.DecideFinding(project, fp, status, reason, by, expires); err != nil {
+			return 0, err
+		}
+	}
+	return len(fps), nil
+}
+
 // ReopenFinding ends the decision about a finding, so it counts again.
 func (e *Engine) ReopenFinding(project, fingerprint, by string) error {
 	if !e.knows(schemaStandings) {

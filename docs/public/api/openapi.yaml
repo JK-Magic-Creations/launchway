@@ -4861,6 +4861,39 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: finding.reopen
+    /api/v1/projects/{name}/findings/accept-path:
+        post:
+            description: 'The same decision for every open finding in a place, for "these are test vectors, not secrets": path (a glob of repository paths, ** crosses folders; docs/** or docs/assertion_vectors.json), optionally check (such as secrets), and status, reason and expires as for one finding. Each finding gets its own decision with the same reason, person and end date, so each can be ended on its own. Answers {"decided", "path", "status", "expires"}; 404 when no open finding is in the path, so a misspelt path is never taken for success; 400 for a path outside the repository.'
+            operationId: post_api_v1_projects_name_findings_accept_path
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The same decision for every open finding in a place, for "these are test vectors, not secrets": path (a glob of repository paths, ** crosses folders; docs/** or docs/assertion_vectors.json), optionally check (such as secrets), and status, reason and expires as for one finding.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: finding.accept_path
     /api/v1/projects/{name}/findings/export:
         get:
             description: The findings as ?format= json, csv or sarif (status as above). SARIF carries the fingerprint as a partial fingerprint.

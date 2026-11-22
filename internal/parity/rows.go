@@ -289,6 +289,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/projects/{name}/findings/history", MCP: "list_findings", CLI: "findings list", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/projects/{name}/findings/export", MCP: "export_findings", CLI: "findings export", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/projects/{name}/findings/{fingerprint}", MCP: "list_findings", CLI: "findings show", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/projects/{name}/findings/accept-path", MCP: "accept_finding", CLI: "findings accept", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/projects/{name}/findings/{fingerprint}/accept", MCP: "accept_finding", CLI: "findings accept", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/projects/{name}/findings/{fingerprint}/reopen", MCP: "reopen_finding", CLI: "findings reopen", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/runs/{id}/inspection", MCP: "get_run_inspection", CLI: "findings inspect", Terraform: "not needed by terraform", Status: Equal, Reason: ""},

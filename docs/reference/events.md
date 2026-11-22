@@ -348,6 +348,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `cache.delete` | `DELETE /api/v1/projects/{name}/caches/{id}` and `DELETE /api/v1/projects/{name}/caches?name=` (also `launchway caches delete`); the target is the entry or the cache name and the detail says how much was ended |
 | `standards.settings_set` | `PUT /api/v1/standards/settings` (also `launchway standards set`); the target is the level and scope, the detail says the version saved, and says plainly in capitals when Standing orders were switched off, with the reason |
 | `finding.accept` | `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` (also `launchway findings accept` and the MCP tool `accept_finding`); the target is the finding's fingerprint and the detail holds the decision, the end date and the reason |
+| `finding.accept_path` | `POST /api/v1/projects/{name}/findings/accept-path` (also `launchway findings accept --path` and the MCP tool `accept_finding` with `path`); the target is the path glob and the detail says how many findings were decided, the decision, its end date and the reason |
 | `finding.reopen` | `POST /api/v1/projects/{name}/findings/{fingerprint}/reopen` (also `launchway findings reopen`); the target is the finding's fingerprint |
 | `cache_policy.set` | `PUT /api/v1/cache-policy` (also `launchway caches policy set`); the detail holds the policy before and after |
 | `cache_policy.set_project` | `PUT /api/v1/projects/{name}/cache-policy`; the detail holds the policy before and after |
