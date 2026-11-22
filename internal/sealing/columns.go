@@ -144,6 +144,8 @@ var explained = []struct{ column, why string }{
 	{"graph_overrides.to_key", "a repository path: an identifier"},
 	{"sessions.id_hash", "SHA-256 of a 256-bit random session id"},
 	{"api_tokens.hash", "SHA-256 of a 256-bit random token"},
+	{"audit.token_id", "the id of the API token a Logbook line was made with (the record naming it), never its value: an identifier"},
+	{"audit.token_name", "the name a person gave the API token a Logbook line was made with: a label, never its value"},
 	{"work_agents.token_hash", "SHA-256 of a 160-bit random agent token"},
 	{"work_agents.token_hint", "the last four characters of the agent's token, to tell tokens apart"},
 	{"work_agents.token_at", "when the token was made"},
