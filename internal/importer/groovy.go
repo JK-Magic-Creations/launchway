@@ -381,14 +381,14 @@ func (p *gparser) rawFrom(first token) *gs {
 	return &gs{name: "(raw)", line: first.line, raw: strings.TrimSpace(p.src[start:p.toks[p.pos].start])}
 }
 
-func (p *gparser) parseArgs(close string, depth int) ([]*gx, error) {
+func (p *gparser) parseArgs(closer string, depth int) ([]*gx, error) {
 	p.pos++ // the opening bracket
 	var out []*gx
 	for {
 		for p.peek().kind == tNL {
 			p.pos++
 		}
-		if p.isP(close) {
+		if p.isP(closer) {
 			p.pos++
 			return out, nil
 		}

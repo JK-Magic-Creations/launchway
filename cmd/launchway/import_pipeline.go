@@ -117,7 +117,12 @@ func cmdImport(args []string) error {
 func collectImportFiles(dir string) ([]importer.File, error) {
 	var out []importer.File
 	total := 0
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, nil // an unreadable directory yields no files, as the walk did
+	}
+	defer root.Close()
+	err = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -135,7 +140,7 @@ func collectImportFiles(dir string) ([]importer.File, error) {
 			return nil
 		}
 		lower := strings.ToLower(d.Name())
-		if !(strings.HasSuffix(lower, ".yml") || strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".groovy") || strings.HasSuffix(lower, "file")) {
+		if !strings.HasSuffix(lower, ".yml") && !strings.HasSuffix(lower, ".yaml") && !strings.HasSuffix(lower, ".groovy") && !strings.HasSuffix(lower, "file") {
 			return nil
 		}
 		if rel == filepath.Join(".launchway", "pipeline.yaml") || rel == filepath.Join(".launchway", "pipeline.yml") {
@@ -145,7 +150,7 @@ func collectImportFiles(dir string) ([]importer.File, error) {
 		if err != nil || info.Size() > int64(importer.DefaultLimits.MaxBytes) || len(out) >= importer.MaxFiles || total+int(info.Size()) > importer.MaxTotalBytes {
 			return nil
 		}
-		b, err := os.ReadFile(p)
+		b, err := root.ReadFile(rel)
 		if err != nil {
 			return nil
 		}
@@ -252,7 +257,7 @@ func writeImported(res *importer.Result, root string, force bool) error {
 func writeImportReport(path string, res *importer.Result) error {
 	if strings.HasSuffix(strings.ToLower(path), ".json") {
 		b, _ := json.MarshalIndent(res, "", "  ")
-		return os.WriteFile(path, b, 0o644)
+		return os.WriteFile(path, b, 0o600)
 	}
 	var b strings.Builder
 	b.WriteString("# Import report\n\n")
@@ -272,5 +277,5 @@ func writeImportReport(path string, res *importer.Result) error {
 		}
 		b.WriteString("\n")
 	}
-	return os.WriteFile(path, []byte(b.String()), 0o644)
+	return os.WriteFile(path, []byte(b.String()), 0o600)
 }

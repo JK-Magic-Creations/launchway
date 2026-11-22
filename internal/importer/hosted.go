@@ -272,9 +272,7 @@ func (h *hostedReader) job(id string, n *N) {
 	j := &Job{ID: id, Line: n.Line, Name: n.Get("name").Str()}
 	h.p.Jobs = append(h.p.Jobs, j)
 	hj := &hostedJob{j: j, secrets: map[string]bool{}}
-	for _, nd := range n.Get("needs").Strings() {
-		j.Needs = append(j.Needs, nd)
-	}
+	j.Needs = append(j.Needs, n.Get("needs").Strings()...)
 	if len(j.Needs) > 0 {
 		h.rp.note("hosted.job.needs", n.LineOf("needs"))
 	}
@@ -714,9 +712,6 @@ func (h *hostedReader) step(hj *hostedJob, s *N, defDir string) {
 	j := hj.j
 	line := s.Line
 	name := s.Get("name").Str()
-	if c := s.Get("if"); c != nil {
-		// handled below once we know it is a run step; remember the text
-	}
 	cond := s.Get("if").Str()
 	if cond != "" {
 		h.rp.note("hosted.step.if", s.LineOf("if"), oneLine(cond, 160))

@@ -149,7 +149,6 @@ func (r *greader) stageList(list []*gs, parent *stageCtx, prev []string) []strin
 type stageCtx struct {
 	image    string
 	env, sec []KV
-	prefix   string
 }
 
 func (r *greader) stage(s *gs, parent *stageCtx, prev []string) []string {
@@ -518,8 +517,8 @@ func (r *greader) matrix(j *Job, m *gs) {
 func (r *greader) when(j *Job, w *gs) {
 	var c Cond
 	ok := true
-	var visit func(list []*gs, any bool)
-	visit = func(list []*gs, any bool) {
+	var visit func(list []*gs, anyOf bool)
+	visit = func(list []*gs, anyOf bool) {
 		for _, x := range list {
 			switch x.name {
 			case "branch":
@@ -589,7 +588,7 @@ func (r *greader) post(d *gs, stage string, after []string, sj *Job) []string {
 		j := &Job{ID: r.unique(firstNonEmpty(stage, "pipeline") + "-post-" + c.name), Line: c.line, Needs: append([]string{}, after...), Image: r.image, Env: r.env, SecretEnv: r.secEnv}
 		j.When.Upstream = upstream
 		j.AllowFail = true
-		var steps []*gs = c.block
+		steps := c.block
 		var own []*gs
 		for _, st := range steps {
 			switch st.name {

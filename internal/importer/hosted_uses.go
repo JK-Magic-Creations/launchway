@@ -195,9 +195,6 @@ func appendOnce(l []KV, kv KV) []KV {
 }
 
 func (h *hostedReader) cacheStep(hj *hostedJob, with *N, line int, act string) {
-	if act == "actions/cache/save" {
-		// the restore half carries it; a lone save is the same cache
-	}
 	key := with.Get("key").Str()
 	c := Cache{}
 	var files []string
@@ -288,9 +285,7 @@ func (h *hostedReader) buildPush(hj *hostedJob, with *N, line int) {
 	}
 	push, _ := with.Get("push").Bool()
 	ib.Push = push
-	for _, p := range strings.FieldsFunc(with.Get("platforms").Str(), func(r rune) bool { return r == ',' || r == '\n' || r == ' ' }) {
-		ib.Platforms = append(ib.Platforms, p)
-	}
+	ib.Platforms = append(ib.Platforms, strings.FieldsFunc(with.Get("platforms").Str(), func(r rune) bool { return r == ',' || r == '\n' || r == ' ' })...)
 	for _, t := range strings.Split(with.Get("tags").Str(), "\n") {
 		t = strings.TrimSpace(t)
 		if t == "" {

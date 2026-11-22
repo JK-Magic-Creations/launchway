@@ -248,10 +248,10 @@ func (w *writer) addInputs(root *yaml.Node, extra *yaml.Node) {
 	yadd(root, "inputs", in)
 }
 
-func oneLine(s string, max int) string {
+func oneLine(s string, limit int) string {
 	s = strings.Join(strings.Fields(s), " ")
-	if len(s) > max {
-		s = s[:max-1] + "…"
+	if len(s) > limit {
+		s = s[:limit-1] + "…"
 	}
 	return s
 }
@@ -969,7 +969,7 @@ func tidyScript(s string) string {
 	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
 		lines = lines[1:]
 	}
-	min := -1
+	minIndent := -1
 	for i, l := range lines {
 		l = strings.TrimRight(l, " \t")
 		lines[i] = l
@@ -977,15 +977,15 @@ func tidyScript(s string) string {
 			continue
 		}
 		n := len(l) - len(strings.TrimLeft(l, " "))
-		if min < 0 || n < min {
-			min = n
+		if minIndent < 0 || n < minIndent {
+			minIndent = n
 		}
 	}
 	// The first line of a quoted block usually starts at the margin: dedent only when every line is indented.
-	if min > 0 {
+	if minIndent > 0 {
 		for i, l := range lines {
-			if len(l) >= min {
-				lines[i] = l[min:]
+			if len(l) >= minIndent {
+				lines[i] = l[minIndent:]
 			}
 		}
 	}

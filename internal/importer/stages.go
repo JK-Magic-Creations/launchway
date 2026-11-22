@@ -173,18 +173,6 @@ func (s *stagesReader) resolve(name string, n *N, depth int) *N {
 	return out
 }
 
-// ref follows a !reference [job, key...] list.
-func (s *stagesReader) ref(n *N) *N {
-	cur := s.root
-	for _, it := range n.Items {
-		cur = s.resolve(it.Val, cur, 0).Get(it.Val)
-		if cur == nil {
-			break
-		}
-	}
-	return cur
-}
-
 // lines flattens a script value (string, list, nested !reference) into lines.
 func (s *stagesReader) lines(n *N, depth int) []string {
 	if n == nil || depth > 6 {
@@ -532,12 +520,12 @@ func (s *stagesReader) job(id string, n *N, byStage map[string][]string, anyMR, 
 		}
 	}
 	if r := def("retry"); r != nil {
-		max := r.Str()
+		maxRetry := r.Str()
 		if r.IsMap() {
-			max = r.Get("max").Str()
+			maxRetry = r.Get("max").Str()
 			s.rp.note("stages.retry.when", r.Line)
 		}
-		j.Retry, _ = strconv.Atoi(max)
+		j.Retry, _ = strconv.Atoi(maxRetry)
 		if n.Has("retry") {
 			s.rp.note("stages.retry", r.Line)
 		}
@@ -793,7 +781,6 @@ func expireIn(s string) (string, bool) {
 var (
 	ifEq  = regexp.MustCompile(`^\$([A-Z_]+)\s*(==|!=)\s*["']([^"']*)["']$`)
 	ifTag = regexp.MustCompile(`^\$CI_COMMIT_TAG$`)
-	ifBr  = regexp.MustCompile(`^\$CI_COMMIT_BRANCH$`)
 	ifPre = regexp.MustCompile(`^\$([A-Z_]+)\s*=~\s*/\^([A-Za-z0-9._/-]+)/$`)
 )
 

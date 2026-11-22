@@ -255,7 +255,7 @@ func (r *jobsReader) job(id string, n, cfg *N) *Job {
 		j.Env = append(j.Env, KV{"CIRCLE_NODE_INDEX", "${LAUNCHWAY_EACH_NODE_INDEX}"}, KV{"CIRCLE_NODE_TOTAL", par})
 		r.rp.note("jobs.parallelism", n.LineOf("parallelism"), par)
 	}
-	if n.Has("parameters") && !(cfg == nil) {
+	if n.Has("parameters") && cfg != nil {
 		n.Get("parameters").Pairs(func(k string, v *N, line int) {
 			r.rp.note("jobs.step.command_params", line, k)
 		})
@@ -303,7 +303,7 @@ func (r *jobsReader) steps(j *Job, steps *N, dir string, depth int) {
 					d = wd
 				}
 				for _, k := range []string{"when", "background", "no_output_timeout"} {
-					if cfg.Has(k) && !(k == "when" && cfg.Get(k).Str() == "always") {
+					if cfg.Has(k) && (k != "when" || cfg.Get(k).Str() != "always") {
 						r.rp.note("jobs.step.run_when", cfg.LineOf(k), k)
 					}
 				}

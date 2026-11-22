@@ -106,7 +106,7 @@ func (r *tasksReader) triggers(t *N) {
 			r.rp.note("tasks.trigger.exclude", tr.LineOf("batch"), "batch")
 		}
 	}
-	if pr := t.Get("pr"); pr != nil && !(pr.IsScalar() && pr.Val == "none") {
+	if pr := t.Get("pr"); pr != nil && (!pr.IsScalar() || pr.Val != "none") {
 		prr := &PullRequest{}
 		branches := pr
 		if pr.IsMap() {
@@ -303,13 +303,13 @@ func (r *tasksReader) job(jn *N, stage string, parent *N, info *stageInfo) {
 		}
 		j.Delivers, j.DeliverWhy = true, "it deploys to the environment "+en
 		r.rp.note("tasks.deployment", jn.Line, en).Fix = "approval"
-		strat := jn.Get("strategy")
+		strategy := jn.Get("strategy")
 		for _, k := range []string{"canary", "rolling"} {
-			if strat.Has(k) {
-				r.rp.note("tasks.deployment.hooks", strat.LineOf(k), k)
+			if strategy.Has(k) {
+				r.rp.note("tasks.deployment.hooks", strategy.LineOf(k), k)
 			}
 		}
-		ro := strat.Get("runOnce")
+		ro := strategy.Get("runOnce")
 		for _, k := range []string{"preDeploy", "routeTraffic", "postRouteTraffic", "on"} {
 			if ro.Has(k) {
 				r.rp.note("tasks.deployment.hooks", ro.LineOf(k), k)
