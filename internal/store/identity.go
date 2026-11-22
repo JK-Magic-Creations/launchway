@@ -183,9 +183,10 @@ func (i *Identity) CreateToken(sc Scope, t APIToken, storedHash string) error {
 	if len(t.Projects) == 0 {
 		projects = []byte("")
 	}
+	repos, ranges := encodeList(t.Repositories), encodeList(t.SourceRanges)
 	err := i.env.Do(sc, true, func(q *Q) error {
-		_, err := q.Exec(`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, role, projects) VALUES(?,?,?,?,?,?,?,?,?)`,
-			q.Base(), t.ID, storedHash, t.User, t.Name, t.CreatedAt, t.ExpiresAt, t.Role, string(projects))
+		_, err := q.Exec(`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, role, projects, repos, repo_access, source_ranges) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
+			q.Base(), t.ID, storedHash, t.User, t.Name, t.CreatedAt, t.ExpiresAt, t.Role, string(projects), repos, t.RepoAccess, ranges)
 		return err
 	})
 	if IsConflict(err) {
@@ -194,13 +195,19 @@ func (i *Identity) CreateToken(sc Scope, t APIToken, storedHash string) error {
 	return err
 }
 
-const tokenColumns = `t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, t.role, t.projects, t.last_used_from` //nolint:gosec // column names, not a credential
+const tokenColumns = `t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, t.role, t.projects, t.last_used_from, t.repos, t.repo_access, t.source_ranges` //nolint:gosec // column names, not a credential
 
 func scanToken(sc Row, extra ...any) (*APIToken, error) {
 	t := &APIToken{}
-	var projects string
-	if err := sc.Scan(append([]any{&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.Role, &projects, &t.LastUsedFrom}, extra...)...); err != nil {
+	var projects, repos, ranges string
+	if err := sc.Scan(append([]any{&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.Role, &projects, &t.LastUsedFrom, &repos, &t.RepoAccess, &ranges}, extra...)...); err != nil {
 		return nil, err
+	}
+	if repos != "" {
+		_ = json.Unmarshal([]byte(repos), &t.Repositories)
+	}
+	if ranges != "" {
+		_ = json.Unmarshal([]byte(ranges), &t.SourceRanges)
 	}
 	if projects != "" {
 		_ = json.Unmarshal([]byte(projects), &t.Projects)
@@ -211,14 +218,15 @@ func scanToken(sc Row, extra ...any) (*APIToken, error) {
 // TokenByHash finds a token of this Base by either stored form of the hash of
 // its value, with its owner's groups as of their latest sign-in. A token of
 // another Base is not found.
-func (i *Identity) TokenByHash(sc Scope, hash, limitedHash string) (*APIToken, []string, error) {
+func (i *Identity) TokenByHash(sc Scope, hash string, limitedHashes ...string) (*APIToken, []string, error) {
 	var groups, name, email sql.NullString
 	var t *APIToken
 	err := i.env.Do(sc, false, func(q *Q) error {
 		var err error
 		t, err = scanToken(q.QueryRow(`SELECT `+tokenColumns+`, u.group_list, u.display_name, u.email
 			FROM api_tokens t LEFT JOIN users u ON u.base_id = t.base_id AND u.username = t.username
-			WHERE t.base_id = ? AND t.hash IN (?, ?)`, q.Base(), hash, limitedHash), &groups, &name, &email)
+			WHERE t.base_id = ? AND t.hash IN (`+strings.TrimSuffix(strings.Repeat("?,", 1+len(limitedHashes)), ",")+`)`,
+			append([]any{q.Base(), hash}, anys(limitedHashes)...)...), &groups, &name, &email)
 		return err
 	})
 	if errors.Is(err, sql.ErrNoRows) {
@@ -932,4 +940,156 @@ func (i *Identity) SetMemberRole(sc Scope, handle, role string) error {
 // RemoveMember removes a member from the Base.
 func (i *Identity) RemoveMember(sc Scope, handle string) error {
 	return i.env.Do(sc, true, func(q *Q) error { return removeMember(q, strings.TrimSpace(handle)) })
+}
+
+// encodeList is a list as JSON, or "" for none.
+func encodeList[T any](l []T) string {
+	if len(l) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(l)
+	return string(b)
+}
+
+// RewriteTokenRepos lets fn change the repository list of every token of the
+// Base that has one (a repository was renamed or deleted); fn returns the new
+// list and whether it changed.
+func (i *Identity) RewriteTokenRepos(sc Scope, fn func([]TokenRepo) ([]TokenRepo, bool)) error {
+	return i.env.Do(sc, true, func(q *Q) error {
+		rows, err := q.Query(`SELECT id, repos FROM api_tokens WHERE base_id = ? AND repos <> ''`, q.Base())
+		if err != nil {
+			return err
+		}
+		type upd struct{ id, repos string }
+		var todo []upd
+		for rows.Next() {
+			var id, raw string
+			if err := rows.Scan(&id, &raw); err != nil {
+				rows.Close()
+				return err
+			}
+			var list []TokenRepo
+			if json.Unmarshal([]byte(raw), &list) != nil {
+				continue
+			}
+			if out, changed := fn(list); changed {
+				todo = append(todo, upd{id, encodeList(out)})
+			}
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		for _, u := range todo {
+			if _, err := q.Exec(`UPDATE api_tokens SET repos = ? WHERE base_id = ? AND id = ?`, u.repos, q.Base(), u.id); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ---- service accounts ----
+
+// CreateServiceAccount adds a service account; ErrConflict if the name is taken.
+func (i *Identity) CreateServiceAccount(sc Scope, a ServiceAccount) error {
+	err := i.env.Do(sc, true, func(q *Q) error {
+		_, err := q.Exec(`INSERT INTO service_accounts(base_id, name, description, role, disabled, created_at, created_by) VALUES(?,?,?,?,0,?,?)`,
+			q.Base(), a.Name, a.Description, a.Role, a.CreatedAt, a.CreatedBy)
+		return err
+	})
+	if IsConflict(err) {
+		return fmt.Errorf("%w: a service account called %q exists", ErrConflict, a.Name)
+	}
+	return err
+}
+
+// ServiceAccounts lists the service accounts, by name.
+func (i *Identity) ServiceAccounts(sc Scope) ([]ServiceAccount, error) {
+	out := []ServiceAccount{}
+	err := i.env.Do(sc, false, func(q *Q) error {
+		rows, err := q.Query(`SELECT name, description, role, disabled, created_at, created_by FROM service_accounts WHERE base_id = ? ORDER BY name`, q.Base())
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a ServiceAccount
+			var dis int
+			if err := rows.Scan(&a.Name, &a.Description, &a.Role, &dis, &a.CreatedAt, &a.CreatedBy); err != nil {
+				return err
+			}
+			a.Disabled = dis != 0
+			out = append(out, a)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
+// ServiceAccount finds one by name.
+func (i *Identity) ServiceAccount(sc Scope, name string) (*ServiceAccount, error) {
+	var a ServiceAccount
+	var dis int
+	err := i.env.Do(sc, false, func(q *Q) error {
+		return q.QueryRow(`SELECT name, description, role, disabled, created_at, created_by FROM service_accounts WHERE base_id = ? AND name = ?`, q.Base(), name).
+			Scan(&a.Name, &a.Description, &a.Role, &dis, &a.CreatedAt, &a.CreatedBy)
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, notFound("service account " + name)
+	}
+	a.Disabled = dis != 0
+	return &a, err
+}
+
+// SetServiceAccount changes a service account's role and whether it is off.
+func (i *Identity) SetServiceAccount(sc Scope, name string, role *string, disabled *bool) error {
+	return i.env.Do(sc, true, func(q *Q) error {
+		var found int64
+		if role != nil {
+			res, err := q.Exec(`UPDATE service_accounts SET role = ? WHERE base_id = ? AND name = ?`, *role, q.Base(), name)
+			if err != nil {
+				return err
+			}
+			found, _ = res.RowsAffected()
+		}
+		if disabled != nil {
+			d := 0
+			if *disabled {
+				d = 1
+			}
+			res, err := q.Exec(`UPDATE service_accounts SET disabled = ? WHERE base_id = ? AND name = ?`, d, q.Base(), name)
+			if err != nil {
+				return err
+			}
+			found, _ = res.RowsAffected()
+		}
+		if found == 0 {
+			return notFound("service account " + name)
+		}
+		return nil
+	})
+}
+
+// DeleteServiceAccount removes the account and every token it owns.
+func (i *Identity) DeleteServiceAccount(sc Scope, name, principal string) error {
+	return i.env.Do(sc, true, func(q *Q) error {
+		res, err := q.Exec(`DELETE FROM service_accounts WHERE base_id = ? AND name = ?`, q.Base(), name)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return notFound("service account " + name)
+		}
+		_, err = q.Exec(`DELETE FROM api_tokens WHERE base_id = ? AND username = ?`, q.Base(), principal)
+		return err
+	})
+}
+
+func anys(l []string) []any {
+	out := make([]any, len(l))
+	for i, v := range l {
+		out[i] = v
+	}
+	return out
 }

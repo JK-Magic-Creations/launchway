@@ -955,9 +955,15 @@ These routes need sign-in on: with sign-in off they answer `404` with `API token
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/tokens` | `signed-in` | — | The caller's own tokens, without their values. |
-| `POST /api/v1/tokens` | `signed-in` | `token.create` | Makes a token. Only from a signed-in browser session, never with another token (`403`). |
+| `POST /api/v1/tokens` | `signed-in` | `token.create` | Makes a token. Only from a signed-in browser session, never with another token (`403`). Body: `name`, `expires_in_days`, `role`, `projects` (Flight patterns), and the limits that make it narrow: `repositories` (`owner/name` or `owner/*`, hosted repositories) with `repo_access` (`read` or `write`), which make a token that can do nothing else (not combined with `projects`), and `source_ranges` (CIDR ranges or single addresses it may be used from; a request from elsewhere is refused with `403` and recorded). |
 | `DELETE /api/v1/tokens/{id}` | `signed-in` | `token.revoke` | Revokes one of the caller's tokens. Answers `204`. |
 | `GET /api/v1/tokens/limits` | `signed-in` | — | The longest a new token may last and the highest role it may have. |
+| `GET /api/v1/service-accounts` | `admin` | — | The service accounts: non-person accounts that own tokens for automation. |
+| `POST /api/v1/service-accounts` | `admin` | `service_account.create` | Makes one: `name`, `role` (`viewer`, the default, `operator` or `admin`), `description`. It has no password and no sign-in. Answers `201`. |
+| `PATCH /api/v1/service-accounts/{name}` | `admin` | `service_account.update` | Changes `role` or switches it off or on (`disabled`); its tokens stop working while it is off. |
+| `DELETE /api/v1/service-accounts/{name}` | `admin` | `service_account.delete` | Removes it and every token it owns. Answers `204`. |
+| `GET /api/v1/service-accounts/{name}/tokens` | `admin` | — | The account's tokens, without their values. |
+| `POST /api/v1/service-accounts/{name}/tokens` | `admin` | `token.create` | Makes a token for the account (the body is that of `POST /api/v1/tokens`; its role is at most the account's). From an administrator's signed-in session; from an administrator's API token only if `auth.tokens.service_accounts_from_tokens` is on (`403` otherwise); never from a service account's or an agent's token. |
 | `GET /api/v1/admin/tokens` | `admin` | — | Everyone's tokens. |
 | `DELETE /api/v1/admin/tokens/{id}` | `admin` | `token.revoke` | Revokes anyone's token. Answers `204`. |
 

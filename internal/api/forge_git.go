@@ -277,6 +277,9 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 		if !found {
 			return notFound()
 		}
+		if c.id.repoLimited() && !c.id.repoIDMatches(repo) {
+			return notFound()
+		}
 		if code, msg := s.checkRepo(c.id, q.class, q.path); code == http.StatusNotFound {
 			return notFound()
 		} else if code != 0 {
@@ -342,8 +345,10 @@ func (s *Server) gitDenied(source string, c gitCaller, path, svc, why string) {
 	if n := c.credentialNote(); n != "" {
 		detail = n + "; " + why
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: path,
-		Outcome: "denied", Detail: detail})
+	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: path,
+		Outcome: "denied", Detail: detail}
+	c.id.stamp(e)
+	s.record(e)
 }
 
 // gitPushed records a push, whichever transport carried it: who, to which
@@ -351,6 +356,7 @@ func (s *Server) gitDenied(source string, c gitCaller, path, svc, why string) {
 // rest of the system (events, webhooks, pipelines).
 func (s *Server) gitPushed(ctx context.Context, source string, c gitCaller, repo forge.Repository, res githttp.Result) {
 	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: repo.Path, Outcome: "ok", Detail: c.credentialNote()}
+	c.id.stamp(e)
 	var refs []string
 	if rr := res.Receive; rr != nil {
 		for _, u := range rr.Updates {

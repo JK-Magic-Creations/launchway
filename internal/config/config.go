@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -514,6 +515,15 @@ type ServerConfig struct {
 	// X-Forwarded-Proto and X-Forwarded-For, and that clients cannot reach
 	// the server except through it.
 	TrustProxy bool `yaml:"trust_proxy"`
+	// TrustedProxies are the address ranges (CIDR) of the proxies whose
+	// forwarding headers are believed; a request from any other address has
+	// its X-Forwarded-For, X-Forwarded-Proto and ClientAddressHeader ignored.
+	// Set, it replaces the "believe every peer" meaning of trust_proxy. Off
+	// when empty.
+	TrustedProxies []string `yaml:"trusted_proxies"`
+	// ClientAddressHeader is the header holding the one client address that
+	// the proxy sets (such as X-Real-IP); empty reads X-Forwarded-For.
+	ClientAddressHeader string `yaml:"client_address_header"`
 	// DrainDelay is how long a stopping server keeps serving after /readyz
 	// starts to report it is not ready, so that load balancers that check
 	// /readyz stop sending it requests first; default 0s.
@@ -970,4 +980,26 @@ func RunnerToken(dataDir string, store SharedStore) (string, error) {
 		}
 	}
 	return tok, nil
+}
+
+// TrustedProxyPrefixes parses server.trusted_proxies: CIDR ranges, or single
+// addresses.
+func (s ServerConfig) TrustedProxyPrefixes() ([]netip.Prefix, error) {
+	var out []netip.Prefix
+	for _, c := range s.TrustedProxies {
+		c = strings.TrimSpace(c)
+		p, err := netip.ParsePrefix(c)
+		if err != nil {
+			a, aerr := netip.ParseAddr(c)
+			if aerr != nil {
+				return nil, fmt.Errorf("server.trusted_proxies: %q is not an address range such as 10.0.0.0/8 or 192.0.2.7", c)
+			}
+			p = netip.PrefixFrom(a, a.BitLen())
+		}
+		out = append(out, p.Masked())
+	}
+	if h := s.ClientAddressHeader; h != "" && (strings.ContainsAny(h, " :\t,") || len(h) > 60) {
+		return nil, fmt.Errorf("server.client_address_header: %q is not a header name", h)
+	}
+	return out, nil
 }

@@ -51,7 +51,7 @@ func (s *Server) requestBase(r *http.Request) string {
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	if s.TrustProxy {
+	if s.proxyTrusted(r) {
 		if p := r.Header.Get("X-Forwarded-Proto"); p == "https" || p == "http" {
 			scheme = p
 		}

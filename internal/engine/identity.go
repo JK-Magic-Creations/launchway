@@ -104,6 +104,10 @@ type AuditEntry struct {
 	Target  string `json:"target"`  // a run, run/step or token name
 	Outcome string `json:"outcome"` // ok, denied or failed
 	Detail  string `json:"detail"`
+	// TokenID and TokenName name the API token the request was authenticated
+	// with; "" when it was not a token. Never the secret.
+	TokenID   string `json:"token_id,omitempty"`
+	TokenName string `json:"token_name,omitempty"`
 	// RequestID is the request that caused the entry. It is not stored in the
 	// table and not in the API's view: only the audit stream carries it.
 	RequestID string `json:"-"`
@@ -114,8 +118,8 @@ type AuditEntry struct {
 func (e *Engine) Audit(a AuditEntry) error {
 	unlock := e.writeLock()
 	defer unlock()
-	_, err := e.db.Exec(`INSERT INTO audit(at, username, source, action, project, target, outcome, detail) VALUES(?,?,?,?,?,?,?,?)`,
-		a.At, a.User, a.Source, a.Action, a.Project, a.Target, a.Outcome, a.Detail)
+	_, err := e.db.Exec(`INSERT INTO audit(at, username, source, action, project, target, outcome, detail, token_id, token_name) VALUES(?,?,?,?,?,?,?,?,?,?)`,
+		a.At, a.User, a.Source, a.Action, a.Project, a.Target, a.Outcome, a.Detail, a.TokenID, a.TokenName)
 	if err == nil {
 		e.emitAudit(a)
 	}
@@ -153,7 +157,7 @@ func (e *Engine) AuditLog(f AuditFilter) ([]AuditEntry, error) {
 			where, args = append(where, c.cond), append(args, c.val)
 		}
 	}
-	q := `SELECT id, at, username, source, action, project, target, outcome, detail FROM audit`
+	q := `SELECT id, at, username, source, action, project, target, outcome, detail, token_id, token_name FROM audit`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -165,7 +169,7 @@ func (e *Engine) AuditLog(f AuditFilter) ([]AuditEntry, error) {
 	out := []AuditEntry{}
 	for rows.Next() {
 		var a AuditEntry
-		if err := rows.Scan(&a.ID, &a.At, &a.User, &a.Source, &a.Action, &a.Project, &a.Target, &a.Outcome, &a.Detail); err != nil {
+		if err := rows.Scan(&a.ID, &a.At, &a.User, &a.Source, &a.Action, &a.Project, &a.Target, &a.Outcome, &a.Detail, &a.TokenID, &a.TokenName); err != nil {
 			return nil, err
 		}
 		out = append(out, a)

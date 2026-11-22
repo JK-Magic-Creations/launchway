@@ -201,6 +201,12 @@ var permissionTable = map[string]matrixRow{
 	"PUT /api/v1/projects/{name}/registry/policy":     {"PUT", "/api/v1/projects/pay-api/registry/policy", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
 	"GET /api/v1/projects/{name}/registry/retention":  {"GET", "/api/v1/projects/pay-api/registry/retention", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/projects/{name}/registry/retention": {"POST", "/api/v1/projects/pay-api/registry/retention", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/service-accounts":                    {"GET", "/api/v1/service-accounts", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/service-accounts":                   {"POST", "/api/v1/service-accounts", `{"name":"matrix-svc"}`, [6]int{401, 403, 403, 403, 403, 201}},
+	"PATCH /api/v1/service-accounts/{name}":           {"PATCH", "/api/v1/service-accounts/nobody", `{"disabled":true}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"DELETE /api/v1/service-accounts/{name}":          {"DELETE", "/api/v1/service-accounts/nobody", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/service-accounts/{name}/tokens":      {"GET", "/api/v1/service-accounts/nobody/tokens", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/service-accounts/{name}/tokens":     {"POST", "/api/v1/service-accounts/nobody/tokens", `{"name":"x"}`, [6]int{401, 403, 403, 403, 403, 404}},
 	"GET /api/v1/audit":                               {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
 	// Step resources: anyone signed in reads, an admin changes.
 	"GET /api/v1/step-resources":                 {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},

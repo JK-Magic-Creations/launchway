@@ -55,6 +55,11 @@ type ForgeHosting struct {
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
 	Updates UpdatesService
+	// Local reads a hosted repository straight from this server's storage
+	// (nil: servers fetch hosted repositories like any other).
+	Local interface {
+		WithCache(ctx context.Context, repo string, fn func(gitDir string) error) error
+	}
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -234,6 +239,7 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		return
 	}
 	if renamedFrom != "" {
+		s.tokensFollowRename(renamedFrom, got)
 		s.emitRepository(ctx, identityFrom(r).User, got, "renamed", map[string]string{"old_path": renamedFrom})
 	}
 	writeJSON(w, http.StatusOK, got)
@@ -248,6 +254,7 @@ func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if gone.ID != "" {
+		s.tokensForgetRepo(gone)
 		s.emitRepository(r.Context(), identityFrom(r).User, gone, "deleted", nil)
 	}
 	w.WriteHeader(http.StatusNoContent)

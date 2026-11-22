@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -31,8 +30,22 @@ type identity struct {
 	capRole  auth.Role
 	scope    []string
 	tokenTag string // the token's name, for the audit trail
+	// repos and repoAccess limit a token to hosted repositories, and to
+	// reading or writing them; floor is the role of a service account, which
+	// its tokens have everywhere before their own limits.
+	repos      []engine.TokenRepo
+	repoAccess string
+	floor      auth.Role
 	// agent is set when the token is an agent's (internal/work).
 	agent *work.Agent
+}
+
+// stamp names the API token a request was authenticated with in an audit
+// entry (never its secret).
+func (id *identity) stamp(e *engine.AuditEntry) {
+	if id != nil && id.Via == viaToken && id.tokenID != "" {
+		e.TokenID, e.TokenName = id.tokenID, id.tokenTag
+	}
 }
 
 const (
@@ -79,6 +92,9 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 		role := auth.Admin
 		if s.Auth != nil {
 			if id == nil || id.Via == viaNone || id.User == "" {
+				return false
+			}
+			if id.repoLimited() {
 				return false
 			}
 			role = s.roleOn(id, project)
@@ -209,6 +225,7 @@ func (s *Server) guardAccess(rt route) http.Handler {
 		if rt.audit != "" {
 			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), RequestID: reqID(r),
 				Action: rt.audit, Target: auditTarget(r)}
+			id.stamp(entry)
 		}
 		deny := func(code int, msg string) {
 			writeErr(w, code, msg)
@@ -219,6 +236,7 @@ func (s *Server) guardAccess(rt route) http.Handler {
 			} else if id.Via == viaToken || id.Via == viaOAuth {
 				e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), RequestID: reqID(r), Action: "token.use",
 					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg}
+				id.stamp(e)
 				markMCP(r, id, e)
 				s.record(e)
 			}
@@ -290,6 +308,11 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 		}
 		return http.StatusNotFound, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, project).Error()
 	}
+	if id.repoLimited() && !repoTokenMayCall(a, r) {
+		// A token limited to repositories does nothing else; this holds for
+		// every route, whatever its access class.
+		return http.StatusForbidden, "this token is limited to repositories: it can do nothing else"
+	}
 	if a == repoRead || a == repoWrite || a == repoAdmin {
 		return s.checkRepoRequest(id, a, r)
 	}
@@ -353,26 +376,10 @@ func (s *Server) isHTTPS(r *http.Request) bool {
 	if r.TLS != nil {
 		return true
 	}
-	if s.TrustProxy {
+	if s.proxyTrusted(r) {
 		return strings.EqualFold(lastListItem(r.Header.Values("X-Forwarded-Proto")), "https")
 	}
 	return false
-}
-
-// clientAddr is the address of whoever made the request. Behind a trusted
-// proxy it is the last address in X-Forwarded-For: the one the proxy itself
-// saw. Addresses before it were sent by the client and could be anything.
-func (s *Server) clientAddr(r *http.Request) string {
-	if s.TrustProxy {
-		if ip := net.ParseIP(lastListItem(r.Header.Values("X-Forwarded-For"))); ip != nil {
-			return ip.String()
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }
 
 // lastListItem returns the last item of a comma-separated header that may
@@ -606,12 +613,38 @@ func (s *Server) tokenIdentity(r *http.Request, tok string, touch bool) (*identi
 		s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
 		return nil, nil
 	}
+	addr := s.clientAddr(r)
+	if len(t.SourceRanges) > 0 && !inSourceRanges(parsePrefixes(t.SourceRanges), addr) {
+		// The credential is genuine, so the failure is not counted against
+		// the address as a guess; but it is audited, by token.
+		if touch {
+			s.record(&engine.AuditEntry{At: now.UnixMilli(), User: t.User, Source: addr, RequestID: reqID(r), Action: "token.use", Target: t.Name,
+				Outcome: "denied", TokenID: t.ID, TokenName: t.Name,
+				Detail: r.Method + " " + r.URL.Path + ": the token " + t.Name + " may only be used from " + strings.Join(t.SourceRanges, ", ") + "; this request came from " + addr})
+		}
+		return nil, tokenRefusal("the token %s may only be used from %s; this request came from %s", t.Name, strings.Join(t.SourceRanges, ", "), addr)
+	}
 	if touch {
-		if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
+		if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), addr); err != nil {
 			s.Log.Warn("recording that a token was used", "err", err)
 		}
 	}
-	id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
+	id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name,
+		repos: t.Repositories, repoAccess: t.RepoAccess}
+	if strings.HasPrefix(t.User, engine.ServicePrincipalPrefix) {
+		// A service account's token works only while the account exists and is on.
+		acct, err := s.Engine.ServiceAccount(strings.TrimPrefix(t.User, engine.ServicePrincipalPrefix))
+		if errors.Is(err, engine.ErrNotFound) || (err == nil && acct.Disabled) {
+			s.tokenDenied(r, touch, t.User, t.Name, "the service account of the token "+t.Name+" is deleted or switched off")
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if id.floor, err = auth.ParseRole(acct.Role); err != nil {
+			return nil, nil
+		}
+	}
 	if t.Role != "" {
 		if id.capRole, err = auth.ParseRole(t.Role); err != nil {
 			return nil, nil // a role this server does not know: refuse rather than guess

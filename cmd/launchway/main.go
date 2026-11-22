@@ -61,6 +61,7 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
                                                 (launchway runs, for more)
+  launchway service-accounts list|create|update|delete|token  non-person accounts that own tokens for automation
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
   launchway notifications [--limit N]           the log of notifications sent, retried or failed
   launchway deployments options|rollback|review  send a service back after a deployment succeeded ({rollback}); review {emergency_rollbacks}
@@ -120,45 +121,46 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 
 // commands take their arguments and nothing else, by name (registry.go adds registry).
 var commands = map[string]func([]string) error{
-	"runs":           cmdRuns,
-	"debrief":        cmdDebrief,
-	"tests":          cmdTests,
-	"attention":      cmdAttention,
-	"recent":         cmdRecent,
-	"organize":       cmdOrganize,
-	"approvals":      cmdApprovals,
-	"notifications":  cmdNotifications,
-	"deployments":    cmdDeployments,
-	"release":        cmdRelease,
-	"rollout":        cmdRollout,
-	"templates":      cmdTemplates,
-	"policy":         cmdPolicy,
-	"waivers":        cmdWaivers,
-	"mcp":            cmdMCP,
-	"verifications":  cmdVerifications,
-	"health-sources": cmdHealthSources,
-	"models":         cmdModels,
-	"runners":        cmdRunners,
-	"step-resources": cmdStepResources,
-	"config":         cmdConfig,
-	"run-limits":     cmdRunLimits,
-	"caches":         cmdCaches,
-	"events":         cmdEvents,
-	"event-sources":  cmdEventSources,
-	"run-triggers":   cmdRunTriggers,
-	"squadrons":      cmdSquadrons,
-	"units":          cmdSquadrons,
-	"standards":      cmdStandards,
-	"findings":       cmdFindings,
-	"state":          cmdState,
-	"configuration":  cmdConfiguration,
-	"variables":      cmdVariables,
-	"toggles":        cmdToggles,
-	"doctor":         cmdDoctor,
-	"users":          cmdUsers,
-	"bases":          cmdBases,
-	"install":        cmdInstall,
-	"work":           cmdWork,
+	"runs":             cmdRuns,
+	"debrief":          cmdDebrief,
+	"tests":            cmdTests,
+	"attention":        cmdAttention,
+	"recent":           cmdRecent,
+	"organize":         cmdOrganize,
+	"approvals":        cmdApprovals,
+	"notifications":    cmdNotifications,
+	"deployments":      cmdDeployments,
+	"release":          cmdRelease,
+	"rollout":          cmdRollout,
+	"templates":        cmdTemplates,
+	"policy":           cmdPolicy,
+	"waivers":          cmdWaivers,
+	"mcp":              cmdMCP,
+	"verifications":    cmdVerifications,
+	"health-sources":   cmdHealthSources,
+	"models":           cmdModels,
+	"runners":          cmdRunners,
+	"step-resources":   cmdStepResources,
+	"config":           cmdConfig,
+	"run-limits":       cmdRunLimits,
+	"caches":           cmdCaches,
+	"events":           cmdEvents,
+	"event-sources":    cmdEventSources,
+	"run-triggers":     cmdRunTriggers,
+	"squadrons":        cmdSquadrons,
+	"units":            cmdSquadrons,
+	"standards":        cmdStandards,
+	"findings":         cmdFindings,
+	"state":            cmdState,
+	"configuration":    cmdConfiguration,
+	"variables":        cmdVariables,
+	"toggles":          cmdToggles,
+	"doctor":           cmdDoctor,
+	"users":            cmdUsers,
+	"service-accounts": cmdServiceAccounts,
+	"bases":            cmdBases,
+	"install":          cmdInstall,
+	"work":             cmdWork,
 }
 
 func main() {
@@ -282,8 +284,16 @@ func cmdServer(args []string) error {
 	api.SetRootKeySource(guideRootKey{su.rootHolder}) // the setup guide's guarded recovery copy reads the unlocked holder
 	forge.SetSealedReader(func(name string) (string, error) { return secretsSvc.ConnectionToken(context.Background(), name) })
 	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
+	trustedProxies, err := cfg.Server.TrustedProxyPrefixes()
+	if err != nil {
+		return err
+	}
+	if cfg.Server.TrustProxy && len(trustedProxies) == 0 {
+		log.Warn("server.trust_proxy is on without server.trusted_proxies: the forwarding headers are believed from every address that reaches this server; list your proxies in server.trusted_proxies so that only they are believed")
+	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
+		TrustProxy: cfg.Server.TrustProxy, TrustedProxies: trustedProxies, ClientAddrHeader: cfg.Server.ClientAddressHeader,
+		AdminTokenMakesServiceTokens: cfg.Auth.Tokens.ServiceAccountsFromTokens, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
 	setDebrief(srv, cfg, log)
 	if store.Available() {
 		srv.Settings = store

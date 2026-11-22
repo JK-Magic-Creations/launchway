@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"sort"
 	"strconv"
 	"strings"
@@ -50,12 +51,22 @@ type Server struct {
 	Drafts *auth.DraftRules
 	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
 	// reverse proxy that every client must go through.
-	TrustProxy  bool
-	OpenInstall bool  // no sign-in on a reachable address; see signin_request.go
-	UI          fs.FS // the built web UI; may be nil
-	Version     string
-	Log         *slog.Logger
-	Now         func() time.Time // for tests
+	TrustProxy bool
+	// TrustedProxies, when not empty, are the only peers whose forwarding
+	// headers are believed (server.trusted_proxies); ClientAddrHeader is the
+	// single-address header such a proxy sets (server.client_address_header),
+	// X-Forwarded-For when empty.
+	TrustedProxies   []netip.Prefix
+	ClientAddrHeader string
+	// AdminTokenMakesServiceTokens lets an administrator's API token, not only
+	// an administrator's signed-in session, make a service account's tokens
+	// (auth.tokens.service_accounts_from_tokens); off by default.
+	AdminTokenMakesServiceTokens bool
+	OpenInstall                  bool  // no sign-in on a reachable address; see signin_request.go
+	UI                           fs.FS // the built web UI; may be nil
+	Version                      string
+	Log                          *slog.Logger
+	Now                          func() time.Time // for tests
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration

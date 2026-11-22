@@ -25,7 +25,7 @@ import (
 // was in the clear waits while an older server is seen and then completes without losing a value. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 // schemaLast is the schema of the build under test: the last migration (a merge that adds one changes it here).
-const schemaLast = schemaUsage
+const schemaLast = schemaNarrow
 
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()

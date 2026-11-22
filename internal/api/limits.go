@@ -18,12 +18,27 @@ import (
 
 // limited reports whether the identity is a token with limits.
 func (id *identity) limited() bool {
-	return id != nil && id.Via == viaToken && (id.capRole > auth.NoRole || len(id.scope) > 0)
+	return id != nil && id.Via == viaToken && (id.capRole > auth.NoRole || len(id.scope) > 0 || id.repoAccess != "" || id.floor > auth.NoRole)
 }
 
 // limit applies a token's limits to a role its owner has on a project.
 func (id *identity) limit(r auth.Role, project string) auth.Role {
 	if !id.limited() {
+		return r
+	}
+	if id.floor > r {
+		r = id.floor
+	}
+	if id.repoAccess != "" {
+		// Only the listed repositories, and no more than the access level
+		// and the role cap allow (the most restrictive of them wins).
+		if !coversRepo(id.repos, project) {
+			return auth.NoRole
+		}
+		r = min(r, id.repoRoleCap())
+		if id.capRole > auth.NoRole {
+			r = min(r, id.capRole)
+		}
 		return r
 	}
 	if len(id.scope) > 0 && !matchPattern(id.scope, project) {
@@ -66,6 +81,9 @@ func (s *Server) limitedAllows(id *identity, a auth.Action, project string) bool
 	case auth.AdministerProject:
 		return s.roleOn(id, project) >= auth.Admin
 	case auth.ReadAny:
+		if id.repoLimited() {
+			return false
+		}
 		known, err := s.knownProjects()
 		if err != nil {
 			return false
@@ -78,8 +96,8 @@ func (s *Server) limitedAllows(id *identity, a auth.Action, project string) bool
 		return false
 	case auth.Administer:
 		// Admin of every project: a token limited to some projects never is.
-		return len(id.scope) == 0 && (id.capRole == auth.NoRole || id.capRole >= auth.Admin) &&
-			s.cur().Policy.RoleEverywhere(id.User, id.Groups) >= auth.Admin
+		return len(id.scope) == 0 && id.repoAccess == "" && (id.capRole == auth.NoRole || id.capRole >= auth.Admin) &&
+			max(id.floor, s.cur().Policy.RoleEverywhere(id.User, id.Groups)) >= auth.Admin
 	}
 	return false
 }

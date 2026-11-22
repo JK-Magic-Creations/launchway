@@ -387,10 +387,10 @@ func (s *Server) mayManageRunners(id *identity) bool {
 	if id == nil || id.Via == viaNone || id.User == "" {
 		return false
 	}
-	if id.limited() && (len(id.scope) > 0 || (id.capRole != auth.NoRole && id.capRole < need)) {
+	if id.limited() && (len(id.scope) > 0 || id.repoAccess != "" || (id.capRole != auth.NoRole && id.capRole < need)) {
 		return false
 	}
-	return s.cur().Policy.RoleEverywhere(id.User, id.Groups) >= need
+	return max(id.floor, s.cur().Policy.RoleEverywhere(id.User, id.Groups)) >= need
 }
 
 func (s *Server) manageRefusal() string {
