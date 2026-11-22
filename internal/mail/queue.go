@@ -2,21 +2,17 @@ package mail
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
-// DB is what the queue needs of a database.
-type DB interface {
-	Exec(ctx context.Context, q string, a ...any) (sql.Result, error)
-	Query(ctx context.Context, q string, a ...any) (*sql.Rows, error)
-	QueryRow(ctx context.Context, q string, a ...any) *sql.Row
-}
+// DB is what the queue needs of a database (the SQL is in internal/store).
+type DB = store.CtxDB
 
 // Queue limits.
 const (
@@ -30,7 +26,7 @@ const (
 )
 
 // ErrQueueFull is returned when too many messages already wait.
-var ErrQueueFull = errors.New("too many messages are waiting to be sent")
+var ErrQueueFull = store.ErrMailQueueFull
 
 // Queue holds the messages waiting to go out, with their tries.
 type Queue struct {
@@ -100,26 +96,16 @@ func (q *Queue) Enqueue(ctx context.Context, it Item) (string, error) {
 	if len(it.Text)+len(it.HTML) > maxBody {
 		return "", errors.New("the message is too long")
 	}
-	var n int
-	if err := q.DB.QueryRow(ctx, `SELECT count(*) FROM mail_queue WHERE state = 'pending'`).Scan(&n); err != nil {
-		return "", err
-	}
 	limit := q.Max
 	if limit <= 0 {
 		limit = MaxPending
 	}
-	if n >= limit {
-		return "", ErrQueueFull
-	}
-	id := ids.New("mal")
 	next := int64(0)
 	if !it.NotBefore.IsZero() {
 		next = it.NotBefore.UnixMilli()
 	}
-	// Headers travel in the html column's sibling-free way: they are few and
-	// fixed by kind, so they are rebuilt when sending (see headersFor).
-	_, err := q.DB.Exec(ctx, `INSERT INTO mail_queue(id, recipient, to_addr, kind, subject, text_body, html_body, state, attempts, next_at, created_at) VALUES(?,?,?,?,?,?,?,'pending',0,?,?)`,
-		id, it.Person, it.To, it.Kind, clip(it.Subject, 300), it.Text, it.HTML, next, q.now().UnixMilli())
+	id := ids.New("mal")
+	err := store.EnqueueMail(ctx, q.DB, store.MailRow{ID: id, Person: it.Person, To: it.To, Kind: it.Kind, Subject: clip(it.Subject, 300), Text: it.Text, HTML: it.HTML}, next, q.now().UnixMilli(), limit)
 	return id, err
 }
 
@@ -130,11 +116,6 @@ func clip(s string, n int) string {
 	return s
 }
 
-type row struct {
-	id, person, to, kind, subject, text, html string
-	attempts                                  int
-}
-
 // Counts is what the queue holds, for the settings page.
 type Counts struct {
 	Pending, Sent, Failed int
@@ -143,39 +124,13 @@ type Counts struct {
 
 // Counts returns the queue's numbers.
 func (q *Queue) Counts(ctx context.Context) (Counts, error) {
-	var c Counts
-	rows, err := q.DB.Query(ctx, `SELECT state, count(*) FROM mail_queue GROUP BY state`)
-	if err != nil {
-		return c, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var st string
-		var n int
-		if err := rows.Scan(&st, &n); err != nil {
-			return c, err
-		}
-		switch st {
-		case "pending":
-			c.Pending = n
-		case "sent":
-			c.Sent = n
-		case "failed":
-			c.Failed = n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return c, err
-	}
-	err = q.DB.QueryRow(ctx, `SELECT count(*) FROM mail_queue WHERE state = 'sent' AND sent_at > ?`, q.now().Add(-time.Hour).UnixMilli()).Scan(&c.SentLastHour)
-	return c, err
+	c, err := store.CountMail(ctx, q.DB, q.now().Add(-time.Hour).UnixMilli())
+	return Counts{Pending: c.Pending, Sent: c.Sent, Failed: c.Failed, SentLastHour: c.SentSince}, err
 }
 
 // sentSince counts messages sent since a time.
 func (q *Queue) sentSince(ctx context.Context, t time.Time) (int, error) {
-	var n int
-	err := q.DB.QueryRow(ctx, `SELECT count(*) FROM mail_queue WHERE state = 'sent' AND sent_at > ?`, t.UnixMilli()).Scan(&n)
-	return n, err
+	return store.MailSentSince(ctx, q.DB, t.UnixMilli())
 }
 
 // Allowed says whether the installation's limits leave room for one more
@@ -204,20 +159,10 @@ func (q *Queue) RunOnce(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	now := q.now()
-	rs, err := q.DB.Query(ctx, `SELECT id, recipient, to_addr, kind, subject, text_body, html_body, attempts FROM mail_queue WHERE state = 'pending' AND next_at <= ? ORDER BY created_at, id LIMIT ?`, now.UnixMilli(), batch)
+	due, err := store.DueMail(ctx, q.DB, now.UnixMilli(), batch)
 	if err != nil {
 		return 0, err
 	}
-	var due []row
-	for rs.Next() {
-		var r row
-		if err := rs.Scan(&r.id, &r.person, &r.to, &r.kind, &r.subject, &r.text, &r.html, &r.attempts); err != nil {
-			rs.Close()
-			return 0, err
-		}
-		due = append(due, r)
-	}
-	rs.Close()
 	sent := 0
 	for _, r := range due {
 		ok, err := q.Allowed(ctx)
@@ -227,22 +172,22 @@ func (q *Queue) RunOnce(ctx context.Context) (int, error) {
 		if !ok {
 			break
 		}
-		err = q.Sender.Send(ctx, Message{To: r.to, Subject: r.subject, Text: r.text, HTML: r.html, ID: r.id, Headers: headersFor(r.text)})
-		at := r.attempts + 1
+		err = q.Sender.Send(ctx, Message{To: r.To, Subject: r.Subject, Text: r.Text, HTML: r.HTML, ID: r.ID, Headers: headersFor(r.Text)})
+		at := r.Attempts + 1
 		switch {
 		case err == nil:
 			sent++
-			_, _ = q.DB.Exec(ctx, `UPDATE mail_queue SET state = 'sent', attempts = ?, sent_at = ?, text_body = '', html_body = '', last_error = '' WHERE id = ?`, at, q.now().UnixMilli(), r.id)
-			q.audit(ctx, "mail.sent", r.person, fmt.Sprintf("%s %s, try %d", r.id, r.kind, at), "ok")
+			store.MailSent(ctx, q.DB, r.ID, at, q.now().UnixMilli())
+			q.audit(ctx, "mail.sent", r.Person, fmt.Sprintf("%s %s, try %d", r.ID, r.Kind, at), "ok")
 		case at >= q.maxAttempts():
-			_, _ = q.DB.Exec(ctx, `UPDATE mail_queue SET state = 'failed', attempts = ?, text_body = '', html_body = '', last_error = ? WHERE id = ?`, at, clip(err.Error(), 300), r.id)
-			q.audit(ctx, "mail.failed", r.person, fmt.Sprintf("%s %s gave up after %d tries", r.id, r.kind, at), "error")
+			store.MailFailed(ctx, q.DB, r.ID, at, clip(err.Error(), 300))
+			q.audit(ctx, "mail.failed", r.Person, fmt.Sprintf("%s %s gave up after %d tries", r.ID, r.Kind, at), "error")
 		default:
-			_, _ = q.DB.Exec(ctx, `UPDATE mail_queue SET attempts = ?, next_at = ?, last_error = ? WHERE id = ?`, at, q.now().Add(q.backoff(at)).UnixMilli(), clip(err.Error(), 300), r.id)
-			q.audit(ctx, "mail.retry", r.person, fmt.Sprintf("%s %s try %d failed", r.id, r.kind, at), "error")
+			store.MailRetry(ctx, q.DB, r.ID, at, q.now().Add(q.backoff(at)).UnixMilli(), clip(err.Error(), 300))
+			q.audit(ctx, "mail.retry", r.Person, fmt.Sprintf("%s %s try %d failed", r.ID, r.Kind, at), "error")
 		}
 	}
-	_, _ = q.DB.Exec(ctx, `DELETE FROM mail_queue WHERE state <> 'pending' AND created_at < ?`, now.Add(-keepFinished).UnixMilli())
+	store.PruneMail(ctx, q.DB, now.Add(-keepFinished).UnixMilli())
 	return sent, nil
 }
 

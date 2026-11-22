@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/mail/smtptest"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/store"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -194,9 +195,8 @@ func TestQueueRetriesThenSendsAndForgetsTheBody(t *testing.T) {
 			clk.Advance(time.Minute)
 		}
 	}
-	var state, text string
-	var attempts int
-	if err := q.DB.QueryRow(t.Context(), `SELECT state, attempts, text_body FROM mail_queue WHERE id = ?`, id).Scan(&state, &attempts, &text); err != nil || state != "sent" || attempts != 3 || text != "" {
+	state, attempts, text, _, err := store.MailState(t.Context(), q.DB, id)
+	if err != nil || state != "sent" || attempts != 3 || text != "" {
 		t.Fatalf("%s %d %q %v", state, attempts, text, err)
 	}
 	if len(*audit) != 3 || !strings.HasPrefix((*audit)[0], "mail.retry|dana|") || !strings.HasPrefix((*audit)[2], "mail.sent|dana|") {
@@ -218,8 +218,8 @@ func TestQueueGivesUpAfterTheLimitAndStaysBounded(t *testing.T) {
 		_, _ = q.RunOnce(t.Context())
 		clk.Advance(time.Minute)
 	}
-	var state, text, lastErr string
-	if err := q.DB.QueryRow(t.Context(), `SELECT state, text_body, last_error FROM mail_queue WHERE id = ?`, id).Scan(&state, &text, &lastErr); err != nil || state != "failed" || text != "" || lastErr == "" {
+	state, _, text, lastErr, err := store.MailState(t.Context(), q.DB, id)
+	if err != nil || state != "failed" || text != "" || lastErr == "" {
 		t.Fatalf("%s %q %q %v", state, text, lastErr, err)
 	}
 	if last := (*audit)[len(*audit)-1]; !strings.HasPrefix(last, "mail.failed|dana|") {

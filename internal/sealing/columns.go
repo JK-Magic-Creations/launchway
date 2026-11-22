@@ -97,7 +97,7 @@ var (
 	}
 	signingColumn = Column{
 		Table: "signing_installation", Column: "sealed", Key: "id", Purpose: keyring.PurposeSecrets,
-		Writers: []string{"internal/forge/signing/store.go"},
+		Writers: []string{"internal/store/person_signing.go"},
 		Why:     "the private signing key of the installation, with which Launchway signs the merge and suggestion commits it makes: with it, a commit could be made that looks like the product's",
 	}
 	webhooksColumn = Column{

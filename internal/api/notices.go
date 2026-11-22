@@ -14,12 +14,9 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
-	"github.com/jk-magic-creations/launchway/internal/config"
-	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/mail"
 	"github.com/jk-magic-creations/launchway/internal/notices"
@@ -41,17 +38,32 @@ func (s *Server) noticeRoutes() []route {
 	}
 }
 
-var mailQueueOnce sync.Map
+// NoticeOptions are the installation's mail settings as the server needs them
+// (the composition root reads them from the installation settings).
+type NoticeOptions struct {
+	// Mail is the sender's settings; an empty Host means no mail is sent.
+	Mail mail.Config
+	// Secrets reads the references of the credentials.
+	Secrets mail.Secrets
+	// Dial is how the mail server is reached: the egress guard's dialer.
+	Dial mail.Dialer
+	// RatePerMinute, RatePerHour and MaxAttempts bound the queue (0: the defaults).
+	RatePerMinute, RatePerHour, MaxAttempts int
+	// PublicURL is where links in mail lead.
+	PublicURL string
+	// IncludePrivateDetails lets titles and comments of repositories that are not public travel by mail.
+	IncludePrivateDetails bool
+}
 
 // EnableNotices turns on notifications for people: the notice service always,
 // and the mail queue when the installation's mail settings name a server.
-func (s *Server) EnableNotices(cfg config.MailConfig) {
-	s.MailSettings = cfg
+func (s *Server) EnableNotices(o NoticeOptions) {
+	s.NoticeSettings = o
 	db := s.Engine.Database()
 	svc := &notices.Service{
 		Store:          &notices.Store{DB: db, Now: s.Now},
-		PublicURL:      cfg.PublicURL,
-		PrivateDetails: cfg.IncludePrivateDetails,
+		PublicURL:      o.PublicURL,
+		PrivateDetails: o.IncludePrivateDetails,
 		Now:            s.Now,
 		Address:        s.personAddress,
 		Key: func(ctx context.Context) ([]byte, error) {
@@ -59,9 +71,9 @@ func (s *Server) EnableNotices(cfg config.MailConfig) {
 			return []byte(v), err
 		},
 	}
-	if cfg.Enabled() {
-		sender := &mail.Sender{Config: cfg.Sender(), Secrets: s.AISecrets, Dial: egress.Default.Dialer(30 * time.Second)}
-		s.Mail = &mail.Queue{DB: db, Sender: sender, Now: s.Now, PerMinute: cfg.RatePerMinute, PerHour: cfg.RatePerHour, MaxAttempts: cfg.MaxAttempts,
+	if o.Mail.Enabled() {
+		sender := &mail.Sender{Config: o.Mail, Secrets: o.Secrets, Dial: o.Dial}
+		s.Mail = &mail.Queue{DB: db, Sender: sender, Now: s.Now, PerMinute: o.RatePerMinute, PerHour: o.RatePerHour, MaxAttempts: o.MaxAttempts,
 			Audit: func(_ context.Context, action, person, detail, outcome string) {
 				s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "system", Action: action, Target: person, Detail: detail, Outcome: outcome})
 			}}
@@ -69,9 +81,6 @@ func (s *Server) EnableNotices(cfg config.MailConfig) {
 	}
 	s.Notices = svc
 	s.Engine.SetPersonNotifier(s.personEvent)
-	if s.Forge != nil && s.Forge.Pulls != nil {
-		_ = s.Forge // pull events reach noticePull through pullEvent
-	}
 	s.work().SetInboxed(s.workInboxed)
 }
 
@@ -114,37 +123,7 @@ const ExpiryWarning = 14 * 24 * time.Hour
 
 // scanCredentials tells people whose SSH keys, signing keys or API tokens end
 // within two weeks, once for each.
-func (s *Server) scanCredentials(ctx context.Context) {
-	db := s.Engine.Database()
-	now := s.Now()
-	type cred struct {
-		owner, what, name string
-		at                int64
-	}
-	var found []cred
-	for _, q := range []struct{ what, sql string }{
-		{"SSH key", `SELECT owner, name, expires_at FROM ssh_keys WHERE kind = 'user' AND expires_at > ? AND expires_at < ?`},
-		{"signing key", `SELECT owner, name, expires_at FROM signing_keys WHERE expires_at > ? AND expires_at < ? AND revoked_at = 0`},
-		{"API token", `SELECT username, name, expires_at FROM api_tokens WHERE expires_at > ? AND expires_at < ?`},
-	} {
-		rows, err := db.Query(ctx, q.sql, now.UnixMilli(), now.Add(ExpiryWarning).UnixMilli())
-		if err != nil {
-			continue
-		}
-		for rows.Next() {
-			c := cred{what: q.what}
-			if rows.Scan(&c.owner, &c.name, &c.at) == nil {
-				found = append(found, c)
-			}
-		}
-		rows.Close()
-	}
-	for _, c := range found {
-		day := time.UnixMilli(c.at).UTC().Format("2006-01-02")
-		_, _ = s.Notices.Notify(ctx, notices.Event{Kind: notices.CredentialExpiring, People: []string{c.owner}, Name: "your account",
-			Title: fmt.Sprintf("your %s %q ends on %s", c.what, c.name, day), Link: "/settings/access/keys", Dedupe: "cred:" + c.what + ":" + c.name + ":" + day})
-	}
-}
+func (s *Server) scanCredentials(ctx context.Context) { s.Notices.ScanCredentials(ctx, ExpiryWarning) }
 
 // ---- the inbox ----
 
@@ -444,9 +423,10 @@ type mailOut struct {
 }
 
 func (s *Server) mailStatus(w http.ResponseWriter, r *http.Request) {
-	c := s.MailSettings
-	out := mailOut{Enabled: s.Mail != nil, Host: c.Host, Port: c.Sender().Port, Security: c.Security, From: c.From, PublicURL: c.PublicURL, Credentials: c.Username != nil,
-		IncludePrivateDetails: c.IncludePrivateDetails, RatePerMinute: c.RatePerMinute, RatePerHour: c.RatePerHour}
+	o := s.NoticeSettings
+	c := o.Mail
+	out := mailOut{Enabled: s.Mail != nil, Host: c.Host, Port: c.EffectivePort(), Security: c.Security, From: c.From, PublicURL: o.PublicURL, Credentials: c.Username != nil,
+		IncludePrivateDetails: o.IncludePrivateDetails, RatePerMinute: o.RatePerMinute, RatePerHour: o.RatePerHour}
 	if out.Enabled && out.Security == "" {
 		out.Security = mail.StartTLS
 	}

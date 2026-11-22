@@ -105,6 +105,9 @@ func (c Config) sec() string {
 	return c.Security
 }
 
+// EffectivePort is the port that is connected to: the one set, or the one the security implies.
+func (c Config) EffectivePort() int { return c.port() }
+
 func (c Config) port() int {
 	switch {
 	case c.Port != 0:

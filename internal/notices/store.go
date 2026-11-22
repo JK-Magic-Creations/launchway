@@ -2,21 +2,17 @@ package notices
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
-// DB is what the store needs of a database.
-type DB interface {
-	Exec(ctx context.Context, q string, a ...any) (sql.Result, error)
-	Query(ctx context.Context, q string, a ...any) (*sql.Rows, error)
-	QueryRow(ctx context.Context, q string, a ...any) *sql.Row
-}
+// DB is what the store needs of a database (the SQL is in internal/store).
+type DB = store.CtxDB
 
 // ErrInvalid is returned for a choice that is not one.
 var ErrInvalid = errors.New("invalid choice")
@@ -55,34 +51,19 @@ func (s *Store) now() time.Time {
 	return time.Now()
 }
 
-const noticeCols = `id, kind, repo, subject, title, detail, link, actor, restricted, mail_state, created_at, read_at, done_at`
-
-func scanNotice(r interface{ Scan(...any) error }) (Notice, error) {
-	var n Notice
-	var restricted int
-	var at, read, done int64
-	if err := r.Scan(&n.ID, &n.Kind, &n.Repository, &n.Subject, &n.Title, &n.Detail, &n.Link, &n.Actor, &restricted, &n.mailState, &at, &read, &done); err != nil {
-		return n, err
-	}
-	n.Restricted, n.At, n.Read, n.Done = restricted != 0, time.UnixMilli(at).UTC(), read != 0, done != 0
-	return n, nil
+func noticeOf(r store.NoticeRow) Notice {
+	return Notice{ID: r.ID, Kind: r.Kind, Repository: r.Repo, Subject: r.Subject, Title: r.Title, Detail: r.Detail, Link: r.Link, Actor: r.Actor, Restricted: r.Restricted,
+		At: time.UnixMilli(r.CreatedAt).UTC(), Read: r.ReadAt != 0, Done: r.DoneAt != 0, mailState: r.MailState}
 }
 
 // Add stores a notice for a person.
 func (s *Store) Add(ctx context.Context, person string, n Notice, mailState, dedupe string) (Notice, error) {
 	n.ID = ids.New("ntc")
-	r := 0
-	if n.Restricted {
-		r = 1
-	}
-	_, err := s.DB.Exec(ctx, `INSERT INTO notices(`+noticeCols[:strings.LastIndex(noticeCols, ", created_at")]+`, recipient, dedupe, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		n.ID, n.Kind, n.Repository, n.Subject, clip(n.Title, 300), clip(n.Detail, 1000), n.Link, n.Actor, r, mailState, person, dedupe, s.now().UnixMilli())
-	if err != nil {
-		return n, err
-	}
-	n.At = s.now().UTC()
-	n.mailState = mailState
-	return n, nil
+	now := s.now()
+	err := store.AddNotice(ctx, s.DB, person, store.NoticeRow{ID: n.ID, Kind: n.Kind, Repo: n.Repository, Subject: n.Subject, Title: clip(n.Title, 300), Detail: clip(n.Detail, 1000),
+		Link: n.Link, Actor: n.Actor, Restricted: n.Restricted, MailState: mailState, CreatedAt: now.UnixMilli()}, dedupe)
+	n.At, n.mailState = now.UTC(), mailState
+	return n, err
 }
 
 func clip(s string, n int) string {
@@ -94,12 +75,7 @@ func clip(s string, n int) string {
 
 // Seen says whether a person already has a notice with this dedupe key.
 func (s *Store) Seen(ctx context.Context, person, dedupe string) bool {
-	if dedupe == "" {
-		return false
-	}
-	var n int
-	_ = s.DB.QueryRow(ctx, `SELECT count(*) FROM notices WHERE recipient = ? AND dedupe = ?`, person, dedupe).Scan(&n)
-	return n > 0
+	return dedupe != "" && store.NoticeSeen(ctx, s.DB, person, dedupe)
 }
 
 // Filter narrows a list.
@@ -111,16 +87,8 @@ type Filter struct {
 
 // List returns a person's notices, newest first.
 func (s *Store) List(ctx context.Context, person string, f Filter) ([]Notice, error) {
-	q := `SELECT ` + noticeCols + ` FROM notices WHERE recipient = ?`
-	args := []any{person}
 	switch f.State {
-	case "unread":
-		q += ` AND read_at = 0 AND done_at = 0`
-	case "done":
-		q += ` AND done_at <> 0`
-	case "all":
-	case "", "open":
-		q += ` AND done_at = 0`
+	case "unread", "done", "all", "", "open":
 	default:
 		return nil, invalid("state is unread, open, done or all")
 	}
@@ -128,71 +96,55 @@ func (s *Store) List(ctx context.Context, person string, f Filter) ([]Notice, er
 		if _, ok := Info(f.Kind); !ok {
 			return nil, invalid("%q is not a kind of notice", f.Kind)
 		}
-		q += ` AND kind = ?`
-		args = append(args, f.Kind)
 	}
 	limit := f.Limit
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.DB.Query(ctx, q+` ORDER BY created_at DESC, id DESC LIMIT `+fmt.Sprint(limit), args...)
+	rows, err := store.ListNotices(ctx, s.DB, person, f.State, f.Kind, limit)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := []Notice{}
-	for rows.Next() {
-		n, err := scanNotice(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, n)
+	out := make([]Notice, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, noticeOf(r))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // Counts returns how many notices are unread and how many wait (not done).
 func (s *Store) Counts(ctx context.Context, person string) (unread, open int, err error) {
-	err = s.DB.QueryRow(ctx, `SELECT count(*) FROM notices WHERE recipient = ? AND done_at = 0 AND read_at = 0`, person).Scan(&unread)
-	if err == nil {
-		err = s.DB.QueryRow(ctx, `SELECT count(*) FROM notices WHERE recipient = ? AND done_at = 0`, person).Scan(&open)
-	}
-	return
+	return store.NoticeCounts(ctx, s.DB, person)
 }
 
 // MarkRead sets or clears the read mark of some of a person's notices.
 func (s *Store) MarkRead(ctx context.Context, person string, idsList []string, read bool) (int, error) {
-	return s.mark(ctx, person, idsList, "read_at", read)
+	return s.mark(ctx, person, idsList, read, store.MarkNoticeRead)
 }
 
 // MarkDone sets or clears the done mark; done also counts as read.
 func (s *Store) MarkDone(ctx context.Context, person string, idsList []string, done bool) (int, error) {
-	n, err := s.mark(ctx, person, idsList, "done_at", done)
+	n, err := s.mark(ctx, person, idsList, done, store.MarkNoticeDone)
 	if err == nil && done {
-		_, err = s.mark(ctx, person, idsList, "read_at", true)
+		_, err = s.mark(ctx, person, idsList, true, store.MarkNoticeRead)
 	}
 	return n, err
 }
 
-func (s *Store) mark(ctx context.Context, person string, idsList []string, col string, on bool) (int, error) {
+func (s *Store) mark(ctx context.Context, person string, idsList []string, on bool, f func(context.Context, store.CtxDB, string, string, int64) (int64, error)) (int, error) {
 	if len(idsList) == 0 || len(idsList) > 200 {
 		return 0, invalid("name between 1 and 200 notices")
 	}
-	v := int64(0)
+	at := int64(0)
 	if on {
-		v = s.now().UnixMilli()
+		at = s.now().UnixMilli()
 	}
 	total := 0
 	for _, id := range idsList {
-		cond := ""
-		if on {
-			cond = " AND " + col + " = 0"
-		}
-		res, err := s.DB.Exec(ctx, `UPDATE notices SET `+col+` = ? WHERE id = ? AND recipient = ?`+cond, v, id, person)
+		n, err := f(ctx, s.DB, person, id, at)
 		if err != nil {
 			return total, err
 		}
-		n, _ := res.RowsAffected()
 		total += int(n)
 	}
 	return total, nil
@@ -200,20 +152,7 @@ func (s *Store) mark(ctx context.Context, person string, idsList []string, col s
 
 // Prefs returns a person's chosen channel per kind (only the chosen).
 func (s *Store) Prefs(ctx context.Context, person string) (map[string]string, error) {
-	rows, err := s.DB.Query(ctx, `SELECT kind, channel FROM notice_prefs WHERE person = ?`, person)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[string]string{}
-	for rows.Next() {
-		var k, c string
-		if err := rows.Scan(&k, &c); err != nil {
-			return nil, err
-		}
-		out[k] = c
-	}
-	return out, rows.Err()
+	return store.NoticePrefs(ctx, s.DB, person)
 }
 
 // SetPref chooses a channel for a kind.
@@ -224,11 +163,7 @@ func (s *Store) SetPref(ctx context.Context, person, kind, channel string) error
 	if channel != InApp && channel != Email && channel != Off {
 		return invalid("the channel is %s, %s or %s", InApp, Email, Off)
 	}
-	if _, err := s.DB.Exec(ctx, `DELETE FROM notice_prefs WHERE person = ? AND kind = ?`, person, kind); err != nil {
-		return err
-	}
-	_, err := s.DB.Exec(ctx, `INSERT INTO notice_prefs(person, kind, channel) VALUES(?,?,?)`, person, kind, channel)
-	return err
+	return store.SetNoticePref(ctx, s.DB, person, kind, channel)
 }
 
 // Watch is a person's level on a repository or a Flight.
@@ -239,20 +174,15 @@ type Watch struct {
 
 // Watches lists a person's chosen levels.
 func (s *Store) Watches(ctx context.Context, person string) ([]Watch, error) {
-	rows, err := s.DB.Query(ctx, `SELECT scope, level FROM notice_watch WHERE person = ? ORDER BY scope`, person)
+	rows, err := store.NoticeWatches(ctx, s.DB, person)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := []Watch{}
-	for rows.Next() {
-		var w Watch
-		if err := rows.Scan(&w.Scope, &w.Level); err != nil {
-			return nil, err
-		}
-		out = append(out, w)
+	out := make([]Watch, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, Watch{Scope: r.Scope, Level: r.Level})
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // ScopeOK reports whether a scope is written right.
@@ -269,20 +199,13 @@ func (s *Store) SetWatch(ctx context.Context, person, scope, level string) error
 	if level != WatchAll && level != WatchParticipating && level != WatchNone {
 		return invalid("the level is %s, %s or %s", WatchAll, WatchParticipating, WatchNone)
 	}
-	if _, err := s.DB.Exec(ctx, `DELETE FROM notice_watch WHERE person = ? AND scope = ?`, person, scope); err != nil {
-		return err
-	}
 	if level == WatchParticipating {
-		return nil
+		level = ""
 	}
-	var n int
-	if err := s.DB.QueryRow(ctx, `SELECT count(*) FROM notice_watch WHERE person = ?`, person).Scan(&n); err != nil {
-		return err
-	}
-	if n >= 500 {
+	err := store.SetNoticeWatch(ctx, s.DB, person, scope, level, 500)
+	if errors.Is(err, store.ErrTooManyWatches) {
 		return invalid("at most 500 watches per person")
 	}
-	_, err := s.DB.Exec(ctx, `INSERT INTO notice_watch(person, scope, level) VALUES(?,?,?)`, person, scope, level)
 	return err
 }
 
@@ -291,13 +214,12 @@ func (s *Store) SetWatch(ctx context.Context, person, scope, level string) error
 func (s *Store) Level(ctx context.Context, person string, scopes []string) (string, error) {
 	level := WatchParticipating
 	for _, sc := range scopes {
-		var l string
-		err := s.DB.QueryRow(ctx, `SELECT level FROM notice_watch WHERE person = ? AND scope = ?`, person, sc).Scan(&l)
-		if errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
+		l, ok, err := store.NoticeWatchLevel(ctx, s.DB, person, sc)
 		if err != nil {
 			return "", err
+		}
+		if !ok {
+			continue
 		}
 		if l == WatchNone {
 			return WatchNone, nil
@@ -314,22 +236,16 @@ func (s *Store) Watchers(ctx context.Context, scopes []string) ([]string, error)
 	var out []string
 	seen := map[string]bool{}
 	for _, sc := range scopes {
-		rows, err := s.DB.Query(ctx, `SELECT person FROM notice_watch WHERE scope = ? AND level = 'all' ORDER BY person LIMIT 1000`, sc)
+		people, err := store.NoticeWatchers(ctx, s.DB, sc)
 		if err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var p string
-			if err := rows.Scan(&p); err != nil {
-				rows.Close()
-				return nil, err
-			}
+		for _, p := range people {
 			if !seen[p] {
 				seen[p] = true
 				out = append(out, p)
 			}
 		}
-		rows.Close()
 	}
 	return out, nil
 }
@@ -349,14 +265,11 @@ var Defaults = Settings{QuietStart: -1, QuietEnd: -1, Zone: "UTC", DigestHour: 8
 
 // Settings returns a person's settings.
 func (s *Store) Settings(ctx context.Context, person string) (Settings, error) {
-	st := Defaults
-	var d int
-	err := s.DB.QueryRow(ctx, `SELECT quiet_start, quiet_end, zone, digest, digest_hour FROM notice_people WHERE person = ?`, person).Scan(&st.QuietStart, &st.QuietEnd, &st.Zone, &d, &st.DigestHour)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Defaults, nil
+	r, ok, err := store.NoticePerson(ctx, s.DB, person)
+	if err != nil || !ok {
+		return Defaults, err
 	}
-	st.Digest = d != 0
-	return st, err
+	return Settings{QuietStart: r.QuietStart, QuietEnd: r.QuietEnd, Zone: r.Zone, Digest: r.Digest, DigestHour: r.DigestHour}, nil
 }
 
 // Validate checks settings.
@@ -381,18 +294,7 @@ func (s *Store) SetSettings(ctx context.Context, person string, st Settings) err
 	if err := st.Validate(); err != nil {
 		return err
 	}
-	d := 0
-	if st.Digest {
-		d = 1
-	}
-	var last int64
-	_ = s.DB.QueryRow(ctx, `SELECT last_digest_at FROM notice_people WHERE person = ?`, person).Scan(&last)
-	if _, err := s.DB.Exec(ctx, `DELETE FROM notice_people WHERE person = ?`, person); err != nil {
-		return err
-	}
-	_, err := s.DB.Exec(ctx, `INSERT INTO notice_people(person, quiet_start, quiet_end, zone, digest, digest_hour, last_digest_at) VALUES(?,?,?,?,?,?,?)`,
-		person, st.QuietStart, st.QuietEnd, st.Zone, d, st.DigestHour, last)
-	return err
+	return store.SetNoticePerson(ctx, s.DB, person, store.PersonRow{QuietStart: st.QuietStart, QuietEnd: st.QuietEnd, Zone: st.Zone, Digest: st.Digest, DigestHour: st.DigestHour})
 }
 
 // QuietUntil returns when quiet hours end if now is inside them, else the zero time.

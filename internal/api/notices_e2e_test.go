@@ -5,10 +5,11 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
+	"github.com/jk-magic-creations/launchway/internal/mail"
 	"github.com/jk-magic-creations/launchway/internal/mail/smtptest"
 	"github.com/jk-magic-creations/launchway/internal/notices"
 )
@@ -25,7 +26,7 @@ type inboxResp struct {
 // A person's inbox and choices over the API, and the rules of the mute link.
 func TestInboxPreferencesAndTheMuteLink(t *testing.T) {
 	e, _ := hostedEnv(t, envOpts{})
-	e.api.EnableNotices(config.MailConfig{})
+	e.api.EnableNotices(NoticeOptions{})
 	ada, otto := e.signIn(t, "ada"), e.signIn(t, "otto")
 	api := e.srv.URL + "/api/v1"
 	ctx := context.Background()
@@ -138,8 +139,8 @@ func TestMailTestMessageAndAuditWithoutBody(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(srv.Close)
-	e.api.EnableNotices(config.MailConfig{Host: srv.Host, Port: srv.Port, From: "Launchway <notify@example.com>", PublicURL: "https://launchway.example.com"})
-	e.api.Mail.Sender.Config.TLSConfig = srv.ClientTLS()
+	e.api.EnableNotices(NoticeOptions{Mail: mail.Config{Host: srv.Host, Port: srv.Port, From: "Launchway <notify@example.com>", TLSConfig: srv.ClientTLS()},
+		Dial: egress.Default.Dialer(5 * time.Second), PublicURL: "https://launchway.example.com"})
 	ada, otto := e.signIn(t, "ada"), e.signIn(t, "otto")
 	api := e.srv.URL + "/api/v1"
 
@@ -186,7 +187,7 @@ func TestMailTestMessageAndAuditWithoutBody(t *testing.T) {
 // repository and the pull request.
 func TestPullRequestEventsReachThePeopleInvolved(t *testing.T) {
 	e, _ := hostedEnv(t, envOpts{})
-	e.api.EnableNotices(config.MailConfig{})
+	e.api.EnableNotices(NoticeOptions{})
 	repo := hostedRepo(t, e, "acme/shop")
 	otto := e.signIn(t, "otto")
 	p := pulls.PullRequest{Number: 7, Title: "Rework checkout", Author: "ada", Reviewers: []string{"otto"}}

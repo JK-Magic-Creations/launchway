@@ -15,7 +15,7 @@ One model covers all of these:
 | A review is asked of you | `review_requested` | inbox and e-mail |
 | You are mentioned in a pull request or work item | `mention` | inbox and e-mail |
 | An approval is waiting for you (you are a named approver) | `approval_waiting` | inbox and e-mail |
-| A credential of yours (an SSH key, a signing key, an API token) ends within two weeks | `credential_expiring` | inbox and e-mail |
+| A credential of yours (an SSH key or a signing key) ends within two weeks | `credential_expiring` | inbox and e-mail |
 | A review is submitted on your pull request | `review_submitted` | inbox |
 | A comment on a pull request or work item you take part in | `comment` | inbox |
 | A pull request you take part in is merged, or closed | `pull_merged`, `pull_closed` | inbox |
@@ -75,4 +75,4 @@ A person without a known address (no profile e-mail, or no sign-in yet) simply g
 
 ## What is not built yet
 
-Replying to a notice by e-mail, and notices for the rest of the product's events (these come as the features that produce them are built). Comment text is not carried in a notice; the notice names the pull request and links to it.
+Replying to a notice by e-mail, a warning for API tokens that are about to end (SSH keys and signing keys are covered), and notices for the rest of the product's events (these come as the features that produce them are built). Comment text is not carried in a notice; the notice names the pull request and links to it.

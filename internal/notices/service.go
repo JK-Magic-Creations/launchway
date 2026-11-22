@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/mail"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // Event is something that happened that concerns people.
@@ -131,7 +132,7 @@ func (s *Service) Notify(ctx context.Context, ev Event) ([]string, error) {
 		told = append(told, p)
 		if state == "queued" {
 			if err := s.queue(ctx, p, saved); err != nil {
-				_, _ = s.Store.DB.Exec(ctx, `UPDATE notices SET mail_state = 'skipped' WHERE id = ?`, saved.ID)
+				store.SetNoticeMailState(ctx, s.Store.DB, saved.ID, "skipped")
 			}
 		}
 	}
@@ -294,20 +295,10 @@ func (s *Service) RunDigests(ctx context.Context) (int, error) {
 	if s.Mail == nil {
 		return 0, nil
 	}
-	rows, err := s.Store.DB.Query(ctx, `SELECT person FROM notice_people WHERE digest = 1`)
+	people, err := store.DigestPeople(ctx, s.Store.DB)
 	if err != nil {
 		return 0, err
 	}
-	var people []string
-	for rows.Next() {
-		var p string
-		if err := rows.Scan(&p); err != nil {
-			rows.Close()
-			return 0, err
-		}
-		people = append(people, p)
-	}
-	rows.Close()
 	sent := 0
 	for _, p := range people {
 		st, err := s.Store.Settings(ctx, p)
@@ -320,16 +311,15 @@ func (s *Service) RunDigests(ctx context.Context) (int, error) {
 		}
 		local := s.now().In(loc)
 		dayStart := time.Date(local.Year(), local.Month(), local.Day(), st.DigestHour, 0, 0, 0, loc)
-		var last int64
-		_ = s.Store.DB.QueryRow(ctx, `SELECT last_digest_at FROM notice_people WHERE person = ?`, p).Scan(&last)
-		if local.Before(dayStart) || last >= dayStart.UnixMilli() {
+		row, _, _ := store.NoticePerson(ctx, s.Store.DB, p)
+		if local.Before(dayStart) || row.LastDigestAt >= dayStart.UnixMilli() {
 			continue
 		}
 		ns, err := s.waiting(ctx, p)
 		if err != nil {
 			continue
 		}
-		_, _ = s.Store.DB.Exec(ctx, `UPDATE notice_people SET last_digest_at = ? WHERE person = ?`, s.now().UnixMilli(), p)
+		store.SetLastDigest(ctx, s.Store.DB, p, s.now().UnixMilli())
 		if len(ns) == 0 {
 			continue
 		}
@@ -349,7 +339,7 @@ func (s *Service) RunDigests(ctx context.Context) (int, error) {
 			continue
 		}
 		for _, n := range ns {
-			_, _ = s.Store.DB.Exec(ctx, `UPDATE notices SET mail_state = 'queued' WHERE id = ?`, n.ID)
+			store.SetNoticeMailState(ctx, s.Store.DB, n.ID, "queued")
 		}
 		sent++
 	}
@@ -357,18 +347,24 @@ func (s *Service) RunDigests(ctx context.Context) (int, error) {
 }
 
 func (s *Service) waiting(ctx context.Context, person string) ([]Notice, error) {
-	rows, err := s.Store.DB.Query(ctx, `SELECT `+noticeCols+` FROM notices WHERE recipient = ? AND mail_state = 'digest' ORDER BY created_at LIMIT 100`, person)
+	rows, err := store.DigestNotices(ctx, s.Store.DB, person)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []Notice
-	for rows.Next() {
-		n, err := scanNotice(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, n)
+	out := make([]Notice, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, noticeOf(r))
 	}
-	return out, rows.Err()
+	return out, nil
+}
+
+// ScanCredentials tells the people whose SSH keys, signing keys or API tokens
+// end within a time, once for each credential.
+func (s *Service) ScanCredentials(ctx context.Context, within time.Duration) {
+	now := s.now()
+	for _, c := range store.ExpiringCredentials(ctx, s.Store.DB, now.UnixMilli(), now.Add(within).UnixMilli()) {
+		day := time.UnixMilli(c.At).UTC().Format("2006-01-02")
+		_, _ = s.Notify(ctx, Event{Kind: CredentialExpiring, People: []string{c.Owner}, Name: "your account",
+			Title: fmt.Sprintf("your %s %q ends on %s", c.What, c.Name, day), Link: "/settings/access/keys", Dedupe: "cred:" + c.What + ":" + c.Name + ":" + day})
+	}
 }

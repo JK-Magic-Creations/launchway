@@ -2,10 +2,10 @@ package engine
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 
 	"github.com/jk-magic-creations/launchway/internal/notify"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // The notification service also tells people (internal/notices): every event
@@ -38,38 +38,8 @@ func (e *Engine) personHook() func(context.Context, notify.Event) {
 }
 
 // RunPeople says who started a run and who approved steps of it.
-func (e *Engine) RunPeople(ctx context.Context, runID string) (actor string, approvers []string) {
-	_ = e.db.QueryRow(`SELECT actor FROM runs WHERE id = ?`, runID).Scan(&actor)
-	rows, err := e.db.Query(`SELECT data FROM events WHERE run_id = ? AND type IN ('step.approved', 'step.approval_recorded') ORDER BY seq LIMIT 50`, runID)
-	if err != nil {
-		return actor, nil
-	}
-	defer rows.Close()
-	seen := map[string]bool{}
-	for rows.Next() {
-		var data string
-		if rows.Scan(&data) != nil {
-			continue
-		}
-		var p struct {
-			Actor     string           `json:"actor"`
-			Approvals []ApprovalRecord `json:"approvals"`
-		}
-		if json.Unmarshal([]byte(data), &p) != nil {
-			continue
-		}
-		names := []string{p.Actor}
-		for _, a := range p.Approvals {
-			names = append(names, a.Actor)
-		}
-		for _, n := range names {
-			if n != "" && !seen[n] {
-				seen[n] = true
-				approvers = append(approvers, n)
-			}
-		}
-	}
-	return actor, approvers
+func (e *Engine) RunPeople(_ context.Context, runID string) (actor string, approvers []string) {
+	return store.RunActor(e.db, runID), store.RunApprovers(e.db, runID)
 }
 
 // StepApprovers says who the named approvers of a waiting approval are (users
@@ -90,7 +60,5 @@ func (e *Engine) StepApprovers(runID, step string) []string {
 // priorRunFailed says whether the run before this one on the same branch of
 // the same Flight had failed.
 func (e *Engine) priorRunFailed(project, branch string, number int) bool {
-	var status string
-	err := e.db.QueryRow(`SELECT status FROM runs WHERE project = ? AND branch = ? AND number < ? AND status IN ('succeeded', 'failed') ORDER BY number DESC LIMIT 1`, project, branch, number).Scan(&status)
-	return err == nil && status == string(RunFailed)
+	return store.PriorRunStatus(e.db, project, branch, number) == string(RunFailed)
 }

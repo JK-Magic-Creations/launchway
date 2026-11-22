@@ -207,12 +207,8 @@ func main() {
 		err = cmdKindAlias(os.Args[1])(args)
 	case "repos", "keys", "pr", "encryption":
 		err = cmdHosting(os.Args[1], args)
-	case "signing":
-		err = cmdSigning(args)
-	case "inbox":
-		err = cmdInbox(args)
-	case "notices":
-		err = cmdNotices(args)
+	case "signing", "inbox", "notices":
+		err = cmdPeople(os.Args[1], args)
 	case "fleet":
 		err = cmdFleet(args)
 	case "deps":
