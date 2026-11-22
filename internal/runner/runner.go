@@ -412,16 +412,22 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		// The server has given the step away, and the retry may go to another
 		// runner: give back what this attempt held, so that it cannot hold
 		// the run's room while the retry waits for it.
-		r.releaseRun(log, job.RunID)
+		r.releaseRun(final, log, job.RunID)
 		return
 	}
+	r.deliver(final, log, sp, job.LeaseID, res)
+}
+
+// deliver sends a finished step's result, after any lines still waiting for
+// the server, and keeps it for later when the server cannot be reached.
+func (r *Runner) deliver(ctx context.Context, log *slog.Logger, sp *stepSpool, lease string, res engine.Result) {
 	if !sp.Done() {
 		// Lines are still waiting for the server: the result goes after them.
 		r.keepResult(log, sp, res)
 		return
 	}
 	for i := 0; i < 5; i++ {
-		err := r.reportResult(report, log, job.LeaseID, &res)
+		err := r.reportResult(ctx, log, lease, &res)
 		if err == nil || errors.Is(err, ErrLeaseLost) {
 			r.finished(log, res)
 			return
@@ -438,12 +444,12 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 }
 
 // releaseRun has the executor give back what it holds for the run, if it can.
-func (r *Runner) releaseRun(log *slog.Logger, runID string) {
+func (r *Runner) releaseRun(parent context.Context, log *slog.Logger, runID string) {
 	rel, ok := r.Exec.(executor.Releaser)
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	if err := rel.ReleaseRun(ctx, runID); err != nil {
 		log.Warn("could not release what the lost step held; the reaper will", "err", err)
