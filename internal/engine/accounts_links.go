@@ -54,9 +54,5 @@ var ErrSetupCode = store.ErrSetupCode
 // spending the setup code: if the code does not match the unused, unexpired
 // one, or an account already exists, nothing is created.
 func (e *Engine) CompleteSetup(codeHash string, a *LocalAccount, recoveryHashes []string, now int64) error {
-	sealed, err := e.sealTOTP(a.Username, a.TOTPSecret)
-	if err != nil {
-		return err
-	}
-	return e.ident().CompleteSetup(e.scope0(), codeHash, a, sealed, recoveryHashes, now)
+	return noRootKey(e.ident().CompleteSetup(e.scope0(), codeHash, a, e.sealer(), recoveryHashes, now))
 }

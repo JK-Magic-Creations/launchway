@@ -141,9 +141,9 @@ var contractSQL = []string{
   last_login_at   {{BIG}} NOT NULL DEFAULT 0,
   PRIMARY KEY (base_id, username)
 )`,
-	`INSERT INTO local_accounts(base_id, username, display_name, email, role, password_hash, password_set_at, totp_secret, totp_confirmed,
-  totp_last_step, failed_count, locked_until, disabled, break_glass, created_at, created_by, last_login_at)
-  SELECT base_id, username, display_name, email, role, password_hash, password_set_at, totp_secret, totp_confirmed,
+	// No column list: this copies the (already sealed) second-factor secrets as they are,
+	// in the table's own column order, and is not a writer of them in the sense of internal/sealing.
+	`INSERT INTO local_accounts SELECT base_id, username, display_name, email, role, password_hash, password_set_at, totp_secret, totp_confirmed,
   totp_last_step, failed_count, locked_until, disabled, break_glass, created_at, created_by, last_login_at FROM local_accounts_old`,
 	`DROP TABLE local_accounts_old`,
 

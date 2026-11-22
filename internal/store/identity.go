@@ -26,6 +26,16 @@ type Identity struct {
 // NewIdentity returns the identity store of an environment.
 func NewIdentity(env *Env) *Identity { return &Identity{env: env} }
 
+func sealTOTP(b Sealer, name, secret string) (string, error) {
+	if secret == "" {
+		return "", nil
+	}
+	if b == nil || !b.Enabled() {
+		return "", ErrSealUnavailable
+	}
+	return b.SealRow(name, []byte(secret))
+}
+
 func newID(prefix string) string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
@@ -318,10 +328,14 @@ func insertLocalAccount(q *Q, a *LocalAccount, sealed string) error {
 	return ensureMember(q, a.Username, a.Role, state, a.CreatedAt)
 }
 
-// CreateLocalAccount adds an account (its second factor already sealed);
+// CreateLocalAccount adds an account, sealing its second factor with box;
 // ErrConflict if the name is taken in this Base. The same name in another
 // Base is not a clash and is not noticed.
-func (i *Identity) CreateLocalAccount(sc Scope, a *LocalAccount, sealed string) error {
+func (i *Identity) CreateLocalAccount(sc Scope, a *LocalAccount, box Sealer) error {
+	sealed, err := sealTOTP(box, a.Username, a.TOTPSecret)
+	if err != nil {
+		return err
+	}
 	return i.env.Do(sc, true, func(q *Q) error {
 		var n int
 		if err := q.QueryRow(`SELECT count(*) FROM local_accounts WHERE base_id = ? AND username = ?`, q.Base(), a.Username).Scan(&n); err != nil {
@@ -473,10 +487,14 @@ func (i *Identity) SetProfile(sc Scope, name, display, email string) error {
 	})
 }
 
-// SetTOTP stores a (sealed) TOTP secret, unconfirmed until the person proves
+// SetTOTP seals and stores a TOTP secret, unconfirmed until the person proves
 // it, or, with an empty one, removes the second factor and the recovery codes
 // with it.
-func (i *Identity) SetTOTP(sc Scope, name, sealed string, confirmed bool) error {
+func (i *Identity) SetTOTP(sc Scope, name, secret string, confirmed bool, box Sealer) error {
+	sealed, err := sealTOTP(box, name, secret)
+	if err != nil {
+		return err
+	}
 	return i.env.Do(sc, true, func(q *Q) error {
 		res, err := q.Exec(`UPDATE local_accounts SET totp_secret = ?, totp_confirmed = ?, totp_last_step = 0 WHERE base_id = ? AND username = ?`,
 			sealed, b2i(confirmed), q.Base(), name)
@@ -726,7 +744,11 @@ var ErrSetupCode = errors.New("the setup code is not valid")
 // CompleteSetup creates the first administrator in the Base in one
 // transaction with spending the setup code: if the code does not match the
 // unused, unexpired one, or an account already exists, nothing is created.
-func (i *Identity) CompleteSetup(sc Scope, codeHash string, a *LocalAccount, sealed string, recoveryHashes []string, now int64) error {
+func (i *Identity) CompleteSetup(sc Scope, codeHash string, a *LocalAccount, box Sealer, recoveryHashes []string, now int64) error {
+	sealed, err := sealTOTP(box, a.Username, a.TOTPSecret)
+	if err != nil {
+		return err
+	}
 	return i.env.Do(sc, true, func(q *Q) error {
 		var n int
 		if err := q.QueryRow(`SELECT count(*) FROM local_accounts WHERE base_id = ?`, q.Base()).Scan(&n); err != nil {

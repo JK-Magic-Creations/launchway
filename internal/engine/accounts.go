@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -44,16 +45,20 @@ func (e *Engine) TOTPSealing() bool {
 	return b != nil && b.Enabled()
 }
 
-// sealTOTP is the stored form of a TOTP secret (empty stays empty).
-func (e *Engine) sealTOTP(name, secret string) (string, error) {
-	if secret == "" {
-		return "", nil
+// sealer is the box the store seals second factors with (nil if none was given).
+func (e *Engine) sealer() store.Sealer {
+	if b := e.totpBoxNow(); b != nil {
+		return b
 	}
-	b := e.totpBoxNow()
-	if b == nil || !b.Enabled() {
-		return "", fmt.Errorf("a second factor stores a secret: %w", keyring.ErrNoRootKey)
+	return nil
+}
+
+// noRootKey says in the engine's words that a second factor needs the root key.
+func noRootKey(err error) error {
+	if errors.Is(err, store.ErrSealUnavailable) {
+		return fmt.Errorf("a second factor stores a secret: %w", keyring.ErrNoRootKey)
 	}
-	return b.SealRow(name, []byte(secret))
+	return err
 }
 
 // openTOTP turns the stored form back into the secret, in place.
@@ -78,11 +83,7 @@ func (e *Engine) openTOTP(a *LocalAccount) error {
 
 // CreateLocalAccount adds an account; ErrConflict if the name is taken.
 func (e *Engine) CreateLocalAccount(a *LocalAccount) error {
-	sealed, err := e.sealTOTP(a.Username, a.TOTPSecret)
-	if err != nil {
-		return err
-	}
-	return e.ident().CreateLocalAccount(e.scope0(), a, sealed)
+	return noRootKey(e.ident().CreateLocalAccount(e.scope0(), a, e.sealer()))
 }
 
 // LocalAccountByName returns the account, or ErrNotFound.
@@ -149,11 +150,7 @@ func (e *Engine) SetLocalProfile(name, display, email string) error {
 // with a code) or, with an empty secret, removes the second factor and the
 // recovery codes with it.
 func (e *Engine) SetLocalTOTP(name, secret string, confirmed bool) error {
-	sealed, err := e.sealTOTP(name, secret)
-	if err != nil {
-		return err
-	}
-	return e.ident().SetTOTP(e.scope0(), name, sealed, confirmed)
+	return noRootKey(e.ident().SetTOTP(e.scope0(), name, secret, confirmed, e.sealer()))
 }
 
 // RecordTOTPStep notes the step of a code just accepted so it cannot be used

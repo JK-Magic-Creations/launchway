@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 )
 
 // Profile is what the provider said about a person at their latest sign-in,
@@ -106,3 +107,15 @@ func b2i(b bool) int {
 	}
 	return 0
 }
+
+// Sealer seals one value bound to its row; internal/sealing's Box satisfies
+// it (through the engine, which holds the box). The store seals what it
+// writes to a secret column, so that the registry of sealed columns can name
+// it as the writer.
+type Sealer interface {
+	Enabled() bool
+	SealRow(row string, plain []byte) (string, error)
+}
+
+// ErrSealUnavailable means a secret was to be stored and no root key is in use.
+var ErrSealUnavailable = errors.New("no root key to seal the secret with")

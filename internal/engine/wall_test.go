@@ -197,7 +197,7 @@ func fill(t *testing.T, tb twoBases, sc store.Scope, canary, role string) {
 	t.Helper()
 	for _, name := range []string{"alice", "bob"} {
 		a := &store.LocalAccount{Username: name, DisplayName: name + " " + canary, Email: name + "@" + canary + ".test", Role: role, CreatedAt: 1, PasswordHash: "hash-" + canary}
-		if err := tb.id.CreateLocalAccount(sc, a, ""); err != nil {
+		if err := tb.id.CreateLocalAccount(sc, a, nil); err != nil {
 			t.Fatalf("%s in %s: %v", name, canary, err)
 		}
 		if err := tb.id.ReplaceRecoveryCodes(sc, name, []string{"rc-" + canary + "-" + name}); err != nil {
@@ -249,7 +249,7 @@ func TestIdentityIsolationBetweenBases(t *testing.T) {
 		// Creating the name again in the same Base clashes; in another it does not,
 		// so a name taken elsewhere cannot be discovered by trying to take it.
 		dup := &store.LocalAccount{Username: "alice", Role: "viewer", CreatedAt: 2}
-		if err := tb.id.CreateLocalAccount(tb.a, dup, ""); !errors.Is(err, store.ErrConflict) {
+		if err := tb.id.CreateLocalAccount(tb.a, dup, nil); !errors.Is(err, store.ErrConflict) {
 			t.Fatalf("a name taken in A is taken in A: %v", err)
 		}
 		scratch, err := e.Bases().CreateBase(ctx, store.NewBase{Handle: "scratch", Now: 1})
@@ -257,7 +257,7 @@ func TestIdentityIsolationBetweenBases(t *testing.T) {
 			t.Fatal(err)
 		}
 		sc, _ := e.Bases().ServiceScope(ctx, scratch.ID)
-		if err := tb.id.CreateLocalAccount(sc, dup, ""); err != nil {
+		if err := tb.id.CreateLocalAccount(sc, dup, nil); err != nil {
 			t.Fatalf("a name taken in A is free in another Base: %v", err)
 		}
 	})
