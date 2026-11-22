@@ -781,9 +781,6 @@ func (c *Config) Validate(path string) error {
 	if err := c.checkQueuesAndTrust(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	if err := c.Maintenance.Check(); err != nil {
-		return fmt.Errorf("%s: %w", path, err)
-	}
 	if err := c.MCP.Check(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}

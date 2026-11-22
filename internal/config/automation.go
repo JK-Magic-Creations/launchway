@@ -66,5 +66,8 @@ func (c *Config) checkQueuesAndTrust() error {
 	if err := c.checkUntrusted(); err != nil {
 		return err
 	}
+	if err := c.Maintenance.Check(); err != nil {
+		return err
+	}
 	return c.Automation.Validate()
 }
