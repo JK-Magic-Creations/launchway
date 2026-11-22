@@ -97,7 +97,10 @@ steps:
   security-go:
     description: Reachable Go vulnerabilities fail; a short fuzz run of every parser
     image: docker.io/library/golang:1.27
-    needs: check-code
+    # After test, not beside it: steps that use the same image share one container and its memory limit on a
+    # Station, and both compiling the whole module at once was killed for memory (run 79). Running second,
+    # this step also starts from the build cache the test step just filled.
+    needs: [check-code, test]
     run: |
       # The module and build caches live in the workspace, where the step's cache saves them (the key is the
       # lock files and the toolchain, so a changed dependency or Go version starts a new one).

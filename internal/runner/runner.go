@@ -263,12 +263,23 @@ func (b *logBuffer) take(max int) []engine.LogLine {
 	return out
 }
 
+// resultWithin bounds delivering a finished step's last log lines and its
+// result. It does not bound the step.
+const resultWithin = 5 * time.Minute
+
 func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	log := r.Log.With("run", job.RunID, "step", job.StepID, "attempt", job.Attempt)
-	// The server talks to the step's lease on a context of its own, so that
-	// reporting the result still works while the runner is shutting down.
-	report, stopReport := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer stopReport()
+	// The server is talked to on contexts of the step's own, not the runner's,
+	// so that reporting still works while the runner is shutting down. While
+	// the step runs that context has NO deadline: heartbeats and log uploads
+	// must go on for as long as the step does, however long that is (one
+	// five-minute deadline here once made every heartbeat fail from the sixth
+	// minute of a step, and the server then took a long step back). Each call
+	// bounds itself. Only what comes after the step, delivering the last lines
+	// and the result, gets a deadline (resultWithin).
+	live, stopLive := context.WithCancel(context.Background())
+	defer stopLive()
+	report := live
 
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
@@ -332,14 +343,14 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		stopWith(true, false)
 	}
 
-	// Heartbeats and log flushing run alongside the step.
+	// Heartbeats and log flushing run alongside the step, each in its own
+	// goroutine: a log upload that is slow (a server under load) must never
+	// delay a heartbeat, which is what keeps the step's lease.
 	bgDone := make(chan struct{})
 	bgStop := make(chan struct{})
 	go func() {
 		defer close(bgDone)
-		hb := time.NewTicker(max(job.LeaseTTL.D()/3, time.Second))
 		fl := time.NewTicker(logFlushEvery)
-		defer hb.Stop()
 		defer fl.Stop()
 		for {
 			select {
@@ -347,20 +358,21 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 				return
 			case <-fl.C:
 				flush()
-			case <-hb.C:
-				c, err := r.Client.Heartbeat(report, job.LeaseID)
-				switch {
-				case errors.Is(err, ErrLeaseLost):
-					log.Warn("lease lost; stopping the step")
-					stopWith(false, true)
-				case err != nil:
-					log.Warn("heartbeat failed", "err", err)
-				case c:
-					sys("The run was canceled; stopping.")
-					stopWith(true, false)
-				}
 			}
 		}
+	}()
+	beatDone := make(chan struct{})
+	go func() {
+		defer close(beatDone)
+		keepLease(report, bgStop, r.Client, job, log, func(c bool, lost bool) {
+			if lost {
+				log.Warn("lease lost; stopping the step")
+				stopWith(false, true)
+			} else if c {
+				sys("The run was canceled; stopping.")
+				stopWith(true, false)
+			}
+		})
 	}()
 
 	res, collect := r.runStep(ctx, job, sys, logs.add)
@@ -377,6 +389,12 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	close(bgStop)
 	<-bgDone
+	<-beatDone
+	// The step is over and nothing runs beside it any more: from here on the
+	// last lines and the result are delivered within resultWithin.
+	final, stopFinal := context.WithTimeout(live, resultWithin)
+	defer stopFinal()
+	report = final
 	mu.Lock()
 	wasRequested, wasLost = requested, lost
 	mu.Unlock()
@@ -391,15 +409,25 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	flush()
 	if wasLost {
+		// The server has given the step away, and the retry may go to another
+		// runner: give back what this attempt held, so that it cannot hold
+		// the run's room while the retry waits for it.
+		r.releaseRun(parent, log, job.RunID)
 		return
 	}
+	r.deliver(final, log, sp, job.LeaseID, res)
+}
+
+// deliver sends a finished step's result, after any lines still waiting for
+// the server, and keeps it for later when the server cannot be reached.
+func (r *Runner) deliver(ctx context.Context, log *slog.Logger, sp *stepSpool, lease string, res engine.Result) {
 	if !sp.Done() {
 		// Lines are still waiting for the server: the result goes after them.
 		r.keepResult(log, sp, res)
 		return
 	}
 	for i := 0; i < 5; i++ {
-		err := r.reportResult(report, log, job.LeaseID, &res)
+		err := r.reportResult(ctx, log, lease, &res)
 		if err == nil || errors.Is(err, ErrLeaseLost) {
 			r.finished(log, res)
 			return
@@ -412,6 +440,20 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		}
 		log.Warn("reporting the result failed; retrying", "err", err)
 		time.Sleep(time.Duration(i+1) * time.Second)
+	}
+}
+
+// releaseRun has the executor give back what it holds for the run, if it can.
+func (r *Runner) releaseRun(parent context.Context, log *slog.Logger, runID string) {
+	rel, ok := r.Exec.(executor.Releaser)
+	if !ok {
+		return
+	}
+	// The release must finish even when the runner is shutting down.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(parent), 30*time.Second)
+	defer cancel()
+	if err := rel.ReleaseRun(ctx, runID); err != nil {
+		log.Warn("could not release what the lost step held; the reaper will", "err", err)
 	}
 }
 

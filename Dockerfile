@@ -24,6 +24,9 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
+# The UI's type check reads a few files of the documentation (the vocabulary its tests guard), so the
+# documentation is beside it before the build, at the same relative place as in the repository.
+COPY docs/ /src/docs/
 RUN npm run build
 # The documentation, rendered from docs/ into the web UI's files (the Learn area): the binary
 # carries the documentation of exactly the release it is. Diagrams are drawn already (docs/.vitepress/diagrams).

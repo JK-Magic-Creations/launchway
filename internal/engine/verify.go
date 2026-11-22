@@ -815,7 +815,7 @@ func (c *cmd) verifyJob(stepID, leaseID string) *Job {
 		vj.Model, vj.ModelNote = c.modelJob(def.Verify.Model, 0)
 	}
 	trig := st.Trigger
-	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
+	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
 		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Event: trig.Event, Timeout: def.Timeout, Source: st.Source, Verify: vj}
 }
 

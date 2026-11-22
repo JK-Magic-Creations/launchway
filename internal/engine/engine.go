@@ -63,10 +63,10 @@ type Options struct {
 	// the file, decides where artifacts are kept once it has an
 	// installation object.
 	ArtifactsFromDatabase func(installation []byte) (ArtifactOptions, error)
-	LeaseTTL              time.Duration // how long a runner may go silent; default 30s
+	LeaseTTL              time.Duration // how long a step's lease lasts without a heartbeat; default DefaultLeaseTTL (90s)
 	MaxLost               int           // times a step is requeued after losing its runner; default 3
 	// RunnerTimeout is how long a runner may go unseen before another runner
-	// may take over its runs (see Lease); default 3 × LeaseTTL.
+	// may take over its runs (see Lease); default 90s, or 3 × LeaseTTL when that is set.
 	RunnerTimeout time.Duration
 	// ConnectWait is how long Open keeps trying a database that does not
 	// answer, for example because it is still starting; default 0, one try.
@@ -221,8 +221,11 @@ const (
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID   string            `json:"lease_id"`
-	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
+	LeaseID  string            `json:"lease_id"`
+	LeaseTTL pipeline.Duration `json:"lease_ttl"`
+	// Beat is how often the runner sends a heartbeat for the lease; 0 (an
+	// older server) means a third of LeaseTTL.
+	Beat      pipeline.Duration `json:"beat,omitempty"`
 	RunID     string            `json:"run_id"`
 	Project   string            `json:"project"`
 	RunNumber int               `json:"run_number"`
@@ -374,11 +377,28 @@ type LogLine struct {
 	Text   string `json:"text"`
 }
 
+// DefaultLeaseTTL is how long a step's lease lasts without a heartbeat. The
+// runner sends one every Beat (at most 15 s), so a server that is slow or
+// unreachable for a minute does not cost a running step its lease. It was
+// 30 s with a heartbeat every 10 s, which a server busy for 15 to 30 s could
+// break.
+const DefaultLeaseTTL = 90 * time.Second
+
+// maxBeat is the longest pause between two heartbeats.
+const maxBeat = 15 * time.Second
+
+// beat is how often a runner renews a lease: a third of the lease, but no
+// more than maxBeat, so that a long lease means more tries, not fewer.
+func (e *Engine) beat() time.Duration { return min(e.ttl/3, maxBeat) }
+
 // Open opens the database, recovers any steps that were in flight, and starts
 // watching leases.
 func Open(o Options) (*Engine, error) {
+	if o.RunnerTimeout == 0 && o.LeaseTTL == 0 {
+		o.RunnerTimeout = 90 * time.Second // as before the lease got longer
+	}
 	if o.LeaseTTL == 0 {
-		o.LeaseTTL = 30 * time.Second
+		o.LeaseTTL = DefaultLeaseTTL
 	}
 	if o.MaxLost == 0 {
 		o.MaxLost = 3
@@ -1893,7 +1913,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	}
 	return &Job{
 		Container: st.Pipeline.ContainerFor(def), Containers: c.runContainers(), ResourcesAsked: def.Resources != nil,
-		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
+		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		// advance fails a draft's step that asks for secrets it may not
 		// read before it is queued; stepSecrets is a second guard, so that

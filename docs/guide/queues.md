@@ -11,8 +11,10 @@ step. It stays *queued*, the Sortie page, the API (`waiting_for` and `waiting_co
 command line (`launchway run show`) and MCP say what it waits for, and it is tried again after a
 pause that grows from 10 seconds to a minute:
 
-> waiting for room in the step namespace: 7.8 CPU of 8 CPU already requested, and this step needs
-> 0.5 CPU more; held by runs #43–#50; this run is next after #52
+> waiting for room in the step namespace: this run has reserved 1 CPU across 1 pod; the namespace
+> allows 8 CPU and 7.8 CPU is reserved in all; this pod needs 0.5 CPU more, so 0.3 CPU must be
+> released first. This is what is reserved by the pods, not what a step uses: nothing ran out of
+> memory; held by runs #43–#50; this run is next after #52
 
 The sentence names the shortage, the Sorties that hold the room, and where this run is in line. Each
 reason has a stable code beside the sentence, for scripts:

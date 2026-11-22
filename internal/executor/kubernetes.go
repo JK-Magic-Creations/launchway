@@ -102,6 +102,7 @@ type Kubernetes struct {
 	keepFailed time.Duration
 	maxPodAge  time.Duration
 	startWait  time.Duration
+	started    time.Time // when this process began; pods of this runner older than it are a previous process's
 
 	mu    sync.Mutex
 	pods  map[string]*runPod
@@ -172,7 +173,7 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 	if err := o.setDefaults(); err != nil {
 		return nil, err
 	}
-	k := &Kubernetes{o: o, cfg: cfg, pods: map[string]*runPod{}, keepFailed: 0, maxPodAge: 24 * time.Hour, startWait: 10 * time.Minute}
+	k := &Kubernetes{o: o, cfg: cfg, pods: map[string]*runPod{}, keepFailed: 0, maxPodAge: 24 * time.Hour, startWait: 10 * time.Minute, started: time.Now()}
 	for _, v := range []struct {
 		s string
 		d *time.Duration
@@ -444,7 +445,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 			"(kubernetes.restricted)", *k.o.RunAsUser, *k.o.RunAsGroup, stepHome)
 	}
 	if _, err := pods.Create(ctx, pod, metav1.CreateOptions{}); err != nil {
-		return nil, createFailed(rp.name, err)
+		return nil, k.createFailed(ctx, rp.name, s.RunID, err)
 	}
 	if err := k.waitRunning(ctx, rp.name, s.Containers, sys); err != nil {
 		_ = pods.Delete(context.Background(), rp.name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))})

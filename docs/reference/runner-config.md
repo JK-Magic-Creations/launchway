@@ -238,13 +238,21 @@ The Station's reaper removes a pod when any of these holds:
   Stations made are left to their Station, or to the age bound);
 - the pod is older than `kubernetes.max_pod_age` (24h) and no step of its run is executing on this
   Station, whatever the server says. This is what stops a crashed Station, or a Sortie nobody holds a
-  lease on, from leaking a pod.
+  lease on, from leaking a pod;
+- the server took a step away from this Station (its lease was lost, for example because the server
+  could not be reached for longer than the lease lasts) and no other step of the Sortie is executing
+  here: the Station removes its pod of the Sortie at once, so that the retry, wherever it runs, never
+  waits for room that the abandoned attempt holds;
+- this Station made it in an earlier process and the new process has not used it. A Station that
+  restarts clears the pods its previous process left, even for Sorties that are still going: the
+  steps that used them have lost their leases.
 
 A pod with a step executing on this Station is never removed. The reaper looks when the Station
 starts (so a restarted Station clears what the crashed one left), soon after any step reports its
 result, and every 30 seconds. A step that cannot start because the namespace's quota is used up
-fails with the cause `infrastructure` and a message that names the quota, so `retry` with its
-backoff applies, and `retry.on` must list `infrastructure` for it to be retried.
+waits for room (see [Holding patterns](../guide/queues.md)). Its message says what the Sortie has reserved
+across how many pods, what the namespace allows and how much must be released first; it is a
+reservation limit, not a step that ran out of memory.
 
 **What a resume keeps.** The Sortie's workspace is the Station's checkout of the commit, on the
 Station's disk under its data directory (kept 24 hours after it was last used), not the pod. A

@@ -117,6 +117,14 @@ type Cleaner interface {
 	Cleanup(ctx context.Context, lookup RunLookup) error
 }
 
+// Releaser is implemented by executors that hold resources per run and can
+// give them back at once when the server takes a step away from the runner
+// (its lease was lost) instead of waiting for the run to end. It is a no-op
+// while another step of the run is executing in this process.
+type Releaser interface {
+	ReleaseRun(ctx context.Context, runID string) error
+}
+
 // removable decides whether to remove what a run's steps held (a pod), given
 // what the server says about the run. A run that is still active keeps it.
 // A run that succeeded does not need it; a failed or canceled run keeps it

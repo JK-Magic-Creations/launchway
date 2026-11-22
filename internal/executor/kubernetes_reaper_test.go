@@ -179,7 +179,7 @@ func TestQuotaFullIsAWaitForRoom(t *testing.T) {
 	if !ok || !errors.Is(err, ErrCapacity) || errors.Is(err, ErrCannotStart) || c.Code != WaitQuotaFull {
 		t.Fatalf("want a wait for room, got %v", err)
 	}
-	for _, want := range []string{"waiting for room in the step namespace", "7.8 CPU of 8 CPU already requested", "0.5 CPU more"} {
+	for _, want := range []string{"waiting for room in the step namespace", "the namespace allows 8 CPU", "7.8 CPU is reserved in all", "needs 0.5 CPU more", "0.3 CPU must be released first", "nothing ran out of memory"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("missing %q in %v", want, err)
 		}
