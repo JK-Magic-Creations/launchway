@@ -35,7 +35,7 @@ func newFixture(t *testing.T, owners ...string) *fixture {
 	t.Helper()
 	h := bitbucketfake.New()
 	t.Cleanup(h.Close)
-	t.Setenv("LW_TEST_BB_TOKEN", bitbucketfake.Token)
+	t.Setenv("LW_TEST_BB_TOKEN", bitbucketfake.Access)
 	g, _ := egress.New([]string{"127.0.0.1"})
 	p := NewAt(forge.Connection{ID: "con_1", Name: "bb", Kind: forge.KindBitbucket, Credential: forge.SecretRef{Env: "LW_TEST_BB_TOKEN"}, Owners: owners}, endpointsOf(t, h.API()), g)
 	return &fixture{h, p, forge.Repository{ID: "rep_1", Connection: "con_1", Path: "acme/app", DefaultBranch: "main", Visibility: forge.Private}}
@@ -328,11 +328,11 @@ func TestWebhook(t *testing.T) {
 func TestCredentialRedirectGuardAndEndpoints(t *testing.T) {
 	f := newFixture(t)
 	if _, err := f.p.Client().Do(t.Context(), http.MethodGet, "https://evil.example.org/2.0/user", nil, 0, ""); err == nil ||
-		!strings.Contains(err.Error(), "not this connection's host") || strings.Contains(err.Error(), bitbucketfake.Token) {
+		!strings.Contains(err.Error(), "not this connection's host") || strings.Contains(err.Error(), bitbucketfake.Access) {
 		t.Fatalf("%v", err)
 	}
 	cred, err := f.p.Access().Credential(t.Context(), f.repo, false)
-	if err != nil || cred.Secret != bitbucketfake.Token || cred.Username != "x-token-auth" {
+	if err != nil || cred.Secret != bitbucketfake.Access || cred.Username != "x-token-auth" {
 		t.Fatalf("%+v %v", cred, err)
 	}
 	red := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

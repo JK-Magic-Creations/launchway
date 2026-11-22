@@ -377,6 +377,62 @@ func (h *Host) routeMR(r *http.Request, sub string, q url.Values, in map[string]
 		h.MRs = append(h.MRs, mr)
 		return 201, h.mrJSON(mr), ""
 	case strings.HasPrefix(sub, "/merge_requests/"):
+		return h.routeMRItem(r, sub, q, in, raw)
+	}
+	return 0, nil, ""
+}
+
+func (h *Host) routeMRAction(m string, mr *MR, tail string, in map[string]any) (int, any, string) {
+	switch {
+	case m == "PUT" && tail == "merge":
+		if bad := params(in, nil, "auto_merge", "squash", "sha", "should_remove_source_branch", "merge_commit_message", "squash_commit_message"); bad != "" {
+			return 0, nil, bad
+		}
+		if mr == nil {
+			return 404, map[string]any{"message": "404 Not found"}, ""
+		}
+		if in["auto_merge"] != true {
+			return 0, nil, "Launchway never merges directly: auto_merge must be true"
+		}
+		h.AutoMerge[mr.IID] = true
+		return 200, h.mrJSON(mr), ""
+	case m == "POST" && tail == "cancel_auto_merge":
+		if len(in) > 0 {
+			return 0, nil, "cancel_auto_merge takes no parameters"
+		}
+		if mr == nil || !h.AutoMerge[mr.IID] {
+			return 409, map[string]any{"message": "Can't cancel the automatic merge"}, ""
+		}
+		delete(h.AutoMerge, mr.IID)
+		return 201, h.mrJSON(mr), ""
+	case m == "POST" && tail == "notes":
+		if bad := params(in, []string{"body"}); bad != "" {
+			return 0, nil, bad
+		}
+		if mr == nil {
+			return 404, map[string]any{"message": "404 Not found"}, ""
+		}
+		h.nextID++
+		h.Notes[h.nextID] = str(in, "body")
+		return 201, map[string]any{"id": h.nextID, "body": str(in, "body"), "system": false}, ""
+	case m == "PUT" && strings.HasPrefix(tail, "notes/"):
+		if bad := params(in, []string{"body"}); bad != "" {
+			return 0, nil, bad
+		}
+		id, _ := strconv.Atoi(strings.TrimPrefix(tail, "notes/"))
+		if _, ok := h.Notes[id]; !ok || mr == nil {
+			return 404, map[string]any{"message": "404 Note Not Found"}, ""
+		}
+		h.Notes[id] = str(in, "body")
+		return 200, map[string]any{"id": id, "body": str(in, "body")}, ""
+	}
+	return 0, nil, ""
+}
+
+func (h *Host) routeMRItem(r *http.Request, sub string, q url.Values, in map[string]any, raw []byte) (int, any, string) {
+	m := r.Method
+	switch {
+	case strings.HasPrefix(sub, "/merge_requests/"):
 		rest := strings.TrimPrefix(sub, "/merge_requests/")
 		iid, tail, _ := strings.Cut(rest, "/")
 		mr := h.findMR(iid)
@@ -409,49 +465,9 @@ func (h *Host) routeMR(r *http.Request, sub string, q url.Values, in map[string]
 				return 0, nil, "state_event is close or reopen"
 			}
 			return 200, h.mrJSON(mr), ""
-		case m == "PUT" && tail == "merge":
-			if bad := params(in, nil, "auto_merge", "squash", "sha", "should_remove_source_branch", "merge_commit_message", "squash_commit_message"); bad != "" {
-				return 0, nil, bad
-			}
-			if mr == nil {
-				return 404, map[string]any{"message": "404 Not found"}, ""
-			}
-			if in["auto_merge"] != true {
-				return 0, nil, "Launchway never merges directly: auto_merge must be true"
-			}
-			h.AutoMerge[mr.IID] = true
-			return 200, h.mrJSON(mr), ""
-		case m == "POST" && tail == "cancel_auto_merge":
-			if len(in) > 0 {
-				return 0, nil, "cancel_auto_merge takes no parameters"
-			}
-			if mr == nil || !h.AutoMerge[mr.IID] {
-				return 409, map[string]any{"message": "Can't cancel the automatic merge"}, ""
-			}
-			delete(h.AutoMerge, mr.IID)
-			return 201, h.mrJSON(mr), ""
-		case m == "POST" && tail == "notes":
-			if bad := params(in, []string{"body"}); bad != "" {
-				return 0, nil, bad
-			}
-			if mr == nil {
-				return 404, map[string]any{"message": "404 Not found"}, ""
-			}
-			h.nextID++
-			h.Notes[h.nextID] = str(in, "body")
-			return 201, map[string]any{"id": h.nextID, "body": str(in, "body"), "system": false}, ""
-		case m == "PUT" && strings.HasPrefix(tail, "notes/"):
-			if bad := params(in, []string{"body"}); bad != "" {
-				return 0, nil, bad
-			}
-			id, _ := strconv.Atoi(strings.TrimPrefix(tail, "notes/"))
-			if _, ok := h.Notes[id]; !ok || mr == nil {
-				return 404, map[string]any{"message": "404 Note Not Found"}, ""
-			}
-			h.Notes[id] = str(in, "body")
-			return 200, map[string]any{"id": id, "body": str(in, "body")}, ""
+		default:
+			return h.routeMRAction(m, mr, tail, in)
 		}
-		return 0, nil, ""
 	}
 	return 0, nil, ""
 }

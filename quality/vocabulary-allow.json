@@ -902,6 +902,17 @@
     {
       "path": "docs/development/automatic-resources.md",
       "why": "A contributor design page that discusses the code's own terms (run, runner, queue, environment) and the Kubernetes objects they map to."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "word:project",
+      "why": "One outside host's own word for a repository: its API paths, access token kinds, roles and webhook settings are named for it, and the guide quotes them exactly. (A Launchway project is a Flight everywhere else in the file.)"
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "users or organizations",
+      "why": "Two outside hosts' own word for the accounts that own repositories."
     }
   ]
 }

@@ -127,11 +127,11 @@ What GitLab adds (shown "from GitLab" on the Flight's Code host page):
 | Addition | What it gives | Launchway drives it |
 | --- | --- | --- |
 | Auto-merge | the host merges a merge request itself once its checks pass | yes: `write_back.merge: auto` sets it right after the merge request is opened (`auto_merge`); a host that refuses leaves the step waiting for a person |
-| Merge trains | merge requests are queued and tested with those ahead | no: set up on the host |
+| Merge trains | merge requests wait in line and are tested with those ahead | no: set up on the host |
 | Approval rules | the host decides who must approve | no: the host enforces it |
 | Statuses on the merge request | each Sortie and failed step shows with a link back | yes: the commit statuses |
 
-What GitLab does not let a connection do, and what to do instead: create or delete projects (create on GitLab, then choose it); make or change a draft merge request (its API documentation has no draft parameter: toggle it on GitLab); merge, review, or change protected branches (do it on GitLab; mark the Launchway status name as required in the project's merge request settings so a failing Sortie blocks the merge); rebase as an auto-merge strategy.
+What GitLab does not let a connection do, and what to do instead: create or delete projects (create on GitLab, then choose it); make or change a draft merge request (its API documentation has no draft parameter: change it on GitLab); merge, review, or change protected branches (do it on GitLab; mark the Launchway status name as required in the project's merge request settings so a failing Sortie blocks the merge); rebase as an auto-merge strategy.
 
 Token scopes and roles, per feature (from the token scope and permission tables in GitLab's documentation; **Test** reports each as has or lacks):
 
@@ -160,7 +160,7 @@ launchway repos host test acme-gl
 
 The kinds `gitea` and `forgejo` are one implementation under two names: Forgejo keeps the API of the Gitea it came from, and every call used here was compared operation by operation between the two hosts' own OpenAPI files. Both are self-managed by nature, so the base address (`--base-url https://git.example.com`) is required; the API is at `<base>/api/v1`. Where they differ, the provider handles it: a created tag answers 200 on Gitea and 201 on Forgejo, a Forgejo branch protection has no force-push setting (unknown is not treated as immutable), and the webhook signature header is named for the host.
 
-- A repository is `owner/name`. The **owners** list names users or organizations.
+- A repository is `owner/name`. The **owners** list names the host's users or organizations.
 - The token is sent as `Authorization: token <token>`. Git over HTTPS uses it as the password with the account's own login as the user name.
 - **Choosing a repository** lists what the account owns or contributes to (the host's repository search for the account); a repository you know by name can be attached with `launchway repos outside attach`.
 - The webhook is checked by its **signature**: the hex HMAC-SHA256 of the raw body, in `X-Gitea-Signature` (Gitea) or `X-Forgejo-Signature` (Forgejo, which also sends the Gitea-named headers), compared in constant time. A replay is dropped by the delivery ID (`X-Gitea-Delivery` or `X-Forgejo-Delivery`). Events: `push` (branches and tags), `create` (a tag), `pull_request` and `pull_request_sync`. The documentation lists the pull request payload only as an object, so the head, the fork and the title are read from it when present and otherwise asked of the API; an event with no head starts nothing by itself, and Launchway asks the host before a pull request runs.

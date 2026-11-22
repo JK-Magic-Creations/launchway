@@ -141,7 +141,7 @@ func (h *Host) findPR(n string) *PR {
 	return nil
 }
 
-func (h *Host) routePulls(r *http.Request, sub string, q url.Values, in map[string]any, _ []byte) (int, any, string) {
+func (h *Host) routePulls(r *http.Request, sub string, q url.Values, in map[string]any, raw []byte) (int, any, string) {
 	m := r.Method
 	switch {
 	case m == "GET" && sub == "/pullrequests":
@@ -168,6 +168,15 @@ func (h *Host) routePulls(r *http.Request, sub string, q url.Values, in map[stri
 		p := &PR{ID: len(h.PRs) + 1, Title: str(in, "title"), Desc: str(in, "description"), State: "OPEN", Draft: in["draft"] == true, Src: src, Dst: dst, SHA: h.branches[src], SrcRepo: "acme/app"}
 		h.PRs = append(h.PRs, p)
 		return 201, h.prJSON(p), ""
+	case strings.HasPrefix(sub, "/pullrequests/"):
+		return h.routePull(r, sub, q, in, raw)
+	}
+	return 0, nil, ""
+}
+
+func (h *Host) routePull(r *http.Request, sub string, q url.Values, in map[string]any, _ []byte) (int, any, string) {
+	m := r.Method
+	switch {
 	case strings.HasPrefix(sub, "/pullrequests/"):
 		id, tail, _ := strings.Cut(strings.TrimPrefix(sub, "/pullrequests/"), "/")
 		p := h.findPR(id)

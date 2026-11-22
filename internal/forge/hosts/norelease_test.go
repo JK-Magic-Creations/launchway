@@ -27,7 +27,7 @@ func TestCutAReleaseWhereTheHostHasNoReleaseObject(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer eng.Close()
-	t.Setenv("LW_BB_TOKEN", bitbucketfake.Token)
+	t.Setenv("LW_BB_TOKEN", bitbucketfake.Access)
 	g, _ := egress.New([]string{"127.0.0.1"})
 	s := hosts.New(eng.Database(), eng, g)
 	ctx := t.Context()

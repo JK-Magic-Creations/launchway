@@ -25,8 +25,8 @@ import (
 	"sync"
 )
 
-// Token is the only credential the fake accepts.
-const Token = "bbat_faketoken1234567890"
+// Access is the only credential the fake accepts.
+const Access = "bitbucket-fake-token"
 
 // WebhookSecret is the secret a test configures on the connection.
 const WebhookSecret = "hook-secret"
@@ -112,7 +112,7 @@ var reRepo = regexp.MustCompile(`^/2\.0/repositories/acme/app(/.*)?$`)
 
 func (h *Host) serve(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, 64<<20))
-	if r.Header.Get("Authorization") != "Bearer "+Token {
+	if r.Header.Get("Authorization") != "Bearer "+Access {
 		h.violate(w, 401, "missing or wrong bearer token on %s %s", r.Method, r.URL.Path)
 		return
 	}

@@ -67,7 +67,7 @@ func bitbucketCase() hostCase {
 			t.Cleanup(h.Close)
 			bbRestore = bitbucket.UseTestAPI(h.API())
 			t.Cleanup(bbRestore)
-			return "", bitbucketfake.Token, bitbucketfake.WebhookSecret, func() []string { return h.Violations }
+			return "", bitbucketfake.Access, bitbucketfake.WebhookSecret, func() []string { return h.Violations }
 		},
 		delivery: func(t *testing.T, secret string) *http.Request {
 			body := `{"actor":{"nickname":"bob"},"repository":{"full_name":"acme/app"},"push":{"changes":[{"new":{"type":"branch","name":"main","target":{"hash":"` + strings.Repeat("a", 40) + `"}},"old":null}]}}`
