@@ -66,7 +66,7 @@ export function TestsTab({ run, version, step, onStep }: {
         <Empty title={running.length ? "No test results yet" : "No test results"}>
           {running.length
             ? <>Results appear when {running.map((s) => s.id).join(", ")} {running.length > 1 ? "end" : "ends"}.</>
-            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} {terms().say("{debriefs}, but none were collected. The step's log says why, for example a glob that matched no files.")}</>}
+            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} {terms().say("{debriefs}, but none were collected: the tests ran (or were skipped) and no report came out of them.")} <strong>The step's log says why.</strong> A step of a built-in template prints a box that starts “TESTS RAN, BUT NO TEST REPORT WAS PRODUCED” with the one line to add; for your own step, make the test command write JUnit XML to the path it declares.</>}
         </Empty>
       );
     }

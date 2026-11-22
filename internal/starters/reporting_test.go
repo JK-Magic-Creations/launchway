@@ -26,7 +26,9 @@ func scriptPath(t *testing.T, name string) string {
 	return p
 }
 
-func fs_readFile(name string) ([]byte, error) { return os.ReadFile(filepath.Join("library", "scripts", name)) }
+func fs_readFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join("library", "scripts", name))
+}
 
 // stubs makes a directory of fake tools that log their arguments; those in reporting write junit.xml and a coverage file
 // when their arguments carry the reporter.
