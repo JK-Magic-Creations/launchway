@@ -21,8 +21,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The release is gated on the lints and scans (this job) and on the whole Go suite run the way the
+  # project's own pipeline runs it (the next job). The race detector runs on every push to main in
+  # ci.yml, in groups; a release is not gated on it because under the detector the hosted runners
+  # are too slow for the suite to be one job (see docs/development/quality-gates.md).
   checks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -43,13 +48,37 @@ jobs:
         run: make lint-scripts lint-workflows
       - name: Charts
         run: make chart-lint
-      - name: Vet and test
-        run: |
-          go vet ./...
-          go test -race -count=1 -timeout 60m ./...
+      - name: Vet
+        run: go vet ./...
+
+  # The whole suite exactly as the pipeline runs it: no race detector, -timeout 18m per package.
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web UI
+        run: cd web && npm ci --no-audit --no-fund && npm run build
+      - name: Build the documentation into the binary (the Learn area)
+        run: make learn
+      - name: Test (no race detector, as the pipeline runs it)
+        run: go test -count=1 -timeout 18m ./...
 
   release:
-    needs: checks
+    needs: [checks, tests]
     runs-on: ubuntu-24.04
     permissions:
       contents: write # the draft release
