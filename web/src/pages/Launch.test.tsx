@@ -90,7 +90,7 @@ describe("the Launch page", () => {
     expect(alert.textContent).toMatch(/Pathfinder pods are not healthy.*CrashLoopBackOff/);
     fireEvent.click(within(alert).getByRole("button", { name: "Open it" }));
     expect(location.search).toContain("tab=objects");
-    expect(location.search).toContain("obj=Pod%2Fshop%2Fshop-bbb-1");
+    expect(location.search).toContain("obj=Pod/shop/shop-bbb-1");
     expect(await screen.findByText(/panic: database password is empty/)).toBeTruthy();
   }, 20000);
 

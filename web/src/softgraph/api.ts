@@ -55,6 +55,8 @@ export const refText = (r: Ref) => `${r.kind}:${r.key}`;
 export const sameRef = (a: Ref, b: Ref) => a.kind === b.kind && a.key === b.key;
 
 export const graphApi = {
+  /** Read one repository into the graph now (needs write access to it). */
+  refresh: (repo: string) => call<unknown>("POST", `/api/v1/repositories/${repo}/graph/refresh`),
   summary: () => call<Summary>("GET", base),
   search: (text: string, kind?: string) => call<{ items: GNode[]; more: boolean }>("GET", `${base}/search${q({ q: text, kind })}`),
   node: (ref: string) => call<{ node: GNode; edges: GEdge[]; more_edges: boolean }>("GET", `${base}/node${q({ ref })}`),

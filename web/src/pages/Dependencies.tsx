@@ -5,6 +5,7 @@ import { PageHead, Sheet } from "../kit/layout";
 import "../styles/deps.css";
 import { depsApi, type DependencyReport, type DepUpdate, type Decision } from "../depsApi";
 import { terms } from "../terms";
+import { RepoTabs } from "../components/RepoTabs";
 
 const STATUS_WORDS: Record<string, string> = {
   "up-to-date": "Up to date", update: "Update available", security: "Security fix available", held: "Waiting for the release to age",
@@ -26,6 +27,7 @@ function Header({ path, current }: { path: string; current: "dependencies" | "up
         sentence={current === "dependencies"
           ? "What this repository's default branch depends on, what is newer, and what is known to be vulnerable. Launchway reads the manifests and lock files and changes nothing here."
           : "How Launchway keeps these dependencies current, and what it would open right now. Updates are proposed as pull requests; nothing is merged by itself."} />
+      <RepoTabs path={path} on="dependencies" />
       <nav className="tabs" aria-label="Dependency pages">
         <a href={`/repositories/${path}/dependencies`} className={"tab" + (current === "dependencies" ? " tab-on" : "")} aria-current={current === "dependencies" ? "page" : undefined}>Dependencies</a>
         <a href={`/repositories/${path}/updates`} className={"tab" + (current === "updates" ? " tab-on" : "")} aria-current={current === "updates" ? "page" : undefined}>Updates and settings</a>

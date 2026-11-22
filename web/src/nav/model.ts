@@ -66,7 +66,15 @@ export const SECTIONS: Section[] = [
     get promise() { return say("Issues, boards, backlogs and sprints, and the agents that work on them."); }, tabs: [],
   },
   { id: "pipelines", label: "Pipelines", href: "/pipelines", icon: "graph", group: 1, get promise() { return say("The steps that build, test and release your software, and how their {runs} went."); }, tabs: [] },
-  { id: "images", label: "Images", href: "/images", icon: "package", group: 1, promise: "Container images, Helm charts and files your pipelines build, with what is in them.", tabs: [] },
+  {
+    id: "images", get label() { return say("{Registry}"); }, href: "/depot", icon: "package", group: 1,
+    get promise() { return say("Container images, Helm charts and files your pipelines build, the built-in store, and what is in them: one place."); },
+    tabs: [
+      { id: "images", label: "Images", href: "/depot", icon: "package" },
+      { id: "components", label: "Components", href: "/depot/components", icon: "list" },
+      { id: "store", label: "Built-in store", href: "/depot/store", icon: "server" },
+    ],
+  },
   {
     id: "deployments", get label() { return say("{Deploys}"); }, href: "/deployments", icon: "deploy", group: 2, side: "What is running, and where.",
     get promise() { return say("What is running where: applications, {environments}, hosts and machine images."); },
@@ -193,12 +201,17 @@ const projectSub = (sub: string, title: string, label: string) =>
 
 const repo = (p: Record<string, string>) => p.owner + "/" + p.name;
 const repoHref = (p: Record<string, string>) => `/repositories/${enc(p.owner)}/${enc(p.name)}`;
+/** The Launch a run page shows (?launch=), if any: the trail then reads Sorties › Sortie › Launch. */
+const launchOf = (): string => (typeof location === "undefined" ? "" : new URLSearchParams(location.search).get("launch") ?? "");
 const repoCrumb = (p: Record<string, string>, to = ""): Crumb => ({ label: repo(p), href: repoHref(p) + to });
+const reposCrumb: Crumb = { label: "Repositories", href: "/repositories" };
+/** Repositories, then this repository (its front page is the code), for the trail of every page of one repository. */
+const repoTrail = (p: Record<string, string>): Crumb[] => [reposCrumb, repoCrumb(p, "/code")];
 const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
 /** A page of one repository: its title ("Mirrors of owner/name"), and the trail back to the repository. */
 const repoSub = (sub: string, title: string, label: string, themed = false) => {
   const word = (t: string) => (themed ? terms().say(t) : t);
-  return page(`/repositories/:owner/:name/${sub}`, "projects", undefined, (p) => `${word(title)} ${repo(p)}`, (p) => [repoCrumb(p), { label: word(label) }]);
+  return page(`/repositories/:owner/:name/${sub}`, "projects", undefined, (p) => `${word(title)} ${repo(p)}`, (p) => [...repoTrail(p), { label: word(label) }]);
 };
 
 /** A page of Settings whose tab, title and trail are one word. */
@@ -227,7 +240,8 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: p.toggle }]),
   page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: "Keys and safeguards" }]),
   page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
-  page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
+  page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [reposCrumb, { label: p.owner + "/" + p.name }]),
+  repoSub("settings", "Settings of", "Settings"),
   repoSub("mirrors", "Mirrors of", "Mirrors"),
   repoSub("dependencies", "Dependencies of", "Dependencies"),
   repoSub("graph", "Graph of", "Graph"),
@@ -235,10 +249,10 @@ export const PAGES: PageInfo[] = [
   repoSub("updates", "{Dependency_updatess} of", "{Dependency_updatess}", true),
   repoSub("history", "Imported history of", "Imported history"),
   repoSub("pulls", "Pull requests of", "Pull requests"),
-  page("/repositories/:owner/:name/pulls/new", "projects", undefined, (p) => `New pull request in ${repo(p)}`, (p) => [repoCrumb(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: "New" }]),
-  page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${repo(p)}`, (p) => [repoCrumb(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: `#${p.number}` }]),
-  page("/repositories/:owner/:name/:view", "projects", undefined, (p) => `${cap(p.view)}: ${repo(p)}`, (p) => [repoCrumb(p, "/code"), { label: cap(p.view) }]),
-  page("/repositories/:owner/:name/commit/:sha", "projects", undefined, (p) => `Commit ${p.sha.slice(0, 8)}: ${repo(p)}`, (p) => [repoCrumb(p, "/code"), { label: p.sha.slice(0, 8) }]),
+  page("/repositories/:owner/:name/pulls/new", "projects", undefined, (p) => `New pull request in ${repo(p)}`, (p) => [...repoTrail(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: "New" }]),
+  page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${repo(p)}`, (p) => [...repoTrail(p), { label: "Pull requests", href: repoHref(p) + "/pulls" }, { label: `#${p.number}` }]),
+  page("/repositories/:owner/:name/:view", "projects", undefined, (p) => `${cap(p.view)}: ${repo(p)}`, (p) => [...repoTrail(p), { label: cap(p.view) }]),
+  page("/repositories/:owner/:name/commit/:sha", "projects", undefined, (p) => `Commit ${p.sha.slice(0, 8)}: ${repo(p)}`, (p) => [...repoTrail(p), { label: "Commits", href: repoHref(p) + "/commits" }, { label: p.sha.slice(0, 8) }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => say("{Deploys}"), () => []),
@@ -260,14 +274,16 @@ export const PAGES: PageInfo[] = [
   page("/activity", "activity", "runs", () => terms().say("{Runs}"), () => [{ label: terms().say("{Runs}") }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
   page("/activity/events", "activity", "events", () => "Events", () => []),
-  page("/runs/:id", "activity", "runs", (p) => terms().say(`{Run} ${p.id}`), (p) => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: terms().say(`{Run} ${p.id.slice(0, 8)}`) }]),
+  page("/runs/:id", "activity", "runs", (p) => (launchOf() ? "Launch of " : "") + terms().say(`{Run} ${p.id}`), (p) => launchOf()
+    ? [{ label: terms().say("{Runs}"), href: "/activity" }, { label: terms().say(`{Run} ${p.id.slice(0, 8)}`), href: `/runs/${enc(p.id)}` }, { label: "Launch" }]
+    : [{ label: terms().say("{Runs}"), href: "/activity" }, { label: terms().say(`{Run} ${p.id.slice(0, 8)}`) }]),
 
-  page("/images", "images", undefined, () => "Images", () => []),
-  page("/images/components", "images", undefined, () => "Components", () => [{ label: "Components" }]),
-  page("/images/registry", "images", undefined, () => terms().say("{Registry}"), () => [{ label: terms().say("{Registry}") }]),
-  page("/images/registry/:project", "images", undefined, (p) => terms().say(`{Registry} of ${p.project}`), (p) => [{ label: terms().say("{Registry}"), href: "/images/registry" }, { label: p.project }]),
-  page("/images/digest/:digest", "images", undefined, (p) => `Image ${p.digest.slice(0, 19)}`, (p) => [{ label: "Image " + p.digest.slice(0, 19) }]),
-  page("/images/:page", "images", undefined, (p) => comingTitle("/images/" + p.page), (p) => [{ label: comingTitle("/images/" + p.page) }]),
+  page("/depot", "images", "images", () => "Images", () => [{ label: "Images" }]),
+  page("/depot/components", "images", "components", () => "Components", () => [{ label: "Components" }]),
+  page("/depot/store", "images", "store", () => "Built-in store", () => [{ label: "Built-in store" }]),
+  page("/depot/store/:project", "images", "store", (p) => `Built-in store of ${p.project}`, (p) => [{ label: "Built-in store", href: "/depot/store" }, { label: p.project }]),
+  page("/depot/digest/:digest", "images", "images", (p) => `Image ${p.digest.slice(0, 19)}`, (p) => [{ label: "Images", href: "/depot" }, { label: "Image " + p.digest.slice(0, 19) }]),
+  page("/depot/:page", "images", undefined, (p) => comingTitle("/depot/" + p.page), (p) => [{ label: comingTitle("/depot/" + p.page) }]),
 
   page("/traffic", "traffic", "map", () => "Traffic map", () => []),
   page("/traffic/:page", "traffic", undefined, (p) => comingTitle("/traffic/" + p.page), (p) => [{ label: comingTitle("/traffic/" + p.page) }]),
@@ -362,16 +378,27 @@ export const MOVED: [from: string, to: string][] = [
   ["/agents", "/settings/access/agents"],
   ["/audit", "/settings/audit"],
   ["/policy", "/settings/rules"],
-  // The registry became its own area, Images (docs 42, section 17).
-  ["/components", "/images/components"],
-  ["/library/images", "/images"],
-  ["/library/components", "/images/components"],
+  // The registry became its own area, Images (docs 42, section 17), and the area is now called Depot.
+  ["/components", "/depot/components"],
+  ["/library/images", "/depot"],
+  ["/library/components", "/depot/components"],
+  // The area was called Images and lived under /images: every old address keeps working.
+  ["/images", "/depot"],
+  ["/images/components", "/depot/components"],
+  ["/images/registry", "/depot/store"],
+];
+
+/** Old addresses that moved with whatever follows them: /images/digest/x is /depot/digest/x. */
+const MOVED_PREFIX: [from: string, to: string][] = [
+  ["/images/registry/", "/depot/store/"],
+  ["/images/", "/depot/"],
 ];
 
 /** The new address for an old one, or null if the address is not an old one. */
 export function redirectFor(path: string, search = ""): string | null {
   const clean = path.length > 1 ? path.replace(/\/+$/, "") : path;
   for (const [from, to] of MOVED) if (clean === from) return to + search;
+  for (const [from, to] of MOVED_PREFIX) if (clean.startsWith(from)) return to + clean.slice(from.length) + search;
   return null;
 }
 

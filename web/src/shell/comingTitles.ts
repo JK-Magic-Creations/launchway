@@ -4,7 +4,7 @@
 import { terms } from "../terms";
 
 export const COMING_TITLES: Record<string, string> = {
-  "/code/files": "Files, commits and branches", "/code/reviews": "Reviews", "/images/charts": "Charts", "/images/files": "Files",
+  "/code/files": "Files, commits and branches", "/code/reviews": "Reviews", "/depot/charts": "Charts", "/depot/files": "Files",
   "/deployments/hosts": "Hosts", "/deployments/machine-images": "Machine images", "/traffic": "Traffic map", "/traffic/protection": "Protection",
   "/traffic/reliability": "Reliability", "/traffic/toggles": "{Toggles}", "/changes": "Calendar", "/changes/records": "Change records",
   "/changes/freezes": "{Hold} windows", "/changes/rules": "{Clearance} rules", "/changes/tickets": "Ticket system",

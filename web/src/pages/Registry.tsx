@@ -27,7 +27,7 @@ function quotaText(r: ProjectRegistry): string {
 
 /** The registry's start page: how to log in and push, and a way to a project's images. */
 export function RegistryPage({ project }: { project?: string }) {
-  useCrumbLabel(project ?? terms().say("{Registry}"));
+  useCrumbLabel(project);
   const statusFn = useCallback(() => registryApi.status(), []);
   const status = useLoad(statusFn);
   const inst = useInstallation();
@@ -38,10 +38,10 @@ export function RegistryPage({ project }: { project?: string }) {
   if (off || (status.error && !status.data)) {
     return (
       <div className="page">
-        <PageHead eyebrow="Images" title={terms().say("{Registry}")} sentence="Launchway's own place for container images and Helm charts." />
+        <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence="Launchway's own place for container images and Helm charts." />
         {!off && <ErrorBox error={status.error} />}
-        <Sheet><EmptyState title={terms().say("The built-in {registry} is off")} action={<LinkButton href="/images" icon="arrow">{terms().say("Find images your {runs} built")}</LinkButton>}>
-          {terms().say("It needs sign-in and an {artifact} store, and")} <Mono>registry.enabled</Mono> must not be false. Run <Mono>launchway doctor registry</Mono> on the server to see what is missing. Pushing to any other registry keeps working.
+        <Sheet><EmptyState title={terms().say("The built-in {registry} is off")} action={<LinkButton href="/depot" icon="arrow">{terms().say("Find images your {runs} built")}</LinkButton>}>
+          {terms().say("The store is off on this server, and the rest of this area works without it: images your {runs} built, and components. Only an administrator can turn it on: it needs sign-in and an {artifact} store, and")} <Mono>registry.enabled</Mono> must not be false in the server's configuration. An administrator can run <Mono>launchway doctor registry</Mono> on the server to see what is missing. Pushing to any other registry keeps working.
         </EmptyState></Sheet>
       </div>
     );
@@ -49,7 +49,7 @@ export function RegistryPage({ project }: { project?: string }) {
   const s = status.data!;
   return (
     <div className="page">
-      <PageHead eyebrow="Images" title={terms().say("{Registry}")} sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>; people with a role on the project see it, and nobody else does.</>} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>; people with a role on the project see it, and nobody else does.</>} />
       <div className="grid g2">
         <Sheet title="Push and pull">
           <dl className="kvlist">
@@ -72,7 +72,7 @@ export function RegistryPage({ project }: { project?: string }) {
       {mine.length === 0 && <p className="faint">You have no role on any project, so there is nothing here to see.</p>}
       <nav className="chips" aria-label="Projects">
         {mine.map((p) => (
-          <a key={p} className={"chip" + (p === project ? " chip-on" : "")} href={`/images/registry/${encodeURIComponent(p)}`} onClick={onLink} aria-current={p === project ? "page" : undefined}>{p}</a>
+          <a key={p} className={"chip" + (p === project ? " chip-on" : "")} href={`/depot/store/${encodeURIComponent(p)}`} onClick={onLink} aria-current={p === project ? "page" : undefined}>{p}</a>
         ))}
       </nav>
       {project && <ProjectRegistryView key={project} project={project} />}
@@ -108,7 +108,7 @@ function ProjectRegistryView({ project }: { project: string }) {
                 <tbody>
                   {r.repositories.map((p) => (
                     <tr key={p.name}>
-                      <td><a href={`/images/registry/${encodeURIComponent(project)}?repository=${encodeURIComponent(p.name)}`} onClick={onLink} aria-current={p.name === repoParam ? "true" : undefined}><Mono>{p.name}</Mono></a></td>
+                      <td><a href={`/depot/store/${encodeURIComponent(project)}?repository=${encodeURIComponent(p.name)}`} onClick={onLink} aria-current={p.name === repoParam ? "true" : undefined}><Mono>{p.name}</Mono></a></td>
                       <td>{p.images}</td><td>{p.tags}</td><td>{bytes(p.bytes)}</td>
                       <td title={clock(p.pushed_at)}>{p.pushed_at ? ago(p.pushed_at) : <span className="faint">never</span>}</td>
                     </tr>
@@ -244,4 +244,4 @@ function PolicyView({ project, registry, admin, onChanged }: { project: string; 
   );
 }
 
-export function openRegistry(project?: string) { navigate(project ? `/images/registry/${encodeURIComponent(project)}` : "/images/registry"); }
+export function openRegistry(project?: string) { navigate(project ? `/depot/store/${encodeURIComponent(project)}` : "/depot/store"); }

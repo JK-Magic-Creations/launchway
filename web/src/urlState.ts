@@ -46,6 +46,9 @@ export function setUrl(changes: Record<string, string | null>, mode: "push" | "r
   listeners.forEach((l) => l());
 }
 
+/** The address's query text, and the page again whenever it changes (for a page that keeps several values in it). */
+export function useSearch(): string { return useSyncExternalStore(subscribe, snapshot, () => ""); }
+
 /** A value kept in the address: `const [tab, setTab] = useUrlState("tab", "overview", oneOf("overview", "tests"))`. */
 export function useUrlState<T>(key: string, def: T, codec: Codec<T> = str as unknown as Codec<T>): [T, (v: T, mode?: "push" | "replace") => void] {
   const search = useSyncExternalStore(subscribe, snapshot, () => "");

@@ -329,7 +329,7 @@ export function FindingRow({ f, run, multiStep, open: openFirst, extra }: {
 function ComponentFinder() {
   const [name, setName] = useState("");
   return (
-    <form className="sbom-find" role="search" onSubmit={(e) => { e.preventDefault(); if (name.trim()) navigate(`/images/components?name=${encodeURIComponent(name.trim())}`); }}>
+    <form className="sbom-find" role="search" onSubmit={(e) => { e.preventDefault(); if (name.trim()) navigate(`/depot/components?name=${encodeURIComponent(name.trim())}`); }}>
       <label className="search">
         <span className="visually-hidden">Component name</span>
         <input type="search" placeholder="Component name, such as requests" value={name} onChange={(e) => setName(e.target.value)} />

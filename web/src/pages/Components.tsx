@@ -45,12 +45,12 @@ export function ComponentsPage() {
     const q = new URLSearchParams();
     if (name.trim()) q.set("name", name.trim());
     if (version.trim()) q.set("version", version.trim());
-    navigate(`/images/components${q.toString() ? "?" + q.toString() : ""}`);
+    navigate(`/depot/components${q.toString() ? "?" + q.toString() : ""}`);
   };
 
   return (
     <div className="page">
-      <PageHead eyebrow="Images" title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which projects use it, at which version, on which branch.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which projects use it, at which version, on which branch.")} />
 
       <form className="card compform" role="search" onSubmit={submit}>
         <label className="field">

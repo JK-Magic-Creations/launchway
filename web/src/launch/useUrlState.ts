@@ -1,26 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { setUrl, useSearch } from "../urlState";
 
-/** The page's view in its address: a few search parameters, so a view can be bookmarked and shared. Changing one
- * replaces the address (it does not add history entries for every click on a tab or a tree row). */
+/** The Launch page's view in its address: a few search parameters, so a view can be bookmarked and shared. It is the
+ * address of src/urlState.ts, shared with every other page: choosing a tab makes a history entry (Back returns to the
+ * one before), a selection inside a tab replaces the address, and a link or a reload opens the same view. */
 export function useUrlState<K extends string>(keys: readonly K[]): [Record<K, string>, (patch: Partial<Record<K, string>>) => void] {
-  const read = useCallback(() => {
-    const p = new URLSearchParams(location.search);
+  const search = useSearch();
+  const state = useMemo(() => {
+    const p = new URLSearchParams(search);
     return Object.fromEntries(keys.map((k) => [k, p.get(k) ?? ""])) as Record<K, string>;
-  }, [keys]);
-  const [state, setState] = useState(read);
-  useEffect(() => {
-    const on = () => setState(read());
-    window.addEventListener("popstate", on);
-    return () => window.removeEventListener("popstate", on);
-  }, [read]);
+  }, [search, keys]);
   const set = useCallback((patch: Partial<Record<K, string>>) => {
-    const p = new URLSearchParams(location.search);
-    for (const [k, v] of Object.entries(patch) as [K, string | undefined][]) {
-      if (v) p.set(k, v); else p.delete(k);
-    }
-    const qs = p.toString();
-    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
-    setState(read());
-  }, [read]);
+    const changes: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(patch) as [K, string | undefined][]) changes[k] = v || null;
+    setUrl(changes, "tab" in patch ? "push" : "replace");
+  }, []);
   return [state, set];
 }

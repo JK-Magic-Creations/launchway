@@ -20,7 +20,7 @@ const PAGES = [
   ["Home", "/"], ["Runs", "/activity"], ["A failed run", `/runs/${runs.RUN_FAILED}`], ["A finished run", `/runs/${runs.RUN_OK}`],
   ["A run waiting", `/runs/${runs.RUN_WAITING}`], ["Decisions", "/activity/approvals"], ["Pipelines", "/pipelines"], ["Code", "/projects"],
   ["A repository", "/projects/shop-api"], ["A pipeline", "/projects/shop-api/pipeline"], ["Deployments", "/deployments"],
-  ["Applications", "/deployments/applications"], ["Environments", "/deployments/environments"], ["Images", "/images"],
+  ["Applications", "/deployments/applications"], ["Environments", "/deployments/environments"], ["Images", "/depot"],
   ["Library", "/library"], ["Settings", "/settings"], ["Runners", "/settings/runners"], ["People and access", "/settings/access"],
   ["Variables", "/settings/variables"], ["Rules", "/settings/rules"], ["Learn", "/learn"], ["A Learn page", "/learn/concepts/launch-line"],
   ["Accessibility guide", "/learn/guide/accessibility"], ["Conformance statement", "/learn/reference/accessibility-conformance"],
@@ -32,7 +32,7 @@ const PAGES = [
   ["The software graph", "/graph"], ["A repository's graph", "/repositories/launchway/shop/graph"], ["Pull requests", "/repositories/launchway/shop/pulls"],
   ["Standing orders of a project", "/projects/shop-api/standards"], ["Standing orders settings", "/settings/standards"],
   ["Build caches", "/projects/shop-api/caches"], ["Configuration of a project", "/projects/shop-api/configuration"],
-  ["Pipeline templates", "/library/starters"], ["Depot", "/images/registry"], ["Switches", "/projects/shop-api/toggles"],
+  ["Pipeline templates", "/library/starters"], ["Depot", "/depot/store"], ["Switches", "/projects/shop-api/toggles"],
   ["Tests of a project", "/projects/shop-api/tests"],
   ["Sign-in", "/signin", { signedOut: true }],
 ];

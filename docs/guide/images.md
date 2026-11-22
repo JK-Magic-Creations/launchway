@@ -187,7 +187,7 @@ project builds is refused before anything starts, naming what the builders build
 **On the Sortie page**, the Images tab shows each image: its digest, the pushed name and tags (or why
 nothing was pushed), size, platforms, whether and with which key it was signed, the provenance and
 the SBOM (links to the Cargo), the scan's counts and policy, and how much of the build came from
-the cache. **The Images page** finds the Sorties that built a digest (the index's or a platform's), and
+the cache. **The Images tab of the Depot** (the area at `/depot`; the old `/images` addresses still work and lead there) finds the Sorties that built a digest (the index's or a platform's), and
 the latest images of a repository or tag.
 
 - **API**: `GET /api/v1/runs/{id}/images`, and

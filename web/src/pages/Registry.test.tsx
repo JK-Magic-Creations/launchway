@@ -15,15 +15,15 @@ describe("the registry page", () => {
 
   it("tells how to log in and push, and plainly that blobs are not encrypted by Launchway", async () => {
     installServer();
-    open("/images/registry");
+    open("/depot/store");
     expect(await screen.findByText(/docker push registry.example.com/, {}, { timeout: 8000 })).toBeTruthy();
     expect(screen.getByText("Not encrypted by Launchway")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "shop-api" }).getAttribute("href")).toBe("/images/registry/shop-api");
+    expect(screen.getByRole("link", { name: "shop-api" }).getAttribute("href")).toBe("/depot/store/shop-api");
   });
 
   it("lists a repository's images with what is known of each, and a pull reference to copy", async () => {
     installServer({}, me({ admin: false, roles: { "shop-api": "operator" } }));
-    open("/images/registry/shop-api?repository=shop-api/web");
+    open("/depot/store/shop-api?repository=shop-api/web");
     const table = await screen.findByRole("table", { name: "Images in shop-api/web" }, { timeout: 8000 });
     const rows = within(table).getAllByRole("row");
     expect(rows).toHaveLength(4);
@@ -39,7 +39,7 @@ describe("the registry page", () => {
   it("offers Delete to a project admin, asks first, and then deletes", async () => {
     installServer({}, me({ admin: false, roles: { "shop-api": "admin" } }));
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    open("/images/registry/shop-api?repository=shop-api/web");
+    open("/depot/store/shop-api?repository=shop-api/web");
     const del = await screen.findByRole("button", { name: "Delete 1.4.0" }, { timeout: 8000 });
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
     fireEvent.click(del);
@@ -50,7 +50,7 @@ describe("the registry page", () => {
   it("does not delete when the person says no", async () => {
     installServer({}, me({ admin: false, roles: { "shop-api": "admin" } }));
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    open("/images/registry/shop-api?repository=shop-api/web");
+    open("/depot/store/shop-api?repository=shop-api/web");
     fireEvent.click(await screen.findByRole("button", { name: "Delete 1.4.0" }, { timeout: 8000 }));
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "DELETE")).toBe(false);
@@ -58,7 +58,7 @@ describe("the registry page", () => {
 
   it("previews what retention would delete before anything is deleted", async () => {
     installServer({}, me({ admin: false, roles: { "shop-api": "operator" } }));
-    open("/images/registry/shop-api");
+    open("/depot/store/shop-api");
     fireEvent.click(await screen.findByRole("button", { name: "Preview what retention would delete" }, { timeout: 8000 }));
     expect(await screen.findByText(/untagged and older than 7 days/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Delete these/ })).toBeNull();
@@ -72,7 +72,7 @@ describe("the registry page", () => {
       if (String(input).startsWith("/api/v1/registry")) return new Response(JSON.stringify({ error: "off", code: "feature_off" }), { status: 404, headers: { "Content-Type": "application/json" } });
       return real(input, init);
     }));
-    open("/images/registry");
+    open("/depot/store");
     expect(await screen.findByText("The built-in Depot is off", {}, { timeout: 8000 })).toBeTruthy();
   });
 });

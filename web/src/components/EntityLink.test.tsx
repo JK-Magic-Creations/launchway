@@ -11,8 +11,8 @@ describe("entityHref", () => {
     expect(entityHref({ kind: "environment", name: "staging" })).toBe("/deployments/environments/staging");
     expect(entityHref({ kind: "application", name: "a" })).toBe("/deployments/applications/a");
     expect(entityHref({ kind: "template", name: "go", library: "platform" })).toBe("/library/templates/platform/go");
-    expect(entityHref({ kind: "image", name: "sha256:1" })).toBe("/images/digest/sha256%3A1");
-    expect(entityHref({ kind: "component", name: "lodash" })).toBe("/images/components?name=lodash");
+    expect(entityHref({ kind: "image", name: "sha256:1" })).toBe("/depot/digest/sha256%3A1");
+    expect(entityHref({ kind: "component", name: "lodash" })).toBe("/depot/components?name=lodash");
     expect(entityHref({ kind: "pipeline", name: "p" })).toBe("/projects/p/pipeline");
   });
 });
