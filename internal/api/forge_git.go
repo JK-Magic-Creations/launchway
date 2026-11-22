@@ -280,7 +280,7 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 		if c.id.repoLimited() && !c.id.repoIDMatches(repo) {
 			return notFound()
 		}
-		if code, msg := s.checkRepo(c.id, q.class, q.path); code == http.StatusNotFound {
+		if code, msg := s.checkRepo(ctx, c.id, q.class, q.path); code == http.StatusNotFound {
 			return notFound()
 		} else if code != 0 {
 			return deny(code, msg)

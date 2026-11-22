@@ -266,19 +266,19 @@ func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int,
 	if s.Forge == nil {
 		return http.StatusNotFound, featureOff
 	}
-	return s.checkRepo(id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
+	return s.checkRepo(r.Context(), id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
 }
 
 // checkRepo applies a repository access class. A repository someone may not
 // read is reported exactly as one that does not exist.
-func (s *Server) checkRepo(id *identity, a access, repo string) (int, string) {
+func (s *Server) checkRepo(ctx context.Context, id *identity, a access, repo string) (int, string) {
 	if !s.authorize(id, auth.Read, repo) {
 		return http.StatusNotFound, "no such repository"
 	}
 	if id.repoLimited() {
 		// A token limited to repositories is bound to them by ID, on every route: a repository
 		// made again under a listed name, or removed some other way, is not the one it was made for.
-		got, err := s.Forge.Provider.Repositories().Get(context.Background(), repo)
+		got, err := s.Forge.Provider.Repositories().Get(ctx, repo)
 		if err != nil || !id.repoIDMatches(got) {
 			return http.StatusNotFound, "no such repository"
 		}

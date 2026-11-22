@@ -93,7 +93,8 @@ func (s *Server) makeRepoCredential(w http.ResponseWriter, r *http.Request) {
 	}
 	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
 	setAudit(r, in.Name, "for "+path)
-	if id.Via != viaSession && !(id.Via == viaToken && id.agent == nil && !strings.HasPrefix(id.User, engine.ServicePrincipalPrefix) && s.AdminTokenMakesServiceTokens) {
+	byAdminToken := id.Via == viaToken && id.agent == nil && !strings.HasPrefix(id.User, engine.ServicePrincipalPrefix) && s.AdminTokenMakesServiceTokens
+	if id.Via != viaSession && !byAdminToken {
 		writeErr(w, http.StatusForbidden, "a repository credential is made from a signed-in session (an administrator's API token may only where auth.tokens.service_accounts_from_tokens is on)")
 		return
 	}
