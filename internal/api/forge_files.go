@@ -21,7 +21,7 @@ import (
 
 func (s *Server) filesRoutes() []route {
 	const base = "/api/v1/repositories/{owner}/{name}"
-	return append(s.browseRoutes(), []route{
+	return append(append(s.browseRoutes(), s.inspectionRoutes()...), []route{
 		{"GET " + base + "/commits", repoRead, "", s.listCommits},
 		{"GET " + base + "/files", repoRead, "", s.readFile},
 		{"PUT " + base + "/files", repoWrite, "repository.file_write", s.writeFile},

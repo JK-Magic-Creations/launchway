@@ -317,6 +317,8 @@ var rows = []Row{
 	{Route: "GET /api/v1/repositories/{owner}/{name}/branches", MCP: "list_repository_branches", CLI: "repos branches", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/branches", MCP: "create_repository_branch", CLI: "repos branches create", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/branches", MCP: "delete_repository_branch", CLI: "repos branches delete", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/inspections", MCP: "get_repository_inspections", CLI: "repos inspections", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/repositories/{owner}/{name}/inspections", MCP: "inspect_repository", CLI: "repos inspect", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/branches/rename", MCP: "rename_repository_branch", CLI: "repos branches rename", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/tags", MCP: "create_repository_tag", CLI: "repos tags create", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/tags", MCP: "delete_repository_tag", CLI: "repos tags delete", Terraform: "", Status: Equal, Reason: ""},

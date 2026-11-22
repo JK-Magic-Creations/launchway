@@ -141,26 +141,10 @@ function History({ s }: { s: Series }) {
 export function ProjectStandardsPage({ name }: { name: string }) {
   const [data, setData] = useState<ProjectStandings | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const [list, setList] = useState<BacklogList | null>(null);
-  const [series, setSeries] = useState<Series | null>(null);
-  const [status, setStatus] = useState("open");
-  const [sev, setSev] = useState<Sev | "">("");
-  const [check, setCheck] = useState("");
-  const [oldest, setOldest] = useState(true);
   const [file, setFile] = useState<{ from_settings: string } | null>(null);
-  const [tick, setTick] = useState(0);
   const profile = useProfile();
-  const me = useMe();
-  const now = useNow(60000);
-  const reload = useCallback(() => setTick((n) => n + 1), []);
 
-  useEffect(() => { let on = true; standardsApi.project(name).then((d) => on && setData(d)).catch((e) => on && setError(e)); return () => { on = false; }; }, [name, tick]);
-  useEffect(() => {
-    let on = true;
-    standardsApi.backlog(name, { status, severity: sev, check, sort: oldest ? "oldest" : "", limit: 100 }).then((l) => on && setList(l)).catch((e) => on && setError(e));
-    return () => { on = false; };
-  }, [name, status, sev, check, oldest, tick]);
-  useEffect(() => { let on = true; standardsApi.history(name).then((s) => on && setSeries(s)).catch(() => undefined); return () => { on = false; }; }, [name, tick]);
+  useEffect(() => { let on = true; standardsApi.project(name).then((d) => on && setData(d)).catch((e) => on && setError(e)); return () => { on = false; }; }, [name]);
 
   const e = data?.effective;
   const w = useMemo(() => profile?.words ?? levelWords(), [profile]);
@@ -169,7 +153,6 @@ export function ProjectStandardsPage({ name }: { name: string }) {
     for (const c of e?.checks ?? []) out.set(c.ecosystem, [...(out.get(c.ecosystem) ?? []), c]);
     return out;
   }, [e]);
-  const enc = encodeURIComponent(name);
   return (
     <div className="page page-wide sto">
       <ProjectHead name={name} on="standards" title={<>{terms().say("{Standards}")} of {name}</>}
@@ -247,6 +230,35 @@ export function ProjectStandardsPage({ name }: { name: string }) {
         </>
       )}
 
+      <FindingsBacklog name={name} />
+    </div>
+  );
+}
+
+/** The findings of a project's default branch: how many are open, how they move, and each one with what to do. */
+export function FindingsBacklog({ name }: { name: string }) {
+  const [error, setError] = useState<unknown>(null);
+  const [list, setList] = useState<BacklogList | null>(null);
+  const [series, setSeries] = useState<Series | null>(null);
+  const [status, setStatus] = useState("open");
+  const [sev, setSev] = useState<Sev | "">("");
+  const [check, setCheck] = useState("");
+  const [oldest, setOldest] = useState(true);
+  const [tick, setTick] = useState(0);
+  const profile = useProfile();
+  const me = useMe();
+  const now = useNow(60000);
+  const reload = useCallback(() => setTick((n) => n + 1), []);
+  useEffect(() => {
+    let on = true;
+    standardsApi.backlog(name, { status, severity: sev, check, sort: oldest ? "oldest" : "", limit: 100 }).then((l) => on && setList(l)).catch((e) => on && setError(e));
+    return () => { on = false; };
+  }, [name, status, sev, check, oldest, tick]);
+  useEffect(() => { let on = true; standardsApi.history(name).then((s) => on && setSeries(s)).catch(() => undefined); return () => { on = false; }; }, [name, tick]);
+  const enc = encodeURIComponent(name);
+  return (
+    <>
+      <ErrorBox error={error} />
       <section aria-labelledby="st-back">
         <h2 id="st-back" className="h-sm st-h">Findings on the default branch</h2>
         {series && list && (
@@ -286,7 +298,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
         {!canOperate(me, name) && <p className="faint small">You can read these. Accepting a risk needs the operator role on this project.</p>}
         <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say("shows every {run}’s findings, including the tools you added yourself.")}</p>
       </section>
-    </div>
+    </>
   );
 }
 

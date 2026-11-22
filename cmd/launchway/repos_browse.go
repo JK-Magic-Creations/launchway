@@ -35,6 +35,10 @@ const reposBrowseUsage = `
                                     make a branch (operators; protected names: administrators)
   launchway repos branches delete OWNER/NAME NAME
                                     delete a branch and print how to bring it back
+  launchway repos inspections OWNER/NAME [--json]
+                                    whether an Inspection can be started now (and why not), and the latest ones
+  launchway repos inspect OWNER/NAME [--ref R] [--json]
+                                    start a run of only the Inspection at the default branch or REF (operators)
   launchway repos branches rename OWNER/NAME OLD NEW
                                     rename a branch (never the default branch)
   launchway repos tags OWNER/NAME [--q TEXT] [--json]
@@ -65,6 +69,10 @@ func (cl *client) reposBrowse(cmd string, args []string) error {
 		return cl.reposBranches(args)
 	case "tags":
 		return cl.reposTags(args)
+	case "inspections":
+		return cl.reposInspections(args)
+	case "inspect":
+		return cl.reposInspect(args)
 	}
 	return usageErr("unknown command repos %s", cmd)
 }
@@ -595,5 +603,74 @@ func (cl *client) reposShow(args []string) error {
 			fmt.Fprintf(cl.out, "  %-9s %s (+%d -%d)\n", f.Status, f.Path, f.Additions, f.Deletions)
 		}
 		fmt.Fprintf(cl.out, "%d files, +%d -%d\n", df.Total, df.Additions, df.Deletions)
+	})
+}
+
+func (cl *client) reposInspections(args []string) error {
+	fs := flag.NewFlagSet("repos inspections", flag.ContinueOnError)
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("launchway repos inspections OWNER/NAME [--json]")
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Available bool
+		Reason    string
+		Project   string
+		Runs      []struct {
+			ID     string
+			Number int
+			Status string
+		}
+	}
+	if err := cl.call("GET", base+"/inspections", nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		if out.Available {
+			fmt.Fprintf(cl.out, "An Inspection can be started (project %s): launchway repos inspect %s\n", out.Project, pos[0])
+		} else {
+			fmt.Fprintf(cl.out, "No Inspection can be started: %s\n", out.Reason)
+		}
+		for _, r := range out.Runs {
+			fmt.Fprintf(cl.out, "  #%d  %s  %s\n", r.Number, r.Status, r.ID)
+		}
+	})
+}
+
+func (cl *client) reposInspect(args []string) error {
+	fs := flag.NewFlagSet("repos inspect", flag.ContinueOnError)
+	ref := fs.String("ref", "", "a branch or tag (default: the default branch)")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("launchway repos inspect OWNER/NAME [--ref R]")
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Project string
+		Run     struct {
+			ID     string
+			Number int
+		}
+	}
+	if err := cl.call("POST", base+"/inspections", map[string]string{"ref": *ref}, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		fmt.Fprintf(cl.out, "Started the Inspection as run #%d of %s (%s).\n", out.Run.Number, out.Project, out.Run.ID)
 	})
 }

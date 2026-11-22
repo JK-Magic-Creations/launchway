@@ -350,6 +350,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/inspections` | `get_repository_inspections` | `repos inspections` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/inspections` | `inspect_repository` | `repos inspect` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/merge-rules` | `get_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/merge-rules` | `set_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |

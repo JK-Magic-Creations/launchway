@@ -346,3 +346,29 @@ func TestUploadingFilesThroughTheAPI(t *testing.T) {
 		t.Error("no audit event for the upload")
 	}
 }
+
+// An Inspection that cannot start says why in a sentence, to everyone who may read the repository, and is audited.
+func TestInspectingARepositoryExplainsWhenItCannot(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	otto, vic := e.signIn(t, "otto"), e.signIn(t, "vic")
+	hostedRepo(t, e, "acme/shop")
+	api := e.srv.URL + "/api/v1/repositories/acme/shop/inspections"
+	var st struct {
+		Available bool
+		Reason    string
+		Runs      []any
+	}
+	vic.get(api).json(t, &st)
+	if st.Available || !strings.Contains(st.Reason, "Standing orders are not available") || st.Runs == nil {
+		t.Errorf("state: %+v", st)
+	}
+	if r := vic.do("POST", api, `{}`); r.status != 403 {
+		t.Errorf("a viewer started an Inspection: %d", r.status)
+	}
+	if r := otto.do("POST", api, `{}`); r.status != 409 || !strings.Contains(string(r.body), "Standing orders are not available") {
+		t.Errorf("refusal: %d %s", r.status, r.body)
+	}
+	if r := newBrowser(t).get(api); r.status != 401 && r.status != 404 {
+		t.Errorf("anonymous: %d", r.status)
+	}
+}
