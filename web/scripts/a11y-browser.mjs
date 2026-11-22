@@ -28,6 +28,12 @@ const PAGES = [
   ["Repository code", "/repositories/launchway/shop/code"], ["A file", "/repositories/launchway/shop/code?path=internal%2Fprice%2Fprice.go"],
   ["Blame", "/repositories/launchway/shop/blame?ref=main&path=internal%2Fprice%2Fprice.go"], ["Commits", "/repositories/launchway/shop/commits"],
   ["Branches", "/repositories/launchway/shop/branches"], ["Compare", "/repositories/launchway/shop/compare?head=fix&base=main"],
+  ["Events", "/activity/events"], ["Releases", "/deployments/releases"], ["Formations", "/deployments/releases/formations"],
+  ["The software graph", "/graph"], ["A repository's graph", "/repositories/launchway/shop/graph"], ["Pull requests", "/repositories/launchway/shop/pulls"],
+  ["Standing orders of a project", "/projects/shop-api/standards"], ["Standing orders settings", "/settings/standards"],
+  ["Build caches", "/projects/shop-api/caches"], ["Configuration of a project", "/projects/shop-api/configuration"],
+  ["Pipeline templates", "/library/starters"], ["Depot", "/images/registry"], ["Switches", "/projects/shop-api/toggles"],
+  ["Tests of a project", "/projects/shop-api/tests"],
   ["Sign-in", "/signin", { signedOut: true }],
 ];
 const VIEWS = [["1440", { width: 1440, height: 900 }], ["390", { width: 390, height: 844 }]];

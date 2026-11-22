@@ -21,7 +21,7 @@ cleanup() {
     while kill -0 "$server_pid" 2>/dev/null && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
     kill -9 "$server_pid" 2>/dev/null || true
   fi
-  [ "$status" = 0 ] || tail -n 20 "$work/server.log" 2>/dev/null >&2 || true
+  [ "$status" = 0 ] || tail -n 40 "$work/server.log" 2>/dev/null >&2 || true
   rm -rf "$work"
   exit "$status"
 }
@@ -107,7 +107,9 @@ printf 'RUN_OK=%s\nRUN_FAILED=%s\nRUN_WAITING=%s\n' "$ok" "$failed" "$waiting" >
 i=0
 until [ "$(curl -fsS "$url/api/v1/approvals" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')" -ge 1 ] \
    && [ "$(curl -fsS "$url/api/v1/runs/$failed" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')" = failed ]; do
-  i=$((i + 1)); [ $i -gt 120 ] && { echo "the demo runs did not reach their states" >&2; exit 1; }
+  i=$((i + 1)); [ $i -gt 120 ] && { echo "the demo runs did not reach their states" >&2
+    for r in $ok $failed $waiting; do curl -fsS "$url/api/v1/runs/$r" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["project"], d["status"], [(s["id"], s["status"], s.get("waiting_for","")) for s in d.get("steps", [])], file=sys.stderr)'; done
+    exit 1; }
   sleep 0.5
 done
 echo "Server at $url (runs: $ok $failed $waiting)" >&2

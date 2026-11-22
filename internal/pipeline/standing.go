@@ -12,10 +12,10 @@ import (
 // adds them when it creates a run, and they are shown in the graph as
 // added by Standing orders.
 
-// SchemaStandings is the server schema that brought Standing orders (55):
+// SchemaStandings is the server schema that brought Standing orders (45):
 // a run that has the steps below carries it as "requires", so that older
 // servers, which would not know the gate step, leave the run alone.
-const SchemaStandings = 55
+const SchemaStandings = 45
 
 // KindGate is the Kind of the step that gives the Inspection's verdict.
 const KindGate = "gate"

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/standards"
 )
 
@@ -227,5 +228,14 @@ func TestStandingSettingsAreVersioned(t *testing.T) {
 	all, _ := e.AllStandingSettings()
 	if len(all) != 1 || all[0].UpdatedBy != "bob" {
 		t.Errorf("%+v", all)
+	}
+}
+
+// The schema a run that carries the Inspection asks for is the schema that brought Standing orders: a run that asks
+// for a newer one is left alone by every server, so a wrong number here leaves every run queued (found when the
+// schemas were renumbered in a combined build).
+func TestInspectionAsksForTheSchemaThatBroughtIt(t *testing.T) {
+	if pipeline.SchemaStandings != schemaStandings {
+		t.Fatalf("pipeline.SchemaStandings is %d, the migration is %d", pipeline.SchemaStandings, schemaStandings)
 	}
 }
