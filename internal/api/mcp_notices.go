@@ -27,7 +27,7 @@ func addNoticeTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Change your choices: kinds (kind to in_app, email or off), watches (scope repo:owner/name or flight:name, level all, participating or none), settings (quiet_start and quiet_end in minutes after midnight or -1 for none, zone, digest, digest_hour). What you leave out is unchanged."},
 		mcpCallTimeout, setNoticePrefs)
 	if c.mayAdminister {
-		addTool(srv, c, &mcp.Tool{Name: "get_mail_status", Annotations: readOnly("Mail settings and queue"),
+		addTool(srv, c, &mcp.Tool{Name: "get_mail_status", Annotations: readOnly("Mail settings and outbox"),
 			Description: "Administrators only. Whether the installation sends mail, to which server and how it is secured, the sender, the limits, and how many messages wait, were sent and failed. Credentials are references and are never shown."},
 			mcpCallTimeout, getMailStatus)
 		addTool(srv, c, &mcp.Tool{Name: "send_test_mail", Annotations: changes("Send a test message", false, false),

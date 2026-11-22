@@ -25,7 +25,7 @@ const noticesUsage = `Usage:
   launchway notices quiet --from 22:00 --to 07:00 [--zone Europe/Berlin]   hold mail during these hours
   launchway notices quiet --off                    no quiet hours
   launchway notices digest on|off [--hour 8]       one mail a day instead of one per notice
-  launchway notices mail [--json]                  administrators: the mail settings and the queue
+  launchway notices mail [--json]                  administrators: the mail settings and the outbox
   launchway notices mail-test [--to ADDRESS]       administrators: send one test message and say how it went
 
 Mail is sent only when an administrator sets the mail section of the installation settings.

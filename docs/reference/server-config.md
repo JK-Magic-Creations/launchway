@@ -743,7 +743,7 @@ policy:
 
 ## Mail
 
-E-mail sent to people (a review asked of them, a mention, an approval waiting, a credential about to expire). An installation setting; unset, no mail is sent and people still have their inbox. See [Notifications for people](../guide/notifications-for-people.md).
+E-mail sent to people (a review asked of them, a mention, an approval waiting, a credential about to expire). A setting of the Base; unset, no mail is sent and people still have their inbox. See [Notifications for people](../guide/notifications-for-people.md).
 
 <!-- keys: server -->
 | Setting | Type | Default | What it does |

@@ -1432,7 +1432,7 @@ launchway notices mail [--json]
 launchway notices mail-test [--to ADDRESS]
 ```
 
-`mail` and `mail-test` are for administrators: the mail settings and queue, and a test message. The same are the MCP tools `get_notice_preferences`, `set_notice_preferences`, `get_mail_status` and `send_test_mail`, and the routes `/api/v1/notices/preferences` and `/api/v1/mail`.
+`mail` and `mail-test` are for administrators: the mail settings and outbox, and a test message. The same are the MCP tools `get_notice_preferences`, `set_notice_preferences`, `get_mail_status` and `send_test_mail`, and the routes `/api/v1/notices/preferences` and `/api/v1/mail`.
 
 ## launchway version
 

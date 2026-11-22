@@ -20,7 +20,7 @@ One model covers all of these:
 | A comment on a pull request or work item you take part in | `comment` | inbox |
 | A pull request you take part in is merged, or closed | `pull_merged`, `pull_closed` | inbox |
 | A run of yours failed, or was fixed | `run_failed`, `run_fixed` | inbox |
-| A deployment you approved finished, or was rolled back | `deploy_finished`, `deploy_rolled_back` | inbox |
+| A deployment you approved finished, or was returned to base | `deploy_finished`, `deploy_rolled_back` | inbox |
 | A release is published in a Flight you watch | `release_published` | inbox |
 
 You are never told of what you did yourself.
@@ -53,7 +53,7 @@ Mail leaves the installation's trust boundary: it passes through mail servers an
 
 ## For administrators: turning mail on
 
-Set the `mail` section of the installation settings (see [the reference](../reference/server-config.md#mail), and `config.mail` in the [Helm values](../reference/helm-values.md)):
+Set the `mail` section of the settings (see [the reference](../reference/server-config.md#mail), and `config.mail` in the [Helm values](../reference/helm-values.md)):
 
 ```yaml
 mail:
@@ -68,8 +68,8 @@ mail:
 - **Credentials are references** to a secret store (`ai.secrets`), read when a message is sent and never stored, logged or shown.
 - **The mail server passes the egress guard.** Launchway reaches it as it reaches every address an administrator names: a public host is allowed; a host on an internal network must be listed under `egress.allow`. On Kubernetes the chart's network policy allows HTTPS out only, so add the mail port under `networkPolicy.server.extraEgress`.
 - **Send a test message:** Settings, Notifications (administrators see the mail panel), `launchway notices mail-test`, or the MCP tool `send_test_mail`. It says how it went.
-- **Limits and retries:** the whole installation sends at most `rate_per_minute` (30) and `rate_per_hour` (300) messages; the rest wait in a bounded queue in the database (5000 messages). A message that fails is tried again with growing pauses, up to `max_attempts` (5), and then given up on. A message's text is deleted from the queue as soon as it is sent or given up on.
-- **Audit:** every message sent, retried or given up on is in the logbook (`mail.sent`, `mail.retry`, `mail.failed`) with the person and the kind, never the subject, the address or the body. The test message and each mute are audited too.
+- **Limits and retries:** the whole installation sends at most `rate_per_minute` (30) and `rate_per_hour` (300) messages; the rest wait in a bounded outbox in the database (5000 messages). A message that fails is tried again with growing pauses, up to `max_attempts` (5), and then given up on. A message's text is deleted from the outbox as soon as it is sent or given up on.
+- **Audit:** every message sent, retried or given up on is in the Logbook (`mail.sent`, `mail.retry`, `mail.failed`) with the person and the kind, never the subject, the address or the body. The test message and each mute are audited too.
 
 A person without a known address (no profile e-mail, or no sign-in yet) simply gets the inbox.
 
