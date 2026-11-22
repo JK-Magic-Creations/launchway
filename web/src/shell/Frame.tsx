@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 const InboxLink = lazy(() => import("./InboxLink").then((m) => ({ default: m.InboxLink })));
 import { api, type Approval, type Me } from "../api";
-import { attention } from "../guided/derive";
+import type { Attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
 import { announce } from "../kit/announce";
 import { ErrorBoundary } from "../components/ErrorBoundary";
@@ -9,7 +9,6 @@ import { Icon } from "../kit/Icon";
 import { CrumbLabelContext } from "../nav/crumbs";
 import { Breadcrumbs } from "../nav/Navigation";
 import { isLearn, pageTitle, redirectFor, section, sectionOf, visibleTabs, type Ctx, type SectionId } from "../nav/model";
-import { PageFor } from "../nav/pages";
 import type { Approvals } from "../live";
 import { navigate, onLink, replace, usePath } from "../router";
 import { DoBarButton } from "./DoBarButton";
@@ -23,6 +22,9 @@ import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
 import { currentViewTitle, onViewTitle } from "../urlState";
+
+// The table that says which page a path opens is a chunk of its own, with the pages it names: the first screen needs only the shell.
+const PageFor = lazy(() => import("../nav/pages").then((m) => ({ default: m.PageFor })));
 
 // The finder and the Do bar load when first opened.
 const Shortcuts = lazy(() => import("./Shortcuts"));
@@ -103,8 +105,11 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   useFocusableScrollers();
   const ctx = { me, facts: inst.facts };
   const area = sectionOf(path);
-  const needs = useMemo(() => attention({ projects: inst.projects, approvals: approvals.list ?? ([] as Approval[]), runners: inst.runners, applications: inst.applications, me }),
-    [inst.projects, approvals.list, inst.runners, inst.applications, me]);
+  // The reading of what needs a person is its own chunk, loaded just after the first screen; until it is there the count is empty.
+  const [derive, setDerive] = useState<typeof import("../guided/derive") | null>(null);
+  useEffect(() => { void import("../guided/derive").then(setDerive); }, []);
+  const needs: Attention[] = useMemo(() => derive ? derive.attention({ projects: inst.projects, approvals: approvals.list ?? ([] as Approval[]), runners: inst.runners, applications: inst.applications, me }) : [],
+    [derive, inst.projects, approvals.list, inst.runners, inst.applications, me]);
   // Failed runs and decisions are counted by the server's attention rule (the same answer as the Home page and the Sorties list); the
   // rest (an unhealthy application, a runner that does not answer) are counted here. Until the server answers, this page's own reading is used.
   const [server, setServer] = useState<{ bad: number; warn: number } | null>(null);
