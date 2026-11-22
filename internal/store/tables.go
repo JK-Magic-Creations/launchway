@@ -142,6 +142,7 @@ var Tables = []Table{
 	{Name: "pull_revisions", Class: Pending, Stage: "S3", Why: "pull request"},
 	{Name: "pull_runs", Class: Pending, Stage: "S3", Why: "pull request and run"},
 	{Name: "ssh_keys", Class: Pending, Stage: "S3", Why: "owner name; fingerprint unique installation-wide"},
+	{Name: "owner_fork_settings", Class: Pending, Stage: "S3", Why: "owner name"},
 
 	// Pending S4: settings, variables, keys.
 	{Name: "config_objects", Class: Pending, Stage: "S4", Why: "org (Wing)"},
