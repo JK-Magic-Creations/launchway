@@ -27,8 +27,8 @@ func Capabilities() forge.Capabilities {
 		Reason:     "a connection is narrow on purpose: it reads and writes repositories that exist and cannot create or delete them",
 		Workaround: "Create the repository on the Git host, then choose it in Launchway"}
 	c[forge.CapProposalRef] = forge.Declaration{Support: forge.Native}
-	c[forge.CapResultsGate] = forge.Declaration{Support: forge.Emulated,
-		Reason:     "required checks are set on the host's branch protection, and Launchway reads them but does not change them",
+	c[forge.CapResultsGate] = forge.Declaration{Support: forge.None,
+		Reason:     "the host enforces required checks itself, in its branch protection, and Launchway cannot change them",
 		Workaround: "Mark the Launchway status contexts as required in the host's branch protection settings"}
 	c[forge.CapReviews] = forge.Declaration{Support: forge.None,
 		Reason:     "reviews stay on the host; Launchway shows a pull request and reports on it but does not review on the host's behalf",

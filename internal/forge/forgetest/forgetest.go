@@ -11,6 +11,7 @@ package forgetest
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
@@ -78,7 +79,7 @@ var probes = map[forge.Capability][]probe{
 		},
 	},
 	forge.CapDrafts: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
-		_, err := p.Proposals().Create(ctx, r, forge.NewProposal{Title: "forgetest", Draft: true})
+		_, err := p.Proposals().Create(ctx, r, forge.NewProposal{Title: "forgetest", Draft: true, Source: forge.Ref{Name: "refs/heads/forgetest-branch"}, Target: forge.Ref{Name: "refs/heads/main"}})
 		return err
 	}},
 	forge.CapReviews: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
@@ -99,6 +100,22 @@ var probes = map[forge.Capability][]probe{
 	}},
 	forge.CapAutoLand: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
 		return p.Land().AutoLand(ctx, r, 1, forge.StrategyMerge, true)
+	}},
+	forge.CapTags: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
+		_, err := p.Releases().CreateTag(ctx, r, forge.TagSpec{Name: "forgetest-tag", Commit: strings.Repeat("c", 40), Message: "forgetest"})
+		return err
+	}},
+	forge.CapReleases: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
+		_, err := p.Releases().PublishRelease(ctx, r, forge.ReleaseSpec{Tag: "forgetest-tag", Title: "forgetest", Notes: "notes"})
+		return err
+	}},
+	forge.CapCommitFile: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
+		_, err := p.Releases().CommitFile(ctx, r, forge.FileChange{Branch: "main", NewBranch: "forgetest-branch", Path: "forgetest.txt", Content: []byte("x"), Message: "forgetest"})
+		return err
+	}},
+	forge.CapProposalNote: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
+		_, err := p.Releases().UpsertSummary(ctx, r, 1, "", "forgetest")
+		return err
 	}},
 	forge.CapRules: {func(ctx context.Context, p forge.Provider, r forge.Repository) error {
 		_, err := p.Rules().List(ctx, r)
@@ -159,6 +176,12 @@ func Run(t *testing.T, h Harness) {
 			t.Skip("declared none")
 		}
 		ev := p.Events()
+		if ev.Mode() == forge.EventsWebhook {
+			req, _ := http.NewRequest(http.MethodPost, "http://launchway.invalid/hook", strings.NewReader(`{"ref":"refs/heads/main"}`))
+			if events, err := ev.Verify(req, []byte("secret")); err == nil || len(events) != 0 {
+				t.Errorf("a webhook provider accepted an unsigned delivery: %v %v", events, err)
+			}
+		}
 		if ev.Mode() == forge.EventsPolling {
 			// A polling-only provider verifies nothing; it must refuse, not accept.
 			if events, err := ev.Verify(&http.Request{Header: http.Header{}}, []byte("secret")); err == nil || len(events) != 0 {
