@@ -23,5 +23,5 @@ var schemaMarkersOverview = schemaMarker{
 
 var schemaMarkersWorkExtras = schemaMarker{
 	schema: schemaWorkExtras, feature: "reactions, time entries, deployment addresses and decision records on work",
-	tables: []string{"work_reactions", "work_time_entries"},
+	tables: []string{"work_reactions", "work_time_entries"}, columns: []string{"deployments.address"},
 }

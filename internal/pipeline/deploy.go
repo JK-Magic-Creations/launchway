@@ -288,7 +288,7 @@ func (p *Pipeline) RollbackOf(deployID string) *Step {
 // ---- parsing ----
 
 var (
-	deployKeys   = []string{"kind", "description", "needs", "when", "timeout", "environment", "service", "version", "argocd", "fleet", "rollout", "on_cancel"}
+	deployKeys   = []string{"kind", "description", "needs", "when", "timeout", "environment", "service", "version", "address", "argocd", "fleet", "rollout", "on_cancel"}
 	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment", "abort_first"}
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
@@ -347,6 +347,8 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 		case "version":
 			s.Version = ps.value(n, where)
 			s.versionLine = n.Line
+		case "address":
+			ps.parseAddress(n, where, s)
 		case "argocd":
 			s.ArgoCD = ps.parseArgoCD(n, where)
 		case "fleet":
@@ -891,6 +893,7 @@ func (ps *parser) checkDeploys(p *Pipeline) {
 			}
 		}
 		add(s.Version, max(s.versionLine, s.Line), "version")
+		add(s.Address, max(s.addressLine, s.Line), "address")
 		if s.ArgoCD != nil && s.ArgoCD.WriteBack != nil {
 			for _, c := range s.ArgoCD.WriteBack.Changes {
 				add(c.Tag, c.Line, "tag")

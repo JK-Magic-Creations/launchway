@@ -101,6 +101,25 @@ steps:
 - **Not yet**: syncing to a revision without a commit, a "roll back to…" button that starts a Sortie,
   pausing a rollout, and `kind: analysis` arrive in later releases.
 
+## Where a deployment can be seen {#address}
+
+A deploy step may say where its deployment can be seen, such as a preview of a pull request, with `address`: a web
+address written in the step, or `{ output: build.url }` from a step it needs.
+
+```yaml
+  preview:
+    kind: deploy
+    needs: build
+    environment: preview
+    address: { output: build.url }
+```
+
+The address is kept with the deployment and comes back in the deployment's `address` (the deployment list, the
+run's deployments and the pull request's results), as text and as a link. It must be an `http` or `https` address
+of at most 2000 characters, with no spaces and no user name or password. One written in the pipeline that is not is
+refused when the pipeline is read; one that a step's output gave and that is not is left out, and the deployment goes
+on without a link, because a mistake in a preview address must not stop a delivery.
+
 ## Returning to base after the Sortie succeeded {#rolling-back-after-the-run-succeeded}
 
 The Return to base step above undoes a deployment that fails its own guards. To roll a service back later, after

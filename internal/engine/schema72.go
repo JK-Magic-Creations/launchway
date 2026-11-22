@@ -16,6 +16,7 @@ func init() {
 // 72: work_reactions has one row per person, target (an item or a comment) and reaction, from a fixed set that the
 // server checks. work_time_entries holds the time people log on work items: a timer (started_at, and ended_at 0
 // while it runs: a unique index allows one running timer per person) or a manual entry; minutes is what counts.
+// deployments.address is where a deployment can be seen (a preview), as its deploy step said.
 //
 //	Compatibility: additive: new tables (and columns with defaults), ignored by an older server.
 //	Downgrade: nothing to undo.
@@ -45,4 +46,6 @@ CREATE TABLE work_time_entries (
 CREATE INDEX work_time_item ON work_time_entries(item_id, day);
 CREATE INDEX work_time_who ON work_time_entries(who, day);
 CREATE UNIQUE INDEX work_time_one_timer ON work_time_entries(who) WHERE kind = 'timer' AND ended_at = 0;
+
+ALTER TABLE deployments ADD COLUMN address TEXT NOT NULL DEFAULT '';
 `}

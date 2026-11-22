@@ -111,6 +111,7 @@
             "description": "With for_each: whole combinations to add outside the lists.",
             "type": "array"
           },
+          "address": {},
           "approvers": {},
           "argocd": {},
           "artifacts": {

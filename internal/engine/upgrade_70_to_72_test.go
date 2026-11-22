@@ -29,6 +29,8 @@ func TestUpgradeFromSchema70KeepsEverythingAndAddsTheWorkTables(t *testing.T) {
 	exec(`INSERT INTO work_scopes(scope_kind, scope_id, prefix) VALUES('project','acme/shop','SHOP')`)
 	exec(`INSERT INTO work_items(id, scope_kind, scope_id, number, title, created_at, updated_at) VALUES('wi_1','project','acme/shop',1,'Crash',1,2)`)
 	exec(`INSERT INTO work_comments(id, item_id, author, body, created_at) VALUES('wcm_1','wi_1','ada','hello',3)`)
+	exec(`INSERT INTO deployments(id, run_id, run_number, project, step_id, environment, service, target, application, mode, version, opened_at)
+		VALUES('dep_1','run_1',3,'shop','deploy','prod','shop','cluster-a','shop','write_back','1.0',9)`)
 	exec(`INSERT INTO work_code_links(id, item_id, kind, repo, ref, created_at, updated_at) VALUES('wk_1','wi_1','pull','acme/shop','1',4,4)`)
 	old.Close()
 
@@ -61,6 +63,14 @@ func TestUpgradeFromSchema70KeepsEverythingAndAddsTheWorkTables(t *testing.T) {
 		if got := count(q); got != want {
 			t.Errorf("%s: %d, want %d", q, got, want)
 		}
+	}
+	// A deployment from before has no address, and one made now can have it.
+	var addr0 string
+	if err := cur.db.QueryRow(`SELECT address FROM deployments WHERE id = 'dep_1'`).Scan(&addr0); err != nil || addr0 != "" {
+		t.Fatalf("the address of an old deployment: %q %v", addr0, err)
+	}
+	if _, err := cur.db.Exec(`UPDATE deployments SET address = ? WHERE id = 'dep_1'`, "https://preview.example.com/x"); err != nil {
+		t.Fatal(err)
 	}
 	// The new statements work on the old rows: the repository condition finds the item, reactions count.
 	if n := count(`SELECT count(*) FROM work_items i WHERE ` + strings.NewReplacer("?", "'acme/shop'").Replace(store.WorkInRepositorySQL)); n != 1 {

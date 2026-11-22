@@ -71,7 +71,7 @@ type pullDeployment struct {
 	Version     string `json:"version"`
 	Phase       string `json:"phase"`
 	Run         string `json:"run_id"`
-	// Address is where the change can be seen, when the deployment has one; no deployment stores one yet.
+	// Address is where the change can be seen, when the deploy step said (an http or https address).
 	Address string `json:"address,omitempty"`
 }
 
@@ -154,7 +154,7 @@ func (s *Server) pullCheckOf(ctx context.Context, runID, target string, detail b
 	}
 	var deps []pullDeployment
 	for _, dp := range d.Deployments {
-		deps = append(deps, pullDeployment{Environment: dp.Environment, Version: dp.Version, Phase: dp.Phase, Run: d.ID})
+		deps = append(deps, pullDeployment{Environment: dp.Environment, Version: dp.Version, Phase: dp.Phase, Run: d.ID, Address: dp.Address})
 	}
 	base := s.baseRunOf(d, target)
 	if base != "" {

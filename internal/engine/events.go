@@ -304,6 +304,8 @@ type DeployEvent struct {
 	Mode        string     `json:"mode,omitempty"` // write_back
 	Version     string     `json:"version,omitempty"`
 	Previous    *DeployRef `json:"previous,omitempty"` // what the environment ran before, if Launchway knows
+	// Address, on deploy.opened, is where the deployment can be seen (an http or https address; see pipeline.ValidAddress).
+	Address string `json:"address,omitempty"`
 	// deploy.opened and deploy.observing: when the whole step fails if it is
 	// not done (Unix ms).
 	Deadline int64 `json:"deadline,omitempty"`
