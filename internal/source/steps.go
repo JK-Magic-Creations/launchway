@@ -10,6 +10,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 	"github.com/jk-magic-creations/launchway/internal/stepkit"
 )
 
@@ -123,8 +124,15 @@ func (m *Manager) versionsOf(ctx context.Context, lib *project) (tags, all []str
 
 // LibrarySteps lists the custom steps of a library at a version (default: the newest tag, else the default branch).
 func (m *Manager) LibrarySteps(ctx context.Context, name, version string) (*LibrarySteps, error) {
-	if name == "launchway" {
-		return &LibrarySteps{Library: name, Versions: []string{}, Steps: []StepSummary{}}, nil
+	if name == starters.Name {
+		out := &LibrarySteps{Library: name, Version: starters.Version, Commit: starters.Commit(), Versions: []string{starters.Version}, Steps: []StepSummary{}}
+		for _, n := range starters.Steps() {
+			data, _ := starters.Step(n)
+			if mf, probs := stepkit.ParseManifest(data); len(probs) == 0 {
+				out.Steps = append(out.Steps, StepSummary{Info: mf.Describe(name + "/" + n)})
+			}
+		}
+		return out, nil
 	}
 	lib := m.c().libraries[name]
 	if lib == nil {
@@ -181,6 +189,17 @@ func (m *Manager) LibrarySteps(ctx context.Context, name, version string) (*Libr
 // version, its tagged versions with what changed in each, and the update on
 // offer.
 func (m *Manager) LibraryStep(ctx context.Context, library, step, version string) (*StepPage, error) {
+	if library == starters.Name {
+		data, ok := starters.Step(step)
+		if !ok {
+			return nil, fmt.Errorf("%w: the library %s has no step %s", engine.ErrNotFound, library, step)
+		}
+		mf, probs := stepkit.ParseManifest(data)
+		if len(probs) > 0 {
+			return nil, fmt.Errorf("%w: %s", engine.ErrInvalid, probs[0].Error())
+		}
+		return &StepPage{Library: library, Version: starters.Version, Commit: starters.Commit(), Step: mf.Describe(library + "/" + step), Versions: []StepVersion{}}, nil
+	}
 	lib := m.c().libraries[library]
 	if lib == nil {
 		return nil, fmt.Errorf("%w: library %q (the libraries are: %s)", engine.ErrNotFound, library, m.c().libraryNames())

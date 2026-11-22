@@ -26,10 +26,20 @@ func isBuiltin(l *pipeline.Library) bool {
 
 // builtinTemplate reads a template of the built-in library.
 func builtinTemplate(name string) ([]byte, error) {
-	if data, ok := starters.Template(name); ok {
-		return data, nil
-	}
-	return nil, pipeline.ErrNoTemplate
+	return pipeline.TemplateOrStep(func(p string) ([]byte, error) {
+		if tn, ok := strings.CutSuffix(strings.TrimPrefix(p, "templates/"), ".yaml"); ok && strings.HasPrefix(p, "templates/") {
+			if data, ok := starters.Template(tn); ok {
+				return data, nil
+			}
+			return nil, pipeline.ErrNoTemplate
+		}
+		if sn, ok := strings.CutSuffix(strings.TrimPrefix(p, "steps/"), "/step.yaml"); ok {
+			if data, ok := starters.Step(sn); ok {
+				return data, nil
+			}
+		}
+		return nil, pipeline.ErrNoTemplate
+	}, name, false)
 }
 
 // builtinProblem is a problem on one line of the pipeline file.

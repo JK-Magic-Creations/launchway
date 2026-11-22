@@ -1431,6 +1431,36 @@ Without a library, the libraries the server lists; with one, its templates and e
 default, and `[names a secret]` when a step takes a secret reference's store, key or field from it. The
 same data is `GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.
 
+### launchway steps
+
+```text
+launchway steps list LIBRARY [--version V] [--json]
+launchway steps get LIBRARY STEP [--version V] [--json]
+```
+
+The [custom steps](step-manifest.md) of a library: what each takes and gives, with types, and what it may
+do (network hosts, secrets, writable paths). `get` is the step's page: an example, its tagged versions with
+what changed in each, the Flights that use it, and the update on offer for each, and whether the newer
+version asks for more permissions. The same data is `GET /api/v1/libraries/{library}/steps[/{step}]` and the
+MCP tools `list_steps` and `get_step`.
+
+### launchway step
+
+```text
+launchway step new --lang go|python|ts|sh [--name NAME] [--dir REPOSITORY]
+launchway step test [DIR] [--with NAME=VALUE]... [--inputs FILE] [--secret NAME=VALUE]... [--executor auto|podman|docker|host] [--json]
+launchway step validate [DIR...] [--against GITREF]
+```
+
+Writing a custom step needs no server. `new` scaffolds `steps/NAME` with a manifest, the kit for the
+language, code, a test and a README. `test` runs the step as a Station would: in its container, with no
+network, a read-only workspace and only the secrets it names, when Podman or Docker is installed (else on
+this machine, which cannot enforce the sandbox, and it says so), then shows the outputs, summary and notes,
+and checks the step against the [step contract](step-contract.md); the exit code is 0 when it passed and
+kept to the contract. `validate` checks manifests and prints what each step may do; with `--against` it
+lists what changed in inputs, outputs and permissions since a tag, branch or commit, and marks changes that
+widen what the step may do. [Write your own step](../guide/write-your-own-step.md) walks through it.
+
 ## launchway work
 
 Work tracking from the command line: items, boards, sprints, charts, settings, views, the inbox, and agents.

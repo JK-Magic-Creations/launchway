@@ -261,7 +261,7 @@
           },
           "until": {},
           "uses": {
-            "description": "A template to use in place of this step: library/template, such as launchway/go-service.",
+            "description": "A template or custom step to use in place of this step: library/template, such as launchway/go-service, library/step, or ./steps/name for a custom step of this repository.",
             "type": "string"
           },
           "version": {},
@@ -289,7 +289,7 @@
       "type": "string"
     },
     "uses": {
-      "description": "A template to use in place of this step: library/template, such as launchway/go-service.",
+      "description": "A template or custom step to use in place of this step: library/template, such as launchway/go-service, library/step, or ./steps/name for a custom step of this repository.",
       "type": "string"
     },
     "with": {

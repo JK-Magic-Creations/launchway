@@ -285,7 +285,12 @@ A template file (`templates/<name>.yaml` in the library) has `template`, `descri
 (`name: { type: string|number|boolean|list, default, description, options, from }`), `containers`,
 `steps` and `outputs` (`key: { from: step.key }`). In a template, `{ param: name }` (with `format:`
 for text around it) stands for a parameter's value, and `if: { param: name }` or
-`if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).
+`if: { param: name, equals: value }` on a step leaves the step out when false.
+
+A library may also hold custom steps, `steps/<name>/step.yaml` with code in any language: `uses: <library>/<name>`, or
+`uses: ./steps/<name>` for one in the pipeline's own repository. `with:` is checked against the manifest's typed inputs (a secret input
+is given as `<name>_store`, `<name>_key` and optionally `<name>_field`); the step becomes one step `<step>/run`. List them with
+`list_steps` and read one with `get_step`. A template made from a manifest carries it as `step_manifest`. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).
 
 ## Variables set at a level
 

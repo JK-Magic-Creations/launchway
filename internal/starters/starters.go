@@ -133,3 +133,25 @@ func distance(a, b string) int {
 	}
 	return prev[len(b)]
 }
+
+// Step returns the manifest of a custom step of the library (steps/<name>/step.yaml), or false.
+func Step(name string) ([]byte, bool) {
+	if strings.ContainsAny(name, "/\\.") || name == "" {
+		return nil, false
+	}
+	data, err := files.ReadFile("library/steps/" + name + "/step.yaml")
+	return data, err == nil
+}
+
+// Steps lists the custom step names, sorted.
+func Steps() []string {
+	ents, _ := fs.ReadDir(files, "library/steps")
+	var out []string
+	for _, e := range ents {
+		if e.IsDir() {
+			out = append(out, e.Name())
+		}
+	}
+	sort.Strings(out)
+	return out
+}

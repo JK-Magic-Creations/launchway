@@ -616,7 +616,7 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			if isSelf {
 				x.problem(sc, s.usesLine, 0, at+".uses", "this repository has no step %s: there is no %s", name, where)
 			} else {
-				x.problem(sc, s.usesLine, 0, at+".uses", "the library %s has no template or step %s: there is no %s, and no %s", lib.Name, name, where, stepkit.ManifestPath(name))
+				x.problem(sc, s.usesLine, 0, at+".uses", "the library %s has no template %s: there is no %s (and no step %s either)", lib.Name, name, where, stepkit.ManifestPath(name))
 			}
 			continue
 		}

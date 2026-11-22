@@ -41,7 +41,7 @@ var keyHelp = map[string]obj{
 	"retry":        prop([]string{"integer", "object"}, "Extra attempts after a failure, or { times, wait, backoff, on }."),
 	"timeout":      prop("string", "How long one attempt may run, such as 10m."),
 	"reports":      prop("object", "Files the step writes that Launchway reads: tests, coverage, findings, sbom."),
-	"uses":         prop("string", "A template to use in place of this step: library/template, such as launchway/go-service."),
+	"uses":         prop("string", "A template or custom step to use in place of this step: library/template, such as launchway/go-service, library/step, or ./steps/name for a custom step of this repository."),
 	"with":         prop("object", "The values of the template's parameters."),
 	"for_each":     prop("object", "Repeat the step once for each combination of the lists (a matrix); see exclude, add, max_parallel, fail_fast, continue_for."),
 	"exclude":      prop("array", "With for_each: combinations to leave out."),

@@ -55,6 +55,15 @@ steps:
 `examples/library` is a small working library (a `check` template, a `release` template that uses
 it, and their scripts), and `make demo` makes a repository of it with two releases.
 
+## Steps in a library
+
+Besides templates, a library may hold **custom steps**: a directory `steps/<name>` with a manifest and code in
+any language, used as `uses: <library>/<name>` and pinned like a template, by tag or commit. The step's
+inputs and outputs are typed, the pipeline's `with:` is checked against them before a Sortie starts, and what
+the step may do (network hosts, secrets, writable paths) is shown to whoever adds it and called out when a newer
+version changes it. See [Write your own step](write-your-own-step.md); `launchway steps list LIBRARY` lists
+a library's steps.
+
 ## One delivery definition for every service
 
 A template may hold the whole path from a tested commit to a running, verified version: an image

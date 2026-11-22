@@ -217,6 +217,7 @@ export default defineConfig({
           { text: 'Editing pipelines', link: '/guide/editor' },
           { text: 'Built-in accounts', link: '/guide/built-in-accounts' },
           { text: 'Shared libraries', link: '/guide/libraries' },
+          { text: 'Write your own step', link: '/guide/write-your-own-step' },
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },
           { text: 'Test reports', link: '/guide/test-reports' },
           { text: 'The Debrief', link: '/guide/debrief' },
@@ -301,6 +302,8 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/reference/' },
           { text: 'Pipeline file', link: '/reference/pipeline' },
+          { text: 'Step contract', link: '/reference/step-contract' },
+          { text: 'Step manifest', link: '/reference/step-manifest' },
           { text: 'Server configuration', link: '/reference/server-config' },
           { text: 'Runner configuration', link: '/reference/runner-config' },
           { text: 'Helm values', link: '/reference/helm-values' },
