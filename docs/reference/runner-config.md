@@ -249,7 +249,7 @@ The Station's reaper removes a pod when any of these holds:
 A pod with a step executing on this Station is never removed. The reaper looks when the Station
 starts (so a restarted Station clears what the crashed one left), soon after any step reports its
 result, and every 30 seconds. A step that cannot start because the namespace's quota is used up
-waits for room (see [queues](../guide/queues.md)). Its message says what the Sortie has reserved
+waits for room (see [Holding patterns](../guide/queues.md)). Its message says what the Sortie has reserved
 across how many pods, what the namespace allows and how much must be released first; it is a
 reservation limit, not a step that ran out of memory.
 
