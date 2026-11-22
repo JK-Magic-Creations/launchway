@@ -392,7 +392,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	<-beatDone
 	// The step is over and nothing runs beside it any more: from here on the
 	// last lines and the result are delivered within resultWithin.
-	final, stopFinal := context.WithTimeout(context.Background(), resultWithin)
+	final, stopFinal := context.WithTimeout(live, resultWithin)
 	defer stopFinal()
 	report = final
 	mu.Lock()
@@ -412,7 +412,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		// The server has given the step away, and the retry may go to another
 		// runner: give back what this attempt held, so that it cannot hold
 		// the run's room while the retry waits for it.
-		r.releaseRun(final, log, job.RunID)
+		r.releaseRun(parent, log, job.RunID)
 		return
 	}
 	r.deliver(final, log, sp, job.LeaseID, res)
@@ -449,7 +449,8 @@ func (r *Runner) releaseRun(parent context.Context, log *slog.Logger, runID stri
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
+	// The release must finish even when the runner is shutting down.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(parent), 30*time.Second)
 	defer cancel()
 	if err := rel.ReleaseRun(ctx, runID); err != nil {
 		log.Warn("could not release what the lost step held; the reaper will", "err", err)
