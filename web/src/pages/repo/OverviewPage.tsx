@@ -24,7 +24,7 @@ export function OverviewPage({ path }: { path: string }) {
     browseApi.read(path, undefined, "").then((i) => { if (live) setRoot(i); }).catch(() => { if (live) setEmpty(true); });
     return () => { live = false; };
   }, [path]);
-  const readme = root?.entries ? findReadme(root.entries) : undefined;
+  const readme = Array.isArray(root?.entries) ? findReadme(root.entries) : undefined;
   const branch = repo?.default_branch ?? "main";
   return (
     <RepoFrame path={path} tab="overview" title={path}

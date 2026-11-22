@@ -19,7 +19,7 @@ export function SecurityPage({ path }: { path: string }) {
   const load = useCallback(() => { browseApi.inspections(path).then((s) => { setSt(s); setError(null); }).catch(setError); }, [path]);
   useEffect(load, [load]);
   // While an Inspection runs, its state is read again.
-  const running = st?.runs.some((r) => r.status === "running" || r.status === "queued" || r.status === "pending");
+  const running = st?.runs?.some((r) => r.status === "running" || r.status === "queued" || r.status === "pending");
   useEffect(() => { if (!running) return; const t = setInterval(load, 5000); return () => clearInterval(t); }, [running, load]);
   const go = async () => {
     setBusy(true); setError(null);
@@ -39,9 +39,9 @@ export function SecurityPage({ path }: { path: string }) {
           </div>
           {!st.available && st.reason && <p className="callout callout-draft" role="status">{st.reason}</p>}
           {started && <p role="status">Started: <Link href={`/runs/${started.id}?tab=security`}>run {started.number}</Link>. Findings appear below when it ends.</p>}
-          {st.runs.length > 0 && (
+          {(st.runs ?? []).length > 0 && (
             <ul className="plain" aria-label="Latest Inspections">
-              {st.runs.map((r) => (
+              {(st.runs ?? []).map((r) => (
                 <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>Run {r.number}</Link> <Chip>{r.status}</Chip> <span className="faint small">at {r.sha.slice(0, 8)}, {ago(r.created_at)}</span></li>
               ))}
             </ul>
