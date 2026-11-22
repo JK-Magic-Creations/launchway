@@ -363,6 +363,13 @@ beside the steps for the whole Sortie (a database for tests, say). All of a Sort
 workspace; on Kubernetes a step's pod holds its own container and the services, so services are reachable at `localhost`
 and start with each step's pod (a service's state does not carry on to the next step).
 
+**A service for more than one step.** Where each step has a pod of its own, a service is started afresh with every
+step, so a database that one step migrated is empty for the next. `launchway validate` warns (code `service-per-step`)
+about a pipeline that has a service and more than one step that runs in a container, and names the steps. What to do:
+make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
+carry what the later steps need as [Cargo](../guide/artifacts.md) or [outputs](#outputs). Other executors, and a Station set to
+`kubernetes.pod: per-run`, keep one service for the whole Sortie, so the warning is about where the pipeline may run, not a mistake in it.
+
 Names match `^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`. `workspace` and names starting with `image-`
 are reserved.
 

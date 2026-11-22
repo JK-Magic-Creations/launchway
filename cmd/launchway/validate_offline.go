@@ -62,7 +62,7 @@ func validateOffline(path string, libs []string, resolved bool, facts pipeline.P
 		return nil
 	}
 	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s), templates expanded from %d library directories\n", path, p.Name, len(p.Steps), len(p.Levels()), len(dirs))
-	for _, w := range append(pipeline.OutputWarnings(p), pipeline.DeliveryWarnings(p)...) {
+	for _, w := range append(append(pipeline.OutputWarnings(p), pipeline.DeliveryWarnings(p)...), pipeline.ServiceWarnings(p)...) {
 		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
 	}
 	return nil
