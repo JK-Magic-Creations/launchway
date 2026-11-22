@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/anygit/anygitfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops/azuredevopsfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
@@ -43,6 +44,10 @@ type hostCase struct {
 	// assertions and expects a result to go to the pull request number prNumber as its one comment.
 	pollingOnly bool
 	prNumber    int
+	// noComment says the host has no pull request comment either: a result goes nowhere and the page says so.
+	noComment bool
+	// noList says the host cannot list repositories: the search comes back empty and the path is entered.
+	noList bool
 	// cloneOK checks the clone credential when it is not the token itself (a signature minted per request).
 	cloneOK func(ca hosts.CloneAuth) bool
 }
@@ -184,7 +189,25 @@ func codeCommitCase() hostCase {
 	}
 }
 
-var kindCases = []hostCase{bitbucketCase(), bitbucketDCCase(), azureDevOpsCase(), codeCommitCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
+// plainCase: any Git server over HTTPS, a real repository behind git's http-backend, a token as the password.
+// It lists no repositories, has no webhook, no statuses and no pull requests.
+func plainCase() hostCase {
+	return hostCase{
+		kind: forge.KindPlain,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			fake := anygitfake.New()
+			t.Cleanup(fake.Close)
+			return fake.Base(), anygitfake.Token, "", func() []string { return fake.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(`{}`))
+			return r
+		},
+		lacks: forge.CapResults, repo: anygitfake.Path, cloneEnd: "/git/" + anygitfake.Path, pollingOnly: true, noList: true, noComment: true,
+	}
+}
+
+var kindCases = []hostCase{plainCase(), bitbucketCase(), bitbucketDCCase(), azureDevOpsCase(), codeCommitCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()
@@ -239,7 +262,7 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 				}
 			}
 			page, err := s.Repositories(ctx, "h", "", "app")
-			if err != nil || len(page.Items) != 1 {
+			if err != nil || len(page.Items) != map[bool]int{true: 0, false: 1}[c.noList] {
 				t.Fatalf("repositories: %+v %v", page, err)
 			}
 			if _, err := s.Attach(ctx, "shop", "h", c.repoPath()); err != nil {
@@ -263,7 +286,14 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 				if ok, err := s.ReportRun(ctx, "shop", result); err != nil || ok {
 					t.Fatalf("a host with no statuses sends no step status: %v %v", ok, err)
 				}
-				if via, err := s.ReportResult(ctx, "shop", result, c.prNumber, "Sortie passed"); err != nil || via != hosts.ViaComment {
+				if c.noComment {
+					if via, err := s.ReportResult(ctx, "shop", result, 3, "Sortie passed"); err != nil || via != hosts.ViaNone {
+						t.Fatalf("a host with no comment gets nothing: %v %v", via, err)
+					}
+					if n := fv.Unsupported[forge.CapResults]; n.Support != forge.None || !strings.Contains(n.Workaround, "Read results in Launchway") {
+						t.Errorf("the page says results are read in Launchway: %+v", n)
+					}
+				} else if via, err := s.ReportResult(ctx, "shop", result, c.prNumber, "Sortie passed"); err != nil || via != hosts.ViaComment {
 					t.Fatalf("the result goes to the comment: %v %v", via, err)
 				}
 				if via, err := s.ReportResult(ctx, "shop", result, 0, ""); err != nil || via != hosts.ViaNone {

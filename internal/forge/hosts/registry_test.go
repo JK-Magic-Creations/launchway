@@ -36,15 +36,15 @@ func TestRegisterIncompletePanics(t *testing.T) {
 }
 
 // A kind that is named in the model but has no provider is not offered: a connection of it is refused, and
-// the guide says "not yet" (plain is the example: it is the built-in no-host kind).
+// the guide says "not yet" (a name no host has is the example: every named kind has a provider now).
 func TestKindsWithoutAProviderAreRefused(t *testing.T) {
 	s, _ := setup(t)
-	_, err := s.Add(t.Context(), hosts.AddInput{Name: "x", Kind: forge.KindPlain, Credential: forge.SecretRef{Env: "X"}}, "d")
+	_, err := s.Add(t.Context(), hosts.AddInput{Name: "x", Kind: "nope", Credential: forge.SecretRef{Env: "X"}}, "d")
 	if !errors.Is(err, forge.ErrInvalid) || !strings.Contains(err.Error(), "is of kind") {
 		t.Fatalf("%v", err)
 	}
 	for _, k := range hosts.Kinds() {
-		if k == forge.KindPlain {
+		if k == "nope" {
 			t.Fatal("registered")
 		}
 	}

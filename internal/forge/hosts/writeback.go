@@ -44,6 +44,10 @@ func (s *Service) WriteBackAuth(ctx context.Context, connection, path, branch, m
 			return PushAuth{}, fmt.Errorf("%w: %s on %s needs a pull request (required reviews or checks); set the Airfield's write_back mode to pull_request, which opens one", ErrProtected, branch, repo.Path)
 		}
 	case "pull_request":
+		if !p.Capabilities().Has(forge.CapProposals) {
+			d := p.Capabilities()[forge.CapProposals]
+			return PushAuth{}, fmt.Errorf("%w: this host has no pull requests Launchway can open (%s): %s", ErrNoPullRequests, d.Reason, d.Workaround)
+		}
 		if merge == "auto" && !canAutoMerge(p) {
 			return PushAuth{}, errors.New("this host has no auto-merge Launchway can switch on: set write_back.merge to person (the step waits until the host merges it)")
 		}
@@ -54,6 +58,10 @@ func (s *Service) WriteBackAuth(ctx context.Context, connection, path, branch, m
 	}
 	return PushAuth{URL: repo.Clone.HTTPS, Username: cred.Username, Secret: cred.Secret}, nil
 }
+
+// ErrNoPullRequests is wrapped when write-back by pull request is asked of a host that has none (a plain Git
+// server): the step is refused before anything is pushed, with the host's declared reason and way around it.
+var ErrNoPullRequests = errors.New("the host has no pull requests")
 
 // canAutoMerge says the host adds an auto-merge that Launchway can drive.
 func canAutoMerge(p forge.Provider) bool {

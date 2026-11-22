@@ -45,7 +45,7 @@ func (s *Server) failHosts(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, strings.TrimPrefix(err.Error(), "not found: "))
 	case errors.Is(err, forge.ErrExists):
 		writeErr(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "already exists: "))
-	case errors.Is(err, forge.ErrInvalid), errors.Is(err, hosts.ErrProtected):
+	case errors.Is(err, forge.ErrInvalid), errors.Is(err, hosts.ErrProtected), errors.Is(err, hosts.ErrNoPullRequests):
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
 	default:
 		if u, ok := forge.IsUnsupported(err); ok {

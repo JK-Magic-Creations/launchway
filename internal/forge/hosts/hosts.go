@@ -149,7 +149,13 @@ func (s *Service) Add(ctx context.Context, in AddInput, by string) (View, error)
 	return s.view(made), nil
 }
 
+// isOurs says a connection is one of the outside hosts this service serves: its kind is registered. The one
+// exception is the watcher's own internal connection (store.PlainConnectionName), which has the kind plain and
+// no base address or credential: it is what a Flight that watches a bare Git address belongs to, not a host.
 func isOurs(c forge.Connection) bool {
+	if c.Name == store.PlainConnectionName {
+		return false
+	}
 	_, ok := entryOf(c.Kind)
 	return ok
 }

@@ -200,6 +200,12 @@ func (s *Service) WriteFile(ctx context.Context, project string, w Writes) (Writ
 		return WriteResult{}, err
 	}
 	out := WriteResult{Commit: sha, Branch: w.Branch}
+	if w.PullRequest && !p.Capabilities().Has(forge.CapProposals) {
+		// The branch is pushed and stands; there is nowhere to open a pull request, so a person merges it.
+		d := p.Capabilities()[forge.CapProposals]
+		out.Branch = ch.NewBranch
+		return out, fmt.Errorf("%w: the branch %s was pushed (commit %s) but this host has no pull requests Launchway can open (%s): %s", ErrNoPullRequests, ch.NewBranch, sha, d.Reason, d.Workaround)
+	}
 	if w.PullRequest {
 		pr, err := p.Proposals().Create(ctx, repo, forge.NewProposal{Title: w.Title, Body: w.Body,
 			Source: forge.Ref{Name: "refs/heads/" + ch.NewBranch}, Target: forge.Ref{Name: "refs/heads/" + w.Branch}})

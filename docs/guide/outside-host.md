@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `bitbucket-datacenter` (the self-managed Bitbucket product: a separate API, base address required) `azuredevops` (the cloud service and the self-managed server product) and `codecommit` (AWS CodeCommit, signed requests and IAM). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Bitbucket Data Center](#bitbucket-data-center) [Azure DevOps](#azure-devops) and [AWS CodeCommit](#aws-codecommit) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `bitbucket-datacenter` (the self-managed Bitbucket product: a separate API, base address required) `azuredevops` (the cloud service and the self-managed server product) `codecommit` (AWS CodeCommit, signed requests and IAM) and `plain` (any Git server over HTTPS, with no host API). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Bitbucket Data Center](#bitbucket-data-center) [Azure DevOps](#azure-devops) [AWS CodeCommit](#aws-codecommit) and [Any Git server](#any-git-server) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -405,6 +405,62 @@ What CodeCommit adds (shown "from AWS CodeCommit" on the Flight's Code host page
 | IAM access control | who may read, push, tag or merge is decided by IAM policy (and the role Launchway assumes) | no: set in IAM |
 
 This provider is labelled experimental until it has passed the conformance suite against a live service. The opt-in test is read-only: `LAUNCHWAY_LIVE_CODECOMMIT_CREDENTIAL` (the credential JSON), `LAUNCHWAY_LIVE_CODECOMMIT_BASE` (the region's Git endpoint) and `LAUNCHWAY_LIVE_CODECOMMIT_REPO` (`account/name`) run it. The strict fake recomputes every signature (the API's, the token service's and the Git password's) and serves a real repository over Git, so the signing and the tag push are proved in the unit tests; only the host's own answers cannot be.
+
+## Any Git server
+
+The kind `plain` is a connection to **any Git server that speaks Git over HTTPS**, with no host API at all: a self-hosted bare server, a small Git service with no REST interface Launchway has a provider for, or a host Launchway does not know. Everything goes through Git itself, run by the product's own git (no shell, only a short list of variables). This is the connection kind; a Flight that watches a bare Git address with no connection (the server's own Git settings supply the credential, SSH included) keeps working exactly as before and is not changed by it.
+
+**The base address is the server's HTTPS address up to where repository paths begin**: `--base-url https://git.example.com`, or with a prefix `https://git.example.com/git` when the clone addresses are `https://git.example.com/git/team/app.git`. It is required. `http` is accepted only for a loopback address; a credential is never sent over plain http. **SSH is not offered through a connection**: git hands a key to ssh only through the ssh command line, which the product's git wrapper refuses to take from a caller on purpose, and Launchway has no SSH client of its own for outside hosts. Give the server's https address; for a server that offers only SSH, keep using a Flight that watches the bare ssh address (it uses the Git credentials of the account the server runs as) and loses what a connection adds (tags and write-back through the connection, the credential kept by reference).
+
+**A repository is two names, `owner/name`, exactly as the server's clone address ends** (`team/app.git` for the address above; Launchway adds or removes nothing, so write `.git` if the server's address has it). A Git server cannot list its repositories, so there is **no repository search**: enter the path. Launchway proves it, and the credential, with `git ls-remote` when you attach the Flight, and reads the default branch from it. The **owners** list, when given, names the first path names Flights may use.
+
+### The credential
+
+The credential reference names one secret, read when a call is made and never stored:
+
+- **A token**: the secret is one line, sent as the HTTP Basic password with the user name `git`. Use this for a server that takes an access token as the password (most do, and most ignore the user name).
+- **A user name and a password**, or a token with the user name the server wants: a small JSON document, `{"username": "mary", "password": "..."}` or `{"username": "mary", "token": "..."}` (`username` defaults to `git`; a password and a token are not both given). A document with a field it does not know, or a bad value, is refused with a message that does not repeat the credential.
+
+```sh
+launchway repos host add acme-git --kind plain \
+  --base-url https://git.example.com \
+  --credential-env ACME_GIT_TOKEN \
+  --owner team
+launchway repos host test acme-git
+launchway repos outside attach shop --connection acme-git --repository team/app.git
+```
+
+The credential reaches git as an HTTP header in that one process's own settings, for the connection's origin only, with redirects off; it is never in an address, a mirror's configuration or a log, and is removed from every message. The base address is checked against the egress allow-list first (an internal address needs `forge.mirror_allow`), and git is pinned to the addresses that check found.
+
+### What the server's account needs
+
+| Feature | The account on the server needs |
+| --- | --- |
+| Choose a repository (`ls-remote`), run Sorties, checkout, polling | read (clone and fetch) on the repository |
+| Tags (**Cut a release**) | write (push) of tags on the repository; a server that restricts tag creation by rule must allow this account |
+| File changes and write-back, directly or to a new branch | write (push) to the branch, or to the new branch, on the repository, and no protection rule that stops this account pushing there |
+
+**Test** reads only the credential: a Git server names no account and lists no repository, so Test shows the user name, checks the form of the credential, and lists the write features as "not checked" (Launchway writes nothing to test). A missing permission shows when the feature is first used, as the server's own message.
+
+### What Launchway does with it
+
+- **Events are polled.** A Git server sends no webhook Launchway can check, so the repository itself is fetched on the server's polling schedule and a push or a new tag is found there; a delivery posted to the connection's webhook address is refused. **To react at once**, call the Flight's git-hook address from the server's `post-receive` hook. Give the Flight `git_webhook: { kind: gitlab, secret_env: ... }` (the kind only names how the call proves itself: the secret goes in the `X-Gitlab-Token` header, compared in constant time) and in the repository's `hooks/post-receive`:
+
+  ```sh
+  #!/bin/sh
+  curl -fsS -X POST -H "X-Gitlab-Token: $LAUNCHWAY_HOOK_SECRET" -H "X-Gitlab-Event: Push Hook" \
+    https://launchway.example.com/api/v1/projects/shop/git-hook >/dev/null
+  ```
+
+  The call only makes the server poll the Flight now; the poll decides what starts, as always, so a forged or repeated call can at most cause a poll.
+- **Tags are made with Git.** Launchway makes the annotated tag with its own git and pushes that one tag; a tag already at that commit is accepted, one that points elsewhere is refused. It fetches the branches into a scratch directory to have the commit, so a very large repository takes a while.
+- **Releases: the server has none.** The capability is declared **none**, as for Bitbucket and Azure DevOps: **Cut a release** pushes the tag, and the release page and its files stay in Launchway, which serves the files.
+- **File changes** are a shallow clone of the branch, the file written (never through a link, never outside the working tree), one commit by the Launchway identity, and a push that is never forced, to the new branch (made from the base branch, or added to when it exists) or to the branch itself. The same content again is not an error. A server that protects the branch refuses the push in its own words, and Launchway returns that message unchanged.
+- **No pull requests.** The server has none, so `write_back.merge: pull_request` is refused **before anything is pushed**, with the way around it: use write-back mode `direct` to a branch the account may push to (a branch a person merges on the server), or connect a host that has pull requests. A file change that asks for a pull request pushes its branch and reports that a person must merge it.
+- **Results are shown in Launchway only.** A Git server has no commit status and no pull request to comment on, so nothing is written back and the Flight's page says "read results in Launchway".
+- **Identity is emulated** (the user name the connection sends; the credential is proved against the repository), **repositories are entered, not listed**, content is read from Launchway's own clone, and creating repositories, reviews, landing, rules and forks are declared none, each with its reason on the Flight's Code host page.
+
+This provider is labelled experimental until it has run against a real server of each common kind. The opt-in test is read-only: `LAUNCHWAY_LIVE_ANYGIT_CREDENTIAL` (a token, or the JSON document), `LAUNCHWAY_LIVE_ANYGIT_BASE` (the server's https address) and `LAUNCHWAY_LIVE_ANYGIT_REPO` (`owner/name`) run it. The strict fake serves a real bare repository over Git's smart HTTP protocol with git's own `http-backend`, requires the Authorization header on every request and can refuse a push with a hook's own message, so the credential, the tag push, the file change and the protected-branch refusal are proved in the unit tests; only a real server's own answers cannot be.
 
 ## In the Logbook
 
