@@ -796,7 +796,7 @@ func (c *Config) Validate(path string) error {
 			if path != "" {
 				return fmt.Errorf("%s: Flight %s: %w", path, p.Name, err)
 			}
-			return fmt.Errorf("Flight %s: %w", p.Name, err)
+			return fmt.Errorf("flight %s: %w", p.Name, err)
 		}
 	}
 	// Policies are refused here, with their lines, so a mistake stops the
@@ -839,7 +839,7 @@ func (c *Config) DraftRules() (*auth.DraftRules, error) {
 		if p.Drafts.Allow != "" {
 			role, err := auth.ParseDraftAllow(p.Drafts.Allow)
 			if err != nil {
-				return nil, fmt.Errorf("Flight %s: drafts: %w", p.Name, err)
+				return nil, fmt.Errorf("flight %s: drafts: %w", p.Name, err)
 			}
 			r.Allow = role
 		}
@@ -899,7 +899,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		if p.Poll != "" {
 			d, err := time.ParseDuration(p.Poll)
 			if err != nil {
-				return nil, fmt.Errorf("Flight %s: poll %q is not a duration", p.Name, p.Poll)
+				return nil, fmt.Errorf("flight %s: poll %q is not a duration", p.Name, p.Poll)
 			}
 			poll = d
 		}

@@ -89,15 +89,15 @@ func (c *Config) checkTriggers() error {
 	for _, p := range c.Projects {
 		if h := p.GitWebhook; h != nil {
 			if !slices.Contains(GitHookKinds, h.Kind) {
-				return fmt.Errorf("Flight %s: git_webhook.kind is github, gitea, forgejo or gitlab", p.Name)
+				return fmt.Errorf("flight %s: git_webhook.kind is github, gitea, forgejo or gitlab", p.Name)
 			}
 			if (h.SecretEnv == "") == (h.SecretFile == "") {
-				return fmt.Errorf("Flight %s: git_webhook needs exactly one of secret_env and secret_file", p.Name)
+				return fmt.Errorf("flight %s: git_webhook needs exactly one of secret_env and secret_file", p.Name)
 			}
 		}
 		for name, w := range p.Webhooks {
 			if !pipeline.ValidWebhookName(name) {
-				return fmt.Errorf("Flight %s: webhooks: %q is not a webhook name", p.Name, name)
+				return fmt.Errorf("flight %s: webhooks: %q is not a webhook name", p.Name, name)
 			}
 			n := 0
 			for _, v := range []string{w.TokenEnv, w.TokenFile, w.HMACSecretEnv, w.HMACSecretFile} {
@@ -106,7 +106,7 @@ func (c *Config) checkTriggers() error {
 				}
 			}
 			if n != 1 {
-				return fmt.Errorf("Flight %s: webhooks.%s needs exactly one of token_env, token_file, hmac_secret_env and hmac_secret_file", p.Name, name)
+				return fmt.Errorf("flight %s: webhooks.%s needs exactly one of token_env, token_file, hmac_secret_env and hmac_secret_file", p.Name, name)
 			}
 		}
 	}

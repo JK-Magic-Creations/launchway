@@ -70,7 +70,7 @@ func contains(list []string, s string) bool {
 func (p *ProjectConfig) Normalize() error {
 	if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
 		if pp.On.Push != nil || pp.On.PullRequest.Kind != 0 {
-			return fmt.Errorf("Flight %s: pipeline has both `on` and `true` (an unquoted on); keep one", p.Name)
+			return fmt.Errorf("flight %s: pipeline has both `on` and `true` (an unquoted on); keep one", p.Name)
 		}
 		pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
 	}

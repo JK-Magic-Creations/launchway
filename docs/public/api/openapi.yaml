@@ -4274,7 +4274,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/project-candidates:
         get:
-            description: Handled by GET /api/v1/project-candidates; the HTTP API reference does not describe this route in a row of its own.
+            description: 'Repositories a Flight could be made from: hosted with those that have no Flight first, connections you can also search, and, with ?connection=NAME, what that connection can see. ?q= filters by path.'
             operationId: get_api_v1_project_candidates
             responses:
                 "200":
@@ -4291,7 +4291,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by GET /api/v1/project-candidates; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'Repositories a Flight could be made from: hosted with those that have no Flight first, connections you can also search, and, with ?connection=NAME, what that connection can see.'
             tags:
                 - project-candidates
             x-launchway-access: admin
@@ -14936,7 +14936,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/unit-moves:
         post:
-            description: Handled by POST /api/v1/unit-moves; the HTTP API reference does not describe this route in a row of its own.
+            description: Moves the Flights whose plan is not blocked, in one change; homes (Flight to Squadron) files each in its own. The answer lists moved, blocked and undo (send it as homes to put each back). One project.moved entry per Flight.
             operationId: post_api_v1_unit_moves
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -14955,14 +14955,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/unit-moves; the HTTP API reference does not describe this route in a row of its own.
+            summary: Moves the Flights whose plan is not blocked, in one change; homes (Flight to Squadron) files each in its own.
             tags:
                 - unit-moves
             x-launchway-access: admin
             x-launchway-audit: project.move
     /api/v1/unit-moves/preview:
         post:
-            description: Handled by POST /api/v1/unit-moves/preview; the HTTP API reference does not describe this route in a row of its own.
+            description: 'For {"flights": [...], "to"} (to empty is Unfiled) says per Flight what a move changes: shared settings that stop or start applying, variables, secret store references (same, different or none), who gains or loses the ability to start runs, and whether it is blocked. Changes nothing.'
             operationId: post_api_v1_unit_moves_preview
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -14981,14 +14981,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/unit-moves/preview; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'For {"flights": [...], "to"} (to empty is Unfiled) says per Flight what a move changes: shared settings that stop or start applying, variables, secret store references (same, different or none), who gains or loses the ability to start runs, and whether it is blocked.'
             tags:
                 - unit-moves
             x-launchway-access: admin
             x-launchway-audit: project.move_preview
     /api/v1/unit-organize:
         get:
-            description: Handled by GET /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            description: 'For Flights in no Squadron, a proposal from folders and name prefixes: groups, leftover. Changes nothing.'
             operationId: get_api_v1_unit_organize
             responses:
                 "200":
@@ -15005,12 +15005,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by GET /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'For Flights in no Squadron, a proposal from folders and name prefixes: groups, leftover.'
             tags:
                 - unit-organize
             x-launchway-access: admin
         post:
-            description: Handled by POST /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            description: 'Takes {"groups": [{"name", "display_name", "description", "flights"}]}; makes the Squadrons that do not exist and files the Flights, as one change. The answer holds undo and undo_delete.'
             operationId: post_api_v1_unit_organize
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -15029,14 +15029,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'Takes {"groups": [{"name", "display_name", "description", "flights"}]}; makes the Squadrons that do not exist and files the Flights, as one change.'
             tags:
                 - unit-organize
             x-launchway-access: admin
             x-launchway-audit: unit.organize
     /api/v1/unit-organize/undo:
         post:
-            description: Handled by POST /api/v1/unit-organize/undo; the HTTP API reference does not describe this route in a row of its own.
+            description: 'Takes {"homes", "delete_units"} from that answer: puts each Flight back and removes the Squadrons the organize made if they are empty.'
             operationId: post_api_v1_unit_organize_undo
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -15055,14 +15055,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/unit-organize/undo; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'Takes {"homes", "delete_units"} from that answer: puts each Flight back and removes the Squadrons the organize made if they are empty.'
             tags:
                 - unit-organize
             x-launchway-access: admin
             x-launchway-audit: unit.organize_undo
     /api/v1/units:
         get:
-            description: Handled by GET /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            description: The Squadrons (permanent name unit) with how many Flights each holds and how many need attention, and the Flights you may see that sit in none (unfiled). may_manage and why say whether you may make or change them.
             operationId: get_api_v1_units
             responses:
                 "200":
@@ -15079,12 +15079,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by GET /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            summary: The Squadrons (permanent name unit) with how many Flights each holds and how many need attention, and the Flights you may see that sit in none (unfiled).
             tags:
                 - units
             x-launchway-access: signed-in
         post:
-            description: Handled by POST /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            description: Makes a Squadron from {"name", "display_name", "description"}; only the name is needed. 400 with a plain sentence for a bad name, 409 for one that exists.
             operationId: post_api_v1_units
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -15103,14 +15103,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            summary: Makes a Squadron from {"name", "display_name", "description"}; only the name is needed.
             tags:
                 - units
             x-launchway-access: admin
             x-launchway-audit: unit.create
     /api/v1/units/{name}:
         get:
-            description: Handled by GET /api/v1/units/{name}; the HTTP API reference does not describe this route in a row of its own.
+            description: 'One Squadron: its flights with latest result and what needs attention (needs), and, for admins, its people and shared settings; operations lists pipelines nothing but a person starts.'
             operationId: get_api_v1_units_name
             parameters:
                 - in: path
@@ -15135,13 +15135,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by GET /api/v1/units/{name}; the HTTP API reference does not describe this route in a row of its own.
+            summary: 'One Squadron: its flights with latest result and what needs attention (needs), and, for admins, its people and shared settings; operations lists pipelines nothing but a person starts.'
             tags:
                 - units
             x-launchway-access: signed-in
     /api/v1/units/{name}/projects:
         post:
-            description: Handled by POST /api/v1/units/{name}/projects; the HTTP API reference does not describe this route in a row of its own.
+            description: Makes a Flight (permanent name project) in the Squadron from {"repository"} (a hosted repository's path) or {"repo"} (an address), with optional name and branch. The answer says whether the repository's pipeline file was found (pipeline.state found) or gives a starter.
             operationId: post_api_v1_units_name_projects
             parameters:
                 - in: path
@@ -15167,7 +15167,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Handled by POST /api/v1/units/{name}/projects; the HTTP API reference does not describe this route in a row of its own.
+            summary: Makes a Flight (permanent name project) in the Squadron from {"repository"} (a hosted repository's path) or {"repo"} (an address), with optional name and branch.
             tags:
                 - units
             x-launchway-access: admin

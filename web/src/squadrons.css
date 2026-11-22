@@ -23,3 +23,6 @@
 }
 .sq-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 16px 0; }
 .sq-check { display: inline-flex; gap: 6px; align-items: center; }
+
+.sq-pick { margin: 0.5rem 0 1rem; }
+.sq-pick summary { cursor: pointer; font-weight: 600; }

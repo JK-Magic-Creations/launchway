@@ -66,7 +66,6 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
       onFavorite={(it, on) => { void org.favorite("project", it.id, on); announce(`${it.name} ${on ? "added to" : "removed from"} favorites.`); }}
       flights={{ onMoved: () => { org.reload(); void loadOverview(true); } }}
       emptyHint={<>{t.say("Folders group {projects} inside a {unit}.")} A name like <code>payments/api</code> makes folders by itself.</>}
-      toolbar={<AddButtons sm />}
       empty={<p>No pipelines yet. <AddButtons flightFirst /></p>} />
     </>
   );

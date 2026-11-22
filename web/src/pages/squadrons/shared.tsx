@@ -24,13 +24,11 @@ export const SQUADRONS = "/units";
 export const squadronHref = (name: string) => `/units/${encodeURIComponent(name)}`;
 export const addFlightHref = (unit: string) => `/units/${encodeURIComponent(unit)}/projects/new`;
 
-const listFn = () => squadronsApi.list();
-
 /** Whether this person may make Squadrons and Flights, and if not, why. Until the server has answered, an administrator
  * is assumed to be allowed and anybody else is shown nothing (so a button never flashes in and out). */
 export function useSquadronAccess(): { may: boolean | null; why: string; list: SquadronList | null; reload: () => void } {
   const me = useMe();
-  const { data, reload } = useLoad(useCallback(listFn, []));
+  const { data, reload } = useLoad(useCallback(() => squadronsApi.list(), []));
   const known = data && typeof data.may_manage === "boolean" ? data : null;
   return { may: known ? known.may_manage : me?.admin ? true : null, why: known?.why ?? "", list: known, reload };
 }

@@ -13,7 +13,7 @@ import { onLink } from "../../router";
 import { squadronsApi, type SquadronPage } from "../../squadronsApi";
 import { terms } from "../../terms";
 import { oneOf, useUrlState, useViewTitle } from "../../urlState";
-import { FlightCheck, MoveFlightsBar, SelectAllFlights, useFlightSelection } from "../../components/MoveFlights";
+import { FlightCheck, MoveFlightsBar, useFlightSelection } from "../../components/MoveFlights";
 import { ProjectCard } from "../HomeSections";
 import { addFlightHref, SQUADRONS, WhyNot } from "./shared";
 import "../../squadrons.css";
@@ -86,9 +86,9 @@ export function SquadronViewPage({ name }: { name: string }) {
             {t.say("A {unit} is a named folder of {projects} with its own people and shared settings. A {project} is one repository and its pipelines. Add the first one and its results appear here.")}
           </EmptyState></Sheet>
         ) : (
-          <Sheet title={t.say("{Projects}")} actions={data.may_manage ? <SelectAllFlights selection={selection} /> : undefined}>
+          <Sheet title={t.say("{Projects}")}>
             {data.may_manage && <MoveFlightsBar selection={selection} onMoved={reload} />}
-            {data.may_manage && <div className="sq-checks">{flights.map((f) => <label key={f.name} className="sq-check"><FlightCheck selection={selection} name={f.name} /> <span>{f.name}</span></label>)}</div>}
+            {data.may_manage && <details className="sq-pick"><summary>{t.say("Choose {projects} to move")}</summary><div className="sq-checks">{flights.map((f) => <label key={f.name} className="sq-check"><FlightCheck selection={selection} name={f.name} /> <span>{f.name}</span></label>)}</div></details>}
             <ul className="hm-cards">
               {[...flights].sort((a, b) => b.needs - a.needs || Number(b.last === "failed") - Number(a.last === "failed") || a.name.localeCompare(b.name)).map((f) => <ProjectCard key={f.name} p={f} now={now} />)}
             </ul>

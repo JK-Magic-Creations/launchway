@@ -69,7 +69,7 @@ function Choose({ unit }: { unit: string }) {
   }, [q, connection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const d = state.data;
-  const hosted = d?.hosted ?? [];
+  const hosted = useMemo(() => d?.hosted ?? [], [d]);
   const fresh = useMemo(() => hosted.filter((c) => !c.flight), [hosted]);
   const taken = useMemo(() => hosted.filter((c) => c.flight), [hosted]);
   const connections = d?.connections ?? [];
@@ -197,6 +197,8 @@ function Added({ unit, name, result }: { unit: string; name: string; result: Add
         {p?.state === "starter" && (
           <>
             <p>{p.note}</p>
+            {/* A scrollable region must be reachable by keyboard. */}
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
             <pre className="sq-starter" tabIndex={0} aria-label="A starter pipeline, read only">{p.starter}</pre>
             <div className="sq-actions">
               <Button onClick={copy}>{copied ? "Copied" : "Copy the starter"}</Button>

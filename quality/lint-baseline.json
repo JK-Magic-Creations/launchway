@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 458,
+  "total": 455,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -1423,12 +1423,6 @@
       "linter": "contextcheck",
       "text": "Non-inherited new context, use function like `context.WithXXX` instead",
       "count": 4
-    },
-    {
-      "file": "internal/runner/runner.go",
-      "linter": "gocyclo",
-      "text": "cyclomatic complexity 34 of func `(*Runner).execute` is high (\u003e 30)",
-      "count": 1
     },
     {
       "file": "internal/runner/runner.go",

@@ -11,7 +11,6 @@ import (
 	"unicode"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
-	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -289,7 +288,7 @@ func (s *Server) squadronSharing(st *settings.Service, unit string) ([]personRol
 			}
 			n++
 			if k.Name == "role-binding" {
-				var b config.AccessBinding
+				var b struct{ User, Group, Role string }
 				if json.Unmarshal(o.Spec, &b) == nil {
 					who := b.User
 					if who == "" {

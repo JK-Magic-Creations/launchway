@@ -43,3 +43,6 @@
 .og-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .og-drag[draggable="true"] { cursor: grab; }
 .og-over { outline: 2px dashed var(--signal); }
+
+.mv-tick input[type="checkbox"] { width: 18px; height: 18px; flex: none; margin: 0 6px 0 0; }
+.mv-tick { display: inline-flex; align-items: center; }
