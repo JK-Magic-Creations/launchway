@@ -13,10 +13,10 @@ const view = (vars: VarEntry[]): VarView => ({ rule: "The nearest setting wins: 
 
 vi.mock("../variablesApi", async (orig) => {
   const real = await orig<typeof import("../variablesApi")>();
-  return { ...real, variablesApi: { ...real.variablesApi, project: vi.fn() } };
+  return { ...real, variablesApi: { ...real.variablesApi, project: vi.fn(), run: vi.fn() } };
 });
 import { variablesApi } from "../variablesApi";
-import { VariablesPanel } from "./Variables";
+import { RunVariables, VariablesPanel } from "./Variables";
 
 const show = (v: VarView) => {
   vi.mocked(variablesApi.project).mockResolvedValue(v);
@@ -61,3 +61,23 @@ describe("the variables hierarchy", () => {
     expect(screen.getByText("reference")).toBeInTheDocument();
   });
 });
+
+describe("the variables a run recorded", () => {
+  // What a server really sends for a template's built-in variables: a null chain and a null
+  // value. Reading chain.length once blanked the whole run page.
+  it("shows them when the server sends null for the chain", async () => {
+    vi.mocked(variablesApi.run).mockResolvedValue({
+      rerun_of: "", variables: [{ name: "launchway_project", type: "", value: null, display: "", from: { kind: "" }, chain: null, why: "", run_id: "run_1" }],
+    } as never);
+    render(<RunVariables runId="run_1" />);
+    expect(await screen.findByText("launchway_project")).toBeInTheDocument();
+  });
+
+  it("shows nothing, and does not fail, when the server sends null for the list", async () => {
+    vi.mocked(variablesApi.run).mockResolvedValue({ rerun_of: "", variables: null } as never);
+    const { container } = render(<RunVariables runId="run_1" />);
+    await Promise.resolve();
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
