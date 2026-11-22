@@ -224,7 +224,10 @@ func (s *Service) Webhook(ctx context.Context, name string, r *http.Request) (De
 		return Delivery{}, err
 	}
 	d := Delivery{Fresh: true, Events: evs}
-	id := r.Header.Get("X-GitHub-Delivery")
+	id := ""
+	if e, ok := entryOf(c.Kind); ok && e.DeliveryHeader != "" {
+		id = r.Header.Get(e.DeliveryHeader)
+	}
 	if id != "" {
 		fresh, err := s.st.SeeDelivery(ctx, c.ID, id)
 		if err != nil {

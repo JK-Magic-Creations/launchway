@@ -20,13 +20,9 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
-	"github.com/jk-magic-creations/launchway/internal/forge/providers/github"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
 	engstore "github.com/jk-magic-creations/launchway/internal/store"
 )
-
-// Kinds a connection of this service can be.
-var Kinds = []forge.Kind{forge.KindGitHub}
 
 // ErrNotAttached is wrapped (with forge.ErrNotFound) when a project has no outside repository.
 var ErrNotAttached = errors.New("not attached")
@@ -92,15 +88,15 @@ type View struct {
 	Additions []forge.Addition `json:"additions,omitempty"`
 }
 
-func view(c forge.Connection) View {
+func (s *Service) view(c forge.Connection) View {
 	v := View{Name: c.Name, Kind: string(c.Kind), BaseURL: c.BaseURL, UploadURL: c.UploadURL, Credential: c.Credential.String(),
 		WebhookSecret: c.WebhookSecret.String(), AuthKind: c.AuthKind, Owners: c.Owners, Enabled: c.Enabled}
 	if v.AuthKind == "" {
 		v.AuthKind = "token"
 	}
-	if c.Kind == forge.KindGitHub {
-		v.Capabilities = github.Capabilities()
-		v.Additions = github.Additions()
+	if p, err := s.newProvider(c); err == nil {
+		v.Capabilities = p.Capabilities()
+		v.Additions = p.Additions()
 	}
 	return v
 }
@@ -120,12 +116,9 @@ type AddInput struct {
 // now: a connection that cannot read its own token is refused with a message
 // that names the reference, never the value.
 func (s *Service) Add(ctx context.Context, in AddInput, by string) (View, error) {
-	ok := false
-	for _, k := range Kinds {
-		ok = ok || k == in.Kind
-	}
+	e, ok := entryOf(in.Kind)
 	if !ok {
-		return View{}, fmt.Errorf("%w: a connection to keep code on is of kind github, not %q", forge.ErrInvalid, in.Kind)
+		return View{}, fmt.Errorf("%w: a connection to keep code on is of kind %s, not %q", forge.ErrInvalid, kindNames(), in.Kind)
 	}
 	if in.Credential.IsZero() {
 		return View{}, fmt.Errorf("%w: connection: a credential reference is required (credential.env, credential.file or sealed:NAME)", forge.ErrInvalid)
@@ -135,11 +128,11 @@ func (s *Service) Add(ctx context.Context, in AddInput, by string) (View, error)
 	if err := c.Validate(); err != nil {
 		return View{}, err
 	}
-	ep, err := github.EndpointsOf(c.BaseURL, c.UploadURL)
+	urls, err := e.Endpoints(c)
 	if err != nil {
 		return View{}, fmt.Errorf("%w: connection: %v", forge.ErrInvalid, err)
 	}
-	for _, u := range []string{ep.API.String(), ep.Upload.String()} {
+	for _, u := range urls {
 		if err := s.guard.Check(ctx, u); err != nil {
 			return View{}, fmt.Errorf("%w: connection: %v", forge.ErrInvalid, err)
 		}
@@ -151,16 +144,12 @@ func (s *Service) Add(ctx context.Context, in AddInput, by string) (View, error)
 	if err != nil {
 		return View{}, err
 	}
-	return view(made), nil
+	return s.view(made), nil
 }
 
 func isOurs(c forge.Connection) bool {
-	for _, k := range Kinds {
-		if c.Kind == k {
-			return true
-		}
-	}
-	return false
+	_, ok := entryOf(c.Kind)
+	return ok
 }
 
 // List lists the connections of this service.
@@ -172,7 +161,7 @@ func (s *Service) List(ctx context.Context) ([]View, error) {
 	out := []View{}
 	for _, c := range all {
 		if isOurs(c) {
-			out = append(out, view(c))
+			out = append(out, s.view(c))
 		}
 	}
 	return out, nil
@@ -195,7 +184,7 @@ func (s *Service) Get(ctx context.Context, name string) (View, error) {
 	if err != nil {
 		return View{}, err
 	}
-	return view(c), nil
+	return s.view(c), nil
 }
 
 // Remove deletes a connection that no Flight uses.
@@ -211,11 +200,11 @@ func (s *Service) Remove(ctx context.Context, name string) (View, error) {
 	if len(used) > 0 {
 		return View{}, fmt.Errorf("%w: %d Flights keep their code on %s; detach them first", forge.ErrInvalid, len(used), name)
 	}
-	return view(c), s.st.DeleteConnection(ctx, c.ID)
+	return s.view(c), s.st.DeleteConnection(ctx, c.ID)
 }
 
 // Provider opens the provider of a connection.
-func (s *Service) Provider(ctx context.Context, name string) (*github.Provider, forge.Connection, error) {
+func (s *Service) Provider(ctx context.Context, name string) (forge.Provider, forge.Connection, error) {
 	c, err := s.conn(ctx, name)
 	if err != nil {
 		return nil, c, err
@@ -223,14 +212,14 @@ func (s *Service) Provider(ctx context.Context, name string) (*github.Provider, 
 	if !c.Enabled {
 		return nil, c, fmt.Errorf("%w: the connection %s is turned off", forge.ErrInvalid, name)
 	}
-	p, err := github.New(c, s.guard)
+	p, err := s.newProvider(c)
 	return p, c, err
 }
 
 // TestResult is what "test connection" answers.
 type TestResult struct {
 	Connection   string             `json:"connection"`
-	Report       github.Report      `json:"report"`
+	Report       forge.HostReport   `json:"report"`
 	Capabilities forge.Capabilities `json:"capabilities"`
 }
 
@@ -240,7 +229,11 @@ func (s *Service) Test(ctx context.Context, name string) (TestResult, error) {
 	if err != nil {
 		return TestResult{}, err
 	}
-	rep, err := p.Probe(ctx)
+	pr, ok := p.(Prober)
+	if !ok {
+		return TestResult{}, fmt.Errorf("%w: this host has no connection test", forge.ErrInvalid)
+	}
+	rep, err := pr.Probe(ctx)
 	if err != nil {
 		return TestResult{}, err
 	}
@@ -392,13 +385,15 @@ func (s *Service) View(ctx context.Context, project string) (FlightView, error) 
 		return FlightView{}, err
 	}
 	v := FlightView{Flight: f, Unsupported: map[forge.Capability]forge.Declaration{}}
-	for k, d := range github.Capabilities() {
-		if d.Support != forge.Native {
-			v.Unsupported[k] = d
-		}
-	}
-	v.Additions = github.Additions()
 	if c, err := s.conn(ctx, f.Connection); err == nil {
+		if p, err := s.newProvider(c); err == nil {
+			for k, d := range p.Capabilities() {
+				if d.Support != forge.Native {
+					v.Unsupported[k] = d
+				}
+			}
+			v.Additions = p.Additions()
+		}
 		v.Kind = string(c.Kind)
 		if at, ok, err := s.fl.OutsideLastDelivery(c.ID); err == nil && ok {
 			v.LastDelivery = at
@@ -411,7 +406,7 @@ func (s *Service) View(ctx context.Context, project string) (FlightView, error) 
 }
 
 // repoOf finds the repository of a Flight on its connection.
-func (s *Service) repoOf(ctx context.Context, project string) (*github.Provider, Flight, forge.Repository, error) {
+func (s *Service) repoOf(ctx context.Context, project string) (forge.Provider, Flight, forge.Repository, error) {
 	f, err := s.Flight(ctx, project)
 	if err != nil {
 		return nil, f, forge.Repository{}, err
