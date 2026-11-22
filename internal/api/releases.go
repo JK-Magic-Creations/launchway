@@ -722,7 +722,10 @@ func firstParagraph(md string) string {
 	for strings.Contains(text, "\n\n\n") {
 		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
 	}
-	return clip(text, 600)
+	if r := []rune(text); len(r) > 600 {
+		text = strings.TrimSpace(string(r[:600])) + "…"
+	}
+	return text
 }
 
 func (s *Server) yankRelease(w http.ResponseWriter, r *http.Request) {
