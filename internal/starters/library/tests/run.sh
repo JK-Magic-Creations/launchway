@@ -45,7 +45,8 @@ fresh
 git init -q . 2>/dev/null
 echo "hello" > a.txt; git add a.txt 2>/dev/null
 check "secrets.sh passes a clean repository" sh "$here/scripts/secrets.sh"
-printf '%s\n' "-----BEGIN RSA PRIVATE KEY-----" > key.pem; git add key.pem 2>/dev/null
+# built from parts, so that the scan of this repository does not read the test's key header as a real one
+printf '%s%s\n' "-----BEGIN RSA PRIVATE " "KEY-----" > key.pem; git add key.pem 2>/dev/null
 refuse "secrets.sh finds a private key" sh "$here/scripts/secrets.sh"
 out=$(sh "$here/scripts/secrets.sh" 2>&1 || true)
 case "$out" in *"BEGIN RSA PRIVATE KEY-----"*) bad "secrets.sh prints the secret it found in full";; *) ok "secrets.sh does not print the whole line it found";; esac
