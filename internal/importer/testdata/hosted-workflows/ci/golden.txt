@@ -1,0 +1,153 @@
+=== .github/workflows/ci.yml (hosted-workflows)
+# Imported from .github/workflows/ci.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: shop-ci
+on:
+  push: {branches: [main, release/*], tags: [v*], paths: [src/**, go.mod]}
+  pull_request: {into: [main]}
+  schedule:
+    - {cron: 17 3 * * 1}
+supersede: true
+inputs:
+  target: {type: choice, description: Where to run, options: [dev, test], default: dev}
+  verbose: {type: boolean, default: false}
+  region: {}
+defaults:
+  env: {GOFLAGS: -mod=readonly}
+containers:
+  integration: {image: 'golang:1.22'}
+  integration-db:
+    image: postgres:16
+    service: true
+    env: {POSTGRES_PASSWORD: '${DB_PASSWORD}'}
+    ready: {tcp: 5432}
+steps:
+  unit:
+    uses: launchway/go-test
+    with: {go_version: "1.22"}
+  matrix:
+    image: {each: node, format: 'docker.io/library/node:%s'}
+    needs: unit
+    on_failure: continue
+    for_each:
+      node: ["18", "20"]
+      os: [ubuntu-latest]
+    exclude:
+      - {node: "18", os: ubuntu-latest}
+    add:
+      - {node: "22", os: ubuntu-latest}
+    max_parallel: 2
+    fail_fast: false
+    env:
+      npm_config_cache: .cache/npm
+    run: |
+      # Install
+      npm ci
+      # Test
+      (
+        cd web
+        export CI=true
+        npm test -- --target ${LAUNCHWAY_INPUT_TARGET}
+        echo "node ${LAUNCHWAY_EACH_NODE} on ${LAUNCHWAY_COMMIT}"
+      )
+    cache:
+      - {name: npm, paths: [.cache/npm], key: {files: ['**/package-lock.json']}}
+    artifacts:
+      - {name: web-report, paths: [web/report, web/coverage.xml], retain: 7d}
+  integration:
+    container: integration
+    needs: unit
+    env:
+      MODE: ci
+      GOMODCACHE: .cache/go-mod
+    secrets:
+      DB_PASSWORD: {store: vault, key: DB_PASSWORD, field: value}
+    run: |
+      (
+        export DATABASE_URL=postgres://postgres@db:5432/postgres
+        go test -tags integration ./...
+      )
+    cache:
+      - {name: cache-go-mod, paths: [.cache/go-mod], key: {files: ['**/go.sum'], text: go}}
+  report:
+    image: docker.io/library/ubuntu:24.04
+    needs: [matrix, integration]
+    when: {upstream: always}
+    run: |
+      ls out
+    fetch:
+      - {from: matrix, name: web-report, into: out}
+  site:
+    image: docker.io/library/ubuntu:24.04
+    needs: unit
+    when: {branch: main, event: push}
+    run: |
+      echo build the site
+  tagged:
+    image: docker.io/library/ubuntu:24.04
+    needs: unit
+    when: {tag: v*}
+    run: |
+      echo tagged
+
+--- findings
+exact     hosted.on.push               .github/workflows/ci.yml:3 The push trigger carries over, with its branch, tag and path filters
+different hosted.on.pr                 .github/workflows/ci.yml:7 Pull requests run at the pull request's head commit, filtered by the branch they target; the event types (opened, synchronize, ...) are not carried, because a run starts when a pull request opens or its head moves -> Nothing, unless you relied on the other types (labeled, closed): use a webhook trigger for those
+exact     hosted.on.schedule           .github/workflows/ci.yml:10 The cron times carry over; both use five fields in UTC
+exact     hosted.on.dispatch           .github/workflows/ci.yml:12 Every Launchway pipeline can be run by hand; the inputs became run inputs of the same names
+different hosted.on.input_type         .github/workflows/ci.yml:23 The input region was written as a plain text input, but it no longer lists the old system's environments -> Make it a choice input listing your Airfields (environments) if the pipeline should offer them
+different hosted.concurrency           .github/workflows/ci.yml:24 Cancelling older runs became supersede: true, which cancels older runs of the same branch, not runs that share the group name -> Check that cancelling by branch is what the old group name meant
+different hosted.permissions           .github/workflows/ci.yml:27 Token scopes are not carried: a Launchway step holds no repository token unless it is given a secret -> If a step pushes, comments or releases, give it a named secret and use it in the script
+exact     hosted.env                   .github/workflows/ci.yml:29 Variables carry over; a step's own values wrap its commands, a job's values are the step's environment and the workflow's are the pipeline's defaults
+different hosted.defaults              .github/workflows/ci.yml:33 The default working directory was applied to each command; the default shell is not carried because steps run with sh -e -> Check the commands run under sh, or use an image with bash
+different hosted.job.runs_on           .github/workflows/ci.yml:36 The runner label ubuntu-latest is not carried (this holds for every job that names it): Launchway chooses the Station by its own configuration and runs steps in a container image -> Name the image the job needs; to pick a Station use the runner key of the step
+exact     hosted.job                   .github/workflows/ci.yml:36 The job became a step; its commands run in order in one script
+different write.template               .github/workflows/ci.yml:36 Step unit uses the built-in template launchway/go-test instead of your own commands: it runs the standard commands and also records test and coverage reports -> Compare its log with the old job's. To keep your own commands, write the step by hand (the wizard has a switch) or use the template's test_command setting
+exact     hosted.job.timeout           .github/workflows/ci.yml:37 The time limit carries over
+exact     hosted.uses.checkout         .github/workflows/ci.yml:39 Launchway checks the repository out before the first step
+exact     hosted.uses.setup            .github/workflows/ci.yml:40 The toolchain version became the image of the step (docker.io/library/golang:1.22)
+exact     hosted.step.run              .github/workflows/ci.yml:43 Commands carry over
+exact     hosted.job                   .github/workflows/ci.yml:45 The job became a step; its commands run in order in one script
+exact     hosted.job.needs             .github/workflows/ci.yml:46 Dependencies between jobs carry over
+exact     hosted.job.continue          .github/workflows/ci.yml:47 The job may fail without failing the run (on_failure: continue)
+exact     hosted.job.fail_fast         .github/workflows/ci.yml:49 fail-fast and max-parallel carry over
+exact     hosted.job.fail_fast         .github/workflows/ci.yml:50 fail-fast and max-parallel carry over
+exact     hosted.job.matrix            .github/workflows/ci.yml:51 The matrix became for_each, with exclude and add entries
+manual    hosted.job.runs_on_os        .github/workflows/ci.yml:52 The job asks for windows-latest, and Launchway steps run in Linux container images -> Run it on a Station with that operating system, or drop it from the pipeline
+exact     hosted.uses.checkout         .github/workflows/ci.yml:61 Launchway checks the repository out before the first step
+exact     hosted.uses.setup            .github/workflows/ci.yml:62 The toolchain version became the image of the step (docker.io/library/node:${LAUNCHWAY_EACH_NODE})
+different hosted.uses.cache            .github/workflows/ci.yml:62 The cache for npm is kept by Launchway between runs, keyed by the files named in the key; where entries can be read follows Launchway's rules for branches and pull requests -> Check the key files and paths
+different hosted.expr                  .github/workflows/ci.yml:64 Expressions were replaced by shell variables where the value is known: matrix.node -> Nothing, unless the new value reads differently
+exact     hosted.step.run              .github/workflows/ci.yml:67 Commands carry over
+exact     hosted.step.workdir          .github/workflows/ci.yml:69 The directory change wraps that step's commands
+exact     hosted.env                   .github/workflows/ci.yml:70 Variables carry over; a step's own values wrap its commands, a job's values are the step's environment and the workflow's are the pipeline's defaults
+different hosted.expr                  .github/workflows/ci.yml:72 Expressions were replaced by shell variables where the value is known: inputs.target, matrix.node, github.sha -> Nothing, unless the new value reads differently
+exact     hosted.step.run              .github/workflows/ci.yml:72 Commands carry over
+exact     hosted.uses.upload           .github/workflows/ci.yml:75 The files became cargo (artifacts) of the step; retention-days became retain
+exact     hosted.job                   .github/workflows/ci.yml:83 The job became a step; its commands run in order in one script
+exact     hosted.job.needs             .github/workflows/ci.yml:84 Dependencies between jobs carry over
+exact     hosted.job.container         .github/workflows/ci.yml:85 The container image became the step's image
+manual    hosted.job.container_options .github/workflows/ci.yml:89 The container settings options were not carried -> Set what you need in the step's container: env, cpu, memory; registry credentials belong in the Station's configuration
+different hosted.job.services          .github/workflows/ci.yml:91 The service db runs beside the step, but it is reached at localhost, not by its service name -> Change the host name your tests use from the service name to localhost
+different write.secret                 .github/workflows/ci.yml:92 Secret DB_PASSWORD is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+exact     hosted.uses.checkout         .github/workflows/ci.yml:97 Launchway checks the repository out before the first step
+different hosted.uses.cache            .github/workflows/ci.yml:98 The cache for .cache/go-mod is kept by Launchway between runs, keyed by the files named in the key; where entries can be read follows Launchway's rules for branches and pull requests -> Check the key files and paths
+manual    hosted.uses.cache_path       .github/workflows/ci.yml:100 The cache path ~/secret-dir is outside the workspace, and Launchway keeps only paths below it -> Make the tool use a directory below the workspace and cache that
+exact     hosted.step.run              .github/workflows/ci.yml:104 Commands carry over
+exact     hosted.env                   .github/workflows/ci.yml:105 Variables carry over; a step's own values wrap its commands, a job's values are the step's environment and the workflow's are the pipeline's defaults
+exact     hosted.job                   .github/workflows/ci.yml:108 The job became a step; its commands run in order in one script
+different write.image.default          .github/workflows/ci.yml:108 The steps report, site, tagged name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     hosted.job.needs             .github/workflows/ci.yml:109 Dependencies between jobs carry over
+exact     hosted.job.if                .github/workflows/ci.yml:110 The condition became a when: filter
+manual    hosted.job.outputs           .github/workflows/ci.yml:111 The job passes values to later jobs through outputs: (total), which has no direct form -> Write name=value lines to the file in $LAUNCHWAY_OUTPUTS and read $LAUNCHWAY_NEEDS_<STEP>_<NAME> in the later job
+exact     hosted.uses.download         .github/workflows/ci.yml:114 The download became a fetch of the step that keeps the artifact
+exact     hosted.step.run              .github/workflows/ci.yml:118 Commands carry over
+exact     hosted.job                   .github/workflows/ci.yml:120 The job became a step; its commands run in order in one script
+exact     hosted.job.needs             .github/workflows/ci.yml:121 Dependencies between jobs carry over
+exact     hosted.job.if                .github/workflows/ci.yml:122 The condition became a when: filter
+exact     hosted.step.run              .github/workflows/ci.yml:124 Commands carry over
+exact     hosted.job                   .github/workflows/ci.yml:126 The job became a step; its commands run in order in one script
+exact     hosted.job.needs             .github/workflows/ci.yml:127 Dependencies between jobs carry over
+exact     hosted.job.if                .github/workflows/ci.yml:128 The condition became a when: filter
+exact     hosted.step.run              .github/workflows/ci.yml:130 Commands carry over
+secrets: DB_PASSWORD

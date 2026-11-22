@@ -1,0 +1,130 @@
+name: Shop CI
+on:
+  push:
+    branches: [main, "release/*"]
+    tags: ["v*"]
+    paths: ["src/**", "go.mod"]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where to run
+        type: choice
+        options: [dev, test]
+        default: dev
+      verbose:
+        type: boolean
+        default: false
+      region:
+        type: environment
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  GOFLAGS: -mod=readonly
+defaults:
+  run:
+    working-directory: .
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - run: go test ./...
+  matrix:
+    runs-on: ubuntu-latest
+    needs: unit
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        node: [18, 20]
+        os: [ubuntu-latest, windows-latest]
+        exclude:
+          - node: 18
+            os: ubuntu-latest
+        include:
+          - node: 22
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Test
+        working-directory: web
+        env:
+          CI: "true"
+        run: |
+          npm test -- --target ${{ inputs.target }}
+          echo "node ${{ matrix.node }} on ${{ github.sha }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Web Report
+          path: |
+            web/report
+            web/coverage.xml
+          retention-days: 7
+  integration:
+    runs-on: ubuntu-latest
+    needs: [unit]
+    container:
+      image: golang:1.22
+      env:
+        MODE: ci
+      options: --user root
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/secret-dir
+          key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+      - run: go test -tags integration ./...
+        env:
+          DATABASE_URL: postgres://postgres@db:5432/postgres
+  report:
+    runs-on: ubuntu-latest
+    needs: [matrix, integration]
+    if: always()
+    outputs:
+      total: ${{ steps.count.outputs.total }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Web Report
+          path: out
+      - run: ls out
+  site:
+    runs-on: ubuntu-latest
+    needs: [unit]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - run: echo build the site
+  tagged:
+    runs-on: ubuntu-latest
+    needs: [unit]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - run: echo tagged

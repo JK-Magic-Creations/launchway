@@ -1,0 +1,76 @@
+=== .github/workflows/odd.yml (hosted-workflows)
+# Imported from .github/workflows/odd.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: odd
+on:
+  push: {branches: ['*']}
+steps:
+  #  NEEDS A PERSON: some ${{ }} expressions below are left as written
+  lint:
+    image: docker.io/library/python:latest
+    run: |
+      # golangci/golangci-lint-action@v6
+      golangci-lint run
+      # codecov/codecov-action@v4
+      echo 'NEEDS A PERSON: a third-party action ran here: codecov/codecov-action@v4'; exit 1
+      echo 'NEEDS A PERSON: this step used the shell pwsh'; exit 1
+      # original:
+      # Write-Host hello
+      # NEEDS A PERSON: this step had the condition `github.event_name == 'push'` and now always runs
+      if [[ -n "$X" ]]; then echo yes; fi
+      echo "v=1" >> $LAUNCHWAY_OUTPUTS
+      echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+      echo ${{ format('{0}-{1}', github.repository, vars.REGION) }} ${{ github.actor }}
+  #  NEEDS A PERSON: this job ran on windows-latest and now runs in a Linux image
+  win:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo windows
+  reuse:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo 'NEEDS A PERSON: this job called a reusable workflow: ./.github/workflows/shared.yml'; exit 1
+  dyn:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo dyn
+  cond:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo conditional
+
+--- findings
+exact     hosted.on.push               .github/workflows/odd.yml:2 The push trigger carries over, with its branch, tag and path filters
+manual    hosted.on.other              .github/workflows/odd.yml:2 The event workflow_run starts the old workflow but has no trigger in the pipeline file -> Use a webhook trigger or a result trigger (see the triggers guide), or start the pipeline by hand
+different hosted.job.runs_on           .github/workflows/odd.yml:5 The runner label ubuntu-latest is not carried (this holds for every job that names it): Launchway chooses the Station by its own configuration and runs steps in a container image -> Name the image the job needs; to pick a Station use the runner key of the step
+exact     hosted.job                   .github/workflows/odd.yml:5 The job became a step; its commands run in order in one script
+different write.shell.bash             .github/workflows/odd.yml:5 Step lint runs with sh -e in Launchway but the old file used bash features, so a line may fail instead of running as before -> Use an image that has bash and write bash -c '...' around the script, or rewrite the lines for sh
+exact     hosted.uses.checkout         .github/workflows/odd.yml:7 Launchway checks the repository out before the first step
+different hosted.uses.equiv            .github/workflows/odd.yml:8 The step runs the third-party program golangci/golangci-lint-action; the command golangci-lint run does the same job and was written in its place -> Make sure the command is installed in the step's image
+manual    hosted.uses.third            .github/workflows/odd.yml:9 This step runs a third-party program (codecov/codecov-action@v4) that Launchway does not know -> Replace it with the command it runs or one of the built-in templates (launchway templates list), or ask a person to decide
+different hosted.uses.setup_file       .github/workflows/odd.yml:12 The version is written into the image tag (the version file .python-version) instead of being read from a file at run time -> Update the tag when the file changes, or keep the image tag in a pipeline variable
+different hosted.uses.setup_file       .github/workflows/odd.yml:15 The version is written into the image tag (the range was written as 20) instead of being read from a file at run time -> Update the tag when the file changes, or keep the image tag in a pipeline variable
+manual    hosted.uses.setup_second     .github/workflows/odd.yml:15 The job sets up actions/setup-node as well as another toolchain, and a Launchway step runs in one image -> Use an image that has both, or split the job in two steps
+manual    hosted.step.shell_other      .github/workflows/odd.yml:18 The step uses the shell pwsh, which Launchway does not run -> Put the script in a file and run it with its interpreter in an image that has it
+exact     hosted.step.run              .github/workflows/odd.yml:19 Commands carry over
+different hosted.step.output_file      .github/workflows/odd.yml:20 The file for step outputs was replaced by $LAUNCHWAY_OUTPUTS; later steps of the same job cannot read it, only steps that need this one -> Read values in other steps as $LAUNCHWAY_NEEDS_<STEP>_<NAME>
+manual    hosted.step.commands         .github/workflows/odd.yml:20 The script uses GITHUB_ENV, which only the old system provides -> Export the variable or extend PATH in the same script; write key=value lines to $LAUNCHWAY_OUTPUTS to pass values on
+exact     hosted.step.run              .github/workflows/odd.yml:20 Commands carry over
+different hosted.step.shell            .github/workflows/odd.yml:24 The commands run with sh -e, not bash -> Check the script for bash-only syntax
+manual    hosted.step.if               .github/workflows/odd.yml:25 The step's condition `github.event_name == 'push'` is not carried; the step always runs -> Put the test in the script (if [ ... ]) or split the step into a job with a when: filter
+manual    hosted.step.continue         .github/workflows/odd.yml:26 The step may fail without failing the job in the old file; here a failing command fails the step -> Append || true to the command, or move it to a step of its own that is allowed to fail
+manual    hosted.step.timeout          .github/workflows/odd.yml:27 A time limit on one step is not carried -> Use the job's timeout, or the timeout command in the script
+manual    hosted.expr.unknown          .github/workflows/odd.yml:28 The expression `format('{0}-{1}', github.repository, vars.REGION)` is evaluated by the old system and was left as written, so the script will not run as it is -> Replace it with a shell command, an input or a variable
+manual    hosted.expr.unknown          .github/workflows/odd.yml:28 The expression `github.actor` is evaluated by the old system and was left as written, so the script will not run as it is -> Replace it with a shell command, an input or a variable
+exact     hosted.step.run              .github/workflows/odd.yml:28 Commands carry over
+manual    hosted.job.runs_on_os        .github/workflows/odd.yml:30 The job asks for windows-latest, and Launchway steps run in Linux container images -> Run it on a Station with that operating system, or drop it from the pipeline
+exact     hosted.job                   .github/workflows/odd.yml:30 The job became a step; its commands run in order in one script
+different write.image.default          .github/workflows/odd.yml:30 The steps win, reuse, dyn, cond name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     hosted.step.run              .github/workflows/odd.yml:32 Commands carry over
+manual    hosted.job.reusable          .github/workflows/odd.yml:34 The job calls the workflow ./.github/workflows/shared.yml, which holds the real steps -> Import that workflow file as well and copy its steps here, or write a template (see libraries)
+exact     hosted.job                   .github/workflows/odd.yml:38 The job became a step; its commands run in order in one script
+manual    hosted.job.matrix_expr       .github/workflows/odd.yml:40 The matrix is made at run time by an expression, which Launchway does not evaluate -> Write the lists in the file, or make a list input and loop over it
+exact     hosted.step.run              .github/workflows/odd.yml:42 Commands carry over
+exact     hosted.job                   .github/workflows/odd.yml:44 The job became a step; its commands run in order in one script
+manual    hosted.job.if_expr           .github/workflows/odd.yml:45 The condition `contains(github.event.head_commit.message, '[ci]')` is an expression, and Launchway has no expression language, so the job now always runs -> Express it as a when: filter (branch, tag, event, changed, input) or move the test into the script
+exact     hosted.step.run              .github/workflows/odd.yml:47 Commands carry over

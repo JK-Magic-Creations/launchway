@@ -1,0 +1,96 @@
+=== .github/workflows/release.yml (hosted-workflows)
+# Imported from .github/workflows/release.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+# Dry import: steps that deliver are off. Set the input enable_delivery default to true to turn them all on.
+pipeline: release
+on:
+  push: {tags: [v*]}
+inputs:
+  enable_delivery:
+    type: boolean
+    default: false
+    description: Turn on the steps that deliver (push an image, release, deploy). Off while you compare this pipeline with the old one.
+steps:
+  image:
+    kind: image
+    file: build/Dockerfile
+    target: runtime
+    platforms: [linux/amd64, linux/arm64]
+    build_args:
+      VERSION: 1.2.3
+      COMMIT: {run: sha}
+    push: false
+  image-push:
+    kind: image
+    file: build/Dockerfile
+    target: runtime
+    platforms: [linux/amd64, linux/arm64]
+    build_args:
+      VERSION: 1.2.3
+      COMMIT: {run: sha}
+    push: true
+    tags:
+      - {repository: team/shop, tag: {run: sha}}
+      - {repository: team/shop, tag: latest}
+    needs: image
+    when: {input: enable_delivery}
+  deploy:
+    image: docker.io/library/ubuntu:24.04
+    needs: image-push
+    when: {input: enable_delivery}
+    secrets:
+      KUBE_TOKEN: {store: vault, key: KUBE_TOKEN, field: value}
+    run: |
+      # Roll out
+      (
+        export KUBE_TOKEN="${KUBE_TOKEN}"
+        kubectl set image deployment/shop shop=registry.example.test/team/shop:${LAUNCHWAY_COMMIT}
+      )
+      echo "$LAUNCHWAY_COMMIT on $LAUNCHWAY_BRANCH"
+  publish:
+    image: docker.io/library/ubuntu:24.04
+    needs: image-push
+    when: {input: enable_delivery}
+    run: |
+      (
+        export TOKEN="${{ secrets.GITHUB_TOKEN }}"
+        npm publish
+      )
+
+--- findings
+exact     hosted.on.push               .github/workflows/release.yml:3 The push trigger carries over, with its branch, tag and path filters
+different hosted.on.ignore             .github/workflows/release.yml:5 Launchway cannot exclude branches or tags by pattern, so branches-ignore was not carried; path exclusions use paths_ignore, which cannot be combined with paths -> List the branches or tags that should run instead of the ones that should not
+manual    hosted.on.pr_target          .github/workflows/release.yml:6 This trigger runs with secrets against code from a pull request. Launchway does not run untrusted pull request code with secrets -> Decide what must run on a pull request from a fork; see the pull request trust guide, then add a pull_request trigger by hand
+manual    hosted.on.other              .github/workflows/release.yml:8 The event release starts the old workflow but has no trigger in the pipeline file -> Use a webhook trigger or a result trigger (see the triggers guide), or start the pipeline by hand
+different hosted.job.runs_on           .github/workflows/release.yml:12 The runner label ubuntu-latest is not carried (this holds for every job that names it): Launchway chooses the Station by its own configuration and runs steps in a container image -> Name the image the job needs; to pick a Station use the runner key of the step
+exact     hosted.job                   .github/workflows/release.yml:12 The job became a step; its commands run in order in one script
+different write.dry.gated              .github/workflows/release.yml:12 Step image delivers (it pushes an image) and is switched off by the dry import: it is skipped until the input enable_delivery is true -> Compare results with the old system first, then set the default of the input enable_delivery to true
+different write.image.registry         .github/workflows/release.yml:12 Step image-push pushes the image to repository team/shop of Launchway's built-in registry instead of the registry the old file named -> To push elsewhere, name a registry your Stations list in the step's tags (registry:)
+different hosted.uses.checkout_opts    .github/workflows/release.yml:14 The checkout options fetch-depth were not carried: Launchway checks out the commit that started the run -> Fetch history or submodules in the script (git fetch --unshallow, git submodule update) if needed
+different hosted.uses.buildx           .github/workflows/release.yml:17 Not needed: image steps build with the Station's builder, and platforms are a setting of the image step -> Nothing
+different hosted.uses.buildx           .github/workflows/release.yml:18 Not needed: image steps build with the Station's builder, and platforms are a setting of the image step -> Nothing
+manual    hosted.uses.login            .github/workflows/release.yml:19 A registry login for registry.example.test is not copied: Launchway logs in to registries from the Station's configuration -> Add the registry and its credentials to the Station's image settings (names of secrets only in the pipeline)
+manual    hosted.uses.metadata         .github/workflows/release.yml:24 Tags and labels worked out by this step were not carried -> Write the tags on the image step: a commit tag with {run: sha}, a fixed tag, or a version from an input
+different hosted.uses.buildpush        .github/workflows/release.yml:28 The image build became an image step, which scans and records provenance as well; it pushes to Launchway's built-in registry, not the registry named in the old file -> Check the tags, and name another registry in the step if you push elsewhere
+different hosted.expr                  .github/workflows/release.yml:35 Expressions were replaced by shell variables where the value is known: github.sha -> Nothing, unless the new value reads differently
+different hosted.expr                  .github/workflows/release.yml:38 Expressions were replaced by shell variables where the value is known: github.sha -> Nothing, unless the new value reads differently
+exact     hosted.job                   .github/workflows/release.yml:42 The job became a step; its commands run in order in one script
+different write.dry.gated              .github/workflows/release.yml:42 Step deploy delivers (it runs kubectl set image) and is switched off by the dry import: it is skipped until the input enable_delivery is true -> Compare results with the old system first, then set the default of the input enable_delivery to true
+different write.image.default          .github/workflows/release.yml:42 The steps deploy, publish name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     hosted.job.needs             .github/workflows/release.yml:43 Dependencies between jobs carry over
+different hosted.job.environment       .github/workflows/release.yml:44 The job deploys to the environment production, so it is marked as delivering. The reviewers and wait timers set on that environment in the old system were not read -> Add an approval step before it, or protect the Airfield; see the approvals guide
+exact     hosted.uses.checkout         .github/workflows/release.yml:48 Launchway checks the repository out before the first step
+different hosted.expr                  .github/workflows/release.yml:50 Expressions were replaced by shell variables where the value is known: github.sha -> Nothing, unless the new value reads differently
+exact     hosted.step.run              .github/workflows/release.yml:50 Commands carry over
+exact     hosted.env                   .github/workflows/release.yml:51 Variables carry over; a step's own values wrap its commands, a job's values are the step's environment and the workflow's are the pipeline's defaults
+different write.secret                 .github/workflows/release.yml:52 Secret KUBE_TOKEN is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+different hosted.step.env_names        .github/workflows/release.yml:53 The variable GITHUB_SHA was replaced by its Launchway counterpart -> Check the value: Launchway reports branch and tag separately
+different hosted.step.env_names        .github/workflows/release.yml:53 The variable GITHUB_REF_NAME was replaced by its Launchway counterpart -> Check the value: Launchway reports branch and tag separately
+exact     hosted.step.run              .github/workflows/release.yml:53 Commands carry over
+exact     hosted.job                   .github/workflows/release.yml:55 The job became a step; its commands run in order in one script
+different write.dry.gated              .github/workflows/release.yml:55 Step publish delivers (it runs npm publish) and is switched off by the dry import: it is skipped until the input enable_delivery is true -> Compare results with the old system first, then set the default of the input enable_delivery to true
+exact     hosted.job.needs             .github/workflows/release.yml:56 Dependencies between jobs carry over
+exact     hosted.step.run              .github/workflows/release.yml:58 Commands carry over
+exact     hosted.env                   .github/workflows/release.yml:59 Variables carry over; a step's own values wrap its commands, a job's values are the step's environment and the workflow's are the pipeline's defaults
+manual    hosted.secret.token          .github/workflows/release.yml:60 The old system made a token for each run, and Launchway does not -> Create an access token for the repository and give it to the step as a named secret
+secrets: KUBE_TOKEN
