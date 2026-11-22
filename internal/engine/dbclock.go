@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 )
@@ -65,6 +66,13 @@ func (e *Engine) syncClock() {
 // are the same case as a server restart: nobody could renew them, so the
 // restart rule applies (see recoverLeases): live leases and runners get a
 // fresh TTL, and the reaper expires only what stays silent after that.
+// alive is what the reaper does each tick to say this server is here: it records it, and looks (every few seconds)
+// whether a server of an older release is still connected, which commands read without asking the database.
+func (e *Engine) alive(ctx context.Context) {
+	e.refreshOlder(ctx)
+	e.markAlive()
+}
+
 func (e *Engine) markAlive() {
 	unlock := e.writeLock()
 	defer unlock()
