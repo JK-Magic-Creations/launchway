@@ -50,7 +50,8 @@ func b2i(b bool) int {
 
 const pullCols = `id, repo_id, number, title, body, author, source_repo_id, source_branch, target_branch, state, draft, labels,
  head_sha, base_sha, merge_base, merge_state, merge_files, merge_behind, merge_ahead, merge_checked_head, merge_checked_base, merge_checked_at, merge_reason,
- merge_commit, merge_method, merged_by, reverts, auto_merge, auto_merge_by, created_at, updated_at, merged_at, closed_at, closed_by`
+ merge_commit, merge_method, merged_by, reverts, auto_merge, auto_merge_by, created_at, updated_at, merged_at, closed_at, closed_by,
+ allow_maintainer_edits, run_approved_head`
 
 // pulled is a row with what the merge judgment was made for.
 type pulled struct {
@@ -60,15 +61,16 @@ type pulled struct {
 
 func scanPull(sc interface{ Scan(...any) error }) (pulled, error) {
 	var p pulled
-	var draft int
+	var draft, edits int
 	var labels, files, state, mstate string
 	var created, updated, merged, closed, checked int64
 	if err := sc.Scan(&p.ID, &p.RepoID, &p.Number, &p.Title, &p.Body, &p.Author, &p.SourceRepo, &p.SourceBranch, &p.TargetBranch, &state, &draft, &labels,
 		&p.HeadSHA, &p.BaseSHA, &p.MergeBase, &mstate, &files, &p.Mergeability.Behind, &p.Mergeability.Ahead, &p.checkedHead, &p.checkedBase, &checked, &p.Mergeability.Reason,
-		&p.MergeCommit, &p.MergeMethod, &p.MergedBy, &p.Reverts, &p.AutoMerge, &p.AutoMergeBy, &created, &updated, &merged, &closed, &p.ClosedBy); err != nil {
+		&p.MergeCommit, &p.MergeMethod, &p.MergedBy, &p.Reverts, &p.AutoMerge, &p.AutoMergeBy, &created, &updated, &merged, &closed, &p.ClosedBy,
+		&edits, &p.RunApprovedHead); err != nil {
 		return p, err
 	}
-	p.State, p.Draft = State(state), draft != 0
+	p.State, p.Draft, p.AllowMaintainerEdits = State(state), draft != 0, edits != 0
 	_ = json.Unmarshal([]byte(labels), &p.Labels)
 	_ = json.Unmarshal([]byte(files), &p.Mergeability.Files)
 	if p.Labels == nil {
@@ -98,16 +100,19 @@ func (s *Store) Create(ctx context.Context, repoID, author string, n New, head, 
 	if err := n.Validate(); err != nil {
 		return PullRequest{}, err
 	}
-	num, err := s.nextNumber(ctx, repoID)
-	if err != nil {
-		return PullRequest{}, err
+	num := n.Number
+	if num == 0 {
+		var err error
+		if num, err = s.nextNumber(ctx, repoID); err != nil {
+			return PullRequest{}, err
+		}
 	}
 	now := s.now()
 	labels, _ := json.Marshal(n.Labels)
 	id := ids.New("pul")
 	if _, err := s.db.Exec(ctx, `INSERT INTO pull_requests(id, repo_id, number, title, body, author, source_branch, target_branch, state, draft, labels,
-		head_sha, base_sha, merge_base, reverts, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?, 'open', ?,?,?,?,?,?,?,?)`,
-		id, repoID, num, n.Title, n.Body, author, n.SourceBranch, n.TargetBranch, b2i(n.Draft), string(labels), head, base, mergeBase, n.Reverts, ms(now), ms(now)); err != nil {
+		head_sha, base_sha, merge_base, reverts, created_at, updated_at, source_repo_id, allow_maintainer_edits) VALUES(?,?,?,?,?,?,?,?, 'open', ?,?,?,?,?,?,?,?,?,?)`,
+		id, repoID, num, n.Title, n.Body, author, n.SourceBranch, n.TargetBranch, b2i(n.Draft), string(labels), head, base, mergeBase, n.Reverts, ms(now), ms(now), n.SourceRepo, b2i(n.AllowMaintainerEdits)); err != nil {
 		return PullRequest{}, err
 	}
 	for _, a := range n.Assignees {

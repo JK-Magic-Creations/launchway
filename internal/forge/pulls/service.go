@@ -50,7 +50,11 @@ type Service struct {
 	// before the rules are read; work tracking uses it for the rules about
 	// agents. actor is who merges.
 	MergeCheck func(ctx context.Context, repoID string, p PullRequest, actor string) error
-	Log        *slog.Logger
+	// SameNetwork says whether two repositories are forks of one root (or one
+	// is the other's parent): a pull request may come only from one of them
+	// (nil: pull requests from forks are not available).
+	SameNetwork func(ctx context.Context, a, b string) (bool, error)
+	Log         *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time
 
@@ -148,6 +152,9 @@ func (s *Service) Open(ctx context.Context, repoID, author string, n New) (PullR
 	if err := n.Validate(); err != nil {
 		return PullRequest{}, err
 	}
+	if n.SourceRepo != "" {
+		return s.openFromFork(ctx, repoID, author, n)
+	}
 	refs, err := s.Git.Refs(ctx, repoID)
 	if err != nil {
 		return PullRequest{}, err
@@ -207,6 +214,7 @@ func zero(sha string) bool { return strings.Trim(sha, "0") == "" }
 // moved, a merge by other means is noticed, and the judgment of
 // mergeability is redone in the background.
 func (s *Service) Pushed(ctx context.Context, repoID, actor string, ups []RefUpdate) {
+	s.forkHeadsMoved(ctx, repoID, actor, ups)
 	for _, u := range ups {
 		br, ok := strings.CutPrefix(u.Name, "refs/heads/")
 		if !ok || zero(u.New) {

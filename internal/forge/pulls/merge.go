@@ -169,7 +169,7 @@ func (s *Service) land(ctx context.Context, repoID string, p PullRequest, in Mer
 	for attempt := 0; attempt < mergeAttempts; attempt++ {
 		ups = nil
 		_, lastErr = s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
-			tgt, src := branchRef(p.TargetBranch), branchRef(p.SourceBranch)
+			tgt, src := branchRef(p.TargetBranch), p.headRef()
 			base, head := refs[tgt], refs[src]
 			switch {
 			case base == "":
@@ -196,7 +196,7 @@ func (s *Service) land(ctx context.Context, repoID string, p PullRequest, in Mer
 				return nil, err
 			}
 			ups = []storage.RefUpdate{{Name: tgt, Old: base, New: merged}}
-			if g.deleteBranch && s.canDeleteSource(ctx, repoID, p) {
+			if g.deleteBranch && p.SourceRepo == "" && s.canDeleteSource(ctx, repoID, p) {
 				ups = append(ups, storage.RefUpdate{Name: src, Old: head, New: strings.Repeat("0", 40)})
 			}
 			return ups, nil
@@ -394,7 +394,7 @@ func (s *Service) Reopen(ctx context.Context, repoID string, p PullRequest, acto
 	if err != nil {
 		return err
 	}
-	head, base := refs[branchRef(p.SourceBranch)], refs[branchRef(p.TargetBranch)]
+	head, base := refs[p.headRef()], refs[branchRef(p.TargetBranch)]
 	switch {
 	case head == "":
 		return conflict("the branch %s no longer exists; push it again to reopen this pull request", p.SourceBranch)
