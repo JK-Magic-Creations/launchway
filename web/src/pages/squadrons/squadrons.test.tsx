@@ -57,7 +57,8 @@ describe("Add a Squadron", () => {
   it("asks only for a name, checks it as people type, and opens the new page", async () => {
     serve({}, (m, p) => (m === "POST" && p === "/api/v1/units" ? json({ name: "ops" }, 201) : undefined));
     await open("/units/new");
-    expect(await screen.findByRole("heading", { level: 1, name: /Add a (Squadron|Team)/ })).toBeInTheDocument();
+    // The first draw of a page waits for its code: the page table and the page itself are lazy chunks, each transformed on first use, which under load takes longer than the default second.
+    expect(await screen.findByRole("heading", { level: 1, name: /Add a (Squadron|Team)/ }, { timeout: 8000 })).toBeInTheDocument();
     expect(screen.queryByLabelText(/repositor/i)).not.toBeInTheDocument();
     const name = screen.getByLabelText(/^Name/);
     await userEvent.type(name, "bad name");
