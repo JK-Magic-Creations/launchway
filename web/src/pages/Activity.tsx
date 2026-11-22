@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
+import { useMe } from "../auth";
 import { api, type Project, type RunSummary } from "../api";
 import { launchApi, type LaunchLineView } from "../api/launch";
 import { EntityLink } from "../components/EntityLink";
@@ -14,9 +15,13 @@ import { useNow, useStream } from "../live";
 import { approx } from "../estimate";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { oneOf, useUrlState } from "../urlState";
+import { organizeApi } from "../organizeApi";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
 const EventsPage = lazy(() => import("./Events").then((m) => ({ default: m.EventsPage })));
+// The same Sorties arranged by place (Wing, Squadron, pipeline), in the explorer: loaded when asked for.
+const RunsExplorer = lazy(() => import("../explorer/RunsExplorer"));
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" }, { key: "running", label: "Running" }, { key: "failed", label: "Failed" }, { key: "succeeded", label: "Passed" },
@@ -48,11 +53,16 @@ export function ActivityPage({ events }: { events?: boolean }) {
 }
 
 function RunsActivity() {
-  const [project, setProject] = useState("");
-  const [status, setStatus] = useState("");
-  const [lane, setLane] = useState("");
+  // Every filter is in the address, so a link or a bookmark opens the same list.
+  const [project, setProject] = useUrlState("project", "");
+  const [status, setStatus] = useUrlState("status", "");
+  const [lane, setLane] = useUrlState("lane", "");
+  // Which Sorties: all, only those that need a person (the Home page's rule) or only those in progress.
+  const [show, setShow] = useUrlState("show", "all", oneOf("all", "needs", "running"));
+  const [by, setBy] = useUrlState("by", "list", oneOf<"list" | "place">("list", "place"));
+  const me = useMe();
   const now = useNow(1000, true);
-  const runsFn = useCallback((bg: boolean) => api.runs({ project, status, lane, limit: 100 }, bg), [project, status, lane]);
+  const runsFn = useCallback((bg: boolean) => (show === "all" ? api.runs({ project, status, lane, limit: 100 }, bg) : organizeApi.attentionRuns(show, bg)), [project, status, lane, show]);
   const runs = useLoad(runsFn);
   const trendFn = useCallback((bg: boolean) => (project ? api.runs({ project, limit: 30 }, bg) : Promise.resolve<RunSummary[]>([])), [project]);
   const trendRuns = useLoad(trendFn);
@@ -69,7 +79,7 @@ function RunsActivity() {
     const l = list ?? [];
     return { running: l.filter((r) => !isDone(r.status) && (r.waiting?.length ?? 0) === 0).length, waiting: l.filter((r) => !isDone(r.status) && (r.waiting?.length ?? 0) > 0).length, failed: l.filter((r) => r.status === "failed").length };
   }, [list]);
-  const filtered = !!(status || project || lane);
+  const filtered = !!(status || project || lane || show !== "all");
   const trend = trendOf(trendRuns.data ?? []);
 
   const sentence = list === null ? terms().say("Loading the {runs}.") : list.length === 0 ? (filtered ? terms().say("No {run} matches these filters.") : "Nothing has run yet.")
@@ -83,12 +93,18 @@ function RunsActivity() {
         actions={<span className={"vchip " + (live ? "run" : "")}><span className={live ? "st run" : "st idle"} aria-hidden="true" style={{ width: 12, height: 12 }} />{live ? "Live" : "Connecting"}</span>} />
 
       <div className="toolbar2">
-        <div className="pillbtns" role="group" aria-label="Filter by state">
-          {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key)}>{f.label}</button>)}
+        <div className="pillbtns" role="group" aria-label="Which runs">
+          {([["all", "All"], ["needs", "Needs attention"], ["running", "In progress"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k, "push")}>{l}</button>)}
         </div>
+        <div className="pillbtns" role="group" aria-label="How to show them">
+          {([["list", "List"], ["place", "By place"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k, "push")}>{l}</button>)}
+        </div>
+        {by === "list" && <div className="pillbtns" role="group" aria-label="Filter by state">
+          {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
+        </div>}
         {(projects.data?.length ?? 0) > 1 && (
           <label className="select"><span className="visually-hidden">Project</span>
-            <select value={project} onChange={(e) => setProject(e.target.value)}>
+            <select value={project} onChange={(e) => setProject(e.target.value, "push")}>
               <option value="">All projects</option>
               {projects.data!.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
             </select>
@@ -96,7 +112,7 @@ function RunsActivity() {
         )}
         {laneNames.length > 0 && (
           <label className="select"><span className="visually-hidden">Lane</span>
-            <select value={lane} onChange={(e) => setLane(e.target.value)}>
+            <select value={lane} onChange={(e) => setLane(e.target.value, "push")}>
               <option value="">All lanes</option>
               {laneNames.map((n) => <option key={n} value={n}>lane {n}</option>)}
             </select>
@@ -121,7 +137,8 @@ function RunsActivity() {
           {filtered ? "Try another filter." : <>Start one from <Link href="/projects">Code</Link>, push to a watched branch, or try <span className="mono">launchway run</span> in a repository.</>}
         </EmptyState></Sheet>
       )}
-      {list && list.length > 0 && (
+      {list && list.length > 0 && by === "place" && <Suspense fallback={<div className="loading">Loading…</div>}><RunsExplorer runs={list} now={now} me={me?.user ?? ""} /></Suspense>}
+      {list && list.length > 0 && by === "list" && (
         <Sheet title={terms().say("{Runs}")} actions={<span className="faint small">Newest first. Each dot is a place the change has to pass.</span>}>
           {list.map((r) => <RunRow key={r.id} r={r} line={byRun.get(r.id)} now={now} />)}
         </Sheet>

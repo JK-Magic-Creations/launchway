@@ -464,6 +464,22 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `auth.sign_in` | `GET /auth/callback`: a sign-in that succeeded (with the groups the provider gave) or failed (with why) |
 | `auth.sign_out` | `POST /auth/logout`, for a session that existed |
 | `auth.setup_now` | `POST /api/v1/auth/setup-now`: sign-in was asked for on an installation that ran with none; the servers' next start uses built-in accounts |
+| `prefs.attention.dismiss` | `POST /api/v1/attention/dismiss`: Sets one entry aside for the caller only: `{"key", "snooze_hours"}`; without snooze it returns when something newer replaces it |
+| `prefs.attention.restore` | `POST /api/v1/attention/restore`: Brings a set-aside entry back (`{"key"}`, or `*` for all) |
+| `folder.create` | `POST /api/v1/organize/{area}/folders`: Makes a folder at a level (`scope`: `base`, `organization`, `unit:<name>` or `project:<name>`) |
+| `folder.update` | `PATCH /api/v1/organize/folders/{id}`: Renames, describes, reorders or moves a folder |
+| `folder.delete` | `DELETE /api/v1/organize/folders/{id}`: Deletes a folder; what was in it moves up to its parent |
+| `folder.move` | `POST /api/v1/organize/{area}/move`: Files an item in a folder, or takes it out (`folder` empty) |
+| `labels.set` | `PUT /api/v1/organize/{area}/labels`: Replaces an item's labels (up to 20, lower case) |
+| `layout.set` | `PUT /api/v1/layouts/{page}`: Sets the shared layout of a page at a level, and whether it is locked for the levels below |
+| `layout.reset` | `DELETE /api/v1/layouts/{page}`: Removes a level's shared layout of a page (`?scope=`) |
+| `prefs.layout.set` | `PUT /api/v1/me/layouts/{page}`: Saves the caller's own arrangement of a page; it follows them across devices and never changes what others see |
+| `prefs.layout.reset` | `DELETE /api/v1/me/layouts/{page}`: Resets the caller's own arrangement of a page to the shared default |
+| `prefs.layout.reset_all` | `DELETE /api/v1/me/layouts`: Resets all of the caller's own arrangements (favorites stay) |
+| `prefs.favorite` | `POST /api/v1/me/favorites`: Adds or removes a favorite for the caller |
+| `layout.import` | `POST /api/v1/layouts-import`: Applies such a document: adds and updates what it names and never deletes what it leaves out |
+| `prefs.activity.clear` | `DELETE /api/v1/activity`: someone deleted their own trail of what they opened |
+| `prefs.activity.pause` | `PUT /api/v1/activity/pause`: someone paused or resumed their own trail |
 | `auth.local.password_changed` | `POST /api/v1/account/password`: someone changed their own password (their other sessions end) |
 | `auth.local.second_factor_begin` | `POST /api/v1/account/second-factor`: someone started adding an authenticator |
 | `auth.local.second_factor_added` | `POST /api/v1/account/second-factor/confirm`: the authenticator was proven with a code |

@@ -98,7 +98,9 @@ export function attention(i: AttentionInput): Attention[] {
   const out: Attention[] = [];
   for (const p of i.projects) {
     const r = p.last_run;
-    if (r && r.status === "failed") {
+    // The same rule as the server's (internal/engine/attention.go) as far as the project's latest run shows it: nothing newer has
+    // run, so a failure is listed when it is on the default branch or is the person's own.
+    if (r && r.status === "failed" && ((r.branch === p.default_branch && r.event !== "pull_request") || (!!i.me.user && r.actor === i.me.user))) {
       out.push({ key: `run:${r.id}`, tone: "bad", title: terms().say(`{Run} #${r.number} of ${p.name} failed`), entities: [{ kind: "project", name: p.name }], detail: r.message || r.pipeline, href: `/runs/${r.id}`, button: "See what went wrong" });
     }
   }

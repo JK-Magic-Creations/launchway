@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
 import { api, type Project, type RunSummary } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
@@ -12,6 +12,9 @@ import { Status, stateOf } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
 import { terms } from "../terms";
+
+// The grouped, searchable view loads after the first paint; the flat list below is what shows meanwhile (and keeps the page height).
+const PipelinesExplorer = lazy(() => import("../explorer/PipelinesExplorer"));
 
 /** What starts each project's pipeline, read from the pipeline file at the tip of its default branch. */
 function useStarts(projects: Project[]): Record<string, string> | null {
@@ -46,6 +49,7 @@ export function PipelinesPage() {
   }, [all]);
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   const rows = inst.projects;
+  const flat = flatList(rows, byProject, starts, now);
   const failing = rows.filter((p) => p.last_run?.status === "failed").length;
   const running = rows.filter((p) => p.last_run?.status === "running" || p.last_run?.status === "queued").length;
   return (
@@ -66,6 +70,15 @@ export function PipelinesPage() {
           {terms().say("Each project has a pipeline: its steps are read from the project's Git repository. Add a project and its pipeline appears here, with what starts it and every {run}'s result.")}
         </EmptyState></Sheet>
       ) : (
+        <Suspense fallback={flat}><PipelinesExplorer projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
+      )}
+    </div>
+  );
+}
+
+/* kept as the placeholder while the Explorer loads */
+function flatList(rows: Project[], byProject: Map<string, RunSummary[]>, starts: Record<string, string> | null, now: number) {
+  return (
         <Sheet title="Every pipeline">
           <ul className="rowlist">
             {rows.map((p) => {
@@ -88,7 +101,5 @@ export function PipelinesPage() {
             })}
           </ul>
         </Sheet>
-      )}
-    </div>
   );
 }

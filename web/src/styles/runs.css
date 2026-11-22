@@ -58,7 +58,9 @@
 }
 .ll { display: flex; padding: 0 14px 0 0; }
 .ll:hover { background: rgba(148, 163, 184, .08); }
-.ln { flex: 0 0 56px; text-align: right; padding-right: 14px; color: var(--log-num); user-select: none; }
+.ln { flex: 0 0 56px; text-align: right; padding-right: 14px; color: var(--log-num); user-select: none; text-decoration: none; cursor: pointer; }
+.ln:hover { color: var(--log-text); }
+.ll-linked { background: color-mix(in srgb, var(--warn) 22%, transparent); }
 .lt { white-space: pre-wrap; word-break: break-word; min-width: 0; }
 .ll-system .lt { color: var(--log-dim); font-style: italic; }
 .ll-stderr .lt { color: var(--log-err); }

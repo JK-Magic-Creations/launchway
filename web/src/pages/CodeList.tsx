@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
 import { useHosting } from "./SshKeys";
-import { api, type RunSummary } from "../api";
+import { hostedHref, useHostedRepos } from "./hostedRepos";
+import { api, type Project, type RunSummary } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
@@ -16,12 +17,16 @@ import { TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
 import { terms } from "../terms";
 
+// The grouped, searchable list loads after the first paint; the flat list is what shows meanwhile.
+const Explorer = lazy(() => import("../explorer/PipelinesExplorer"));
+
 /** Code: every project as a repository, with where it lives and how its last pipeline run went. */
 export function CodeListPage() {
   const inst = useInstallation();
   const me = useMe();
   const now = useNow(15000);
   const hosting = useHosting();
+  const hosted = useHostedRepos() ?? [];
   const runsFn = useCallback((bg: boolean) => api.runs({ limit: 100 }, bg), []);
   const all = useLoad(runsFn, 15000).data;
   const by = useMemo(() => {
@@ -31,11 +36,12 @@ export function CodeListPage() {
   }, [all]);
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   const rows = inst.projects;
+  const flat = flatList(rows, by, now);
   const unreachable = rows.filter((p) => p.error).length;
   return (
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
-        sentence={rows.length === 0 ? "Your code lives in Git repositories. None is connected yet." : unreachable > 0 ? <><b>{unreachable} {unreachable === 1 ? "repository cannot" : "repositories cannot"} be reached.</b> The others are read normally.</> : `${rows.length} ${rows.length === 1 ? "repository" : "repositories"} connected, all reachable.`}
+        sentence={rows.length === 0 && hosted.length > 0 ? `${hosted.length} ${hosted.length === 1 ? "repository is" : "repositories are"} hosted by Launchway; none is connected as a project with a pipeline yet.` : rows.length === 0 ? "Your code lives in Git repositories. None is connected yet." : unreachable > 0 ? <><b>{unreachable} {unreachable === 1 ? "repository cannot" : "repositories cannot"} be reached.</b> The others are read normally.</> : `${rows.length} ${rows.length === 1 ? "repository" : "repositories"} connected, all reachable.`}
         actions={<><LinkButton href="/graph" sm>Graph</LinkButton>{hosting === "on" && <LinkButton href="/repositories" sm>Hosted by Launchway</LinkButton>}{rows.length > 0 && me?.admin ? <WizardButton wizard="connect-repository" label="Add a project" /> : null}</>} />
       {rows.length > 0 && (
         <Band cells={[
@@ -44,10 +50,32 @@ export function CodeListPage() {
           { key: "fail", label: terms().say("Last {run} failed"), value: rows.filter((p) => p.last_run?.status === "failed").length, foot: "see Pipelines" },
         ]} />
       )}
+      {hosted.length > 0 && (
+        <Sheet title="Hosted by Launchway" actions={<LinkButton href="/repositories" sm>All hosted repositories</LinkButton>}>
+          <ul className="rowlist">
+            {hosted.slice(0, 20).map((r) => (
+              <li key={r.id}>
+                <div className="main">
+                  <div className="nm"><a href={hostedHref(r)}>{r.path}</a> <Chip>{r.visibility}</Chip></div>
+                  <div className="sb faint">default branch {r.default_branch}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
       {rows.length === 0 ? (
-        <WizardEmpty title="No projects yet" wizard="connect-repository" label="Add a project"
+        <WizardEmpty title={hosted.length > 0 ? "No repository has a pipeline yet" : "No projects yet"} wizard="connect-repository" label="Add a project"
           text="A project is a Git repository. Pick one and Launchway reads its pipeline from Git and runs it each time you push." />
       ) : (
+        <Suspense fallback={flat}><Explorer as="projects" projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
+      )}
+    </div>
+  );
+}
+
+function flatList(rows: Project[], by: Map<string, RunSummary[]>, now: number) {
+  return (
         <Sheet title="Every repository" actions={<LinkButton href="/code/files" sm>Files and reviews</LinkButton>}>
           <ul className="rowlist">
             {rows.map((p) => {
@@ -70,7 +98,5 @@ export function CodeListPage() {
             })}
           </ul>
         </Sheet>
-      )}
-    </div>
   );
 }

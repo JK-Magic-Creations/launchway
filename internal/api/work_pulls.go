@@ -117,7 +117,7 @@ func (s *Server) pullAuthors(ctx context.Context, p pulls.PullRequest) []string 
 	}
 	if revs, err := s.Forge.Pulls.Store.Revisions(ctx, p.ID); err == nil {
 		for _, r := range revs {
-			if isAgentUser(r.Actor) && !contains(authors, agentNameOf(r.Actor)) {
+			if isAgentUser(r.Actor) && !listHas(authors, agentNameOf(r.Actor)) {
 				authors = append(authors, agentNameOf(r.Actor))
 			}
 		}
@@ -159,7 +159,7 @@ func (s *Server) agentChangeOf(ctx context.Context, repo forge.Repository, p pul
 		itemIDs = append(itemIDs, it.ID)
 		ch.ItemType = it.Type
 		for _, a := range it.Assignees {
-			if a.Kind == work.KindAgent && !contains(authors, a.Name) {
+			if a.Kind == work.KindAgent && !listHas(authors, a.Name) {
 				// Whoever worked the item is treated as an author: it is not independent of the change.
 				authors = append(authors, a.Name)
 			}
@@ -168,7 +168,7 @@ func (s *Server) agentChangeOf(ctx context.Context, repo forge.Repository, p pul
 	return ch, authors, itemIDs, nil
 }
 
-func contains(l []string, v string) bool {
+func listHas(l []string, v string) bool {
 	for _, x := range l {
 		if x == v {
 			return true

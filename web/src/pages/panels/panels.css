@@ -1,0 +1,25 @@
+.hm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.hm-grid > .hm-sec { min-width: 0; }
+.hm-span-1 { grid-column: span 1; } .hm-span-2 { grid-column: span 2; } .hm-span-3 { grid-column: span 3; }
+@media (max-width: 900px) { .hm-grid { grid-template-columns: 1fr; } .hm-grid > .hm-sec { grid-column: 1 / -1; } }
+.pn { background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r2); }
+.pn > h2 { margin: 0; padding: 12px 16px; font-size: var(--fs-section); border-bottom: 1px solid var(--line); }
+.pn-b { padding: 12px 16px; }
+.pn-b p { margin: 0 0 8px; }
+.pn-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pn-list li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pn-day { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.pn-changed { color: var(--signal-ink); font-weight: 600; }
+.pn-err { color: var(--bad-ink); }
+.pn-skel { height: 72px; border-radius: var(--r1); background: linear-gradient(90deg, var(--sheet-2), var(--sheet-3), var(--sheet-2)); background-size: 200% 100%; animation: hm-sh 1.4s linear infinite; }
+.pn-ctl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.ar-modes { display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap; border: 0; padding: 0; min-width: 0; }
+.ar-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ar-list li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; border: 1px solid transparent; border-radius: var(--r1); }
+.ar-list li[draggable="true"] { cursor: grab; }
+.ar-list li.over { border-color: var(--signal); background: var(--signal-wash); }
+.ar-list li > span:first-child { flex: 1; min-width: 120px; }
+.ar-form { display: flex; flex-direction: column; gap: 10px; padding: 18px; min-width: min(480px, 88vw); }
+.ar-form label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.ar-form input, .ar-form select, .ar-form textarea { font: 14px var(--font); border: 1px solid var(--control-line); border-radius: var(--r1); padding: 6px 8px; background: var(--sheet); color: var(--ink); }
+.ar-form textarea { min-height: 120px; }

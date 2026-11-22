@@ -1,3 +1,4 @@
+import { oneOf, useUrlState } from "../urlState";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type CasePage, type CaseSort, type CompareCase, type Facet, type RunDetail, type RunTests, type StepTests, type TestCase, type TestCompare } from "../api";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -33,14 +34,9 @@ export function TestsTab({ run, version, step, onStep }: {
   const [tests, setTests] = useState<RunTests | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [caseId, setCaseId] = useState(caseFromURL);
-  const [view, setView] = useState<"debrief" | "results">(() => (new URLSearchParams(location.search).get("view") === "results" ? "results" : "debrief"));
-  const chooseView = useCallback((v: "debrief" | "results") => {
-    const q = new URLSearchParams(location.search);
-    q.set("tab", "tests");
-    if (v === "results") q.set("view", "results"); else q.delete("view");
-    history.replaceState(null, "", location.pathname + "?" + q.toString());
-    setView(v);
-  }, []);
+  // The view is in the address (?view=results), so a link or a bookmark opens the same one.
+  const [view, setView] = useUrlState<"debrief" | "results">("view", "debrief", oneOf("debrief", "results"));
+  const chooseView = setView;
   useEffect(() => {
     let alive = true;
     api.runTests(run.id, true).then((t) => { if (alive) { setTests(t); setError(null); } }).catch((e) => alive && setError(e));
@@ -98,14 +94,16 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
 }) {
   const t = tests.totals!;
   const bad = failing(t);
-  const [filter, setFilter] = useState<Filter>(bad > 0 ? "failed" : "");
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
-  const [tag, setTag] = useState("");
-  const [suite, setSuite] = useState("");
-  const [variant, setVariant] = useState("");
-  const [sort, setSort] = useState<CaseSort>("failures");
-  const [grouping, setGrouping] = useState<Grouping>(tests.steps.length > 1 ? "step" : "none");
+  // The filters are in the address (?tab=tests&result=failed&find=timeout&suite=api&order=slowest&group=suite), so a filtered
+  // list can be linked; typing waits a moment before it asks the server.
+  const [filter, setFilter] = useUrlState<Filter>("result", bad > 0 ? "failed" : "");
+  const [search, setSearch] = useUrlState("find", "");
+  const [query, setQuery] = useState(search.trim());
+  const [tag, setTag] = useUrlState("tag", "");
+  const [suite, setSuite] = useUrlState("suite", "");
+  const [variant, setVariant] = useUrlState("variant", "");
+  const [sort, setSort] = useUrlState<CaseSort>("order", "failures");
+  const [grouping, setGrouping] = useUrlState<Grouping>("group", tests.steps.length > 1 ? "step" : "none");
   const [page, setPage] = useState<CasePage | null>(null);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<unknown>(null);

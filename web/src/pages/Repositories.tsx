@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { clock } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
@@ -19,15 +19,31 @@ function Off() {
   );
 }
 
+// The grouped, searchable list loads after the first paint; the flat list is what shows meanwhile.
+const RepositoriesExplorer = lazy(() => import("../explorer/RepositoriesExplorer"));
+
 /** The repositories Launchway hosts, which the person may read. */
 export function RepositoriesPage() {
   const hosting = useHosting();
   const [repos, setRepos] = useState<HostedRepo[] | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [opened] = useState(Date.now);
   useEffect(() => { if (hosting === "on") forgeApi.repositories().then(setRepos).catch(setError); }, [hosting]);
   if (hosting === null) return null;
   if (hosting === "off") return <Off />;
   const owners = [...new Set((repos ?? []).map((r) => r.home).filter((o): o is string => !!o))];
+  const flat = repos && (
+        <Sheet title="Hosted repositories">
+      <ul className="rowlist">
+        {repos.map((r) => (
+          <li key={r.id}>
+            <div className="main"><div className="nm"><Link href={`/repositories/${encodeURIComponent(r.home ?? "")}/${encodeURIComponent(r.name)}`}>{r.path}</Link> <Chip>{r.visibility}</Chip>{r.archived && <Chip tone="warn">archived</Chip>}</div>
+              <div className="sb faint">default branch {r.default_branch}</div></div>
+          </li>
+        ))}
+      </ul>
+    </Sheet>
+  );
   return (
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
@@ -35,16 +51,7 @@ export function RepositoriesPage() {
         actions={<><Link href="/graph" className="btn btn-sm">Graph</Link> <Link href="/settings/access/ssh-keys" className="btn btn-sm">SSH keys</Link></>} />
       <ErrorBox error={error} />
       {repos && repos.length > 0 && (
-        <Sheet title="Hosted repositories">
-          <ul className="rowlist">
-            {repos.map((r) => (
-              <li key={r.id}>
-                <div className="main"><div className="nm"><Link href={`/repositories/${encodeURIComponent(r.home ?? "")}/${encodeURIComponent(r.name)}`}>{r.path}</Link> <Chip>{r.visibility}</Chip>{r.archived && <Chip tone="warn">archived</Chip>}</div>
-                  <div className="sb faint">default branch {r.default_branch}</div></div>
-              </li>
-            ))}
-          </ul>
-        </Sheet>
+        <Suspense fallback={flat}><RepositoriesExplorer repos={repos} now={opened} /></Suspense>
       )}
       {owners.length > 0 && (
         <Sheet title="By owner">

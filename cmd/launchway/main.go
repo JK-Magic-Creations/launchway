@@ -107,6 +107,9 @@ Usage:
   launchway work     items|board|sprints|milestones|agents ...   work tracking: items, boards, sprints, roadmap, agents
                                                 (launchway work, for more)
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
+  launchway attention [--json]                          what needs you: the Home page's rule, for a script or an agent
+  launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
+  launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -118,6 +121,9 @@ var commands = map[string]func([]string) error{
 	"runs":           cmdRuns,
 	"debrief":        cmdDebrief,
 	"tests":          cmdTests,
+	"attention":      cmdAttention,
+	"recent":         cmdRecent,
+	"organize":       cmdOrganize,
 	"approvals":      cmdApprovals,
 	"notifications":  cmdNotifications,
 	"deployments":    cmdDeployments,

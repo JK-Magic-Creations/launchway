@@ -58,11 +58,18 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor/confirm` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/sign-out-everywhere` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `DELETE /api/v1/activity` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail |
+| `GET /api/v1/activity` | `recent` | `recent` | — | equal |
+| `PUT /api/v1/activity` | — | — | — | exempt: the pages note what a person opened, in the background; a token or agent has no pages |
+| `PUT /api/v1/activity/pause` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --pause); an agent must not switch the person's trail off |
 | `GET /api/v1/admin/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `DELETE /api/v1/admin/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/ai/models` | `list_config (kind models)` | `models` | `launchway_model` | equal |
 | `GET /api/v1/approvals` | `list_approvals` | — | — | gap: launchway has no approvals command yet |
 | `GET /api/v1/artifact-store` | — | `blobs status` | — | gap: blobs status reads the database directly; no MCP tool |
+| `GET /api/v1/attention` | `attention` | `attention` | — | equal |
+| `POST /api/v1/attention/dismiss` | — | — | — | exempt: a personal preference of the person at the Home page (set aside until something newer replaces it); a token or agent has no Home page |
+| `POST /api/v1/attention/restore` | — | — | — | exempt: a personal preference of the person at the Home page; a token or agent has no Home page |
 | `GET /api/v1/audit` | — | — | — | gap: the audit trail is read in the UI; no MCP tool or CLI command yet |
 | `POST /api/v1/auth/link` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `POST /api/v1/auth/link/begin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
@@ -122,16 +129,32 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/graph/specification` | `graph_machine_specification` | `graph spec` | — | equal |
 | `GET /api/v1/graph/where` | `graph_where_running` | `graph where` | — | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
+| `GET /api/v1/home` | — | — | — | exempt: a read model for the Home page, worked out from the same rule as attention, plus runs and projects that list_runs and list_projects give in full |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
+| `GET /api/v1/layouts-export` | `organize` | `organize` | — | equal |
+| `POST /api/v1/layouts-import` | `organize` | `organize` | — | equal |
+| `DELETE /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
+| `GET /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
+| `PUT /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
+| `POST /api/v1/me/favorites` | — | — | — | exempt: a person's own favorites; a token or agent has no pages |
+| `DELETE /api/v1/me/layouts` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
+| `DELETE /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
+| `PUT /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `GET /api/v1/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
 | `GET /api/v1/notifications` | `list_notifications` | `notifications` | — | equal |
+| `DELETE /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
+| `PATCH /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
+| `GET /api/v1/organize/{area}` | `organize` | `organize` | — | equal |
+| `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
+| `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
+| `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
@@ -427,6 +450,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/runs/{id}/trust` | `trust_run` | `runs trust` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
+| `GET /api/v1/search` | — | — | — | exempt: the finder in the top bar: list_projects, list_runs and the repositories commands list and filter the same things for agents and scripts |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
 | `GET /api/v1/setup` | — | `users setup-code` | — | exempt: the first-run page asks it before anyone can sign in; the console command issues the code |
 | `GET /api/v1/setup-guide` | — | `doctor security` | — | exempt: the first-run guide is a walk-through in the browser; its facts are the same ones the other interfaces already read (runners, hosting, connections, projects) and the security checklist is launchway doctor security |

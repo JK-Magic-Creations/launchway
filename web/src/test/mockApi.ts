@@ -27,6 +27,11 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
         replay: { ref: "refs/heads/main", sha: "3f2a1c9aaaa" }, decisions: [{ id: 1, at: 1794646800000, trigger: "push", decision: "started", reason: "started run #7", run_id: "run_7", run_number: 7 }] },
       { id: "evt_2", project: "shop-api", at: 1794646700000, source: "webhook", source_name: "deploy", verified: false, summary: "Webhook call: deploy", decisions: [{ id: 2, at: 1794646700000, trigger: "webhook:deploy", decision: "refused", reason: "the signature did not match" }] },
     ],
+    "/api/v1/home": homeFixture(),
+    "/api/v1/organize/pipelines": organizeFixture(),
+    "/api/v1/organize/repositories": organizeFixture(),
+    "/api/v1/organize/projects": organizeFixture(),
+    "/api/v1/organize/runs": organizeFixture(),
     "/api/v1/runners": [runner()],
     "/api/v1/environments": [environment()],
     "/api/v1/runs/run_2": { ...detail, id: "run_2", project: "shop-web", number: 118, status: "running", step_list: [step({ id: "approve", status: "waiting", kind: "approval" })] },
@@ -272,4 +277,23 @@ export function toggleFixtures(): Record<string, unknown> {
     [`${p}/rollback`]: { project: "shop-api", environment: "prod", service: "shop", protected: false, action: { name: "rollback", available: true, who: "operator" },
       toggles: { since: 1_700_000_000_000, note: "1 toggle change(s) were made here after version 1.3.2 went live.", changes: [{ id: 11, toggle: "checkout-v2", actor: "ada", reason: "start at 25%", at: 1_700_000_050_000 }] } },
   };
+}
+
+/** Home as the server answers it: one failure that needs a person, one Sortie running (retrying another), two projects in a Squadron. */
+export function homeFixture() {
+  return {
+    view: "all", at: 1, counts: { needs: 1, running: 1, projects: 2 }, favorites: [{ name: "shop-api", favorite: true, last: "failed", last_number: 7, last_at: 1000, running: 1, needs: 1, history: ["succeeded", "failed"] }],
+    needs: [{ key: "failed:run_7", kind: "failed", tone: "bad", project: "shop-api", title: "Sortie #7 of shop-api failed on main", why: "It is the latest result on main, the default branch; nothing newer has run.", do: "See what went wrong, then fix it or run it again.", since: 1000, href: "/runs/run_7" }],
+    dismissed: [],
+    running: [{ id: "run_2", project: "shop-web", number: 118, branch: "main", status: "running", step: "test", started_at: 1000, created_at: 900, actor: "ana", mine: true, retry_of: 117 }],
+    categories: [{ id: "unit:shop", kind: "unit", label: "Shop", needs: 1, running: 1, failing: 1, projects: [
+      { name: "shop-api", favorite: true, last: "failed", last_number: 7, last_at: 1000, running: 0, needs: 1, history: ["succeeded", "failed"] },
+      { name: "shop-web", favorite: false, last: "succeeded", last_number: 118, last_at: 1000, running: 1, needs: 0, history: ["succeeded", "succeeded"] }] }],
+    recent: [{ id: "run_3", project: "shop-web", number: 117, branch: "main", status: "succeeded", finished_at: 900 }],
+    layout: { page: "home", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} },
+  };
+}
+
+export function organizeFixture() {
+  return { area: "pipelines", folders: [], items: {}, favorites: [], may_arrange_base: false, layout: { page: "pipelines", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} } };
 }

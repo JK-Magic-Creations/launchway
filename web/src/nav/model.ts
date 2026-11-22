@@ -178,8 +178,6 @@ function kindWord(kind: string): string {
   }
 }
 
-const repoCrumb = (p: Record<string, string>): Crumb => ({ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` });
-const pipeCrumb = (p: Record<string, string>): Crumb => ({ label: p.name, href: `/projects/${enc(p.name)}/pipeline` });
 
 function page(pattern: string, section: SectionId, tab: string | undefined, title: (p: Record<string, string>) => string,
   trail: (p: Record<string, string>) => Crumb[]): PageInfo {

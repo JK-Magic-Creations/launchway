@@ -1,11 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { HomeAnswer } from "../organizeApi";
 import { applications } from "../guided/derive";
 import { approval, environment, me, project, run, runner } from "../test/fixtures";
 import { expectEntitiesLinked } from "../test/entities";
 import { Home, type HomeProps } from "./Home";
 import { setTerms, resetTerms } from "../terms";
-import { afterEach, beforeEach } from "vitest";
+import { beforeEach } from "vitest";
 // These tests are about behavior and read the plain words: the plain business set. The themed words have their own tests (themed.test.tsx).
 beforeEach(() => setTerms({ set: "business" }));
 afterEach(() => resetTerms());
@@ -14,13 +15,23 @@ const props = (over: Partial<HomeProps> = {}): HomeProps => ({
   me: me({ auth_mode: "none" }), projects: [], runs: [], runners: [], environments: [], applications: [], approvals: [], now: 10_000, ...over,
 });
 
+/** The server's one Home answer, as the sections below the checklist ask for it. */
+const answer = (over: Partial<HomeAnswer> = {}): HomeAnswer => ({
+  view: "all", at: 1, needs: [], dismissed: [], running: [], categories: [], favorites: [], recent: [], counts: { projects: 1, needs: 0 },
+  layout: { page: "home", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} }, ...over,
+});
+const stubHome = (a: HomeAnswer) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(a), { status: 200, headers: { "Content-Type": "application/json" } })));
+afterEach(() => vi.unstubAllGlobals());
+const failedNeed = { key: "failed:run_412", kind: "failed" as const, tone: "bad" as const, project: "shop-api", title: "Sortie #412 of shop-api failed on main", why: "It is the latest result on main, the default branch; nothing newer has run.", do: "See what went wrong, then fix it or run it again.", since: 9_000, href: "/runs/run_412" };
+
 describe("Home on a new installation", () => {
-  it("asks for the first thing and nothing else", () => {
+  it("asks for the first thing and nothing else", async () => {
+    stubHome(answer({ counts: { projects: 0, needs: 0 } }));
     render(<Home {...props()} />);
     expect(screen.getByRole("heading", { name: "Add your first project" })).toBeInTheDocument();
     expect(screen.getByText("0 of 5 essentials done")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add a project" })).toHaveAttribute("href", "/config/wizard/connect-repository");
-    expect(screen.getByText("Nothing needs you.")).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing needs you\./)).toBeInTheDocument();
     expect(screen.queryByText("Latest runs")).not.toBeInTheDocument();
   });
   it("lists the rest of the checklist as links", () => {
@@ -58,11 +69,23 @@ describe("Home on a busy installation", () => {
     approvals: [approval()], me: me({ auth_mode: "oidc" }),
     applications: applications([environment({ services: [{ project: "shop-api", service: "api", waiting: [], last: { id: "d", run_id: "run_1", run_number: 1, project: "shop-api", step: "d", environment: "staging", service: "api", target: "t", application: "shop-api-prod", mode: "argocd", version: "1", changed: true, phase: "degraded", detail: "", opened_at: 1, holding: false, observed_at: 5, snapshot: { app: { found: true, sync: "Synced", health: "Degraded", source: 0, automated: false } } } }] })]),
   });
-  it("shows what needs attention, urgent first, each with its button", () => {
+  it("shows what needs attention, each saying why it is there and what to do", async () => {
+    stubHome(answer({ needs: [failedNeed, { ...failedNeed, key: "decision:run_9/gate", kind: "decision", tone: "warn", title: "Waiting for a decision: Release?", why: "Sortie #9 is paused until someone says Go or No-go.", do: "Review it and decide.", href: "/runs/run_9?step=gate" }] }));
     render(<Home {...busy()} />);
-    const list = screen.getByRole("region", { name: "Needs your attention" });
+    const list = (await screen.findByRole("heading", { name: /Needs you/ })).closest(".sheet") as HTMLElement;
+    expect(await within(list).findByText(/latest result on main, the default branch/)).toBeInTheDocument();
+    expect(within(list).getAllByText(/What to do:/)).toHaveLength(2);
+    // What is not a run or a decision stays as it was: an unhealthy application, a runner that does not answer.
     const buttons = within(list).getAllByRole("link").filter((a) => a.classList.contains("btn")).map((a) => a.textContent);
-    expect(buttons).toEqual(["See what went wrong", "Look into it", "Review", "Open runners"]);
+    expect(buttons).toEqual(expect.arrayContaining(["Look into it", "Open runners"]));
+  });
+  it("does not list a failure that a newer Sortie is already retrying: it is under Running now", async () => {
+    stubHome(answer({ needs: [], running: [{ id: "run_413", project: "shop-api", number: 413, branch: "main", status: "running", step: "unit-tests", started_at: 5_000, created_at: 4_000, actor: "Priya", mine: true, retry_of: 412 }] }));
+    render(<Home {...busy()} />);
+    expect(await screen.findByText("Retrying #412")).toBeInTheDocument();
+    const need = (await screen.findByRole("heading", { name: /Needs you/ })).closest(".sheet") as HTMLElement;
+    expect(within(need).queryByText(/Sortie #412/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Running now/ })).toBeInTheDocument();
   });
   it("links every name it mentions", () => {
     const { container } = render(<Home {...busy()} />);
@@ -87,13 +110,18 @@ describe("Home, v2", () => {
     projects: [project({ last_run: run({ id: "run_412", number: 412, status: "failed" }) })], runs: [run({ id: "run_412", number: 412, status: "failed" })],
     runners: [runner()], environments: [environment()], me: me({ auth_mode: "oidc" }),
   });
-  it("says how many things need you, and says where a failed run stopped", () => {
+  it("says how many things need you, by the server's rule", async () => {
+    stubHome(answer({ needs: [failedNeed] }));
     render(<Home {...base()} lines={[line()]} images={2} />);
-    expect(screen.getByRole("heading", { level: 1, name: "1 thing needs you" })).toBeInTheDocument();
-    const need = screen.getByRole("region", { name: "Needs your attention" });
-    expect(within(need).getByText(/stopped at tests/)).toBeInTheDocument();
-    expect(within(need).getByText(/unit-tests ended with exit code 1/)).toBeInTheDocument();
-    expect(within(need).getByRole("link", { name: "See what went wrong" })).toHaveAttribute("href", "/runs/run_412");
+    expect(await screen.findByRole("heading", { level: 1, name: "1 thing needs you" })).toBeInTheDocument();
+    const need = (await screen.findByRole("heading", { name: /Needs you/ })).closest(".sheet") as HTMLElement;
+    expect(await within(need).findByRole("link", { name: /Sortie #412 of shop-api failed on main/ })).toHaveAttribute("href", "/runs/run_412");
+    expect(within(need).getByRole("link", { name: "Open" })).toHaveAttribute("href", "/runs/run_412");
+  });
+  it("is calm when the only failure is being retried: All clear", async () => {
+    stubHome(answer());
+    render(<Home {...base()} lines={[line()]} images={2} />);
+    expect(await screen.findByRole("heading", { level: 1, name: "All clear" })).toBeInTheDocument();
   });
   it("draws each recent change as a launch line with one sentence", () => {
     render(<Home {...base()} lines={[line()]} images={2} />);
@@ -102,10 +130,11 @@ describe("Home, v2", () => {
     expect(within(sheet).getByText("Stopped at tests. unit-tests ended with exit code 1")).toBeInTheDocument();
     expect(within(sheet).getByRole("link", { name: /Round refunds per line item/ })).toHaveAttribute("href", "/runs/run_412");
   });
-  it("is calm when nothing needs a person: All clear", () => {
+  it("is calm when nothing needs a person: All clear", async () => {
+    stubHome(answer());
     render(<Home {...props({ projects: [project({ last_run: run({ status: "succeeded" }) })], runs: [run()], runners: [runner()], environments: [environment()], me: me({ auth_mode: "oidc" }) })} />);
-    expect(screen.getByRole("heading", { level: 1, name: "All clear" })).toBeInTheDocument();
-    expect(screen.getByText("Nothing needs you.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "All clear" })).toBeInTheDocument();
+    expect((await screen.findAllByText(/Nothing needs you\./)).length).toBeGreaterThan(0);
   });
   it("shows the Explore strip with live counts from what the server holds", () => {
     render(<Home {...base()} lines={[line()]} images={7} />);
@@ -123,15 +152,26 @@ describe("Home, v2", () => {
 });
 
 describe("Home lists the pull requests that wait on a person", () => {
-  it("as entries of Needs you, each with a link to the pull request", () => {
+  it("as entries of Needs you, each with a link to the pull request", async () => {
+    stubHome(answer({ needs: [], counts: { projects: 1, needs: 0 } }));
     render(<Home {...props({ pullInbox: [
       { repository: "acme/shop", number: 3, title: "Round prices", kind: "review_requested", why: "ada asked you to review it" },
       { repository: "acme/shop", number: 4, title: "Add tests", kind: "queue_failed", why: "the merge queue took it out: `test` failed" },
     ] })} />);
-    const need = screen.getByRole("region", { name: "Needs your attention" });
+    const need = (await screen.findByRole("heading", { name: /Needs you/ })).closest(".sheet") as HTMLElement;
     expect(within(need).getByText("Review wanted on acme/shop#3")).toBeInTheDocument();
     expect(within(need).getByText("acme/shop#4 left the merge queue")).toBeInTheDocument();
     expect(within(need).getByRole("link", { name: "Review" })).toHaveAttribute("href", "/repositories/acme/shop/pulls/3");
     expect(within(need).getByRole("link", { name: "See why" })).toHaveAttribute("href", "/repositories/acme/shop/pulls/4");
+  });
+});
+
+describe("Home with hosted repositories and no project", () => {
+  it("says how many repositories there are, that none has a pipeline yet, and offers to add one", async () => {
+    const repo = (n: string) => ({ id: n, name: n, home: "acme", path: `acme/${n}`, visibility: "private", default_branch: "main", clone: { https: "" } });
+    vi.stubGlobal("fetch", vi.fn(async (u: string) => new Response(JSON.stringify(String(u).endsWith("/api/v1/repositories") ? { items: [repo("a"), repo("b")] } : answer({ counts: { projects: 0, needs: 0 } })), { status: 200, headers: { "Content-Type": "application/json" } })));
+    render(<Home {...props({ me: me({ admin: true }) })} />);
+    expect(await screen.findByRole("heading", { name: "2 repositories, none has a pipeline yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add a pipeline" })).toHaveAttribute("href", "/config/wizard/connect-repository");
   });
 });

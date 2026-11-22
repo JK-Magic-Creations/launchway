@@ -1,3 +1,4 @@
+import { useUrlState } from "../urlState";
 import { useEffect, useState } from "react";
 import { api, type HostedReport, type RunDetail, type RunReports } from "../api";
 import { Empty, ErrorBox, Link } from "../components/ui";
@@ -15,7 +16,7 @@ export function ReportsTab({ run, version }: { run: RunDetail; version: string }
   const [data, setData] = useState<RunReports | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [tick, setTick] = useState(0);
-  const [chosen, setChosen] = useState(() => new URLSearchParams(location.search).get("report") ?? "");
+  const [chosen, setChosen] = useUrlState("report", "");
   useEffect(() => {
     let alive = true;
     api.runReports(run.id, true).then((d) => { if (alive) { setData(d); setError(null); } }).catch((e) => alive && setError(e));
@@ -26,12 +27,7 @@ export function ReportsTab({ run, version }: { run: RunDetail; version: string }
     return () => window.clearInterval(id);
   }, []);
 
-  const choose = (key: string) => {
-    setChosen(key);
-    const q = new URLSearchParams(location.search);
-    q.set("report", key);
-    history.replaceState(null, "", location.pathname + "?" + q.toString());
-  };
+  const choose = (key: string) => setChosen(key, "push");
 
   if (error) return <ErrorBox error={error} />;
   if (!data) return <div className="loading">Loading…</div>;

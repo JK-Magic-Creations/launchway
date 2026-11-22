@@ -88,7 +88,7 @@ export function CodePage({ path }: { path: string }) {
   const current = item?.ref ?? refName ?? repo?.default_branch ?? "main";
   const canWrite = canOperate(me, path) && !repo?.mirror && !repo?.archived;
   const goRef = useCallback((r: string) => navigate(codeHref(path, r, item?.type === "dir" || !item ? p || undefined : p)), [path, item, p]);
-  const setHashTo = (h: string) => { history.replaceState(null, "", location.pathname + location.search + h); setHash(h); };
+  const setHashTo = (h: string) => { history.replaceState(null, "", `${location.pathname}${location.search}${h}`); // a line anchor (#L12), not a view setHash(h); };
 
   // Keys: t finds a file, j and k move through the entries, y copies the permalink, b opens blame, e edits.
   useEffect(() => {

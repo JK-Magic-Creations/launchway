@@ -1393,6 +1393,104 @@ paths:
                 - account
             x-launchway-access: signed-in
             x-launchway-audit: auth.sign_out_everywhere
+    /api/v1/activity:
+        delete:
+            description: Deletes the caller's whole trail.
+            operationId: delete_api_v1_activity
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes the caller's whole trail.
+            tags:
+                - activity
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.activity.clear
+        get:
+            description: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days. It is the caller''s alone: no route takes another user''s name, so administrators cannot read it. Entries for projects the caller can no longer see are left out. ?limit= (100, at most 200).'
+            operationId: get_api_v1_activity
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+        put:
+            description: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the project.'
+            operationId: put_api_v1_activity
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+    /api/v1/activity/pause:
+        put:
+            description: 'Pauses or resumes writing the caller''s trail: {"paused": true}.'
+            operationId: put_api_v1_activity_pause
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Pauses or resumes writing the caller''s trail: {"paused": true}.'
+            tags:
+                - activity
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.activity.pause
     /api/v1/admin/tokens:
         get:
             description: Everyone's tokens.
@@ -1518,6 +1616,81 @@ paths:
             tags:
                 - artifact-store
             x-launchway-access: any-viewer
+    /api/v1/attention:
+        get:
+            description: 'What needs a person: needs (each with why and do), dismissed (set aside by the caller), retrying (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and count. The rule is in the guide page *What the home page shows*.'
+            operationId: get_api_v1_attention
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What needs a person: needs (each with why and do), dismissed (set aside by the caller), retrying (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and count.'
+            tags:
+                - attention
+            x-launchway-access: signed-in
+    /api/v1/attention/dismiss:
+        post:
+            description: 'Sets one entry aside for the caller only: {"key", "snooze_hours"}; without snooze it returns when something newer replaces it. A personal preference, recorded in the Logbook as such.'
+            operationId: post_api_v1_attention_dismiss
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets one entry aside for the caller only: {"key", "snooze_hours"}; without snooze it returns when something newer replaces it.'
+            tags:
+                - attention
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.attention.dismiss
+    /api/v1/attention/restore:
+        post:
+            description: Brings a set-aside entry back ({"key"}, or * for all).
+            operationId: post_api_v1_attention_restore
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Brings a set-aside entry back ({"key"}, or * for all).
+            tags:
+                - attention
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.attention.restore
     /api/v1/audit:
         get:
             description: The Logbook, newest first.
@@ -3026,6 +3199,29 @@ paths:
             tags:
                 - health-sources
             x-launchway-access: signed-in
+    /api/v1/home:
+        get:
+            description: 'The Home page in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately. ?view=mine or all. Only what the caller may see; counts never include anything else.'
+            operationId: get_api_v1_home
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The Home page in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately.'
+            tags:
+                - home
+            x-launchway-access: signed-in
     /api/v1/images:
         get:
             description: 'Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a project''s images (?project=). {"hits": […]}'
@@ -3144,6 +3340,150 @@ paths:
             tags:
                 - launch-lines
             x-launchway-access: signed-in
+    /api/v1/layouts-export:
+        get:
+            description: A level's layouts and folders as one document (?scope=), to keep in Git. Needs the right to arrange the level.
+            operationId: get_api_v1_layouts_export
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A level's layouts and folders as one document (?scope=), to keep in Git.
+            tags:
+                - layouts-export
+            x-launchway-access: signed-in
+    /api/v1/layouts-import:
+        post:
+            description: 'Applies such a document: adds and updates what it names and never deletes what it leaves out. ?dry_run=1 lists what it would do.'
+            operationId: post_api_v1_layouts_import
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Applies such a document: adds and updates what it names and never deletes what it leaves out.'
+            tags:
+                - layouts-import
+            x-launchway-access: signed-in
+            x-launchway-audit: layout.import
+    /api/v1/layouts/{page}:
+        delete:
+            description: Removes a level's shared layout of a page (?scope=).
+            operationId: delete_api_v1_layouts_page
+            parameters:
+                - in: path
+                  name: page
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a level's shared layout of a page (?scope=).
+            tags:
+                - layouts
+            x-launchway-access: signed-in
+            x-launchway-audit: layout.reset
+        get:
+            description: 'The layout of a page: each level''s shared layout from the Base down (a locked level stops the ones below), the caller''s own, and the result in effect. ?scope=.'
+            operationId: get_api_v1_layouts_page
+            parameters:
+                - in: path
+                  name: page
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The layout of a page: each level''s shared layout from the Base down (a locked level stops the ones below), the caller''s own, and the result in effect.'
+            tags:
+                - layouts
+            x-launchway-access: signed-in
+        put:
+            description: Sets the shared layout of a page at a level, and whether it is locked for the levels below. Needs the right to arrange that level.
+            operationId: put_api_v1_layouts_page
+            parameters:
+                - in: path
+                  name: page
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sets the shared layout of a page at a level, and whether it is locked for the levels below.
+            tags:
+                - layouts
+            x-launchway-access: signed-in
+            x-launchway-audit: layout.set
     /api/v1/libraries:
         get:
             description: 'The shared libraries pipelines may use, by name, with the time of the last fetch (last_fetch). The first is always launchway, marked builtin: true: the [starters](../guide/starters.md) that ship with Launchway.'
@@ -3221,6 +3561,123 @@ paths:
             tags:
                 - me
             x-launchway-access: signed-in
+    /api/v1/me/favorites:
+        post:
+            description: 'Adds or removes a favorite for the caller: {"item":"project:<name>" or "repository:<path>","on":true}.'
+            operationId: post_api_v1_me_favorites
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Adds or removes a favorite for the caller: {"item":"project:<name>" or "repository:<path>","on":true}.'
+            tags:
+                - me
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.favorite
+    /api/v1/me/layouts:
+        delete:
+            description: Resets all of the caller's own arrangements (favorites stay).
+            operationId: delete_api_v1_me_layouts
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Resets all of the caller's own arrangements (favorites stay).
+            tags:
+                - me
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.layout.reset_all
+    /api/v1/me/layouts/{page}:
+        delete:
+            description: Resets the caller's own arrangement of a page to the shared default.
+            operationId: delete_api_v1_me_layouts_page
+            parameters:
+                - in: path
+                  name: page
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Resets the caller's own arrangement of a page to the shared default.
+            tags:
+                - me
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.layout.reset
+        put:
+            description: Saves the caller's own arrangement of a page; it follows them across devices and never changes what others see.
+            operationId: put_api_v1_me_layouts_page
+            parameters:
+                - in: path
+                  name: page
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Saves the caller's own arrangement of a page; it follows them across devices and never changes what others see.
+            tags:
+                - me
+            x-launchway-access: signed-in
+            x-launchway-audit: prefs.layout.set
     /api/v1/mirrors:
         get:
             description: Every mirror of the repositories the caller may read; ?behind=true lists only those that have fallen behind.
@@ -3267,6 +3724,201 @@ paths:
             tags:
                 - notifications
             x-launchway-access: signed-in
+    /api/v1/organize/{area}:
+        get:
+            description: 'How a list is organized: its folders (only those with something the caller can see in them, or at a level they may arrange), each item''s folder and labels, the caller''s favorites and the layout in effect. area is pipelines, repositories, projects or runs.'
+            operationId: get_api_v1_organize_area
+            parameters:
+                - in: path
+                  name: area
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'How a list is organized: its folders (only those with something the caller can see in them, or at a level they may arrange), each item''s folder and labels, the caller''s favorites and the layout in effect.'
+            tags:
+                - organize
+            x-launchway-access: signed-in
+    /api/v1/organize/{area}/folders:
+        post:
+            description: 'Makes a folder at a level (scope: base, organization, unit:<name> or project:<name>). Needs admin of everything at that level.'
+            operationId: post_api_v1_organize_area_folders
+            parameters:
+                - in: path
+                  name: area
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a folder at a level (scope: base, organization, unit:<name> or project:<name>).'
+            tags:
+                - organize
+            x-launchway-access: signed-in
+            x-launchway-audit: folder.create
+    /api/v1/organize/{area}/labels:
+        put:
+            description: Replaces an item's labels (up to 20, lower case). Needs operator on the project.
+            operationId: put_api_v1_organize_area_labels
+            parameters:
+                - in: path
+                  name: area
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replaces an item's labels (up to 20, lower case).
+            tags:
+                - organize
+            x-launchway-access: signed-in
+            x-launchway-audit: labels.set
+    /api/v1/organize/{area}/move:
+        post:
+            description: Files an item in a folder, or takes it out (folder empty). An item lives in one folder. Needs the right to arrange the folder's level.
+            operationId: post_api_v1_organize_area_move
+            parameters:
+                - in: path
+                  name: area
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Files an item in a folder, or takes it out (folder empty).
+            tags:
+                - organize
+            x-launchway-access: signed-in
+            x-launchway-audit: folder.move
+    /api/v1/organize/folders/{id}:
+        delete:
+            description: Deletes a folder; what was in it moves up to its parent.
+            operationId: delete_api_v1_organize_folders_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes a folder; what was in it moves up to its parent.
+            tags:
+                - organize
+            x-launchway-access: signed-in
+            x-launchway-audit: folder.delete
+        patch:
+            description: Renames, describes, reorders or moves a folder. A person who may not arrange its level gets 404.
+            operationId: patch_api_v1_organize_folders_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Renames, describes, reorders or moves a folder.
+            tags:
+                - organize
+            x-launchway-access: signed-in
+            x-launchway-audit: folder.update
     /api/v1/owners/{owner}/hooks:
         get:
             description: As for a repository, for every repository of the owner.
@@ -13444,6 +14096,29 @@ paths:
             tags:
                 - runs
             x-launchway-access: run-viewer
+    /api/v1/search:
+        get:
+            description: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch). ?q=, ?limit= (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link.'
+            operationId: get_api_v1_search
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch).'
+            tags:
+                - search
+            x-launchway-access: signed-in
     /api/v1/settings/approvals:
         get:
             description: Whether the person who started a run may approve it here (allow_self), and whether people sign in. The approval cards use it to say exactly why someone cannot approve.

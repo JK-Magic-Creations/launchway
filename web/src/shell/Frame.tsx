@@ -10,7 +10,7 @@ import { isLearn, pageTitle, redirectFor, section, sectionOf, visibleTabs, type 
 import { PageFor } from "../nav/pages";
 import type { Approvals } from "../live";
 import { navigate, onLink, replace, usePath } from "../router";
-import { DoBar, DoBarButton } from "./DoBar";
+import { DoBarButton } from "./DoBarButton";
 import { ExplainerContext, type Explainer } from "./explainer";
 import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
@@ -20,7 +20,11 @@ import { useFocusableScrollers } from "./scrollers";
 import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
+import { currentViewTitle, onViewTitle } from "../urlState";
 
+// The finder and the Do bar load when first opened.
+const Shortcuts = lazy(() => import("./Shortcuts"));
+const DoBar = lazy(() => import("./DoBar").then((m) => ({ default: m.DoBar })));
 const Guide = lazy(() => import("./Guide").then((m) => ({ default: m.Guide }))); // the first load does not carry the Guide's text
 const GUIDE_KEY = "lw-guide";
 
@@ -63,7 +67,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   const inst = useInstallation();
   const [version, setVersion] = useState("");
   const [crumb, setCrumb] = useState<string | undefined>();
-  const [layer, setLayer] = useState<"do" | "areas" | null>(null);
+  const [layer, setLayer] = useState<"do" | "areas" | "keys" | null>(null);
   const [guidePref, setGuidePref] = useState<boolean | null>(storedGuide);
   const [explainer, setExplainer] = useState<Explainer | null>(null);
   const [theme, setThemeState] = useState(currentTheme);
@@ -75,7 +79,12 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
     const to = redirectFor(path, location.search);
     if (to) replace(to);
   }, [path]);
-  useEffect(() => { document.title = pageTitle(path); }, [path]);
+  useEffect(() => {
+    const set = () => { const v = currentViewTitle(); document.title = (v ? v + " · " : "") + pageTitle(path); };
+    set();
+    void import("../trail").then((m) => m.noteView(path)); // what was opened is kept in the person's own trail, in the background
+    return onViewTitle(set);
+  }, [path]);
   // A page change in a single-page app is silent: say where we are, and put the reading position at the top of the page.
   const first = useRef(true);
   useEffect(() => {
@@ -84,7 +93,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
     document.getElementById("main")?.focus({ preventScroll: true });
   }, [path]);
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (opensDoBar(e)) { e.preventDefault(); setLayer("do"); } };
+    const k = (e: KeyboardEvent) => { if (e.defaultPrevented) return; if (opensDoBar(e)) { e.preventDefault(); setLayer("do"); } else if (e.key === "?" && opensDoBar({ key: "/", ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, target: e.target })) { e.preventDefault(); setLayer("keys"); } };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, []);
@@ -94,7 +103,20 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   const area = sectionOf(path);
   const needs = useMemo(() => attention({ projects: inst.projects, approvals: approvals.list ?? ([] as Approval[]), runners: inst.runners, applications: inst.applications, me }),
     [inst.projects, approvals.list, inst.runners, inst.applications, me]);
-  const pulse = pulseOf(needs.filter((n) => n.tone === "bad").length, needs.filter((n) => n.tone === "warn").length, inst.runs.some((r) => r.status === "running"));
+  // Failed runs and decisions are counted by the server's attention rule (the same answer as the Home page and the Sorties list); the
+  // rest (an unhealthy application, a runner that does not answer) are counted here. Until the server answers, this page's own reading is used.
+  const [server, setServer] = useState<{ bad: number; warn: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    const tick = () => void import("../organizeApi").then((m) => m.organizeApi.attention(true)).then((a) => { if (live) setServer({ bad: a.needs.filter((n) => n.tone === "bad").length, warn: a.needs.filter((n) => n.tone === "warn").length }); }).catch(() => {});
+    tick();
+    const t = window.setInterval(tick, 30000);
+    return () => { live = false; window.clearInterval(t); };
+  }, [approvals.list]);
+  const own = server ? needs.filter((n) => !/^(run|approval):/.test(n.key)) : needs;
+  const badN = own.filter((n) => n.tone === "bad").length + (server?.bad ?? 0);
+  const warnN = own.filter((n) => n.tone === "warn").length + (server?.warn ?? 0);
+  const pulse = pulseOf(badN, warnN, inst.runs.some((r) => r.status === "running"));
   // Wide screens remember the choice, and open the Guide on Home. A narrow screen shows it as a sheet, closed until asked.
   const wide = useWide();
   // What needs a person is said once when it changes, not on every refresh.
@@ -127,7 +149,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <a className="brand" href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }} aria-label="Launchway home">
             <Icon name="logo" size="xl" /><span className="bn">Launchway</span>
           </a>
-          <Route ctx={ctx} on={area} needs={needs.length} />
+          <Route ctx={ctx} on={area} needs={badN + warnN} />
           <DoBarButton onOpen={() => setLayer("do")} />
           <div className="top-r">
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
@@ -156,8 +178,9 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
         {guideOpen && <Suspense fallback={<aside className="rail" aria-label={terms().label("guide")} />}><Guide ctx={ctx} path={path} explainer={explainer} onClose={toggleGuide} focusOnOpen={!wide} /></Suspense>}
         {guideOpen && <div className="rail-back" onClick={toggleGuide} aria-hidden="true" />}
       </div>
-      <TabBar ctx={ctx} on={area} needs={needs.length} onAreas={() => setLayer("areas")} />
-      {layer === "do" && <DoBar ctx={ctx} projects={inst.projects} onClose={() => setLayer(null)} />}
+      <TabBar ctx={ctx} on={area} needs={badN + warnN} onAreas={() => setLayer("areas")} />
+      {layer === "do" && <Suspense fallback={null}><DoBar ctx={ctx} projects={inst.projects} onClose={() => setLayer(null)} /></Suspense>}
+      {layer === "keys" && <Suspense fallback={null}><Shortcuts onClose={() => setLayer(null)} /></Suspense>}
       {layer === "areas" && <Launcher ctx={ctx} onClose={() => setLayer(null)} />}
     </ExplainerContext.Provider>
   );

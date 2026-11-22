@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { bool, useUrlState } from "../urlState";
 import { ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import "../styles/deps.css";
@@ -45,11 +46,12 @@ function useReport(path: string, preview: boolean) {
 /** The dependencies of one hosted repository, as a table with filters. */
 export function DependenciesPage({ path }: { path: string }) {
   const { report, error } = useReport(path, false);
-  const [eco, setEco] = useState("");
-  const [status, setStatus] = useState("");
-  const [text, setText] = useState("");
-  const [direct, setDirect] = useState(true);
-  const [justVulnerable, setJustVulnerable] = useState(false);
+  // The filters are in the address (?eco=npm&status=outdated&q=lodash&direct=0&vulnerable=1).
+  const [eco, setEco] = useUrlState("eco", "");
+  const [status, setStatus] = useUrlState("status", "");
+  const [text, setText] = useUrlState("q", "");
+  const [direct, setDirect] = useUrlState("direct", true, bool);
+  const [justVulnerable, setJustVulnerable] = useUrlState("vulnerable", false, bool);
   const prOf = useMemo(() => {
     const m = new Map<string, number[]>();
     for (const d of report?.decisions ?? []) if (d.number) for (const u of d.updates) m.set(u.dep.ecosystem + "|" + u.dep.name, [...(m.get(u.dep.ecosystem + "|" + u.dep.name) ?? []), d.number]);
