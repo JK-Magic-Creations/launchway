@@ -301,8 +301,8 @@ func (s *Service) Detach(ctx context.Context, project string) error {
 	return nil
 }
 
-func (s *Service) flightOf(row engstore.FlightRow) (Flight, error) {
-	c, err := s.st.Connection(context.Background(), row.ConnectionID)
+func (s *Service) flightOf(ctx context.Context, row engstore.FlightRow) (Flight, error) {
+	c, err := s.st.Connection(ctx, row.ConnectionID)
 	if err != nil {
 		return Flight{}, err
 	}
@@ -319,7 +319,7 @@ func (s *Service) Flight(ctx context.Context, project string) (Flight, error) {
 	if !ok {
 		return Flight{}, fmt.Errorf("%w: %w: project %s is not attached to an outside repository", forge.ErrNotFound, ErrNotAttached, project)
 	}
-	return s.flightOf(row)
+	return s.flightOf(ctx, row)
 }
 
 // flightsOf lists the projects attached to a repository of a connection.
@@ -330,7 +330,7 @@ func (s *Service) flightsOf(ctx context.Context, connID, repoPath string) ([]Fli
 	}
 	var out []Flight
 	for _, r := range rows {
-		f, err := s.flightOf(r)
+		f, err := s.flightOf(ctx, r)
 		if err != nil {
 			return nil, err
 		}

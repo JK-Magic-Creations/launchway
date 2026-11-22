@@ -174,6 +174,13 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 	switch {
 	case m == "GET" && sub == "":
 		return 200, repoJSON(h.Push), true
+	}
+	return h.routeGit(r, m, sub, in, raw)
+}
+
+// routeGit is the routes of refs and tags.
+func (h *Host) routeGit(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
+	switch {
 	case m == "GET" && strings.HasPrefix(sub, "/git/matching-refs/"):
 		prefix := strings.TrimPrefix(sub, "/git/matching-refs/")
 		var out []any
@@ -224,6 +231,13 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 		}
 		h.refs[strings.TrimPrefix(ref, "refs/")] = sha
 		return 201, map[string]any{"ref": ref}, true
+	}
+	return h.routeStatuses(r, m, sub, in, raw)
+}
+
+// routeStatuses is the middle of the routes: statuses, commits, branches, pulls, comments.
+func (h *Host) routeStatuses(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
+	switch {
 	case m == "POST" && strings.HasPrefix(sub, "/statuses/"):
 		sha := strings.TrimPrefix(sub, "/statuses/")
 		st, _ := in["state"].(string)
@@ -246,13 +260,6 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 		}
 		h.Statuses = append(h.Statuses, Status{sha, st, ctx, d, tu})
 		return 201, map[string]any{"state": st}, true
-	}
-	return h.routeStatuses(r, m, sub, in, raw)
-}
-
-// routeStatuses is the middle of the routes: statuses, commits, branches, pulls, comments.
-func (h *Host) routeStatuses(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
-	switch {
 	case m == "GET" && strings.HasPrefix(sub, "/commits/") && strings.HasSuffix(sub, "/statuses"):
 		sha := strings.TrimSuffix(strings.TrimPrefix(sub, "/commits/"), "/statuses")
 		out := []any{}
@@ -271,6 +278,13 @@ func (h *Host) routeStatuses(r *http.Request, m, sub string, in map[string]any, 
 		}
 		return 200, map[string]any{"required_status_checks": map[string]any{"contexts": []string{"launchway/ci"}},
 			"required_pull_request_reviews": map[string]any{"required_approving_review_count": 1}, "allow_force_pushes": map[string]any{"enabled": false}}, true
+	}
+	return h.routePulls(r, m, sub, in, raw)
+}
+
+// routePulls is the routes of pull requests and their comments.
+func (h *Host) routePulls(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
+	switch {
 	case m == "GET" && sub == "/pulls":
 		return 200, h.Pulls, true
 	case m == "GET" && strings.HasPrefix(sub, "/pulls/"):

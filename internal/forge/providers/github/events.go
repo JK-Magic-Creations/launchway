@@ -23,8 +23,6 @@ func (events) Mode() forge.EventMode { return forge.EventsWebhook }
 // https://docs.github.com/en/webhooks/webhook-events-and-payloads#payload-cap
 const maxDelivery = 25 << 20
 
-const zeros = "0000000000000000000000000000000000000000"
-
 // ErrBadSignature is returned for a delivery whose signature does not match.
 var ErrBadSignature = errors.New("the webhook signature does not match")
 

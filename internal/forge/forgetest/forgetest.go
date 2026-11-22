@@ -177,7 +177,7 @@ func Run(t *testing.T, h Harness) {
 		}
 		ev := p.Events()
 		if ev.Mode() == forge.EventsWebhook {
-			req, _ := http.NewRequest(http.MethodPost, "http://launchway.invalid/hook", strings.NewReader(`{"ref":"refs/heads/main"}`))
+			req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "http://launchway.invalid/hook", strings.NewReader(`{"ref":"refs/heads/main"}`))
 			if events, err := ev.Verify(req, []byte("secret")); err == nil || len(events) != 0 {
 				t.Errorf("a webhook provider accepted an unsigned delivery: %v %v", events, err)
 			}
