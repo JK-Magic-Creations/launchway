@@ -1,5 +1,4 @@
 /* Reading a repository's code: the tree, a file, blame, commits, compare, branches and search. Colors come from tokens. */
-.code-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .code-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .code-bar .grow, .code-file-head .grow { flex: 1 1 auto; }
 .crumbs-code ol { display: flex; flex-wrap: wrap; gap: 0; list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: var(--fs-small); }

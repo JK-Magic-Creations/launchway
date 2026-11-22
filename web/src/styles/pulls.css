@@ -1,5 +1,4 @@
 /* Pull requests: the list, the page, the merge box and the diff. Colors come from the tokens, so both themes work. */
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .pr-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--line); align-items: flex-start; }
 .pr-row:first-of-type { border-top: 0; }
 .pr-row-side { text-align: right; }

@@ -1,5 +1,4 @@
 /* Dependencies and dependency updates (pages/Dependencies.tsx). */
-.deps .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .deps-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; }
 .deps-filter .field { flex: 0 1 220px; margin: 0; }
 .deps-filter .check { display: inline-flex; align-items: center; gap: 8px; }

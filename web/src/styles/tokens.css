@@ -92,6 +92,6 @@ h2 { margin: 0; font: 650 var(--fs-section) / 1.25 var(--display); letter-spacin
 .small { font-size: var(--fs-small); }
 .sub { margin: 4px 0 0; color: var(--ink-2); }
 .num { font-variant-numeric: tabular-nums; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.visually-hidden, .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: var(--r1); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; } }
