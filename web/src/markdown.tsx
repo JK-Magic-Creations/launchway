@@ -105,6 +105,7 @@ export function Markdown({ text, ctx }: { text: string; ctx?: Context }) {
       const rows: string[][] = [];
       while (i < lines.length && lines[i].trim() !== "" && lines[i].includes("|")) rows.push(cells(lines[i++]));
       blocks.push(
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be reachable with the keyboard
         <div key={k++} className="md-table" role="region" aria-label={`Table: ${head.filter(Boolean).join(", ") || "rows"}`} tabIndex={0}>
           <table>
             <thead><tr>{head.map((h, c) => <th key={c} scope="col" className={align[c]}>{inline(h, ctx)}</th>)}</tr></thead>
