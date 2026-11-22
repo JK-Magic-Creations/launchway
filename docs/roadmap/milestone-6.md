@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 6 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 13 planned · 15 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 18 planned · 20 capabilities</p>
 
 AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.
 
@@ -46,6 +46,7 @@ flowchart TD
 |---|---|---|---|---|
 | [Today](#g-today) | 2 | 2 | 0 | 0 |
 | [A gateway of your own](#g-a-gateway-of-your-own) | 13 | 0 | 0 | 13 |
+| [Agents that deliver](#g-agents-that-deliver) | 5 | 0 | 0 | 5 |
 
 ### Today {#g-today}
 
@@ -196,6 +197,50 @@ Explain why a deploy failed as well as a step, with the evidence used. Explainin
 Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions. Each agent is audited like a user.
 
 **Depends on:** Agents as users.
+
+[Area page](ai.md)
+
+### Agents that deliver {#g-agents-that-deliver}
+
+Documents become stories, stories become changes, and changes reach production when the gates pass, with a person in control.
+
+#### Assign a story to an agent {#assign-a-story-to-an-agent}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a kill switch from the start. The author never approves its own work.
+
+[Area page](ai.md)
+
+#### Autonomy levels set by policy {#autonomy-levels-set-by-policy}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Choose how much an agent may do, per environment, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Defaults are cautious.
+
+[Area page](ai.md)
+
+#### An independent reviewing agent {#an-independent-reviewing-agent}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Where policy allows, a separate session with a different identity and no shared context may approve listed kinds of change, with a share of changes sampled by people. Starts with documentation and tests only.
+
+[Area page](ai.md)
+
+#### Spend wisely {#spend-wisely}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Route each task to the right model for its difficulty, use plain tools before any model, keep a share of capacity in reserve for interactive work, and show spend against limits. Context compression and caching apply here.
+
+[Area page](ai.md)
+
+#### One interface for developers, designers and owners {#one-interface-for-developers-designers-and-owners}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Assign, review and watch agent work, spend and results in one place, with the same permissions and audit trail as everything else. Bring your own agent: other agents connect through the same published points at a lower autonomy ceiling.
 
 [Area page](ai.md)
 

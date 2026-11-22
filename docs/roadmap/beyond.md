@@ -124,4 +124,4 @@ This milestone is done when all of these are true.
 
 ---
 
-[← Milestone 12: Security and trust](milestone-12.md)
+[← Milestone 14: Editors and extension points](milestone-14.md)

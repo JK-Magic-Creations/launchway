@@ -255,6 +255,14 @@ ${st.missing.map((x) => `      <li>${esc(x)}</li>`).join('\n')}
     </ul>
     <p class="wc-date">${esc(st.note || '')}</p>
   </section>` : ''
+const wf = src.whoFor || []
+const whoForHtml = wf.length ? `<section class="what-changed" aria-labelledby="h-who">
+    <h2 id="h-who">Who Launchway is for</h2>
+    <p class="wc-date">${esc(src.whoForNote || '')}</p>
+    <ul>
+${wf.map((x) => `      <li><b>${esc(x.who)}.</b> ${esc(x.wants)} <i>${esc(x.today)}</i></li>`).join('\n')}
+    </ul>
+  </section>` : ''
 const queueHtml = (src.buildQueue || []).length ? `<section class="what-changed" aria-labelledby="h-queue">
     <h2 id="h-queue">The order we are building in</h2>
     <p class="wc-date">After what is already in flight, in this order.</p>
@@ -274,6 +282,8 @@ ${src.vision.map((v) => `    <li>${esc(v)}</li>`).join('\n')}
 ${whatChangedHtml}
 
 ${standsHtml}
+
+${whoForHtml}
 
 ${queueHtml}
 
@@ -355,6 +365,8 @@ items are drawn on the [roadmap](./public/roadmap.html), and each milestone has 
 ${src.vision.join(' ')}
 
 ${st ? `## Where Launchway stands today\n\n**Already strong.**\n\n${st.strong.map((x) => `- ${x}`).join('\n')}\n\n**Not there yet.**\n\n${st.missing.map((x) => `- ${x}`).join('\n')}\n\n${st.note || ''}\n` : ''}
+
+${wf.length ? `## Who Launchway is for\n\n${src.whoForNote || ''}\n\n${wf.map((x) => `- **${x.who}.** ${x.wants} *${x.today}*`).join('\n')}\n` : ''}
 
 ${(src.buildQueue || []).length ? `## The order we are building in\n\nAfter what is already in flight, in this order.\n\n${src.buildQueue.map((q, n) => `${n + 1}. **${q.title}.** ${q.value}${q.area ? ` ([area page](roadmap/${q.area}.md))` : ''}`).join('\n')}\n` : ''}
 
