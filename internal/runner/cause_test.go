@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -49,7 +48,7 @@ func TestRunStepReportsTheCause(t *testing.T) {
 			stubExec{code: -1, err: fmt.Errorf("%w: gone", executor.ErrInfrastructure)}, time.Minute, "lost", pipeline.CauseInfrastructure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &Runner{Exec: tc.exec, DataDir: t.TempDir(), wsLocks: map[string]*sync.Mutex{}}
+			r := &Runner{Exec: tc.exec, DataDir: t.TempDir(), wsLocks: map[string]ctxLock{}}
 			job := &engine.Job{LeaseID: "l1", RunID: "r1", Source: tc.src, Image: "x", Script: "true", Timeout: pipeline.Duration(tc.timeout)}
 			res, _ := r.runStep(context.Background(), job, func(string, ...any) {}, func(string, string) {})
 			if res.Outcome != tc.outcome || res.Cause != tc.cause {

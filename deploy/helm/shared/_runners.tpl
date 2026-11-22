@@ -746,9 +746,14 @@ spec:
             - name: health
               containerPort: {{ $r.healthPort }}
               protocol: TCP
+          # /livez fails when a loop that takes work from the server has not polled for five minutes
+          # (not merely when the process is gone), which restarts a deploy runner that is up but
+          # stuck. It tolerates a server that is down: the loops keep polling and retrying.
           livenessProbe:
-            httpGet: { path: /healthz, port: health }
-            periodSeconds: 10
+            httpGet: { path: /livez, port: health }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet: { path: /readyz, port: health }
             periodSeconds: 10

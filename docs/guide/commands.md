@@ -72,5 +72,5 @@ needs a namespace that allows that. Pipelines cannot change this setting.
 [deploy/README.md](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/README.md#step-pods-and-pod-security) has the details, including
 service images that expect root.
 
-`--health-listen :8081` serves `/healthz` (the process is up) and `/readyz` (the server answered
-within the last two minutes) for probes.
+`--health-listen :8081` serves `/healthz` (the process is up), `/livez` (the loop that takes work polled
+within the last five minutes) and `/readyz` (the server answered within the last two minutes) for probes.

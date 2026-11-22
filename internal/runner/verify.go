@@ -55,17 +55,21 @@ func (d *DeployRunner) verifications(ctx context.Context) {
 	if n <= 0 {
 		n = 8
 	}
+	vl := d.vitals().loop("verify lease")
 	slots := make(chan struct{}, n)
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	backoff := time.Second
 	for {
+		vl.slotWait(true)
 		select {
 		case slots <- struct{}{}:
 		case <-ctx.Done():
 			return
 		}
+		vl.slotWait(false)
 		job, err := d.Client.LeaseVerify(ctx, d.Info, 25*time.Second)
+		vl.polled()
 		if err != nil {
 			<-slots
 			if ctx.Err() != nil {
@@ -100,6 +104,11 @@ func (d *DeployRunner) verifications(ctx context.Context) {
 // verify reads one verification's remaining intervals and finishes it.
 func (d *DeployRunner) verify(parent context.Context, job *engine.Job) {
 	log := d.Log.With("run", job.RunID, "step", job.StepID, "verification", job.StepID)
+	var abandonAt time.Time // a verification takes the time of its intervals, and much more only when it is stuck
+	if vj := job.Verify; vj != nil && vj.Start > 0 {
+		abandonAt = time.UnixMilli(vj.Start + int64(vj.Intervals)*vj.IntervalMS).Add(d.settleFor(vj) + time.Hour)
+	}
+	defer d.vitals().begin("verify "+job.StepID, abandonAt)()
 	report, stopReport := context.WithTimeout(context.Background(), 24*time.Hour)
 	defer stopReport()
 	ctx, cancel := context.WithCancel(parent)

@@ -212,6 +212,16 @@ func (c *Cluster) patchApp(ctx context.Context, app string, patch map[string]any
 
 var errConflict = errors.New("the application changed while it was being read")
 
+// How long one Kubernetes watch lasts before it is started again, how much
+// longer the client waits for it to end, and the pause between two.
+const (
+	watchEvery = 5 * time.Minute
+	watchGrace = 30 * time.Second
+	watchPause = 5 * time.Second
+)
+
+func ptr[T any](v T) *T { return &v }
+
 // WatchChanges sends on changed whenever the application, the rollout or
 // the namespace's analysis runs change, until ctx ends. A watch that fails
 // is started again after a pause; the caller also reads on a timer, so a
@@ -219,12 +229,17 @@ var errConflict = errors.New("the application changed while it was being read")
 func (c *Cluster) WatchChanges(ctx context.Context, app, rolloutNS, rollout string, changed chan<- struct{}) {
 	start := func(gvr schema.GroupVersionResource, ns, name string) {
 		for ctx.Err() == nil {
-			opts := metav1.ListOptions{}
+			opts := metav1.ListOptions{TimeoutSeconds: ptr(int64(watchEvery / time.Second))}
 			if name != "" {
 				opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", name).String()
 			}
-			w, err := c.dyn.Resource(gvr).Namespace(ns).Watch(ctx, opts)
+			// A watch has a deadline of its own, on the server's side (the
+			// options) and on this one (the context): a connection that went
+			// quiet without closing ends at it, and the watch is started again.
+			wctx, cancel := context.WithTimeout(ctx, watchEvery+watchGrace)
+			w, err := c.dyn.Resource(gvr).Namespace(ns).Watch(wctx, opts)
 			if err == nil {
+				stop := context.AfterFunc(wctx, w.Stop)
 				for ev := range w.ResultChan() {
 					if ev.Type == watch.Error {
 						break
@@ -234,12 +249,14 @@ func (c *Cluster) WatchChanges(ctx context.Context, app, rolloutNS, rollout stri
 					default:
 					}
 				}
+				stop()
 				w.Stop()
 			}
+			cancel()
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(5 * time.Second):
+			case <-time.After(watchPause):
 			}
 		}
 	}
