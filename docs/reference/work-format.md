@@ -30,7 +30,7 @@ changes nothing: items are matched by `key`.
 |---|---|---|
 | `key` | text, required | A stable name for the item in the file, unique in it. It is kept on the item (`source_key`) and is what makes a second import change nothing. Search it with `key:S01-01` |
 | `title` | text, required | The title, cut at 300 characters |
-| `epic` | text | The `key` of the epic this is under. A key that is in neither the project nor the file gives a warning and no parent |
+| `epic` | text | The `key` of the epic this is under. A key that is in neither the Flight (codebase) nor the file gives a warning and no parent |
 | `body` | text | The description |
 | `labels` | list of text | Lower-cased; those that are not valid labels are dropped; at most 50 |
 | `milestone` | text | The title of a milestone, made if it does not exist |
@@ -61,7 +61,7 @@ imports. MCP: `import_work_stories`. Each import is recorded in the Logbook as `
 ## Archive promotion
 
 A repository's [archive](archive-format.md) holds another server's issues read-only. **Promoting** it turns
-them into live items of the project:
+them into live items of the Flight:
 
 | In the archive | Becomes |
 |---|---|
@@ -82,12 +82,12 @@ POST /api/v1/work/import/archive
 {"repository": "acme/shop", "preview": true}
 ```
 
-Only a maintainer of the project promotes; MCP: `promote_archive`; Logbook: `work.import_archive`.
+Only a maintainer of the Flight promotes; MCP: `promote_archive`; Logbook: `work.import_archive`.
 Importers for other trackers than this are not built.
 
 ## Settings
 
-Work is configured per level (Base, Wing, Squadron, Project). A field left out is inherited from the next
+Work is configured per level (Base, Wing, Squadron, Flight). A field left out is inherited from the next
 level up; a nearer level overrides a farther one.
 
 ```text
@@ -145,7 +145,7 @@ as `work.settings`.
 | `classes` | Which agent classes (`small`, `medium`, `large`) may take items of each difficulty |
 | `difficulty_rules` | Set the difficulty of a new item by a `label` it carries or by a `min_estimate` it reaches; the first rule that fits wins. Added to those of farther levels |
 | `agents` | The [agent rules](#agent-rules) |
-| `proposals` | How analyzers may file work: `max_items` (the most new items one source opens in one project in one Sortie (run); 0 means 10), `auto_accept` (a list of `{source, min_severity}`: sources whose findings of at least that severity become items without a review; severity is 0 to 4) and `reason` (required with `auto_accept`). See [proposals](#proposals) |
+| `proposals` | How analyzers may file work: `max_items` (the most new items one source opens in one Flight in one Sortie (run); 0 means 10), `auto_accept` (a list of `{source, min_severity}`: sources whose findings of at least that severity become items without a review; severity is 0 to 4) and `reason` (required with `auto_accept`). See [proposals](#proposals) |
 
 ### Agent rules
 

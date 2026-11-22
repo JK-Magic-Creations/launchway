@@ -34,7 +34,7 @@ server:
   url: ""
 
 token:
-  # -- A Secret in this namespace holding the Station token, or a Flight line's token, from the
+  # -- A Secret in this namespace holding the Station token, or a Ramp's token, from the
   # server's administrator (required for build Stations). The chart never creates it.
   existingSecret: ""
   existingSecretKey: token
@@ -199,8 +199,8 @@ runner:
     # -- Depots by the name pipelines use: { host, credentials: { username, password: {
     # store, key, field } }, pullCredentials, caFile, insecure, push: [ { projects,
     # repositories } ], pullProjects: [ ... ] }. Credentials are secret references read from
-    # runner.secretStores. pullCredentials go to the builds of the projects in pullProjects (empty:
-    # every project), and to pull requests only when they may read secrets.
+    # runner.secretStores. pullCredentials go to the builds of the Flights in pullProjects (empty:
+    # every Flight), and to pull requests only when they may read secrets.
     # Mount a CA file with extraVolumes and name its path in caFile.
     registries: {}
     # -- A Secret with the Stations' own cosign key (cosign.key, and cosign.password if it is
@@ -309,7 +309,7 @@ networkPolicy:
 
 # ---------------------------------------------------------------------------------------------
 # Health sources for verify steps, using the same entries as delivery.verification.sources in the
-# launchway chart. Register the same names, types and projects in the server's configuration;
+# launchway chart. Register the same names, types and Flights in the server's configuration;
 # this chart gives their connection details only to the launch Station.
 # ---------------------------------------------------------------------------------------------
 verification:
@@ -321,7 +321,7 @@ verification:
 # the launchway chart, except the token, which here must be an existing Secret.
 # ---------------------------------------------------------------------------------------------
 deployRunner:
-  # -- Run a launch Station in this cluster, with the token of a deploy Flight line. It serves
+  # -- Run a launch Station in this cluster, with the token of a deploy Ramp. It serves
   # deployRunner.target, which must be this cluster.
   enabled: false
   # -- The target this cluster is, as the server's Airfields name it (Airfields: in its
@@ -330,7 +330,7 @@ deployRunner:
   replicas: 1
   # -- Where the Argo CD Applications are.
   argocdNamespace: argocd
-  # -- Which projects may deploy which applications. Names must be written out (no
+  # -- Which Flights may deploy which applications. Names must be written out (no
   # patterns): the RBAC rules name each application.
   #   - { projects: [shop], names: [shop] }
   applications: []
@@ -349,7 +349,7 @@ deployRunner:
   # verdicts, with keys read from deployRunner.secretStores. Written only when true. Unset: false.
   ai: null
   # -- The launch Station's own limits on the work it takes (accept: in its runner.yaml), checked
-  # on the Station before anything runs: which projects it serves and which Airfields it
+  # on the Station before anything runs: which Flights it serves and which Airfields it
   # deploys to. Written only when set. For example:
   #   accept: { projects: [launchway], Airfields: [launchway-dev, launchway-sandbox], executors: [deploy] }
   accept: null
@@ -397,7 +397,7 @@ deployRunner:
   # only an Application's operation and refresh annotation, never its spec.
   admissionPolicy:
     enabled: true
-  # -- The deploy Flight line's token (runner_pools in the server's configuration, the pool
+  # -- The deploy Ramp's token (runner_pools in the server's configuration, the pool
   # deploy-<target>): a Secret in this namespace. Required when enabled.
   token:
     existingSecret: ""

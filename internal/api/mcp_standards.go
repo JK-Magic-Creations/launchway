@@ -31,19 +31,19 @@ func addStandardsTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Every check of the profile: what it looks for and why, which ecosystem makes it apply, its tool and the tool's license, its default state, whether it can block, its time budget and what it needs from the network, plus the defaults of the gates and the setting keys."},
 		mcpCallTimeout, getStandardsProfile)
 	addTool(srv, c, &mcp.Tool{Name: "get_standards", Annotations: readOnly("Get a repository's Standing orders"),
-		Description: "The Standing orders in effect for a project: each check with its state (off, advise or block), whether it applies and runs and why not, where each value comes from (the default, a level, the repository's own file) and what a lock above holds, the gate thresholds, license lists, exemptions and notices such as a value that did not count because a level above locked it. With file=true also the repository's .launchway/standards.yaml and what the settings would look like as a file."},
+		Description: "The Standing orders in effect for a Flight: each check with its state (off, advise or block), whether it applies and runs and why not, where each value comes from (the default, a level, the repository's own file) and what a lock above holds, the gate thresholds, license lists, exemptions and notices such as a value that did not count because a level above locked it. With file=true also the repository's .launchway/standards.yaml and what the settings would look like as a file."},
 		mcpCallTimeout, getStandards)
 	addTool(srv, c, &mcp.Tool{Name: "get_standards_settings", Annotations: readOnly("Get one level's Standing orders settings"),
-		Description: "The settings one level (installation, organization, unit or project) has, with their version and the level names in use. They are changed in the interface, the API or the command line by someone who administers the level, not by tools."},
+		Description: "The settings one level (installation, organization, unit or Flight) has, with their version and the level names in use. They are changed in the interface, the API or the command line by someone who administers the level, not by tools."},
 		mcpCallTimeout, getStandardsSettings)
 	addTool(srv, c, &mcp.Tool{Name: "get_standards_coverage", Annotations: readOnly("Which repositories have which checks"),
-		Description: "For the projects of a level that the caller may read: whether Standing orders are switched off, each check's state and whether it runs, and the open findings by severity."},
+		Description: "For the Flights of a level that the caller may read: whether Standing orders are switched off, each check's state and whether it runs, and the open findings by severity."},
 		mcpCallTimeout, getStandardsCoverage)
-	addTool(srv, c, &mcp.Tool{Name: "list_findings", Annotations: readOnly("List a project's findings"),
-		Description: "The findings the project's default branch has had, in one model whatever the tool: severity, check, rule, file and line, package and version with the fixed version, advisories, whether the vulnerable code is reachable, how to fix it, when it was first seen, and its status (open, fixed, accepted risk, false positive) with the decision's reason, who and end date. Filter by status, severity, check or text; oldest=true sorts oldest first. With fingerprint, one finding; with history=true, the open findings over time, the mean time to fix and the oldest open one."},
+	addTool(srv, c, &mcp.Tool{Name: "list_findings", Annotations: readOnly("List a Flight's findings"),
+		Description: "The findings the Flight's default branch has had, in one model whatever the tool: severity, check, rule, file and line, package and version with the fixed version, advisories, whether the vulnerable code is reachable, how to fix it, when it was first seen, and its status (open, fixed, accepted risk, false positive) with the decision's reason, who and end date. Filter by status, severity, check or text; oldest=true sorts oldest first. With fingerprint, one finding; with history=true, the open findings over time, the mean time to fix and the oldest open one."},
 		mcpCallTimeout, listFindings)
-	addTool(srv, c, &mcp.Tool{Name: "export_findings", Annotations: readOnly("Export a project's findings"),
-		Description: "A project's findings as json, csv or sarif text (SARIF 2.1.0 with the stable fingerprint as a partial fingerprint)."},
+	addTool(srv, c, &mcp.Tool{Name: "export_findings", Annotations: readOnly("Export a Flight's findings"),
+		Description: "A Flight's findings as json, csv or sarif text (SARIF 2.1.0 with the stable fingerprint as a partial fingerprint)."},
 		mcpCallTimeout, exportFindings)
 	addTool(srv, c, &mcp.Tool{Name: "get_run_inspection", Annotations: readOnly("Get a Sortie's Inspection"),
 		Description: "What the Inspection that Standing orders added to a Sortie found: the verdict (blocked or passed, in a sentence), the profile and thresholds in force when the run was made, each check and whether it ran, and the findings with their standing: new (introduced by this change), existing (already on the default branch), accepted or false positive. Filter by standing, check or severity."},
@@ -65,14 +65,14 @@ func getStandardsProfile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest
 }
 
 type standardsIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	File    bool   `json:"file,omitempty" jsonschema:"also return the repository's own settings file and the file the settings would make"`
 }
 
 func getStandards(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in standardsIn) (map[string]any, error) {
 	out := map[string]any{}
 	if in.Project == "" {
-		return out, errors.New("say which project")
+		return out, errors.New("say which Flight")
 	}
 	if err := c.apiJSON(ctx, "get_standards", http.MethodGet, apiPath("/api/v1/projects/%s/standards", in.Project), nil, &out); err != nil {
 		return out, err
@@ -88,8 +88,8 @@ func getStandards(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in st
 }
 
 type standardsLevelIn struct {
-	Level string `json:"level,omitempty" jsonschema:"installation (the default), organization, unit or project"`
-	Scope string `json:"scope,omitempty" jsonschema:"the unit's or project's name"`
+	Level string `json:"level,omitempty" jsonschema:"installation (the default), organization, unit or Flight"`
+	Scope string `json:"scope,omitempty" jsonschema:"the unit's or Flight's name"`
 }
 
 func (in standardsLevelIn) query() string {
@@ -116,7 +116,7 @@ func getStandardsCoverage(ctx context.Context, c *mcpCall, _ *mcp.CallToolReques
 }
 
 type listFindingsIn struct {
-	Project     string   `json:"project" jsonschema:"the project's name"`
+	Project     string   `json:"project" jsonschema:"the Flight's name"`
 	Status      string   `json:"status,omitempty" jsonschema:"open (default), fixed, accepted or all"`
 	Severities  []string `json:"severities,omitempty" jsonschema:"any of critical, high, medium, low, unknown"`
 	Check       string   `json:"check,omitempty" jsonschema:"only this check, such as vuln-deps"`
@@ -138,7 +138,7 @@ func clipTracked(f *engine.TrackedFinding) {
 func listFindings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in listFindingsIn) (map[string]any, error) {
 	out := map[string]any{}
 	if in.Project == "" {
-		return out, errors.New("say which project")
+		return out, errors.New("say which Flight")
 	}
 	switch {
 	case in.History:
@@ -168,14 +168,14 @@ func listFindings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in li
 }
 
 type exportFindingsIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	Format  string `json:"format,omitempty" jsonschema:"json (default), csv or sarif"`
 	Status  string `json:"status,omitempty" jsonschema:"open (default), fixed, accepted or all"`
 }
 
 func exportFindings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in exportFindingsIn) (map[string]any, error) {
 	if in.Project == "" {
-		return nil, errors.New("say which project")
+		return nil, errors.New("say which Flight")
 	}
 	if in.Format == "" {
 		in.Format = "json"
@@ -217,7 +217,7 @@ func getRunInspection(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 }
 
 type acceptFindingIn struct {
-	Project     string `json:"project" jsonschema:"the project's name"`
+	Project     string `json:"project" jsonschema:"the Flight's name"`
 	Fingerprint string `json:"fingerprint,omitempty" jsonschema:"the finding's fingerprint, from list_findings or get_run_inspection; or give path instead"`
 	Path        string `json:"path,omitempty" jsonschema:"instead of one finding: a path of the repository, such as docs/** or docs/vectors.json; every open finding there gets the decision (for example: these are test vectors, not secrets)"`
 	Check       string `json:"check,omitempty" jsonschema:"with path: only the findings of this check, such as secrets"`
@@ -229,7 +229,7 @@ type acceptFindingIn struct {
 func acceptFinding(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in acceptFindingIn) (engine.DecisionView, error) {
 	var out engine.DecisionView
 	if in.Project == "" || (in.Fingerprint == "") == (in.Path == "") {
-		return out, errors.New("say which project and either which finding (fingerprint) or which path")
+		return out, errors.New("say which Flight and either which finding (fingerprint) or which path")
 	}
 	if in.Path != "" {
 		var n map[string]any
@@ -246,7 +246,7 @@ func acceptFinding(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in a
 }
 
 func reopenFinding(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-	Project     string `json:"project" jsonschema:"the project's name"`
+	Project     string `json:"project" jsonschema:"the Flight's name"`
 	Fingerprint string `json:"fingerprint" jsonschema:"the finding's fingerprint"`
 }) (map[string]bool, error) {
 	out := map[string]bool{}

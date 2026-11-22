@@ -31,7 +31,7 @@ describe("the Code page with hosted repositories and no project", () => {
     render(<MeContext.Provider value={me()}><InstallationProvider me={me()} approvals={[]}><CodeListPage /></InstallationProvider></MeContext.Provider>);
     expect(await screen.findByRole("link", { name: "acme/shop" })).toHaveAttribute("href", "/repositories/acme/shop");
     expect(screen.getByRole("link", { name: "acme/docs" })).toBeInTheDocument();
-    expect(screen.getByText(/2 repositories are hosted by Launchway; none is connected as a project/)).toBeInTheDocument();
+    expect(screen.getByText(/2 repositories are hosted by Launchway; none is connected as a Codebase/)).toBeInTheDocument();
     expect(screen.queryByText(/None is connected yet/)).not.toBeInTheDocument();
   });
 });

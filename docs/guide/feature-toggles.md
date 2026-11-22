@@ -8,13 +8,13 @@ You need none of this to run a pipeline. This page describes what is built today
 
 ## The model
 
-A toggle belongs to a project (or is shared from a Squadron, the Wing or the installation, the same
+A toggle belongs to a Flight (or is shared from a Squadron, the Wing or the installation, the same
 levels [variables](variables.md) have: a nearer level overrides, a lock keeps it from being overridden).
 It has:
 
 | Part | What it is |
 |---|---|
-| **Key** | Lower-case letters, digits and `- _ .`, such as `checkout-v2`. Unique in a project. |
+| **Key** | Lower-case letters, digits and `- _ .`, such as `checkout-v2`. Unique in a Flight. |
 | **Type** | `boolean`, `string`, `number` or `json`. Every value a toggle serves has its type. |
 | **Kind** | `release`, `kill` (a Master switch (kill switch), with a safe value), `experiment`, `operational` or `permission`. |
 | **Default** | What it serves while it is off. A toggle starts off in every Airfield (environment). |
@@ -63,7 +63,7 @@ reason, and is recorded).
 
 A team can **turn a safeguard down** at its level, for one Airfield or all; that needs a reason and is
 recorded in the toggle history and the Logbook. A level above can **lock** a safeguard, and that is the
-only way a team loses the choice. The settings page of a project's toggles shows each safeguard and which
+only way a team loses the choice. The settings page of a Flight's toggles shows each safeguard and which
 level set it. Launchway never rewrites your application: where it has advice, it advises.
 
 ## History and revert
@@ -97,7 +97,7 @@ from your code and then delete the toggle (the deletion can be reverted).
 
 ## Keys for applications
 
-An application reads toggles with an **SDK key** of one Airfield of one project, which can only read:
+An application reads toggles with an **SDK key** of one Airfield of one Flight, which can only read:
 
 | Key | Looks like | Use | Can |
 |---|---|---|---|
@@ -106,7 +106,7 @@ An application reads toggles with an **SDK key** of one Airfield of one project,
 
 A server key is shown once, when made, and stored only as a SHA-256 hash. Rotating makes a new key and lets the
 old one work for an overlap (a day unless said) so no deployment is caught between them; revoking ends a key at
-once. Needs the admin role on the project. A toggle that gates something dangerous must not be client-visible:
+once. Needs the admin role on the Flight. A toggle that gates something dangerous must not be client-visible:
 **a client-visible toggle's value is public**, and toggles are not a security boundary. A client-visible toggle
 cannot have a prerequisite that is not visible.
 
@@ -123,13 +123,13 @@ prefer rules on attributes.
 
 ## The toggles file (config as code)
 
-`launchway toggles export PROJECT -o .launchway/toggles.yaml` writes a project's toggles as a file (the same
+`launchway toggles export PROJECT -o .launchway/toggles.yaml` writes a Flight's toggles as a file (the same
 model as the API, in YAML); you review changes to it in a pull request. `launchway toggles plan PROJECT -f FILE`
 shows how the file and the live toggles differ: what to add, what to change, and what exists only live.
 `launchway toggles apply PROJECT -f FILE --reason "..."` makes the live toggles match the file, through the
 same safeguards (a toggle that needs approval waits). It **never removes** a toggle, an Airfield or a
 segment the file leaves out: those are listed as *only live*. Nothing applies by itself. The web page of a
-project's toggles has the same three steps in "The toggles file".
+Flight's toggles has the same three steps in "The toggles file".
 
 Launchway does not read the file from your repository for you yet: run `plan` in the pull request's pipeline to
 show the drift, and `apply` after it merges (see the recipe below).
@@ -159,7 +159,7 @@ segments:
 ### Changing a toggle as part of a delivery
 
 There is no pipeline keyword for it yet. A step that runs the CLI does it, with an API token of the pipeline's
-own (limited to the project and the operator role) from a secret store, and the recorded way "pipeline":
+own (limited to the Flight and the operator role) from a secret store, and the recorded way "pipeline":
 
 ```yaml
   open-to-ten-percent:
@@ -175,14 +175,14 @@ The safeguards apply to it like to anyone: in a protected Airfield it waits for 
 
 | | Who |
 |---|---|
-| See toggles, history, usage | a viewer of the project |
-| Make, change, delete a toggle; change its state; revert; approve | an operator of the project (in the Airfield, for a state change); a shared toggle needs the level's administrator |
-| Safeguards, SDK keys | an administrator of the project (of the level, above it) |
+| See toggles, history, usage | a viewer of the Flight |
+| Make, change, delete a toggle; change its state; revert; approve | an operator of the Flight (in the Airfield, for a state change); a shared toggle needs the level's administrator |
+| Safeguards, SDK keys | an administrator of the Flight (of the level, above it) |
 
 Every action is in the [audit trail](../reference/events.md) (`toggle.*`); the toggle's own history keeps before
 and after. The same operations are in the [HTTP API](../reference/http-api.md), the CLI (`launchway toggles`),
 the MCP tools (`list_toggles`, `set_toggle_state`, and others; none makes or shows an SDK key) and the web pages
-under a project's **Toggles** tab. A Terraform resource is planned (see [interface parity](../reference/interface-parity.md)).
+under a Flight's **Toggles** tab. A Terraform resource is planned (see [interface parity](../reference/interface-parity.md)).
 
 ## Not built yet
 

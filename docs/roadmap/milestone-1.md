@@ -206,7 +206,7 @@ Publish a single release branch to a public mirror, and update the mirror only a
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
+Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Features that are switched off are hidden, so a small setup stays small. Each screen explains what it does in a sentence.
 
 **Depends on:** Built-in Git hosting.
 
@@ -403,7 +403,7 @@ Track work next to the code, with labels, milestones, assignees and links betwee
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Colored and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across projects at the levels you choose.
+Colored and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across Flights at the levels you choose.
 
 **Depends on:** Issues and work items.
 
@@ -453,7 +453,7 @@ Bring issues in from other trackers, or keep them in sync in both directions whi
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Estimates, timers and due dates, off until a project turns them on. Estimates and start and due dates are on the main branch. Missing: timers.
+Estimates, timers and due dates, off until a Flight turns them on. Estimates and start and due dates are on the main branch. Missing: timers.
 
 **Depends on:** Issues and work items.
 
@@ -535,7 +535,7 @@ Your keys, and your tokens with their scopes and expiry, together on one page, w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A token that works on one repository only, with the actions it may take, and a list of source addresses it may be used from. A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to projects.
+A token that works on one repository only, with the actions it may take, and a list of source addresses it may be used from. A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to Flights.
 
 [Area page](git-hosting.md)
 
@@ -730,7 +730,7 @@ Run the same steps across versions, systems and architectures from one definitio
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the project, branch and Airfield.
+Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the Flight, branch and Airfield.
 
 [Area page](pipelines.md)
 
@@ -780,7 +780,7 @@ A full step namespace makes a step wait, with the reason, the Sorties that hold 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Runs over a limit are held with a reason, in a visible order, and the main build is never held. Limits on concurrent Sorties of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.
+Runs over a limit are held with a reason, in a visible order, and the main build is never held. Limits on concurrent Sorties of a Flight, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.
 
 **Depends on:** Nothing beyond what runs pipelines today.
 
@@ -1015,7 +1015,7 @@ Launchway is built, tested, signed and rolled out by Launchway, in a group of se
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-No pile of connectors, services and Airfields to define before anything works. Six words cover everyday use: project, pipeline, step, run, Airfield and Station.
+No pile of connectors, services and Airfields to define before anything works. Six words cover everyday use: Flight, pipeline, step, run, Airfield and Station.
 
 
 #### Signed releases and installers {#signed-releases-and-installers}
@@ -1181,7 +1181,7 @@ Every list is a hierarchy you can search, and the Tower shows what needs a perso
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Pipelines, repositories, projects and runs sit in folders you can search, grouped by level. A long flat list gets cluttered; folders keep it findable.
+Pipelines, repositories, Flights and runs sit in folders you can search, grouped by level. A long flat list gets cluttered; folders keep it findable.
 
 [Area page](guided-interface.md)
 

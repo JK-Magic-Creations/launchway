@@ -18,9 +18,9 @@ When a run is made, Launchway looks at the files of the commit and picks the che
 | Helm charts, Kubernetes manifests, Terraform | misconfiguration; Kubernetes best practice |
 | Shell scripts | shellcheck (advice) |
 
-[The reference](../reference/standing-orders.md) lists every check with its tool, the tool's license, its time budget and what it needs from the network. The project's **Standing orders** page (Pipelines, then your project, then Standing orders) shows, for your repository, each check, whether it runs and why, and where each setting comes from.
+[The reference](../reference/standing-orders.md) lists every check with its tool, the tool's license, its time budget and what it needs from the network. The Flight's **Standing orders** page (Pipelines, then your Flight (codebase), then Standing orders) shows, for your repository, each check, whether it runs and why, and where each setting comes from.
 
-The steps are **added by the server**. Your pipeline file does not mention them, and the graph of the Sortie marks them as added by Standing orders, with a link to the page that says why and how to change it. They run in the tool's own pinned container image, never see your project's secrets, use the step cache, and run unchanged for a pull request from a fork or an automation account (a restricted run), because they need no secret.
+The steps are **added by the server**. Your pipeline file does not mention them, and the graph of the Sortie marks them as added by Standing orders, with a link to the page that says why and how to change it. They run in the tool's own pinned container image, never see your Flight's secrets, use the step cache, and run unchanged for a pull request from a fork or an automation account (a restricted run), because they need no secret.
 
 If your pipeline has a step of its own called `inspect-<check>` (for example `inspect-secrets`), Launchway keeps yours and does not add that check.
 
@@ -41,7 +41,7 @@ Settings live at four levels and the repository's own file; the nearest wins, an
 | Level | Where |
 |---|---|
 | Base, Wing, Squadron | Settings, Standing orders (`launchway standards set --level organization ...`) |
-| Project | the same page, or the project's Standing orders page |
+| Flight | the same page, or the Flight's Standing orders page |
 | The repository | `.launchway/standards.yaml` on the default branch |
 
 Everything is on by default; you opt out. Each level can set a check to `off`, `advise` or `block`, set the severity that blocks, require a fix, choose what findings on the default branch do, allow or deny licenses, and list exemptions. Each level also has one **off switch** for Standing orders as a whole: it needs a reason, it is written to the Logbook, and the Security pages show a reminder while it is off. An installation can also switch them off for everything with one setting in the server's settings, `LAUNCHWAY_STANDING_ORDERS=off` (in the Helm chart, `server.extraEnv`). It is read for every Sortie and needs no database, so an operator can set it before upgrading to the release that brings Standing orders, and remove it when ready; an older server ignores it. Each Sortie it applies to says so in its note.
@@ -63,19 +63,19 @@ ignore:
 ```
 
 - **The file is the team's control.** It is read from the default branch only: a pull request that edits it takes effect after it merges, so a change cannot switch off its own checks.
-- **It is validated with plain messages**, naming the line: an unknown check suggests the closest name, a missing reason or end date is refused, an end date more than a year away is refused. What is wrong is left out and shown on the project's Standing orders page; the rest still applies.
+- **It is validated with plain messages**, naming the line: an unknown check suggests the closest name, a missing reason or end date is refused, an end date more than a year away is refused. What is wrong is left out and shown on the Flight's Standing orders page; the rest still applies.
 - **A lock above wins.** If your Wing locked `check.secrets` at `block` and your file says `advise`, the file's value is ignored, and the page says so: "locked by your Wing: the security team requires it". Nothing is silently dropped.
 - The page shows where every value comes from, and what it overrides, struck through.
-- To move your settings into Git, open the project's Standing orders page and choose "Show this project's settings as a file".
+- To move your settings into Git, open the Flight's Standing orders page and choose "Show this Flight's settings as a file".
 
 ## Accepting a risk
 
-On a finding (in a Sortie's Security tab, or the project's page) choose **Accept the risk**. It needs:
+On a finding (in a Sortie's Security tab, or the Flight's page) choose **Accept the risk**. It needs:
 
 - a **reason** of at least 10 characters (why it is safe, or why it is not a problem), and
 - an **end date** within a year.
 
-You can also mark it a **false positive**. The decision is recorded with your name, appears in the Logbook, counts for that finding wherever it appears in the project, and **stops counting on its end date**, after which the finding blocks again if it would. Anyone with the operator role can end it early (**End this decision**). From the command line: `launchway findings accept PROJECT FINGERPRINT --reason "..." --days 30`.
+You can also mark it a **false positive**. The decision is recorded with your name, appears in the Logbook, counts for that finding wherever it appears in the Flight, and **stops counting on its end date**, after which the finding blocks again if it would. Anyone with the operator role can end it early (**End this decision**). From the command line: `launchway findings accept PROJECT FINGERPRINT --reason "..." --days 30`.
 
 Teams can also write an exemption in the file (`ignore:` above), with the same reason and end date.
 
@@ -83,12 +83,12 @@ Teams can also write an exemption in the file (`ignore:` above), with the same r
 
 Each finding says what it is, where, why the check exists, and how to fix it: the fixed version for a dependency, or a change the tool suggests. For a dependency the finding offers the command that asks the dependency updater for the pull request (`launchway deps update NAME`); Launchway never edits your code on its own.
 
-Exports: the project's page offers CSV, JSON and SARIF; `launchway findings export PROJECT --format sarif` writes the same. A tool that Launchway does not run can report into it too: a step whose `reports.findings` names a SARIF file, or a file in the [native findings format](../reference/standing-orders.md#plugging-in-another-tool), is read like any other.
+Exports: the Flight's page offers CSV, JSON and SARIF; `launchway findings export PROJECT --format sarif` writes the same. A tool that Launchway does not run can report into it too: a step whose `reports.findings` names a SARIF file, or a file in the [native findings format](../reference/standing-orders.md#plugging-in-another-tool), is read like any other.
 
 ## Where the results are
 
 - **The Security tab of a Sortie** starts with the Inspection: verdict, the checks and whether each ran, and the findings split into new, existing and accepted.
-- **The project's Standing orders page**: the open findings over time (with a table of the same numbers), by check, oldest first, the mean time to fix, and exports.
+- **The Flight's Standing orders page**: the open findings over time (with a table of the same numbers), by check, oldest first, the mean time to fix, and exports.
 - **Settings, Standing orders**: which repositories have which checks, at a level, and the settings of the level.
 
-See also: [Security findings and SBOMs](security-findings.md), [Maintenance (dependency updates)](dependency-updates.md), [Variables at levels](variables.md) (the same Base, Wing, Squadron and Project levels and locks).
+See also: [Security findings and SBOMs](security-findings.md), [Maintenance (dependency updates)](dependency-updates.md), [Variables at levels](variables.md) (the same Base, Wing, Squadron and Flight levels and locks).

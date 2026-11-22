@@ -2,7 +2,7 @@
 
 An **agent** is software that takes work from the same items people use, does it, and hands it back to a
 person. Launchway treats an agent like a careful new colleague with a name tag: it has its own token,
-may touch only the Projects and kinds of work it was registered for, holds an item only on a lease, and
+may touch only the Flights (codebase) and kinds of work it was registered for, holds an item only on a lease, and
 cannot finish anything, approve anything or change its own limits. Whatever an agent does is marked as
 agent-made in the item's history and in the [Logbook](../reference/events.md#audit-trail).
 
@@ -22,18 +22,18 @@ about work.
 There are two ways, and both end in the agent's [list of work](#the-loop):
 
 - **Assign it.** Add the agent as an assignee, like a person. The server refuses an agent that is switched
-  off, that is not registered for the item's Project, or that does not take the item's type.
+  off, that is not registered for the item's Flight, or that does not take the item's type.
 - **Use a pool.** Give an agent a label it works from (for example `agent:docs`). Any open item with that
   label and **no assignee** is offered to it. The first agent to claim an item gets it.
 
 An item is **not offered** to an agent when it is confidential, blocked by an open item, finished, held
-by another agent on a live lease, outside the agent's Projects or types, of a difficulty its
+by another agent on a live lease, outside the agent's Flights or types, of a difficulty its
 [class](#class-routing) may not take, or in a level where agents are switched off. The Holding pattern (queue) keeps the
 backlog order, with urgent work first.
 
 ## Registering an agent
 
-A person who maintains the scope (admin of the Project, or of every Project of a Squadron, Wing or
+A person who maintains the scope (admin of the Flight, or of every Flight of a Squadron, Wing or
 Base) registers an agent. An operator cannot. From the command line:
 `launchway work agents create docs --scope installation --project acme/shop --label agent:docs --type task`
 (it prints the token once); `launchway work agents rotate-token NAME`, `disable NAME` and `enable NAME`
@@ -43,7 +43,7 @@ manage it, and `launchway work agents list` shows what each holds.
 |---|---|
 | Name | 2 to 40 characters: letters, digits, `-` and `_`. Not the name of a person on any work |
 | Scope | The level it is registered at |
-| Projects | The Projects it may work in: patterns, never "all by default". `*` is allowed only for an agent registered at the Base |
+| Flights | The Flights it may work in: patterns, never "all by default". `*` is allowed only for an agent registered at the Base |
 | Types | The item types it takes (all if empty) |
 | Labels | The pools it works from |
 | Concurrency | Items it may hold at once (default 1, at most 20) |
@@ -117,8 +117,8 @@ each has a test that fails if the rule is lost.
 | **An agent never approves a pull request through the ordinary review, never merges unless it is allowed to, and never turns on auto-merge** | `TestAgentLoopThroughTheAPI` (each call is refused) |
 | **A pull request by an agent is not merged without a person's approval**, whoever presses merge, unless the [policy](#the-autonomy-policy) lets it through or an [independent agent's review](#independent-review-by-another-agent) counts | `TestAgentLoopThroughTheAPI` ("needs a person's approval") and `TestAutonomyGate` |
 | **An agent's merge never finishes work.** The item waits in review for a person | `TestPullMergeMovesWorkAndNeverClosesAcrossProjects` |
-| **An agent never closes work in another Project**, and nobody does without the right to change work there | `TestPullMergeMovesWorkAndNeverClosesAcrossProjects` (for a person without the right); for agents in code (`mayCloseFor`) |
-| **An agent works only in the Projects it was registered for**, for work and for Git. A claim, an assignment or a push elsewhere is refused | `TestKillSwitchBudgetsAndScopeLimits` and `TestAgentLoopThroughTheAPI` (a push to another repository is refused) |
+| **An agent never closes work in another Flight**, and nobody does without the right to change work there | `TestPullMergeMovesWorkAndNeverClosesAcrossProjects` (for a person without the right); for agents in code (`mayCloseFor`) |
+| **An agent works only in the Flights it was registered for**, for work and for Git. A claim, an assignment or a push elsewhere is refused | `TestKillSwitchBudgetsAndScopeLimits` and `TestAgentLoopThroughTheAPI` (a push to another repository is refused) |
 | **An agent is never offered, and cannot claim, a confidential or blocked item** | in code (the Holding pattern and claim checks); no separate test yet. `TestConfidentialAndCrossProjectVisibility` proves confidential items are hidden from people who may not see them |
 | **An agent cannot exceed its limits**: items held, items per day, its daily budget | `TestAgentLoopAssignClaimReviewDone` (the second claim is refused) and `TestKillSwitchBudgetsAndScopeLimits` |
 | **Only a person who maintains the scope registers an agent**; an operator cannot | `TestAgentLoopThroughTheAPI` (403) and `TestKillSwitchBudgetsAndScopeLimits` |
@@ -160,18 +160,18 @@ job that merges agents' work; the existing auto-merge sweep is what acts.
 
 ### Where the effective policy comes from
 
-Settings are read from the nearest level that sets them: Project, then its Squadron, then the Wing, then
-the Base. The **autonomy** setting of a nearer level replaces the farther one's. The page of the Project shows the level
-in force and **where it comes from** ("installation", "project:acme/shop", or "default"), and, if it is above
+Settings are read from the nearest level that sets them: Flight, then its Squadron, then the Wing, then
+the Base. The **autonomy** setting of a nearer level replaces the farther one's. The page of the Flight shows the level
+in force and **where it comes from** ("installation", "Flight:acme/shop", or "default"), and, if it is above
 what the server acts on, says so. A level cannot loosen what a farther level switched off: if agents are
 off at the Base they are off below.
 
 ### Pause
 
 Autonomy **pauses by itself** when an agent's changes go wrong: when `pause_after` (3 by default) of a
-Project's recent agent changes were reverted within `pause_days` (14), the Project stops auto-merging
+Flight's recent agent changes were reverted within `pause_days` (14), the Flight stops auto-merging
 until a person clears the pause with a reason ("cause found and fixed"). While paused, everything still
-works at level 1: it needs a person. Only a person who maintains the Project clears a pause
+works at level 1: it needs a person. Only a person who maintains the Flight clears a pause
 (`clear_autonomy_pause`, `POST /api/v1/work/autonomy/clear-pause`). Today the server records a revert (a
 pull request that reverts an agent's merged change); the rule also counts a failed delivery, but nothing
 writes that outcome yet.
@@ -188,7 +188,7 @@ writes that outcome yet.
 ## Independent review by another agent
 
 Normally an agent's review is **advice**: it shows on the pull request, marked as advice, with why it
-does not count. A Wing or a Project that wants a second pair of eyes before a person looks can let a
+does not count. A Wing or a Flight that wants a second pair of eyes before a person looks can let a
 **different agent's** approval count. That is a policy of the level, off by default:
 
 | Setting | Meaning |
@@ -230,7 +230,7 @@ When an item's budget or the agent's daily budget is passed, the answer to the r
 **further claims are refused**; nothing is stopped part-way, and a person may raise the budget.
 
 The **spend view** (`get_work_spend`, `GET /api/v1/work/spend`) shows, for what you may see, each agent's use over
-the last 24 hours against its daily budget, each Project's use over all time, and the costliest items with
+the last 24 hours against its daily budget, each Flight's use over all time, and the costliest items with
 what is left of their budget.
 
 ## Taking over

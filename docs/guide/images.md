@@ -49,13 +49,13 @@ steps:
 | `platforms` | `os/arch` values; default the builder's own. See *Several platforms* |
 | `build_args` | Values as for deploy steps: written in place, `{ output: step.key }`, `{ run: sha \| short_sha \| branch \| tag \| number \| commit_time }` or `{ input: name }`. They are recorded in the provenance: never put a secret in one |
 | `secrets` | Build secrets by ID, read from the Station's secret stores like any step's secrets. They reach the build only as `RUN --mount=type=secret` mounts: never in a layer, the image's history, the provenance, the log (masked like any secret), an event or the database |
-| `tags` | Names to push under: a Depot (registry) as the Station's configuration names it, a repository in it, and a tag (a value, as above). A tag that names no Depot (or `registry: launchway`) goes to the [built-in Depot](registry.md): no Station (runner) configuration, and the step is handed a credential made for the Sortie (run). There the repository is under the project (`api` in project `shop` is `shop/api`) |
+| `tags` | Names to push under: a Depot (registry) as the Station's configuration names it, a repository in it, and a tag (a value, as above). A tag that names no Depot (or `registry: launchway`) goes to the [built-in Depot](registry.md): no Station (runner) configuration, and the step is handed a credential made for the Sortie (run). There the repository is under the Flight (`api` in Flight `shop` is `shop/api`) |
 | `push` | Default true. Pull-request and draft runs never push, whatever it says |
 | `cache` | A repository the build cache is read from and, on runs that push and may push there, written to |
 | `sbom` | Make a CycloneDX SBOM of each platform's image: kept as the step's `sbom` Cargo (artifact) and summarized, as for `reports.sbom`, and searchable under *Components* |
 | `provenance` | Record where the image came from (see *Provenance*); kept as the step's `provenance` Cargo |
 | `sign` | Sign the image, its platforms' images, the provenance and the SBOMs, in the form cosign verifies |
-| `scan` | Look for known vulnerabilities in each platform's image. `mode: report` (the default) records them; `mode: enforce` fails the step, before anything is pushed, when one is at `fail_on` or worse. They are findings like any scanner's: the Sortie's Security tab, the project's Security page |
+| `scan` | Look for known vulnerabilities in each platform's image. `mode: report` (the default) records them; `mode: enforce` fails the step, before anything is pushed, when one is at `fail_on` or worse. They are findings like any scanner's: the Sortie's Security tab, the Flight's Security page |
 
 **What is sent as the build context.** The ignore file is `<Dockerfile>.dockerignore` beside the
 Dockerfile if there is one, else `.dockerignore` in the context, with the builder's own pattern
@@ -125,26 +125,26 @@ images:
   max_image_mib: 20480
 ```
 
-- **Push rules.** Nothing is pushed without a rule naming the project and the repository (`*`
+- **Push rules.** Nothing is pushed without a rule naming the Flight and the repository (`*`
   within one level, a final `/**` any depth below). The Station checks that the Depot accepts its
   credentials for each repository before building, so a wrong password or a Depot that cannot be
   reached fails the step in seconds, saying which.
 - **Pull requests and drafts** never push, never write the cache and never read `credentials`:
   the server tells the Station they may not push, and the Station refuses again on its own. They do
   build, scan and make the SBOM, so a pull request shows what its image would be. Their build
-  secrets and `pull_credentials` are refused unless the project allows secrets for pull requests;
+  secrets and `pull_credentials` are refused unless the Flight allows secrets for pull requests;
   without them, they pull anonymously, and the log says once that private base images cannot be
   pulled. The server decides this and tells the Station; a Station that is not told treats a
   pull-request or draft run as not allowed.
 - **Who gets which credentials.** A Dockerfile can send anything it can pull to anywhere (a `RUN`
-  line with network access), so any credentials a build gets are as good as the project's. The
-  builder gets `pull_credentials` only for the projects in `pull_projects`; with `pull_projects`
-  empty, **every project's builds, and pull requests that may read secrets, can pull whatever that
+  line with network access), so any credentials a build gets are as good as the Flight's. The
+  builder gets `pull_credentials` only for the Flights in `pull_projects`; with `pull_projects`
+  empty, **every Flight's builds, and pull requests that may read secrets, can pull whatever that
   account can read**, from any repository. Give each Depot's pull account read access to what
-  those projects need and nothing more, and name the projects. Push `credentials` are given to the
+  those Flights need and nothing more, and name the Flights. Push `credentials` are given to the
   builder only for the Depots a build pushes to (for the build cache), and they pull too: a
-  project allowed to push to one repository can pull whatever that account can read. Use a Depot
-  account per project or team (robot accounts scoped to their repositories), not one account for
+  Flight allowed to push to one repository can pull whatever that account can read. Use a Depot
+  account per Flight or team (robot accounts scoped to their repositories), not one account for
   everything.
 - **Token services.** A Depot names where the Station should send its credentials for a token;
   the Station sends them only over HTTPS, unless the Depot is marked `insecure: true`.
@@ -154,7 +154,7 @@ images:
 
 **Signing.** `sign: true` signs with the Station's own key (`images.signing`), a file only the Station
 reads: steps never see it, so a signature says the image came from this Station's build. `sign: {
-key: …, password: … }` signs with a key from a secret store, which steps of projects that store
+key: …, password: … }` signs with a key from a secret store, which steps of Flights that store
 allows can read too: such a signature is only as trustworthy as access to that key. Keys are ECDSA
 keys as `cosign generate-key-pair` makes them (encrypted, with their password) or PKCS#8 PEM. The
 signature, the provenance and the SBOMs are written to the image's repository the way cosign keeps
@@ -191,7 +191,7 @@ emulation, which needs `binfmt_misc` handlers installed on its machine (a privil
 node, which Launchway does not make). Give each architecture a builder of its own, with
 `platforms:`: a step that asks for several platforms is built on each builder at once, and the
 images are pushed as one index, with each builder's provenance. A platform no builder of the
-project builds is refused before anything starts, naming what the builders build.
+Flight builds is refused before anything starts, naming what the builders build.
 
 **On the Sortie page**, the Images tab shows each image: its digest, the pushed name and tags (or why
 nothing was pushed), size, platforms, whether and with which key it was signed, the provenance and
@@ -200,7 +200,7 @@ the cache. **The Images tab of the Depot** (the area at `/depot`; the old `/imag
 the latest images of a repository or tag.
 
 - **API**: `GET /api/v1/runs/{id}/images`, and
-  `GET /api/v1/images?digest=sha256:…` or `?repository=host/path&tag=…` or `?project=…` (only projects
+  `GET /api/v1/images?digest=sha256:…` or `?repository=host/path&tag=…` or `?project=…` (only Flights
   the caller may see).
 - **Station settings** are `images:` in a Station's configuration; with the Helm chart,
   `runner.images` (unset by default: Stations then take no image steps). `launchway run

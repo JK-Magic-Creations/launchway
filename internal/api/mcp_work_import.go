@@ -26,7 +26,7 @@ func addWorkImportTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Make work items from a list of stories (epics and their stories, with keys, so running it again finds what it made). preview reports what would happen first. Audited."},
 		mcpCallTimeout, workSend("import_work_stories", http.MethodPost, fixed[importStoriesIn]("/api/v1/work/import/stories"), whole[importStoriesIn]))
 	addTool(srv, c, &mcp.Tool{Name: "promote_archive", Annotations: changes("Make a repository's archived issues live work items", false, true),
-		Description: "Turn the issues in a repository's read-only archive (see import_archive) into work items of that project, keeping numbers, comments and states; running it again finds what it made. preview reports first. Audited."},
+		Description: "Turn the issues in a repository's read-only archive (see import_archive) into work items of that Flight, keeping numbers, comments and states; running it again finds what it made. preview reports first. Audited."},
 		mcpCallTimeout, workSend("promote_archive", http.MethodPost, fixed[promoteIn]("/api/v1/work/import/archive"), whole[promoteIn]))
 }
 

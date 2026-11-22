@@ -1,0 +1,48 @@
+/* Moving Flights between Squadrons, and the Organize wizard. Tokens only, so light and dark both work. */
+.mv-bar { display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; }
+.mv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mv-all { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.mv-check { width: 18px; height: 18px; flex: none; margin: 0 6px 0 0; }
+.mv-done { margin: 0; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--signal-wash); color: var(--signal-ink); overflow-wrap: anywhere; }
+.mv-callout { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--signal-wash); color: var(--signal-ink); overflow-wrap: anywhere; }
+.mv-callout a { color: inherit; font-weight: 700; text-decoration: underline; }
+.mv-modal { width: min(720px, 94vw); max-height: 90vh; overflow: auto; }
+.mv-dialog { display: flex; flex-direction: column; gap: 10px; padding: 18px; min-width: 0; }
+.mv-dialog h2, .mv-dialog p { margin: 0; overflow-wrap: anywhere; }
+.mv-dest { border: 1px solid var(--line); border-radius: var(--r1); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mv-dest legend { font-weight: 600; padding: 0 4px; }
+.mv-opt { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.mv-note { padding: 8px 12px; border: 1px solid var(--warn); border-radius: var(--r1); }
+.mv-comment { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.mv-comment input { height: 36px; font: 14px var(--font); border: 1px solid var(--control-line); border-radius: var(--r1); padding: 0 8px; background: var(--sheet); color: var(--ink); }
+.mv-plans { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mv-plan { border: 1px solid var(--line); border-radius: var(--r1); padding: 10px 12px; background: var(--sheet); min-width: 0; }
+.mv-plan.blocked { border-color: var(--bad); }
+.mv-plan-h { margin: 0; font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.mv-tick { display: inline-flex; align-items: center; gap: 8px; }
+.mv-state { margin: 4px 0 0; font-weight: 600; }
+.mv-blocked ul { margin: 4px 0; padding-left: 18px; }
+.mv-effects { display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr); gap: 4px 12px; margin: 8px 0 0; }
+.mv-effects dt { font-weight: 600; }
+.mv-effects dd { margin: 0; overflow-wrap: anywhere; }
+.mv-effects ul { margin: 0; padding-left: 16px; }
+@media (max-width: 560px) { .mv-effects { grid-template-columns: minmax(0, 1fr); } }
+
+/* Organize into Squadrons */
+.og { display: flex; flex-direction: column; gap: 14px; }
+.og-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+.og-group { border: 1px solid var(--line); border-radius: var(--r2); padding: 12px; background: var(--sheet); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.og-group h2 { margin: 0; font-size: 15px; }
+.og-group label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.og-group input[type="text"], .og-group select, .og-flight select { height: 34px; font: 14px var(--font); border: 1px solid var(--control-line); border-radius: var(--r1); padding: 0 8px; background: var(--sheet); color: var(--ink); max-width: 100%; }
+.og-flights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.og-flight { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: space-between; }
+.og-flight > span { overflow-wrap: anywhere; }
+.og-flight label { flex-direction: row; align-items: center; gap: 6px; font-weight: 400; }
+.og-merge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.og-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.og-drag[draggable="true"] { cursor: grab; }
+.og-over { outline: 2px dashed var(--signal); }
+
+.mv-tick input[type="checkbox"] { width: 18px; height: 18px; flex: none; margin: 0 6px 0 0; }
+.mv-tick { display: inline-flex; align-items: center; }

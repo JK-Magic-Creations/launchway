@@ -139,7 +139,7 @@ Shared libraries pinned by tag already work; the catalog lets you find, compare 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See which projects use an old version of a template and open an update as a reviewable change. Teams keep common pipeline logic current without a manual hunt.
+See which Flights use an old version of a template and open an update as a reviewable change. Teams keep common pipeline logic current without a manual hunt.
 
 **Depends on:** A browsable catalog of templates and steps.
 
@@ -209,7 +209,7 @@ Each step has a page: where its code lives, its inputs and types, and which pipe
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result. A push that no trigger starts is listed with the reason, and a push that starts a Sortie is one entry, not two.
+Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another Flight's result. A push that no trigger starts is listed with the reason, and a push that starts a Sortie is one entry, not two.
 
 [Area page](pipelines.md)
 
@@ -383,7 +383,7 @@ The right amount of sharing at the right level, with the fewest new ideas to lea
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it. Today a Flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
+Set a template or a Flight plan at the Wing or Squadron and every Flight beneath it uses it. Today a Flight plan can be bound at a level and a Flight can override what the level allows. A solo developer never has to open any of this.
 
 [Read the documentation](../guide/libraries.md)
 
@@ -399,7 +399,7 @@ Declare a variable lower down to override it, let a level above lock it, and see
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open. You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.
+A template says what it needs and offers, can be built on another, and a Flight fills in or overrides only what is open. You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.
 
 **Depends on:** Shared pipeline templates and Flight plans.
 
@@ -437,7 +437,7 @@ A connection to a Depot, a cluster or a cloud set up once at a level and used be
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-For any template, library or connection, a list of every project that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
+For any template, library or connection, a list of every Flight that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
 
 **Depends on:** Templates and Flight plans by level.
 
@@ -491,7 +491,7 @@ Validation and the pipeline editor flag cache settings that could serve stale or
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes. A fork reads nothing from the project's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.
+What a pull request writes only that pull request reads; what a trusted branch writes the Flight reads; forks are isolated; image caches follow the same scopes. A fork reads nothing from the Flight's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.
 
 [Area page](build-tools-caches.md)
 
@@ -539,7 +539,7 @@ Bazel, sbt, .NET, Rust, C and C++, Ruby, PHP, Helm and Terraform follow the firs
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Android projects build with Gradle recipes, signing keys kept on your side, and results on the launch line. Follows the Gradle recipe.
+Android Flights build with Gradle recipes, signing keys kept on your side, and results on the launch line. Follows the Gradle recipe.
 
 [Area page](build-tools-caches.md)
 
@@ -547,7 +547,7 @@ Android projects build with Gradle recipes, signing keys kept on your side, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Apple projects build on macOS Stations you provide, with signing kept on your side. The honest constraint: Apple builds need Apple hardware.
+Apple Flights build on macOS Stations you provide, with signing kept on your side. The honest constraint: Apple builds need Apple hardware.
 
 [Area page](build-tools-caches.md)
 

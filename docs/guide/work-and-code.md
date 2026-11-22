@@ -15,9 +15,9 @@ commits, and pushes to a hosted repository. It finds item names in three forms:
 
 | Form | Names |
 |---|---|
-| `#12` | Item 12 of the project the pull request or push is in |
-| `PAY-12` | The item with that prefix and number, in whichever project owns the prefix |
-| `acme/shop#12` | Item 12 of that project |
+| `#12` | Item 12 of the Flight (codebase) the pull request or push is in |
+| `PAY-12` | The item with that prefix and number, in whichever Flight owns the prefix |
+| `acme/shop#12` | Item 12 of that Flight |
 
 A bare number glued to a word (`C#12`) is not a reference. Names that match no item are reported as
 unknown and ignored.
@@ -91,14 +91,14 @@ These are the limits on the rule, all enforced by the server:
 | Case | What happens |
 |---|---|
 | An item that is already done or won't do | Left alone |
-| An item in another project | **Never closed unless the person who merged may change work there**; otherwise it is linked and the answer says "another project: you may not close its work" |
+| An item in another Flight | **Never closed unless the person who merged may change work there**; otherwise it is linked and the answer says "another Flight: you may not close its work" |
 | Merged by an agent | **An agent's merge never finishes work.** The item moves to In review and waits for a person |
 | A commit straight to the default branch | A person's commit with a closing word closes like a merge; an agent's is only linked |
 | A pull request closed without merging | Nothing is closed; the link shows it was closed |
 | The workflow has no such state | The first done state is used |
 
-Closing across projects asks the **person's own** role: the person who merged needs a role that lets them
-change work in the other project through a binding that names them. Bindings granted to a group do not yet
+Closing across Flights asks the **person's own** role: the person who merged needs a role that lets them
+change work in the other Flight through a binding that names them. Bindings granted to a group do not yet
 allow it (see [what is not built](#what-is-not-built)).
 
 Every move made this way is in the item's history, as made by the person who merged, through Git.
@@ -121,7 +121,7 @@ The MCP tool is `release_notes`. The same function is called by each, so a relea
 
 ## What is not built
 
-- Closing work in another project with a role granted to a **group** is not yet allowed; only a
+- Closing work in another Flight with a role granted to a **group** is not yet allowed; only a
   binding that names the person works.
 - A failed delivery of an agent's change does not yet count toward
   [the pause rule](working-with-agents.md#pause); a revert does.

@@ -74,7 +74,7 @@ Set `reports.origin` so the links are full addresses.
 
 Every message is a row: event, channel, status (`sent`, `pending` for a retry, or `failed`), attempts, the
 reason for the last failure, and when it will be tried again. `launchway notifications`, `GET /api/v1/notifications`
-and the MCP tool `list_notifications` show it, for the projects you may read. A failed call is tried again after 1
+and the MCP tool `list_notifications` show it, for the Flights (codebase) you may read. A failed call is tried again after 1
 minute, 5 minutes, 30 minutes and 2 hours (five attempts), then stays as `failed` with its reason ("the channel
 answered 500 Internal Server Error", "reading the channel's address (vault:…): …"). A message about one event is
 made once per channel, whichever server notices it first (several servers can share a database).

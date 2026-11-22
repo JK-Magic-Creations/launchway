@@ -10,7 +10,7 @@ hosts, with its branch protected.
 ## Several pipelines writing one file
 
 Many services often share one manifest (`apps/mcp-servers/base.yaml` holds eight). Launches (deploys) of
-different projects can then arrive at the same moment, so a launch Station (runner):
+different Flights (codebase) can then arrive at the same moment, so a launch Station (runner):
 
 - **Edits only the value it was told to change.** It finds the image references in the YAML, rewrites
   those values in place and leaves every other byte alone, comments, quoting and order included.
@@ -98,7 +98,7 @@ A step that names a hosted repository fails, saying so, when the Station's repos
 ### Mode `direct`: a rule admits the pipeline
 
 The branch stays protected: nobody but an administrator pushes to it. A **pipeline writer rule** of
-the repository admits a project's deploy steps to that branch for exactly the files they may write:
+the repository admits a Flight's deploy steps to that branch for exactly the files they may write:
 
 ```sh
 launchway repos protected-branches platform/platform-gitops --set main \
@@ -108,10 +108,10 @@ launchway repos protected-branches platform/platform-gitops --set main \
 or `PUT /api/v1/repositories/platform/platform-gitops/protected-branches` with
 `{"patterns":["main"],"pipeline_writers":[{"branch":"main","projects":["mcp-*"],"files":["apps/mcp-servers/base.yaml"]}]}`
 (the MCP tool `set_protected_branches` takes the same). When a push arrives the server reads the
-files it changes and refuses it unless every one is admitted: "the pipeline of project mcp-weather
+files it changes and refuses it unless every one is admitted: "the pipeline of Flight mcp-weather
 may not change README.md on main: its rules admit only apps/mcp-servers/base.yaml". A rule that
-admits every file (`**`) is refused when it is saved. A project with no rule gets: "no rule of this
-repository admits a pipeline of project shop to main…".
+admits every file (`**`) is refused when it is saved. A Flight with no rule gets: "no rule of this
+repository admits a pipeline of Flight shop to main…".
 
 ### Mode `pull_request`: the step opens a pull request
 

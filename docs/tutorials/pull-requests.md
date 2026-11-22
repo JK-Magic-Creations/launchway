@@ -94,7 +94,7 @@ and `LAUNCHWAY_BRANCH` is empty. `pr-comment` prints:
 pull request 1 would get version 1.0.11
 ```
 
-and `publish` is skipped. *Recent pushes* on the project page says why each ref did or did not
+and `publish` is skipped. *Recent pushes* on the Flight (codebase) page says why each ref did or did not
 start a Sortie:
 
 ```text
@@ -103,7 +103,7 @@ refs/heads/feature/greeting  the pipeline's push trigger does not match refs/hea
 ```
 
 > [!NOTE]
-> Pull requests that already existed when the server first looked at a project do not run. Only
+> Pull requests that already existed when the server first looked at a Flight do not run. Only
 > new pull requests, and ones pushed to, run.
 
 ## 3 See secrets refused
@@ -140,7 +140,7 @@ when: { event: [push, manual] }, or ask an administrator to set pull_requests.se
 ```
 
 Do what it says: add `when: { event: [push, manual] }` to `notify`. An administrator can allow
-secrets for a project's pull requests with `pull_requests: { secrets: true }` in the server's
+secrets for a Flight's pull requests with `pull_requests: { secrets: true }` in the server's
 configuration, if only trusted people can open pull requests there.
 
 ## What you learned
@@ -148,7 +148,7 @@ configuration, if only trusted people can open pull requests there.
 - `on.pull_request` on the default branch turns pull-request runs on; Launchway polls
   `refs/pull/*`.
 - `when: { event: ... }` keeps steps in or out of pull-request runs; branch conditions never match them.
-- Pull-request runs cannot read secrets unless the project allows it.
+- Pull-request runs cannot read secrets unless the Flight allows it.
 
 ## What next
 

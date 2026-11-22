@@ -127,7 +127,7 @@ func whereOf(level, scope, project string) (togglestore.Where, error) {
 func (s *Server) mayEditLevel(r *http.Request, w togglestore.Where, project string) (int, string) {
 	if w.Level == togglestore.LevelProject {
 		if w.Scope != project {
-			return http.StatusNotFound, fmt.Sprintf("not found: project %s", w.Scope)
+			return http.StatusNotFound, fmt.Sprintf("not found: Flight %s", w.Scope)
 		}
 		return 0, ""
 	}
@@ -347,7 +347,7 @@ func (s *Server) lockToggle(lock bool) http.HandlerFunc {
 			return
 		}
 		if sm.Level == togglestore.LevelProject {
-			writeErr(w, http.StatusBadRequest, "a lock stops nearer levels from defining the toggle: lock one that is shared at a level above its projects")
+			writeErr(w, http.StatusBadRequest, "a lock stops nearer levels from defining the toggle: lock one that is shared at a level above its {projects}")
 			return
 		}
 		if code, msg := s.mayChangeLevel(identityFrom(r), settings.Level(sm.Level), sm.Scope, true); code != 0 {
@@ -515,7 +515,7 @@ func (s *Server) changeOfProject(w http.ResponseWriter, r *http.Request, svc *to
 		return nil, false
 	}
 	if ch.Project != project && (ch.Project != "" || ch.Level == togglestore.LevelProject) {
-		writeErr(w, http.StatusNotFound, fmt.Sprintf("not found: no change %d in project %s", id, project))
+		writeErr(w, http.StatusNotFound, fmt.Sprintf("not found: no change %d in {project} %s", id, project))
 		return nil, false
 	}
 	if ch.Project == "" { // a shared toggle's change: the level's administrators

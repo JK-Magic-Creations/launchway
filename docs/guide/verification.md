@@ -136,7 +136,7 @@ has at least 3 lines), as does a known one appearing unusually often.
 ## Health sources
 
 Operators configure where the data is; pipelines only name it. The servers list the names, types
-and projects (`verification.sources`; every server lists the same ones), and the launch Stations
+and Flights (`verification.sources`; every server lists the same ones), and the launch Stations
 that serve the Airfield's target hold the rest (`health_sources`), because they are the ones next
 to the monitoring systems and they never run anyone's script:
 
@@ -170,7 +170,7 @@ only indices pipelines may search), `postgres` (named statements in a read-only 
 `delivery.verification.sources` fills both sides. Credentials are only secret references, read from
 the launch Station's own stores for each query.
 
-**What a pipeline cannot do with a health source.** Use one its project is not listed for (checked
+**What a pipeline cannot do with a health source.** Use one its Flight is not listed for (checked
 when the pipeline is validated, and again on the launch Station); run SQL of its own; search an
 index not allowed; change anything (PromQL and LogQL are read APIs; ClickHouse statements run with
 `readonly=1`; PostgreSQL ones in a `READ ONLY` transaction; HTTP requests go to the configured
@@ -230,7 +230,7 @@ no ingestion delay to wait for.
 What the launch Station will not do, whatever a pipeline says:
 
 - It calls only the hosts and Service namespaces its own `check` source lists (an empty list allows
-  nothing), and only for the projects the source lists. An address literal must be in a listed range.
+  nothing), and only for the Flights the source lists. An address literal must be in a listed range.
 - The connection goes to what the name resolves to at the moment of the call, so a name that answers
   differently later cannot lead into the network around it. No redirect is followed (a 302 is reported
   as an answer that is not healthy) and no proxy is used.
@@ -267,7 +267,7 @@ statistics (when they pass a bad version or fail a good one: short windows, low 
 regressed baseline, seasonality, warm-up) are written down in
 [internal/verify/doc.go](https://github.com/JK-Magic-Creations/launchway/blob/main/internal/verify/doc.go).
 
-**Marking a verification passed or failed.** An operator of the project may mark a running or
+**Marking a verification passed or failed.** An operator of the Flight may mark a running or
 paused verification passed or failed, with a reason (`verification.override` in the Logbook);
 on a protected Airfield the person who started the Sortie (run) may not mark it passed. A pass marked by
 a person does not become part of the baseline.

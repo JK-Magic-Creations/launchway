@@ -12,19 +12,19 @@ import (
 
 const registryUsage = `Usage:
   launchway registry status [--json]                       the built-in registry: address, login, limits, what protects the blobs
-  launchway registry list PROJECT [--json]                 a project's repositories, with usage against its quota
+  launchway registry list FLIGHT [--json]                 a Flight's repositories, with usage against its quota
   launchway registry list REPOSITORY [--json]              a repository's images: tags, digest, size, platforms, who pushed it, how to pull it
   launchway registry tags REPOSITORY                       a repository's tags and the digest each points at
   launchway registry inspect REPOSITORY REFERENCE          one image or artifact by tag or digest, with its manifest
   launchway registry delete REPOSITORY REFERENCE [--tag]   delete an image (with its signatures and SBOMs), or with --tag only the tag
-  launchway registry retention PROJECT|REPOSITORY [--run]  what the retention rules would delete; --run deletes it
-  launchway registry policy get [PROJECT|REPOSITORY]       quota, retention, immutable tags (and the effective values)
-  launchway registry policy set [PROJECT|REPOSITORY]       change them
+  launchway registry retention FLIGHT|REPOSITORY [--run]  what the retention rules would delete; --run deletes it
+  launchway registry policy get [FLIGHT|REPOSITORY]       quota, retention, immutable tags (and the effective values)
+  launchway registry policy set [FLIGHT|REPOSITORY]       change them
                      [--quota-gib N] [--keep-last N] [--keep-tags P,P] [--untagged-days N] [--immutable-tags P,P] [--pull-from P,P]
   launchway registry gc [--dry-run] [--last]               collect garbage in the blob store (administrators)
 
-A repository is PROJECT/NAME (the project first): pushing to <registry host>/PROJECT/NAME makes it. Reading needs
-the viewer role on the project, deleting and policy the admin role; collection is an administrator's. Pipelines
+A repository is PROJECT/NAME (the Flight first): pushing to <registry host>/PROJECT/NAME makes it. Reading needs
+the viewer role on the Flight, deleting and policy the admin role; collection is an administrator's. Pipelines
 push and pull with a credential made for each run; people use an API token with docker, podman, skopeo or helm.
 Deleting, policy changes, retention and collection are recorded in the audit trail. Blobs are not encrypted by
 Launchway in this release: see "registry status".
@@ -102,7 +102,7 @@ func (cl *client) registryStatus(args []string) error {
 		if v.Insecure {
 			fmt.Fprintln(cl.out, "It is plain HTTP: clients need --tls-verify=false (podman, skopeo) or --insecure (docker, helm --plain-http).")
 		}
-		fmt.Fprintf(cl.out, "Limits:  a blob up to %s, a project %s by default, %d requests a minute per caller\n", byteText(v.Limits.MaxBlob), byteText(v.Limits.Quota), v.Limits.PerMinute)
+		fmt.Fprintf(cl.out, "Limits:  a blob up to %s, a Flight %s by default, %d requests a minute per caller\n", byteText(v.Limits.MaxBlob), byteText(v.Limits.Quota), v.Limits.PerMinute)
 		fmt.Fprintf(cl.out, "At rest: %s\n", v.Encryption.Note)
 	})
 }
@@ -115,7 +115,7 @@ func (cl *client) registryList(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway registry list PROJECT|REPOSITORY [--json]")
+		return usageErr("launchway registry list FLIGHT|REPOSITORY [--json]")
 	}
 	if !strings.Contains(pos[0], "/") {
 		var v struct {
@@ -326,7 +326,7 @@ func (cl *client) registryRetention(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway registry retention PROJECT|REPOSITORY [--run]")
+		return usageErr("launchway registry retention FLIGHT|REPOSITORY [--run]")
 	}
 	path := "/api/v1/projects/" + url.PathEscape(projectOfRepo(pos[0])) + "/registry/retention"
 	if strings.Contains(pos[0], "/") {
@@ -407,12 +407,12 @@ func (cl *client) registryPolicy(args []string) error {
 
 func (cl *client) registryPolicySet(args []string) error {
 	fs := flag.NewFlagSet("registry policy set", flag.ContinueOnError)
-	quota := fs.Float64("quota-gib", 0, "what the project may store, in GiB (0 for no quota)")
+	quota := fs.Float64("quota-gib", 0, "what the Flight may store, in GiB (0 for no quota)")
 	keepLast := fs.Int("keep-last", 0, "keep the newest N tagged images")
 	keepTags := fs.String("keep-tags", "", "keep images with a tag matching these patterns, comma separated (v*,release-*)")
 	untagged := fs.Int("untagged-days", 0, "delete untagged images older than this many days")
 	immutable := fs.String("immutable-tags", "", "tag patterns that cannot be overwritten or deleted once pushed (v*)")
-	pullFrom := fs.String("pull-from", "", "projects (patterns) whose runs may pull this project's repositories")
+	pullFrom := fs.String("pull-from", "", "Flights (patterns) whose runs may pull this Flight's repositories")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -420,7 +420,7 @@ func (cl *client) registryPolicySet(args []string) error {
 	}
 	given := visited(fs)
 	if len(pos) > 1 || len(given) == 0 || (given["json"] && len(given) == 1) {
-		return usageErr("launchway registry policy set [PROJECT|REPOSITORY] [--quota-gib N] [--keep-last N] [--keep-tags P,P] [--untagged-days N] [--immutable-tags P,P] [--pull-from P,P]")
+		return usageErr("launchway registry policy set [FLIGHT|REPOSITORY] [--quota-gib N] [--keep-last N] [--keep-tags P,P] [--untagged-days N] [--immutable-tags P,P] [--pull-from P,P]")
 	}
 	split := func(s string) []string {
 		var out []string

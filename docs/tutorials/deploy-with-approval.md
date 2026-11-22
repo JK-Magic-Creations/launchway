@@ -36,7 +36,7 @@ flowchart LR
 
 Words used here: an **Airfield (environment)** is a place a service is deployed to (here `staging`), served
 by a **target** (a cluster); a **deploy Station** is the process that changes the target, and a
-**Flight line (Station (runner) pool)** is the token it uses; a **deployment** is one deploy step's change and everything
+**Ramp (Station (runner) pool)** is the token it uses; a **deployment** is one deploy step's change and everything
 that guards it. See the [glossary](../glossary.md).
 
 ## 1 Make the cluster
@@ -170,7 +170,7 @@ shop   2         2         2            2           15s
 
 ## 5 Configure and start the server
 
-`launchway.yaml` declares the Airfield, the Flight line that may serve its target, and the
+`launchway.yaml` declares the Airfield, the Ramp that may serve its target, and the
 built-in Station, which runs steps as pods in the cluster so the smoke test can reach the Pathfinder:
 
 ```yaml
@@ -253,7 +253,7 @@ deploy:
       paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
 ```
 
-- `applications`, `rollout_namespaces` and `paths` are allow-lists: project `shop` may deploy only
+- `applications`, `rollout_namespaces` and `paths` are allow-lists: Flight (codebase) `shop` may deploy only
   the Application `shop`, watch rollouts only in `shop`, and change only files under `apps/shop/`.
 - `url` and `argocd_url` differ because your machine reaches Git through the port-forward and
   Argo CD reaches it inside the cluster. The Station matches the Application by `argocd_url`.
@@ -367,7 +367,7 @@ the promotion) leaves `promote` not succeeded and the Return to base runs. See
 
 ## 8 Release version 1.1.0
 
-Go to **Projects**, press **Start a Sortie** on `shop`, keep `version` at `1.1.0` and press
+Go to **Flights**, press **Start a Sortie** on `shop`, keep `version` at `1.1.0` and press
 **Start run**. (Or: `curl -s -X POST -H 'X-Launchway-CSRF: 1' -d
 '{"ref":"main","inputs":{"version":"1.1.0"}}' http://127.0.0.1:8080/api/v1/projects/shop/runs`.)
 
@@ -418,7 +418,7 @@ Now open **Airfields**:
 
 ## 9 Release a broken version and watch the Return to base {#9-release-a-broken-version-and-watch-the-rollback}
 
-Start another Sortie (**Projects**, **Start a Sortie** on `shop`), this time with `version` set to
+Start another Sortie (**Flights**, **Start a Sortie** on `shop`), this time with `version` set to
 `1.2.0-broken`. The Pathfinder starts, but its
 `/healthz` is missing, so `canary-smoke` fails:
 
@@ -489,7 +489,7 @@ cluster with `kind delete cluster --name launchway-test`.
 
 ## What you learned
 
-- Airfields and Flight lines live in the server's configuration; a deploy Station with the pool's
+- Airfields and Ramps live in the server's configuration; a deploy Station with the pool's
   token is the only thing that touches Git and the cluster for them.
 - A deploy step commits a version to a GitOps repository and judges "deployed" from what Argo CD
   and Argo Rollouts report, never from the commit alone.

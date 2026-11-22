@@ -12,7 +12,7 @@ const runLimitsUsage = `Usage:
 
 max-run-timeout is the longest timeout a pipeline may ask for with its top-level timeout, such as
 48h (1m to 720h). A pipeline that asks for more is refused when a run starts and by 'launchway
-validate'. Changes need the admin role on every project and are recorded in the audit trail.
+validate'. Changes need the admin role on every Flight and are recorded in the audit trail.
 `
 
 type runLimitsView struct {

@@ -1,20 +1,21 @@
 # First-run setup
 
-The first-run wizard is the quickest way from a new installation to a first project. It appears on
-the Configuration page while the installation has no projects. It needs the admin role, which on a new
+The first-run wizard is the quickest way from a new installation to a first Flight (codebase). It appears on
+the Configuration page while the installation has no Flights. It needs the admin role, which on a new
 installation means signing in as one of the people named in `auth.admins` (or, with `auth.mode:
 none`, anyone).
 
 ## What it asks
 
-1. **The words Launchway uses.** Choose the aviation words (Base, Wing, Squadron, Project; Wingman,
+1. **The words Launchway uses.** Choose the aviation words (Base, Wing, Squadron, Flight; Wingman,
    Preflight, Clearance, Logbook) or the plain business words (Installation, Organization, Team,
-   Project; Guide, Checks, Approval, Audit trail), watch the preview change, and rename any single word.
+   Flight; Guide, Checks, Approval, Audit trail), watch the preview change, and rename any single word.
    They are labels only. See [the words Launchway uses](../guide/words.md).
-2. **Your wing and its Squadrons.** Say what your organization is called, and whether you want
-   squadrons (a group of projects with shared settings, such as a team or a department). If you say
-   no, squadrons stay out of every screen; you can turn them on later. The questions use the words you
-   chose in the first step.
+2. **Your wing and its first Squadron.** Say what your organization is called and name the first
+   Squadron (`Main` is offered). A Squadron is a named folder of Flights with its own people and shared
+   settings, such as a team or a product line; it is always there, and you can make more at any time with
+   just a name. The questions use the words you chose in the first step. See
+   [Squadrons and Flights](../guide/squadrons-and-flights.md).
 3. **How do people sign in?**
    - *No sign-in* is for trying Launchway on your own machine: everyone is an administrator. The
      wizard says so plainly and warns against it on a server others can reach.
@@ -28,12 +29,12 @@ none`, anyone).
      (the bootstrap file's, which is also the way back in if sign-in breaks), and the wizard says so.
      If your provider is on your own network, the server refuses to contact it until an administrator
      allows its host; the wizard offers to add it to the allowed hosts.
-4. **Your first project.** The same steps as [Connect a repository](connect-repository.md).
+4. **Your first Flight.** The same steps as [Connect a repository](connect-repository.md).
 
 ## What it creates
 
 A summary lists exactly what will be created: the words in the Base settings, and the
-project. Nothing is created until you confirm, and the wizard creates it all in one step or not at all;
+Flight. Nothing is created until you confirm, and the wizard creates it all in one step or not at all;
 cancelling at any step leaves nothing behind.
 
 The same thing from the command line: `launchway config check-signin ...` checks the answers and

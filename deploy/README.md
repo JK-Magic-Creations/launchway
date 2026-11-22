@@ -69,7 +69,7 @@ Everything else has a working, secure default: the database (bundled; or `databa
 `database.url` for your own, which switches the bundled one off), the image, replicas, network
 policies, encryption. [`values.yaml`](helm/launchway/values.yaml) leads with the few values most people
 set and keeps the rest under an "ADVANCED" divider; `values.schema.json` rejects misspelt or
-mistyped ones. Projects, Stations, Git hosting and sign-in are set up in the browser after the first
+mistyped ones. Flights (codebase), Stations, Git hosting and sign-in are set up in the browser after the first
 sign-in.
 
 ### Configuration
@@ -225,10 +225,10 @@ helm install runners deploy/helm/launchway-runner -n launchway-runners \
 | Value | |
 |---|---|
 | `server.url` (required) | the server's URL as the Stations reach it |
-| `token.existingSecret` | a Secret holding the Station token or a Flight line's token; required for build Stations unless they enrol with `runner.join.existingSecret`; the chart never creates it |
+| `token.existingSecret` | a Secret holding the Station token or a Ramp's token; required for build Stations unless they enrol with `runner.join.existingSecret`; the chart never creates it |
 | `runner.*` | the same as the main chart's `runner.*` (replicas, concurrency, join tokens, labels and `accept`, `kubernetes.namespace` and `createNamespace`, which labels the namespace Pod Security "restricted", resources, PDB, secret stores, image steps) |
 | `deployRunner.*` | the same as the main chart's `delivery.deployRunner.*`, with the pool token in `deployRunner.token.existingSecret`; `runner.enabled: false` for a cluster that only receives deployments ([example](helm/launchway-runner/examples/deploy-runner.yaml)) |
-| `verification.sources` | the same health-source connection entries as the main chart's `delivery.verification.sources`, given only to the deploy Station; register their names, types and projects on the servers too |
+| `verification.sources` | the same health-source connection entries as the main chart's `delivery.verification.sources`, given only to the deploy Station; register their names, types and Flights on the servers too |
 | `proxy.httpsProxy`, `httpProxy`, `noProxy` | a proxy for the Stations' connections; its idle timeout must exceed 30 seconds (long polls last 25) |
 | `caBundle.configMap`, `key` | a CA bundle replacing the image's (it must include the public CAs you need) |
 | `networkPolicy.*` | NetworkPolicies, off by default: the Station pods may receive nothing and reach only DNS, the server, the Kubernetes API and `extraEgress`; `steps.enabled` adds one for the step namespace (DNS and `steps.egress` only). See [examples/networkpolicy.yaml](helm/launchway-runner/examples/networkpolicy.yaml) |
@@ -311,7 +311,7 @@ upgrades.
 
 ## Saving pipelines from the editor
 
-The pipeline editor can commit to a project's repository if the project has a `push` section
+The pipeline editor can commit to a Flight's repository if the Flight has a `push` section
 (see the main README's *Editing pipelines*):
 
 ```yaml
@@ -333,8 +333,8 @@ The servers then need a credential that may push, not only fetch. Give it as lit
 allows (one repository, no admin rights) and protect important branches on the host itself.
 Saves are made in temporary clones under the data directory (`server.dataVolume`), which are
 removed after each save. Who may start draft runs, and whether drafts may read secrets, is
-`drafts:` in `config.extraConfig` and per project. Whether the steps of pull-request runs may read secrets
-(no, by default) is `pull_requests:` in `config.extraConfig` and per project.
+`drafts:` in `config.extraConfig` and per Flight. Whether the steps of pull-request runs may read secrets
+(no, by default) is `pull_requests:` in `config.extraConfig` and per Flight.
 
 ## What is kept where
 
@@ -342,7 +342,7 @@ removed after each save. Who may start draft runs, and whether drafts may read s
 |---|---|---|
 | Runs, steps, events, logs, approvals, Station list, the Station token (unless you set one), the text of draft runs | PostgreSQL | Only with the database: back it up |
 | Cargo, and the SBOMs and provenance kept as Cargo | PostgreSQL, unless `config.artifacts.store` says S3 ([docs/artifacts.md](../docs/artifacts.md): limits, backups, when to move to S3) | Their retention ends, or with the database |
-| Mirrors of project repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
+| Mirrors of Flight repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each Station's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
 | A Sortie's workspace | Its step pod in the step namespace | The Sortie ends in any state (at once; `keepFailed` can add a grace period), or the pod is older than `maxPodAge` (24 hours) with no step executing; any Station removes it, including the pods of Stations that were replaced |
 | The development database | A PersistentVolumeClaim | `helm uninstall` deletes it |

@@ -23,7 +23,7 @@ import (
 
 func addConfigTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_config_overview", Annotations: readOnly("Get the configuration overview"),
-		Description: "The kinds of configuration objects this installation keeps in its database (projects, libraries, Airfields, Station pools, role bindings, policies, policy sources, health sources, AI models, secret stores, units, installation settings), what the levels are called here, and whether this server keeps configuration in the database."},
+		Description: "The kinds of configuration objects this installation keeps in its database (Flights, libraries, Airfields, Station pools, role bindings, policies, policy sources, health sources, AI models, secret stores, units, installation settings), what the levels are called here, and whether this server keeps configuration in the database."},
 		mcpCallTimeout, getConfigOverview)
 	if !c.mayAdminister {
 		return
@@ -38,7 +38,7 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. Create or replace one configuration object: the whole spec replaces the old one. The change is checked by the rules the configuration file is checked by (every problem is listed), recorded in the object's history and the audit trail, and takes effect on every server within seconds. Pass version (from get_config) to refuse the change if somebody else changed the object meanwhile; version -1 means it must not exist yet. Use validate_config first to check without changing."},
 		mcpCallTimeout, putConfig)
 	addTool(srv, c, &mcp.Tool{Name: "delete_config", Annotations: changes("Delete a configuration object", true, true),
-		Description: "Administrators only. Delete one configuration object. It is kept and can be brought back with restore_config. Refused if something still depends on it (a pool a project uses, say) or if it would leave the configuration invalid."},
+		Description: "Administrators only. Delete one configuration object. It is kept and can be brought back with restore_config. Refused if something still depends on it (a pool a Flight uses, say) or if it would leave the configuration invalid."},
 		mcpCallTimeout, deleteConfig)
 	addTool(srv, c, &mcp.Tool{Name: "restore_config", Annotations: changes("Restore a configuration object", false, true),
 		Description: "Administrators only. Bring a deleted configuration object back as it was."},
@@ -52,8 +52,8 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "apply_config", Annotations: changes("Apply several configuration changes", true, true),
 		Description: "Administrators only. Make several configuration changes together, all or none (what a wizard does): each is {kind, name, action (put, delete or restore), unit, spec, version}. Validate first with validate_config."},
 		mcpCallTimeout, applyConfig)
-	addTool(srv, c, &mcp.Tool{Name: "get_effective_config", Annotations: readOnly("Get a project's effective configuration"),
-		Description: "What applies to a project, setting by setting, and where each comes from (the Base, the Wing, a Squadron, the project)."},
+	addTool(srv, c, &mcp.Tool{Name: "get_effective_config", Annotations: readOnly("Get a Flight's effective configuration"),
+		Description: "What applies to a Flight, setting by setting, and where each comes from (the Base, the Wing, a Squadron, the Flight)."},
 		mcpCallTimeout, getEffectiveConfig)
 	addTool(srv, c, &mcp.Tool{Name: "export_config", Annotations: readOnly("Export the configuration"),
 		Description: "The whole configuration as YAML text, for backup, review or Git. import_config reads it back."},
@@ -65,7 +65,7 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 		Description: "The imports of configuration so far, the first start's import of the configuration file among them, with what each changed."},
 		mcpCallTimeout, listConfigImports)
 	addTool(srv, c, &mcp.Tool{Name: "check_repository", Annotations: changes("Check a Git repository", false, true),
-		Description: "Read a repository as the server would, keeping nothing: whether it can be reached, its branches and default branch, and whether a branch has a pipeline file. Use it before creating a project. The server contacts the address (an internal address or a path on the server is refused unless allowed), so this is audited and limited, and is not a read-only call."},
+		Description: "Read a repository as the server would, keeping nothing: whether it can be reached, its branches and default branch, and whether a branch has a pipeline file. Use it before creating a Flight. The server contacts the address (an internal address or a path on the server is refused unless allowed), so this is audited and limited, and is not a read-only call."},
 		mcpCallTimeout, checkRepository)
 	addTool(srv, c, &mcp.Tool{Name: "check_signin", Annotations: changes("Check sign-in settings", false, true),
 		Description: "Check sign-in answers (issuer, client_id, redirect_url, client_secret_env, groups, first administrators) against the identity provider and list every problem. The server contacts the address, so an address inside its own network is refused unless an administrator allowed the host; the call is audited and limited."},
@@ -186,7 +186,7 @@ type lifecycleIn struct {
 	Version       int64  `json:"version,omitempty" jsonschema:"the version you read with get_config; refused if the object has moved on. Required unless overwrite is true"`
 	Overwrite     bool   `json:"overwrite,omitempty" jsonschema:"act whatever version the object is at (the last writer wins)"`
 	Comment       string `json:"comment,omitempty" jsonschema:"why, for the history"`
-	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (project, environment, runner pool); recorded in the history and the audit trail"`
+	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (Flight, environment, Ramp); recorded in the history and the audit trail"`
 	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
 }
 
@@ -282,13 +282,13 @@ func applyConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cha
 }
 
 type effectiveIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 }
 
 func getEffectiveConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in effectiveIn) (obj, error) {
 	var out obj
 	if in.Project == "" {
-		return out, errors.New("say which project")
+		return out, errors.New("say which Flight")
 	}
 	err := c.apiJSON(ctx, "get_effective_config", http.MethodGet, apiPath("/api/v1/config/effective/%s", in.Project), nil, &out)
 	return out, err

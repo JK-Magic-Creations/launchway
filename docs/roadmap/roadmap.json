@@ -45,13 +45,13 @@
     {
       "theme": "Platform",
       "title": "Configuration in the database",
-      "value": "Projects, Flight lines, Airfields, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit.",
+      "value": "Flights, Ramps, Airfields, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit.",
       "link": "guide/configuration"
     },
     {
       "theme": "Platform",
       "title": "Four levels",
-      "value": "Base, Wing, Squadron and Project (or the plain Installation, Organization, Team and Project), with words you choose and levels nobody uses kept out of sight.",
+      "value": "Base, Wing, Squadron and Flight (or the plain Installation, Organization, Team and Codebase), with words you choose and levels nobody uses kept out of sight.",
       "link": "guide/configuration#levels"
     },
     {
@@ -123,7 +123,7 @@
     {
       "theme": "Security",
       "title": "Sign-in and access",
-      "value": "OpenID Connect sign-in with groups, roles per project and Airfield, scoped API tokens and an audit trail.",
+      "value": "OpenID Connect sign-in with groups, roles per Flight and Airfield, scoped API tokens and an audit trail.",
       "link": "guide/access"
     },
     {
@@ -147,7 +147,7 @@
     {
       "theme": "Security",
       "title": "Runner identity and pools",
-      "value": "Join tokens, a key per Station, pools scoped to projects, and allow-lists on the Station itself.",
+      "value": "Join tokens, a key per Station, pools scoped to Flights, and allow-lists on the Station itself.",
       "link": "guide/runner-identity"
     },
     {
@@ -207,7 +207,7 @@
     {
       "theme": "Platform",
       "title": "Shared pipeline templates and Flight plans",
-      "value": "A template or a Flight plan set once for a Wing or Squadron, used by every project beneath it, with deploy, verify and approval steps included.",
+      "value": "A template or a Flight plan set once for a Wing or Squadron, used by every Flight beneath it, with deploy, verify and approval steps included.",
       "link": "guide/libraries"
     },
     {
@@ -326,7 +326,7 @@
     {
       "theme": "Git hosting",
       "title": "Hosted repositories on the Code page",
-      "value": "The Code page lists every repository Launchway hosts, even when no project reads a pipeline from it, and opens it to browse, search and edit.",
+      "value": "The Code page lists every repository Launchway hosts, even when no Flight reads a pipeline from it, and opens it to browse, search and edit.",
       "link": "guide/browsing-code"
     },
     {
@@ -605,7 +605,7 @@
               "status": "available",
               "title": "Repository settings screens",
               "value": "Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen.",
-              "detail": "Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.",
+              "detail": "Features that are switched off are hidden, so a small setup stays small. Each screen explains what it does in a sentence.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -769,7 +769,7 @@
               "status": "available",
               "title": "Labels, milestones and templates for work",
               "value": "Colored and exclusive labels, milestones with progress, and templates and forms for new items.",
-              "detail": "Labels and milestones are shared across projects at the levels you choose.",
+              "detail": "Labels and milestones are shared across Flights at the levels you choose.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
@@ -808,7 +808,7 @@
             {
               "status": "in-progress",
               "title": "Optional time tracking and due dates",
-              "value": "Estimates, timers and due dates, off until a project turns them on.",
+              "value": "Estimates, timers and due dates, off until a Flight turns them on.",
               "detail": "Estimates and start and due dates are on the main branch. Missing: timers.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
@@ -878,7 +878,7 @@
               "status": "planned",
               "title": "Access tokens for one repository",
               "value": "A token that works on one repository only, with the actions it may take, and a list of source addresses it may be used from.",
-              "detail": "A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to projects.",
+              "detail": "A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to Flights.",
               "area": "git-hosting"
             },
             {
@@ -1048,7 +1048,7 @@
               "status": "planned",
               "title": "Cloud sign-in per step",
               "value": "Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored.",
-              "detail": "The trust is set up in the cloud once, and the token carries the project, branch and Airfield.",
+              "detail": "The trust is set up in the cloud once, and the token carries the Flight, branch and Airfield.",
               "area": "pipelines"
             },
             {
@@ -1092,7 +1092,7 @@
               "status": "available",
               "title": "Limits and a fair order for runs",
               "value": "Runs over a limit are held with a reason, in a visible order, and the main build is never held.",
-              "detail": "Limits on concurrent Sorties of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
+              "detail": "Limits on concurrent Sorties of a Flight, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
               "needs": "Nothing beyond what runs pipelines today.",
               "area": "pipelines",
               "link": "guide/queues"
@@ -1302,7 +1302,7 @@
               "status": "planned",
               "title": "Fewer concepts to learn",
               "value": "No pile of connectors, services and Airfields to define before anything works.",
-              "detail": "Six words cover everyday use: project, pipeline, step, run, Airfield and Station."
+              "detail": "Six words cover everyday use: Flight, pipeline, step, run, Airfield and Station."
             },
             {
               "status": "in-progress",
@@ -1451,7 +1451,7 @@
             {
               "status": "available",
               "title": "Folders and search on every list",
-              "value": "Pipelines, repositories, projects and runs sit in folders you can search, grouped by level.",
+              "value": "Pipelines, repositories, Flights and runs sit in folders you can search, grouped by level.",
               "detail": "A long flat list gets cluttered; folders keep it findable.",
               "area": "guided-interface"
             },
@@ -1641,7 +1641,7 @@
             {
               "status": "planned",
               "title": "Update notices for shared libraries",
-              "value": "See which projects use an old version of a template and open an update as a reviewable change.",
+              "value": "See which Flights use an old version of a template and open an update as a reviewable change.",
               "detail": "Teams keep common pipeline logic current without a manual hunt.",
               "needs": "A browsable catalog of templates and steps.",
               "area": "pipelines"
@@ -1697,7 +1697,7 @@
             {
               "status": "available",
               "title": "An event log that explains every decision",
-              "value": "Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result.",
+              "value": "Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another Flight's result.",
               "area": "pipelines",
               "detail": "A push that no trigger starts is listed with the reason, and a push that starts a Sortie is one entry, not two."
             },
@@ -1853,8 +1853,8 @@
             {
               "status": "available",
               "title": "Templates and Flight plans by level",
-              "value": "Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it.",
-              "detail": "Today a Flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.",
+              "value": "Set a template or a Flight plan at the Wing or Squadron and every Flight beneath it uses it.",
+              "detail": "Today a Flight plan can be bound at a level and a Flight can override what the level allows. A solo developer never has to open any of this.",
               "link": "guide/libraries"
             },
             {
@@ -1867,7 +1867,7 @@
             {
               "status": "planned",
               "title": "Templates that read like code",
-              "value": "A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open.",
+              "value": "A template says what it needs and offers, can be built on another, and a Flight fills in or overrides only what is open.",
               "detail": "You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.",
               "needs": "Shared pipeline templates and Flight plans.",
               "area": "pipelines"
@@ -1898,7 +1898,7 @@
             {
               "status": "planned",
               "title": "See what is shared and who uses it",
-              "value": "For any template, library or connection, a list of every project that uses it and what would change if it changed.",
+              "value": "For any template, library or connection, a list of every Flight that uses it and what would change if it changed.",
               "detail": "A change to something shared is previewed before it is applied.",
               "needs": "Templates and Flight plans by level.",
               "area": "pipelines"
@@ -1947,8 +1947,8 @@
             {
               "status": "available",
               "title": "Caches by trust scope",
-              "value": "What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes.",
-              "detail": "A fork reads nothing from the project's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.",
+              "value": "What a pull request writes only that pull request reads; what a trusted branch writes the Flight reads; forks are isolated; image caches follow the same scopes.",
+              "detail": "A fork reads nothing from the Flight's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.",
               "area": "build-tools-caches"
             },
             {
@@ -1989,14 +1989,14 @@
             {
               "status": "planned",
               "title": "Android builds",
-              "value": "Android projects build with Gradle recipes, signing keys kept on your side, and results on the launch line.",
+              "value": "Android Flights build with Gradle recipes, signing keys kept on your side, and results on the launch line.",
               "detail": "Follows the Gradle recipe.",
               "area": "build-tools-caches"
             },
             {
               "status": "planned",
               "title": "iOS and macOS builds",
-              "value": "Apple projects build on macOS Stations you provide, with signing kept on your side.",
+              "value": "Apple Flights build on macOS Stations you provide, with signing kept on your side.",
               "detail": "The honest constraint: Apple builds need Apple hardware.",
               "area": "build-tools-caches"
             },
@@ -2752,7 +2752,7 @@
             {
               "status": "planned",
               "title": "Portfolio bill of materials",
-              "value": "A bill of materials across every image as well as every project, with export. Searching components across projects already works.",
+              "value": "A bill of materials across every image as well as every Flight, with export. Searching components across Flights already works.",
               "detail": "Pairs with the software graph.",
               "needs": "Findings and SBOMs per Sortie.",
               "area": "delivery"
@@ -3042,7 +3042,7 @@
         "A build pushes an image; policy refuses it because it is unsigned.",
         "You promote the exact image tested in staging to production with no copy.",
         "Retention cleans old images but keeps the one a cluster is running.",
-        "A project's packages tab shows its images and charts and where each runs."
+        "A Flight's packages tab shows its images and charts and where each runs."
       ],
       "diagram": "flowchart TD\n  Build[\"Build\"] -->|push| Gate[\"Policy on push\"]\n  Gate --> Store[\"Depot<br/>database + blob store\"]\n  Store --> Scan[\"Scan, sign, record\"]\n  Scan --> Promote[\"Promote by digest\"]\n  Promote --> Deploy[\"Policy on deploy\"]\n  Deploy --> Run[\"Running\"]\n  Public[\"Public registries\"] -->|pull-through cache| Store\n  Store -->|replicate| Other[\"Other registries\"]\n  Retention[\"Retention\"] -.->|never deletes deployed| Store",
       "diagramNote": "An image from build to running, with policy at both ends.",
@@ -3107,7 +3107,7 @@
               "status": "available",
               "title": "Retention that protects what runs",
               "value": "Clean up old images without ever deleting one that is deployed.",
-              "detail": "Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.",
+              "detail": "Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, Flight and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -3146,8 +3146,8 @@
             {
               "status": "available",
               "title": "Per-project packages and permissions",
-              "value": "A packages tab in each project that is a filtered view of the Depot, with per-package access.",
-              "detail": "Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.",
+              "value": "A packages tab in each Flight that is a filtered view of the Depot, with per-package access.",
+              "detail": "Every repository belongs to the Flight named by its first path component and follows the Flight's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a Flight's repositories. Per-package access inside a Flight is not built.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -3171,7 +3171,7 @@
               "status": "available",
               "title": "Any other registry, equally",
               "value": "Pushing to any OCI registry works today and stays first class beside the built-in one.",
-              "detail": "Choose per project and move later.",
+              "detail": "Choose per Flight and move later.",
               "link": "guide/images",
               "area": "registry"
             },
@@ -3192,7 +3192,7 @@
             {
               "status": "planned",
               "title": "Who uses which version",
-              "value": "A library page shows which projects fetched which version and which are behind.",
+              "value": "A library page shows which Flights fetched which version and which are behind.",
               "detail": "Comes from publish and fetch records.",
               "area": "dependency-order"
             },
@@ -3486,10 +3486,10 @@
       "short": "AI helper",
       "promise": "AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.",
       "audience": "Anyone who wants AI help with delivery, and anyone who wants it kept out.",
-      "what": "Milestone 6 puts AI wherever it saves effort and keeps it entirely optional. A built-in gateway routes to any model with spending limits, local models are first-class, regulated projects have a protected path, and a failing check can never be hidden by a model.",
+      "what": "Milestone 6 puts AI wherever it saves effort and keeps it entirely optional. A built-in gateway routes to any model with spending limits, local models are first-class, regulated Flights have a protected path, and a failing check can never be hidden by a model.",
       "scenarios": [
         "An administrator turns on AI explanations for failures only, and sets a monthly limit.",
-        "A regulated project is allowed to use only models with recorded data terms.",
+        "A regulated Flight is allowed to use only models with recorded data terms.",
         "A step calls the gateway by model name; moving to another provider needs no pipeline change.",
         "You sketch a delivery and are shown a pipeline you can read and edit."
       ],
@@ -3499,7 +3499,7 @@
         "With every AI purpose off, no model is ever called.",
         "Spending limits stop or warn before a budget is exceeded.",
         "Compression never removes file paths, line numbers or error codes, and marks each omission.",
-        "A regulated project cannot reach a model it is not allowed to use.",
+        "A regulated Flight cannot reach a model it is not allowed to use.",
         "A model verdict never overrides a failing check."
       ],
       "notIncluded": [
@@ -3566,7 +3566,7 @@
             {
               "status": "planned",
               "title": "Usage monitoring",
-              "value": "See usage by model, project and purpose, with cost.",
+              "value": "See usage by model, Flight and purpose, with cost.",
               "detail": "Charts feed the same dashboards as everything else.",
               "needs": "A built-in model gateway.",
               "area": "ai"
@@ -3574,7 +3574,7 @@
             {
               "status": "planned",
               "title": "Spending limits",
-              "value": "Budgets in money, per model, project and purpose, not only in tokens.",
+              "value": "Budgets in money, per model, Flight and purpose, not only in tokens.",
               "detail": "Calls stop or warn when a limit is reached.",
               "needs": "A built-in model gateway.",
               "area": "ai"
@@ -3597,7 +3597,7 @@
             {
               "status": "planned",
               "title": "A protected path for regulated data",
-              "value": "Use only models whose data-handling terms you have recorded, so that regulated projects never reach the wrong one.",
+              "value": "Use only models whose data-handling terms you have recorded, so that regulated Flights never reach the wrong one.",
               "detail": "Adapters for the big cloud model services are included.",
               "needs": "A built-in model gateway.",
               "area": "ai"
@@ -3695,11 +3695,11 @@
       "short": "Hosted service",
       "promise": "Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.",
       "audience": "Start-ups, freelancers and small teams first, then enterprises and regulated teams that must keep everything on their side.",
-      "what": "Milestone 7 lets you use Launchway without running it, and shows people the way to run it themselves when that suits them better. The first customers are small teams, so sign-up is short: an email or an existing account, a strong second factor, and a guided first project. Three ways to run it share one product: fully hosted, hosted with your own machines doing the work and holding the files, or self-hosted, and a team can move between them one project or one Base at a time. The hosted service is protected from its customers and its customers from it and from each other, and it is never a place to park files. It opens to outsiders in stages, each only after its checks pass. Plans have every feature on; what changes is a limit, and the spend limit starts at zero. The same milestone adds the identity, audit and retention controls enterprises ask for.",
+      "what": "Milestone 7 lets you use Launchway without running it, and shows people the way to run it themselves when that suits them better. The first customers are small teams, so sign-up is short: an email or an existing account, a strong second factor, and a guided first Flight. Three ways to run it share one product: fully hosted, hosted with your own machines doing the work and holding the files, or self-hosted, and a team can move between them one Flight or one Base at a time. The hosted service is protected from its customers and its customers from it and from each other, and it is never a place to park files. It opens to outsiders in stages, each only after its checks pass. Plans have every feature on; what changes is a limit, and the spend limit starts at zero. The same milestone adds the identity, audit and retention controls enterprises ask for.",
       "scenarios": [
         "Two friends at two houses sign up, protect their accounts with a passkey, and have a first green build in minutes, with no network set-up on either side.",
         "A team that does not want its files on anyone else’s server chooses to keep them on its own machines, and both people reach them through Launchway over an encrypted relay that cannot read them.",
-        "A team that started fully hosted moves one project to its own hardware with a preview first, and keeps working during the move.",
+        "A team that started fully hosted moves one Flight to its own hardware with a preview first, and keeps working during the move.",
         "A Base nearing the hosted size limit gets plain notices and a guided move, and is never locked out of its own data.",
         "A regulated team enables encryption keys with rotation and a retention rule.",
         "An auditor exports a tamper-evident audit trail to the security tools.",
@@ -3808,7 +3808,7 @@
             {
               "status": "planned",
               "title": "Sign up with the least set-up",
-              "value": "One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first project.",
+              "value": "One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first Flight.",
               "detail": "The aim is a first green build in minutes. The same sentence is shown whether or not an address is already known, so the form reveals nothing about who has an account.",
               "area": "hosted-service"
             },
@@ -3889,7 +3889,7 @@
               "status": "planned",
               "title": "Hosted with your own Detachment",
               "value": "The hosted screens and coordination, with builds, secrets and deployments on your side.",
-              "detail": "A project can move here one at a time. The Detachment only calls out, so no port is opened and no tunnel is needed.",
+              "detail": "A Flight can move here one at a time. The Detachment only calls out, so no port is opened and no tunnel is needed.",
               "needs": "The Detachment.",
               "area": "hosted-service"
             },
@@ -3928,7 +3928,7 @@
             {
               "status": "planned",
               "title": "Guided moves between the three",
-              "value": "Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide.",
+              "value": "Move one Flight or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide.",
               "detail": "A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.",
               "needs": "Leave completely.",
               "area": "hosted-service"
@@ -3972,7 +3972,7 @@
               "status": "planned",
               "title": "Nothing anonymous or public",
               "value": "No repository, Cargo, image, page, report or file on the hosted service can be reached without signing in as a member of that Base.",
-              "detail": "There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.",
+              "detail": "There are no public Flight pages, no hosted sites and no direct download addresses. Share links are absent at first.",
               "area": "hosted-service"
             },
             {
@@ -4266,7 +4266,7 @@
             {
               "status": "in-progress",
               "title": "Nothing crosses between Bases",
-              "value": "No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
+              "value": "No interface, search, graph, Ramp, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
               "detail": "Only the identity tables are walled so far, and tests guard that no new table is added without an owner. Missing: the rest of the data, which is registered as pending its stage.",
               "area": "hosted-service"
             },
@@ -4438,7 +4438,7 @@
             {
               "status": "planned",
               "title": "Safeguards on by default",
-              "value": "Every protection starts on and your team can tune or turn it off per project and Airfield; only a level above can require one.",
+              "value": "Every protection starts on and your team can tune or turn it off per Flight and Airfield; only a level above can require one.",
               "detail": "You stay in charge, and Launchway says plainly when a safeguard has been relaxed.",
               "needs": "Variables at levels.",
               "area": "zero-downtime"
@@ -4717,7 +4717,7 @@
             {
               "status": "planned",
               "title": "Create and change through Git",
-              "value": "An assistant writes an Application, an ApplicationSet or a Project into Git and opens a pull request, showing what will be created.",
+              "value": "An assistant writes an Application, an ApplicationSet or a Flight into Git and opens a pull request, showing what will be created.",
               "detail": "Nothing is changed with a click against the cluster.",
               "needs": "Pull requests on the built-in host.",
               "area": "delivery"
@@ -4725,7 +4725,7 @@
             {
               "status": "planned",
               "title": "Adopt existing applications",
-              "value": "Discover the applications you already have and map them to projects and Airfields without changing them.",
+              "value": "Discover the applications you already have and map them to Flights and Airfields without changing them.",
               "detail": "Discovery is opt-in and read-only.",
               "needs": "See every application and its tree.",
               "area": "delivery"
@@ -6148,7 +6148,7 @@
               "status": "planned",
               "title": "Cloud cost management",
               "value": "See what each service, team and Airfield costs to run, next to what it delivers.",
-              "detail": "Includes the cost of Flight lines.",
+              "detail": "Includes the cost of Ramps.",
               "needs": "The software graph."
             },
             {
@@ -6167,14 +6167,14 @@
             {
               "status": "planned",
               "title": "Discussions and snippets",
-              "value": "A forum for projects and shareable snippets.",
+              "value": "A forum for Flights and shareable snippets.",
               "detail": "Optional and off by default.",
               "needs": "Built-in Git hosting."
             },
             {
               "status": "planned",
               "title": "Cloud development environments",
-              "value": "Ready-made Airfields to work on a project from a browser.",
+              "value": "Ready-made Airfields to work on a Flight from a browser.",
               "detail": "Reuses preview Airfields.",
               "needs": "Preview Airfields."
             },
@@ -6278,7 +6278,7 @@
     "date": "22 November 2026",
     "items": [
       "Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.",
-      "Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.",
+      "Hosted repositories are listed on the Code page even when no Flight reads a pipeline from them, and the Tower says how many there are.",
       "The rollout page: watch a delivery object by object, read its logs, and steer it, with each right off until an administrator turns it on, and warnings when real traffic could reach a version nothing proved.",
       "Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.",
       "Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.",

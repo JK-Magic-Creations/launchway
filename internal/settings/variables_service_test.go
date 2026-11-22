@@ -62,7 +62,7 @@ func TestSetAtTheBaseOverrideAtAProjectLockAndRefuse(t *testing.T) {
 	}
 	v, _ = s.View(ctx, LevelProject, "cart", "", nil)
 	e = entryNamed(t, v, "replicas")
-	if e.Display != "1" || e.Locked == nil || e.CanOverride || !strings.Contains(e.Blocked, "locked by the base (fleet rule). Only an administrator of every project can change it.") {
+	if e.Display != "1" || e.Locked == nil || e.CanOverride || !strings.Contains(e.Blocked, "locked by the base (fleet rule). Only an administrator of every Flight can change it.") {
 		t.Fatalf("%+v", e)
 	}
 	if e.Chain[1].Ignored == "" {
@@ -118,7 +118,7 @@ func TestBindGivesAPipelineWhatIsInEffectAndTheRunRecordsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, n := vars["registry"], vars["replicas"]
-	if r.Text != "harbor" || !r.Locked || r.LockedBy != "the wing (audited)" || r.Source != "the wing" || n.Text != "9" || n.Source != "project cart for production" {
+	if r.Text != "harbor" || !r.Locked || r.LockedBy != "the wing (audited)" || r.Source != "the wing" || n.Text != "9" || n.Source != "flight cart for production" {
 		t.Fatalf("%+v %+v", r, n)
 	}
 	// Recording a run keeps what it used, and a re-run reads the original's.

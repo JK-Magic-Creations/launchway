@@ -10,14 +10,14 @@ AI wherever it saves effort, always optional, always off until an administrator 
 
 ## What it is, and who it is for
 
-Milestone 6 puts AI wherever it saves effort and keeps it entirely optional. A built-in gateway routes to any model with spending limits, local models are first-class, regulated projects have a protected path, and a failing check can never be hidden by a model.
+Milestone 6 puts AI wherever it saves effort and keeps it entirely optional. A built-in gateway routes to any model with spending limits, local models are first-class, regulated Flights have a protected path, and a failing check can never be hidden by a model.
 
 **Who it is for.** Anyone who wants AI help with delivery, and anyone who wants it kept out.
 
 ## What you will be able to do
 
 - An administrator turns on AI explanations for failures only, and sets a monthly limit.
-- A regulated project is allowed to use only models with recorded data terms.
+- A regulated Flight is allowed to use only models with recorded data terms.
 - A step calls the gateway by model name; moving to another provider needs no pipeline change.
 - You sketch a delivery and are shown a pipeline you can read and edit.
 
@@ -106,7 +106,7 @@ Change provider or model in one place, with fallbacks if one is down. No code ch
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See usage by model, project and purpose, with cost. Charts feed the same dashboards as everything else.
+See usage by model, Flight and purpose, with cost. Charts feed the same dashboards as everything else.
 
 **Depends on:** A built-in model gateway.
 
@@ -116,7 +116,7 @@ See usage by model, project and purpose, with cost. Charts feed the same dashboa
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Budgets in money, per model, project and purpose, not only in tokens. Calls stop or warn when a limit is reached.
+Budgets in money, per model, Flight and purpose, not only in tokens. Calls stop or warn when a limit is reached.
 
 **Depends on:** A built-in model gateway.
 
@@ -144,7 +144,7 @@ Shrink what is sent to a model without losing file paths, line numbers or error 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Use only models whose data-handling terms you have recorded, so that regulated projects never reach the wrong one. Adapters for the big cloud model services are included.
+Use only models whose data-handling terms you have recorded, so that regulated Flights never reach the wrong one. Adapters for the big cloud model services are included.
 
 **Depends on:** A built-in model gateway.
 
@@ -251,7 +251,7 @@ This milestone is done when all of these are true.
 - With every AI purpose off, no model is ever called.
 - Spending limits stop or warn before a budget is exceeded.
 - Compression never removes file paths, line numbers or error codes, and marks each omission.
-- A regulated project cannot reach a model it is not allowed to use.
+- A regulated Flight cannot reach a model it is not allowed to use.
 - A model verdict never overrides a failing check.
 
 ## What is deliberately not in it

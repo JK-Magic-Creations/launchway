@@ -25,10 +25,10 @@ A plan made on a pull request or a draft run has no state credential (those Sort
 
 ## State
 
-Launchway implements the HTTP backend protocol that Terraform and OpenTofu both speak, per project and workspace: `GET`, `POST` and `DELETE` on the state, `LOCK` and `UNLOCK` with the client's lock document, `423` with the holder's document when it is taken.
+Launchway implements the HTTP backend protocol that Terraform and OpenTofu both speak, per Flight (codebase) and workspace: `GET`, `POST` and `DELETE` on the state, `LOCK` and `UNLOCK` with the client's lock document, `423` with the holder's document when it is taken.
 
 - **Sealed at rest**: every version is sealed under the installation's root key, bound to its own row. A copy of the database holds none of it. A server with no root key refuses to keep state.
-- **Credentials**: a step is given a credential for one workspace of its own project, valid while its Sortie goes, read-only for pull request and draft runs. People use their API token as the password.
+- **Credentials**: a step is given a credential for one workspace of its own Flight, valid while its Sortie goes, read-only for pull request and draft runs. People use their API token as the password.
 - **Versions**: every accepted state is a version (who, when, which run, serial, resource count), 50 kept. A write with an older serial, another lineage, or the same serial and other content is refused.
 - **Locks**: a lock taken by a Sortie that has ended is released by the next `LOCK`; nobody has to force it. Force-unlock needs a reason and is refused while the holder's run is going.
 - **Return to base (rollback)**: stores an older version as the newest, with a higher serial. It changes the stored state only; no real resource changes, and the next plan shows the difference.

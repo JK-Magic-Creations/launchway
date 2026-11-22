@@ -86,7 +86,7 @@ func TestCLICaches(t *testing.T) {
 	if err := ada.cachesPolicySet([]string{"shop", "--enabled=false"}); err != nil || !strings.Contains(ao.String(), "Caching is OFF (project)") || !strings.Contains(ao.String(), "after 3 days") {
 		t.Fatalf("a project's policy starts from what applies to it: %v %q", err, ao.String())
 	}
-	if err := vic.cachesList([]string{"shop"}); err != nil || !strings.Contains(vo.String(), "Caching is turned off for this project") {
+	if err := vic.cachesList([]string{"shop"}); err != nil || !strings.Contains(vo.String(), "Caching is turned off for this Flight") {
 		t.Fatalf("%v %q", err, vo.String())
 	}
 	if err := ada.cachesPolicySet([]string{"shop", "--max-entry-gib", "400"}); err == nil {

@@ -35,7 +35,7 @@ export function ImageDetailPage({ digest }: { digest: string }) {
   if (hits.loading) return <div className="page"><div className="loading">Loading…</div></div>;
   if (!first) {
     return <div className="page"><PageHead eyebrow={terms().say("{Registry}")} title="Image" /><ErrorBox error={hits.error} />
-      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or project.")}</EmptyState></Sheet></div>;
+      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or {project}.")}</EmptyState></Sheet></div>;
   }
   const scan = iv?.scan;
   const worst = scan ? Math.max(scan.critical + scan.high, 0) : 0;

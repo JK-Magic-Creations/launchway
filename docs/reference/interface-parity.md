@@ -166,6 +166,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
+| `GET /api/v1/project-candidates` | `list_project_candidates` | `squadrons candidates` | — | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy clear` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
@@ -488,6 +489,15 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/tokens/limits` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `DELETE /api/v1/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
+| `POST /api/v1/unit-moves` | `move_projects` | `squadrons move` | `launchway_project unit (the same field; no change)` | equal |
+| `POST /api/v1/unit-moves/preview` | `preview_project_move` | `squadrons move` | — | equal |
+| `GET /api/v1/unit-organize` | `organize_into_units` | `squadrons organize` | — | equal |
+| `POST /api/v1/unit-organize` | `organize_into_units` | `squadrons organize` | — | equal |
+| `POST /api/v1/unit-organize/undo` | `organize_into_units` | `squadrons organize` | — | equal |
+| `GET /api/v1/units` | `list_units` | `squadrons list` | — | equal |
+| `POST /api/v1/units` | `create_unit` | `squadrons create` | `launchway_unit (the same object; no change)` | equal |
+| `GET /api/v1/units/{name}` | `get_unit` | `squadrons show` | — | equal |
+| `POST /api/v1/units/{name}/projects` | `create_project_in_unit` | `squadrons add-flight` | `launchway_project with unit (the same object; no change)` | equal |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |

@@ -1,10 +1,10 @@
-# FLIGHT PLAN for a Maven project.
+# FLIGHT PLAN for a Maven codebase.
 #
 #   ci: { uses: launchway/java-maven }
 #
 # Runs mvn verify (the repository's ./mvnw if it has one) with the local repository cached between runs under a key made of every pom.xml and the Java version, shows the Surefire and Failsafe results in Tests and JaCoCo's report (when the build writes one) in Coverage, keeps the jars as the artifact jar, scans for secrets, and builds the image when you set image: true and the repository has a Dockerfile.
 template: java-maven
-description: "Flight plan: a Java project built with Maven: verify, tests and coverage, secret scan, optional image"
+description: "Flight plan: a Java codebase built with Maven: verify, tests and coverage, secret scan, optional image"
 params:
   working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
   java_version: { type: string, default: "21", description: "The Java version of the image" }

@@ -5,6 +5,7 @@ import { navigate } from "../router";
 import { announce } from "../kit/announce";
 import { ActionMenu, Blank, dueClass, ErrorPanel, itemHref, Labels, Loading, Prio, scopeHref, scopeLabel, useLoad, Who, WorkPage } from "./common";
 import { workApi, type Board as BoardData, type Column, type Item, type Sprint } from "./workApi";
+import { terms } from "../terms";
 
 // The board: one column for each state of the workflow. Dragging a card is a convenience; every move can also be made with the
 // keyboard through the card's "Move to…" menu, which also reorders. What was done is said in a live region.
@@ -57,7 +58,7 @@ export default function BoardPage({ scope }: { scope: string }) {
       <ErrorPanel error={error ?? board.error} onRetry={board.reload} />
       {board.loading && <Loading what="board" />}
       {empty && <Blank title="The board is empty" action={<Button kind="pri" onClick={() => navigate(scopeHref(scope))}>Go to items</Button>}>
-        {q || sprint ? "Nothing matches this filter. Clear it to see every item." : "Add items to this project and they appear here, in the column of their state."}</Blank>}
+        {q || sprint ? "Nothing matches this filter. Clear it to see every item." : terms().say("Add items to this {project} and they appear here, in the column of their state.")}</Blank>}
       {b && !empty && (b.lanes && b.lanes.length > 0
         ? b.lanes.map((l) => <Lane key={l.key} title={l.name} cols={b.columns} only={(it) => b.lane_of?.[it.id] === l.key} onMove={moveTo} onReorder={reorder} />)
         : <Lane cols={b.columns} onMove={moveTo} onReorder={reorder} />)}

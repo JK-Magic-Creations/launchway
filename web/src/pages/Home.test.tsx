@@ -4,6 +4,7 @@ import type { HomeAnswer } from "../organizeApi";
 import { applications } from "../guided/derive";
 import { approval, environment, me, project, run, runner } from "../test/fixtures";
 import { expectEntitiesLinked } from "../test/entities";
+import { exploreTiles } from "./HomeExplore";
 import { Home, type HomeProps } from "./Home";
 import { setTerms, resetTerms } from "../terms";
 import { beforeEach } from "vitest";
@@ -28,9 +29,9 @@ describe("Home on a new installation", () => {
   it("asks for the first thing and nothing else", async () => {
     stubHome(answer({ counts: { projects: 0, needs: 0 } }));
     render(<Home {...props()} />);
-    expect(screen.getByRole("heading", { name: "Add your first project" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add your first Codebase" })).toBeInTheDocument();
     expect(screen.getByText("0 of 5 essentials done")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a project" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/projects/new");
     expect(await screen.findByText(/Nothing needs you\./)).toBeInTheDocument();
     expect(screen.queryByText("Latest runs")).not.toBeInTheDocument();
   });
@@ -38,7 +39,7 @@ describe("Home on a new installation", () => {
     render(<Home {...props()} />);
     const list = screen.getByRole("region", { name: /Setup checklist/i });
     expect(within(list).getAllByRole("link").map((a) => a.textContent)).toEqual([
-      "Add your first project", "Choose who does the work", "See your first run pass", "Create an environment", "Turn on sign-in",
+      "Add your first Codebase", "Choose who does the work", "See your first run pass", "Create an environment", "Turn on sign-in",
     ]);
   });
 });
@@ -47,7 +48,7 @@ describe("Home as setup progresses", () => {
   it("folds what is done into one line and moves the card on", () => {
     render(<Home {...props({ projects: [project()], runners: [runner()] })} />);
     expect(screen.getByRole("heading", { name: "See your first run pass" })).toBeInTheDocument();
-    expect(screen.getByText(/Done: Add your first project, Choose who does the work/)).toBeInTheDocument();
+    expect(screen.getByText(/Done: Add your first Codebase, Choose who does the work/)).toBeInTheDocument();
     expect(screen.getByText("2 of 5 essentials done")).toBeInTheDocument();
   });
   it("does not walk a person who is not an administrator through setup", () => {
@@ -140,10 +141,19 @@ describe("Home, v2", () => {
     render(<Home {...base()} lines={[line()]} images={7} />);
     const strip = screen.getByRole("region", { name: "Explore" });
     expect(within(strip).getByRole("link", { name: /Images/ })).toHaveTextContent("7");
-    expect(within(strip).getByRole("link", { name: /Code/ })).toHaveTextContent("1project");
+    expect(within(strip).getByRole("link", { name: /Code/ })).toHaveTextContent("1Codebase");
     expect(within(strip).getByRole("link", { name: /Pipelines/ })).toHaveTextContent("1 stopped");
     expect(within(strip).getByRole("link", { name: /Waiting/ })).toHaveTextContent("Nothing waits");
     expect(within(strip).getByRole("link", { name: /Traffic/ })).toHaveTextContent("Coming");
+  });
+  it("has a Squadrons tile that counts them and says which need a look", () => {
+    const sq = (name: string, needs: number) => ({ name, display_name: name, flights: 2, needs, failing: 0, running: 0 });
+    const tiles = exploreTiles({ projects: [], applications: [], environments: [], approvals: [], images: 0, squadrons: [sq("payments", 1), sq("shop", 0)] });
+    const tile = tiles.find((t) => t.key === "squadrons")!;
+    expect(tile.href).toBe("/units");
+    expect(tile.n).toBe(2);
+    expect(JSON.stringify(tile.state)).toContain("need a look");
+    expect(exploreTiles({ projects: [], applications: [], environments: [], approvals: [], images: 0, squadrons: [] }).find((t) => t.key === "squadrons")!.state).toBe("None yet");
   });
   it("counts decisions waiting", () => {
     render(<Home {...base()} approvals={[approval(), approval({ step_id: "b", run_id: "run_9" })]} />);
@@ -172,6 +182,6 @@ describe("Home with hosted repositories and no project", () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string) => new Response(JSON.stringify(String(u).endsWith("/api/v1/repositories") ? { items: [repo("a"), repo("b")] } : answer({ counts: { projects: 0, needs: 0 } })), { status: 200, headers: { "Content-Type": "application/json" } })));
     render(<Home {...props({ me: me({ admin: true }) })} />);
     expect(await screen.findByRole("heading", { name: "2 repositories, none has a pipeline yet" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a pipeline" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a pipeline" })).toHaveAttribute("href", "/projects/new");
   });
 });

@@ -74,12 +74,12 @@ func (s *Server) unitProjects(unit string) []string {
 func (s *Server) mayReadLevel(id *identity, level settings.Level, scope string) (int, string) {
 	if level == settings.LevelProject {
 		if !s.authorize(id, auth.Read, scope) {
-			return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, scope).Error()
+			return http.StatusNotFound, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, scope).Error()
 		}
 		return 0, ""
 	}
 	if !s.authorize(id, auth.ReadAny, "") {
-		return http.StatusForbidden, "you have no access to any project"
+		return http.StatusForbidden, "you have no access to any Flight"
 	}
 	return 0, ""
 }
@@ -90,24 +90,24 @@ func (s *Server) mayChangeLevel(id *identity, level settings.Level, scope string
 	switch level {
 	case settings.LevelInstallation, settings.LevelOrganization:
 		if !s.authorize(id, auth.Administer, "") {
-			return http.StatusForbidden, "only admins of every project may change variables at this level"
+			return http.StatusForbidden, "only admins of every Flight may change variables at this level"
 		}
 	case settings.LevelUnit:
 		projects := s.unitProjects(scope)
 		if len(projects) == 0 {
 			if !s.authorize(id, auth.Administer, "") {
-				return http.StatusForbidden, "only admins of every project may change variables of a unit with no projects"
+				return http.StatusForbidden, "only admins of every Flight may change variables of a unit with no Flights"
 			}
 			return 0, ""
 		}
 		for _, p := range projects {
 			if !s.authorize(id, auth.AdministerProject, p) {
-				return http.StatusForbidden, "only an admin of every project in the unit may change its variables"
+				return http.StatusForbidden, "only an admin of every Flight in the unit may change its variables"
 			}
 		}
 	case settings.LevelProject:
 		if !s.authorize(id, auth.Read, scope) {
-			return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, scope).Error()
+			return http.StatusNotFound, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, scope).Error()
 		}
 		if lock && !s.authorize(id, auth.AdministerProject, scope) {
 			return http.StatusForbidden, fmt.Sprintf("you need the admin role on %s to lock or unlock a variable", scope)
@@ -116,7 +116,7 @@ func (s *Server) mayChangeLevel(id *identity, level settings.Level, scope string
 			return http.StatusForbidden, fmt.Sprintf("you need the operator role on %s to change its variables", scope)
 		}
 	default:
-		return http.StatusBadRequest, "level is installation, organization, unit or project"
+		return http.StatusBadRequest, "level is installation, organization, unit or Flight"
 	}
 	return 0, ""
 }
@@ -135,7 +135,7 @@ func (s *Server) listVariables(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	level := levelOf(q.Get("level"))
 	if !level.Valid() {
-		writeErr(w, http.StatusBadRequest, "say which level: ?level=installation, organization, unit or project (and &scope= for a unit or a project)")
+		writeErr(w, http.StatusBadRequest, "say which level: ?level=installation, organization, unit or {project} (and &scope= for a unit or a {project})")
 		return
 	}
 	if code, msg := s.mayReadLevel(identityFrom(r), level, q.Get("scope")); code != 0 {

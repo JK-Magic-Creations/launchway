@@ -108,14 +108,14 @@ launchway: listen tcp 127.0.0.1:8080: bind: address already in use
 Another process (perhaps another Launchway) listens there. Stop it, or change `listen` or
 `--listen`.
 
-### A Flight line's token is missing or weak {#a-runner-pools-token-is-missing-or-weak}
+### A Ramp's token is missing or weak {#a-runner-pools-token-is-missing-or-weak}
 
 ```text
 launchway: launchway.yaml: runner_pools: prod-deployers: the variable POOL_TOKEN is not set
 launchway: launchway.yaml: runner_pools: prod-deployers: the token is shorter than 32 characters; make a long random one, for example with: openssl rand -hex 24
 ```
 
-Each deploy Flight line (Station (runner) pool) needs its own long random token, given in the variable or file named.
+Each deploy Ramp (Station (runner) pool) needs its own long random token, given in the variable or file named.
 
 ### A secret store is configured wrongly
 
@@ -205,7 +205,7 @@ another form of the name than the `user` shown (Dex, for example, gives the emai
 | Status | Message | Means and what to do |
 |---|---|---|
 | 401 | `sign in first, or send a valid API token` | no session, or the token is unknown, revoked or expired; sign in, or make a new token |
-| 403 | `you need the operator role on app to do this` | you may see the project, not change it |
+| 403 | `you need the operator role on app to do this` | you may see the Flight (codebase), not change it |
 | 403 | `only admins of every project may do this` | The Logbook and everyone's tokens need `admin` from a binding without `projects` |
 | 403 | `you have no access to any project` | you have no role anywhere |
 | 404 | `not found: project app` or `not found: run run_...` | it does not exist, or you may not see it: the answer is the same on purpose |
@@ -333,7 +333,7 @@ secret REGISTRY_PASSWORD (bao:apps/demo/registry#password): this runner has no s
 | Reason | What to do |
 |---|---|
 | no secret store called | the Station that took the step does not have that store; configure it on every Station that may take the step |
-| does not allow project or key | widen the store's `projects` or `keys`, if this project should read it |
+| does not allow Flight or key | widen the store's `projects` or `keys`, if this Flight should read it |
 | no secret at, no field | write the secret, or fix `key` or `field` |
 | permission denied | the token's policy or the Kubernetes role does not cover the path |
 | refused the kubernetes login | the role's bound service account or namespace does not match the Station's; a wrong `auth_path` gave this message too |
@@ -346,7 +346,7 @@ Secret store down is unavailable (vault did not answer: Get "http://127.0.0.1:82
 secret X (down:apps/a/b#f): vault did not answer: Get "http://127.0.0.1:8200/v1/secret/data/apps/a/b": dial tcp 127.0.0.1:8200: connect: connection refused. The step will be run again.
 ```
 
-Draft and pull-request runs may not read secrets unless the project allows it:
+Draft and pull-request runs may not read secrets unless the Flight allows it:
 
 ```text
 not run: this is a draft run, and draft runs of imgapp may not read secrets (the step asks for REGISTRY_PASSWORD). Save the pipeline and run it from its branch, or ask an administrator to set drafts.secrets: true for the project
@@ -381,7 +381,7 @@ fails to start and names the init container, see [The step's user](../reference/
 deploy-prod: project other may not deploy to prod (see the environment's projects in the server's configuration)
 ```
 
-The Sortie (run) is refused with `422` before it starts. Add the project to the Airfield's `projects`,
+The Sortie (run) is refused with `422` before it starts. Add the Flight to the Airfield's `projects`,
 if it should deploy there.
 
 ```text
@@ -408,9 +408,9 @@ pipeline, or have someone allowed by `policy.waivers.allow` grant a waiver, then
 ```
 
 Every webhook caller that cannot prove itself gets this `404`, whatever the reason: no such
-project, no `git_webhook` or `webhooks` entry for it, a trigger the configuration does not list, a
+Flight, no `git_webhook` or `webhooks` entry for it, a trigger the configuration does not list, a
 wrong secret or token, or a bad signature. The Logbook (`webhook.git`, `webhook.run`) says
-which. Check the project name in the URL, the secret's variable on the server, and for a Git host
+which. Check the Flight name in the URL, the secret's variable on the server, and for a Git host
 the `kind` (which header it checks).
 
 ## The container image misbehaves
@@ -420,7 +420,7 @@ level=WARN msg="polling a project" project=app err="fetching /repos/app: fatal: 
 ```
 
 The image has no shell, and Git needs one to read a repository from a local path. Use an
-`https://` or SSH URL for `repo`. Starting a run of such a project answers
+`https://` or SSH URL for `repo`. Starting a run of such a Flight answers
 `something went wrong on the server; its log has the details`.
 
 Every step fails at once when the server's built-in Station runs in the image:

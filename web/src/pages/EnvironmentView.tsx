@@ -64,7 +64,7 @@ export function EnvironmentViewPage({ name }: { name: string }) {
         <dl className="kvlist">
           <dt>Where</dt><dd>{terms().say("{Deploy:does} to")} <Mono>{env.target}</Mono>{env.protected ? "; protected: the person who started a run may not promote or retry its deployments here" : ""}.</dd>
           <dt>Watched by</dt><dd className="row"><Status state={watched ? "ok" : "warn"} />{watched ? <>{terms().say("The {deploy:do} {runner}")} <EntityLink kind="runner" name={env.observer ?? ""} /> watches it.</> : terms().say("No {deploy:do} {runner} watches it, so a deployment here cannot finish.")}</dd>
-          <dt>Used by</dt><dd>{env.projects.length === 0 ? terms().say("No project {deploy:does} here yet.") : env.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<EntityLink kind="project" name={p} /></span>)}</dd>
+          <dt>Used by</dt><dd>{env.projects.length === 0 ? terms().say("No {project} {deploy:does} here yet.") : env.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<EntityLink kind="project" name={p} /></span>)}</dd>
           <dt>Queue</dt><dd>{env.queue === "all" ? terms().say("Every {run} waiting for the lock is kept.") : terms().say("A {run} waiting for the lock is skipped when a newer run of the same service starts waiting.")}</dd>
         </dl>
       </Sheet>

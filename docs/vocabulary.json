@@ -6,10 +6,10 @@
     "identifiers": "Stable identifiers (API JSON fields and paths, database tables and columns, configuration keys and kind names, command-line flags, metric names, event kinds, Go identifiers) cannot follow a renameable word. Each level has one neutral, permanent name: installation, organization, unit, project. They are documented as 'the API name of a Base' and are never themed.",
     "ordinary-words": "Where an industry word is the accepted term it stays ordinary: pipeline, step, alert, branch, pull request, commit, secret, variable, template, library. Everything else Launchway names itself (runner, run, queue, deploy, environment, rollback, canary, registry, artifact and the rest of the table) uses the product word, with the plain word beside it where the word is introduced.",
     "buttons": "A button for a delivery action uses the product verb: Launch (deploy), Return to base (rollback), Abort (emergency rollback). The plain word is in the button's accessible description and in the confirmation text. Elsewhere an ordinary verb on a button stays acceptable where a newcomer must understand it (Save, Cancel, Approve, Reject).",
-    "capitals": "Product words are capitalized as names, in pages as well as documents: Sortie, Station, Airfield, Launch, Tower, Radar. Level words (Base, Wing, Squadron, Project) and feature words (Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload) too. The business set reads as ordinary English: its words are lower case in the middle of a sentence, except the level words. 'launch line' stays lower case.",
+    "capitals": "Product words are capitalized as names, in pages as well as documents: Sortie, Station, Airfield, Launch, Tower, Radar. Level words (Base, Wing, Squadron, Flight) and feature words (Wingman, Preflight, Clearance, Logbook, Flight plan, Detachment, Payload) too. The business set reads as ordinary English: its words are lower case in the middle of a sentence, except the level words. 'launch line' stays lower case.",
     "spelling": "American English: organization, color, behavior, license (noun and verb), initialize, customize.",
     "disclaimer": "These are ordinary words used descriptively. Launchway is not affiliated with or endorsed by any military service.",
-    "levels-in-prose": "Where a level is meant, prose uses the default word (Base, Wing, Squadron, Project), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.",
+    "levels-in-prose": "Where a level is meant, prose uses the default word (Base, Wing, Squadron, Flight), never the plain word: 'organization' for the second level, 'unit' or 'team' for the third, 'installation' for the top level. The plain word appears once where the vocabulary is introduced, on the vocabulary page, and in code font where a literal identifier is shown (`organization`, `--organization`, JSON fields). 'Installation' stays the ordinary word for a running Launchway deployment. 'organization' stays where it means the real-world company ('your organization's identity provider'); those uses are on the allow-list.",
     "statuses": "A status is always shown with an icon and its plain word beside the themed one ('Airborne · running'); in the business set only the plain word. Never color alone.",
     "no-combat": "Flying and ground operations only. No strike, target, kill, weapon or attack words and no real program, unit or rank names are product words.",
     "stable-addresses": "Page addresses (URLs, routes), documentation file names, anchors, flags, API fields and enum values, JSON output, and stored role names never change with a word."
@@ -365,7 +365,7 @@
           "one": "Organization",
           "many": "Organizations"
         },
-        "meaning": "The group that owns the projects: the second level.",
+        "meaning": "The group that owns the Squadrons: the second level.",
         "renameable": true,
         "identifier": "organization (kind name today: organisation)",
         "mustNotBeCalled": [
@@ -386,9 +386,10 @@
           "one": "Team",
           "many": "Teams"
         },
-        "meaning": "An optional group of projects with shared settings: the third level.",
+        "meaning": "A named folder of Flights with its own people, settings, measures and cards: the third level.",
         "renameable": true,
         "mustNotBeCalled": [
+          "Flight (word retired)",
           "group",
           "namespace",
           "workspace",
@@ -399,16 +400,17 @@
         "key": "project",
         "group": "levels",
         "aviation": {
-          "one": "Project",
-          "many": "Projects"
+          "one": "Flight",
+          "many": "Flights"
         },
         "plain": {
-          "one": "Project",
-          "many": "Projects"
+          "one": "Codebase",
+          "many": "Codebases"
         },
-        "meaning": "One repository and its pipeline: the fourth level.",
+        "meaning": "One repository and its pipelines: the fourth level.",
         "renameable": true,
         "mustNotBeCalled": [
+          "Flight (word retired)",
           "repo (as the level)",
           "app (that is an application, a deployed thing)"
         ]
@@ -434,15 +436,16 @@
         "key": "runner_group",
         "group": "work",
         "aviation": {
-          "one": "Flight line"
+          "one": "Ramp"
         },
         "plain": {
-          "one": "Runner group"
+          "one": "Ramp"
         },
         "meaning": "A group of runners that share a purpose, such as every runner that can build images.",
         "renameable": true,
         "mustNotBeCalled": [
-          "runner pool (in text a person reads)",
+          "Ramp (renamed Ramp)",
+          "Ramp (in text a person reads)",
           "fleet"
         ]
       },
@@ -788,7 +791,7 @@
         "plain": {
           "one": "Pipeline template"
         },
-        "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
+        "meaning": "A complete, ready-made pipeline for a kind of Flight, with a few things to fill in.",
         "renameable": true,
         "mustNotBeCalled": [
           "blueprint",
@@ -991,7 +994,7 @@
           "one": "Dependency updates",
           "many": "Dependency updates"
         },
-        "meaning": "Proposed updates to the libraries a project uses, opened as pull requests.",
+        "meaning": "Proposed updates to the libraries a Flight uses, opened as pull requests.",
         "renameable": true
       },
       {
@@ -1072,7 +1075,7 @@
         "plain": {
           "one": "Owner"
         },
-        "meaning": "Can do everything, including who may do what. The stored role is owner.",
+        "meaning": "Can do everything, including who may do what. Today the stored role is admin; there is no owner role.",
         "renameable": true
       },
       {
@@ -1084,7 +1087,7 @@
         "plain": {
           "one": "Approver"
         },
-        "meaning": "Decides whether a change may go on. The stored role is approver.",
+        "meaning": "Decides whether a change may go on. Today the stored role is operator; there is no approver role yet.",
         "renameable": true
       },
       {
@@ -1096,7 +1099,7 @@
         "plain": {
           "one": "Developer"
         },
-        "meaning": "Writes code and starts runs. The stored role is developer.",
+        "meaning": "Writes code and starts runs. Today the stored role is operator; there is no developer role.",
         "renameable": true
       },
       {
@@ -1108,7 +1111,7 @@
         "plain": {
           "one": "Viewer"
         },
-        "meaning": "Can read everything and change nothing. The stored role is viewer.",
+        "meaning": "Can read everything and change nothing. The stored role is viewer, as the word says.",
         "renameable": true
       },
       {
@@ -1203,6 +1206,11 @@
       "rules": [
         {
           "pattern": "\\brunner (?:groups?|pools?)\\b",
+          "to": "number",
+          "auto": true
+        },
+        {
+          "pattern": "\\bflight lines?\\b",
           "to": "number",
           "auto": true
         }
@@ -1664,6 +1672,20 @@
       "rules": [],
       "labels": {
         "Template library": "{Hangar}"
+      }
+    },
+    {
+      "key": "project",
+      "rules": [
+        {
+          "pattern": "(?<!launchway )(?<!config (?:list|get|set|%s) )(?<!objects of a kind: )(?<!kind is one of )(?<!the kind: )(?<!home, pipelines, )(?<!\\|)\\bprojects?\\b(?!\\||:(?:NAME|OWNER|<name>)|=<name>| or runs|, libraries)",
+          "to": "number",
+          "auto": true
+        }
+      ],
+      "labels": {
+        "Project": "{Project}",
+        "Projects": "{Projects}"
       }
     }
   ],

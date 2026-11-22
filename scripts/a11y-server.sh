@@ -100,6 +100,12 @@ mkdir -p "$hosted/internal/price" && (
   git push -q "$url/git/launchway/shop.git" main 2>/dev/null; git checkout -q -b fix && printf '// fix\n' >> README.md && git -c user.name="Sam Rivera" -c user.email="sam@example.com" commit -q -am "Fix the readme" && git push -q "$url/git/launchway/shop.git" fix 2>/dev/null
 ) || true
 
+# A Squadron with a Flight in it, an empty one, and two Flights left unfiled (the Squadron pages and the Organize page are scanned too).
+api() { curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' -d "$2" "$url$1" >/dev/null; }
+api /api/v1/units '{"name":"shop","description":"Everything the shop sells with"}'
+api /api/v1/units '{"name":"archive"}'
+api /api/v1/unit-moves '{"flights":["shop-api"],"to":"shop"}'
+
 start() { curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' -d '{"ref":"main"}' "$url/api/v1/projects/$1/runs" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'; }
 ok=$(start shop-docs); failed=$(start shop-api); waiting=$(start shop-web)
 printf 'RUN_OK=%s\nRUN_FAILED=%s\nRUN_WAITING=%s\n' "$ok" "$failed" "$waiting" > "$work/runs.env"

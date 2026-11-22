@@ -258,6 +258,7 @@ export default defineConfig({
           { text: 'Encryption at rest', link: '/guide/encryption-at-rest' },
           { text: 'Upgrading', link: '/guide/upgrading' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
+          { text: 'Squadrons and Flights', link: '/guide/squadrons-and-flights' },
           { text: 'The words Launchway uses', link: '/guide/words' },
           { text: 'Sign-in and access', link: '/guide/access' },
           { text: 'Runners on other machines', link: '/guide/runner-identity' },

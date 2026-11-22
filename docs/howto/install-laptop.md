@@ -11,7 +11,7 @@ machinery is built and described in [verifying downloads](../security/verify-dow
 
 | Tool | Version | Why |
 |---|---|---|
-| Git | any recent | to clone, and for the projects Launchway watches |
+| Git | any recent | to clone, and for the Flights (codebase) Launchway watches |
 | Go | 1.27 or newer | to build the binary |
 | Node.js | 24 or newer | to build the web UI, which is compiled into the binary |
 | Podman or Docker | any recent | steps run in containers; without either, steps run directly on your machine |
@@ -46,7 +46,7 @@ If `launchway --help` is not found, add `~/.local/bin` to `PATH` in your shell's
 
 - **Run a pipeline locally:** in a repository with `.launchway/pipeline.yaml`, run
   `launchway validate` and `launchway run`.
-- **Run the server with demo projects:** `make run` in the checkout; see the
+- **Run the server with demo Flights:** `make run` in the checkout; see the
   [quick start](../start/quick-start.md).
 - **Run the server for your own repositories:** see step 5 of
   [First pipeline in 10 minutes](../tutorials/first-pipeline.md#6-let-a-server-run-it-on-every-commit).

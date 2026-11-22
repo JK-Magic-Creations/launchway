@@ -4,9 +4,8 @@ import { configApi, type Spec } from "../../configApi";
 import { LinkButton } from "../../kit/layout";
 import { actionOf, type ChecklistItem, type GuideStep } from "../../guideApi";
 import { Unavailable, Wingman } from "./Frame";
-import { useOverview } from "../../configApi";
-import { ConnectRepoWizard } from "../wizards/ConnectRepo";
-import { Empty, Link } from "../../components/ui";
+import { Link } from "../../components/ui";
+import { ADD_FLIGHT } from "../squadrons/shared";
 import { terms } from "../../terms";
 
 /** Step 5: is a runner connected, and how to add another. */
@@ -60,9 +59,8 @@ export function HostingStep({ step, kubernetes, onChange }: { step: GuideStep; k
   );
 }
 
-/** Step 8: a first pipeline from a starter for one repository: the existing connect-a-repository wizard, inside the guide. */
+/** Step 8: a first pipeline from a starter for one repository: Add a Flight, which finds the repository (a hosted one first), names the Flight and shows the pipeline before anything is made. */
 export function PipelineStep({ step }: { step: GuideStep }) {
-  const { overview } = useOverview();
   const start = actionOf(step, "start_wizard");
   return (
     <>
@@ -72,9 +70,7 @@ export function PipelineStep({ step }: { step: GuideStep }) {
         to commit; it never changes your application behind your back.
       </Wingman>
       {!start?.available && <Unavailable action={start} />}
-      {start?.available && overview && overview.available && <ConnectRepoWizard overview={overview} />}
-      {start?.available && !overview && <p className="loading">Loading…</p>}
-      {start?.available && overview && !overview.available && <Empty title="This server keeps its configuration in its file">Add the project to the settings file.</Empty>}
+      {start?.available && <p><LinkButton href={ADD_FLIGHT} kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton></p>}
     </>
   );
 }

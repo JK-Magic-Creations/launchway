@@ -35,13 +35,13 @@ None of this is in the pipeline file, because a pipeline must not be able to gra
 | Where | What | Notes |
 |---|---|---|
 | Depot (registry) | A robot account that may push **only** the repository of the Launchway image and its cache | Do not reuse a robot that can push everywhere. Turn on tag immutability for the repository: a tag is for people, the digest is what deploys. |
-| Station (`runner.images`) | A builder for the project `launchway`, a Depot with a push rule for that repository, the Station's signing key | One BuildKit daemon is one trust boundary: give this project a daemon of its own. See [Container images](../guide/images.md) and `deploy/buildkit/README.md`. |
-| Station (`runner.secretStores`) | A `file` store holding the robot's name and password, allowed for the project `launchway` only | The credentials are read by the Station; step pods never see them. |
+| Station (`runner.images`) | A builder for the Flight (codebase) `launchway`, a Depot with a push rule for that repository, the Station's signing key | One BuildKit daemon is one trust boundary: give this Flight a daemon of its own. See [Container images](../guide/images.md) and `deploy/buildkit/README.md`. |
+| Station (`runner.secretStores`) | A `file` store holding the robot's name and password, allowed for the Flight `launchway` only | The credentials are read by the Station; step pods never see them. |
 | Node | The BuildKit seccomp profile on the node that runs the daemon | `deploy/buildkit/seccomp-rootless-buildkit.json`; how it reaches the node is your decision (host configuration or the Security Profiles Operator). |
 | Server (`delivery.environments`) | Airfields (environments) `launchway-sandbox` and `launchway-dev` (dev `protected: true`) | The names in `.launchway/pipeline.yaml`; rename both together. |
 | Deploy Station (`delivery.deployRunner`) | `applications` naming exactly the two Argo CD Applications; `rolloutNamespaces` the two namespaces; `accept: { projects: [launchway], environments: [...], executors: [deploy] }` | `rbac.patchApplications: false` and `refresh: false`: Argo CD syncs by itself, so Launchway asks it for nothing and holds read access only. `accept` needs the chart with `delivery.deployRunner.accept` (this branch). |
 | Deploy Station (`repos`) | The GitOps repository with `paths` listing the four files the pipeline edits | A token that can push to that repository only; `paths` is enforced by the Station, not by Git. |
-| Verification sources | `prometheus` and `loki`, for project `launchway` | The pipeline's verify steps read pod readiness and restarts, and the server's logs. |
+| Verification sources | `prometheus` and `loki`, for Flight `launchway` | The pipeline's verify steps read pod readiness and restarts, and the server's logs. |
 | GitOps repository | An Argo CD `PreSync` job that dumps the database | Launchway cannot dump its own database from a pipeline. The dump runs before the new pods exist, and a failed dump fails the sync, so nothing changes. |
 | GitOps repository | A second, small Launchway instance (the sandbox) with its own database, namespace and credentials | Never share credentials with dev. |
 

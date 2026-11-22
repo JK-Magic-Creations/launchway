@@ -261,8 +261,8 @@ func TestTestResultsFollowAccess(t *testing.T) {
 		"/api/v1/runs/" + web + "/tests":                            "not found: run " + web,
 		fmt.Sprintf("/api/v1/runs/%s/tests/cases/%d", web, webCase): "not found: run " + web,
 		fmt.Sprintf("/api/v1/runs/%s/tests/cases/%d", pay, webCase): fmt.Sprintf("not found: test result %d", webCase),
-		"/api/v1/projects/web/tests":                                "not found: project web",
-		"/api/v1/projects/web/tests/history?key=" + key:             "not found: project web",
+		"/api/v1/projects/web/tests":                                "not found: Flight web",
+		"/api/v1/projects/web/tests/history?key=" + key:             "not found: Flight web",
 	} {
 		r := vic.get(e.srv.URL + path)
 		var body struct{ Error string }

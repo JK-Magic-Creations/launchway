@@ -17,6 +17,8 @@
     "/\\b[a-z]{3}_[0-9a-z]{16,}\\b/g"
   ],
   "words": [
+    "Unfiled",
+    "unfiled",
     "overwatch",
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
     "Valkey", "Containerfile", "Containerfiles", "Dockerfiles", "millicores",

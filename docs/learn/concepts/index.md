@@ -6,8 +6,8 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 | Page | The question it answers |
 |---|---|
 | [The launch line](launch-line.md) | How does a change get from my code to running software, and where is it now? |
-| [Projects, pipelines, steps and runs](pipelines-and-runs.md) | What are the pieces, and how do they fit together? |
-| [Templates, libraries and Flight plans](templates-and-libraries.md) | How do many projects share the same steps? |
+| [Flights (codebase), pipelines, steps and runs](pipelines-and-runs.md) | What are the pieces, and how do they fit together? |
+| [Templates, libraries and Flight plans](templates-and-libraries.md) | How do many Flights share the same steps? |
 | [Variables](variables.md) | Where does a step get its settings and secrets from? |
 | [The built-in Depot (registry)](registry.md) | Where do my images and charts live, and who may touch them? |
 | [Switches (feature toggles)](feature-toggles.md) | How do I ship a feature turned off, roll it out to some users, and turn it off in seconds? |
@@ -22,6 +22,6 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 Where the technical world already has a word (branch, commit, variable, secret, Airfield,
 pull request), Launchway uses it. For its own ideas it borrows from aviation, because a launch is a
 journey with checks along the way: the **launch line** (the journey of one change), a **flight
-plan** (a ready-made pipeline for one kind of project), a **clearance** (an approval, with a go or
+plan** (a ready-made pipeline for one kind of Flight), a **clearance** (an approval, with a go or
 a no-go), and the **Wingman** (the guide panel that explains each page). Where a word has a plain
 business name beside it, this documentation uses both the first time.

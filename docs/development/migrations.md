@@ -126,7 +126,7 @@ graph), `when: { input: … }`, `on.schedule` and `on.webhook` are such keys too
 pipeline uses any of them, whose trigger carries input values, or whose event is `schedule` or
 `webhook` has `runs.min_schema` 13, so a server of schema 12 leaves it alone
 (`TestOlderBuildLeavesTriggerRunsAlone`). Schema 13 adds no event type. Its API tokens limited to
-a role or projects are stored under a `v2:` hash that older servers never look up, so a Return to base
+a role or Flights (codebase) are stored under a `v2:` hash that older servers never look up, so a Return to base
 refuses such tokens instead of granting their owner's full rights.
 
 Schema 14 brings commands on a deployment's rollout and rollout steps. It is additive: new columns
@@ -219,7 +219,7 @@ the Sortie alone (`TestOlderBuildLeavesReportRunsAlone`). Stations are part of t
 declares coverage is given only to a Station that reports the feature `coverage`; attachments and
 HTML reports are kept by any Station that knows Cargo (the server adds them to the step's
 Cargo, with their limits, and enforces the limits itself). A test's key now includes its
-variant (browser or project) when a report gives one; results without one keep the keys they had,
+variant (browser or Flight) when a report gives one; results without one keep the keys they had,
 so histories carry on.
 
 Returning to base from schema 18 to 17:
@@ -247,7 +247,7 @@ runs of 17 and 18 alone (`TestUpgradeFromSchema16AndBack`).
 
 Schema 19 brings verify steps (`kind: verify`) and ai steps (`kind: ai`). It is additive: four new
 tables (`verifications` and `verify_baselines`, projections of the verification events;
-`ai_usage`, each project's model use per day; `ai_explanations`), a `kind` column on `steps` with a
+`ai_usage`, each Flight's model use per day; `ai_explanations`), a `kind` column on `steps` with a
 default, and four event types of schema 19 (`verify.started`, `verify.interval`, `verify.verdict`,
 `verify.override`). A pipeline with a verify or ai step has `runs.min_schema` 19 from creation and
 carries `"requires": 19`, so older servers leave such runs alone, refuse to start one, and do not
@@ -296,7 +296,7 @@ read as failed, with the Station's reason. Older servers never read the new tabl
   work (or its deploy pool's), unless the pool sets `require_identity`, which refuses it with a
   message saying to enrol.
 
-Schema 21 brings build Flight lines (Station (runner) pools) and the pipeline key `runner:`. It is additive: `runs` gains
+Schema 21 brings build Ramps (Station (runner) pools) and the pipeline key `runner:`. It is additive: `runs` gains
 `runner_pool` and `runner_labels` (defaults `''`). A pipeline with `runner:` carries `"requires":
 21` and has `runs.min_schema` 21, so older servers leave its Sorties alone; and while any build pool is
 configured, every new Sortie's `run.created` carries `requires: 21`, because an older server would
@@ -421,7 +421,7 @@ Lanes are schema 24's too. Four event types, `run.lane_waiting`, `run.lane_start
 the deploy events, and `runs` gains `lane_name`, `lane_key`, `lane_label`, `lane_state`, `lane_other` and
 `lane_other_number` for lists and filters. A pipeline with `lane` carries `"requires": 24`, so older
 servers leave its Sorties alone and never see a waiting run as one with steps to lease. A Sortie joins its lane
-in the transaction that creates it, after taking the project's `run_counters` row, which is why servers
+in the transaction that creates it, after taking the Flight's `run_counters` row, which is why servers
 creating runs at once take turns; a holder that ends releases its lane in its own transaction, which
 takes the same row, and starts the first waiting run. A promotion that was lost leaves a lane with
 waiting runs and no live holder: every server's reaper (`recoverLanes`) starts the first of them, and a
@@ -437,21 +437,21 @@ instead of reading it as a re-run from the first step.
 `on.pull_request.into` is schema 24's last pipeline key. A pipeline with it carries `"requires": 24`,
 so older servers refuse to read it as a pipeline file (they do not know the key) and leave its Sorties
 alone. `runs` gains `pull_request_into`, and a Sortie's trigger gains `pull_request_into`: the branch the
-project's forge said the pull request targets when the Sortie was created. Pull requests wait for the
+Flight's forge said the pull request targets when the Sortie was created. Pull requests wait for the
 forge, never run unfiltered: a decision with outcome `waiting` is recorded without claiming the
-head, so the next poll tries again. The forge itself is not database state here: a project's connection
-is given to the server's source manager, and a project without one runs no pull request of a
+head, so the next poll tries again. The forge itself is not database state here: a Flight's connection
+is given to the server's source manager, and a Flight without one runs no pull request of a
 pipeline that filters.
 
 Schema 25 brings build caches: the pipeline key `cache:` on a step (see the pipeline reference), and
-three tables. `caches` holds the entries (project, scope, name, key, platform, the blob key under
+three tables. `caches` holds the entries (Flight, scope, name, key, platform, the blob key under
 `caches/`, size, who wrote it, when it was last used, how often, and a status of `uploading`, `kept`
-or `ended`, with the state of a chunked upload while it is under way); a unique index over project,
+or `ended`, with the state of a chunked upload while it is under way); a unique index over Flight,
 scope, name, key and platform covers the entries that are not ended, so that an ended entry's name
-can be saved again while its bytes wait to be removed. `cache_usage` counts each project's kept
-bytes, like `artifact_usage`. `cache_policy` holds the limits, one row for the installation (project
-`''`) and one per project that overrides it; with no row the values compiled in apply (10 GiB a
-project, 2 GiB an entry, 7 idle days). It is additive: three new tables and nothing else, no new
+can be saved again while its bytes wait to be removed. `cache_usage` counts each Flight's kept
+bytes, like `artifact_usage`. `cache_policy` holds the limits, one row for the installation (Flight
+`''`) and one per Flight that overrides it; with no row the values compiled in apply (10 GiB a
+Flight, 2 GiB an entry, 7 idle days). It is additive: three new tables and nothing else, no new
 event type, and nothing older code reads. `step.finished` may carry a `caches` field (what each cache
 did: hit, fallback, miss, saved or not saved), which older servers ignore like every field they do
 not know. A pipeline with a `cache:` carries `"requires": 25`, so older servers leave its Sorties
@@ -499,16 +499,16 @@ exist, so it stays.
 
 Schema 26 brings forges (`internal/forge`), additive: four new tables and nothing else.
 `forge_connections` and `forge_repositories` hold a connection (a link to a Git host; the kind `plain`
-is today's watcher of a Git address) and its repositories, and every watched project becomes a
+is today's watcher of a Git address) and its repositories, and every watched Flight becomes a
 repository on the connection `plain-git` when the server starts. `forge_events` keeps what each
 connection heard and decided, with a retention limit, and `forge_deliveries` remembers webhook
 deliveries per connection so a replay is ignored. A credential is stored as a reference (an Airfield
 variable name or a file path), never as a value. Older servers ignore the tables, and nothing about how
-a project is watched depends on them: if the rows cannot be written the watcher says so once and goes
+a Flight is watched depends on them: if the rows cannot be written the watcher says so once and goes
 on. The migration lives in its own file because `db.go` is over the size limit.
 
 Schema 46 brings the built-in Depot (`internal/registry`), additive: ten new tables and nothing else.
-`registry_repositories` (a repository and its project and Wing), `registry_blobs` (one row per
+`registry_repositories` (a repository and its Flight and Wing), `registry_blobs` (one row per
 Wing and digest: content is shared inside a Wing and never across two) with
 `registry_repo_blobs` (which repository may see which blob), `registry_manifests`,
 `registry_manifest_refs` and `registry_tags`, `registry_uploads` and `registry_upload_chunks` (uploads

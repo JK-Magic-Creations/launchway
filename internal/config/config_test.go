@@ -479,7 +479,7 @@ runner_pools:
 		t.Fatalf("%v %v", r, err)
 	}
 	for body, want := range map[string]string{
-		"runner_pools:\n  - { name: web, kind: build }\n":                                              "list the projects",
+		"runner_pools:\n  - { name: web, kind: build }\n":                                              "list the Flights",
 		"runner_pools:\n  - { name: web, kind: build, projects: [a], targets: [cluster-a] }\n":         "no targets and no token",
 		"runner_pools:\n  - { name: web, kind: gpu }\n":                                                "kind is deploy",
 		"runner_pools:\n  - { name: d, targets: [cluster-a], projects: [a], token_env: X }\n":          "for build pools",

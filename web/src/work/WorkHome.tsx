@@ -5,6 +5,7 @@ import { Button, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { Blank, ErrorPanel, itemHref, Loading, Prio, scopeHref, StateTag, useLoad, when, WorkPage } from "./common";
 import { workApi, type HomeWork, type Sample } from "./workApi";
+import { terms } from "../terms";
 
 // /work: what is assigned to you, what waits for you, and where to go next (every project's items, board and backlog).
 
@@ -13,7 +14,7 @@ export default function WorkHome() {
   const repos = useLoad<HostedRepo[]>("work-repos", () => forgeApi.repositories());
   const h = home.data;
   return (
-    <WorkPage title="Work" sentence="Your items, what agents did for you, and every project's board and backlog."
+    <WorkPage title="Work" sentence={terms().say("Your items, what agents did for you, and every {project}'s board and backlog.")}
       actions={<><Link href="/work/inbox" className="btn">Inbox{h && h.unread > 0 ? ` (${h.unread} unread)` : ""}</Link><Link href="/work/agents" className="btn">Agents</Link></>}>
       <ErrorPanel error={home.error} onRetry={home.reload} />
       {home.loading && <Loading what="your work" />}
@@ -22,7 +23,7 @@ export default function WorkHome() {
           <div className="wk-main">
             <Sheet title="Assigned to you" actions={h.assigned_total > 0 ? <span className="faint num">{h.assigned_total} open</span> : undefined} pad={h.assigned.length === 0}>
               {h.assigned.length === 0
-                ? <Blank title="Nothing is assigned to you">When an item is assigned to you it appears here, most urgent first. Pick a project to the right to find work.</Blank>
+                ? <Blank title="Nothing is assigned to you">{terms().say("When an item is assigned to you it appears here, most urgent first. Pick a {project} to the right to find work.")}</Blank>
                 : <ul className="wk-rows tight">{h.assigned.map((it) => <li key={it.id}><span className="mono">{it.ref}</span> <Link href={itemHref(it.ref)}>{it.title}</Link> <StateTag item={it} /> <Prio p={it.priority} /></li>)}</ul>}
             </Sheet>
             <Sheet title="Agents and your review" pad>
@@ -35,8 +36,8 @@ export default function WorkHome() {
             </Sheet>
             <Samples samples={h.samples} onDone={home.reload} />
           </div>
-          <aside className="wk-side" aria-label="Projects">
-            <Sheet title="Projects" pad={false}>
+          <aside className="wk-side" aria-label={terms().say("{Projects}")}>
+            <Sheet title={terms().say("{Projects}")} pad={false}>
               <ErrorPanel error={repos.error} onRetry={repos.reload} />
               <ul className="wk-rows projects">
                 <li><strong>Everything</strong> <Link href={scopeHref("installation")}>Items</Link> <Link href={scopeHref("installation", "board")}>Board</Link></li>
@@ -46,7 +47,7 @@ export default function WorkHome() {
                   </li>
                 ))}
               </ul>
-              {repos.data && repos.data.length === 0 && <p className="faint pad">No projects yet. Create a repository first, then track its work here.</p>}
+              {repos.data && repos.data.length === 0 && <p className="faint pad">{terms().say("No {projects} yet. Create a repository first, then track its work here.")}</p>}
             </Sheet>
           </aside>
         </div>

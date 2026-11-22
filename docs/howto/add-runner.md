@@ -5,9 +5,9 @@ it, makes a one-time join token and shows the exact command to run.
 
 ## What it asks
 
-1. **Which pool?** A pool is a group of Stations. A *build* pool runs the steps of projects, optionally
+1. **Which pool?** A pool is a group of Stations. A *build* pool runs the steps of Flights (codebase), optionally
    only for some events; a *deploy* pool serves deploy targets (a cluster) and may deploy only to
-   them. Pick an existing pool or create one. For a new pool the wizard asks which projects (or
+   them. Pick an existing pool or create one. For a new pool the wizard asks which Flights (or
    targets) it serves, and whether Stations must enrol with a join token of their own (recommended: a
    shared token cannot be told apart from another machine using it).
 2. **Where will it run?** On Kubernetes, on a virtual machine or server, or in a container. The

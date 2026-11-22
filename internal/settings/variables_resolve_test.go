@@ -111,7 +111,7 @@ func TestLockedConflictsNameTheLevelAndWhoCanChangeIt(t *testing.T) {
 		t.Fatalf("conflicts: %+v", r.Conflicts)
 	}
 	m := r.Conflicts[0].Message
-	for _, want := range []string{"replicas is locked to 3 by the wing (audited)", "the pipeline file sets 5", "an administrator of every project"} {
+	for _, want := range []string{"replicas is locked to 3 by the wing (audited)", "the pipeline file sets 5", "an administrator of every Flight"} {
 		if !strings.Contains(m, want) {
 			t.Errorf("message %q lacks %q", m, want)
 		}
@@ -293,7 +293,7 @@ func TestAllNamesAreResolvedWhenNoneIsAsked(t *testing.T) {
 // the guide, the concept page, the references and the pipeline guide.
 func TestTheRuleIsTheSameInEveryDocument(t *testing.T) {
 	// A page that has met a word before does not repeat the plain word beside it: "Sortie (run)" is "Sortie" there.
-	plain := strings.NewReplacer(" (run)", "", " (environment)", "")
+	plain := strings.NewReplacer(" (run)", "", " (environment)", "", " (codebase)", "")
 	core := plain.Replace(strings.TrimSuffix(VariableRule, " Lists replace, never merge. Variables and locks never cross Wings."))
 	for _, f := range []string{"docs/guide/variables.md", "docs/learn/concepts/variables.md", "docs/reference/http-api.md", "docs/reference/cli.md"} {
 		b, err := os.ReadFile("../../" + f)

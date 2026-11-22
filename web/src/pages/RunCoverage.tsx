@@ -141,7 +141,7 @@ function StepCoverage({ s, run }: { s: CoverageStep; run: RunDetail }) {
         ))}
         {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
         {s.stored < s.source_files && <li className="tfile-note">{s.stored.toLocaleString()} of {s.source_files.toLocaleString()} files were kept for the table below; the totals count them all.</li>}
-        {s.pruned && <li className="tfile-note">The files were removed to keep the project's storage within its limit; the totals remain.</li>}
+        {s.pruned && <li className="tfile-note">{terms().say("The files were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
       </ul>
     </li>
   );

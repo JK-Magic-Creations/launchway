@@ -3,7 +3,7 @@
 The pipeline editor in the web UI: check a pipeline as you type, run unsaved text as a draft, and save to Git as yourself.
 
 Git is the only place a pipeline is kept. Launchway never holds a copy of its own: the editor
-(*Projects → Edit pipeline*, or *Edit this pipeline* on a Sortie's *Pipeline* tab) reads
+(*Flights (codebase) → Edit pipeline*, or *Edit this pipeline* on a Sortie's *Pipeline* tab) reads
 `.launchway/pipeline.yaml` from the tip of a branch, checks it as you type with the same parser
 the server uses, marks problems on their lines and draws the graph. It shows which branch and
 commit the text came from and whether you have changed it. Unsaved edits stay in that browser tab
@@ -18,7 +18,7 @@ A draft is its own trigger event, `draft`:
 - a step with a `when` runs only if its `event` list names `draft`. `when: { branch: main }` or
   `when: { event: [push, manual] }` does not run in a draft of `main`, so a deployment guarded by
   `when` does not run from unsaved, unreviewed text;
-- a step that declares `secrets` fails before any Station (runner) sees it, unless the project allows
+- a step that declares `secrets` fails before any Station (runner) sees it, unless the Flight allows
   drafts to read secrets (below). Its Station never looks a secret up.
 
 A draft lets someone run steps nobody has reviewed, with whatever the Stations can reach, so who
@@ -44,8 +44,8 @@ By default it goes to a new branch, `<branch_prefix><you>/<date-time>`, with a l
 request when the repository is on GitHub, GitLab, Gitea or Forgejo (judged by its host name;
 Launchway calls no Git host API). A save is refused, and nothing is pushed, if the branch has
 moved on since the text was opened, so two people cannot overwrite each other; or if the text has
-problems, unless an admin of the project chooses to save it anyway. Saving needs the operator role
-and a `push` section for the project:
+problems, unless an admin of the Flight chooses to save it anyway. Saving needs the operator role
+and a `push` section for the Flight:
 
 ```yaml
 projects:
@@ -61,7 +61,7 @@ Git settings in the server's Airfield (environment), such as `GIT_CONFIG_COUNT=1
 `GIT_CONFIG_KEY_0=http.https://git.example.com/.extraHeader` and
 `GIT_CONFIG_VALUE_0=Authorization: Bearer ...`. Give that credential only the rights it needs,
 and protect the branches that matter on the Git host: Launchway refuses direct saves outside
-`allow_direct`, but the credential itself could push anywhere it is allowed to. A project without
+`allow_direct`, but the credential itself could push anywhere it is allowed to. A Flight without
 `push` cannot be saved to; the editor offers *Copy* and *Download* instead. Each save works in a
 temporary clone of the server's mirror, which is removed whatever happens, and pushes with a
 lease, so saves on several servers at once are safe. If the push fails, Git's own message is

@@ -186,11 +186,11 @@ nine tenths of the token's lifetime have passed or when the store answers `403`.
 Any pipeline can ask any store for any key, so limit each store. Both lists are checked on the
 Station, before the store is asked:
 
-- `projects`: the projects whose runs may read the store;
+- `projects`: the Flights (codebase) whose runs may read the store;
 - `keys`: the keys they may read.
 
 Patterns use `*`, which does not cross a `/`, `?` and `[...]`. An empty list allows everything.
-`launchway run` uses the project name `local`.
+`launchway run` uses the Flight name `local`.
 
 ```text
 secret REGISTRY_PASSWORD (bao:apps/demo/registry#password): store "bao" does not allow project "payments-api" (projects: app)
@@ -272,7 +272,7 @@ not run: this is a draft run, and draft runs of imgapp may not read secrets (the
 not run: this run is for a pull request, whose code may come from anyone who can open one, and pull-request runs of <project> may not read secrets (the step asks for <names>). Guard the step with when: { event: [push, manual] }, or ask an administrator to set pull_requests.secrets: true for the project
 ```
 
-Turn either on per project, only where you trust everyone who can open a pull request or start a
+Turn either on per Flight, only where you trust everyone who can open a pull request or start a
 draft:
 
 ```yaml

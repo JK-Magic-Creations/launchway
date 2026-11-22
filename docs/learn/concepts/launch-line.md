@@ -68,5 +68,5 @@ run at once), or a timer before a retry. The sentence is on the Sortie page, und
 
 ## Next
 
-- [Projects, pipelines, steps and runs](pipelines-and-runs.md): what the line is made from.
+- [Flights (codebase), pipelines, steps and runs](pipelines-and-runs.md): what the line is made from.
 - [Approvals](approvals.md): the stations where a person decides.

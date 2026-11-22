@@ -1,6 +1,6 @@
 # Boards and sprints
 
-Planning in Launchway is a view of the same items, not a second copy. A board is the items of a project
+Planning in Launchway is a view of the same items, not a second copy. A board is the items of a Flight (codebase)
 drawn by state; the backlog is their order; a sprint is a period with a goal and a set of items; the
 charts are computed from the history of the items. Nothing here makes anyone's decision for them: every
 limit and every piece of capacity advice is a **warning**, never a refusal.
@@ -46,7 +46,7 @@ See [accessibility](accessibility.md) for what the interface supports.
 ## The backlog and its order
 
 Items in a scope have one **order**. New work goes to the bottom. Put an item at the top, at the bottom,
-or before or after another item of the same project (`rank_work_item`, `launchway work items rank PAY-12 top`, `POST /api/v1/work/items/{ref}/rank`). On the backlog page each row has a **Move…** menu with the same choices: to the top, the bottom, up, down or before another item, and a control to put the item in a sprint. Moving one item
+or before or after another item of the same Flight (`rank_work_item`, `launchway work items rank PAY-12 top`, `POST /api/v1/work/items/{ref}/rank`). On the backlog page each row has a **Move…** menu with the same choices: to the top, the bottom, up, down or before another item, and a control to put the item in a sprint. Moving one item
 changes one number, not the whole list, so two people reordering at once line up rather than overwrite
 each other. Agents do not reorder the backlog.
 
@@ -57,7 +57,7 @@ work first and keeps the order within a priority).
 
 A **milestone** is a goal with a due date, such as a release. An item belongs to at most one. A milestone
 shows how many of its items are done, the points, and a percentage, and is open or closed. Milestones are
-kept per scope: a Squadron, a Wing or the Base may have their own for work that spans projects.
+kept per scope: a Squadron, a Wing or the Base may have their own for work that spans Flights.
 
 ## Epics and the roadmap
 
@@ -141,5 +141,5 @@ MCP tools `get_work_burndown` and `get_work_chart`.
 | Sprints, milestones | Each scope has its own |
 | Agent rules | See [working with agents](working-with-agents.md#the-autonomy-policy) |
 
-Settings are read from the nearest level that sets them: the Project, its Squadron, the Wing, then the
+Settings are read from the nearest level that sets them: the Flight, its Squadron, the Wing, then the
 Base. They are described in the [work format reference](../reference/work-format.md#settings).

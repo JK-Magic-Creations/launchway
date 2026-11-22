@@ -214,7 +214,7 @@ Required with `mode: oidc`: `issuer`, `client_id`, `redirect_url` and one of
 | `auth.oidc.username_claim` | text | `preferred_username`, then `email`, then `sub` | The claim that names a person. Choose one people cannot change themselves |
 | `auth.oidc.groups_claim` | text | `groups` | The claim, in the ID token or the userinfo response, that lists a person's groups |
 
-`auth.admins` names the first administrators: people or groups who are administrators of every project
+`auth.admins` names the first administrators: people or groups who are administrators of every Flight
 whatever the role bindings in the database say. It stays in the file so that a new installation has
 someone who can sign in and set the rest up, and so that bindings that lock everyone out can be
 repaired by editing a file.
@@ -222,8 +222,8 @@ repaired by editing a file.
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `auth.admins.users` | list of text | | Users, as `username_claim` gives them, who are administrators of every project |
-| `auth.admins.groups` | list of text | | Groups, as `groups_claim` gives them, whose members are administrators of every project |
+| `auth.admins.users` | list of text | | Users, as `username_claim` gives them, who are administrators of every Flight |
+| `auth.admins.groups` | list of text | | Groups, as `groups_claim` gives them, whose members are administrators of every Flight |
 
 ### Access bindings
 
@@ -240,12 +240,12 @@ the highest role wins.
 | `auth.access[].group` | text | | A group, as `groups_claim` gives it. One of `group` or `user` |
 | `auth.access[].user` | text | | A user, as `username_claim` gives it |
 | `auth.access[].role` | text | required | `viewer`, `operator` or `admin` |
-| `auth.access[].projects` | list of patterns | every project | The projects it grants the role on |
+| `auth.access[].projects` | list of patterns | every Flight | The Flights it grants the role on |
 | `auth.access[].environments` | list of patterns | every Airfield | Limits what it grants on deployments (rollout commands, approvals that name a deployment) to these Airfields |
 
-## Projects
+## Flights {#projects}
 
-`projects` lists the repositories to watch. Projects can be added only here.
+`projects` lists the repositories to watch. Flights can be added only here.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
@@ -254,22 +254,22 @@ the highest role wins.
 | `projects[].repo` | URL or path | required | What the servers and Stations clone: `https://...`, `ssh://...`, or a local path. Credentials go in the URL or in `GIT_CONFIG_*` variables |
 | `projects[].branch` | branch | `main` | The default branch: manual Sorties (runs) start from it, and schedules, webhooks and the pull-request setting are read from its pipeline |
 | `projects[].poll` | duration | `30s` | How often to look for pushes and pull requests. At least `5s` (shorter is raised to 5s). Checked when the server starts |
-| `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this project |
-| `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this project |
-| `projects[].pull_requests.secrets` | boolean | the server's `pull_requests.secrets` | Overrides `pull_requests.secrets` for this project |
-| `projects[].pull_requests.untrusted` | `restrict` or `allow` | the server's `pull_requests.untrusted` | Overrides `pull_requests.untrusted` for this project |
-| `projects[].queues.max_wait` | duration or `off` | the server's `queues.max_wait` | Overrides `queues.max_wait` for this project |
-| `projects[].queues.runs` | whole number | the server's `queues.runs` | Overrides `queues.runs` for this project |
-| `projects[].queues.pipeline_runs` | whole number | the server's `queues.pipeline_runs` | Overrides `queues.pipeline_runs` for this project |
-| `projects[].queues.pull_request_runs` | whole number | the server's `queues.pull_request_runs` | Overrides `queues.pull_request_runs` for this project |
-| `projects[].queues.push_runs` | whole number | the server's `queues.push_runs` | Overrides `queues.push_runs` for this project |
-| `projects[].queues.schedule_runs` | whole number | the server's `queues.schedule_runs` | Overrides `queues.schedule_runs` for this project |
-| `projects[].queues.manual_runs` | whole number | the server's `queues.manual_runs` | Overrides `queues.manual_runs` for this project |
-| `projects[].queues.automation_runs` | whole number | the server's `queues.automation_runs` | Overrides `queues.automation_runs` for this project |
-| `projects[].queues.supersede_pull_requests` | boolean | the server's `queues.supersede_pull_requests` | Overrides `queues.supersede_pull_requests` for this project |
+| `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this Flight |
+| `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this Flight |
+| `projects[].pull_requests.secrets` | boolean | the server's `pull_requests.secrets` | Overrides `pull_requests.secrets` for this Flight |
+| `projects[].pull_requests.untrusted` | `restrict` or `allow` | the server's `pull_requests.untrusted` | Overrides `pull_requests.untrusted` for this Flight |
+| `projects[].queues.max_wait` | duration or `off` | the server's `queues.max_wait` | Overrides `queues.max_wait` for this Flight |
+| `projects[].queues.runs` | whole number | the server's `queues.runs` | Overrides `queues.runs` for this Flight |
+| `projects[].queues.pipeline_runs` | whole number | the server's `queues.pipeline_runs` | Overrides `queues.pipeline_runs` for this Flight |
+| `projects[].queues.pull_request_runs` | whole number | the server's `queues.pull_request_runs` | Overrides `queues.pull_request_runs` for this Flight |
+| `projects[].queues.push_runs` | whole number | the server's `queues.push_runs` | Overrides `queues.push_runs` for this Flight |
+| `projects[].queues.schedule_runs` | whole number | the server's `queues.schedule_runs` | Overrides `queues.schedule_runs` for this Flight |
+| `projects[].queues.manual_runs` | whole number | the server's `queues.manual_runs` | Overrides `queues.manual_runs` for this Flight |
+| `projects[].queues.automation_runs` | whole number | the server's `queues.automation_runs` | Overrides `queues.automation_runs` for this Flight |
+| `projects[].queues.supersede_pull_requests` | boolean | the server's `queues.supersede_pull_requests` | Overrides `queues.supersede_pull_requests` for this Flight |
 | `projects[].push.branch_prefix` | text | `launchway/` | Lets the pipeline editor save to the repository. Saves go to a new branch `<prefix><you>/<date-time>`. Letters, digits, `-`, `_`, `.` and `/`, at most 100 |
 | `projects[].push.allow_direct` | list of patterns | none | Branches that may be saved to directly |
-| `projects[].schedules.enabled` | boolean | the server's `schedules.enabled` | Turns this project's [schedules](pipeline.md#schedule) on or off |
+| `projects[].schedules.enabled` | boolean | the server's `schedules.enabled` | Turns this Flight's [schedules](pipeline.md#schedule) on or off |
 | `projects[].git_webhook.kind` | text | | The Git host's webhook, which makes the server poll at once: `github`, `gitea`, `forgejo` or `gitlab`. The host calls `POST /api/v1/projects/<name>/git-hook` |
 | `projects[].git_webhook.secret_env` | variable name | | The webhook's secret, from an environment variable. Exactly one of `secret_env` or `secret_file` |
 | `projects[].git_webhook.secret_file` | path | | Or from a file |
@@ -280,7 +280,7 @@ the highest role wins.
 
 ### A pipeline from a library
 
-A project may get its pipeline from a library template instead of a file in its repository. At a
+A Flight may get its pipeline from a library template instead of a file in its repository. At a
 commit that has its own `.launchway/pipeline.yaml`, that file wins.
 
 <!-- keys: server -->
@@ -295,13 +295,13 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 | `projects[].pipeline.on.push.tags` | list of patterns | none | |
 | `projects[].pipeline.on.pull_request` | empty mapping | none | Write `pull_request: {}` to run pull requests. It takes no settings |
 | `projects[].pipeline.supersede` | boolean | `false` | As a pipeline's [`supersede`](pipeline.md#top-level-keys) |
-| `projects[].pipeline.lane.name` | name | the project's name | The lane's name, as a pipeline's [`lane`](pipeline.md#lane): runs of the project take turns. Needs schema 24; not with `supersede` |
+| `projects[].pipeline.lane.name` | name | the Flight's name | The lane's name, as a pipeline's [`lane`](pipeline.md#lane): runs of the Flight take turns. Needs schema 24; not with `supersede` |
 | `projects[].pipeline.lane.per` | list | none | `ref`, `pull_request` or `input:<name>`: what splits the lane |
 | `projects[].pipeline.lane.when_busy` | `wait`, `cancel` or `skip` | `wait` | What a Sortie that arrives while the lane is held does |
 | `projects[].pipeline.lane.queue` | `newest` or `all` | `newest` | For `wait`: whether a newer waiting run replaces an older one |
 | `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
-| `projects[].default_pipeline.enabled` | boolean | `true` | `false`: the project runs no [flight plan](config-objects.md#a-flight-plan-for-every-repository). A repository file still runs |
-| `projects[].default_pipeline.with` | mapping | none | Other values for some parameters of the Flight plan's template; the rest stay as the Flight plan sets them. Ignored when the project has its own `pipeline` |
+| `projects[].default_pipeline.enabled` | boolean | `true` | `false`: the Flight runs no [flight plan](config-objects.md#a-flight-plan-for-every-repository). A repository file still runs |
+| `projects[].default_pipeline.with` | mapping | none | Other values for some parameters of the Flight plan's template; the rest stay as the Flight plan sets them. Ignored when the Flight has its own `pipeline` |
 
 ## Libraries
 
@@ -312,7 +312,7 @@ read from. A pipeline names one of these by name; it can never give an address.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `libraries[].name` | name | required | `^[a-z][a-z0-9-]{0,39}$`, unique |
-| `libraries[].repo` | URL or path | required | Fetched with the same credentials as projects |
+| `libraries[].repo` | URL or path | required | Fetched with the same credentials as Flights |
 
 ## Station {#runner}
 
@@ -339,13 +339,13 @@ a separate Station's: see the [Station configuration reference](runner-config.md
 ## Drafts and pull requests
 
 [Draft runs](../glossary.md#draft-run) run pipeline text from the editor that is in no commit;
-pull-request runs run code anyone who can open a pull request wrote. Each project may override
+pull-request runs run code anyone who can open a pull request wrote. Each Flight may override
 these settings.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `drafts.allow` | text | `operator` | The role needed on a project to start a draft run there: `admin`, `operator` or `none` (nobody) |
+| `drafts.allow` | text | `operator` | The role needed on a Flight to start a draft run there: `admin`, `operator` or `none` (nobody) |
 | `drafts.secrets` | boolean | `false` | Let steps of draft runs read secrets |
 | `pull_requests.secrets` | boolean | `false` | Let steps of pull-request runs read secrets, and image steps use pull credentials and build secrets |
 | `pull_requests.untrusted` | `restrict` or `allow` | `restrict` | What happens to a pull request from an [automation account](#automation-accounts): `restrict` runs it without secrets (even with `pull_requests.secrets: true`), deploy steps, saved caches or Depot (registry) pushes, using the pipeline of the default branch, until a maintainer approves it with *Run with secrets*; `allow` treats it like any other pull request. See [Pull-request trust](../guide/pull-request-trust.md) |
@@ -353,15 +353,15 @@ these settings.
 ## Queues and limits
 
 How long a step waits for room. The guide [Queues and limits](../guide/queues.md) explains it. Each
-project may override these settings.
+Flight may override these settings.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `queues.max_wait` | duration or `off` | `60m` | The longest a step waits for room (the step namespace's quota, a node with space) before it fails with the reason and what to change. `off` waits for ever |
-| `queues.runs` | whole number | `10` | How many Sorties of a project go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
+| `queues.runs` | whole number | `10` | How many Sorties of a Flight go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
 | `queues.pipeline_runs` | whole number | no limit | How many Sorties of one pipeline go at once |
-| `queues.pull_request_runs` | whole number | `4` | How many pull-request runs of a project go at once |
+| `queues.pull_request_runs` | whole number | `4` | How many pull-request runs of a Flight go at once |
 | `queues.push_runs` | whole number | no limit | How many Sorties for pushes to branches that are not protected go at once |
 | `queues.schedule_runs` | whole number | no limit | How many Patrols (scheduled Sorties (runs)) go at once |
 | `queues.manual_runs` | whole number | no limit | How many Sorties started by hand, by a webhook or by a re-run go at once |
@@ -387,7 +387,7 @@ Limits on what the server keeps of the Debriefs (test reports) steps declare. `0
 |---|---|---|---|
 | `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; Stations (runners) are told and send no more. At most 1024 |
 | `tests.max_cases_per_run` | whole number | `50000` | Individual results one Sortie (run) keeps; beyond it, only the totals |
-| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a Flight keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
 | `tests.max_age_days` | whole number | `180` | How long individual test results and a test's statistics (its typical duration, first and last appearance) are kept. Older results are removed whatever the count; each Sortie's totals stay. At most 3650 |
 
 ## Reports
@@ -404,7 +404,7 @@ from. `0` means the default. See [Debriefs](../guide/test-reports.md).
 | `reports.max_html_mib` | whole number | `256` | MiB of one hosted HTML report |
 | `reports.max_coverage_upload_mib` | whole number | `24` | MiB of coverage reports accepted per step attempt. At most 1024 |
 | `reports.max_coverage_files_per_run` | whole number | `20000` | Per-file coverage records one Sortie keeps; beyond it, only the totals |
-| `reports.max_coverage_files_per_project` | whole number | `2000000` | Per-file coverage records a project keeps, the oldest runs' removed first |
+| `reports.max_coverage_files_per_project` | whole number | `2000000` | Per-file coverage records a Flight keeps, the oldest runs' removed first |
 | `reports.origin` | URL | none | A separate origin, such as `https://reports.example.com`, that alone serves hosted HTML reports, on its own host name pointing at the same servers. Without it, reports are served from Launchway's own origin, sandboxed |
 | `reports.brand_name` | text | none | A name for the header and cover of exported Debriefs (HTML and PDF), at most 60 characters. Without it they say Launchway |
 | `reports.brand_logo` | file path | none | A PNG or JPEG file of at most 256 KiB shown in exported Debriefs. The server reads it when it starts |
@@ -433,7 +433,7 @@ share: the database (the default on PostgreSQL), `s3`, or a directory on a share
 | `artifacts.s3.ca_file` | path | none | An extra CA bundle (PEM) for a private endpoint |
 | `artifacts.max_file_mib` | whole number | `1024` | The largest file a Cargo may hold, in MiB. At most 80000 |
 | `artifacts.max_run_mib` | whole number | `4096` | How much one run may keep, in MiB. At least `max_file_mib` |
-| `artifacts.max_project_gib` | whole number | `50` | How much a project may keep over all its Sorties, in GiB. At least `max_run_mib` |
+| `artifacts.max_project_gib` | whole number | `50` | How much a Flight may keep over all its Sorties, in GiB. At least `max_run_mib` |
 | `artifacts.retain` | text | `30d` | How long Cargo are kept when the pipeline does not say: `30d`, `2w`, `12h`. From `1h` to `3650d` |
 | `artifacts.max_retain` | text | `90d` | The longest any Cargo is kept, whatever the pipeline says. At least `retain` |
 
@@ -482,7 +482,7 @@ beside the API (see [the Depot guide](../guide/registry.md)). It keeps blobs in 
 wherever the server has a Cargo store **and sign-in**: with sign-in off the Depot answers `503`
 (`needs_sign_in`), because there is no anonymous Depot. These settings are read from the file when the
 server starts. Quotas, retention and immutable tags are not here: they are policies kept in the database, set
-per installation, project or repository (`launchway registry policy set`).
+per installation, Flight or repository (`launchway registry policy set`).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
@@ -493,9 +493,9 @@ per installation, project or repository (`launchway registry policy set`).
 | `registry.allow_insecure_http` | boolean | `false` | Accept a password or token over plain HTTP from any address; otherwise only a loopback listener does |
 | `registry.max_blob_mib` | whole number | `10240` | The largest layer or blob accepted, in MiB |
 | `registry.max_manifest_kib` | whole number | `4096` | The largest manifest accepted, in KiB |
-| `registry.default_quota_gib` | whole number | `20` | What a project may store when no policy says otherwise, in GiB; `-1` for no quota. Each distinct blob is counted once |
+| `registry.default_quota_gib` | whole number | `20` | What a Flight may store when no policy says otherwise, in GiB; `-1` for no quota. Each distinct blob is counted once |
 | `registry.requests_per_minute` | whole number | `3000` | The most requests one caller makes in a minute; `-1` for no cap |
-| `registry.max_repositories_per_project` | whole number | `500` | The most repositories a project may have |
+| `registry.max_repositories_per_project` | whole number | `500` | The most repositories a Flight may have |
 | `registry.max_tags_per_repository` | whole number | `5000` | The most tags a repository may have |
 | `registry.gc_grace` | text | `1h` | How old an unreferenced blob must be before garbage collection removes it, so a push in progress is never collected. At least `1m` |
 | `registry.maintain_every` | text | `6h` | How often retention rules are applied and garbage is collected; `off` turns the schedule off (`launchway registry gc` still works). At least `1m` |
@@ -510,9 +510,9 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 |---|---|---|---|
 | `findings.max_upload_mib` | whole number | `32` | MiB of SARIF files accepted per step attempt. At most 1024 |
 | `findings.max_per_run` | whole number | `20000` | Findings one Sortie keeps; beyond it, only the counts |
-| `findings.max_per_project` | whole number | `500000` | Findings a project keeps, the oldest runs' removed first. At least `max_per_run` |
+| `findings.max_per_project` | whole number | `500000` | Findings a Flight keeps, the oldest runs' removed first. At least `max_per_run` |
 | `findings.max_components_per_run` | whole number | `20000` | SBOM components one Sortie keeps for searching |
-| `findings.max_components_per_project` | whole number | `1000000` | SBOM components a project keeps. At least `max_components_per_run` |
+| `findings.max_components_per_project` | whole number | `1000000` | SBOM components a Flight keeps. At least `max_components_per_run` |
 | `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarize them. At most 1024 |
 
 ## Loops
@@ -527,7 +527,7 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `schedules.enabled` | boolean | `true` | `false` turns every project's schedules off (a project's own setting wins). While off, firings are recorded as skipped and are not caught up later |
+| `schedules.enabled` | boolean | `true` | `false` turns every Flight's schedules off (a Flight's own setting wins). While off, firings are recorded as skipped and are not caught up later |
 
 ## Airfields {#environments}
 
@@ -539,24 +539,24 @@ steps are refused. Checked when the server starts.
 |---|---|---|---|
 | `environments[].name` | name | required | Lower-case letters, digits and hyphens, at most 63, unique |
 | `environments[].target` | name | required | What launch Stations serve to reach it, in practice its cluster. Same rules as `name` |
-| `environments[].projects` | list of patterns | required | The projects that may launch here, such as `web-*` |
+| `environments[].projects` | list of patterns | required | The Flights that may launch here, such as `web-*` |
 | `environments[].queue` | text | `newest` | `newest`: a Sortie waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they launch in turn |
 | `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its launch gate, unless `approvals.allow_self` lets them approve their own runs |
-| `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an Abort (emergency Return to base (rollback)) of this Airfield; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
+| `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an Abort (emergency Return to base (rollback)) of this Airfield; when neither is given, any operator of the Flight other than the person who asked for it (unless `approvals.allow_self` lets them) |
 | `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an Abort of this Airfield |
 | `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this Airfield |
 | `environments[].write_back.repo` | `owner/name` | none | A GitOps repository hosted by this Launchway that the Airfield's launch steps write to with a credential of their own (nothing stored). Without `write_back` they use the deploy Station's configured credentials. See [GitOps write-back](../guide/gitops-write-back.md) |
-| `environments[].write_back.mode` | `direct` or `pull_request` | required with `write_back` | `direct`: the step pushes to the branch, and a pipeline writer rule of the repository admits its project for exactly the files it may write. `pull_request`: the step pushes a branch of its own and opens a pull request |
+| `environments[].write_back.mode` | `direct` or `pull_request` | required with `write_back` | `direct`: the step pushes to the branch, and a pipeline writer rule of the repository admits its Flight for exactly the files it may write. `pull_request`: the step pushes a branch of its own and opens a pull request |
 | `environments[].write_back.merge` | `auto` or `person` | `auto` | `pull_request` only: `auto` merges the pull request itself as soon as the repository's merge rules are met; `person` waits for a person to merge it |
 | `environments[].write_back.method` | `merge`, `squash` or `rebase` | the repository's default | `pull_request` only: how the pull request is merged |
 | `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
-## Flight lines (Station (runner) pools) {#runner-pools}
+## Ramps (Station (runner) pools) {#runner-pools}
 
 `runner_pools` gives Stations pools. A **launch** pool has targets, and its Stations take launch work
-for them, with the pool's own token or enrolled with a join token. A **build** pool serves projects
+for them, with the pool's own token or enrolled with a join token. A **build** pool serves Flights
 (and optionally only some events), and its Stations enrol with join tokens. The build pool named
-`default` is the pool of the shared Station token: without it listed, it serves every project that no
+`default` is the pool of the shared Station token: without it listed, it serves every Flight that no
 other build pool serves; list it to limit what it serves or to require identities. See
 [Stations on other machines and clusters](../guide/runner-identity.md). Checked when the server
 starts.
@@ -565,11 +565,11 @@ starts.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `runner_pools[].name` | text | required | Unique |
-| `runner_pools[].kind` | text | `deploy` | `deploy` (serves targets) or `build` (serves projects) |
+| `runner_pools[].kind` | text | `deploy` | `deploy` (serves targets) or `build` (serves Flights) |
 | `runner_pools[].token_env` | variable name | | A launch pool's token, from an environment variable. Exactly one of `token_env` or `token_file`, unless `require_identity` is set (then neither). At least 32 characters, different from every other pool's and from the shared Station token. A build pool has none: its Stations enrol with join tokens |
 | `runner_pools[].token_file` | path | | Or from a file |
 | `runner_pools[].targets` | list | required for a launch pool | Targets its Stations may serve; each must be some Airfield's `target` |
-| `runner_pools[].projects` | list of patterns | required for a build pool (`["*"]` for all) | Projects a build pool's Stations take work for. The pool named `default` may leave it out |
+| `runner_pools[].projects` | list of patterns | required for a build pool (`["*"]` for all) | Flights a build pool's Stations take work for. The pool named `default` may leave it out |
 | `runner_pools[].events` | list | every event | A build pool: only runs started this way, such as `push` or `manual`, and not, say, pull requests |
 | `runner_pools[].require_identity` | boolean | `false` | Refuse shared tokens: only Stations enrolled with a join token for the pool serve it. For the pool named `default` (the build pool of the shared Station token), refuse the shared token; turn the built-in Station off first |
 
@@ -578,7 +578,7 @@ starts.
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `runner_admin` | text | `admin` | The role needed on every project to manage Stations: make join tokens, and revoke and rotate Stations. `admin`, `operator` or `none` (managing Stations over the API and the web UI is off) |
+| `runner_admin` | text | `admin` | The role needed on every Flight to manage Stations: make join tokens, and revoke and rotate Stations. `admin`, `operator` or `none` (managing Stations over the API and the web UI is off) |
 
 ## Verification
 
@@ -592,7 +592,7 @@ Unset, verify steps are refused.
 |---|---|---|---|
 | `verification.sources[].name` | name | required | What pipelines call the source |
 | `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres`, `http` or `check` |
-| `verification.sources[].projects` | list of patterns | none | The projects that may use it |
+| `verification.sources[].projects` | list of patterns | none | The Flights that may use it |
 
 ## AI models
 
@@ -609,11 +609,11 @@ sent to any model unless one is listed here. See [AI models](../guide/ai.md).
 | `ai.models[].key.store` | name | | Where the API key is kept: a secret store of the Station that makes the call (and of `ai.secrets` on a server). A reference, never a value. Required for `api.anthropic.com`; a local server may need none |
 | `ai.models[].key.key` | text | | The key in the store |
 | `ai.models[].key.field` | text | | The field of the key |
-| `ai.models[].projects` | list of patterns | none | The projects that may use the model. Empty means none |
+| `ai.models[].projects` | list of patterns | none | The Flights that may use the model. Empty means none |
 | `ai.models[].max_tokens` | whole number | `4096` | Output cap per call, 1 to 128000 |
 | `ai.models[].max_input_bytes` | whole number | `262144` | Bytes of instructions and prompt per call, at most 8 MiB |
 | `ai.models[].calls_per_run` | whole number | `20` | Calls one run may make, 1 to 1000 |
-| `ai.models[].tokens_per_day` | whole number | `0` | Tokens (input and output) a project may use a day. `0` means no limit |
+| `ai.models[].tokens_per_day` | whole number | `0` | Tokens (input and output) a Flight may use a day. `0` means no limit |
 | `ai.models[].timeout` | duration | `2m` | One call, retries included, at most `15m` |
 | `ai.models[].effort` | text | the model's own | `anthropic` only: `low`, `medium`, `high`, `xhigh` or `max` |
 | `ai.models[].stream` | boolean | stream when a call may write over 16000 tokens | Whether calls stream their answer |
@@ -628,7 +628,7 @@ sent to any model unless one is listed here. See [AI models](../guide/ai.md).
 | `ai.models[].price.long_input_per_mtok` | number | | The long-prompt input price |
 | `ai.models[].price.long_output_per_mtok` | number | | The long-prompt output price |
 | `ai.secrets.<name>.type` | text | required | The server's own secret stores, for the keys of models the server calls itself (only to explain a failed step); Stations read keys from their own. Same types and settings as [`secrets`](runner-config.md#secrets): `env`, `file` or `vault`. Without them the server explains only with models that need no key |
-| `ai.secrets.<name>.projects` | list of patterns | every project | As for Station secret stores |
+| `ai.secrets.<name>.projects` | list of patterns | every Flight | As for Station secret stores |
 | `ai.secrets.<name>.keys` | list of patterns | every key | |
 | `ai.secrets.<name>.dir` | directory | required for `file` | |
 | `ai.secrets.<name>.address` | URL | required for `vault` | |
@@ -695,13 +695,13 @@ Unset, there are no policies.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `policy.policies` | list | none | Policies written in this file. Mistakes are reported with this file's line |
-| `policy.waivers.allow` | text | `admin` | The role needed on a project to waive one of its policies' rules (on the Airfield too, for a launch rule): `admin`, `operator` or `none` |
+| `policy.waivers.allow` | text | `admin` | The role needed on a Flight to waive one of its policies' rules (on the Airfield too, for a launch rule): `admin`, `operator` or `none` |
 | `policy.waivers.max_days` | whole number | `30` | The longest a waiver may last, in days, 1 to 365. Checked when the server starts |
 | `policy.sources[].name` | name | required | Lower-case letters, digits and hyphens; unique, and not `config` |
 | `policy.sources[].library` | name | required | One of [`libraries`](#libraries) |
 | `policy.sources[].version` | text | required | A tag or a full commit id. A branch is refused (the source then fails closed) |
 | `policy.sources[].path` | path | `policies` | The directory of `*.yaml` policy files in the library. No `..` |
-| `policy.sources[].projects` | list of patterns | every project | The projects it may govern |
+| `policy.sources[].projects` | list of patterns | every Flight | The Flights it may govern |
 | `policy.sources[].refresh` | duration | `1m` | How often servers look at the version again. From `10s` to `168h` |
 | `policy.sources[].stale_after` | duration | `1h` | How long a version loaded earlier is used while the repository cannot be reached. From `10s` to `168h` |
 
@@ -746,7 +746,7 @@ Who is told when an approval waits or something went wrong, and where. See [Noti
 | `notifications.channels[].secret.field` | text | | The field of the key |
 | `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long`, `release.published`, `release.promoted`, `release.returned`, `freeze.started` |
 | `notifications.rules[].to` | list | required | The names of the channels that get them |
-| `notifications.rules[].projects` | list of patterns | all | Only events of these projects |
+| `notifications.rules[].projects` | list of patterns | all | Only events of these Flights |
 | `notifications.rules[].environments` | list of patterns | all | Only events of these Airfields (deployments and Returns to base) |
 | `notifications.rules[].branches` | list of patterns | all | Only runs made from these branches |
 | `notifications.rules[].after` | duration | `1h` | For `step.waiting_long`: how long a step waits before it is reported, at least `1m` |

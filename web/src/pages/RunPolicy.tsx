@@ -33,7 +33,7 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
   const blocked = decisions.find((d) => d.verdict === "block");
   return (
     <div className="pol-tab">
-      {!decisions.length && <Empty title={terms().say("No policy judged this {run}")}>No policy in force governs this project, branch and event.</Empty>}
+      {!decisions.length && <Empty title={terms().say("No policy judged this {run}")}>{terms().say("No policy in force governs this {project}, branch and event.")}</Empty>}
       {blocked && run.status === "failed" && (
         <div className="callout callout-bad">
           <strong>Blocked by policy.</strong> {terms().say("Change what was found, or have someone who may grant a waiver do so, then resume the {run}")}

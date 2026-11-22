@@ -45,7 +45,7 @@ and when it held.
 | built | A concrete built image: a digest, per platform |
 | pipeline | A repository's pipeline |
 | Airfield | An Airfield (environment) |
-| deployment | What runs in an Airfield for a project and service |
+| deployment | What runs in an Airfield for a Flight (codebase) and service |
 | machine, platform | A virtual machine or server; a cluster, a serverless runtime, a database or a Holding pattern (queue) |
 | owner | A person or Squadron, from `CODEOWNERS` |
 | commit | A commit that something was built from |
@@ -123,14 +123,14 @@ After a push, `rebuild-set` lists what must be built again, in order, and why.
 
 #### Start dependents after a push
 
-A push to a library repository runs the library's pipeline. The projects that build the repositories depending on it can start when that run ends well, each one after the projects it depends on, because each result starts the next level: providers build before consumers. This uses the same [triggers on results](result-triggers.md) as any other project's start, so the same two decisions apply: the project that depends on another makes the trigger, and the project depended on must allow it. **It is off until you ask for it.** Nothing is made by looking.
+A push to a library repository runs the library's pipeline. The Flights that build the repositories depending on it can start when that run ends well, each one after the Flights it depends on, because each result starts the next level: providers build before consumers. This uses the same [triggers on results](result-triggers.md) as any other Flight's start, so the same two decisions apply: the Flight that depends on another makes the trigger, and the Flight depended on must allow it. **It is off until you ask for it.** Nothing is made by looking.
 
 ```
 launchway run-triggers graph team-app            # what the graph says team-app depends on, in order, and what stands in the way
 launchway run-triggers graph team-app --create   # make a trigger for each project that has allowed it
 ```
 
-The first command lists the projects that build the repositories `team-app`'s repository depends on, lowest level first, and for each whether it has allowed `team-app` to trigger on its results and whether a trigger exists. The second makes a trigger named `graph-<project>` for each that allowed it (it starts a run of `team-app` when a run of that project ends well), and says plainly why it left out any that did not. A dependency you marked `ignore` or `pin` is not followed, and a cycle is shown, not followed. The projects are the ones the caller may read. Nothing crosses between projects but the result by reference. In the API it is `GET` and `POST /api/v1/projects/{name}/run-triggers/graph`, and the MCP tools are `get_graph_run_triggers` and `follow_graph_with_run_triggers`.
+The first command lists the Flights that build the repositories `team-app`'s repository depends on, lowest level first, and for each whether it has allowed `team-app` to trigger on its results and whether a trigger exists. The second makes a trigger named `graph-<project>` for each that allowed it (it starts a run of `team-app` when a run of that Flight ends well), and says plainly why it left out any that did not. A dependency you marked `ignore` or `pin` is not followed, and a cycle is shown, not followed. The Flights are the ones the caller may read. Nothing crosses between Flights but the result by reference. In the API it is `GET` and `POST /api/v1/projects/{name}/run-triggers/graph`, and the MCP tools are `get_graph_run_triggers` and `follow_graph_with_run_triggers`.
 
 **You can always correct it.** An override says one repository is built before another (`before`), does not really
 depend on another (`ignore`) or stays at a version of another, so a push to it does not rebuild it (`pin`). Every
@@ -193,8 +193,8 @@ It needs the vulnerability data the Maintenance use; without it the answer says 
 Every question is asked as you. A node or edge you may not read in its own place is not in any answer: it is not
 listed, it is not followed, and it is not counted. A path that would run through a repository you cannot read is
 not shown, and a node you may not read answers exactly as one that does not exist. Repositories use the same
-access as the repository pages; deployments the same as the project; machines and platforms need a viewer role on
-any project.
+access as the repository pages; deployments the same as the Flight; machines and platforms need a viewer role on
+any Flight.
 
 ## Limits, and saying so
 
@@ -213,7 +213,7 @@ corrections), What it needs (with the edit action and the machine specification)
 ## Setting it up
 
 It needs nothing beyond the server: it is on whenever the server runs, in the same database. Git hosting
-gives it repositories; without it the graph holds projects, built images and deployments only.
+gives it repositories; without it the graph holds Flights, built images and deployments only.
 
 `LAUNCHWAY_GRAPH_REGISTRIES` names the hosts behind the Depot names pipelines use, so that an image a
 pipeline plans to push (`registry: harbor`) and the image that was pushed (`harbor.example.com/...`) are the same

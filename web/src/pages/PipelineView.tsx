@@ -117,7 +117,7 @@ function History({ name, now }: { name: string; now: number }) {
   return (
     <>
       <ErrorBox error={runs.error} />
-      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title={terms().say("No {runs} yet")} action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">Start one from the project</LinkButton>}>Every run of this pipeline will be listed here, with its launch line.</EmptyState></Sheet>}
+      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title={terms().say("No {runs} yet")} action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">{terms().say("Start one from the {project}")}</LinkButton>}>Every run of this pipeline will be listed here, with its launch line.</EmptyState></Sheet>}
       {runs.data && runs.data.length > 0 && (
         <>
           <Sheet title="How it has been going" actions={<RateText trend={t} />}>

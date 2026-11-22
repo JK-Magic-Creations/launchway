@@ -5,15 +5,16 @@ import type { ConfigOverview } from "../configApi";
 import { kindLabel, kindShown } from "../configApi";
 import { onLink } from "../router";
 
-export interface WizardInfo { id: string; title: string; kind?: string; text: string }
+export interface WizardInfo { id: string; title: string; kind?: string; text: string; /** Where the card leads when it is not the wizard itself. */ href?: string }
 
 export const WIZARDS: WizardInfo[] = [
-  { id: "connect-repository", title: "Connect a repository", kind: "project", text: "Watch a Git repository: its branch, what starts runs, and where its pipeline comes from. Then run it." },
+  { id: "connect-repository", title: "Connect a repository", kind: "project", href: "/projects/new", text: "Watch a Git repository: its branch, what starts runs, and where its pipeline comes from. Then run it." },
   { id: "add-runner", title: "Add a runner", kind: "runner-pool", text: "Pick or make a pool, make a join token, and get the exact command for a machine, a container or Kubernetes." },
   { id: "add-environment", title: "Add an environment", kind: "environment", text: "Where deploy steps deploy: its target, who may deploy there, whether it is protected." },
   { id: "add-policy", title: "Add a policy", kind: "policy", text: "Rules runs must meet before they deploy or finish, enforced or only reported." },
   { id: "add-health-source", title: "Add a health source", kind: "health-source", text: "Metrics or logs that verify steps read to judge a deployment." },
-  { id: "add-model", title: "Add an AI model", kind: "model", text: "A model steps may ask, which projects may use it, and where its key is kept." },
+  { id: "add-model", title: "Add an AI model", kind: "model", text: "A model steps may ask, which {projects} may use it, and where its key is kept." },
+  { id: "organize-squadrons", title: "Organize into {Units}", href: "/units/organize", text: "Sort the {projects} that sit in no {unit} into named {units}, as one audited change you can undo." },
 ];
 
 export function wizardFor(kind: string): WizardInfo | undefined {

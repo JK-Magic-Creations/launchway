@@ -19,37 +19,37 @@ import (
 
 const releaseUsage = `Usage:
   launchway release list [--project P] [--state draft|candidate|published|yanked] [--json]
-  launchway release show PROJECT VERSION [--json]
+  launchway release show FLIGHT VERSION [--json]
   launchway release next --project P [--from REF] [--pre rc] [--json]
         propose the next version from the changes since the last release, with the reasoning
   launchway release notes --project P [--to REF] [--version V]   preview generated release notes
   launchway release create --project P --version V [--from REF | --adopt TAG] [--notes-file F | --generate-notes]
                            [--title T] [--run RUN] [--allow-lower]
         make a draft release; with --run the image digests of that Sortie are recorded
-  launchway release edit PROJECT VERSION [--notes-file F] [--title T] [--regenerate-notes]
-  launchway release assets add PROJECT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
-  launchway release assets remove PROJECT VERSION NAME
-  launchway release assets get PROJECT VERSION NAME [-o FILE]
-  launchway release candidate PROJECT VERSION
-  launchway release publish PROJECT VERSION [--public]       create the annotated tag and fix the release
-  launchway release yank PROJECT VERSION --reason TEXT       withdraw a release, with a reason
-  launchway release delete PROJECT VERSION                   delete a draft
-  launchway release changelog PROJECT VERSION [--base BRANCH]   propose the notes as a changelog pull request
-  launchway release compare PROJECT VERSION-A VERSION-B
-  launchway release checklist PROJECT VERSION --airfield A [--json]
-  launchway release clearance PROJECT VERSION --airfield A [--comment TEXT]
-  launchway release promote PROJECT VERSION --airfield A [--override REASON]
-        start the project's pipeline at the release's tag with its version and image digest
-  launchway release plan PROJECT VERSION --airfield A --at TIME [--note TEXT]
+  launchway release edit FLIGHT VERSION [--notes-file F] [--title T] [--regenerate-notes]
+  launchway release assets add FLIGHT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
+  launchway release assets remove FLIGHT VERSION NAME
+  launchway release assets get FLIGHT VERSION NAME [-o FILE]
+  launchway release candidate FLIGHT VERSION
+  launchway release publish FLIGHT VERSION [--public]       create the annotated tag and fix the release
+  launchway release yank FLIGHT VERSION --reason TEXT       withdraw a release, with a reason
+  launchway release delete FLIGHT VERSION                   delete a draft
+  launchway release changelog FLIGHT VERSION [--base BRANCH]   propose the notes as a changelog pull request
+  launchway release compare FLIGHT VERSION-A VERSION-B
+  launchway release checklist FLIGHT VERSION --airfield A [--json]
+  launchway release clearance FLIGHT VERSION --airfield A [--comment TEXT]
+  launchway release promote FLIGHT VERSION --airfield A [--override REASON]
+        start the Flight's pipeline at the release's tag with its version and image digest
+  launchway release plan FLIGHT VERSION --airfield A --at TIME [--note TEXT]
   launchway release return --project P --airfield A --reason TEXT [--to DEPLOYMENT|VERSION] [--queue]
         return to base: the Airfield goes back to the release before, by the existing rollback
   launchway release matrix [--json]                          which release is in which Airfield
   launchway release calendar [--from T] [--to T] [--json]
   launchway release report [--project P] [--from T] [--to T] [--html FILE] [--json]
-  launchway release settings PROJECT [--scheme semver|calver|natural|created] [--tag-prefix P] [--changelog F] [--public=bool]
+  launchway release settings FLIGHT [--scheme semver|calver|natural|created] [--tag-prefix P] [--changelog F] [--public=bool]
   launchway release installation [--public-downloads=bool]   whether this installation allows public downloads
-  launchway release gate list PROJECT
-  launchway release gate set PROJECT --airfield A [--checks] [--notes] [--no-findings] [--soak MINUTES] [--clearances N]
+  launchway release gate list FLIGHT
+  launchway release gate set FLIGHT --airfield A [--checks] [--notes] [--no-findings] [--soak MINUTES] [--clearances N]
                              [--clearance-role operator|admin] [--previous AIRFIELD]
                              [--window-days mon,tue,...] [--window-from HH:MM] [--window-to HH:MM] [--window-zone ZONE]
   launchway release freeze list
@@ -57,7 +57,7 @@ const releaseUsage = `Usage:
   launchway release freeze cancel ID
   launchway release formation list
   launchway release formation show NAME
-  launchway release formation create NAME PROJECT@VERSION PROJECT@VERSION ... [--note TEXT] [--order dependencies]   in promotion order, or by the software graph's dependencies
+  launchway release formation create NAME FLIGHT@VERSION FLIGHT@VERSION ... [--note TEXT] [--order dependencies]   in promotion order, or by the software graph's dependencies
   launchway release formation promote NAME --airfield A [--override REASON]
   launchway release formation advance NAME
 
@@ -135,7 +135,7 @@ func (cl *client) release(args []string) error {
 
 func (cl *client) releaseList(args []string) error {
 	fs := flag.NewFlagSet("release list", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project")
+	project := fs.String("project", "", "only this Flight")
 	state := fs.String("state", "", "draft, candidate, published or yanked")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -172,7 +172,7 @@ func (cl *client) two(fsName string, args []string, fs *flag.FlagSet) (project, 
 		return "", "", err
 	}
 	if len(pos) != 2 {
-		return "", "", usageErr("%s takes a project and a version: launchway release %s PROJECT VERSION\n\n%s", fsName, fsName, releaseUsage)
+		return "", "", usageErr("%s takes a Flight and a version: launchway release %s FLIGHT VERSION\n\n%s", fsName, fsName, releaseUsage)
 	}
 	return pos[0], pos[1], nil
 }
@@ -212,7 +212,7 @@ func (cl *client) releaseShow(args []string) error {
 
 func (cl *client) releaseNext(args []string) error {
 	fs := flag.NewFlagSet("release next", flag.ContinueOnError)
-	project := fs.String("project", "", "the project")
+	project := fs.String("project", "", "the Flight")
 	from := fs.String("from", "", "the branch, tag or commit to release")
 	pre := fs.String("pre", "", "propose a pre-release with this label, such as rc")
 	asJSON := fs.Bool("json", false, "print JSON")
@@ -220,7 +220,7 @@ func (cl *client) releaseNext(args []string) error {
 		return err
 	}
 	if *project == "" {
-		return usageErr("say which project: --project P\n\n%s", releaseUsage)
+		return usageErr("say which Flight: --project P\n\n%s", releaseUsage)
 	}
 	var out struct {
 		Proposal struct {
@@ -256,14 +256,14 @@ func (cl *client) releaseNext(args []string) error {
 
 func (cl *client) releaseNotes(args []string) error {
 	fs := flag.NewFlagSet("release notes", flag.ContinueOnError)
-	project := fs.String("project", "", "the project")
+	project := fs.String("project", "", "the Flight")
 	to := fs.String("to", "", "the branch, tag or commit")
 	version := fs.String("version", "", "the version the notes are for")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
 	}
 	if *project == "" {
-		return usageErr("say which project: --project P")
+		return usageErr("say which Flight: --project P")
 	}
 	var out struct{ Notes struct{ Markdown string } }
 	if err := cl.call("GET", pp(*project)+"/releases/notes?"+url.Values{"to": {*to}, "version": {*version}}.Encode(), nil, &out); err != nil {
@@ -283,7 +283,7 @@ func readFlagFile(path string) (string, error) {
 
 func (cl *client) releaseCreate(args []string) error {
 	fs := flag.NewFlagSet("release create", flag.ContinueOnError)
-	project := fs.String("project", "", "the project")
+	project := fs.String("project", "", "the Flight")
 	version := fs.String("version", "", "the version")
 	from := fs.String("from", "", "the branch, tag or commit to release")
 	adopt := fs.String("adopt", "", "an existing annotated tag to release")
@@ -297,7 +297,7 @@ func (cl *client) releaseCreate(args []string) error {
 		return err
 	}
 	if *project == "" || *version == "" {
-		return usageErr("say the project and version: --project P --version V\n\n%s", releaseUsage)
+		return usageErr("say the Flight and version: --project P --version V\n\n%s", releaseUsage)
 	}
 	notes, err := readFlagFile(*notesFile)
 	if err != nil {
@@ -386,7 +386,7 @@ func (cl *client) releaseAssets(args []string) error {
 		return nil
 	case "remove":
 		if len(args) != 4 {
-			return usageErr("launchway release assets remove PROJECT VERSION NAME")
+			return usageErr("launchway release assets remove FLIGHT VERSION NAME")
 		}
 		return cl.call("DELETE", cl.relPath(args[1], args[2], "/assets/"+url.PathEscape(args[3])), nil, nil)
 	case "get":
@@ -397,7 +397,7 @@ func (cl *client) releaseAssets(args []string) error {
 			return err
 		}
 		if len(pos) != 3 {
-			return usageErr("launchway release assets get PROJECT VERSION NAME [-o FILE]")
+			return usageErr("launchway release assets get FLIGHT VERSION NAME [-o FILE]")
 		}
 		return cl.download(cl.relPath(pos[0], pos[1], "/assets/"+url.PathEscape(pos[2])), nonEmptyStr(*out, pos[2]))
 	}
@@ -545,7 +545,7 @@ func (cl *client) releaseCompare(args []string) error {
 		return err
 	}
 	if len(pos) != 3 {
-		return usageErr("launchway release compare PROJECT VERSION-A VERSION-B")
+		return usageErr("launchway release compare FLIGHT VERSION-A VERSION-B")
 	}
 	var out map[string]any
 	if err := cl.call("GET", pp(pos[0])+"/releases/compare?"+url.Values{"a": {pos[1]}, "b": {pos[2]}}.Encode(), nil, &out); err != nil {
@@ -565,7 +565,7 @@ func (cl *client) releaseCompare(args []string) error {
 
 func (cl *client) releaseReturn(args []string) error {
 	fs := flag.NewFlagSet("release return", flag.ContinueOnError)
-	project := fs.String("project", "", "the project")
+	project := fs.String("project", "", "the Flight")
 	airfield := fs.String("airfield", "", "the Airfield")
 	to := fs.String("to", "", "a deployment or version to return to (default the previous)")
 	reason := fs.String("reason", "", "why; required")
@@ -574,7 +574,7 @@ func (cl *client) releaseReturn(args []string) error {
 		return err
 	}
 	if *project == "" || *airfield == "" || strings.TrimSpace(*reason) == "" {
-		return usageErr("say the project, the Airfield and why: --project P --airfield A --reason \"...\"")
+		return usageErr("say the Flight, the Airfield and why: --project P --airfield A --reason \"...\"")
 	}
 	var run map[string]any
 	if err := cl.call("POST", pp(*project)+"/release-returns", map[string]any{"airfield": *airfield, "to": *to, "reason": *reason, "queue": *queue}, &run); err != nil {
@@ -648,7 +648,7 @@ func (cl *client) releaseCalendar(args []string) error {
 
 func (cl *client) releaseReport(args []string) error {
 	fs := flag.NewFlagSet("release report", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project")
+	project := fs.String("project", "", "only this Flight")
 	from := fs.String("from", "", "from")
 	to := fs.String("to", "", "to")
 	htmlFile := fs.String("html", "", "write the report as an HTML file")
@@ -689,13 +689,13 @@ func (cl *client) releaseSettings(args []string) error {
 	scheme := fs.String("scheme", "", "semver, calver, natural or created")
 	prefix := fs.String("tag-prefix", "", "the tag prefix, such as v")
 	changelog := fs.String("changelog", "", "the changelog file")
-	public := fs.Bool("public", false, "allow public downloads of this project's published releases")
+	public := fs.Bool("public", false, "allow public downloads of this Flight's published releases")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway release settings PROJECT [flags]")
+		return usageErr("launchway release settings FLIGHT [flags]")
 	}
 	var cur struct{ Settings map[string]any }
 	if err := cl.call("GET", pp(pos[0])+"/release-settings", nil, &cur); err != nil {
@@ -729,7 +729,7 @@ func (cl *client) releaseSettings(args []string) error {
 
 func (cl *client) releaseInstallation(args []string) error {
 	fs := flag.NewFlagSet("release installation", flag.ContinueOnError)
-	pub := fs.Bool("public-downloads", false, "allow public downloads of releases that projects and releases ask to make public")
+	pub := fs.Bool("public-downloads", false, "allow public downloads of releases that Flights and releases ask to make public")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
 	}
@@ -754,7 +754,7 @@ func (cl *client) releaseGate(args []string) error {
 	switch args[0] {
 	case "list":
 		if len(args) != 2 {
-			return usageErr("launchway release gate list PROJECT")
+			return usageErr("launchway release gate list FLIGHT")
 		}
 		var out any
 		if err := cl.call("GET", pp(args[1])+"/release-gates", nil, &out); err != nil {
@@ -780,7 +780,7 @@ func (cl *client) releaseGate(args []string) error {
 			return err
 		}
 		if len(pos) != 1 || *airfield == "" {
-			return usageErr("launchway release gate set PROJECT --airfield A [flags]")
+			return usageErr("launchway release gate set FLIGHT --airfield A [flags]")
 		}
 		g := map[string]any{"require_checks": *checks, "require_notes": *notes, "require_no_blocking_findings": *nofind, "soak_minutes": *soak, "clearances": *nClear, "previous_airfield": *prev}
 		if *role != "" {
@@ -809,12 +809,12 @@ func (cl *client) releaseFreeze(args []string) error {
 			return err
 		}
 		for _, f := range out {
-			fmt.Fprintf(cl.out, "%v  %s to %s  %v / %v  %v\n", f["id"], stamp(int64(num(f["from"]))), stamp(int64(num(f["to"]))), nonEmptyStr(str(f["project"], 0), "every project"), nonEmptyStr(str(f["airfield"], 0), "every Airfield"), f["reason"])
+			fmt.Fprintf(cl.out, "%v  %s to %s  %v / %v  %v\n", f["id"], stamp(int64(num(f["from"]))), stamp(int64(num(f["to"]))), nonEmptyStr(str(f["project"], 0), "every Flight"), nonEmptyStr(str(f["airfield"], 0), "every Airfield"), f["reason"])
 		}
 		return nil
 	case "create":
 		fs := flag.NewFlagSet("release freeze create", flag.ContinueOnError)
-		project := fs.String("project", "", "a project (default every project)")
+		project := fs.String("project", "", "a Flight (default every Flight)")
 		airfield := fs.String("airfield", "", "an Airfield (default every Airfield)")
 		from := fs.String("from", "", "from (default now)")
 		to := fs.String("to", "", "until")
@@ -863,7 +863,7 @@ func (cl *client) releaseFormation(args []string) error {
 			return err
 		}
 		if len(pos) < 3 {
-			return usageErr("launchway release formation create NAME PROJECT@VERSION PROJECT@VERSION ...")
+			return usageErr("launchway release formation create NAME FLIGHT@VERSION FLIGHT@VERSION ...")
 		}
 		if err := cl.call("POST", "/api/v1/release-formations", map[string]any{"name": pos[0], "note": *note, "releases": pos[1:], "order": *order}, &out); err != nil {
 			return err

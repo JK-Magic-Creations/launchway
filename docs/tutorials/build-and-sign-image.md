@@ -238,8 +238,8 @@ runner:
       password_file: cosign/password
 ```
 
-- **Push rules.** Nothing is pushed without a rule naming the project and the repository. Here
-  project `hello` may push to `tutorial/<anything>` and nowhere else.
+- **Push rules.** Nothing is pushed without a rule naming the Flight (codebase) and the repository. Here
+  Flight `hello` may push to `tutorial/<anything>` and nowhere else.
 - **Credentials** are a reference to a secret store (`files`, a directory), never the value.
 - **`insecure: true`** allows plain HTTP. Use it only for a Depot on the Station's own machine.
 
@@ -316,7 +316,7 @@ launchway server --config launchway.yaml
   1 project(s), data in /home/you/image-tutorial/data, SQLite database /home/you/image-tutorial/data/launchway.db
 ```
 
-Leave it running and open **http://127.0.0.1:8080**. Go to **Projects**, press **Start a Sortie (run)** on
+Leave it running and open **http://127.0.0.1:8080**. Go to **Flights**, press **Start a Sortie (run)** on
 `hello`, keep the branch `main` and press **Start run**. (From another terminal, `curl -s -X POST -H 'X-Launchway-CSRF: 1' -d
 '{"ref":"main"}' http://127.0.0.1:8080/api/v1/projects/hello/runs` does the same.)
 
@@ -347,7 +347,7 @@ image:   127.0.0.1:5000/tutorial/hello@sha256:2665acd3a33f…
 tags:    127.0.0.1:5000/tutorial/hello:1.0.1,127.0.0.1:5000/tutorial/hello:latest
 ```
 
-Because the project polls `app` every 5 seconds, each commit you make on `main` from now on starts
+Because the Flight polls `app` every 5 seconds, each commit you make on `main` from now on starts
 a Sortie by itself.
 
 ## 9 Read the Images tab
@@ -455,7 +455,7 @@ cd ..
 
 `launchway run` runs the pipeline of your working copy with the same engine. Give it the
 `images:` section and the secret stores in files of their own (`images.yaml` and `secrets.yaml`
-in the tutorial directory; `launchway run` uses the project name `local`, which the push rule in
+in the tutorial directory; `launchway run` uses the Flight name `local`, which the push rule in
 `images.yaml` names):
 
 ```sh
@@ -495,7 +495,7 @@ rm -rf ~/image-tutorial
 | `registry local has no credentials to push with (images.registries.local.credentials)` | The Depot has no `credentials`. Launchway pushes only with credentials; add them as in step 6 |
 | `failed to Lchown ... for UID 65534 ... (Hint: try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid)` | The base image has files owned by a user ID above the range rootless Podman can map (busybox's `nobody` is 65534). Use a base image without such files, such as `alpine`, or run BuildKit with more IDs (on Kubernetes, see [deploy/buildkit](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/buildkit/README.md)) |
 | `a tcp:// builder needs ca_file, cert_file and key_file` | The Station refuses a builder without mutual TLS. Give all three |
-| The step waits in *queued* | No Station has a builder for this project: check `images.builders[].projects` |
+| The step waits in *queued* | No Station has a builder for this Flight: check `images.builders[].projects` |
 
 ## What you learned
 

@@ -17,15 +17,15 @@ export const GUIDE: Record<string, GuideEntry> = {
     title: "You are on Home",
     text: "Every change you make travels along a line, from the commit to running software. Home shows what needs you, then the changes on their way and where each one is.",
     does: [
-      { icon: "plus", label: "Add a project", href: "/config/wizard/connect-repository" },
+      { icon: "plus", label: "Add a {project}", href: "/projects/new" },
       { icon: "gate", label: "See what is waiting for you", href: "/activity/approvals" },
       { icon: "activity", label: "See every {run}", href: "/activity" },
     ],
   },
   "/projects": {
-    title: "Your projects",
-    text: "A project is one piece of software, kept in a Git repository. Open one to see its pipeline, its {runs} and where it is running.",
-    does: [{ icon: "plus", label: "Add a project", href: "/config/wizard/connect-repository" }],
+    title: "Your {projects}",
+    text: "A {project} is one piece of software, kept in a Git repository. Open one to see its pipeline, its {runs} and where it is running.",
+    does: [{ icon: "plus", label: "Add a {project}", href: "/projects/new" }],
   },
   "/repositories/:owner/:name/pulls": {
     title: "Pull requests",
@@ -47,17 +47,17 @@ export const GUIDE: Record<string, GuideEntry> = {
   },
   "/pipelines": {
     title: "Pipelines",
-    text: "A pipeline is a set of steps that runs when something happens, such as a push. Each row says which project it belongs to and how its last {run} went.",
+    text: "A pipeline is a set of steps that runs when something happens, such as a push. Each row says which {project} it belongs to and how its last {run} went.",
     does: [{ icon: "play", label: "Try a pipeline without saving", href: "/playground" }],
   },
   "/depot": {
     title: "Images",
-    text: "Everything your pipelines build lives here. Find an image by its project, its repository or its digest, then see which run built it.",
+    text: "Everything your pipelines build lives here. Find an image by its {project}, its repository or its digest, then see which run built it.",
     does: [{ icon: "search", label: "Find a component in every {run}", href: "/depot/components" }],
   },
   "/depot/components": {
     title: "Components",
-    text: "What is inside your software, found by name across every {run}. Each hit says which run and which project, so you know what a new problem touches.",
+    text: "What is inside your software, found by name across every {run}. Each hit says which run and which {project}, so you know what a new problem touches.",
     does: [{ icon: "package", label: "Find an image", href: "/depot" }],
   },
   "/deployments": {
@@ -101,11 +101,11 @@ export const GUIDE: Record<string, GuideEntry> = {
   },
   "/settings/variables": {
     title: "Variables",
-    text: "A variable is a named setting you set once at a level: the {installation}, the {organization}, a {unit} or a project. Everything below gets it. A nearer level can set the same name to override it, and a lock keeps it from being overridden. Nothing here is needed to run a pipeline.",
+    text: "A variable is a named setting you set once at a level: the {installation}, the {organization}, a {unit} or a {project}. Everything below gets it. A nearer level can set the same name to override it, and a lock keeps it from being overridden. Nothing here is needed to run a pipeline.",
   },
   "/projects/:name/variables": {
-    title: "Variables of this project",
-    text: "What reaches this project from above, and what it sets itself. The nearest setting wins; struck-through values are what it overrides. Override here with one click, unless a lock above stops it.",
+    title: "Variables of this {project}",
+    text: "What reaches this {project} from above, and what it sets itself. The nearest setting wins; struck-through values are what it overrides. Override here with one click, unless a lock above stops it.",
   },
   "/settings/words": {
     title: "Words",

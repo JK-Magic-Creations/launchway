@@ -1,6 +1,6 @@
 # Triggers
 
-What starts a Sortie besides a person: pushes and pull requests found by polling, schedules, and webhooks. Whatever started (or did not start) a Sortie is recorded: see [Events](events.md). Systems that are not Git hosts can start runs through [event sources](event-sources.md), and one project's result can start another's through [triggers on results](result-triggers.md).
+What starts a Sortie besides a person: pushes and pull requests found by polling, schedules, and webhooks. Whatever started (or did not start) a Sortie is recorded: see [Events](events.md). Systems that are not Git hosts can start runs through [event sources](event-sources.md), and one Flight's result can start another's through [triggers on results](result-triggers.md).
 
 ## Path filters
 
@@ -39,13 +39,13 @@ with everything else, and a Sortie starts when one appears or moves.
   marked *pull request #12* wherever runs are shown, its event is `pull_request`, and its steps
   get `LAUNCHWAY_EVENT=pull_request`, `LAUNCHWAY_REF=refs/pull/12/head` and
   `LAUNCHWAY_PULL_REQUEST=12`. `LAUNCHWAY_BRANCH` is empty.
-- **Who decides.** A pull request runs only if the pipeline at the tip of the project's default
+- **Who decides.** A pull request runs only if the pipeline at the tip of the Flight's default
   branch asks for pull requests, and so does the pipeline at its head. The default branch decides
   because it has been reviewed: a pull request cannot turn pull-request runs on for itself. When
   a pull request asks but the default branch does not, *Recent pushes* says so.
 - **Pull requests that already exist do not run.** Git hosts keep these refs after a pull
-  request is closed or merged. The first time a server looks for a project's pull requests (a new
-  project, or the first poll after upgrading), it records every pull request's head and runs
+  request is closed or merged. The first time a server looks for a Flight's pull requests (a new
+  Flight (codebase), or the first poll after upgrading), it records every pull request's head and runs
   none of them. After that only new pull requests, and ones pushed to, run. Heads are recorded
   even while the default branch does not ask for pull requests, so turning them on later does
   not run the old ones either. As with pushes, this is kept in the database, and exactly one
@@ -54,22 +54,22 @@ with everything else, and a Sortie starts when one appears or moves.
   which branch it targets, so `when: { branch: ... }` never matches a pull-request run. Use
   `when: { event: pull_request }` for steps only pull requests run, and `when: { event: [push,
   manual] }` to keep a step out of them. To run only for pull requests into some branches, write
-  `on: { pull_request: { into: [main, "release/*"] } }`: the server then asks the project's forge
+  `on: { pull_request: { into: [main, "release/*"] } }`: the server then asks the Flight's forge
   connection which branch each new head targets (once for each head), and runs nothing for a
   pull request it cannot ask about. Steps get the answer as `LAUNCHWAY_PULL_REQUEST_INTO`. See
   [Pull request](../reference/pipeline.md#pull-request) for what the decisions say.
 - **No secrets, by default.** A pull request's code may come from anyone who can open one, so a
   step of a pull-request run that declares `secrets` fails before any Station (runner) sees it, unless the
-  project allows it. The setting is read when the Sortie is created; resuming the Sortie and re-running
+  Flight allows it. The setting is read when the Sortie is created; resuming the Sortie and re-running
   it keep that decision.
 
   ```yaml
   pull_requests:
     secrets: false          # the default
-  projects:
+  Flights:
     - name: payments
       repo: https://git.example.com/team/payments.git
-      pull_requests: { secrets: true }   # overrides, per project
+      pull_requests: { secrets: true }   # overrides, per Flight
   ```
 
 - **Not there yet:** reporting a Sortie's outcome back to the pull request as a commit status. A Git
@@ -89,7 +89,7 @@ week; `@hourly`, `@daily`, `@weekly`, `@monthly` and `@yearly` work too) in a ti
 name; UTC if none). When the clocks go forward, a time that does not exist that day is skipped;
 when they go back, a time that happens twice fires once. `ref` is the branch or tag whose pipeline
 runs (the default branch if none) and `inputs` the Sortie's values (the others take their defaults).
-Schedules are read only from the pipeline on the project's default branch, so a branch cannot
+Schedules are read only from the pipeline on the Flight's default branch, so a branch cannot
 schedule itself. Runs have event `schedule`.
 
 Each firing is claimed in the database, so however many servers are running, it starts one Sortie.
@@ -97,11 +97,11 @@ A schedule never fires for a time before it was first seen (adding or changing o
 for the past). If no server was running when a schedule should have fired, the first server to
 look afterwards starts one Sortie, for the latest time that was missed, and none for the earlier
 ones. A firing that cannot start a Sortie (the branch is gone, the pipeline there has problems) is
-recorded with why. The project page lists the schedules, when each fires next, and how its last
+recorded with why. The Flight page lists the schedules, when each fires next, and how its last
 firing went (`GET /api/v1/projects/{name}/schedules`).
 
 `schedules: { enabled: false }` in the server's configuration turns schedules off for every
-project, and a project's own `schedules:` overrides it. While off, firings are recorded as
+Flight, and a Flight's own `schedules:` overrides it. While off, firings are recorded as
 skipped, so turning them back on does not catch up.
 
 ## Webhooks
@@ -109,10 +109,10 @@ skipped, so turning them back on does not catch up.
 Two kinds of webhook reach the server. Both prove themselves with a secret that the server's
 configuration names as an environment variable or a file (a Kubernetes Secret, for example); the
 secret is never in the repository or the database. A caller that cannot prove itself gets the
-same `404` whatever the reason (no such project, no webhook, a wrong secret), is recorded in the
+same `404` whatever the reason (no such Flight, no webhook, a wrong secret), is recorded in the
 audit trail, and counts towards the [limit on failed attempts](access.md#api-tokens).
 
-**A Git host's webhook** makes the server poll a project at once, instead of at its next poll. It
+**A Git host's webhook** makes the server poll a Flight at once, instead of at its next poll. It
 starts nothing by itself: the poll decides, as it always does, so a forged or repeated call could
 at most cause a poll. Point the host's push and pull request webhook at
 `https://launchway.example.com/api/v1/projects/<name>/git-hook`:

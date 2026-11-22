@@ -72,7 +72,7 @@ export function PromoteDialog({ project, version, airfield, onClose, onDone }: {
                 <textarea value={override} onChange={(e) => setOverride(e.target.value)} maxLength={500} placeholder="For example: customer outage, fix approved by the on-call lead" /></label>
             )}
             {!ck.ready && !ck.already_there && !(ck.can_override && ans?.may_override) && (
-              <p className="rel-hint">{ck.can_override ? "An administrator of the project may override what stops it, with a reason." : "What stops it cannot be overridden: it has to be met."}</p>
+              <p className="rel-hint">{ck.can_override ? terms().say("An administrator of the {project} may override what stops it, with a reason.") : "What stops it cannot be overridden: it has to be met."}</p>
             )}
           </>
         )}

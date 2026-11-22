@@ -66,7 +66,7 @@ it.)
 
 An entry also has an age, counted from when its contents were last **started from scratch**. What a
 step saves after restoring something keeps that age, so a chain of refreshes does not live for ever.
-Past `max_age` (7 days unless the cache or the project's cache policy says otherwise; a cache may ask
+Past `max_age` (7 days unless the cache or the Flight's cache policy says otherwise; a cache may ask
 for less than the policy, never more) a restore treats the entry as missing, the step rebuilds the
 cache from nothing, and that rebuild starts a new chain. The Sortie says `Too old` for such an entry. An
 entry restored as a fallback does not keep itself alive by being used.
@@ -90,15 +90,15 @@ be restored by a Sortie that is trusted with secrets or deploys.
 | A pull request from a fork | `pull:<number>` only | `pull:<number>` |
 | A draft run (unsaved pipeline text) | `default` | nothing |
 
-On top of the scope, every entry belongs to **its pipeline**: two pipelines of a project that use the
+On top of the scope, every entry belongs to **its pipeline**: two pipelines of a Flight (codebase) that use the
 same cache name do not see each other's entries, so a lint pipeline cannot seed the release pipeline.
 Caches that name the same `share` group (and the same cache `name` and scope) do share. A cache marked
 `sensitive: true` is never read outside the scope that wrote it; an entry saved as sensitive stays
 that way even if a pull request's own pipeline says the cache is not.
 
 So a pull request starts from what the default branch built, and saves only where the default
-branch never looks. Nothing is shared between projects. Launchway takes the default branch from the
-project's repository; if it cannot tell which it is, no Sortie writes `default` (a run of any branch then
+branch never looks. Nothing is shared between Flights. Launchway takes the default branch from the
+Flight's repository; if it cannot tell which it is, no Sortie writes `default` (a run of any branch then
 saves to its own branch scope) rather than guess. The same scopes decide whose **image cache** an
 image step uses: the protected tag only a default-branch run writes, a tag of its own for every other
 scope (a pull request imports the protected one and exports only to its own; a fork's reads only its
@@ -168,17 +168,17 @@ resolver's "checked less than a day ago") sees restored output as older than the
 rebuilds it instead of taking output built from other sources for current. Symbolic links are left out, and the log says which.
 A path that names the repository's `.git` directory (`.git`, `.g*`, `.*`) is refused when the pipeline is
 checked, and files inside a `.git` directory are never kept, whatever the paths match.
-Entries are tar archives compressed with zstd. By default a project keeps 10 GiB of caches, one entry
+Entries are tar archives compressed with zstd. By default a Flight keeps 10 GiB of caches, one entry
 may hold 2 GiB, an entry nobody restored exactly for 7 days is ended, and so is one whose contents
 were started from scratch more than 7 days ago. An entry counts against the quota from the moment its
-save begins, so uploads in progress take room too. When a save would pass the quota, the project's
+save begins, so uploads in progress take room too. When a save would pass the quota, the Flight's
 least recently used entries are ended to make room, those of pull requests and branches before the
-default branch's, or the save is refused if it cannot fit. An administrator changes these in the database, for the installation or for one project: the
-**Caches** page of the project, `launchway caches policy` (`--max-age-days` for the maximum age), `PUT /api/v1/cache-policy` and the MCP tool
-`set_cache_policy` do the same thing, and every change is audited. With caching off for a project,
+default branch's, or the save is refused if it cannot fit. An administrator changes these in the database, for the installation or for one Flight: the
+**Caches** page of the Flight, `launchway caches policy` (`--max-age-days` for the maximum age), `PUT /api/v1/cache-policy` and the MCP tool
+`set_cache_policy` do the same thing, and every change is audited. With caching off for a Flight,
 lookups miss and nothing is saved, and the pipeline still passes validation.
 
-People with the operator role delete entries (one, or a whole cache by name) from the project's
+People with the operator role delete entries (one, or a whole cache by name) from the Flight's
 **Caches** page, `launchway caches delete`, `DELETE /api/v1/projects/{name}/caches` and the MCP tool
 `delete_cache`; viewers list them (`launchway caches list`, `list_caches`). The next Sortie that wanted a
 deleted entry starts without it and saves it again.

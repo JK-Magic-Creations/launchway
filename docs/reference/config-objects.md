@@ -35,7 +35,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
   `launchway config set project NAME -f project.yaml --unit platform` attaches (or moves) a project,
   and `--unit ""` takes it out of its unit; over the API it is the `unit` in the body of
   `PUT /api/v1/config/{kind}/{name}`. Moving a project changes which roles, libraries, policies,
-  Airfields (environments), Flight lines (Station (runner) pools) and secret stores defined at a Squadron apply to it, from the next Sortie (run); its
+  Airfields (environments), Ramps (Station (runner) pools) and secret stores defined at a Squadron apply to it, from the next Sortie (run); its
   runs, repository and history stay where they are. Changing it needs an administrator of the installation.
 
 ## The kinds
@@ -104,11 +104,11 @@ default_pipeline:
   supersede: true
 ```
 
-Which pipeline a project runs, first match first:
+Which pipeline a Flight (codebase) runs, first match first:
 
 1. the repository's own `.launchway/pipeline.yaml` at the commit;
 2. the project's own `pipeline`;
-3. the Flight plan of the project's unit;
+3. the Flight plan of the Flight's unit;
 4. the Flight plan of the Wing.
 
 A level that has no flight plan of its own to name can let the repository choose one: `default_pipeline: { detect: true }` runs, where
@@ -151,7 +151,7 @@ holds, at version 0.
 
 `token_file`, `secret_file`, `hmac_secret_file`, `ca_file` and `artifacts.dir` name files and directories on the
 server host, and a repository address that is a path on the server (or a `file:` address) reads one. They are the
-operator's to set, not an API administrator's: the admin role on every project is not a login on the server, but
+operator's to set, not an API administrator's: the admin role on every Flight is not a login on the server, but
 a server that reads whatever file such a setting names would turn it into one (its own service-account token, for
 one). So they are set in the bootstrap file, and local repository paths also need `egress.allow_local` there. The
 first start's import brings them into the database; the API, the web UI, the CLI, MCP and Terraform keep what is

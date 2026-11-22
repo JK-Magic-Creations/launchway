@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { organizeApi, type Area, type FolderView, type OrganizeAnswer } from "../organizeApi";
 import { useOverview } from "../configApi";
 import { terms } from "../terms";
-import { derivePath, type Seg } from "./tree";
+import { derivePath, flightSeg, UNFILED, type Seg } from "./tree";
 import type { Collection } from "./Explorer";
 
 /** The organization of a list: the folders people made, which item is in which, labels, favorites, and the
@@ -20,6 +20,8 @@ export function useOrganized(area: Area) {
     for (const u of overview?.units ?? []) for (const p of u.projects) m.set(p, { key: "unit:" + u.name, label: u.display_name || u.name });
     return m;
   }, [overview]);
+  // Unfiled Flights show under a built-in "Unfiled" place, a view only (nothing is stored), once the installation has any Squadron.
+  const hasSquadrons = (overview?.units?.length ?? 0) > 0;
   const wingName = overview?.organisation?.display_name;
   const wing = useMemo<Seg | null>(() => (wingName ? { key: "wing", label: wingName } : null), [wingName]);
 
@@ -31,17 +33,20 @@ export function useOrganized(area: Area) {
     return out;
   }, [folderById]);
 
-  /** Where an item lives, and the name to show for it. */
-  const place = useCallback((name: string, unitName?: string): { path: Seg[]; leaf: string; labels: string[]; folder: string } => {
+  /** Where an item lives, and the name to show for it. With withFlight the path ends with the Flight itself
+   * (Wing > Squadron > folders > Flight), so the items listed under it are its pipelines. */
+  const place = useCallback((name: string, unitName?: string, withFlight = false): { path: Seg[]; leaf: string; labels: string[]; folder: string } => {
     const org = data?.items?.[name];
     const top: Seg[] = [];
     const u = unitName ? { key: "unit:" + unitName, label: unitName } : unitOf.get(name);
     if (wing && u) top.push(wing);
     if (u) top.push(u);
-    if (org?.folder && folderById.has(org.folder)) return { path: [...top, ...folderSegs(org.folder)], leaf: name, labels: org.labels ?? [], folder: org.folder };
+    else if (hasSquadrons) top.push(UNFILED);
+    const tail = withFlight ? [flightSeg(name)] : [];
+    if (org?.folder && folderById.has(org.folder)) return { path: [...top, ...folderSegs(org.folder), ...tail], leaf: name, labels: org.labels ?? [], folder: org.folder };
     const d = derivePath(name);
-    return { path: [...top, ...d.path], leaf: name, labels: org?.labels ?? [], folder: "" };
-  }, [data, wing, unitOf, folderById, folderSegs]);
+    return { path: [...top, ...d.path, ...tail], leaf: name, labels: org?.labels ?? [], folder: "" };
+  }, [data, wing, unitOf, folderById, folderSegs, hasSquadrons]);
 
   const emptyFolders = useMemo(() => (data?.folders ?? []).filter((f) => f.count === 0).map((f) => ({ id: f.id, path: folderSegs(f.id) })), [data, folderSegs]);
   const folders = useMemo(() => (data?.folders ?? []).filter((f) => f.may_arrange).map((f) => ({ id: f.id, path: f.path })), [data]);

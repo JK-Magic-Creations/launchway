@@ -52,7 +52,7 @@ func (c *Config) checkUntrusted() error {
 	}
 	for _, p := range c.Projects {
 		if p.PullRequests != nil && !ok(p.PullRequests.Untrusted) {
-			return fmt.Errorf("project %s: pull_requests.untrusted is restrict or allow, not %q", p.Name, p.PullRequests.Untrusted)
+			return fmt.Errorf("flight %s: pull_requests.untrusted is restrict or allow, not %q", p.Name, p.PullRequests.Untrusted)
 		}
 	}
 	return nil

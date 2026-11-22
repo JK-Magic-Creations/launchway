@@ -6,6 +6,7 @@ import { Button, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { Blank, ErrorPanel, itemHref, Loading, money, scopeLabel, useLoad, when, WorkPage } from "./common";
 import { workApi, type Agent, type AgentLogEntry, type SpendRow } from "./workApi";
+import { terms } from "../terms";
 
 // The agent registry: who may work on items without a person, how much each may spend, a switch that stops one at once, and
 // where the money went. A token is shown once, when it is made, and never again.
@@ -63,7 +64,7 @@ export default function Agents() {
         {spend.data && spend.data.rows.length === 0 && <p className="faint">Nothing has been spent yet.</p>}
         {spend.data && spend.data.rows.length > 0 && (
           <div className="tablewrap"><table className="table wk-table">
-            <caption className="visually-hidden">Spend by agent, project and item</caption>
+            <caption className="visually-hidden">{terms().say("Spend by agent, {project} and item")}</caption>
             <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Budget</th><th scope="col">Spent</th><th scope="col">Remaining</th><th scope="col">Tokens</th></tr></thead>
             <tbody>{spend.data.rows.map((r, i) => (
               <tr key={r.kind + r.name + i}>
@@ -122,7 +123,7 @@ function Register({ repos, onMade, onCancel }: { repos: HostedRepo[]; onMade: (a
         <div className="wk-f"><label htmlFor={ids.n}>Name</label><input id={ids.n} value={f.name} onChange={set("name")} required maxLength={60} placeholder="docs-agent" /></div>
         <div className="wk-f span"><label htmlFor={ids.d}>What it does</label><input id={ids.d} value={f.description} onChange={set("description")} maxLength={300} /></div>
         <div className="wk-f"><label htmlFor={ids.s}>Works in</label>
-          <select id={ids.s} value={f.scope} onChange={set("scope")}><option value="installation">Everything (all projects)</option>{repos.map((r) => <option key={r.id} value={"project:" + r.path}>{r.path}</option>)}</select></div>
+          <select id={ids.s} value={f.scope} onChange={set("scope")}><option value="installation">{terms().say("Everything (all {projects})")}</option>{repos.map((r) => <option key={r.id} value={"project:" + r.path}>{r.path}</option>)}</select></div>
         <div className="wk-f"><label htmlFor={ids.m}>Model it runs on</label><input id={ids.m} value={f.model} onChange={set("model")} placeholder="the model family" /></div>
         <div className="wk-f"><label htmlFor={ids.c}>Size of job it takes</label><select id={ids.c} value={f.class} onChange={set("class")}><option>small</option><option>medium</option><option>large</option></select></div>
         <div className="wk-f"><label htmlFor={ids.cc}>Items at once</label><input id={ids.cc} type="number" min="1" value={f.concurrency} onChange={set("concurrency")} /></div>
@@ -130,7 +131,7 @@ function Register({ repos, onMade, onCancel }: { repos: HostedRepo[]; onMade: (a
         <div className="wk-f"><label htmlFor={ids.b}>Budget a day (dollars)</label><input id={ids.b} type="number" min="0" step="0.01" value={f.budget} onChange={set("budget")} placeholder="no limit" /></div>
         <div className="wk-f"><label htmlFor={ids.t}>Tokens a day</label><input id={ids.t} type="number" min="0" value={f.tokens} onChange={set("tokens")} placeholder="no limit" /></div>
       </div>
-      <label className="wk-check"><input type="checkbox" checked={f.merge} onChange={(e) => setF({ ...f, merge: e.target.checked })} />It may merge its own pull requests (only where the project's rules also allow it)</label>
+      <label className="wk-check"><input type="checkbox" checked={f.merge} onChange={(e) => setF({ ...f, merge: e.target.checked })} />{terms().say("It may merge its own pull requests (only where the {project}'s rules also allow it)")}</label>
       <ErrorPanel error={error} />
       <div className="acts"><Button type="submit" kind="pri" disabled={!f.name.trim()}>Register and show token</Button><Button onClick={onCancel}>Cancel</Button></div>
     </form>

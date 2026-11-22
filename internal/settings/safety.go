@@ -37,7 +37,7 @@ func checkAdministrable(c *config.Config) error {
 		return nil // reported by the other checks
 	}
 	if !p.HasEverywhereAdmin() {
-		return errors.New("this change would leave nobody able to administer everything: keep at least one role binding that gives the admin role on every project (no project list), or name administrators in the bootstrap file's auth.admins")
+		return errors.New("this change would leave nobody able to administer everything: keep at least one role binding that gives the admin role on every Flight (no Flight list), or name administrators in the bootstrap file's auth.admins")
 	}
 	return nil
 }
@@ -99,7 +99,7 @@ func (s *Service) fallback() (*composed, string) {
 		}
 	}
 	c, lay, _ := Compose(s.boot, nil)
-	return &composed{cfg: c, lay: lay}, "the bootstrap file only (no projects, environments or policies)"
+	return &composed{cfg: c, lay: lay}, "the bootstrap file only (no Flights, environments or policies)"
 }
 
 // StartConfig returns the configuration a starting server runs with: the

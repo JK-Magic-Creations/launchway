@@ -77,7 +77,7 @@ export function RunnersPage() {
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say("Machines that run steps. A {runner} only ever connects out to the server, so it can sit in any network. Each belongs to a pool, which decides which projects' work it may take.")}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
+      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say("Machines that run steps. A {runner} only ever connects out to the server, so it can sit in any network. Each belongs to a pool, which decides which {projects}' work it may take.")}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
       <ErrorBox error={error} />
 
       {legacy.length > 0 && (
@@ -150,8 +150,7 @@ export function RunnersPage() {
       {pools && !manage && (
         <section className="card">
           <h2 className="h-sm">{terms().say("Add a {runner} on another machine")}</h2>
-          <p className="sub">{terms().say("Someone who manages {runners} (the role")} <Mono>runner_admin</Mono> names, admin by default, on every project)
-            makes a join token for a pool here. With it, on the machine:</p>
+          <p className="sub">{terms().say("Someone who manages {runners} (the role")} <Mono>runner_admin</Mono> {terms().say("names, admin by default, on every {project}) makes a join token for a pool here. With it, on the machine:")}</p>
           <pre className="code">{`launchway runner --server ${location.origin} --join <join token>`}</pre>
         </section>
       )}
@@ -284,7 +283,7 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
                   <td>
                     {p.kind === "deploy" ? <>targets {p.targets.join(", ")}</>
                       : p.projects.length ? <>projects {p.projects.join(", ")}</>
-                      : <>every project no other pool serves</>}
+                      : <>{terms().say("every {project} no other pool serves")}</>}
                     {p.events.length > 0 && <div className="faint small">only runs started by {p.events.join(", ")}</div>}
                   </td>
                   <td>

@@ -28,7 +28,7 @@ when it was first seen, when it was fixed, how long fixing takes.
 ## Who decides
 
 The team that owns the repository, within what the levels above allow. Settings come from the Base, a Wing,
-a Squadron, the project and a file in the repository, `.launchway/standards.yaml`; the nearest wins and a level
+a Squadron, the Flight (codebase) and a file in the repository, `.launchway/standards.yaml`; the nearest wins and a level
 above can **lock** a value, so no one below weakens it. A risk can be accepted with a reason and an end date;
 when the date comes the finding counts again.
 

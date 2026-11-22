@@ -140,7 +140,7 @@ policies:
 
 ### Forbid secrets
 
-`forbid_secrets` stops runs of some events from reading secrets. A run of a listed event passes if its project does not let such runs read secrets anyway, or if no step asks for a secret. A signing key that an image step reads from a secret store counts as a secret.
+`forbid_secrets` stops runs of some events from reading secrets. A run of a listed event passes if its Flight (codebase) does not let such runs read secrets anyway, or if no step asks for a secret. A signing key that an image step reads from a secret store counts as a secret.
 
 | Option | Type | Default | Values |
 |---|---|---|---|
@@ -319,7 +319,7 @@ There may be at most 200 policies in one list, and at most 100 values in any lis
 
 | Key | Values | Matching |
 |---|---|---|
-| `projects` | patterns | the Sortie's project |
+| `projects` | patterns | the Sortie's Flight |
 | `environments` | patterns | the deploy step's Airfield; only deploy rules may be scoped to Airfields |
 | `branches` | patterns | the Sortie's branch; a Sortie without a branch (a tag or a pull request) does not match |
 | `events` | `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` | the Sortie's event |
@@ -369,7 +369,7 @@ policy:
 |---|---|---|
 | `policy.policies` | none | a list of policies |
 | `policy.sources` | none | Git sources; see [Policies from Git](#policies-from-git) |
-| `policy.waivers.allow` | `admin` | `admin`, `operator` or `none`: the role needed on the project to grant or revoke a waiver; `none` turns waivers off |
+| `policy.waivers.allow` | `admin` | `admin`, `operator` or `none`: the role needed on the Flight to grant or revoke a waiver; `none` turns waivers off |
 | `policy.waivers.max_days` | `30` | the longest a waiver may last, 1 to 365 days |
 
 Every server that shares a database must have the same policies; a server warns in its log if another one started recently with different ones. With the Helm chart, policies are `config.policy` in the values. Policies need database schema 16: configure them only once every server runs a release that knows them (see [migrations](../development/migrations.md)).
@@ -398,7 +398,7 @@ policy:
 | `library` | required | one of `libraries:` in the configuration |
 | `version` | required | a tag or a full commit id; a branch is refused |
 | `path` | `policies` | the directory; every `*.yaml` and `*.yml` file below it is read, in all subdirectories; may not contain `..` |
-| `projects` | every project | patterns of the projects the source may govern |
+| `projects` | every Flight | patterns of the Flights the source may govern |
 | `refresh` | `1m` | how often each server looks at the version again, 10s to 168h |
 | `stale_after` | `1h` | how long a version loaded earlier is still used while the repository cannot be reached, 10s to 168h |
 
@@ -406,7 +406,7 @@ A source may have at most 100 policy files of at most 256 KiB each. Changing pol
 
 ## Failing closed
 
-A source governs the projects it covers whatever is in it. When its policies cannot be known, every run of those projects is refused at every policy point, as an enforced failure of the rule `source` that names the source and the reason. The **Policy** page and `launchway policy list` show the source as failing closed. This happens when:
+A source governs the Flights it covers whatever is in it. When its policies cannot be known, every run of those Flights is refused at every policy point, as an enforced failure of the rule `source` that names the source and the reason. The **Policy** page and `launchway policy list` show the source as failing closed. This happens when:
 
 - no server has loaded the source yet, just after it is added;
 - the version does not exist, or is a branch;
@@ -423,15 +423,15 @@ If a rule's facts were not recorded at all, which would be a fault in Launchway,
 
 ## Waivers
 
-A waiver lets one failing rule of one policy pass for one project until it expires. It may be narrowed further.
+A waiver lets one failing rule of one policy pass for one Flight until it expires. It may be narrowed further.
 
 | Field | Required | Notes |
 |---|---|---|
-| `policy` | yes | a policy in force that applies to the project |
+| `policy` | yes | a policy in force that applies to the Flight |
 | `rule` | yes | a rule the policy has; never `source` |
 | `reason` | yes | at most 500 characters; shown wherever the verdict is |
 | `expires_in_hours` or `expires_at` | yes | hours from now, or Unix milliseconds; in the future and at most `policy.waivers.max_days` away |
-| `run` | no | only this run of the project |
+| `run` | no | only this run of the Flight |
 | `environment` | no | only this Airfield; deploy rules only; must be a configured Airfield |
 | `finding` | no | only this finding, by its fingerprint; the `findings` rule only |
 
@@ -459,14 +459,14 @@ How waivers behave:
 - Waivers are a log of grants and revocations. Each is written to the Logbook as `policy.waive` or `policy.revoke_waiver`, allowed or refused.
 - A waiver counts only while it is in force: a decision made after it expires does not count it, even in a Sortie that started before. A decision notes waivers that would have applied but had expired.
 - A rule is judged again when the Sortie is resumed or re-run, so the usual path is to grant a waiver, then resume the Sortie.
-- Who may waive is `policy.waivers.allow` on the project. A deploy rule needs that role on the Airfield too; a waiver that names no Airfield needs it from an access binding not limited to Airfields. A limited API token never grants more than its limits. See [roles](roles.md).
+- Who may waive is `policy.waivers.allow` on the Flight. A deploy rule needs that role on the Airfield too; a waiver that names no Airfield needs it from an access binding not limited to Airfields. A limited API token never grants more than its limits. See [roles](roles.md).
 - On an Airfield with `protected: true`, the person who started a Sortie may not waive its deploy rules, unless `approvals.allow_self` lets people approve their own runs: a waiver of theirs for that Sortie is refused, and a project-wide waiver they granted is not applied to their Sorties there.
 
 ## What is recorded
 
 Each decision is a `policy.evaluated` event in the Sortie's event log (see [run events](events.md#run-events)). It holds the point, the step and action, the Airfield, the time, the verdict, every policy as judged with its source and version, each rule's verdict with what was found, what would satisfy it, the evidence and any waiver used, the facts judged and the waivers considered. A decision can therefore be reproduced from the log alone.
 
-At run start a decision is recorded for every run of a governed project. Before deploying and before an image push, a decision is recorded only when some policy applies.
+At run start a decision is recorded for every run of a governed Flight. Before deploying and before an image push, a decision is recorded only when some policy applies.
 
 Read them with `GET /api/v1/runs/{id}/policy`, on the Sortie's **Policy** tab, or on the command line:
 

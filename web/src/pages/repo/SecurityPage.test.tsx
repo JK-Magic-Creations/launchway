@@ -39,7 +39,7 @@ describe("the Security tab of a repository", () => {
     serve({ available: false, reason: "No project watches this repository, and an Inspection is a run.", runs: [] });
     render(<main><SecurityPage path="acme/shop" /></main>);
     expect(await screen.findByText("No findings yet")).toBeTruthy();
-    expect(screen.getByText(/no project watches this repository yet/)).toBeTruthy();
+    expect(screen.getByText(/no Flight watches this repository yet/)).toBeTruthy();
     expect((screen.getByRole("button", { name: "Inspect now" }) as HTMLButtonElement).disabled).toBe(true);
     expect(calls.some((c) => c.includes("/findings"))).toBe(false);
   });

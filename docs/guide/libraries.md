@@ -89,15 +89,15 @@ steps:
 
 **A template authorizes nothing.** When a Sortie (run) is created the template's steps become ordinary
 steps and are checked as if the pipeline had written them: the Airfield must exist and list the
-project, the deploy Station's repository settings must allow the files, and policies see the
-deployment. A library cannot be used to reach an Airfield the project may not use. A library
+Flight (codebase), the deploy Station's repository settings must allow the files, and policies see the
+deployment. A library cannot be used to reach an Airfield the Flight may not use. A library
 author checks a change with `examples/library/check-library.sh`, which also runs the tests that
 expand every example pipeline; a repository that has no pipeline file can get one of these
 templates as a [flight plan](../reference/config-objects.md#a-flight-plan-for-every-repository).
 
 **Which repositories may be libraries** is server configuration. A pipeline's `repo:` must name
 one of them; it can never be an address, so a pipeline cannot make the server fetch from anywhere
-with its credentials. Libraries are fetched exactly as projects are, with the same
+with its credentials. Libraries are fetched exactly as Flights are, with the same
 [credentials](editor.md) (in the URL, or `GIT_CONFIG_*` settings in the Airfield of
 the server and the Stations (runners)):
 
@@ -158,7 +158,7 @@ Advanced*, or `POST /api/v1/projects/{name}/runs` with `{"ref": "main", "librari
 editor) may use another version of any library the pipeline names. The Sortie records both versions
 and is marked *Library override*. It needs only the right to start the Sortie.
 
-**One pipeline for many repositories.** A project may get its pipeline from a library instead of
+**One pipeline for many repositories.** A Flight may get its pipeline from a library instead of
 a file in its repository:
 
 ```yaml
@@ -175,12 +175,12 @@ projects:
 ```
 
 At a commit that has its own `.launchway/pipeline.yaml`, that file wins; otherwise the configured
-template is the pipeline, named after the project. The push decisions under *Recent pushes* and
+template is the pipeline, named after the Flight. The push decisions under *Recent pushes* and
 the Sortie page say which was used, and the Sortie keeps the configuration as the pipeline file it
 amounts to, shown on its *Pipeline* tab. The editor opens that text for such a repository, so
 saving it turns it into a file.
 
-**In the editor**, pipelines are checked against the project's libraries as you type: the graph
+**In the editor**, pipelines are checked against the Flight's libraries as you type: the graph
 shows the expanded template, parameter problems are marked on their lines, problems in a template
 are listed with its file, and the resolved commit of each library is shown.
 `POST /api/v1/validate?project=NAME` (or `?expand=1`) does the same over the API; without either,
@@ -194,8 +194,8 @@ cannot run templates, which come from a server's libraries.
   names Git lists; only a full commit id, checked to be one, is ever passed to Git. Library names
   are at most 40 characters,
   parameter values at most 4 KiB, and a template may have at most 50 parameters.
-- A template's steps run as part of the using project's run: a step's secrets are looked up for
-  that project, so a secret store's `projects` allow-list applies to templates as to any step, and
+- A template's steps run as part of the using Flight's run: a step's secrets are looked up for
+  that Flight, so a secret store's `projects` allow-list applies to templates as to any step, and
   expansion cannot change whose job a step is. Draft runs that may not read secrets refuse
   template steps that ask for them, too.
 - Manual and draft starts record in the Logbook each library's version, any override, the

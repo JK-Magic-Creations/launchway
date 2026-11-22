@@ -1,3 +1,4 @@
+import { OrganizeCallout } from "../components/OrganizeCallout";
 import { useHostedRepos } from "./hostedRepos";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import type { Approval, Me, Project, RunSummary, Runner } from "../api";
@@ -19,6 +20,7 @@ import { Status, StateChip, type State } from "../kit/Status";
 import { useNow } from "../live";
 import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
+import { AddButtons } from "./squadrons/shared";
 import { terms } from "../terms";
 
 // Loaded after the first paint: Home draws without it.
@@ -74,11 +76,12 @@ export function Home({ me, projects, runs, runners, environments, applications, 
     <div className="page home">
       <PageHead eyebrow={me.user ? `Hello, ${me.user}` : undefined} title={fresh ? "Welcome" : h.title}
         sentence={fresh ? terms().say("Launchway builds, tests and {deploy:does} your software. Let us get you started.") : h.sentence}
-        actions={me.admin && projects.length > 0 ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined} />
+        actions={projects.length > 0 ? <AddButtons flightFirst /> : undefined} />
 
       <ErrorBoundary name="The repositories without a pipeline"><HostedWithoutPipelines projects={projects.length} admin={!!me.admin} /></ErrorBoundary>
+      <ErrorBoundary name="The organize suggestion"><OrganizeCallout /></ErrorBoundary>
       {next.item && <ErrorBoundary name="The next step" resetKey={next.item.href}><NextStepCard item={next.item} done={next.done} total={next.total} /></ErrorBoundary>}
-      {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("Projects, a {runner}, a first {run} and an {environment} are in place.")}</div>}
+      {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("{Projects}, a {runner}, a first {run} and an {environment} are in place.")}</div>}
 
       <ErrorBoundary name="The Tower cards"><Suspense fallback={<div aria-busy="true" style={{ minHeight: 420 }} />}><HomeSections onCount={setServerNeeds} extra={extra} /></Suspense></ErrorBoundary>
       <ErrorBoundary name="The work in progress"><Suspense fallback={null}><HomeWork /></Suspense></ErrorBoundary>
@@ -87,7 +90,7 @@ export function Home({ me, projects, runs, runners, environments, applications, 
 
       {items.length > 0 && next.item && <ErrorBoundary name="The checklist"><Checklist items={items} done={next.done} /></ErrorBoundary>}
       {!me.admin && projects.length === 0 && (
-        <div className="card"><h2 className="h-sm">Nothing to show yet</h2><p className="sub">No project has been added. An administrator adds the first one.</p></div>
+        <div className="card"><h2 className="h-sm">Nothing to show yet</h2><p className="sub">{terms().say("No {project} has been added. An administrator adds the first one.")}</p></div>
       )}
 
       <ErrorBoundary name="The Explore strip"><Explore projects={projects} applications={applications} environments={environments} approvals={approvals} images={images} /></ErrorBoundary>
@@ -103,9 +106,9 @@ export function HostedWithoutPipelines({ projects, admin }: { projects: number; 
   return (
     <section className="card" aria-labelledby="hosted-h">
       <h2 id="hosted-h" className="h-sm">{n} {n === 1 ? "repository" : "repositories"}, none has a pipeline yet</h2>
-      <p className="sub">Launchway hosts {n === 1 ? "this repository" : "these repositories"}, and you can browse {n === 1 ? "it" : "them"} now. Add a project to read a pipeline from one and run it on each push.</p>
+      <p className="sub">Launchway hosts {n === 1 ? "this repository" : "these repositories"}, and you can browse {n === 1 ? "it" : "them"} {terms().say("now. Add a {project} to read a pipeline from one and run it on each push.")}</p>
       <div className="guided-next-actions">
-        {admin && <Link href="/config/wizard/connect-repository" className="btn btn-primary">Add a pipeline</Link>}
+        {admin && <Link href="/projects/new" className="btn btn-primary">Add a pipeline</Link>}
         <Link href="/projects" className="btn">Browse the code</Link>
       </div>
     </section>

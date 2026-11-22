@@ -2,6 +2,7 @@ import { vi } from "vitest";
 import type { RunDetail } from "../api";
 import { approval, environment, me, project, run, runner, step } from "./fixtures";
 import { registryFixtures } from "./registryFixtures";
+import { moveFixtures } from "./squadronFixtures";
 
 /** A stand-in for the server for tests that draw whole pages: fixtures for the main lists, an empty answer
  * for anything else. `overrides` maps a path (without the query) to the JSON to answer with. */
@@ -69,11 +70,13 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/signin/test": { tested: false },
     "/api/v1/encryption/root-key-copy": { taken: false, can_take: true },
     ...forgeFixtures(),
+    ...squadronFixtures(),
     ...registryFixtures(),
     ...rollbackFixtures(detail),
     ...pullFixtures(),
     ...browseFixtures(),
     ...toggleFixtures(),
+    ...moveFixtures(),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
@@ -84,6 +87,29 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     const body = hit !== undefined ? hit : path.endsWith("s") || path.includes("list") ? [] : {};
     return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
   }));
+}
+
+/** Squadrons (units) and Flights (projects): the list, one Squadron's page, the repositories a Flight could be made from,
+ * and the answer to adding one. */
+export function squadronFixtures(): Record<string, unknown> {
+  const flight = (name: string, over: Record<string, unknown> = {}) => ({ name, favorite: false, last: "succeeded", last_id: "run_1", last_number: 12, last_at: 1794646800000, running: 0, needs: 0, history: ["succeeded", "failed", "succeeded"], pipelines: 1, ...over });
+  return {
+    "/api/v1/units": { squadrons: [
+      { name: "payments", display_name: "Payments", description: "Everything the payments team owns", flights: 2, needs: 1, failing: 1, running: 0 },
+      { name: "storefront", display_name: "", flights: 0, needs: 0, failing: 0, running: 0 }], unfiled: [flight("shop-web")], may_manage: true },
+    "/api/v1/units/payments": { name: "payments", display_name: "Payments", description: "Everything the payments team owns",
+      flights: [flight("shop-api", { last: "failed", needs: 1 }), flight("ledger")],
+      needs: [{ key: "failed:run_7", kind: "failed", tone: "bad", project: "shop-api", title: "Run #7 of shop-api failed on main", why: "It is the latest result on main.", do: "See what went wrong.", since: 1794646000000, href: "/runs/run_7" }],
+      people: [{ who: "ada", role: "admin" }, { who: "group payments-dev", role: "operator" }],
+      settings: [{ kind: "role-binding", path: "role-bindings", title: "Role bindings", count: 2 }],
+      operations: [{ flight: "ledger", pipeline: "restore-ledger", last: "succeeded", last_id: "run_9", last_number: 9, last_at: 1794646800000 }], operations_complete: false, may_manage: true },
+    "/api/v1/units/storefront": { name: "storefront", display_name: "", flights: [], needs: [], people: [], settings: [], operations: [], operations_complete: true, may_manage: true },
+    "/api/v1/project-candidates": { hosted: [
+      { path: "acme/shop", source: "hosted", default_branch: "main", visibility: "private", address: "https://launchway.example/git/acme/shop.git" },
+      { path: "acme/ledger", source: "hosted", default_branch: "main", visibility: "private", address: "https://launchway.example/git/acme/ledger.git", flight: "ledger" }],
+      hosted_without_flight: 1, connections: ["github-acme"], connection_items: [] },
+    "/api/v1/units/payments/projects": { name: "shop", unit: "payments", pipeline: { state: "starter", starter: "pipeline: shop\nsteps:\n  test:\n    run: make test\n", note: "The repository has no pipeline file yet." } },
+  };
 }
 
 /** Hosted repositories, SSH keys, deploy keys, webhooks and their delivery log: the answers the Git hosting pages draw from. */

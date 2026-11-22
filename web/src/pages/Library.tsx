@@ -27,7 +27,7 @@ export function LibraryPage() {
         )}
         <Link href="/depot" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">▣</span>
-          <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or project.")}</span></span>
+          <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or {project}.")}</span></span>
         </Link>
         <Link href="/depot/components" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">◫</span>

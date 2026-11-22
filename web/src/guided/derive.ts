@@ -31,9 +31,9 @@ export function checklist(me: Me, s: Setup): CheckItem[] {
   const firstProject = s.projects[0]?.name;
   const items: CheckItem[] = [
     {
-      id: "project", title: "Add your first project",
+      id: "project", title: terms().say("Add your first {project}"),
       why: "Pick a repository. Launchway reads its pipeline from Git and runs it when you push.",
-      done: s.projects.length > 0, href: "/config/wizard/connect-repository", button: "Add a project",
+      done: s.projects.length > 0, href: "/projects/new", button: terms().say("Add a {project}"),
     },
   ];
   if (me.runners) {
@@ -45,8 +45,8 @@ export function checklist(me: Me, s: Setup): CheckItem[] {
   }
   items.push({
     id: "run", title: terms().say("See your first {run} pass"),
-    why: terms().say("Open a project and start a {run}. Nothing is {deploy:did} by it."),
-    done: s.runs.some((r) => r.status === "succeeded"), href: firstProject ? `/projects/${encodeURIComponent(firstProject)}` : "/projects", button: "Open your project",
+    why: terms().say("Open a {project} and start a {run}. Nothing is {deploy:did} by it."),
+    done: s.runs.some((r) => r.status === "succeeded"), href: firstProject ? `/projects/${encodeURIComponent(firstProject)}` : "/projects", button: terms().say("Open your {project}"),
   });
   items.push({
     id: "environment", title: terms().say("Create an {environment}"),

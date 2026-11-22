@@ -74,7 +74,7 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
       </div>
     );
   } else if (usable.length === 0) {
-    offer = <p className="sub small">No AI model is open to {run.project}; an administrator can choose which projects may use a model.</p>;
+    offer = <p className="sub small">No AI model is open to {run.project}{terms().say("; an administrator can choose which {projects} may use a model.")}</p>;
   } else {
     const why = !mayAsk ? `You need the operator role on ${run.project} to ask a model.` : "";
     offer = (
@@ -208,7 +208,7 @@ export function ModelsSection() {
       {models && models.models.length > 0 && (
         <div className="table-scroll models-wrap">
           <table className="inputs-table models-table">
-            <thead><tr><th>Model</th><th>Where</th><th>Projects</th><th>Limits</th><th>Used today (UTC)</th></tr></thead>
+            <thead><tr><th>Model</th><th>Where</th><th>{terms().say("{Projects}")}</th><th>Limits</th><th>Used today (UTC)</th></tr></thead>
             <tbody>
               {models.models.map((m) => <ModelRow key={m.name} m={m} />)}
             </tbody>
@@ -230,12 +230,12 @@ function ModelRow({ m }: { m: ModelView }) {
     <tr>
       <td data-label="Model"><strong>{m.name}</strong><div className="faint small mono">{m.model}</div></td>
       <td data-label="Where">{m.local ? "local, no key" : <>remote, {m.provider}</>}</td>
-      <td data-label="Projects">{m.projects?.length ? m.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">none</span>}</td>
+      <td data-label={terms().say("{Projects}")}>{m.projects?.length ? m.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">none</span>}</td>
       <td data-label="Limits" className="small">
         <div>{m.max_tokens.toLocaleString()} tokens out per call</div>
         <div>{Math.round(m.max_input_bytes / 1024).toLocaleString()} KiB in per call</div>
         <div>{m.calls_per_run} {terms().say("calls per {run}")}</div>
-        <div>{m.tokens_per_day ? `${m.tokens_per_day.toLocaleString()} tokens a day per project` : "no daily limit"}</div>
+        <div>{m.tokens_per_day ? terms().say(`${m.tokens_per_day.toLocaleString()} tokens a day per {project}`) : "no daily limit"}</div>
       </td>
       <td data-label="Used today" className="small">
         {used.length === 0 ? <span className="faint">nothing yet</span> : (

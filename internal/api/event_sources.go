@@ -247,7 +247,7 @@ func (s *Server) testEventSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	hs := map[string]string{}
@@ -414,7 +414,7 @@ func (s *Server) checkSourceSignature(r *http.Request, src *engine.EventSource, 
 // ---- MCP ----
 
 type listSourcesIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 }
 
 type sourceBrief struct {
@@ -429,11 +429,11 @@ type sourceBrief struct {
 }
 
 type listSourcesOut struct {
-	Sources []sourceBrief `json:"sources" jsonschema:"the project's event sources; the signing secret is never shown"`
+	Sources []sourceBrief `json:"sources" jsonschema:"the Flight's event sources; the signing secret is never shown"`
 }
 
 type testSourceIn struct {
-	Project string         `json:"project" jsonschema:"the project's name"`
+	Project string         `json:"project" jsonschema:"the Flight's name"`
 	Source  string         `json:"source" jsonschema:"the event source's name"`
 	Body    map[string]any `json:"body" jsonschema:"the JSON object to try, as a sender would post it"`
 }
@@ -447,13 +447,13 @@ type testSourceOut struct {
 }
 
 type deleteSourceIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	Source  string `json:"source" jsonschema:"the event source's name"`
 }
 
 func addEventSourceTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_event_sources", Annotations: readOnly("List event sources"),
-		Description: "A project's incoming webhook sources: each one's address, what it maps from the body to the pipeline's inputs, its filter, dedupe key and window. The signing secret is never shown. Making a source is done on the console or in the web interface, because its secret is shown once."},
+		Description: "A Flight's incoming webhook sources: each one's address, what it maps from the body to the pipeline's inputs, its filter, dedupe key and window. The signing secret is never shown. Making a source is done on the console or in the web interface, because its secret is shown once."},
 		mcpCallTimeout, listEventSources)
 	if !c.mayOperate {
 		return

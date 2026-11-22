@@ -6,6 +6,7 @@ import { Markdown } from "../markdown";
 import { navigate } from "../router";
 import { Blank, csv, dueClass, ErrorPanel, itemHref, Labels, Loading, Prio, scopeLabel, StateTag, useLoad, Who, WorkPage } from "./common";
 import { workApi, scopeObject, type Item, type Page, type View } from "./workApi";
+import { terms } from "../terms";
 
 // The items of one project: a query box in the query language, filters, saved views, sorting, paging and a form for a new item.
 
@@ -162,7 +163,7 @@ function SavedViews({ scope, q, views, onPick, onChanged }: { scope: string; q: 
       {chosen && <Button sm kind="bad" onClick={remove}>Delete view</Button>}
       <form className="wk-inline" onSubmit={save}>
         <label className="wk-f"><span>Save this query as</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
-        <label className="wk-check"><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />Share with everyone who reads this project</label>
+        <label className="wk-check"><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />{terms().say("Share with everyone who reads this {project}")}</label>
         <Button type="submit" sm disabled={!name.trim()}>Save view</Button>
       </form>
       <ErrorPanel error={error} />

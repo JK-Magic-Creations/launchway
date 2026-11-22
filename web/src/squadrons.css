@@ -1,0 +1,28 @@
+/* Squadrons and Flights: the pages that make them and show them. Colors come from the design tokens, so both themes follow. */
+.sq-page { display: flex; flex-direction: column; gap: 16px; }
+.sq-form { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.sq-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.sq-why { margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: var(--r2); background: var(--sheet); color: var(--text); max-width: 60ch; }
+.sq-why.small { padding: 4px 10px; font-size: 0.875rem; }
+.sq-note { margin: 0 16px 12px; }
+.sq-panel { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+.sq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sq-conns { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 16px; }
+.sq-links { display: block; margin-top: 8px; }
+.sq-pick { margin: 0; overflow-wrap: anywhere; }
+.sq-starter { margin: 12px 0; padding: 12px 14px; max-height: 360px; overflow: auto; background: var(--sheet); color: var(--text); border: 1px solid var(--line); border-radius: var(--r2); font-family: var(--mono, ui-monospace, monospace); font-size: 0.875rem; white-space: pre; }
+.sq-starter:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.sq-choices { border: 1px solid var(--line); border-radius: var(--r2); padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 8px; margin: 0; min-width: 0; }
+.sq-choices legend { padding: 0 6px; font-weight: 600; }
+.sq-choice { display: flex; gap: 10px; align-items: flex-start; padding: 6px 4px; cursor: pointer; }
+.sq-choice input { margin-top: 4px; }
+.sq-aside { margin: 0; max-width: 70ch; }
+@media (max-width: 600px) {
+  .sq-actions > * { flex: 1 1 auto; justify-content: center; }
+  .sq-page .rowlist li { flex-wrap: wrap; }
+}
+.sq-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 16px 0; }
+.sq-check { display: inline-flex; gap: 6px; align-items: center; }
+
+.sq-pick { margin: 0.5rem 0 1rem; }
+.sq-pick summary { cursor: pointer; font-weight: 600; }

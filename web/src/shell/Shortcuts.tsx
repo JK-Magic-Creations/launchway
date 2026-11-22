@@ -1,7 +1,7 @@
 import { Dialog } from "../kit/Dialog";
 
 const KEYS: [string, string][] = [
-  ["/", "Open the finder: projects, repositories, pipelines, Sorties, pull requests, pages and the documentation (it also shows your favorites and what you opened lately)"],
+  ["/", "Open the finder: Flights, repositories, pipelines, Sorties, pull requests, pages and the documentation (it also shows your favorites and what you opened lately)"],
   ["?", "Show this list"],
   ["f", "On a list with an explorer: jump to its filter box"],
   ["Arrow keys, Home, End", "In a tree or a list of tabs: move"],

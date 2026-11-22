@@ -4,7 +4,7 @@ import { configApi, type LibraryTemplates, type TemplateInfo, type TemplateStep 
 import { Empty, ErrorBox, Mono } from "../components/ui";
 import { useInstallation } from "../guided/facts";
 import { PageLearn } from "../learn/LearnLink";
-import { useTerms } from "../terms";
+import { useTerms, terms } from "../terms";
 import "../styles/starters.css";
 
 const FLIGHT = "flight plan";
@@ -178,11 +178,11 @@ function UseThis({ t }: { t: TemplateInfo }) {
     <div className="starter-use">
       <h4 className="h-xs">Use this</h4>
       {projects.length === 0 ? (
-        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> in your repository. (Opening a pull request from here needs a project you may save to.)</p>
+        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> {terms().say("in your repository. (Opening a pull request from here needs a {project} you may save to.)")}</p>
       ) : (
         <div className="starter-use-row">
           <label>Add it to <select value={project} onChange={(e) => setProject(e.target.value)}>
-            <option value="">choose a project</option>
+            <option value="">{terms().say("choose a {project}")}</option>
             {projects.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select></label>
           <button type="button" className="btn btn-primary btn-sm" disabled={!project || busy} onClick={go}>{busy ? "Adding…" : "Open a pull request adding this file"}</button>

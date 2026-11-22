@@ -32,7 +32,7 @@ data never reach Launchway:
 |---|---|---|
 | Unique user identity | Every person signs in through your OpenID Connect provider; actions are recorded under their user name | [Sign-in and access](../guide/access.md) |
 | Multi-factor authentication | Delegated to your identity provider: require it there | [OIDC and roles](../howto/oidc-and-roles.md) |
-| Least privilege | Viewer, operator and admin roles per project, limited to Airfields (environments) where needed; API tokens limited to a role and projects | [Roles and permissions](../reference/roles.md) |
+| Least privilege | Viewer, operator and admin roles per Flight (codebase), limited to Airfields (environments) where needed; API tokens limited to a role and Flights | [Roles and permissions](../reference/roles.md) |
 | Session management | Idle timeout and maximum session lifetime; sign-out ends the session on every server | [Sign-in and access](../guide/access.md#sessions) |
 | Credential handling | Secrets resolved by Stations only, masked in logs, never stored by the server; sessions and tokens stored as hashes; tokens always expire | [Secrets](../guide/secrets.md) |
 | Encryption of stored secrets | The server's own secrets (signing and sealing keys, the shared Station token, SSH host keys, webhook secrets) are sealed with AES-256-GCM under a root key held outside the database, each bound to its row; rotation and root key replacement online; a database dump alone is useless without the key. Cargo, logs, caches and Git packs are not yet encrypted by Launchway | [Encryption at rest](../guide/encryption-at-rest.md) |
@@ -40,10 +40,10 @@ data never reach Launchway:
 | Separation of duties for production | Protected Airfields: the starter cannot promote or waive the gate; operator rights limited per Airfield | [Deployments](../guide/deployments.md#controlling-a-rollout-promote-abort-retry) |
 | Testing before release | Policy rule `tests`: the steps before a deployment reported tests and none failed | [Policy rules](../reference/policy-rules.md) |
 | Vulnerability management | Scanner findings (SARIF) per run with new and fixed; image scans with an enforced severity; policy rule `findings` | [Security findings](../guide/security-findings.md) |
-| Component inventory | SBOMs and a search across projects for a component and version | [Security findings](../guide/security-findings.md) |
+| Component inventory | SBOMs and a search across Flights for a component and version | [Security findings](../guide/security-findings.md) |
 | Back-out | Return to base (rollback) steps revert the deployment's commit and wait until the previous version is healthy | [Deployments](../guide/deployments.md) |
 | Integrity of what is deployed | Images pinned by digest, signed by the Station, with provenance; policy rule `deployed_images` | [Supply chain](supply-chain.md) |
-| Station identity | Stations enrol with join tokens and hold their own key; leases are bound to the Station; pools limit a Station to the projects they serve; the Station's own `accept:` list limits what it will run; revocation and key rotation are audited. Stations still on the shared token have no identity | [Stations on other machines](../guide/runner-identity.md) |
+| Station identity | Stations enrol with join tokens and hold their own key; leases are bound to the Station; pools limit a Station to the Flights they serve; the Station's own `accept:` list limits what it will run; revocation and key rotation are audited. Stations still on the shared token have no identity | [Stations on other machines](../guide/runner-identity.md) |
 | Post-deployment verification | Metrics and logs are checked after a deploy by built-in statistics; a failing verification can abort, roll back or hold a promotion. Optional AI models only explain, never turn a failure into a pass | [Verifying a deployment](../guide/verification.md) |
 | Audit logging | Every change, sign-in, failed sign-in, refused token, webhook call and waiver, with who, when, from where and the outcome; only ever added to | [Sign-in and access](../guide/access.md#audit-trail) |
 | Records of each change | Each Sortie's event log: commit, pipeline, inputs, approvals with comments, policy decisions with the facts judged, deployments and what was observed | [Events](../reference/events.md) |

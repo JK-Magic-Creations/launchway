@@ -54,7 +54,7 @@ the roles of [People and access](app:/settings/access). A viewer can see a reque
 
 An approval is one kind of gate. A **policy** is a rule that checks things automatically: for
 example "no deployment to prod without passing tests". A policy can stop a step by itself, and an
-administrator can waive a rule for a project for a limited time, with a reason. See
+administrator can waive a rule for a Flight (codebase) for a limited time, with a reason. See
 [Policies](../../guide/policies.md).
 
 ## Next

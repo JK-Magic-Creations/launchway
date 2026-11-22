@@ -81,12 +81,12 @@ launchway event-sources test payments deploy-request --body sample.json
 ```
 
 shows whether the body would be accepted, the inputs the run would get, and the dedupe key, and records and starts
-nothing. The page for the project in the web interface has the same button.
+nothing. The page for the Flight (codebase) in the web interface has the same button.
 
 ## Safety
 
 - The secret is never shown again, never in a list, a log, an event or the Logbook (`event_source.*`).
 - The body is kept in the event with credential-looking values removed, cut at 16 KiB. Do not send secrets on
   purpose.
-- A source can start only what a person who may operate the project could start, and only the pipeline at its `ref`.
+- A source can start only what a person who may operate the Flight could start, and only the pipeline at its `ref`.
 - Delete a source and calls to its address are answered not found at once; its events stay.

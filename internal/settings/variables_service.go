@@ -55,7 +55,7 @@ func checkScope(lay *Layout, k VarKey) (unit string, err error) {
 	case LevelProject:
 		u, ok := lay.ProjectUnit[k.Scope]
 		if !ok {
-			return "", fmt.Errorf("%w: project %s", engine.ErrNotFound, k.Scope)
+			return "", fmt.Errorf("%w: Flight %s", engine.ErrNotFound, k.Scope)
 		}
 		return u, nil
 	}

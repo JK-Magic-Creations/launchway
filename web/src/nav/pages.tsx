@@ -77,6 +77,12 @@ const ConfigListPage = lz(() => import("../pages/ConfigList"), "ConfigListPage")
 const ConfigObjectPage = lz(() => import("../pages/ConfigObject"), "ConfigObjectPage");
 const SetupGuidePage = lz(() => import("../pages/SetupGuide"), "SetupGuidePage");
 const WorkRoutes = lazy(() => import("../work/WorkRoutes"));
+const UnitListPage = lz(() => import("../pages/squadrons/UnitList"), "UnitListPage");
+const AddSquadronPage = lz(() => import("../pages/squadrons/AddSquadron"), "AddSquadronPage");
+const SquadronViewPage = lz(() => import("../pages/squadrons/SquadronPage"), "SquadronViewPage");
+const AddFlightPage = lz(() => import("../pages/squadrons/AddFlight"), "AddFlightPage");
+const ChooseSquadronPage = lz(() => import("../pages/squadrons/ChooseSquadron"), "ChooseSquadronPage");
+const OrganizePage = lz(() => import("../pages/OrganizeSquadrons"), "OrganizePage");
 const WizardPage = lz(() => import("../pages/wizards/Wizards"), "WizardPage");
 
 /** The page for an address. The key makes a page that shows one thing start afresh for another. */
@@ -88,6 +94,11 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
   switch (at.info.pattern) {
     case "/": return <HomePage />;
     case "/projects": return <ProjectsPage />;
+    case "/projects/new": return <ChooseSquadronPage />;
+    case "/units": return <UnitListPage />;
+    case "/units/new": return <AddSquadronPage />;
+    case "/units/:name": return <SquadronViewPage key={p.name} name={p.name} />;
+    case "/units/:name/projects/new": return <AddFlightPage key={p.name} unit={p.name} />;
     case "/projects/:name": return <ProjectPage key={p.name} name={p.name} />;
     case "/projects/:name/pipeline": return <PipelinePage key={p.name} name={p.name} />;
     case "/projects/:name/pipeline/edit": return <EditPipelinePage key={p.name} name={p.name} />;
@@ -158,6 +169,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/standards": return <SettingsStandardsPage />;
     case "/settings/security": return <SettingsSecurityPage />;
     case "/config": return <ConfigHomePage />;
+    case "/units/organize": return <OrganizePage />;
     case "/config/wizard/:id": return <WizardPage key={p.id} id={p.id} />;
     case "/config/:kind/new": return <ConfigObjectPage key={p.kind + "/new"} kind={p.kind} name="" />;
     case "/config/:kind/:name": return <ConfigObjectPage key={p.kind + "/" + p.name} kind={p.kind} name={p.name} />;

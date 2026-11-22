@@ -10,7 +10,7 @@ import { terms } from "../terms";
 
 type By = "digest" | "repository" | "project";
 
-const BY: [By, string][] = [["digest", "Digest"], ["repository", "Repository"], ["project", "Project"]];
+const BY: [By, string][] = [["digest", "Digest"], ["repository", "Repository"], ["project", "{Project}"]];
 
 interface Asked { by: By; value: string; tag: string }
 
@@ -103,19 +103,19 @@ export function ImagesPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a project.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a {project}.")} />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
         <div className="imgform-by">
           <span className="imgform-by-label" id="img-by">Find by</span>
           <div className="chips" role="group" aria-labelledby="img-by">
             {BY.map(([k, label]) => (
-              <button key={k} type="button" className={"chip" + (by === k ? " chip-on" : "")} aria-pressed={by === k} onClick={() => choose(k)}>{label}</button>
+              <button key={k} type="button" className={"chip" + (by === k ? " chip-on" : "")} aria-pressed={by === k} onClick={() => choose(k)}>{terms().say(label)}</button>
             ))}
           </div>
         </div>
         <label className="field imgform-value">
-          {by === "digest" ? "Digest" : by === "repository" ? "Repository" : "Project"}
+          {by === "digest" ? "Digest" : by === "repository" ? "Repository" : terms().say("{Project}")}
           <input value={value} onChange={(e) => { setValue(e.target.value); setProblem(""); }} placeholder={PLACEHOLDER[by]}
             required maxLength={500} spellCheck={false} autoCapitalize="off" autoComplete="off" autoFocus={!asked.value}
             className={by === "project" ? undefined : "mono"} aria-invalid={problem ? true : undefined} aria-describedby={problem ? "img-problem" : undefined} />
@@ -131,7 +131,7 @@ export function ImagesPage() {
         <p className="sub small compform-note">
           {by === "digest" ? "The digest of an image or of one of its platforms; newest runs first."
             : by === "repository" ? "The repository without a tag, such as host/team/app; the newest image first."
-            : "The project's name; its newest images first."}
+            : terms().say("The {project}'s name; its newest images first.")}
         </p>
       </form>
 
@@ -145,7 +145,7 @@ export function ImagesPage() {
         <Empty title="Not found">
           {asked.by === "digest" ? <>{terms().say("No {run} built an image with the digest")} <span className="mono imgref">{shortDigest(asked.value)}</span>.</>
             : asked.by === "repository" ? <>{terms().say("No {run} built an image for")} <span className="mono imgref">{asked.value}{asked.tag ? `:${asked.tag}` : ""}</span>{terms().say(". The repository must match exactly, {registry} host included.")}</>
-            : <>The project <strong>{asked.value}</strong> has built no images, or does not exist.</>}
+            : <>{terms().say("The {project}")} <strong>{asked.value}</strong> has built no images, or does not exist.</>}
         </Empty>
       )}
       {hits && hits.length > 0 && (
@@ -163,7 +163,7 @@ export function ImagesPage() {
           <section aria-label="Images found">
             <div className="table-scroll card card-flush">
               <table className="inputs-table comptable imgtable">
-                <thead><tr><th>Project</th><th>{terms().say("{Run}")}</th><th>Step</th><th>Branch</th><th>Image</th><th>Digest</th><th>State</th><th>When</th></tr></thead>
+                <thead><tr><th>{terms().say("{Project}")}</th><th>{terms().say("{Run}")}</th><th>Step</th><th>Branch</th><th>Image</th><th>Digest</th><th>State</th><th>When</th></tr></thead>
                 <tbody>
                   {hits.map((h, i) => (
                     <tr key={h.run_id + h.step + h.kind + (h.tag ?? "") + (h.platform ?? "") + i}>

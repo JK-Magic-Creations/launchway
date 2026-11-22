@@ -37,7 +37,7 @@ It stands for a pipeline named `ci` that runs on pushes to `main` and on pull re
 
 ## What a service Flight plan runs, and what blocks
 
-`go-service`, `python-service` and `node-app` run, by default: a format and style check, the unit tests with a parsed report and coverage, an audit of the dependencies for known vulnerabilities, static analysis where a free tool exists (`bandit` for Python, `staticcheck` for Go), a list of the dependencies' licenses, a secret scan, the build, and the image: built, scanned, with its bill of materials, signed, and pushed when the project has Airfields (environments) to deliver to. Provenance and signing use what the Station has configured. Coming: findings of the analysis in the Security tab, a coverage floor from the base branch.
+`go-service`, `python-service` and `node-app` run, by default: a format and style check, the unit tests with a parsed report and coverage, an audit of the dependencies for known vulnerabilities, static analysis where a free tool exists (`bandit` for Python, `staticcheck` for Go), a list of the dependencies' licenses, a secret scan, the build, and the image: built, scanned, with its bill of materials, signed, and pushed when the Flight (codebase) has Airfields (environments) to deliver to. Provenance and signing use what the Station has configured. Coming: findings of the analysis in the Security tab, a coverage floor from the base branch.
 
 Safeguards are on, and the team is in charge of each:
 
@@ -52,13 +52,13 @@ Safeguards are on, and the team is in charge of each:
 
 ## Delivery
 
-When the project has Airfields (in the server's configuration, in the order they are listed), the Flight plans for services that ship an image deliver to **each of them, in that order**, after the image is built, from `main`. The Airfield's own setting decides where a person is asked first: a **protected** Airfield gets a Clearance step. Then, for each Airfield: the **launch (deploy)** (a commit of the image's tag and digest to the GitOps repository that Argo CD applies), a **health proof** (the launch Station calls `http://<workload>.<namespace>.svc.cluster.local:<port><health_path>` for a **watch period**, 5 minutes by default), and an automatic **return to base** (the deployment is reverted) if the launch or the proof fails. The next Airfield starts only after the one before has been proven. People are told by the server's notification rules: `approval.requested` when a decision waits, `deployment.failed` and `deployment.rolled_back` when it goes wrong.
+When the Flight has Airfields (in the server's configuration, in the order they are listed), the Flight plans for services that ship an image deliver to **each of them, in that order**, after the image is built, from `main`. The Airfield's own setting decides where a person is asked first: a **protected** Airfield gets a Clearance step. Then, for each Airfield: the **launch (deploy)** (a commit of the image's tag and digest to the GitOps repository that Argo CD applies), a **health proof** (the launch Station calls `http://<workload>.<namespace>.svc.cluster.local:<port><health_path>` for a **watch period**, 5 minutes by default), and an automatic **return to base** (the deployment is reverted) if the launch or the proof fails. The next Airfield starts only after the one before has been proven. People are told by the server's notification rules: `approval.requested` when a decision waits, `deployment.failed` and `deployment.rolled_back` when it goes wrong.
 
 Everything the delivery needs is worked out, and each value can be changed:
 
 | Value | Worked out as | Change it |
 |---|---|---|
-| The service's name | the project's name | `service` |
+| The service's name | the Flight's name | `service` |
 | The image | `<image_namespace>/<service>` | `image_repository`, or set the variable `image_namespace` once |
 | The Argo CD application | `<service>-<environment>` | `overrides: [prod.application=shop]` |
 | The file in the GitOps repository | `apps/<application>/base.yaml` | `overrides: [prod.manifest=...]` |
@@ -67,10 +67,10 @@ Everything the delivery needs is worked out, and each value can be changed:
 | How it is written | the image's references in the manifest | `method: helm-values` sets `image.tag` and `image.digest` in a values file |
 | An Argo Rollouts Pathfinder (canary) | off | `overrides: [prod.rollout=true]` |
 | No proof, no decision for one Airfield | on | `overrides: [dev.verify=false, prod.approve=false]` |
-| Which Airfields | the project's | `deliver: [staging, prod]`, or `deliver: []` for none |
+| Which Airfields | the Flight's | `deliver: [staging, prod]`, or `deliver: []` for none |
 | The watch period | 5 minutes | `verify_for: 10m` |
 
-The project's name, Airfields and protection reach the Flight plan as variables (`launchway_project`, `launchway_environments`, `launchway_protected`), so the Sortie records them like any variable it used. Values that are the same for many projects are variables too: `image_namespace`, `registry`, `gitops_repo`, `gitops_branch`, `health_source`, `health_path` and `delivery_overrides` can be set once at a level. Plain Kubernetes manifests and Helm values are what the launch step writes today; a chart repository and other deploy methods are coming.
+The Flight's name, Airfields and protection reach the Flight plan as variables (`launchway_project`, `launchway_environments`, `launchway_protected`), so the Sortie records them like any variable it used. Values that are the same for many Flights are variables too: `image_namespace`, `registry`, `gitops_repo`, `gitops_branch`, `health_source`, `health_path` and `delivery_overrides` can be set once at a level. Plain Kubernetes manifests and Helm values are what the launch step writes today; a chart repository and other deploy methods are coming.
 
 ## Switching stages off, adding steps and taking stages over
 
@@ -100,7 +100,7 @@ default_pipeline:
   detect: true
 ```
 
-(or `pipeline: { detect: true }` on one project in the server's configuration). At each commit without a file the server looks at the
+(or `pipeline: { detect: true }` on one Flight in the server's configuration). At each commit without a file the server looks at the
 repository's top level (`go.mod`, `pyproject.toml`, `package.json`, `pom.xml`, `build.gradle`, `Chart.yaml`, a
 `Dockerfile`, an `index.html`), chooses a Flight plan, and reads the versions it names (the Go version in `go.mod`, `.python-version`,
 `.nvmrc`, the Java release in `pom.xml`). A repository where nothing matches has no pipeline, as before: nothing is guessed.
@@ -126,8 +126,8 @@ dependency cache under a key made of the lock file and the tool version, check, 
 | `python-library` | A Python package | the same, tested on each version in `test_versions`, and a wheel built |
 | `node-app` | A Node or TypeScript program with a `Dockerfile` | install by `pnpm-lock.yaml`, `yarn.lock` or `package-lock.json`; the `lint`, `format:check` and `typecheck` scripts the package defines (and `tsc --noEmit` for TypeScript); tests with a Tests and a Coverage report for jest, vitest, mocha and `node --test` (the reporter and the coverage tool are installed for the step, at pinned versions, and added to your `test_command` too; the repository lists nothing); the `build` script; secret scan; the image |
 | `node-library` | An npm package | the same, tested on each version in `test_versions` |
-| `java-maven` | A Maven project | `mvn verify` (or `./mvnw`) with the Surefire and Failsafe results in Tests and JaCoCo in Coverage; the jars kept; secret scan; the image when `image: true` |
-| `java-gradle` | A Gradle project | `gradle build` (or `./gradlew`) with the test results and JaCoCo; the jars kept; secret scan; the image when `image: true` |
+| `java-maven` | A Maven build | `mvn verify` (or `./mvnw`) with the Surefire and Failsafe results in Tests and JaCoCo in Coverage; the jars kept; secret scan; the image when `image: true` |
+| `java-gradle` | A Gradle build | `gradle build` (or `./gradlew`) with the test results and JaCoCo; the jars kept; secret scan; the image when `image: true` |
 | `container-image` | A repository whose product is an image | secret scan; build, scan, bill of materials, sign and push |
 | `static-site` | HTML, written by hand or built by a command | the build command if you give one; checks for `index.html` and for links to files that are not there; the pages kept as the Cargo (artifact) `site` |
 | `helm-chart` | A Helm chart | `helm lint --strict`, `helm template`, `helm package` (kept as the Cargo `chart`); secret scan |
@@ -138,7 +138,7 @@ dependency cache under a key made of the lock file and the tool version, check, 
 
 Flight plans with a `Dockerfile` build the image on the branch named by `image_branch` (default `main`), scan it, write its
 software bill of materials and sign it, **and push it only when `push: true`**. The Depot (registry) is `registry` (default `launchway`, the [built-in Depot](registry.md) of this server, which names an
-image under the project; or a name your Stations' configuration lists). The built-in Depot needs sign-in, so on a server with sign-in off the Flight plans do not default to it: they push to the Depot (registry) the server names in `registry.fallback`, or to the one the variable `registry` names, and with neither they do not push, and the Sortie's variables say why (`launchway_pushing`) and the repository `image_repository`:
+image under the Flight; or a name your Stations' configuration lists). The built-in Depot needs sign-in, so on a server with sign-in off the Flight plans do not default to it: they push to the Depot (registry) the server names in `registry.fallback`, or to the one the variable `registry` names, and with neither they do not push, and the Sortie's variables say why (`launchway_pushing`) and the repository `image_repository`:
 
 ```yaml
 steps:
@@ -148,7 +148,7 @@ steps:
 ```
 
 Pull-request and draft runs never push. Launching, verifying and returning to base are not part of the Flight plans yet; add them
-with the delivery templates of your own library, after `ci` (`needs: ci`). **Coming:** the same steps built in, for a project
+with the delivery templates of your own library, after `ci` (`needs: ci`). **Coming:** the same steps built in, for a Flight
 that has an Airfield configured, asking for approval where the Airfield is protected.
 
 ### Versions
@@ -209,7 +209,7 @@ from a step wait for the notification work.
 
 - **Any input** is overridden with `with:`; the gallery lists them all with their defaults.
 - **Test results and coverage** come with the test step, also when you set `test_command`. When the command is not one of the test tools the step knows (jest, vitest, mocha, `node --test` and pytest), it is carried out unchanged and the step's log shows a boxed notice that the tests ran but no report was produced, with the one line to add; the Tests page points to it. `coverage: false` turns coverage off.
-- **Static analysis** (`analysis`, Python) reads the project's own source, never the virtual environment, installed packages, build output or vendored code. It records every finding of medium severity or worse as a finding in the backlog, and fails only at `analysis_severity` and `analysis_confidence` (both `high` by default); `analysis_paths` and `analysis_exclude` choose where it reads.
+- **Static analysis** (`analysis`, Python) reads the Flight's own source, never the virtual environment, installed packages, build output or vendored code. It records every finding of medium severity or worse as a finding in the backlog, and fails only at `analysis_severity` and `analysis_confidence` (both `high` by default); `analysis_paths` and `analysis_exclude` choose where it reads.
 - **Timeouts.** The steps that test, audit and analyze have a timeout of their own (30 minutes for tests, 10 to 20 for the rest), not the default hour. When one is reached the log and the Sortie (run) say so, and add the usual cause: a step that lasted that long with little output is usually waiting (for a connection the network policy drops, for a lock, for input). The Sortie's page also says so when a running step has printed nothing for five minutes.
 - **A command** is replaced with `test_command`, `lint_command`, `install_command` or `build_command`.
 - **A starter of your own** replaces a built-in one by living in a library you list: write `uses: platform/go-service`. The name
@@ -222,7 +222,7 @@ from a step wait for the notification work.
 The files are embedded in Launchway and written into the workspace at `.launchway/lib/launchway/` for each Sortie, like any library.
 A Sortie records the library at a content hash where a Git library has a commit. A Station of another release refuses the Sortie and
 says to update it, rather than run scripts the server did not plan with. Each Flight plan is run for real against a tiny
-repository of its language in the project's tests (a toolchain a machine lacks is skipped, with the reason).
+repository of its language in the Flight's tests (a toolchain a machine lacks is skipped, with the reason).
 
 ## What is not built yet
 

@@ -1,3 +1,4 @@
+import { terms } from "../../terms";
 import type { ComponentType } from "react";
 import type { HomeAnswer } from "../../organizeApi";
 
@@ -40,8 +41,8 @@ export const PANEL_TYPES: PanelType[] = [
     load: () => import("./ContinuePanel") as never },
   { type: "pinned", label: "A saved view", description: "A link to a filtered list or any view of a page, kept on Home.", defaultSize: 1,
     fields: [{ key: "href", label: "Address", kind: "address", help: "An address on this server, such as /pipelines?result=bad", required: true }], load: () => import("./PinnedPanel") as never },
-  { type: "project", label: "One project", description: "The status of a single project: its latest result, what runs, what needs a look.", defaultSize: 1,
-    fields: [{ key: "project", label: "Project", kind: "project", required: true }], load: () => import("./ProjectPanel") as never },
+  { type: "project", get label() { return terms().say("One {project}"); }, get description() { return terms().say("The status of a single {project}: its latest result, what runs, what needs a look."); }, defaultSize: 1,
+    fields: [{ key: "project", get label() { return terms().say("{Project}"); }, kind: "project", required: true }], load: () => import("./ProjectPanel") as never },
   { type: "note", label: "Notes and links", description: "Text with links, for example a team's runbook. Written in Markdown; only safe formatting is shown.", defaultSize: 2,
     fields: [{ key: "text", label: "Text", kind: "textarea", help: "Markdown: **bold**, `code`, [links](https://example.com), lists and headings.", required: true }], load: () => import("./NotePanel") as never },
 ];

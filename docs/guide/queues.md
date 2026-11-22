@@ -33,7 +33,7 @@ the Sortie's timeout does not stop counting, so a run does not wait for ever.
 ### The longest wait
 
 A step waits for room for at most `queues.max_wait` (default **60 minutes**, in the
-[server settings](../reference/server-config.md#queues-and-limits); a project may set its own).
+[server settings](../reference/server-config.md#queues-and-limits); a Flight (codebase) may set its own).
 After that it fails with the reason and what to change: free up room by canceling runs that are not
 needed, or give the step namespace more quota, or let steps wait longer. `off` waits for ever.
 
@@ -49,22 +49,22 @@ A burst of eight dependency pull requests used to start eight runs at once, fill
 namespace's quota, and starve the main build. Now a run over a limit is **held**: it is created, it
 shows up in Activity under *Waiting for room*, and none of its steps is queued until room is free.
 Nothing is configured for this; these are the defaults, and each is a setting in the
-[server settings](../reference/server-config.md#queues-and-limits) that a project may override:
+[server settings](../reference/server-config.md#queues-and-limits) that a Flight may override:
 
 | Limit | Default | Setting |
 |---|---|---|
-| Runs of a project at once | 10 | `queues.runs` |
-| Pull-request runs of a project at once | 4 | `queues.pull_request_runs` |
+| Runs of a Flight at once | 10 | `queues.runs` |
+| Pull-request runs of a Flight at once | 4 | `queues.pull_request_runs` |
 | Runs started by automation accounts at once | 2 | `queues.automation_runs` |
 | Runs of one pipeline, of branch pushes, of schedules, of manual Sorties | no limit | `queues.pipeline_runs`, `push_runs`, `schedule_runs`, `manual_runs` |
 
-`0` means no limit. Pushes to protected branches (the project's default branch) are **never
-held**, and a Sortie started by hand is not held by the project total. Running steps are never
+`0` means no limit. Pushes to protected branches (the Flight's default branch) are **never
+held**, and a Sortie started by hand is not held by the Flight total. Running steps are never
 stopped to make room.
 
 A held run says why, with a stable code beside the sentence:
 
-> waiting for room: this project allows 2 Sorties started by automation accounts at once, and 2 are
+> waiting for room: this Flight allows 2 Sorties started by automation accounts at once, and 2 are
 > going (runs #1–#2); 1 held run go first
 
 | `code` | Meaning |
@@ -72,7 +72,7 @@ A held run says why, with a stable code beside the sentence:
 | `automation_limit` | The automation limit is reached |
 | `kind_limit` | The limit for this kind of run is reached |
 | `pipeline_limit` | The pipeline's limit is reached |
-| `project_limit` | The project's total is reached |
+| `project_limit` | The Flight's total is reached |
 | `held_by_operator` | A person held it |
 
 ### The order

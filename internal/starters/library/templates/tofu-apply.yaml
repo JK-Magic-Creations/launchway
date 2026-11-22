@@ -12,7 +12,7 @@ params:
   tool: { type: string, default: "tofu", options: ["tofu", "terraform"], description: "The binary: tofu (open, default) or terraform (source-available)" }
   image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "An image with the tool and a shell; pin it by digest in production" }
   directory: { type: string, default: ".", description: "The directory with the configuration" }
-  workspace: { type: string, default: "default", description: "The state workspace of this project" }
+  workspace: { type: string, default: "default", description: "The state workspace of this Flight" }
   environment: { type: string, default: "", description: "The Airfield, for the Configuration page" }
   vars: { type: string, default: "{}", description: "Variables as a JSON object" }
   var_files: { type: string, default: "", description: "Variable files, separated by spaces" }

@@ -14,7 +14,7 @@ import (
 
 const variablesUsage = `Usage:
   launchway variables list      LEVEL [--environment E] [--json]   the variables at a level, with what each inherits
-  launchway variables effective PROJECT [--environment E] [--json] every variable in effect for a project, with its chain
+  launchway variables effective FLIGHT [--environment E] [--json] every variable in effect for a Flight, with its chain
   launchway variables run       RUN [--json]                       the variables a run used, as recorded
   launchway variables set    NAME LEVEL --type T --value V [--of KIND] [--environment E] [--description D]
   launchway variables delete NAME LEVEL [--environment E]
@@ -26,7 +26,7 @@ Types: string, number, boolean, list (a,b,c or a JSON list), map (JSON), secret
 (store:key#field, a reference and never the secret) and connection (a name, with --of).
 Use --json-value to give the value as JSON. The nearest setting wins: a nearer level
 overrides a wider one, and a lock set at a level beats everything below it.
-Setting needs an operator of the project, or an administrator of the Squadron, the Wing
+Setting needs an operator of the Flight, or an administrator of the Squadron, the Wing
 or the Base; locking needs the level's administrator. Changes are audited.
 `
 
@@ -72,7 +72,7 @@ func addLevelFlags(fs *flag.FlagSet) levelFlags {
 		installation: fs.Bool("installation", false, "the whole installation"),
 		organization: fs.Bool("organization", false, "the Wing (organization)"),
 		unit:         fs.String("unit", "", "a Squadron (unit), by name"),
-		project:      fs.String("project", "", "a project, by name"),
+		project:      fs.String("project", "", "a Flight, by name"),
 		env:          fs.String("environment", "", "only for this Airfield"),
 	}
 }
@@ -132,7 +132,7 @@ func (cl *client) variablesEffective(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway variables effective PROJECT [--environment E] [--json]")
+		return usageErr("launchway variables effective FLIGHT [--environment E] [--json]")
 	}
 	path := "/api/v1/projects/" + url.PathEscape(pos[0]) + "/variables"
 	if *env != "" {

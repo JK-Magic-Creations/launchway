@@ -18,7 +18,7 @@ type organizeIn struct {
 	Parent      *string         `json:"parent,omitempty" jsonschema:"the parent folder's ID, for create_folder or update_folder"`
 	Name        *string         `json:"name,omitempty" jsonschema:"a folder's name, no slash"`
 	Description *string         `json:"description,omitempty" jsonschema:"a folder's description"`
-	Item        string          `json:"item,omitempty" jsonschema:"the project or repository to move or label"`
+	Item        string          `json:"item,omitempty" jsonschema:"the Flight or repository to move or label"`
 	Labels      []string        `json:"labels,omitempty" jsonschema:"the labels an item should have; lower case, up to 20"`
 	Page        string          `json:"page,omitempty" jsonschema:"the page of a layout: home, pipelines, projects, repositories or runs"`
 	Layout      json.RawMessage `json:"layout,omitempty" jsonschema:"the layout document for set_layout, or the whole document for import"`

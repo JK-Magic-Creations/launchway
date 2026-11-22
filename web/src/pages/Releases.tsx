@@ -47,9 +47,9 @@ export function ReleasesPage() {
         actions={operable.length > 0 ? <Button kind="pri" icon="plus" onClick={() => setMaking(true)}>New release</Button> : undefined} />
       <ReleasesNav path="/deployments/releases" />
       <div className="toolbar2">
-        <label className="select"><span className="visually-hidden">Project</span>
+        <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span>
           <select value={project} onChange={(e) => setProject(e.target.value)}>
-            <option value="">Every project</option>
+            <option value="">{terms().say("Every {project}")}</option>
             {(inst.projects ?? []).map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select></label>
         <label className="select"><span className="visually-hidden">State</span>
@@ -117,7 +117,7 @@ function NewReleaseDialog({ projects, initial, onClose }: { projects: string[]; 
     <Dialog label="New release" onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (version.trim()) make(); }}>
         <h2>New release</h2>
-        <label className="field"><span>Project</span>
+        <label className="field"><span>{terms().say("{Project}")}</span>
           <select value={project} onChange={(e) => { setProject(e.target.value); setProp(null); }}>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
         <label className="field"><span>Make it from (a branch, tag or commit; empty is the default branch)</span>
           <input type="text" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="main" /></label>
@@ -315,7 +315,7 @@ function PublishDialog({ release, may, onClose, onDone }: { release: Release; ma
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); go(); }}>
         <h2>Publish {release.project} {release.version}?</h2>
         <p className="rel-hint">Publishing makes the annotated tag {release.tag || "for this version"} at commit {release.sha.slice(0, 8)} (an existing tag at that commit is adopted) and fixes the release. Its notes, files, tag and image digests can never change; if something is wrong, withdraw it and make a new release.</p>
-        {may && <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> Allow downloading its files without signing in (only where the installation and the project allow it)</label>}
+        {may && <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> {terms().say("Allow downloading its files without signing in (only where the installation and the {project} allow it)")}</label>}
         <ErrorBox error={error} />
         <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Not yet</button><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Publishing…" : "Publish"}</button></div>
       </form>

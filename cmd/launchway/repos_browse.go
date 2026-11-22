@@ -581,7 +581,7 @@ func (cl *client) reposInspections(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		if out.Available {
-			fmt.Fprintf(cl.out, "An Inspection can be started (project %s): launchway repos inspect %s\n", out.Project, pos[0])
+			fmt.Fprintf(cl.out, "An Inspection can be started (Flight %s): launchway repos inspect %s\n", out.Project, pos[0])
 		} else {
 			fmt.Fprintf(cl.out, "No Inspection can be started: %s\n", out.Reason)
 		}

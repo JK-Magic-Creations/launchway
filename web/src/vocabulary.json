@@ -51,7 +51,7 @@
         "one": "Organization",
         "many": "Organizations"
       },
-      "meaning": "The group that owns the projects: the second level.",
+      "meaning": "The group that owns the Squadrons: the second level.",
       "renameable": true
     },
     {
@@ -65,21 +65,21 @@
         "one": "Team",
         "many": "Teams"
       },
-      "meaning": "An optional group of projects with shared settings: the third level.",
+      "meaning": "A named folder of Flights with its own people, settings, measures and cards: the third level.",
       "renameable": true
     },
     {
       "key": "project",
       "group": "levels",
       "aviation": {
-        "one": "Project",
-        "many": "Projects"
+        "one": "Flight",
+        "many": "Flights"
       },
       "plain": {
-        "one": "Project",
-        "many": "Projects"
+        "one": "Codebase",
+        "many": "Codebases"
       },
-      "meaning": "One repository and its pipeline: the fourth level.",
+      "meaning": "One repository and its pipelines: the fourth level.",
       "renameable": true
     },
     {
@@ -98,10 +98,10 @@
       "key": "runner_group",
       "group": "work",
       "aviation": {
-        "one": "Flight line"
+        "one": "Ramp"
       },
       "plain": {
-        "one": "Runner group"
+        "one": "Ramp"
       },
       "meaning": "A group of runners that share a purpose, such as every runner that can build images.",
       "renameable": true
@@ -380,7 +380,7 @@
       "plain": {
         "one": "Pipeline template"
       },
-      "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
+      "meaning": "A complete, ready-made pipeline for a kind of Flight, with a few things to fill in.",
       "renameable": true
     },
     {
@@ -544,7 +544,7 @@
         "one": "Dependency updates",
         "many": "Dependency updates"
       },
-      "meaning": "Proposed updates to the libraries a project uses, opened as pull requests.",
+      "meaning": "Proposed updates to the libraries a Flight uses, opened as pull requests.",
       "renameable": true
     },
     {
@@ -616,7 +616,7 @@
       "plain": {
         "one": "Owner"
       },
-      "meaning": "Can do everything, including who may do what. The stored role is owner.",
+      "meaning": "Can do everything, including who may do what. Today the stored role is admin; there is no owner role.",
       "renameable": true
     },
     {
@@ -628,7 +628,7 @@
       "plain": {
         "one": "Approver"
       },
-      "meaning": "Decides whether a change may go on. The stored role is approver.",
+      "meaning": "Decides whether a change may go on. Today the stored role is operator; there is no approver role yet.",
       "renameable": true
     },
     {
@@ -640,7 +640,7 @@
       "plain": {
         "one": "Developer"
       },
-      "meaning": "Writes code and starts runs. The stored role is developer.",
+      "meaning": "Writes code and starts runs. Today the stored role is operator; there is no developer role.",
       "renameable": true
     },
     {
@@ -652,7 +652,7 @@
       "plain": {
         "one": "Viewer"
       },
-      "meaning": "Can read everything and change nothing. The stored role is viewer.",
+      "meaning": "Can read everything and change nothing. The stored role is viewer, as the word says.",
       "renameable": true
     },
     {

@@ -5,14 +5,14 @@
 #     needs: image
 #     with: { environment: prod, image_repository: team/app, tag: { output: image.tag }, digest: { output: image.digest } }
 #
-# The flight plans use it once for each of the project's environments, in the order the environments are configured, so a file rarely names it. Every value that can be worked out is: the application is <service>-<environment>, the file that holds the image is apps/<application>/base.yaml in the GitOps repository, the namespace is <service>-<environment>, and the health address is http://<workload>.<namespace>.svc.cluster.local:<port><health_path>. Any of them can be written under with, or for one environment in overrides: ["prod.application=shop", "dev.port=3000"].
+# The flight plans use it once for each of the Flight's environments, in the order the environments are configured, so a file rarely names it. Every value that can be worked out is: the application is <service>-<environment>, the file that holds the image is apps/<application>/base.yaml in the GitOps repository, the namespace is <service>-<environment>, and the health address is http://<workload>.<namespace>.svc.cluster.local:<port><health_path>. Any of them can be written under with, or for one environment in overrides: ["prod.application=shop", "dev.port=3000"].
 # Whether a decision is asked is the environment's own setting (protected in the server's configuration), not this file's. The server's notification rules tell people when a decision waits (approval.requested) and when a deployment fails or is rolled back (deployment.failed, deployment.rolled_back).
 # The deploy runner serving the environment writes the image's digest (and tag) to the GitOps repository and waits for Argo CD; with method: helm-values it sets image.tag and image.digest in a values file instead of rewriting the image in a manifest.
 template: deliver
 description: "Maneuver: deliver an image to one environment: decision, deploy, health proof and return to base"
 params:
   environment: { type: environment, description: "The environment, as the server's configuration names it" }
-  service: { type: string, from: launchway_project, default: "app", description: "What is deployed there; the project's name" }
+  service: { type: string, from: launchway_project, default: "app", description: "What is deployed there; the Flight's name" }
   image_repository: { type: string, description: "The image's repository, without the host: team/app" }
   tag: { type: output, description: "The tag that was built: { output: image.tag }" }
   digest: { type: output, description: "The digest that was built: { output: image.digest }" }

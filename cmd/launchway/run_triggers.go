@@ -12,25 +12,25 @@ import (
 )
 
 const runTriggersUsage = `Usage:
-  launchway run-triggers list PROJECT [--json]           triggers of PROJECT on other projects' results
-  launchway run-triggers create PROJECT --name NAME --on UPSTREAM [--launch] [--when RESULT] [--pipeline NAME]
+  launchway run-triggers list FLIGHT [--json]           triggers of FLIGHT on other Flights' results
+  launchway run-triggers create FLIGHT --name NAME --on UPSTREAM [--launch] [--when RESULT] [--pipeline NAME]
                                 [--filter EXPR] [--ref REF] [--map INPUT=EXPRESSION ...]
-  launchway run-triggers delete PROJECT NAME
-  launchway run-triggers graph PROJECT [--create] [--json]   follow the software graph: what PROJECT depends on, and triggers for it
+  launchway run-triggers delete FLIGHT NAME
+  launchway run-triggers graph FLIGHT [--create] [--json]   follow the software graph: what FLIGHT depends on, and triggers for it
   launchway run-triggers allow UPSTREAM DOWNSTREAM [--share-outputs]   let DOWNSTREAM trigger on UPSTREAM's results
   launchway run-triggers allowed UPSTREAM [--json]       who may trigger on UPSTREAM
   launchway run-triggers revoke UPSTREAM DOWNSTREAM
 
-graph shows the projects the software graph says PROJECT's repository depends on, in build order, whether each has
-allowed PROJECT, and whether a trigger exists; with --create it makes a trigger (named graph-UPSTREAM, on a run that
-ended well) for each that allowed it. Each project's result starts the next level, so providers build before
+graph shows the Flights the software graph says FLIGHT's repository depends on, in build order, whether each has
+allowed FLIGHT, and whether a trigger exists; with --create it makes a trigger (named graph-UPSTREAM, on a run that
+ended well) for each that allowed it. Each Flight's result starts the next level, so providers build before
 consumers. Nothing is made without --create.
 
-When a run (or, with --launch, a deployment) of UPSTREAM ends, a run of PROJECT starts, with inputs mapped from
-the result by expressions over run (id, number, project, pipeline, status, ref, branch, tag, sha, url), launch
+When a run (or, with --launch, a deployment) of UPSTREAM ends, a run of FLIGHT starts, with inputs mapped from
+the result by expressions over run (id, number, Flight, pipeline, status, ref, branch, tag, sha, url), launch
 (verdict, environment, service, version) and outputs (only if UPSTREAM allowed --share-outputs).
 --when is succeeded, failed, canceled or any for a run; deployed, failed, rolled_back or any for a launch.
-UPSTREAM must have allowed PROJECT first (an operator of UPSTREAM does that), and a cycle is refused.
+UPSTREAM must have allowed FLIGHT first (an operator of UPSTREAM does that), and a cycle is refused.
 No secret, log or file crosses: the result is described by reference.
 `
 
@@ -71,7 +71,7 @@ func (cl *client) triggersList(args []string) error {
 	pos, err := parseArgs(fs, args)
 	if err != nil || len(pos) != 1 {
 		if err == nil {
-			err = usageErr("say which project: launchway run-triggers list PROJECT")
+			err = usageErr("say which Flight: launchway run-triggers list FLIGHT")
 		}
 		return err
 	}
@@ -81,7 +81,7 @@ func (cl *client) triggersList(args []string) error {
 	}
 	return cl.print(list, *asJSON, func() {
 		if len(list) == 0 {
-			fmt.Fprintln(cl.out, "No triggers on other projects' results.")
+			fmt.Fprintln(cl.out, "No triggers on other Flights' results.")
 		}
 		for _, t := range list {
 			fmt.Fprintf(cl.out, "%s: when a %s of %s ends %s, start a run of %s\n", t.Name, t.Kind, t.UpstreamProject, t.When, t.Project)
@@ -100,7 +100,7 @@ func (cl *client) triggersList(args []string) error {
 func (cl *client) triggersCreate(args []string) error {
 	fs := flag.NewFlagSet("run-triggers create", flag.ContinueOnError)
 	name := fs.String("name", "", "the trigger's name")
-	on := fs.String("on", "", "the upstream project")
+	on := fs.String("on", "", "the upstream Flight")
 	launch := fs.Bool("launch", false, "trigger on a deployment that ended, not a Sortie")
 	when := fs.String("when", "", "which result starts it")
 	pl := fs.String("pipeline", "", "only results of the upstream pipeline with this name")
@@ -113,7 +113,7 @@ func (cl *client) triggersCreate(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *name == "" || *on == "" {
-		return usageErr("say the project, --name and --on\n\n%s", runTriggersUsage)
+		return usageErr("say the Flight, --name and --on\n\n%s", runTriggersUsage)
 	}
 	t := engine.RunTrigger{Name: *name, UpstreamProject: *on, When: *when, UpstreamPipeline: *pl, Filter: *filter, Ref: *ref, Mapping: map[string]string{}, Kind: engine.TriggerOnRun}
 	if *launch {
@@ -138,7 +138,7 @@ func (cl *client) triggersDelete(args []string) error {
 	pos, err := parseArgs(flag.NewFlagSet("run-triggers delete", flag.ContinueOnError), args)
 	if err != nil || len(pos) != 2 {
 		if err == nil {
-			err = usageErr("say the project and the trigger: launchway run-triggers delete PROJECT NAME")
+			err = usageErr("say the Flight and the trigger: launchway run-triggers delete FLIGHT NAME")
 		}
 		return err
 	}
@@ -155,7 +155,7 @@ func (cl *client) triggersAllow(args []string) error {
 	pos, err := parseArgs(fs, args)
 	if err != nil || len(pos) != 2 {
 		if err == nil {
-			err = usageErr("say the upstream and the downstream project: launchway run-triggers allow UPSTREAM DOWNSTREAM")
+			err = usageErr("say the upstream and the downstream Flight: launchway run-triggers allow UPSTREAM DOWNSTREAM")
 		}
 		return err
 	}
@@ -172,7 +172,7 @@ func (cl *client) triggersAllowed(args []string) error {
 	pos, err := parseArgs(fs, args)
 	if err != nil || len(pos) != 1 {
 		if err == nil {
-			err = usageErr("say which project: launchway run-triggers allowed UPSTREAM")
+			err = usageErr("say which Flight: launchway run-triggers allowed UPSTREAM")
 		}
 		return err
 	}
@@ -182,7 +182,7 @@ func (cl *client) triggersAllowed(args []string) error {
 	}
 	return cl.print(list, *asJSON, func() {
 		if len(list) == 0 {
-			fmt.Fprintln(cl.out, "No project may trigger on this project's results.")
+			fmt.Fprintln(cl.out, "No Flight may trigger on this Flight's results.")
 		}
 		for _, a := range list {
 			extra := ""
@@ -198,7 +198,7 @@ func (cl *client) triggersRevoke(args []string) error {
 	pos, err := parseArgs(flag.NewFlagSet("run-triggers revoke", flag.ContinueOnError), args)
 	if err != nil || len(pos) != 2 {
 		if err == nil {
-			err = usageErr("say the upstream and the downstream project: launchway run-triggers revoke UPSTREAM DOWNSTREAM")
+			err = usageErr("say the upstream and the downstream Flight: launchway run-triggers revoke UPSTREAM DOWNSTREAM")
 		}
 		return err
 	}
@@ -216,7 +216,7 @@ func (cl *client) triggersGraph(args []string) error {
 	pos, err := parseArgs(fs, args)
 	if err != nil || len(pos) != 1 {
 		if err == nil {
-			err = usageErr("say which project: launchway run-triggers graph PROJECT [--create]")
+			err = usageErr("say which Flight: launchway run-triggers graph FLIGHT [--create]")
 		}
 		return err
 	}

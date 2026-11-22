@@ -17,7 +17,7 @@ import (
 // VariableRule is the precedence rule, in the one sentence every page,
 // message and document uses. A test holds the documents to it.
 const VariableRule = "The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, " +
-	"then the project, the Squadron, the Wing, the Base, then the template's own default; " +
+	"then the Flight, the Squadron, the Wing, the Base, then the template's own default; " +
 	"at the same level a variable set for the Airfield (environment) being deployed to beats the general one; " +
 	"and a lock set at a level beats everything below it. Lists replace, never merge. Variables and locks never cross Wings."
 
@@ -161,7 +161,7 @@ func (in ResolveInput) levelPhrase(l Level, scope string) string {
 func (in ResolveInput) whoCan(l Level, scope string) string {
 	switch l {
 	case LevelInstallation, LevelOrganization:
-		return "an administrator of every project"
+		return "an administrator of every Flight"
 	case LevelUnit:
 		return "an administrator of " + in.levelPhrase(l, scope)
 	}

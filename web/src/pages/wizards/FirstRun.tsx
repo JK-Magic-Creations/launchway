@@ -32,8 +32,8 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   const [words, setWords] = useState<WordsValue>(() => ({ set: terms().set, overrides: { ...terms().overrides } }));
   const wordsAtStart = useState(() => JSON.stringify({ set: terms().set, overrides: terms().overrides }))[0];
   const wt = makeTerms(words);
-  const [useUnits, setUseUnits] = useState<"no" | "yes">(overview.units_in_use ? "yes" : "no");
-  const [unitName, setUnitName] = useState("");
+  // A Squadron is always there now: the wizard asks only for the first one's name (Main when nobody has made one).
+  const [unitName, setUnitName] = useState(overview.units_in_use ? "" : "Main");
   const [unitDisplay, setUnitDisplay] = useState("");
   const [signin, setSignin] = useState<"none" | "oidc">(me?.auth_mode === "oidc" ? "oidc" : "none");
   const [provider, setProvider] = useState("authentik");
@@ -76,7 +76,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   if (org && orgName.trim() && orgName.trim() !== (org.spec.display_name ?? "")) {
     changes.push({ kind: "organisation", name: "default", spec: { ...org.spec, display_name: orgName.trim() }, version: org.version });
   }
-  if (useUnits === "yes" && unitName.trim() && !overview.units?.some((u) => u.name === unitName.trim())) {
+  if (unitName.trim() && !overview.units?.some((u) => u.name === unitName.trim())) {
     changes.push({ kind: "unit", name: unitName.trim(), spec: unitDisplay.trim() ? { display_name: unitDisplay.trim() } : {}, version: -1 });
   }
   if (signin === "oidc" && signinCheck.result && signinCheck.result.problems.length === 0) {
@@ -85,10 +85,9 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
       ...(adminGroups.length || adminUsers.length ? { admins: { ...(adminGroups.length ? { groups: adminGroups } : {}), ...(adminUsers.length ? { users: adminUsers } : {}) } } : {}),
     } });
   }
-  if (flow.name) changes.push({ ...flow.change, unit: useUnits === "yes" && unitName.trim() ? unitName.trim() : flow.change.unit });
+  if (flow.name) changes.push({ ...flow.change, unit: unitName.trim() ? unitName.trim() : flow.change.unit });
 
   const unitWord = wt.label("unit");
-  const projWord = wt.label("project");
 
   const wordsStep: StepDef = {
     id: "words", title: "The words Launchway uses",
@@ -105,24 +104,17 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   const namesStep: StepDef = {
     id: "names", title: `Your ${wt.lower("organization")} and its ${wt.pluralLower("unit")}`,
     fields: [{ path: "display_name", match: ["display_name", "organisation"], value: orgName }, { path: "unit", match: ["unit"], value: unitName }],
-    local: () => useUnits === "yes" && !unitName.trim() && !overview.units_in_use ? `Name the first ${unitWord.toLowerCase()}, or choose not to use them.` : null,
+    local: () => !unitName.trim() && !overview.units_in_use ? `Name the first ${unitWord.toLowerCase()}.` : null,
     render: (by) => (
       <>
         <div className="cf-grid">
           <TextInput label={`Your ${wt.lower("organization")}'s name`} value={orgName} onChange={setOrgName} placeholder="Acme" focusOnMount problems={by.display_name}
             help="Shown at the top of the configuration and where it helps people know where they are. Optional." />
         </div>
-        <Choices legend={`Do you want to group ${wt.pluralLower("project")}?`} value={useUnits} onChange={(v) => setUseUnits(v as "no" | "yes")}
-          help={`The levels are the ${wt.lower("installation")}, the ${wt.lower("organization")} that owns everything, optional ${wt.pluralLower("unit")}, and the ${wt.pluralLower("project")} (one per repository).`}
-          options={[
-            { value: "no", label: "No, not now", help: `Every ${projWord.toLowerCase()} shares the ${wt.lower("organization")}'s settings. The simplest start; you can add ${wt.pluralLower("unit")} any time and the screens then show them.` },
-            { value: "yes", label: `Yes, into ${wt.pluralLower("unit")}`,
-              help: terms().say(`Each ${unitWord.toLowerCase()} gets its own roles, libraries, policies, {environments}, {runner_groups} and secret stores, which apply only to its ${wt.pluralLower("project")}. One level, never nested.`) },
-          ]} />
-        {useUnits === "yes" && !overview.units_in_use && (
+        {!overview.units_in_use && (
           <div className="cf-grid">
             <TextInput label={`Name of the first ${unitWord.toLowerCase()}`} value={unitName} onChange={setUnitName} mono placeholder="payments" problems={by.unit}
-              help="Used in URLs and the command line: letters, digits, dots, hyphens and underscores. Your first repository goes into it." />
+              help={`A ${unitWord.toLowerCase()} is a named folder of ${wt.pluralLower("project")} with its own people and shared settings. The name is used in URLs and the command line: letters, digits, dots, hyphens and underscores. Your first repository goes into it.`} />
             <TextInput label="Shown as" value={unitDisplay} onChange={setUnitDisplay} placeholder="Payments team" help="How people read it. Optional." />
           </div>
         )}

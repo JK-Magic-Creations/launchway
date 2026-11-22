@@ -77,7 +77,7 @@ func (s *Server) changeQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 type listQueueIn struct {
-	Project string `json:"project,omitempty" jsonschema:"only this project's queue"`
+	Project string `json:"project,omitempty" jsonschema:"only this Flight's queue"`
 }
 
 type queueRunIn struct {

@@ -85,7 +85,7 @@ steps:
   asks Argo CD to sync if it must, and waits until the revert is synced and healthy. A revert that
   does not apply (later commits changed the same lines) fails the step and leaves Git alone; the
   deployment then says it needs a person. A deployment that changed nothing has nothing to revert.
-- **One deployment at a time**: each service of a project has one lock per Airfield, taken when
+- **One deployment at a time**: each service of a Flight (codebase) has one lock per Airfield, taken when
   its deployment opens and released when the deploy step, its Return to base step and every step on a
   needs path between them are done. A deploy step that finds it held waits. With `queue: newest`
   (the default), a Sortie (run) waiting for the lock is skipped as superseded when a newer run of the same
@@ -97,7 +97,7 @@ steps:
 - **Validation** says what is wrong and on which line: a value from a step that is not needed, a
   Return to base that does not need its deploy step, two deploy steps of one service and Airfield that
   could run at once, and, against the server's configuration (in `/api/v1/validate` and when a Sortie is
-  created), an unknown Airfield or a project the Airfield does not allow.
+  created), an unknown Airfield or a Flight the Airfield does not allow.
 - **Not yet**: syncing to a revision without a commit, a "roll back to…" button that starts a Sortie,
   pausing a rollout, and `kind: analysis` arrive in later releases.
 
@@ -166,7 +166,7 @@ A Pathfinder (canary) can stop at a pause and wait: for a smoke test of the Path
   (`POST .../commands/{command}/withdraw`); an abort withdraws the ones not taken yet and goes first.
   Commands given while no deploy Station reaches the cluster wait, and are applied when one does.
   Every command, withdrawal and refusal is in the Logbook (`deployment.promote` and so on).
-- **Who may.** A command needs the operator role on the Sortie's project from a binding that covers
+- **Who may.** A command needs the operator role on the Sortie's Flight from a binding that covers
   the deployment's Airfield (see `environments:` under [Roles](access.md#roles)). On an Airfield marked
   `protected: true`, the person who started the Sortie may not promote or retry it (unless
   `approvals.allow_self` lets them approve their own runs); anyone with the operator role there may
@@ -193,7 +193,7 @@ A Pathfinder (canary) can stop at a pause and wait: for a smoke test of the Path
   through its spec (`spec.paused`), which needs a change to the spec Launchway does not make.
 
 **Who does the work.** Deploy steps are done by a **deploy Station**: `launchway runner` with a
-`deploy:` section, in or near the cluster, with the token of a **Flight line (Station (runner) pool)**. Only a pool's token
+`deploy:` section, in or near the cluster, with the token of a **Ramp (Station (runner) pool)**. Only a pool's token
 can take deploy work, and only for the targets the pool may serve; the shared Station token, which
 build Stations running anyone's code hold, cannot claim a target or report that a deployment is
 healthy. The deploy Station talks to the cluster through the Kubernetes API with its own identity;

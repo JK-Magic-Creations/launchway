@@ -21,7 +21,7 @@ here says "not run" and why; it is never shown as green.
 | Cell | What it proves |
 |---|---|
 | install | a fresh install (the installer's Kubernetes mode, and a plain `helm install` with defaults) signs in, runs a pipeline, is encrypted, and `launchway doctor` is clean |
-| upgrade, by `helm upgrade`, GitOps (single application and app-of-apps), image first, chart first | no crash loop; a project, a Sortie (run), a variable, a webhook with its secret, the SSH host keys and a pull request survive; no secret is readable in a database dump once sealing completes; one root key; `launchway doctor` is clean; and nothing but the version was changed |
+| upgrade, by `helm upgrade`, GitOps (single application and app-of-apps), image first, chart first | no crash loop; a Flight (codebase), a Sortie (run), a variable, a webhook with its secret, the SSH host keys and a pull request survive; no secret is readable in a database dump once sealing completes; one root key; `launchway doctor` is clean; and nothing but the version was changed |
 | Return to base, before and after sealing | before: no manual step. After: the previous release says it cannot read sealed values, and the documented restore from a dump works end to end |
 | values | the previous release's values file renders under this chart; a values file with keys only a newer chart knows renders, and says which keys were ignored |
 | network | a namespace with policies already in place gets the chart's off by default (the installer says why); one without gets the chart's protecting by default; step pods cannot reach the cluster API or a public address unless opted in |

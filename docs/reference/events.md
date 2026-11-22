@@ -17,7 +17,7 @@ the messages of the live stream the web UI listens to, and the Logbook. It is fo
 read these records through the API, build tools on them, or review them for evidence.
 
 > **Verified** on 2026-11-19 against commit f717337: a server started with `launchway server` on
-> 127.0.0.1 without sign-in, running the demo project from `make demo`; a run was started, resumed
+> 127.0.0.1 without sign-in, running the demo Flight (codebase) from `make demo`; a run was started, resumed
 > after a failure and approved, and its event log, the live stream (all Sorties and one Sortie) and the
 > audit trail were read with `curl`; refused calls to an unconfigured webhook and Git hook were made
 > to see their audit entries; then a server with OpenID Connect sign-in (a test provider) recorded
@@ -148,7 +148,7 @@ server takes out what the UI shows elsewhere or what must not leave it:
 curl -s http://127.0.0.1:8080/api/v1/runs/run_06gzdc7n5e965qfptm1g/events
 ```
 
-An excerpt of a real run of the demo project (a retry, a failed step, a resume and an approval;
+An excerpt of a real run of the demo Flight (a retry, a failed step, a resume and an approval;
 lines shortened):
 
 ```json
@@ -186,7 +186,7 @@ log: read it with `GET /api/v1/runs/{id}/steps/{step}/logs`, or follow it on the
 The web UI uses it to update pages without polling. It needs the same access as the rest of the
 API: a session or an API token when sign-in is on.
 
-- Without parameters it sends `run` messages for every run of the projects you may see.
+- Without parameters it sends `run` messages for every run of the Flights you may see.
 - With `?run=<run-id>` it sends every message about that one Sortie: `run`, `step`, `log` and
   `deployment`. A Sortie you may not see answers `404`.
 
@@ -231,7 +231,7 @@ buffer this path.
 
 Work tracking sends one more event to the [webhooks](../guide/webhooks.md) of a repository: `work_item`. It
 is delivered like every other event: the same headers, the same `X-Launchway-Signature-256` signature
-over the raw body, the same delivery log and redelivery. It is sent for items of that repository's Project,
+over the raw body, the same delivery log and redelivery. It is sent for items of that repository's Flight,
 and only to hooks that ask for `work_item` in their events. These are not run events and not Logbook entries; the Logbook has
 its own rows for what people change (see the audit actions that start with `work.`).
 
@@ -256,7 +256,7 @@ its own rows for what people change (see the audit actions that start with `work
 }
 ```
 
-Items of a level above a Project (a Squadron, a Wing or the Base) have no repository and send no event.
+Items of a level above a Flight (a Squadron, a Wing or the Base) have no repository and send no event.
 Email is not sent for any of these.
 
 ## Audit trail
@@ -276,10 +276,17 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.cancel` | `POST /api/v1/runs/{id}/cancel` |
 | `run.resume` | `POST /api/v1/runs/{id}/resume` |
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
-| `run_trigger.create` | `POST /api/v1/projects/{name}/run-triggers`: a project now starts a run when another project's run or launch ends |
-| `run_trigger.delete` | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}`: a trigger on another project's results was removed |
-| `run_trigger.from_graph` | `POST /api/v1/projects/{name}/run-triggers/graph`: result triggers made from what the software graph says the project depends on; the detail says how many |
-| `run_trigger.allow` | `POST /api/v1/projects/{name}/run-trigger-allows`: the upstream project allowed another to trigger on its results (the detail says whether it may read step outputs) |
+| `run_trigger.create` | `POST /api/v1/projects/{name}/run-triggers`: a Flight now starts a run when another Flight's run or launch ends |
+| `run_trigger.delete` | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}`: a trigger on another Flight's results was removed |
+| `run_trigger.from_graph` | `POST /api/v1/projects/{name}/run-triggers/graph`: result triggers made from what the software graph says the Flight depends on; the detail says how many |
+| `run_trigger.allow` | `POST /api/v1/projects/{name}/run-trigger-allows`: the upstream Flight allowed another to trigger on its results (the detail says whether it may read step outputs) |
+| `project.move` | `POST /api/v1/unit-moves`: a request to move Flights (the answer lists which moved; see `project.moved`) |
+| `unit.create` | `POST /api/v1/units`: a Squadron was made with a name |
+| `project.create_in_unit` | `POST /api/v1/units/{name}/projects`: a Flight was made in a Squadron from a repository |
+| `project.move_preview` | `POST /api/v1/unit-moves/preview`: the effects of a move were read (nothing changed) |
+| `project.moved` | One Flight was moved to another Squadron (one entry per Flight; the detail says from and to) |
+| `unit.organize` | `POST /api/v1/unit-organize`: Squadrons were made and Flights filed in them as one change |
+| `unit.organize_undo` | `POST /api/v1/unit-organize/undo`: an organize was undone |
 | `run_trigger.revoke` | `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}`: that permission was withdrawn |
 | `event_source.create` | `POST /api/v1/projects/{name}/event-sources`: an incoming event source was made; the signing secret was shown once and is never recorded |
 | `event_source.change` | `POST /api/v1/projects/{name}/event-sources/{source}`: its settings changed, or its secret was replaced |
@@ -314,7 +321,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `release.promote` | `POST /api/v1/projects/{name}/releases/{version}/promote`: the promotion with its Sortie (run) and image digests; a refusal or an override with its reason is recorded too |
 | `release.plan` | `POST /api/v1/projects/{name}/releases/{version}/plan`: a promotion written on the calendar |
 | `release.return` | `POST /api/v1/projects/{name}/release-returns`: an Airfield returned to base, with the reason |
-| `release.freeze` | `POST /api/v1/release-freezes`: a freeze, for which project and Airfield, with the reason |
+| `release.freeze` | `POST /api/v1/release-freezes`: a freeze, for which Flight and Airfield, with the reason |
 | `release.freeze.cancel` | `POST /api/v1/release-freezes/{id}/cancel` |
 | `release.formation.create` | `POST /api/v1/release-formations`: the releases of a formation, in order |
 | `release.formation.promote` | `POST /api/v1/release-formations/{id}/promote`: a formation promoted to an Airfield |
@@ -389,7 +396,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `registry.untag` | a tag was deleted and the image stays |
 | `registry.retention` | a retention rule deleted images (the actor is the person who ran it, or `retention` for the Patrol (scheduled run)) |
 | `registry.gc` | garbage collection removed blobs; the detail has the counts and bytes |
-| `registry.quota` | a push was refused because the project or Wing is over its quota (outcome `denied`) |
+| `registry.quota` | a push was refused because the Flight or Wing is over its quota (outcome `denied`) |
 | `registry.gc_run` | `POST /api/v1/registry/gc` (also `launchway registry gc`); the detail says dry run or collection |
 | `registry.policy` | `PUT /api/v1/registry/policy` and `PUT /api/v1/projects/{name}/registry/policy` (also `launchway registry policy set`); the target is the level and its name |
 | `registry.image_delete` | `DELETE /api/v1/projects/{name}/registry/image` (also `launchway registry delete`); the target is `repository@reference` |
@@ -413,7 +420,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.file_write` | `PUT /api/v1/repositories/{owner}/{name}/files` (also `launchway repos put-file`): one commit made by the server; the detail names the branch, the path and the commit range |
 | `repository.file_delete` | `DELETE /api/v1/repositories/{owner}/{name}/files` (also `launchway repos delete-file`): one commit made by the server that removes a file; the detail names the branch, the path and the commit range |
 | `repository.files_upload` | `POST /api/v1/repositories/{owner}/{name}/files` (also `launchway repos upload`): several files added in one commit by the server; the detail names the branch, the paths and the commits before and after |
-| `repository.inspect` | `POST /api/v1/repositories/{owner}/{name}/inspections` (also `launchway repos inspect`): an Inspection started by hand; the detail names the project, the Sortie (run) and the commit. A refusal (no project watches the repository, Standing orders off, no Station online) is audited with its reason |
+| `repository.inspect` | `POST /api/v1/repositories/{owner}/{name}/inspections` (also `launchway repos inspect`): an Inspection started by hand; the detail names the Flight (codebase), the Sortie (run) and the commit. A refusal (no Flight watches the repository, Standing orders off, no Station online) is audited with its reason |
 | `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
 | `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
 | `repository.branch_rename` | `POST /api/v1/repositories/{owner}/{name}/branches/rename` (also `launchway repos branches rename`): a branch renamed; the detail names both names and the commit |
@@ -459,7 +466,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `git.push` | A push over HTTP, to `/git/{owner}/{name}.git` or `/{owner}/{name}.git`, or over SSH; the user is the person (or `run <id>`, or `deploy key <name>`), the detail the token's name or `ssh key SHA256:...` and each ref with its old and new commit, the outcome `ok`, `failed` (it lost a race or did not commit) or `denied` (no push rights, or the repository is archived) |
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
-| `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |
+| `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the Flight poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |
 | `webhook.run` | `POST /api/v1/projects/{name}/webhooks/{trigger}`: a webhook trigger's call that started a Sortie (`ok`), failed, or was refused |
 | `step.explain` | `POST /api/v1/runs/{id}/steps/{step}/explain`: asking a model to explain a failed step; the detail names the model |
 | `verification.override` | `POST /api/v1/runs/{id}/steps/{step}/verify/override`: marking a verification passed or failed, with the reason |
@@ -552,14 +559,14 @@ Each entry has these fields:
 | `user` | who: the user name, `git:<host kind>` for a Git hook, `webhook:<trigger>` for a webhook trigger, or empty for a sign-in that failed before anyone was known |
 | `source` | the client's address (behind a reverse proxy, the one the proxy saw, with `server.trust_proxy: true`) |
 | `action` | one of the actions above |
-| `project` | the project, or empty |
+| `project` | the Flight, or empty |
 | `target` | what was acted on: a Sortie ID, `run/step`, a token's name, a waiver, or a webhook delivery |
 | `outcome` | `ok`; `denied` when the permission check or the handler refused it with `403`; `failed` when the call was allowed but did not succeed |
 | `detail` | a short description, at most 1000 bytes, such as `run #2 of main at fa0b04cb, inputs scan=quick`, or why it was refused or failed |
 
 ### Reading the Logbook
 
-Admins of every project read the trail on the **Audit trail** page, or with
+Admins of every Flight read the trail on the **Audit trail** page, or with
 `GET /api/v1/audit`. Every parameter is optional:
 
 - `user`, `project`, `action`: only entries with exactly this value;
@@ -605,7 +612,7 @@ off. The stream carries the same entries as the Logbook, in the same order, and 
 | `actor` | who acted; `system` when nobody did |
 | `actor_kind` | `person`, `runner` or `system` |
 | `organization` | the Wing the entry belongs to (`default`) |
-| `project` | the project, or an empty string |
+| `project` | the Flight, or an empty string |
 | `target` | what was acted on: a Sortie, a token name, a repository path |
 | `outcome` | `ok`, `denied` or `failed` |
 | `detail` | a short note |

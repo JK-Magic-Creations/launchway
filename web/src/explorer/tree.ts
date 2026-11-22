@@ -6,6 +6,11 @@ export type Tone = "bad" | "wait" | "run" | "ok" | "none";
 /** One step of where an item lives: a level (Wing, Squadron) or a folder. */
 export interface Seg { key: string; label: string; folderId?: string }
 
+/** The step of a path that is a Flight (its pipelines are the items under it), and the built-in Unfiled place. A Flight's key never holds a "/" (the keys of a path are joined with one). */
+export const flightSeg = (name: string): Seg => ({ key: "fl:" + name.replace(/\//g, "|"), label: name });
+export const isFlightSeg = (s: Seg): boolean => s.key.startsWith("fl:");
+export const UNFILED: Seg = { key: "unfiled", label: "Unfiled" };
+
 export interface XItem {
   id: string;
   name: string;

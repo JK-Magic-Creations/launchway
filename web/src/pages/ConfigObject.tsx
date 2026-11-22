@@ -273,7 +273,7 @@ function RawEditor({ spec, onChange }: { spec: Spec; onChange: (s: Spec) => void
   );
 }
 
-const FROM: Record<string, string> = { default: "built-in default", project: "this project" };
+const FROM: Record<string, string> = { default: "built-in default", project: "this {project}" };
 
 /** EffectiveCard says what applies to a project and where each comes from. */
 function EffectiveCard({ project, overview }: { project: string; overview: ConfigOverview }) {
@@ -281,7 +281,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
   const [error, setError] = useState<unknown>(null);
   useEffect(() => { configApi.effective(project).then(setEf).catch(setError); }, [project]);
   const from = (f: string, unit?: string) => f === "organisation" ? terms().label("organization")
-    : f === "unit" ? levelOf(overview, unit ?? "") : f === "installation" ? `${terms().label("installation")} setting` : FROM[f] ?? f;
+    : f === "unit" ? levelOf(overview, unit ?? "") : f === "installation" ? `${terms().label("installation")} setting` : terms().say(FROM[f] ?? f);
   return (
     <section className="card" aria-labelledby="cf-eff-h">
       <h2 id="cf-eff-h" className="cf-h">What applies to this {overview.levels.project.singular.toLowerCase()}</h2>
@@ -309,7 +309,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
                     <tr key={o.kind + "/" + o.name}>
                       <td>{kk ? kindLabel(overview, kk, false) : o.kind}</td>
                       <td>{kk ? <Link href={`/config/${kk.path}/${encodeURIComponent(o.name)}`}><Mono>{o.name}</Mono></Link> : <Mono>{o.name}</Mono>}</td>
-                      <td><span className={`cf-from cf-from-${o.from}`}>{o.from === "project" ? "names this project" : from(o.from, o.unit)}</span></td>
+                      <td><span className={`cf-from cf-from-${o.from}`}>{o.from === "project" ? terms().say("names this {project}") : from(o.from, o.unit)}</span></td>
                     </tr>
                   );
                 })}</tbody>

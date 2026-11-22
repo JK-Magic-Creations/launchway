@@ -173,7 +173,7 @@ func ScopeFor(l Level, name string) (string, error) {
 		}
 		return name, nil
 	}
-	return "", variableProblem("%q is not a level; the levels are installation, organization, unit and project", string(l))
+	return "", variableProblem("%q is not a level; the levels are installation, organization, unit and Flight", string(l))
 }
 
 // CheckKey checks the names of a key.

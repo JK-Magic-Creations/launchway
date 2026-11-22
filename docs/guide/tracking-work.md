@@ -1,6 +1,6 @@
 # Tracking work
 
-Launchway keeps the work of a project next to its code: issues, bugs, stories, tasks and epics, with a
+Launchway keeps the work of a Flight (codebase) next to its code: issues, bugs, stories, tasks and epics, with a
 small workflow, links between them, and links to the commits, pull requests, runs and deployments that
 carry them out. Everything below works the same in the web interface, over the HTTP API, with the MCP
 tools and with the command line. People and [agents](working-with-agents.md) use the same items and the
@@ -19,24 +19,24 @@ the [query reference](../reference/work-queries.md).
 ## From the command line
 
 Everything on this page has a command: `launchway work items create "Fix the retry button" --type bug
---scope project:acme/shop`, `launchway work items list --query "assignee:me is:open"`, `launchway work items
+--scope Flight:acme/shop`, `launchway work items list --query "assignee:me is:open"`, `launchway work items
 comment PAY-12 "Seen on mobile"`, `launchway work inbox --unread`. The list is in the
 [command-line reference](../reference/cli.md#launchway-work); `--json` gives the answer as the API
 returns it.
 
 ## Where work lives
 
-An item belongs to one **scope**: a Project, or a level above it (a Squadron, a Wing, or the Base). Most
-items live in a Project. In the API a scope is written `project:owner/name`, `unit:name`, `organization`
+An item belongs to one **scope**: a Flight, or a level above it (a Squadron, a Wing, or the Base). Most
+items live in a Flight. In the API a scope is written `project:owner/name`, `unit:name`, `organization`
 or `installation`.
 
 Each scope has a **prefix** of up to ten capital letters or digits, such as `PAY`, and counts its items
 from 1. An item is named by the prefix and its number: `PAY-12`. A prefix belongs to one scope across the
 whole installation, so `PAY-12` names exactly one item wherever it is written.
 
-Who may do what follows the project's roles. Seeing work needs the viewer role, changing it the operator
+Who may do what follows the Flight's roles. Seeing work needs the viewer role, changing it the operator
 role, and changing a scope's settings, registering agents and approving imports the admin role of the
-Project. See [Roles and permissions](../reference/roles.md#work-tracking).
+Flight. See [Roles and permissions](../reference/roles.md#work-tracking).
 
 ## Types
 
@@ -111,7 +111,7 @@ related link does not. Each link shows on both items.
 
 A link that would make a cycle is refused, and the answer names the chain:
 `that would make a cycle: PAY-3 blocks itself through PAY-3 blocks PAY-1 blocks PAY-2 blocks PAY-3`. An item cannot
-be linked to itself, and the same link cannot be added twice. You may link items of different projects
+be linked to itself, and the same link cannot be added twice. You may link items of different Flights
 when you may see both.
 
 An item blocked by an open item is marked **blocked** and shows by which. It is left out of what agents
@@ -229,5 +229,5 @@ a person to accept. See [proposals from analysis](proposals-from-analysis.md).
 
 - No email, in or out.
 - Attachments are kept in the database, not in object storage.
-- Closing work from a pull request in another Project is allowed only to people who hold a direct role
+- Closing work from a pull request in another Flight is allowed only to people who hold a direct role
   there; see [work and code](work-and-code.md#closing-rules).

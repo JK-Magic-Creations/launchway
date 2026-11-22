@@ -11,6 +11,7 @@ import { RefPicker } from "../components/RefPicker";
 import { VariablesPanel } from "../components/Variables";
 import { OverridesEditor } from "../components/Libraries";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono } from "../components/ui";
+import { terms } from "../terms";
 
 // Git is the only place a pipeline is kept. This page reads the file from a
 // branch, lets you change it, run the change as a draft without saving it,
@@ -138,8 +139,8 @@ export function EditPipelinePage({ name }: { name: string }) {
   if (loadErr) {
     return (
       <div className="page">
-        <ErrorBox error={loadErr instanceof ApiError && loadErr.status === 404 ? (ref ? `${name} has no branch called ${ref}, or no such project.` : "This project does not exist.") : loadErr} />
-        <Link href="/projects">Back to projects</Link>
+        <ErrorBox error={loadErr instanceof ApiError && loadErr.status === 404 ? (ref ? terms().say(`${name} has no branch called ${ref}, or no such {project}.`) : terms().say("This {project} does not exist.")) : loadErr} />
+        <Link href="/projects">{terms().say("Back to {projects}")}</Link>
       </div>
     );
   }
@@ -288,8 +289,7 @@ function SaveNotice({ project, me }: { project: Project; me: string }) {
   if (!project.push) {
     return (
       <div className="callout callout-info">
-        <strong>Saving is not set up for {project.name}.</strong> An administrator can allow it in the project's settings
-        (<a href={`/config/projects/${encodeURIComponent(project.name)}`}>Saving from the editor</a>); each save is then a commit on a new branch.
+        <strong>Saving is not set up for {project.name}.</strong> {terms().say("An administrator can allow it in the {project}'s settings (")}<a href={`/config/projects/${encodeURIComponent(project.name)}`}>Saving from the editor</a>); each save is then a commit on a new branch.
         Until then, use <em>Copy</em> or <em>Download</em> and commit the file yourself.
       </div>
     );

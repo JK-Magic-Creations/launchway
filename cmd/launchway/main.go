@@ -55,7 +55,7 @@ Usage:
   launchway runner   --server URL --token T     run a {runner} with the shared token (no identity)
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
-  launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
+  launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that Flight too)
   launchway init     [--write] [--force]         propose the pipeline file for this repository from what it holds
   launchway graph    [file]                     print a pipeline's graph as JSON; or ask the software graph (launchway graph impact|order|where|needs|spec ...)
   launchway login    --server URL               store an API token for a server
@@ -84,13 +84,14 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway debrief  show|summary|export <run-id>   the report of a run's tests: read it, or export it as html, pdf, json or junit
-  launchway tests    flaky|timings|split <project>   flaky tests, typical durations, and a balanced split of tests for N shards
+  launchway tests    flaky|timings|split <Flight>   flaky tests, typical durations, and a balanced split of tests for N shards
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
   launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
   launchway events   list|show|replay            what reached the server and what was decided about it; start one again
   launchway event-sources list|create|change|delete|test   incoming webhook sources: a signed address that starts a run
-  launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another project's run or launch ends
+  launchway squadrons list|create|show|candidates|add-flight|move|organize   Squadrons (folders of Flights): make, fill, move, organize
+  launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another Flight's run or launch ends
   launchway standards show|set|explain|coverage|profile  the Standing orders every repository has: checks, gates, settings by level
   launchway findings list|show|accept|reopen|export|inspect  what the checks found: the backlog, decisions, a run's verdict
   launchway state    list|show|versions|lock|unlock|pull|push|rollback   built-in Terraform/OpenTofu state
@@ -145,6 +146,8 @@ var commands = map[string]func([]string) error{
 	"events":         cmdEvents,
 	"event-sources":  cmdEventSources,
 	"run-triggers":   cmdRunTriggers,
+	"squadrons":      cmdSquadrons,
+	"units":          cmdSquadrons,
 	"standards":      cmdStandards,
 	"findings":       cmdFindings,
 	"state":          cmdState,
@@ -360,7 +363,7 @@ func cmdServer(args []string) error {
 		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
 	}
 	signIn := signInBanner(cfg, authOpts != nil)
-	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Station token for other machines: %s\n\n",
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d Flight(s), data in %s, %s\n  Station token for other machines: %s\n\n",
 		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 
 	<-ctx.Done()

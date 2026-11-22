@@ -99,9 +99,9 @@ func Detect(files []string, read func(string) string) *Detection {
 	case top["Chart.yaml"]:
 		return &Detection{Flight: "helm-chart", Because: "Chart.yaml was found"}
 	case docker:
-		return &Detection{Flight: "container-image", Because: has("Dockerfile", "Containerfile") + " was found and nothing else that builds the project"}
+		return &Detection{Flight: "container-image", Because: has("Dockerfile", "Containerfile") + " was found and nothing else that builds the codebase"}
 	case top["index.html"]:
-		return &Detection{Flight: "static-site", Because: "index.html was found and nothing else that builds the project"}
+		return &Detection{Flight: "static-site", Because: "index.html was found and nothing else that builds the codebase"}
 	}
 	return nil
 }

@@ -69,7 +69,7 @@ func checkServerPaths(have []engine.ConfigObject, puts []engine.ConfigObject) er
 		before := serverPaths(p.Kind, cur[p.Kind+"\x00"+p.Name].Spec)
 		for path, v := range serverPaths(p.Kind, p.Spec) {
 			if before[path] != v {
-				bad = append(bad, fmt.Sprintf("%s %s: %s names a file on the server, so it can only be set in the bootstrap file, not through the API (an administrator of projects is not an operator of the server, and could point it at any file the server can read)", p.Kind, p.Name, path))
+				bad = append(bad, fmt.Sprintf("%s %s: %s names a file on the server, so it can only be set in the bootstrap file, not through the API (an administrator of Flights is not an operator of the server, and could point it at any file the server can read)", p.Kind, p.Name, path))
 			}
 		}
 	}

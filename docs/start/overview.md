@@ -38,7 +38,7 @@ called a [pipeline](../glossary.md#pipeline).
   restarts, and resumes from the step that failed.
 - **Stations (runners) that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
   pods or containers, with named toolbox containers and services sharing a workspace.
-- **Sign-in with your organization's OpenID Connect provider**, roles per project, API tokens for
+- **Sign-in with your organization's OpenID Connect provider**, roles per Flight (codebase), API tokens for
   scripts, and an audit trail of every change.
 - **Secrets that never reach the server.** Pipelines hold references; the Station fetches values
   from Vault or OpenBao just before a step and masks them in output.
@@ -51,7 +51,7 @@ called a [pipeline](../glossary.md#pipeline).
   sources, judges them with built-in statistics, and can promote, abort or roll back. Optional AI
   models only explain; the statistics decide.
 - **Stations with identities.** Stations enrol with join tokens and their own keys, serve only the
-  projects of their pool, and set their own limits on what they accept.
+  Flights of their pool, and set their own limits on what they accept.
 - **Cargo (artifacts) and Debriefs (test reports) that work out of the box.** Cargo are kept in the database
   with nothing else to run; Debriefs come in 13 formats, with coverage and hosted HTML reports.
 - **An endpoint for AI agents** (MCP), with the same rights and audit trail as any token.

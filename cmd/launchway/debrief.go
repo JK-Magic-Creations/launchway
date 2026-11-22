@@ -22,9 +22,9 @@ const debriefUsage = `Usage:
   launchway debrief summary <run-id>                            the short form (Markdown) for a pull request comment
   launchway debrief export <run-id> --format html|pdf|json|junit [--out FILE]
                                                                 a self-contained report to keep or send
-  launchway tests flaky <project> [--limit N] [--json]           tests whose history shows them flaky, with a quarantine entry to copy
-  launchway tests timings <project> [--limit N] [--json]         each test's typical duration, slowest first
-  launchway tests split <project> --shards N [--shard I] [--json]
+  launchway tests flaky <Flight> [--limit N] [--json]           tests whose history shows them flaky, with a quarantine entry to copy
+  launchway tests timings <Flight> [--limit N] [--json]         each test's typical duration, slowest first
+  launchway tests split <Flight> --shards N [--shard I] [--json]
                                                                 a balanced split of the tests for N shards; --shard I prints only
                                                                 the names of shard I (from 0), one per line, for a test tool's arguments
 `
@@ -206,7 +206,7 @@ func (cl *client) testsFlaky(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which project: launchway tests flaky <project>")
+		return usageErr("say which Flight: launchway tests flaky <Flight>")
 	}
 	var fl engine.FlakyList
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/tests/flaky?limit="+strconv.Itoa(*limit), nil, &fl); err != nil {
@@ -240,7 +240,7 @@ func (cl *client) testsTimings(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which project: launchway tests timings <project>")
+		return usageErr("say which Flight: launchway tests timings <Flight>")
 	}
 	var tl engine.TimingList
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/tests/timings?limit="+strconv.Itoa(*limit), nil, &tl); err != nil {
@@ -277,7 +277,7 @@ func (cl *client) testsSplit(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *shards < 1 {
-		return usageErr("say the project and the shards: launchway tests split <project> --shards N")
+		return usageErr("say the Flight and the shards: launchway tests split <Flight> --shards N")
 	}
 	var ts engine.TestShards
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/tests/shards?count="+strconv.Itoa(*shards), nil, &ts); err != nil {

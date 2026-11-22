@@ -188,7 +188,7 @@ func (c *Config) PolicyOptions() (engine.PolicyOptions, error) {
 		}
 		for _, p := range s.Projects {
 			if _, err := path.Match(p, ""); err != nil || p == "" {
-				return o, fmt.Errorf("%s: %q is not a valid project pattern", where, p)
+				return o, fmt.Errorf("%s: %q is not a valid Flight pattern", where, p)
 			}
 		}
 		sc := engine.PolicySourceConfig{Name: s.Name, Library: s.Library, Version: s.Version, Path: s.Path, Projects: s.Projects}
@@ -402,7 +402,7 @@ func (c *Config) Pools(sharedToken string) ([]Pool, error) {
 			case len(p.Targets) > 0 || p.TokenEnv != "" || p.TokenFile != "":
 				return nil, fmt.Errorf("%s: a build pool has no targets and no token: its runners enrol with join tokens", where)
 			case len(p.Projects) == 0 && p.Name != engine.DefaultPool:
-				return nil, fmt.Errorf("%s: list the projects it serves (names or patterns such as web-*; [\"*\"] for all)", where)
+				return nil, fmt.Errorf("%s: list the Flights it serves (names or patterns such as web-*; [\"*\"] for all)", where)
 			case p.Name == engine.DefaultPool && p.RequireIdentity && c.RunnerEnabled():
 				return nil, fmt.Errorf("%s: require_identity refuses the shared runner token, which the built-in runner uses; turn the built-in runner off (runner.enabled: false)", where)
 			}
@@ -412,7 +412,7 @@ func (c *Config) Pools(sharedToken string) ([]Pool, error) {
 		}
 		switch {
 		case len(p.Projects) > 0 || len(p.Events) > 0:
-			return nil, fmt.Errorf("%s: projects and events are for build pools (kind: build); a deploy pool serves targets", where)
+			return nil, fmt.Errorf("%s: Flights and events are for build pools (kind: build); a deploy pool serves targets", where)
 		case p.Name == engine.DefaultPool:
 			return nil, fmt.Errorf("%s: the pool named default is the build pool of the shared runner token; give the deploy pool another name", where)
 		case p.RequireIdentity && p.TokenEnv == "" && p.TokenFile == "" && len(p.Targets) > 0:
@@ -794,9 +794,9 @@ func (c *Config) Validate(path string) error {
 		}
 		if _, err := p.Pipeline.On.pullRequests(); err != nil {
 			if path != "" {
-				return fmt.Errorf("%s: project %s: %w", path, p.Name, err)
+				return fmt.Errorf("%s: Flight %s: %w", path, p.Name, err)
 			}
-			return fmt.Errorf("project %s: %w", p.Name, err)
+			return fmt.Errorf("flight %s: %w", p.Name, err)
 		}
 	}
 	// Policies are refused here, with their lines, so a mistake stops the
@@ -839,7 +839,7 @@ func (c *Config) DraftRules() (*auth.DraftRules, error) {
 		if p.Drafts.Allow != "" {
 			role, err := auth.ParseDraftAllow(p.Drafts.Allow)
 			if err != nil {
-				return nil, fmt.Errorf("project %s: drafts: %w", p.Name, err)
+				return nil, fmt.Errorf("flight %s: drafts: %w", p.Name, err)
 			}
 			r.Allow = role
 		}
@@ -899,7 +899,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		if p.Poll != "" {
 			d, err := time.ParseDuration(p.Poll)
 			if err != nil {
-				return nil, fmt.Errorf("project %s: poll %q is not a duration", p.Name, p.Poll)
+				return nil, fmt.Errorf("flight %s: poll %q is not a duration", p.Name, p.Poll)
 			}
 			poll = d
 		}

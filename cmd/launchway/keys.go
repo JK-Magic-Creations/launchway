@@ -259,7 +259,7 @@ func (cl *client) protectedBranches(args []string) error {
 	set := fs.String("set", "", "replace the patterns with these, comma separated (an empty value removes the protection)")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	var writers writerFlag
-	fs.Var(&writers, "writer", "admit a pipeline to a protected branch: BRANCH=PROJECTS=FILES, each list comma separated (repeat; none removes all rules)")
+	fs.Var(&writers, "writer", "admit a pipeline to a protected branch: BRANCH=FLIGHTS=FILES, each list comma separated (repeat; none removes all rules)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func (cl *client) protectedBranches(args []string) error {
 		}
 		fmt.Fprintln(cl.out, "Protected branches (direct pushes from administrators only, never deleted): "+strings.Join(out.Patterns, ", "))
 		for _, w := range out.PipelineWriters {
-			fmt.Fprintf(cl.out, "Pipelines admitted to %s: projects %s may change only %s\n", w.Branch, strings.Join(w.Projects, ", "), strings.Join(w.Files, ", "))
+			fmt.Fprintf(cl.out, "Pipelines admitted to %s: Flights %s may change only %s\n", w.Branch, strings.Join(w.Projects, ", "), strings.Join(w.Files, ", "))
 		}
 	})
 }
@@ -337,7 +337,7 @@ func (w *writerFlag) Set(v string) error {
 	}
 	parts := strings.Split(v, "=")
 	if len(parts) != 3 {
-		return fmt.Errorf("write --writer BRANCH=PROJECTS=FILES, for example main=mcp-*=apps/mcp-servers/base.yaml (lists are comma separated)")
+		return fmt.Errorf("write --writer BRANCH=FLIGHTS=FILES, for example main=mcp-*=apps/mcp-servers/base.yaml (lists are comma separated)")
 	}
 	split := func(s string) []string {
 		var out []string

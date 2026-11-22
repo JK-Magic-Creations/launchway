@@ -136,7 +136,7 @@ func (s *Server) replayEvent(w http.ResponseWriter, r *http.Request) {
 			"code": "not_replayable", "next": "Start a run by hand instead."})
 		return
 	case s.Projects == nil:
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	run, err := s.Projects.StartRunWith(r.Context(), source.StartRequest{Project: ev.Project, Ref: ev.Replay.Ref, SHA: ev.Replay.SHA,
@@ -152,7 +152,7 @@ func (s *Server) replayEvent(w http.ResponseWriter, r *http.Request) {
 // ---- MCP ----
 
 type listEventsIn struct {
-	Project  string `json:"project,omitempty" jsonschema:"only this project's events"`
+	Project  string `json:"project,omitempty" jsonschema:"only this Flight's events"`
 	Source   string `json:"source,omitempty" jsonschema:"push, pull_request, schedule, webhook, event_source, manual, run_result or launch_result"`
 	Decision string `json:"decision,omitempty" jsonschema:"only events with a decision of this kind: started, held, waiting, filtered, superseded, skipped, duplicate, refused or error"`
 	Verified string `json:"verified,omitempty" jsonschema:"yes or no: whether the sender proved who it was"`
@@ -191,7 +191,7 @@ type eventIn struct {
 
 func addEventTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_events", Annotations: readOnly("List events"),
-		Description: "The event log: what reached the server (pushes, pull requests, schedules, webhook calls, runs started by hand, other projects' results), newest first, each with the decision for every trigger and why (started run #41, filtered: paths, superseded, held: lane busy, duplicate, refused: not verified). Use it to answer why something started or did not."},
+		Description: "The event log: what reached the server (pushes, pull requests, schedules, webhook calls, runs started by hand, other Flights' results), newest first, each with the decision for every trigger and why (started run #41, filtered: paths, superseded, held: lane busy, duplicate, refused: not verified). Use it to answer why something started or did not."},
 		mcpCallTimeout, listEvents)
 	addTool(srv, c, &mcp.Tool{Name: "get_event", Annotations: readOnly("Show one event"),
 		Description: "One event with its payload as kept (credential-looking values removed) and every decision."},

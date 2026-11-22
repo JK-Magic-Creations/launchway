@@ -11,13 +11,13 @@ The button is only shown where it will work; otherwise it is shown unavailable w
 ## When to use it
 
 Use it when the version that runs now is bad and an earlier successful version is good. It is for
-emergencies as much as for ordinary changes of mind: you need the operator role on the project (and on the
+emergencies as much as for ordinary changes of mind: you need the operator role on the Flight (and on the
 Airfield), a reason, and nothing else. It is not a way to deploy a new version. To go forward, run the
 pipeline.
 
 ## What it does
 
-A Return to base is a **run of its own**, in the same project, that you ask for and that has one step. The Sortie
+A Return to base is a **run of its own**, in the same Flight, that you ask for and that has one step. The Sortie
 that made the deployment is never changed; it only gains a link, "returned to base later by run #N", and the
 Return to base run links back to the versions it restored.
 

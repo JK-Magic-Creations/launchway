@@ -493,7 +493,7 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
                 </li>
               ))}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-              {s.pruned && <li className="tfile-note">The individual results were removed to keep the project's storage within its limit; the totals remain.</li>}
+              {s.pruned && <li className="tfile-note">{terms().say("The individual results were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
             </ul>
           </li>
         ))}

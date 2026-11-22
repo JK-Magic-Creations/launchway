@@ -10,7 +10,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 
 ## What it is, and who it is for
 
-Milestone 7 lets you use Launchway without running it, and shows people the way to run it themselves when that suits them better. The first customers are small teams, so sign-up is short: an email or an existing account, a strong second factor, and a guided first project. Three ways to run it share one product: fully hosted, hosted with your own machines doing the work and holding the files, or self-hosted, and a team can move between them one project or one Base at a time. The hosted service is protected from its customers and its customers from it and from each other, and it is never a place to park files. It opens to outsiders in stages, each only after its checks pass. Plans have every feature on; what changes is a limit, and the spend limit starts at zero. The same milestone adds the identity, audit and retention controls enterprises ask for.
+Milestone 7 lets you use Launchway without running it, and shows people the way to run it themselves when that suits them better. The first customers are small teams, so sign-up is short: an email or an existing account, a strong second factor, and a guided first Flight. Three ways to run it share one product: fully hosted, hosted with your own machines doing the work and holding the files, or self-hosted, and a team can move between them one Flight or one Base at a time. The hosted service is protected from its customers and its customers from it and from each other, and it is never a place to park files. It opens to outsiders in stages, each only after its checks pass. Plans have every feature on; what changes is a limit, and the spend limit starts at zero. The same milestone adds the identity, audit and retention controls enterprises ask for.
 
 **Who it is for.** Start-ups, freelancers and small teams first, then enterprises and regulated teams that must keep everything on their side.
 
@@ -18,7 +18,7 @@ Milestone 7 lets you use Launchway without running it, and shows people the way 
 
 - Two friends at two houses sign up, protect their accounts with a passkey, and have a first green build in minutes, with no network set-up on either side.
 - A team that does not want its files on anyone else’s server chooses to keep them on its own machines, and both people reach them through Launchway over an encrypted relay that cannot read them.
-- A team that started fully hosted moves one project to its own hardware with a preview first, and keeps working during the move.
+- A team that started fully hosted moves one Flight to its own hardware with a preview first, and keeps working during the move.
 - A Base nearing the hosted size limit gets plain notices and a guided move, and is never locked out of its own data.
 - A regulated team enables encryption keys with rotation and a retention rule.
 - An auditor exports a tamper-evident audit trail to the security tools.
@@ -148,7 +148,7 @@ The first customers are start-ups, freelancers and small teams, so the front doo
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first project. The aim is a first green build in minutes. The same sentence is shown whether or not an address is already known, so the form reveals nothing about who has an account.
+One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first Flight. The aim is a first green build in minutes. The same sentence is shown whether or not an address is already known, so the form reveals nothing about who has an account.
 
 [Area page](hosted-service.md)
 
@@ -240,7 +240,7 @@ Reach Git over SSH on the hosted service and in the mode where a relay meets you
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The hosted screens and coordination, with builds, secrets and deployments on your side. A project can move here one at a time. The Detachment only calls out, so no port is opened and no tunnel is needed.
+The hosted screens and coordination, with builds, secrets and deployments on your side. A Flight can move here one at a time. The Detachment only calls out, so no port is opened and no tunnel is needed.
 
 **Depends on:** The Detachment.
 
@@ -290,7 +290,7 @@ Everything on your own machines, installed with the guided installer, with the s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.
+Move one Flight or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.
 
 **Depends on:** Leave completely.
 
@@ -336,7 +336,7 @@ The hosted service is for your work, not for storing arbitrary files, and it is 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-No repository, Cargo, image, page, report or file on the hosted service can be reached without signing in as a member of that Base. There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.
+No repository, Cargo, image, page, report or file on the hosted service can be reached without signing in as a member of that Base. There are no public Flight pages, no hosted sites and no direct download addresses. Share links are absent at first.
 
 [Area page](hosted-service.md)
 
@@ -673,7 +673,7 @@ The service operator’s own Base is a separate Base that no customer or demonst
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Only the identity tables are walled so far, and tests guard that no new table is added without an owner. Missing: the rest of the data, which is registered as pending its stage.
+No interface, search, graph, Ramp, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Only the identity tables are walled so far, and tests guard that no new table is added without an owner. Missing: the rest of the data, which is registered as pending its stage.
 
 [Area page](hosted-service.md)
 

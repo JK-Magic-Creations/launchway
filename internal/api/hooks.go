@@ -54,7 +54,7 @@ const (
 // branch, with when each fires next and recent firings, and its webhooks.
 func (s *Server) projectSchedules(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	v, err := s.Projects.Schedules(r.PathValue("name"))
@@ -98,7 +98,7 @@ func (s *Server) gitHook(w http.ResponseWriter, r *http.Request) {
 	if hook != nil {
 		var err error
 		if secret, err = hook.Secret.Read(); err != nil {
-			s.Log.Error("reading a project's Git webhook secret", "project", name, "err", err)
+			s.Log.Error("reading a Flight's Git webhook secret", "project", name, "err", err)
 			hook = nil
 		}
 	}
@@ -137,7 +137,7 @@ func (s *Server) gitHook(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Projects.PollNow(name)
 	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: who, Source: s.clientAddr(r), RequestID: reqID(r), Action: "webhook.git", Project: name,
-		Target: clip(delivery, maxTarget), Outcome: "ok", Detail: "event " + clip(event, 60) + ": polling the project now"})
+		Target: clip(delivery, maxTarget), Outcome: "ok", Detail: "event " + clip(event, 60) + ": polling the Flight now"})
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "polling"})
 }
 

@@ -104,7 +104,7 @@
     {
       "path": "docs/roadmap/roadmap.json",
       "rule": "level-organization",
-      "contains": "Organization, Team and Project",
+      "contains": "Organization, Team and Codebase",
       "why": "Introduction of the plain set."
     },
     {
@@ -792,6 +792,112 @@
       "rule": "word:canary/2",
       "contains": "canary",
       "why": "The role a ReplicaSet has in a rollout (stable, canary, preview, active) is the Kubernetes tool's own value, typed as it is."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself, the open-source project, not of the fourth level."
+    },
+    {
+      "path": "SECURITY.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself, the open-source project, not of the fourth level."
+    },
+    {
+      "path": "SUPPORT.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself, the open-source project, not of the fourth level."
+    },
+    {
+      "path": "docs/guide/accessibility.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself, the open-source project, not of the fourth level."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "projects:",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "projects }",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "{ projects,",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "database, projects,",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "}, projects,",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "deploy/helm/",
+      "rule": "word:project",
+      "contains": "url, projects,",
+      "why": "A comment that names the configuration key `projects` (a permanent name) in an example."
+    },
+    {
+      "path": "docs/security/reporting.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself or of a third-party open-source project, not of the fourth level."
+    },
+    {
+      "path": "docs/security/how-launchway-is-scanned.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself or of a third-party open-source project, not of the fourth level."
+    },
+    {
+      "path": "docs/security/supply-chain.md",
+      "rule": "word:project",
+      "why": "Says 'the project' of Launchway itself or of a third-party open-source project, not of the fourth level."
+    },
+    {
+      "path": "docs/guide/upgrading.md",
+      "rule": "word:project",
+      "contains": "| Project |",
+      "why": "The rename table names the old word on purpose."
+    },
+    {
+      "path": "docs/guide/upgrading.md",
+      "rule": "word:runner_group/1",
+      "contains": "| Flight line |",
+      "why": "The rename table names the old word on purpose."
+    },
+    {
+      "path": "docs/guide/upgrading.md",
+      "rule": "word:runner_group/2",
+      "contains": "| Flight line |",
+      "why": "The rename table names the old word on purpose."
+    },
+    {
+      "path": "docs/guide/upgrading.md",
+      "rule": "word:runner/2",
+      "contains": "| Flight line |",
+      "why": "The rename table names the old word on purpose."
+    },
+    {
+      "path": "docs/guide/squadrons-and-flights.md",
+      "rule": "word:project",
+      "why": "Explains the rename: names the old word and the permanent name on purpose."
+    },
+    {
+      "path": "cmd/launchway/squadrons.go",
+      "rule": "word:project",
+      "contains": "permanent name",
+      "why": "The usage says which permanent name a Flight keeps."
     }
   ]
 }

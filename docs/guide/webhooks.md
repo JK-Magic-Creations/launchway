@@ -5,7 +5,7 @@ deleted, the repository created, renamed or deleted. You add a **webhook** to on
 **owner** to cover every repository the owner has, and Launchway sends each event to the address you give
 as a signed JSON request.
 
-Pipelines do **not** use webhooks. A push to a hosted repository makes the projects that watch it look at
+Pipelines do **not** use webhooks. A push to a hosted repository makes the Flights (codebase) that watch it look at
 once, inside the server, and starts the pipeline directly (see [Pipelines start on a push](#pipelines-start-on-a-push)).
 
 ## Events
@@ -144,7 +144,7 @@ removed before it is stored.
 
 ## Pipelines start on a push
 
-When a push commits, over HTTPS or SSH, Launchway makes every project whose address is that repository
+When a push commits, over HTTPS or SSH, Launchway makes every Flight whose address is that repository
 poll at once. The poll finds the moved ref and starts the pipeline through the same path as every other Git
 host, so everything that applies to a push applies here:
 

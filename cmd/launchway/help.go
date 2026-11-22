@@ -45,8 +45,8 @@ as .launchway/pipeline.yaml, and --force replaces one that is there. Exits 1 whe
 
 Checks a pipeline file (default .launchway/pipeline.yaml) and prints each problem with its file, line and
 path, one per line. Exits 0 if the file is valid, 1 if it has problems. With --project NAME the server you
-are signed in to checks it for that project as well: its libraries, the limits the installation sets, and
-what the project must have for the pipeline to work.
+are signed in to checks it for that Flight as well: its libraries, the limits the installation sets, and
+what the Flight must have for the pipeline to work.
 
 The starters that ship with Launchway (uses: launchway/go-service) are expanded here with no server and no
 --library. With --library NAME=DIRECTORY (once for each library the pipeline uses) the templates are expanded from those

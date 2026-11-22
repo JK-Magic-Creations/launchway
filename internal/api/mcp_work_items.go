@@ -53,7 +53,7 @@ func addWorkReadTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type listWorkIn struct {
-	Scope  string `json:"scope,omitempty" jsonschema:"where: project:owner/name, unit:NAME, organization or installation; leave out for everything you may read"`
+	Scope  string `json:"scope,omitempty" jsonschema:"where: Flight:owner/name, unit:NAME, organization or installation; leave out for everything you may read"`
 	Query  string `json:"query,omitempty" jsonschema:"the search, such as: state:open assignee:me label:bug"`
 	Sort   string `json:"sort,omitempty" jsonschema:"rank (default), updated, created, priority, due or number"`
 	Desc   bool   `json:"desc,omitempty" jsonschema:"largest first"`
@@ -176,7 +176,7 @@ type criterionIn struct {
 
 func addWorkChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "create_work_item", Annotations: changes("Create a work item", false, false),
-		Description: "Make a work item at a level (project, Squadron, Wing or Base). Give a title; everything else has a default. It gets the next reference of the level. Audited."},
+		Description: "Make a work item at a level (Flight, Squadron, Wing or Base). Give a title; everything else has a default. It gets the next reference of the level. Audited."},
 		mcpCallTimeout, workSend("create_work_item", http.MethodPost, scopedPath[createWorkIn]("/api/v1/work/items", nil), without[createWorkIn]("scope")))
 	addTool(srv, c, &mcp.Tool{Name: "update_work_item", Annotations: changes("Change a work item", false, true),
 		Description: workUpdateItemDescription},
@@ -268,7 +268,7 @@ type linkIn struct {
 func (i linkIn) itemRef() string { return i.Item }
 
 type saveViewIn struct {
-	Scope  string `json:"scope" jsonschema:"where: project:owner/name, unit:NAME, organization or installation"`
+	Scope  string `json:"scope" jsonschema:"where: Flight:owner/name, unit:NAME, organization or installation"`
 	Name   string `json:"name" jsonschema:"a name"`
 	Query  string `json:"query" jsonschema:"the search"`
 	Shared bool   `json:"shared,omitempty" jsonschema:"offer it to everyone who reads the level"`

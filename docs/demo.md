@@ -43,12 +43,12 @@ make run
    `../launchway-demo-plain` (a repository with no pipeline file). An existing one is left alone.
 3. Starts the server with `examples/local.yaml`, at **http://127.0.0.1:8080**. It keeps its data in
    an SQLite database in `launchway-data/` in your clone, and runs steps on a built-in Station (runner).
-4. Watches four projects: `demo-app`, `demo-lib-app`, `demo-plain` and Launchway itself.
+4. Watches four Flights (codebase): `demo-app`, `demo-lib-app`, `demo-plain` and Launchway itself.
 
 There is no sign-in: the server listens only on 127.0.0.1, and every page says "No sign-in". Open
 the address in a browser, then try these:
 
-- **Projects, demo-app, Start a Sortie (run).** Pick `main`, keep the inputs, press *Start run*.
+- **Flights, demo-app, Start a Sortie (run).** Pick `main`, keep the inputs, press *Start run*.
 - **Watch it.** The steps appear as a graph and the logs stream in.
 - **Resume it.** `smoke-test` fails on its first attempt on purpose. Press *Resume from smoke-test*:
   only that step and the ones after it run again.
@@ -84,7 +84,7 @@ rm -rf launchway-data ../launchway-demo ../launchway-demo-library ../launchway-d
 
 These screenshots come from a real server running the demo data of
 `scripts/docs-screenshots.sh` (see [Make the screenshots again](#make-the-screenshots-again)). The
-projects, people and addresses in them are made up.
+Flights, people and addresses in them are made up.
 
 A short silent recording of starting a Sortie and watching it finish is in
 [start-a-run.webm](public/images/tour/start-a-run.webm).
@@ -145,12 +145,12 @@ failed step** runs only that step and the ones after it, at the same commit.
 Every JUnit or `go test -json` report the steps wrote, with new failures and flaky tests marked.
 Open a Sortie's **Tests** tab.
 
-### Test history of a project
+### Test history of a Flight {#test-history-of-a-project}
 
 ![Tests of web-frontend: results run by run as stacked bars, the time each Sortie's tests took, and lists of the tests failing most, flaky tests and the slowest tests](images/tour/project-tests-light.png)
 
 How a branch's results move over its recent Sorties, and which tests fail most, are flaky or slow.
-Press **Tests** on a project.
+Press **Tests** on a Flight.
 
 ### Security findings
 
@@ -217,9 +217,9 @@ Open a pipeline and press **Try it without saving**, or **Pipelines**, then **Tr
 
 ### Components
 
-![The Components page searching for left-pad: 2 projects use it, web-frontend at 1.1.3 and demo-app at 1.3.0, with every Sortie whose SBOM lists it](images/tour/components-light.png)
+![The Components page searching for left-pad: 2 Flights use it, web-frontend at 1.1.3 and demo-app at 1.3.0, with every Sortie whose SBOM lists it](images/tour/components-light.png)
 
-Find which projects and runs use a component, from the SBOMs the Sorties made.
+Find which Flights and runs use a component, from the SBOMs the Sorties made.
 Open **Images**, then **Components**.
 
 ### Policy
@@ -231,7 +231,7 @@ mode, so they warn but never block. Open **Settings**, then **Rules**.
 
 ### Audit trail
 
-![the Logbook: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the project and run, the outcome and a detail](images/tour/audit-light.png)
+![the Logbook: one row per change, such as run.start, run.draft and approval.approve, with the time, who, their address, the Flight and run, the outcome and a detail](images/tour/audit-light.png)
 
 Every change made through the API, who made it and whether it was allowed. Admins open
 **Settings**, then **Audit trail**.

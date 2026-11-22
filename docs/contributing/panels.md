@@ -12,7 +12,7 @@ A **panel type** is an entry of `PANEL_TYPES` in `web/src/pages/panels/registry.
 
 - `load` is a lazy chunk: a panel nobody has costs nothing, and the initial bundle does not grow.
 - `fields` are what a person fills in when they add one (`text`, `textarea`, `project`, `address`); the values arrive as `settings`.
-- The component receives `PanelProps`: `id`, `title`, `settings`, `size` (1, 2 or 3 columns), the one `home` answer Home was drawn from (needs, running, projects, favorites) and `now`. It draws its own loading (a skeleton the height of its content), empty and error states; a thrown error must not take Home down, so read data defensively (an older server may not send a field).
+- The component receives `PanelProps`: `id`, `title`, `settings`, `size` (1, 2 or 3 columns), the one `home` answer Home was drawn from (needs, running, Flights (codebase), favorites) and `now`. It draws its own loading (a skeleton the height of its content), empty and error states; a thrown error must not take Home down, so read data defensively (an older server may not send a field).
 - Take data from `home` when it is there, and otherwise ask the server for your own, permission-filtered, small answer. Never put a secret in `settings`: the layout is shared with everyone who can see Home.
 - Links in a panel go through the router (`onLink`) and an address from `settings` must be checked to be on this server (`href.startsWith("/")`).
 

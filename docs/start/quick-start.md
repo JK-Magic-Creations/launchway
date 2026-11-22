@@ -1,6 +1,6 @@
 # Quick start
 
-Run Launchway on your own machine with a set of demo projects, in a few minutes. For anyone who
+Run Launchway on your own machine with a set of demo Flights (codebase), in a few minutes. For anyone who
 wants to see it working before reading further.
 
 > **Verified** on 2026-11-19 against commit f717337: a fresh `git clone` of the repository, then
@@ -37,14 +37,14 @@ Open **http://127.0.0.1:8080**. Stop the server with Ctrl+C; the data stays in
 - creates a demo repository at `../launchway-demo`, and a demo [shared library](../guide/libraries.md)
   at `../launchway-demo-library` with two repositories that use it (beside your checkout);
 - starts the server at **http://127.0.0.1:8080** with [examples/local.yaml](https://github.com/JK-Magic-Creations/launchway/blob/main/examples/local.yaml);
-- watches four projects: the demo repository, the two that use the library, and Launchway itself.
+- watches four Flights: the demo repository, the two that use the library, and Launchway itself.
 
 The server listens only on `127.0.0.1` and has no sign-in. That is fine on your own machine and
 nowhere else: a server without sign-in refuses to listen on any other address.
 
 ## Things to try
 
-- **Projects → demo-app → Start a Sortie (run).** The branch list is read from the repository as you open it.
+- **Flights → demo-app → Start a Sortie (run).** The branch list is read from the repository as you open it.
 - **Watch the Sortie live.** The steps appear as a graph and the logs stream in.
 - **Resume a failed Sortie.** The demo's `smoke-test` fails on its first attempt on purpose while a
   file called `FLAKY` exists. Press *Resume from smoke-test*. Only that step and the ones after it
@@ -55,10 +55,10 @@ nowhere else: a server without sign-in refuses to listen on any other address.
 - **Approve a deployment.** On `main`, the demo waits for approval before `deploy-dev`. Open
   **Waiting for a decision** to find it, then say **Go** or **No-go** (clear or refuse it) on the Sortie.
 - **Push to trigger a Sortie.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A Sortie
-  starts within a few seconds, and *Recent pushes* on the project explains every decision.
+  starts within a few seconds, and *Recent pushes* on the Flight explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is
   run again, and nothing that had finished Sorties twice.
-- **Edit a pipeline.** *Projects → demo-app → Edit pipeline* opens the file from a branch. Change
+- **Edit a pipeline.** *Flights → demo-app → Edit pipeline* opens the file from a branch. Change
   it, press *Run this draft* to try the change without saving it, then *Save…* to commit it (the
   example configuration lets the demo be saved; see [Editing pipelines](../guide/editor.md)).
 - **Open the Playground.** Write a pipeline and watch it validate and draw as you type.

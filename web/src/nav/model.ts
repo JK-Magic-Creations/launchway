@@ -60,7 +60,7 @@ const has = (n: number | null) => (n ?? 0) > 0;
 /** The ten areas, in the order of a change's journey, then the places visited less often (docs 42, section 17). */
 export const SECTIONS: Section[] = [
   { id: "home", get label() { return say("{Home}"); }, href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
-  { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, promise: "Repositories and projects: files, commits, branches and reviews.", tabs: [] },
+  { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, get promise() { return say("Repositories and {projects}: files, commits, branches and reviews."); }, tabs: [] },
   {
     id: "work", label: "Work", href: "/work", icon: "list", group: 1,
     get promise() { return say("Issues, boards, backlogs and sprints, and the agents that work on them."); }, tabs: [],
@@ -224,6 +224,14 @@ export const PAGES: PageInfo[] = [
   page("/code/:page", "projects", undefined, (p) => comingTitle("/code/" + p.page), (p) => [{ label: comingTitle("/code/" + p.page) }]),
 
   page("/pipelines", "pipelines", undefined, () => "Pipelines", () => []),
+  // Organize into Squadrons: before any /units/:name page, so the word organize is never taken for a Squadron's name.
+  page("/units/organize", "home", undefined, () => say("Organize into {Units}"), () => [{ label: say("Organize into {Units}") }]),
+  page("/projects/new", "projects", undefined, () => terms().say("Add a {project}"), () => [{ label: terms().say("Add a {project}") }]),
+  page("/units", "home", undefined, () => terms().say("{Units}"), () => [{ label: terms().say("{Units}") }]),
+  page("/units/new", "home", undefined, () => terms().say("Add a {unit}"), () => [{ label: terms().say("{Units}"), href: "/units" }, { label: terms().say("Add a {unit}") }]),
+  page("/units/:name", "home", undefined, (p) => terms().say(`{Unit} ${p.name}`), (p) => [{ label: terms().say("{Units}"), href: "/units" }, { label: p.name }]),
+  page("/units/:name/projects/new", "home", undefined, (p) => terms().say(`Add a {project} to ${p.name}`),
+    (p) => [{ label: terms().say("{Units}"), href: "/units" }, { label: p.name, href: `/units/${enc(p.name)}` }, { label: terms().say("Add a {project}") }]),
   page("/projects/:name", "projects", undefined, (p) => p.name, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline", "pipelines", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline/edit", "pipelines", undefined, (p) => `Edit the pipeline of ${p.name}`,

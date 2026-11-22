@@ -37,7 +37,7 @@ Address: `/api/state/v1/{project}/{workspace}`; lock address: the same with `/lo
 | `terraform workspace` commands | no: a workspace is part of the address |
 | The remote backend of Terraform's hosted service | no, by decision |
 
-Authentication is HTTP basic. The password is a state credential (`lwst_...`, made for one workspace of one project and one step of one Sortie, valid while the Sortie goes, at most three hours) or an API token; the user name is ignored. Credentials of Sorties are asked for by a step with a reference to the reserved secret store `launchway`: `launchway:state#WORKSPACE`; the Station (runner) also sets `TF_HTTP_ADDRESS`, `TF_HTTP_LOCK_ADDRESS`, `TF_HTTP_UNLOCK_ADDRESS`, `TF_HTTP_LOCK_METHOD`, `TF_HTTP_UNLOCK_METHOD` and `TF_HTTP_USERNAME`.
+Authentication is HTTP basic. The password is a state credential (`lwst_...`, made for one workspace of one Flight (codebase) and one step of one Sortie, valid while the Sortie goes, at most three hours) or an API token; the user name is ignored. Credentials of Sorties are asked for by a step with a reference to the reserved secret store `launchway`: `launchway:state#WORKSPACE`; the Station (runner) also sets `TF_HTTP_ADDRESS`, `TF_HTTP_LOCK_ADDRESS`, `TF_HTTP_UNLOCK_ADDRESS`, `TF_HTTP_LOCK_METHOD`, `TF_HTTP_UNLOCK_METHOD` and `TF_HTTP_USERNAME`.
 
 Rules: the first write fixes the lineage; a lower serial, another lineage, or the same serial with other content is `409`; a write under another client's lock is `423`; a state over 64 MiB is refused; 50 versions are kept per workspace.
 

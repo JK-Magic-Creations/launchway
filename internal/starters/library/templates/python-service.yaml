@@ -19,9 +19,9 @@ params:
   coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
   secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
   image: { type: boolean, default: true, description: "Build the image from the Dockerfile, scan it and make its software bill of materials" }
-  push: { type: boolean, default: { nonempty: push_when }, description: "Push the image: on when the project has environments to deliver to and there is a registry to push to, off otherwise" }
-  push_when: { type: list, from: launchway_pushing, default: [], description: "The environments an image is pushed for: the project's own, or none when this server has no registry to push to" }
-  image_repository: { type: string, default: { text: "{image_namespace}/{service}" }, description: "The image's repository in the registry, without the host: team/app; by default the namespace and the project's name" }
+  push: { type: boolean, default: { nonempty: push_when }, description: "Push the image: on when the Flight has environments to deliver to and there is a registry to push to, off otherwise" }
+  push_when: { type: list, from: launchway_pushing, default: [], description: "The environments an image is pushed for: the Flight's own, or none when this server has no registry to push to" }
+  image_repository: { type: string, default: { text: "{image_namespace}/{service}" }, description: "The image's repository in the registry, without the host: team/app; by default the namespace and the Flight's name" }
   registry: { type: string, from: registry, default: { param: default_registry }, description: "The registry to push to: launchway (built into this server), or a name the Stations' configuration lists" }
   default_registry: { type: string, from: launchway_registry, default: "launchway", description: "What Launchway says the registry is when nothing else does: launchway, or registry.fallback when the built-in registry cannot serve here" }
   dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository" }
@@ -41,10 +41,10 @@ params:
   analysis_confidence: { type: string, default: "high", options: ["low", "medium", "high"], description: "A finding at or above this confidence (and the severity above) fails the run in enforce mode" }
   license_scan: { type: boolean, default: true, description: "List the licenses of the dependencies" }
   license_deny: { type: list, default: [], description: "Licenses that fail the run when a dependency has one; empty only lists them" }
-  service: { type: string, from: launchway_project, default: "app", description: "What the project is called in deliveries and in the image's name; the project's own name" }
+  service: { type: string, from: launchway_project, default: "app", description: "What the Flight is called in deliveries and in the image's name; the Flight's own name" }
   moving_tag: { type: string, default: "", description: "A second, moving tag pushed with every build (ci-latest, for a Dockerfile that uses the image as a base); empty pushes only the commit's tag" }
-  image_namespace: { type: string, from: image_namespace, default: "launchway", description: "The registry namespace of the image's repository; set once for every project with the variable image_namespace" }
-  deliver: { type: list, from: launchway_environments, default: [], description: "The environments to deliver to, in order: the project's environments as the server's configuration lists them, protected ones behind a decision. [] turns delivery off" }
+  image_namespace: { type: string, from: image_namespace, default: "launchway", description: "The registry namespace of the image's repository; set once for every Flight with the variable image_namespace" }
+  deliver: { type: list, from: launchway_environments, default: [], description: "The environments to deliver to, in order: the Flight's environments as the server's configuration lists them, protected ones behind a decision. [] turns delivery off" }
   deliver_branch: { type: string, default: { param: image_branch }, description: "The branch whose commits are delivered; the image branch" }
   overrides: { type: list, from: delivery_overrides, default: [], description: "Delivery values for one environment, written environment.name=value: prod.application=shop, dev.port=3000, dev.verify=false (see the deliver maneuver)" }
   port: { type: number, default: "8080", description: "The port the service listens on, for the health address of a delivery" }

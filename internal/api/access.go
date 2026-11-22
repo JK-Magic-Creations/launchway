@@ -288,7 +288,7 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 		if a == runRead || a == runOperate {
 			return http.StatusNotFound, fmt.Errorf("%w: run %s", engine.ErrNotFound, r.PathValue("id")).Error()
 		}
-		return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error()
+		return http.StatusNotFound, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, project).Error()
 	}
 	if a == repoRead || a == repoWrite || a == repoAdmin {
 		return s.checkRepoRequest(id, a, r)
@@ -298,11 +298,11 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 		return 0, ""
 	case readAny:
 		if !s.authorize(id, auth.ReadAny, "") {
-			return http.StatusForbidden, "you have no access to any project"
+			return http.StatusForbidden, "you have no access to any Flight"
 		}
 	case administer:
 		if !s.authorize(id, auth.Administer, "") {
-			return http.StatusForbidden, "only admins of every project may do this"
+			return http.StatusForbidden, "only admins of every Flight may do this"
 		}
 	case projectRead, runRead:
 		if !s.authorize(id, auth.Read, project) {

@@ -4,6 +4,7 @@ import { PipelinePreview } from "../components/PipelinePreview";
 import { Link } from "../components/ui";
 import { KeyHelp } from "../learn/LearnLink";
 import { useValidation } from "../validation";
+import { terms } from "../terms";
 
 const SAMPLE = `pipeline: my-service
 on:
@@ -69,8 +70,7 @@ export function PlaygroundPage() {
       <header className="page-head">
         <div>
           <h1>Playground</h1>
-          <p className="sub">Write a pipeline and see the graph it becomes. Checked by the same code the server uses; nothing runs.
-            To change a project's pipeline, open it from <Link href="/projects">Projects</Link>.</p>
+          <p className="sub">{terms().say("Write a pipeline and see the graph it becomes. Checked by the same code the server uses; nothing runs. To change a {project}'s pipeline, open it from")} <Link href="/projects">{terms().say("{Projects}")}</Link>.</p>
         </div>
         <div className="run-actions">
           <label className="checkline" title="Steps that say uses: library/template are expanded from the libraries this server allows">

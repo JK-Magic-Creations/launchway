@@ -6,11 +6,13 @@ import { Explorer } from "./Explorer";
 import { useOrganized } from "./useOrganized";
 import type { Tone, XItem } from "./tree";
 import { terms } from "../terms";
-import { LinkButton } from "../kit/layout";
+import { AddButtons } from "../pages/squadrons/shared";
 import { hostName } from "../guided/code";
 import { useLoad } from "../guided/useLoad";
 import { organizeApi } from "../organizeApi";
+import { loadOverview } from "../configApi";
 import { useCallback } from "react";
+import { OrganizeCallout } from "../components/OrganizeCallout";
 
 const toneOf = (r: RunSummary | null | undefined): Tone => {
   if (!r) return "none";
@@ -34,7 +36,10 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
     return m;
   }, [runs]);
   const items = useMemo<XItem[]>(() => projects.map((p) => {
-    const where = org.place(p.name);
+    // A Flight is one repository and its pipelines. The tree reads Wing > Squadron > folders > Flight and the cards
+    // listed under a Flight are its pipelines (today one each): the Flight is a place in the tree, the pipeline the card,
+    // so a Flight with several pipelines needs no change. Repositories (as="projects") ARE the Flights, so they get no extra step.
+    const where = org.place(p.name, undefined, !repos);
     const rs = byProject.get(p.name) ?? (p.last_run ? [p.last_run] : []);
     const last = p.last_run ?? rs[0] ?? null;
     const trend = trendOf(rs);
@@ -52,13 +57,16 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
   }), [projects, byProject, org, me, stats, repos]);
   const t = terms();
   return (
+    <>
+    <OrganizeCallout />
     <Explorer noun={repos ? { singular: "repository", plural: "repositories" } : { singular: "pipeline", plural: "pipelines" }} kinds={repos ? [...new Set(projects.map((p) => hostName(p.url) || "local"))].sort() : undefined} items={items} now={now}
       emptyFolders={org.emptyFolders} folders={org.folders} collections={org.collections} onCollections={org.saveCollections}
       onMove={org.mayArrange ? async (it, folder) => { await org.move(it.id, folder); } : undefined}
       onCreateFolder={org.mayArrange ? org.createFolder : undefined}
       onFavorite={(it, on) => { void org.favorite("project", it.id, on); announce(`${it.name} ${on ? "added to" : "removed from"} favorites.`); }}
-      emptyHint={<>Folders group pipelines inside a {t.label("unit")} or {t.label("project")}. A name like <code>payments/api</code> makes folders by itself.</>}
-      toolbar={undefined}
-      empty={<p>No pipelines yet. <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton></p>} />
+      flights={{ onMoved: () => { org.reload(); void loadOverview(true); } }}
+      emptyHint={<>{t.say("Folders group {projects} inside a {unit}.")} A name like <code>payments/api</code> makes folders by itself.</>}
+      empty={<p>No pipelines yet. <AddButtons flightFirst /></p>} />
+    </>
   );
 }

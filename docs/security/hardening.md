@@ -13,7 +13,7 @@ authors. For operators and platform engineers, and for developers who write pipe
   unless `auth.allow_anonymous: true` says something else restricts who can reach it; use that
   only if that is really so. See [Sign-in with OIDC and roles](../howto/oidc-and-roles.md).
 - [ ] **Give the fewest people `admin`.** Grant `viewer` to everyone who needs to see, `operator`
-  to the teams that own projects (`projects:` patterns), and `admin` to a small group. Limit
+  to the teams that own Flights (`projects:` patterns), and `admin` to a small group. Limit
   operators of production with `environments:` on their bindings.
 - [ ] **Serve over HTTPS**, normally behind a reverse proxy. Set `server.trust_proxy: true` only if
   clients cannot reach Launchway except through that proxy. The proxy must not buffer
@@ -63,13 +63,13 @@ The chart ships these on by default; check that you have not switched one off.
 ### Stations {#runners}
 
 - [ ] **Enrol Stations with join tokens** instead of the shared Station token, give each pool only the
-  projects it serves, and set `require_identity: true` on pools whose Stations are all enrolled. A
+  Flights it serves, and set `require_identity: true` on pools whose Stations are all enrolled. A
   Station on the shared token has no identity; see the
   [trust model](trust-model.md#current-limits-and-what-is-changing).
 - [ ] **Keep the Station token and join tokens secret.** The server stores the shared Station token sealed (see Encryption at rest above); the data directory's `runner-token` file holds it too, mode `0600`. A token lets a machine take work, and with it
   pipelines and the secret references they hold. Make join tokens short-lived and ephemeral, and
   revoke Stations you no longer trust.
-- [ ] **Give each Station an `accept:` section** limiting the projects, repositories, images and
+- [ ] **Give each Station an `accept:` section** limiting the Flights, repositories, images and
   executors it takes, and refusing pull requests and drafts where they are not needed. The server
   cannot change it. See [Stations on other machines](../guide/runner-identity.md).
 - [ ] **Connect Stations only to servers you run**, over HTTPS.
@@ -78,7 +78,7 @@ The chart ships these on by default; check that you have not switched one off.
 - [ ] **Keep step pods restricted** (`restricted: true`, the default) and label the step namespace
   `pod-security.kubernetes.io/enforce=restricted`.
 - [ ] **Give each secret store allow-lists** of `projects` and `keys`. An empty list allows every
-  project to read every key the Station can read.
+  Flight to read every key the Station can read.
 - [ ] **Do not define an `env` secret store on a shared Station** unless you mean pipelines to read
   the Station's Airfield (environment).
 - [ ] **Give Git credentials through `GIT_CONFIG_*` settings**, not inside repository addresses,
@@ -88,8 +88,8 @@ The chart ships these on by default; check that you have not switched one off.
 
 ### Images and deployments
 
-- [ ] **Scope Depot (registry) accounts**: one robot account per project or team, limited to its
-  repositories. Name the projects in `pull_projects` and give push rules per project.
+- [ ] **Scope Depot (registry) accounts**: one robot account per Flight or team, limited to its
+  repositories. Name the Flights in `pull_projects` and give push rules per Flight.
 - [ ] **Run BuildKit rootless in its own namespace**, as `deploy/buildkit` does, and treat each
   daemon as a trust boundary.
 - [ ] **Keep the Station's signing key on the Station only** (`images.signing`), not in a secret store

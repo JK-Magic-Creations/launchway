@@ -64,8 +64,8 @@ type unitFlags struct{ env, project, service *string }
 func addUnitFlags(fs *flag.FlagSet) unitFlags {
 	return unitFlags{
 		env:     fs.String("env", "", "the Airfield"),
-		project: fs.String("project", "", "the project (found from the Airfield's services when it is the only one)"),
-		service: fs.String("service", "", "the service (default: the project's name)"),
+		project: fs.String("project", "", "the Flight (found from the Airfield's services when it is the only one)"),
+		service: fs.String("service", "", "the service (default: the Flight's name)"),
 	}
 }
 
@@ -100,7 +100,7 @@ func (cl *client) resolveUnit(u unitFlags) (project, env, service string, err er
 	case 0:
 		return "", "", "", usageErr("no service is deployed to %s that this token can see; give --project", env)
 	}
-	return "", "", "", usageErr("several projects deploy to %s (%s); give --project", env, strings.Join(found, ", "))
+	return "", "", "", usageErr("several Flights deploy to %s (%s); give --project", env, strings.Join(found, ", "))
 }
 
 func (cl *client) planOf(project, env, service string) (*engine.RollbackPlan, error) {

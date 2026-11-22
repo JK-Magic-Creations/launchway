@@ -79,7 +79,7 @@ Each layer assumes the one before it can fail. The same profile is available to 
 
 ## Sign up and go
 
-The first customers are start-ups, freelancers and small teams, so the front door is short: an email address or an existing account, proof of the address, a strong second factor (a passkey, or an authenticator app, with recovery codes shown once), a name for your Base, plain terms and a guided first project. Text-message codes are not offered on purpose, because they can be taken over. Recovery goes through your other factors or a waiting period with notices; staff cannot reset a second factor or let anyone in.
+The first customers are start-ups, freelancers and small teams, so the front door is short: an email address or an existing account, proof of the address, a strong second factor (a passkey, or an authenticator app, with recovery codes shown once), a name for your Base, plain terms and a guided first Flight (codebase). Text-message codes are not offered on purpose, because they can be taken over. Recovery goes through your other factors or a waiting period with notices; staff cannot reset a second factor or let anyone in.
 
 ## Three ways to run, and easy moves between them
 
@@ -95,7 +95,7 @@ flowchart LR
 
 Fully hosted needs nothing installed, and the service says plainly that it then stores your code and secrets, encrypted in your own Base. If you would rather keep your files, one command on your machine connects it outward to the service: nothing is opened and no tunnel is set up. In the smallest form, two people each Sortie (run) that command and both reach the files through Launchway over an end-to-end encrypted session; the relay in the middle carries only ciphertext, and the hosted side keeps only accounts, who is on the team, which machines are online and opaque identifiers. With two machines every repository has a full copy on each; protected branches have one home at a time, and a true disagreement is kept visible, never overwritten.
 
-Moving is one operation for one project or a whole Base, in either direction. It shows a preview first, mirrors the repositories while you keep working, verifies every reference, switches in seconds, keeps the old address redirecting and offers a Return to base (rollback) window before the source is deleted. Secret values travel re-sealed to the destination, never in the clear.
+Moving is one operation for one Flight or a whole Base, in either direction. It shows a preview first, mirrors the repositories while you keep working, verifies every reference, switches in seconds, keeps the old address redirecting and offers a Return to base (rollback) window before the source is deleted. Secret values travel re-sealed to the destination, never in the clear.
 
 ## Limits, and never a place to park files
 

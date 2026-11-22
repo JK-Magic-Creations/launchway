@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import type { Approval, EnvironmentView, Project } from "../api";
 import type { AppRow } from "../guided/derive";
 import { needsLook } from "../guided/derive";
@@ -6,6 +6,8 @@ import { Icon, type IconName } from "../kit/Icon";
 import { Status } from "../kit/Status";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { useLoad } from "../guided/useLoad";
+import { squadronsApi, type SquadronSummary } from "../squadronsApi";
 
 export interface ExploreProps {
   projects: Project[];
@@ -14,6 +16,8 @@ export interface ExploreProps {
   approvals: Approval[];
   /** Different images found, or null while it is not known. */
   images: number | null;
+  /** The Squadrons, or null/undefined while they are not known (the tile then says so). */
+  squadrons?: SquadronSummary[] | null;
 }
 
 interface Tile { key: string; icon: IconName; label: string; n: ReactNode; unit: string; state: ReactNode; href: string }
@@ -24,8 +28,12 @@ export function exploreTiles(p: ExploreProps): Tile[] {
   const failing = p.projects.filter((x) => x.last_run?.status === "failed").length;
   const unreachable = p.projects.filter((x) => x.error).length;
   const look = p.applications.filter(needsLook).length;
+  const sq = p.squadrons;
+  const sqNeed = sq ? sq.filter((x) => x.needs > 0 || x.failing > 0).length : 0;
   return [
-    { key: "code", icon: "code", label: "Code", n: p.projects.length, unit: p.projects.length === 1 ? "project" : "projects", href: "/projects",
+    { key: "squadrons", icon: "graph", label: terms().say("{Units}"), n: sq ? sq.length : "…", unit: sq?.length === 1 ? terms().say("{unit}") : terms().say("{units}"), href: "/units",
+      state: sq === undefined || sq === null ? "Counting" : sqNeed ? <><Status state="warn" /> {sqNeed} need a look</> : sq.length ? <><Status state="ok" /> All clear</> : "None yet" },
+    { key: "code", icon: "code", label: "Code", n: p.projects.length, unit: p.projects.length === 1 ? terms().say("{project}") : terms().say("{projects}"), href: "/projects",
       state: unreachable ? <><Status state="warn" /> {unreachable} cannot be reached</> : p.projects.length ? <><Status state="ok" /> All reachable</> : "None yet" },
     { key: "pipelines", icon: "graph", label: "Pipelines", n: p.projects.length, unit: p.projects.length === 1 ? "pipeline" : "pipelines", href: "/pipelines",
       state: failing ? <><Status state="bad" /> {failing} stopped</> : p.projects.some((x) => x.last_run) ? <><Status state="ok" /> Last runs are fine</> : terms().say("No {runs} yet") },
@@ -41,11 +49,14 @@ export function exploreTiles(p: ExploreProps): Tile[] {
 }
 
 export function Explore(p: ExploreProps) {
+  const list = useCallback(() => squadronsApi.list(), []);
+  const { data } = useLoad(list);
+  const tiles = exploreTiles({ ...p, squadrons: p.squadrons ?? data?.squadrons ?? null });
   return (
     <section className="explore" aria-labelledby="explore-h">
       <div className="ex-h"><h2 id="explore-h">Explore</h2><span className="faint">What Launchway holds, with its live count</span></div>
       <div className="ex-g">
-        {exploreTiles(p).map((t) => (
+        {tiles.map((t) => (
           <a key={t.key} className="ex" href={t.href} onClick={onLink}>
             <span className="ex-i"><Icon name={t.icon} /><b>{t.label}</b></span>
             <span className="ex-n">{t.n}</span>

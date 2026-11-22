@@ -43,7 +43,7 @@ steps:
 - **Secrets are not masked in Cargo.** Secret values are hidden in a step's log, but files a
   step keeps are kept exactly as written. Do not put secrets in them.
 - **The Cargo tab** of a Sortie lists each Cargo with its files, sizes, SHA-256 and how long it
-  is kept, with a download for each file and for all of them as a zip. Operators of the project may
+  is kept, with a download for each file and for all of them as a zip. Operators of the Flight (codebase) may
   delete one; the Logbook records who did. Files are always served as downloads, never shown
   as pages.
 - **Storage**: with nothing configured, in the database on PostgreSQL (in 1 MiB chunks, each
@@ -70,7 +70,7 @@ steps:
 | `artifacts.s3.endpoint`, `bucket`, `region`, `prefix`, `path_style`, `ca_file` | – | the S3 store; credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or `*_FILE`), never from the file |
 | `artifacts.max_file_mib` | 1024 | the largest file a Cargo may hold |
 | `artifacts.max_run_mib` | 4096 | how much one Sortie may keep |
-| `artifacts.max_project_gib` | 50 | how much a project may keep over all its Sorties |
+| `artifacts.max_project_gib` | 50 | how much a Flight may keep over all its Sorties |
 | `artifacts.retain` | 30d | how long Cargo are kept when the pipeline does not say |
 | `artifacts.max_retain` | 90d | the longest any is kept, whatever the pipeline says |
 

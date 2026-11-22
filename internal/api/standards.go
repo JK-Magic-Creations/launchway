@@ -117,7 +117,7 @@ func (s *Server) standardsLevel(w http.ResponseWriter, level, scope string) (str
 		}
 		return scope, true
 	}
-	writeErr(w, http.StatusBadRequest, "level is installation, organization, unit or project")
+	writeErr(w, http.StatusBadRequest, "level is installation, organization, unit or {project}")
 	return "", false
 }
 
@@ -255,7 +255,7 @@ func (s *Server) projectProfile(r *http.Request) (*standardsservice.Project, err
 	name := r.PathValue("name")
 	dir, branch, ok := s.Projects.ProjectGit(name)
 	if !ok {
-		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
+		return nil, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, name)
 	}
 	return s.Standards.ForProject(r.Context(), name, dir, branch)
 }
@@ -356,7 +356,7 @@ func (s *Server) projectFinding(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.fail(w, fmt.Errorf("%w: finding %s of project %s (only what the default branch has had is listed; a finding of a pull request is in its Sortie's Inspection)", engine.ErrNotFound, fp, r.PathValue("name")))
+	s.fail(w, fmt.Errorf("%w: finding %s of Flight %s (only what the default branch has had is listed; a finding of a pull request is in its Sortie's Inspection)", engine.ErrNotFound, fp, r.PathValue("name")))
 }
 
 type acceptBody struct {

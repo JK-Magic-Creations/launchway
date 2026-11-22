@@ -108,7 +108,7 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 	expand := (project != "" || q.Get("expand") == "1") && s.Projects != nil
 	if project != "" {
 		if _, err := s.Projects.Get(project); err != nil || !s.authorize(identityFrom(r), auth.Read, project) {
-			s.fail(w, fmt.Errorf("%w: project %s", engine.ErrNotFound, project))
+			s.fail(w, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, project))
 			return
 		}
 	}
@@ -146,7 +146,7 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 	// pipeline that filters pull requests by the branch they target needs
 	// the project's forge to say which that is.
 	if project != "" && s.Projects != nil && p.On.FiltersPullRequests() && !s.Projects.HasForge(project) {
-		out["warnings"] = []string{"the pipeline filters pull requests by the branch they target (on.pull_request.into), and project " + project +
+		out["warnings"] = []string{"the pipeline filters pull requests by the branch they target (on.pull_request.into), and Flight " + project +
 			" has no forge connection: no pull request will run until it has one"}
 	}
 	if ws := outputWarnings(p); len(ws) > 0 {

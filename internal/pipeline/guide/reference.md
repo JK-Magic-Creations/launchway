@@ -31,7 +31,7 @@ steps: { … }                # required: the steps, by name
 | Key | Meaning |
 |---|---|
 | `pipeline` | The pipeline's name |
-| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}` (or `{ into: [patterns] }`: only for pull requests that target such a branch, as the project's forge says), `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
+| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}` (or `{ into: [patterns] }`: only for pull requests that target such a branch, as the Flight's forge says), `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
 | `supersede` | `true`: a run started by a push or pull request cancels the older such runs of the same branch, tag or pull request that are still going |
 | `lane` | `name` (default the pipeline's), `per` (`ref`, `pull_request`, `input:<name>`: what splits it into separate lanes), `when_busy` (`wait`, `cancel` or `skip`: what a run that arrives while the lane is held does) and `queue` (`newest`: a waiting run is replaced by a newer one; or `all`). At most one run of a lane goes at a time. Not with `supersede` |
 | `timeout` | How long a run may stay open, `1m` to `720h` (and no more than the installation's limit): a run past it is canceled with the reason `run timeout of 2h reached`. Time spent waiting for an approval does not count |
@@ -255,11 +255,11 @@ artifacts never changes a step's outcome; keep the step failing yourself when te
 The key is the paths and SHA-256 contents of the files `key.files` matches, in sorted order, with
 `key.text` mixed in and the runner's operating system and architecture; change `text` to start over.
 An entry is never changed once saved. A pull-request run restores the default branch's entry and saves
-only into its own scope; a draft run saves nothing; nothing is shared between projects. A cache is an
+only into its own scope; a draft run saves nothing; nothing is shared between Flights (codebase). A cache is an
 optimisation: a restore or save that fails is logged on the step and never changes its outcome. Only
 regular files and directories are kept (no symbolic links). The names and the policy (10 GiB a
-project, 2 GiB an entry, 7 days idle by default) are set by an administrator; `list_caches` shows
-what a project keeps.
+Flight, 2 GiB an entry, 7 days idle by default) are set by an administrator; `list_caches` shows
+what a Flight keeps.
 
 ## Templates from shared libraries
 
@@ -290,8 +290,8 @@ for text around it) stands for a parameter's value, and `if: { param: name }` or
 ## Variables set at a level
 
 `from: name` on an input or a template parameter takes the variable `name`, set at the Base, the
-Wing, a Squadron or the project. The nearest setting wins: what is given when a run starts, then the
-pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the
+Wing, a Squadron or the Flight. The nearest setting wins: what is given when a run starts, then the
+pipeline file's own `with:`, then the Flight, the Squadron, the Wing, the Base, then the
 template's own default; at the same level a variable set for the environment being deployed to beats the
 general one; and a lock set at a level beats everything below it. Lists replace, never merge. A variable
 that is locked refuses a different value under `with:` or given at the start, naming the level that
@@ -372,5 +372,5 @@ runs, pull-request runs or local runs.
 
 A draft run runs pipeline text that is not committed, against the current commit of a branch. Its
 event is `draft`: steps without `when` run; steps with a `when` run only if its `event` names
-`draft`; steps that declare `secrets` fail unless the project allows drafts to read secrets; deploy
+`draft`; steps that declare `secrets` fail unless the Flight allows drafts to read secrets; deploy
 steps never run. Use one to try a pipeline before committing it.

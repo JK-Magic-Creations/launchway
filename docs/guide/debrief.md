@@ -22,7 +22,7 @@ A test is **flaky** when its results go against its own history without a change
 
 A break that lasts, and a failure that was fixed, are not flaky. The **score** is the share of the commits the test ran on that showed this. A test that passed on a retry (a retried step, or the test tool running it again) is shown as **passed on retry: flaky** and never as a plain pass.
 
-The project's **Flaky tests** page (Tests page, `?view=flaky`) lists them with their history, branches and when each was first seen, and `launchway tests flaky <project>` prints the same. Retrying is the step's own `retry`; Launchway does not rerun single tests.
+The Flight's **Flaky tests** page (Tests page, `?view=flaky`) lists them with their history, branches and when each was first seen, and `launchway tests flaky <project>` prints the same. Retrying is the step's own `retry`; Launchway does not rerun single tests.
 
 ## Quarantine
 
@@ -67,6 +67,6 @@ steps:
       ./run-tests.sh --only-file mine.txt
 ```
 
-Each member of the loop receives its shard number as `LAUNCHWAY_EACH_SHARD`. The step's `launchway` command needs a token with read access to the project; this is documented, not yet a Maneuver of the starter library.
+Each member of the loop receives its shard number as `LAUNCHWAY_EACH_SHARD`. The step's `launchway` command needs a token with read access to the Flight (codebase); this is documented, not yet a Maneuver of the starter library.
 
 A test with no history is given the average. The same data is at `GET /api/v1/projects/{name}/tests/shards?count=N` and in the MCP tool `split_tests`. How long history is kept: see `tests.max_age_days`.

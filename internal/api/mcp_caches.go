@@ -19,11 +19,11 @@ import (
 )
 
 func addCacheTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_caches", Annotations: readOnly("List a project's caches"),
-		Description: "A project's build caches: each entry with its name, key, scope (default, ref:<ref> or pull:<n>), platform, size, when it was last restored, how often, and the Sortie that wrote it, with the total against the project's quota and idle days."},
+	addTool(srv, c, &mcp.Tool{Name: "list_caches", Annotations: readOnly("List a Flight's caches"),
+		Description: "A Flight's build caches: each entry with its name, key, scope (default, ref:<ref> or pull:<n>), platform, size, when it was last restored, how often, and the Sortie that wrote it, with the total against the Flight's quota and idle days."},
 		mcpCallTimeout, listCaches)
 	addTool(srv, c, &mcp.Tool{Name: "get_cache_policy", Annotations: readOnly("Get the cache policy"),
-		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib, idle_days and max_age_days, for one project (its own override, else the installation's) or, without a project, the installation's."},
+		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib, idle_days and max_age_days, for one Flight (its own override, else the installation's) or, without a Flight, the installation's."},
 		mcpCallTimeout, getCachePolicy)
 	if c.mayOperate {
 		addCacheChangeTools(srv, c)
@@ -32,7 +32,7 @@ func addCacheTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_cache_policy", Annotations: changes("Set the cache policy", true, true),
-		Description: "Administrators only. Change the cache policy of one project (an override) or, without a project, the installation's: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days. A field left out keeps its value. Lowering the quota ends the project's least recently used entries. Audited."},
+		Description: "Administrators only. Change the cache policy of one Flight (an override) or, without a Flight, the installation's: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days. A field left out keeps its value. Lowering the quota ends the Flight's least recently used entries. Audited."},
 		mcpCallTimeout, setCachePolicy)
 }
 
@@ -43,7 +43,7 @@ func addCacheChangeTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type cachesIn struct {
-	Project string `json:"project" jsonschema:"the project's name, as list_projects gives it"`
+	Project string `json:"project" jsonschema:"the Flight's name, as list_projects gives it"`
 }
 
 type cacheEntryOut struct {
@@ -70,7 +70,7 @@ type cachesOut struct {
 
 func listCaches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cachesIn) (cachesOut, error) {
 	if in.Project == "" {
-		return cachesOut{}, errors.New("say which project")
+		return cachesOut{}, errors.New("say which Flight")
 	}
 	var l struct {
 		engine.CacheList
@@ -86,7 +86,7 @@ func listCaches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cach
 	}
 	switch {
 	case !l.Policy.Enabled:
-		out.Summary = "Caching is turned off for this project (cache policy)."
+		out.Summary = "Caching is turned off for this Flight (cache policy)."
 	case len(out.Entries) == 0 && l.Use.Run > 0 && len(l.Use.Steps) == 0:
 		out.Summary = "No step in this pipeline uses a cache, so nothing is kept. Add a cache: to a step (name, paths and a key made of the lock files) to keep a directory between runs."
 		if len(l.Use.Layers) > 0 {
@@ -101,7 +101,7 @@ func listCaches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in cach
 }
 
 type deleteCacheIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	ID      string `json:"id,omitempty" jsonschema:"one entry, by the id list_caches gives"`
 	Name    string `json:"name,omitempty" jsonschema:"every entry of this cache, in every scope and key"`
 }
@@ -110,7 +110,7 @@ func deleteCache(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in del
 	var out engine.CachesDeleted
 	switch {
 	case in.Project == "":
-		return out, errors.New("say which project")
+		return out, errors.New("say which Flight")
 	case (in.ID == "") == (in.Name == ""):
 		return out, errors.New("give either id (one entry) or name (a whole cache), not both and not neither")
 	case in.ID != "":
@@ -122,16 +122,16 @@ func deleteCache(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in del
 }
 
 type cachePolicyToolIn struct {
-	Project       string   `json:"project,omitempty" jsonschema:"a project to override the policy for; without one, the installation's policy"`
+	Project       string   `json:"project,omitempty" jsonschema:"a Flight to override the policy for; without one, the installation's policy"`
 	Enabled       *bool    `json:"enabled,omitempty" jsonschema:"whether caches are kept at all"`
-	MaxProjectGiB *float64 `json:"max_project_gib,omitempty" jsonschema:"how much one project's entries may add up to, in GiB (10 by default)"`
+	MaxProjectGiB *float64 `json:"max_project_gib,omitempty" jsonschema:"how much one Flight's entries may add up to, in GiB (10 by default)"`
 	MaxEntryGiB   *float64 `json:"max_entry_gib,omitempty" jsonschema:"the most one entry may hold, in GiB (2 by default)"`
 	IdleDays      *int     `json:"idle_days,omitempty" jsonschema:"how long an entry nobody restored is kept (7 by default)"`
 	MaxAgeDays    *int     `json:"max_age_days,omitempty" jsonschema:"how old an entry may be, from when its contents were started from scratch, before a restore treats it as missing (7 by default); a cache's own max_age may be shorter"`
 }
 
 func getCachePolicy(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-	Project string `json:"project,omitempty" jsonschema:"a project; without one, the installation's policy"`
+	Project string `json:"project,omitempty" jsonschema:"a Flight; without one, the installation's policy"`
 }) (engine.CachePolicyView, error) {
 	var out engine.CachePolicyView
 	path := "/api/v1/cache-policy"

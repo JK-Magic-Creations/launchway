@@ -7,16 +7,16 @@ import { WIZARDS } from "../components/ConfigNav";
 import { visibleSections, visibleTabs, type Ctx } from "../nav/model";
 import { terms } from "../terms";
 
-export interface DoItem { id: string; label: string; hint: string; href: string; icon: IconName; group: "Do" | "Go to" | "Projects" }
+export interface DoItem { id: string; label: string; hint: string; href: string; icon: IconName; group: string }
 
 /** Everything the bar can offer to this person. */
 export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
   const out: DoItem[] = [];
   if (ctx.me.admin) {
-    out.push({ id: "add-project", label: "Add a project", hint: "Connect a repository", href: "/config/wizard/connect-repository", icon: "plus", group: "Do" });
+    out.push({ id: "add-project", label: terms().say("Add a {project}"), hint: "Choose a repository", href: "/projects/new", icon: "plus", group: "Do" });
     for (const w of WIZARDS) {
       if (w.id === "connect-repository") continue;
-      out.push({ id: "wizard-" + w.id, label: w.title, hint: "A short guided set-up", href: `/config/wizard/${w.id}`, icon: "plus", group: "Do" });
+      out.push({ id: "wizard-" + w.id, label: terms().say(w.title), hint: "A short guided set-up", href: w.href ?? `/config/wizard/${w.id}`, icon: "plus", group: "Do" });
     }
   }
   out.push({ id: "decide", label: "Decide what is waiting", hint: terms().say("{Clearances} that need a person (approvals)"), href: "/activity/approvals", icon: "gate", group: "Do" });
@@ -26,7 +26,7 @@ export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
     if (p.last_run?.status === "failed") {
       out.push({ id: "why-" + p.name, label: `See why ${p.name} failed`, hint: terms().say(`{Run} #${p.last_run.number}`), href: `/runs/${p.last_run.id}`, icon: "alert", group: "Do" });
     }
-    out.push({ id: "project-" + p.name, label: p.name, hint: "Project", href: `/projects/${encodeURIComponent(p.name)}`, icon: "code", group: "Projects" });
+    out.push({ id: "project-" + p.name, label: p.name, hint: terms().say("{Project}"), href: `/projects/${encodeURIComponent(p.name)}`, icon: "code", group: terms().say("{Projects}") });
   }
   for (const s of visibleSections(ctx)) {
     out.push({ id: "area-" + s.id, label: s.label, hint: s.promise, href: s.href, icon: s.icon, group: "Go to" });

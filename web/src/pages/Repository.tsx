@@ -142,7 +142,7 @@ function AddMirror({ repo, hasPull, onAdded }: { repo: Repository; hasPull: bool
         <ErrorBox error={error} />
         <div><button type="submit" className="btn btn-primary" disabled={busy || !url.trim()}>{busy ? "Adding…" : "Add mirror"}</button></div>
       </form>
-      <p className="sub"><Link href="/projects">Projects</Link> use repositories; a mirror keeps a copy current, it does not change who may push where.</p>
+      <p className="sub"><Link href="/projects">{terms().say("{Projects}")}</Link> use repositories; a mirror keeps a copy current, it does not change who may push where.</p>
     </section>
   );
 }

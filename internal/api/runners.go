@@ -150,7 +150,7 @@ func (s *Server) claimsEnrolled(w http.ResponseWriter, r *http.Request, said eng
 // the default pool takes only enrolled runners. "" if it may.
 func (s *Server) sharedRefused() string {
 	if p, ok := s.Engine.Pool(engine.DefaultPool); ok && p.RequireIdentity {
-		return "the default runner pool takes only enrolled runners (require_identity), so the shared runner token takes no work; enrol this runner with a join token (launchway runner --join)"
+		return "the default Ramp takes only enrolled runners (require_identity), so the shared runner token takes no work; enrol this runner with a join token (launchway runner --join)"
 	}
 	return ""
 }
@@ -397,7 +397,7 @@ func (s *Server) manageRefusal() string {
 	if s.runnersRole() == auth.NoRole {
 		return "managing Stations is turned off (runner_admin: none)"
 	}
-	return fmt.Sprintf("you need the %s role on every project to manage Stations (runner_admin)", s.runnersRole())
+	return fmt.Sprintf("you need the %s role on every Flight to manage Stations (runner_admin)", s.runnersRole())
 }
 
 // PoolView is a runner pool as people see it.

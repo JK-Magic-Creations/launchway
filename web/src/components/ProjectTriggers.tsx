@@ -31,7 +31,7 @@ export function ProjectTriggers({ project }: { project: string }) {
         before it first appeared; if no server was running when it should have fired, it fires once, for the latest time missed.</p>
       {v.problem && <div className="callout callout-bad">{v.problem}</div>}
       {!v.enabled && v.schedules.length > 0 && (
-        <div className="callout callout-draft">Schedules are turned off for this project in its settings (or the {terms().lower("installation")}'s): their firings are recorded as skipped and start nothing.</div>
+        <div className="callout callout-draft">{terms().say("Schedules are turned off for this {project} in its settings (or the")} {terms().lower("installation")}'s): their firings are recorded as skipped and start nothing.</div>
       )}
       {v.schedules.length > 0 && (
         <table className="table sched-table">
@@ -50,7 +50,7 @@ export function ProjectTriggers({ project }: { project: string }) {
               {w.inputs && Object.keys(w.inputs).length > 0 && <> with {Object.entries(w.inputs).map(([k, p]) => `${k} ← ${p}`).join(", ")}</>}:
               {" "}{w.configured
                 ? <><Mono>POST {location.origin}/api/v1/projects/{project}/webhooks/{w.name}</Mono> with {w.auth === "hmac" ? "an HMAC signature" : "a bearer token"}.</>
-                : <span className="sched-off">not callable: the project's settings give it no token or secret yet.</span>}
+                : <span className="sched-off">{terms().say("not callable: the {project}'s settings give it no token or secret yet.")}</span>}
             </li>
           ))}
         </ul>

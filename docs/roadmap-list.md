@@ -56,7 +56,7 @@ After what is already in flight, in this order.
 **What changed in the roadmap, 22 November 2026.**
 
 - Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.
-- Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.
+- Hosted repositories are listed on the Code page even when no Flight reads a pipeline from them, and the Tower says how many there are.
 - The rollout page: watch a delivery object by object, read its logs, and steer it, with each right off until an administrator turns it on, and warnings when real traffic could reach a version nothing proved.
 - Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.
 - Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.
@@ -77,8 +77,8 @@ compliance items provide controls and evidence.
 | Triggers | Push, pull request (with target-branch filters, and newer pushes cancelling older Sorties), manual, schedule and webhook. ([more](guide/triggers.md)) |
 | Shared libraries | Templates and scripts in their own repository, pinned by tag, branch or commit, with typed parameters. ([more](guide/libraries.md)) |
 | Step resources | Each step is sized, with defaults per kind of step and a ceiling no step can pass, so one step cannot starve a cluster. ([more](reference/config-objects.md#step-resources)) |
-| Configuration in the database | Projects, Flight lines, Airfields, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit. ([more](guide/configuration.md)) |
-| Four levels | Base, Wing, Squadron and Project (or the plain Installation, Organization, Team and Project), with words you choose and levels nobody uses kept out of sight. ([more](guide/configuration.md#levels)) |
+| Configuration in the database | Flights, Ramps, Airfields, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit. ([more](guide/configuration.md)) |
+| Four levels | Base, Wing, Squadron and Flight (or the plain Installation, Organization, Team and Codebase), with words you choose and levels nobody uses kept out of sight. ([more](guide/configuration.md#levels)) |
 | Guided setup wizards | First-run setup, connecting a repository, adding a Station, an Airfield, a policy or a verification step: plain questions, explained options, answers checked as you go. ([more](howto/setup-first-run.md)) |
 | A guided interface | A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a Sortie page that says why each wait is happening. ([more](demo.md)) |
 | One capability, every interface | What the web UI does, the HTTP API, the command line and the agent endpoint do too, with a table in the build that fails when one falls behind. ([more](reference/interface-parity.md)) |
@@ -90,11 +90,11 @@ compliance items provide controls and evidence.
 | Container images | Rootless builds, scans, signatures, provenance and SBOMs, pushed to any OCI registry. ([more](guide/images.md)) |
 | Approvals and protected environments | Approval steps; the person who started a Sortie cannot approve its production deploy. ([more](guide/approvals-and-reruns.md)) |
 | Policy gates | Rules pipelines cannot opt out of, at run start, before deploys and image pushes; report or enforce; audited, expiring waivers. ([more](guide/policies.md)) |
-| Sign-in and access | OpenID Connect sign-in with groups, roles per project and Airfield, scoped API tokens and an audit trail. ([more](guide/access.md)) |
+| Sign-in and access | OpenID Connect sign-in with groups, roles per Flight and Airfield, scoped API tokens and an audit trail. ([more](guide/access.md)) |
 | Secrets that stay with runners | Pipelines hold references; Stations read values from Vault, OpenBao, files or the Airfield, and mask them. ([more](guide/secrets.md)) |
 | Security findings and SBOMs | Secret, code, dependency, license and image findings (SARIF), new and fixed across runs, and a component search. ([more](guide/security-findings.md)) |
 | Secure step execution | Non-root step pods under strict pod security, a step pod removed when its Sortie ends and leaked ones reaped, container and host executors, and Stations that only connect outward. ([more](security/trust-model.md)) |
-| Runner identity and pools | Join tokens, a key per Station, pools scoped to projects, and allow-lists on the Station itself. ([more](guide/runner-identity.md)) |
+| Runner identity and pools | Join tokens, a key per Station, pools scoped to Flights, and allow-lists on the Station itself. ([more](guide/runner-identity.md)) |
 | Test, coverage and HTML reports | Thirteen test formats, coverage with thresholds, flaky-test detection, history, and the tools' own HTML reports in a sandbox. ([more](guide/test-reports.md)) |
 | Built-in artifact storage | Cargo and hosted reports live in the database by default, so several servers need nothing else; S3 or a shared folder are optional. ([more](artifacts.md)) |
 | AI models in steps | Optional hosted or local models for steps and failure explanations, with per-model token limits; keys never enter a step's container. ([more](guide/ai.md)) |
@@ -104,7 +104,7 @@ compliance items provide controls and evidence.
 | Launchway’s own words | Two built-in sets of words (aviation-flavored and plain business names), a rename for any word, and the same words in the interface, documentation and messages. ([more](guide/words.md)) |
 | Learn, inside the product | The documentation of the release you are running, with pictures and an offline search, opened from the interface with no separate website. ([more](learn/start-here.md)) |
 | Variables at levels | The same variable declared at a nearer level overrides the one above, with locks from above and a hierarchy view that shows where each value comes from. ([more](guide/variables.md)) |
-| Shared pipeline templates and Flight plans | A template or a Flight plan set once for a Wing or Squadron, used by every project beneath it, with deploy, verify and approval steps included. ([more](guide/libraries.md)) |
+| Shared pipeline templates and Flight plans | A template or a Flight plan set once for a Wing or Squadron, used by every Flight beneath it, with deploy, verify and approval steps included. ([more](guide/libraries.md)) |
 | Rides through outages | Database errors are retried, Station writes are safe to repeat, a Station keeps its logs and results while the server is away, and a doctor command checks the database. ([more](guide/high-availability.md)) |
 | Accessible by design | Automated scans, contrast tests and keyboard journeys run on every change, with a published conformance statement and a quality bar for the API, the agent endpoint and the command line. ([more](guide/accessibility.md)) |
 | A failed step says why | Every failed step states its reason and cause with the evidence, can be re-run from that step, and the actions offered are only those that can work. ([more](guide/approvals-and-reruns.md)) |
@@ -124,7 +124,7 @@ compliance items provide controls and evidence.
 | Validate offline | `launchway validate` checks a pipeline without a server and can show the fully resolved result. ([more](reference/cli.md)) |
 | Full import and a read-only issue archive | Import every ref of an existing repository and keep another server's issues as a read-only archive. ([more](reference/cli.md)) |
 | Plain messages when a step is killed | A step killed for memory says so, with the limit and the setting to raise. ([more](guide/pipelines.md)) |
-| Hosted repositories on the Code page | The Code page lists every repository Launchway hosts, even when no project reads a pipeline from it, and opens it to browse, search and edit. ([more](guide/browsing-code.md)) |
+| Hosted repositories on the Code page | The Code page lists every repository Launchway hosts, even when no Flight reads a pipeline from it, and opens it to browse, search and edit. ([more](guide/browsing-code.md)) |
 | Code review in depth | Code owners, a merge queue, viewed marks, batched suggestions and the pull requests that wait on you. ([more](guide/pull-requests.md)) |
 | Git over SSH, mirrors and the issue archive | Clone and push over SSH, pull and push mirrors, and a read-only archive of another tracker's issues. ([more](guide/git-over-ssh.md)) |
 | The Depot | Container images, charts and other Cargo in Launchway itself, with permissions, retention and signatures stored beside them. ([more](guide/registry.md)) |
@@ -199,7 +199,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Boards that show delivery](roadmap/milestone-1.md#boards-that-show-delivery) | Available | A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. |
 | [Decision records](roadmap/milestone-1.md#decision-records) | Planned | A question, the options, a recommendation, what it blocks, and the answer with who gave it and when. |
 | [Import and sync from other trackers](roadmap/milestone-1.md#import-and-sync-from-other-trackers) | Planned | Bring issues in from other trackers, or keep them in sync in both directions while you switch. |
-| [Optional time tracking and due dates](roadmap/milestone-1.md#optional-time-tracking-and-due-dates) | In progress | Estimates, timers and due dates, off until a project turns them on. |
+| [Optional time tracking and due dates](roadmap/milestone-1.md#optional-time-tracking-and-due-dates) | In progress | Estimates, timers and due dates, off until a Flight turns them on. |
 | [Confidential items and links to the code](roadmap/milestone-1.md#confidential-items-and-links-to-the-code) | In progress | Items visible only to chosen people, and branches started from an item that carry its reference. |
 | [A wiki per repository](roadmap/milestone-1.md#a-wiki-per-repository) | Planned | A wiki that is itself a Git repository, with history, linked live to pipelines and deployments. |
 | [Static pages](roadmap/milestone-1.md#static-pages) | Planned | Publish a static site from a branch of a repository, built by a pipeline. |
@@ -329,7 +329,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Folders and search on every list](roadmap/milestone-1.md#folders-and-search-on-every-list) | Available | Pipelines, repositories, projects and runs sit in folders you can search, grouped by level. |
+| [Folders and search on every list](roadmap/milestone-1.md#folders-and-search-on-every-list) | Available | Pipelines, repositories, Flights and runs sit in folders you can search, grouped by level. |
 | [Folders made from names](roadmap/milestone-1.md#folders-made-from-names) | Available | Name a pipeline payments/api/build and the folders appear without anyone filing it. |
 | [Shared layouts and personal layouts](roadmap/milestone-1.md#shared-layouts-and-personal-layouts) | Available | A default layout per level, and your own on top: order, pins and hidden sections, with drag and drop, keyboard equivalents and a reset. |
 | [A home page that shows what needs a person](roadmap/milestone-1.md#a-home-page-that-shows-what-needs-a-person) | Available | Cards by category, what is running, and what truly needs attention; a failure that is already being retried is not shown as needing you. |
@@ -356,14 +356,14 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [Expressions for conditions](roadmap/milestone-2.md#expressions-for-conditions) | Planned | A small typed expression language with no loops and no side effects, checked before the Sortie; today's conditions keep working. ([docs](reference/pipeline.md#when)) |
 | [Typed outputs between steps](roadmap/milestone-2.md#typed-outputs-between-steps) | Planned | A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. |
 | [A browsable catalog of templates and steps](roadmap/milestone-2.md#a-browsable-catalog-of-templates-and-steps) | Planned | Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product. ([docs](guide/libraries.md)) |
-| [Update notices for shared libraries](roadmap/milestone-2.md#update-notices-for-shared-libraries) | Planned | See which projects use an old version of a template and open an update as a reviewable change. |
+| [Update notices for shared libraries](roadmap/milestone-2.md#update-notices-for-shared-libraries) | Planned | See which Flights use an old version of a template and open an update as a reviewable change. |
 | [A triggers page](roadmap/milestone-2.md#a-triggers-page) | Planned | One page showing every trigger and exactly which pipelines it starts. |
 | [Event sources from queues and buses](roadmap/milestone-2.md#event-sources-from-queues-and-buses) | Planned | Start pipelines from message queues and event buses, with filters, and replies back. |
 | [Steps as a graph of containers](roadmap/milestone-2.md#steps-as-a-graph-of-containers) | Planned | Lay steps out as a graph of containers with fan-out and join, for work that is not a straight line. |
 | [Runners that keep themselves updated](roadmap/milestone-2.md#runners-that-keep-themselves-updated) | Planned | Stations on VMs and on customers' machines update under your policy, so the fleet never drifts. |
 | [Pipeline history and flaky tests](roadmap/milestone-2.md#pipeline-history-and-flaky-tests) | In progress | Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page. |
 | [Step pages](roadmap/milestone-2.md#step-pages) | Planned | Each step has a page: where its code lives, its inputs and types, and which pipelines use it. |
-| [An event log that explains every decision](roadmap/milestone-2.md#an-event-log-that-explains-every-decision) | Available | Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result. |
+| [An event log that explains every decision](roadmap/milestone-2.md#an-event-log-that-explains-every-decision) | Available | Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another Flight's result. |
 | [Standing orders for every repository](roadmap/milestone-2.md#standing-orders-for-every-repository) | Available | A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces. |
 
 ### Builds use every machine sensibly
@@ -405,13 +405,13 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Templates and Flight plans by level](roadmap/milestone-2.md#templates-and-flight-plans-by-level) | Available | Set a template or a Flight plan at the Wing or Squadron and every project beneath it uses it. ([docs](guide/libraries.md)) |
+| [Templates and Flight plans by level](roadmap/milestone-2.md#templates-and-flight-plans-by-level) | Available | Set a template or a Flight plan at the Wing or Squadron and every Flight beneath it uses it. ([docs](guide/libraries.md)) |
 | [Overrides, locks and the hierarchy view](roadmap/milestone-2.md#overrides-locks-and-the-hierarchy-view) | Available | Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline. ([docs](guide/variables.md)) |
-| [Templates that read like code](roadmap/milestone-2.md#templates-that-read-like-code) | Planned | A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open. |
+| [Templates that read like code](roadmap/milestone-2.md#templates-that-read-like-code) | Planned | A template says what it needs and offers, can be built on another, and a Flight fills in or overrides only what is open. |
 | [Language starters](roadmap/milestone-2.md#language-starters) | In progress | Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits. |
 | [Light environments and services](roadmap/milestone-2.md#light-environments-and-services) | Planned | Airfields and services as short lists with sensible defaults, not another set of ideas to learn before anything works. |
 | [Shared connections](roadmap/milestone-2.md#shared-connections) | Planned | A connection to a Depot, a cluster or a cloud set up once at a level and used below it, with its use shown. |
-| [See what is shared and who uses it](roadmap/milestone-2.md#see-what-is-shared-and-who-uses-it) | Planned | For any template, library or connection, a list of every project that uses it and what would change if it changed. |
+| [See what is shared and who uses it](roadmap/milestone-2.md#see-what-is-shared-and-who-uses-it) | Planned | For any template, library or connection, a list of every Flight that uses it and what would change if it changed. |
 | [Starters that deliver end to end](roadmap/milestone-2.md#starters-that-deliver-end-to-end) | In progress | A library of starters per language and kind, proven through delivery, with detection, a gallery and `launchway init`. |
 
 ### Every popular build tool, with a cache that is never stale
@@ -422,14 +422,14 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [Fixed things reused, moving things looked up again](roadmap/milestone-2.md#fixed-things-reused-moving-things-looked-up-again) | Available | Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build. |
 | [Every restore is a head start, never the answer](roadmap/milestone-2.md#every-restore-is-a-head-start-never-the-answer) | Available | What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result. |
 | [Warnings for unsafe cache patterns](roadmap/milestone-2.md#warnings-for-unsafe-cache-patterns) | Available | Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix. |
-| [Caches by trust scope](roadmap/milestone-2.md#caches-by-trust-scope) | Available | What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes. |
+| [Caches by trust scope](roadmap/milestone-2.md#caches-by-trust-scope) | Available | What a pull request writes only that pull request reads; what a trusted branch writes the Flight reads; forks are isolated; image caches follow the same scopes. |
 | [What the run restored, and how old](roadmap/milestone-2.md#what-the-run-restored-and-how-old) | Planned | Every Sortie shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify. |
 | [Build twice and compare](roadmap/milestone-2.md#build-twice-and-compare) | Planned | Run a build with and without cache and compare the results, or run without cache, or refresh the cache, with one choice. |
 | [Recipes for the popular tools](roadmap/milestone-2.md#recipes-for-the-popular-tools) | Planned | Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and Debriefs. |
 | [Shared build caches Launchway hosts](roadmap/milestone-2.md#shared-build-caches-launchway-hosts) | Planned | Where a tool has a build cache that verifies its inputs, such as Gradle, Bazel and container layers, Launchway serves it itself instead of copying folders around. |
 | [More build tools](roadmap/milestone-2.md#more-build-tools) | Planned | Bazel, sbt, .NET, Rust, C and C++, Ruby, PHP, Helm and Terraform follow the first recipes. |
-| [Android builds](roadmap/milestone-2.md#android-builds) | Planned | Android projects build with Gradle recipes, signing keys kept on your side, and results on the launch line. |
-| [iOS and macOS builds](roadmap/milestone-2.md#ios-and-macos-builds) | Planned | Apple projects build on macOS Stations you provide, with signing kept on your side. |
+| [Android builds](roadmap/milestone-2.md#android-builds) | Planned | Android Flights build with Gradle recipes, signing keys kept on your side, and results on the launch line. |
+| [iOS and macOS builds](roadmap/milestone-2.md#ios-and-macos-builds) | Planned | Apple Flights build on macOS Stations you provide, with signing kept on your side. |
 | [Cross-platform mobile frameworks](roadmap/milestone-2.md#cross-platform-mobile-frameworks) | Planned | Each cross-platform framework says which Station it needs, so a build lands on the right machine. |
 
 ### The developer comes first
@@ -558,7 +558,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Delivery metrics and executive dashboards](roadmap/milestone-3.md#delivery-metrics-and-executive-dashboards) | Planned | Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the Sorties behind each number. |
 | [Test intelligence and flow insights](roadmap/milestone-3.md#test-intelligence-and-flow-insights) | Planned | Find slow and flaky tests, bottlenecks in review and idle time in delivery. |
 | [Policy rules in an open language](roadmap/milestone-3.md#policy-rules-in-an-open-language) | Planned | Write extra policy rules in an open policy language alongside the built-in rules. |
-| [Portfolio bill of materials](roadmap/milestone-3.md#portfolio-bill-of-materials) | Planned | A bill of materials across every image as well as every project, with export. Searching components across projects already works. |
+| [Portfolio bill of materials](roadmap/milestone-3.md#portfolio-bill-of-materials) | Planned | A bill of materials across every image as well as every Flight, with export. Searching components across Flights already works. |
 | [Experiments with toggles](roadmap/milestone-3.md#experiments-with-toggles) | Planned | Compare outcomes between users with a toggle on and off. |
 
 ### Moving over from other delivery platforms
@@ -632,13 +632,13 @@ Images, Helm charts and other OCI Cargo stored beside the code, under the same p
 | [Pull-through cache](roadmap/milestone-4.md#pull-through-cache) | Planned | Cache public images and packages so builds are faster, work offline, and never serve an out-of-date copy of something that can change. |
 | [Image guard for sandboxed builds](roadmap/milestone-4.md#image-guard-for-sandboxed-builds) | Planned | Keep unchecked images away from sandboxed builds, and fetch every image through a checking proxy. |
 | [Replication with other registries](roadmap/milestone-4.md#replication-with-other-registries) | Planned | Copy images to and from other registries on a rule. |
-| [Per-project packages and permissions](roadmap/milestone-4.md#per-project-packages-and-permissions) | Available | A packages tab in each project that is a filtered view of the Depot, with per-package access. |
+| [Per-project packages and permissions](roadmap/milestone-4.md#per-project-packages-and-permissions) | Available | A packages tab in each Flight that is a filtered view of the Depot, with per-package access. |
 | [Signing and verification](roadmap/milestone-4.md#signing-and-verification) | In progress | Sign images on build and verify signatures on pull and deploy. |
 | [More package formats](roadmap/milestone-4.md#more-package-formats) | Planned | Language and system packages, such as for common programming languages, with cleanup rules and quotas. |
 | [Any other registry, equally](roadmap/milestone-4.md#any-other-registry-equally) | Available | Pushing to any OCI registry works today and stays first class beside the built-in one. ([docs](guide/images.md)) |
 | [Pipelines that build, test and publish only](roadmap/milestone-4.md#pipelines-that-build-test-and-publish-only) | Planned | Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available. |
 | [Native endpoints for package clients](roadmap/milestone-4.md#native-endpoints-for-package-clients) | Planned | Go and npm clients talk to Launchway directly, and Python, Maven, NuGet, Cargo and RubyGems follow. |
-| [Who uses which version](roadmap/milestone-4.md#who-uses-which-version) | Planned | A library page shows which projects fetched which version and which are behind. |
+| [Who uses which version](roadmap/milestone-4.md#who-uses-which-version) | Planned | A library page shows which Flights fetched which version and which are behind. |
 | [The Depot: one area for everything stored](roadmap/milestone-4.md#the-depot-one-area-for-everything-stored) | Available | Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. |
 
 ## Milestone 5: The software graph, with automated patching (Later)
@@ -706,11 +706,11 @@ AI wherever it saves effort, always optional, always off until an administrator 
 | [A built-in model gateway](roadmap/milestone-6.md#a-built-in-model-gateway) | Planned | One endpoint that routes to any hosted or self-hosted model, with usage monitoring and easy switching of providers. |
 | [Local and self-hosted models](roadmap/milestone-6.md#local-and-self-hosted-models) | Planned | Run and serve open models on your own machines and use them like any other. |
 | [Provider switching and fallbacks](roadmap/milestone-6.md#provider-switching-and-fallbacks) | Planned | Change provider or model in one place, with fallbacks if one is down. |
-| [Usage monitoring](roadmap/milestone-6.md#usage-monitoring) | Planned | See usage by model, project and purpose, with cost. |
-| [Spending limits](roadmap/milestone-6.md#spending-limits) | Planned | Budgets in money, per model, project and purpose, not only in tokens. |
+| [Usage monitoring](roadmap/milestone-6.md#usage-monitoring) | Planned | See usage by model, Flight and purpose, with cost. |
+| [Spending limits](roadmap/milestone-6.md#spending-limits) | Planned | Budgets in money, per model, Flight and purpose, not only in tokens. |
 | [AI off until a purpose is turned on](roadmap/milestone-6.md#ai-off-until-a-purpose-is-turned-on) | Planned | Every purpose, such as explaining failures or reviewing changes, is off until an administrator turns it on. |
 | [Context compression](roadmap/milestone-6.md#context-compression) | Planned | Shrink what is sent to a model without losing file paths, line numbers or error codes, with every omission marked and the saving measured. |
-| [A protected path for regulated data](roadmap/milestone-6.md#a-protected-path-for-regulated-data) | Planned | Use only models whose data-handling terms you have recorded, so that regulated projects never reach the wrong one. |
+| [A protected path for regulated data](roadmap/milestone-6.md#a-protected-path-for-regulated-data) | Planned | Use only models whose data-handling terms you have recorded, so that regulated Flights never reach the wrong one. |
 | [Models that know Launchway](roadmap/milestone-6.md#models-that-know-launchway) | Planned | Optional models tuned on Launchway itself, runnable locally and never trained on customer data. |
 | [From a picture to a pipeline](roadmap/milestone-6.md#from-a-picture-to-a-pipeline) | Planned | Design a delivery visually and have AI help translate it into a pipeline you can read and edit. |
 | [AI summaries and review of changes](roadmap/milestone-6.md#ai-summaries-and-review-of-changes) | Planned | Optional summaries and review comments on pull requests, labelled as AI. |
@@ -748,7 +748,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Sign up with the least set-up](roadmap/milestone-7.md#sign-up-with-the-least-set-up) | Planned | One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first project. |
+| [Sign up with the least set-up](roadmap/milestone-7.md#sign-up-with-the-least-set-up) | Planned | One front door where anyone signs up with an email address or an existing account, proves the address, protects the account, names their Base and lands in a guided first Flight. |
 | [Passkeys, authenticator apps and recovery codes](roadmap/milestone-7.md#passkeys-authenticator-apps-and-recovery-codes) | Planned | The account is bound to something only its owner has: a passkey, preferably, or an authenticator app, with recovery codes shown once. The owner and every administrator must use one of the strong ones. |
 | [Recovery that is not a back door](roadmap/milestone-7.md#recovery-that-is-not-a-back-door) | Planned | A lost second factor is recovered through the other factors you set up, or through a waiting period with notices to every session and to the account’s email. |
 | [Sign-up protection that respects privacy](roadmap/milestone-7.md#sign-up-protection-that-respects-privacy) | Planned | Rate limits, a small puzzle the browser solves and friction for throwaway addresses guard the form, with no tracking, no outside challenge service and no phone numbers. |
@@ -768,7 +768,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 | [Replicas across two machines](roadmap/milestone-7.md#replicas-across-two-machines) | Planned | With two machines, every repository has a full copy on each, pushes go to whichever is reachable, and they catch up with each other when both are online. |
 | [Backup and recovery on your own machines](roadmap/milestone-7.md#backup-and-recovery-on-your-own-machines) | Planned | The second machine is a live copy, and an optional encrypted backup goes to storage you own, with a walk-through for “my laptop died”. |
 | [Self-hosted, the same product](roadmap/milestone-7.md#self-hosted-the-same-product) | Planned | Everything on your own machines, installed with the guided installer, with the same features and the same export format. |
-| [Guided moves between the three](roadmap/milestone-7.md#guided-moves-between-the-three) | Planned | Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. |
+| [Guided moves between the three](roadmap/milestone-7.md#guided-moves-between-the-three) | Planned | Move one Flight or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. |
 | [Secrets move without being exposed](roadmap/milestone-7.md#secrets-move-without-being-exposed) | Planned | Secret values are re-sealed to the destination’s key, exported under a passphrase only you know, or re-entered and rotated, so they are never in the clear on the way. |
 
 ### A size ceiling, with notices, and nothing held hostage
@@ -847,7 +847,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 |---|---|---|
 | [Every customer has its own Base](roadmap/milestone-7.md#every-customer-has-its-own-base) | In progress | A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. |
 | [The operator’s own Base is walled off](roadmap/milestone-7.md#the-operator-s-own-base-is-walled-off) | Planned | The service operator’s own Base is a separate Base that no customer or demonstration visitor can see, list, search or guess. |
-| [Nothing crosses between Bases](roadmap/milestone-7.md#nothing-crosses-between-bases) | In progress | No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. |
+| [Nothing crosses between Bases](roadmap/milestone-7.md#nothing-crosses-between-bases) | In progress | No interface, search, graph, Ramp, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. |
 | [Proven by tests that gate every release](roadmap/milestone-7.md#proven-by-tests-that-gate-every-release) | Planned | A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. |
 | [A vendor console, separate from any Base](roadmap/milestone-7.md#a-vendor-console-separate-from-any-base) | Planned | The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, Flight recorders, secrets, findings or traffic. |
 | [A separate sign-in for the vendor](roadmap/milestone-7.md#a-separate-sign-in-for-the-vendor) | Planned | Vendor access is a different identity entered on purpose, with strong authentication, a stated reason and a session that ends by itself. |
@@ -872,7 +872,7 @@ Every deployment, whatever it is made of, brings the new version up beside the o
 | [Guarded queries for monitoring data](roadmap/milestone-8.md#guarded-queries-for-monitoring-data) | In progress | Questions put to a metrics or log store pass through a guarded layer that limits what can be asked and how much comes back. |
 | [The stable state](roadmap/milestone-8.md#the-stable-state) | Planned | For each Airfield Launchway records the version, settings, secret versions, toggles and routes that were known to work. |
 | [Controls with consequences](roadmap/milestone-8.md#controls-with-consequences) | Planned | Go, go all the way, pause, resume, stop and go back, try again, skip a step, set the amount by hand, restart and scale. |
-| [Safeguards on by default](roadmap/milestone-8.md#safeguards-on-by-default) | Planned | Every protection starts on and your team can tune or turn it off per project and Airfield; only a level above can require one. |
+| [Safeguards on by default](roadmap/milestone-8.md#safeguards-on-by-default) | Planned | Every protection starts on and your team can tune or turn it off per Flight and Airfield; only a level above can require one. |
 | [Rollout readiness scan](roadmap/milestone-8.md#rollout-readiness-scan) | Planned | Launchway reads your application and tells you what stands in the way of a safe rollout, with changes it proposes. |
 
 ### Rollouts: every strategy, with an assistant
@@ -928,8 +928,8 @@ Every deployment, whatever it is made of, brings the new version up beside the o
 | [A problem in one sentence](roadmap/milestone-8.md#a-problem-in-one-sentence) | Planned | A diagnosis such as “Argo CD cannot build this application: a link points outside its folder”, with the evidence and the next step. |
 | [Every item and its logs](roadmap/milestone-8.md#every-item-and-its-logs) | Planned | Open any resource to see its events, manifest, desired against live, and logs including the previous container. |
 | [Safe sync and control](roadmap/milestone-8.md#safe-sync-and-control) | Planned | Sync with a preview, refresh, stop a stuck sync, run a resource action, and pause automatic sync during an incident with a banner and a reminder. |
-| [Create and change through Git](roadmap/milestone-8.md#create-and-change-through-git) | Planned | An assistant writes an Application, an ApplicationSet or a Project into Git and opens a pull request, showing what will be created. |
-| [Adopt existing applications](roadmap/milestone-8.md#adopt-existing-applications) | Planned | Discover the applications you already have and map them to projects and Airfields without changing them. |
+| [Create and change through Git](roadmap/milestone-8.md#create-and-change-through-git) | Planned | An assistant writes an Application, an ApplicationSet or a Flight into Git and opens a pull request, showing what will be created. |
+| [Adopt existing applications](roadmap/milestone-8.md#adopt-existing-applications) | Planned | Discover the applications you already have and map them to Flights and Airfields without changing them. |
 | [Rollouts, sync and environments in one view](roadmap/milestone-8.md#rollouts-sync-and-environments-in-one-view) | Planned | A joined timeline of a sync and its rollout, and a matrix of what version runs in each Airfield. |
 | [Other deployment engines](roadmap/milestone-8.md#other-deployment-engines) | Planned | The same panels over another GitOps engine or plain apply and Helm, through an adapter. |
 
@@ -1203,8 +1203,8 @@ Ideas that grow naturally from one connected platform. Planned, but behind every
 | [Cloud cost management](roadmap/beyond.md#cloud-cost-management) | Planned | See what each service, team and Airfield costs to run, next to what it delivers. |
 | [A developer portal and service catalog](roadmap/beyond.md#a-developer-portal-and-service-catalog) | Planned | A directory of every service with its owner, health, docs and deployments. |
 | [Smaller integrations](roadmap/beyond.md#smaller-integrations) | Planned | Chat approvals, feature-flag mitigation and more event sources. |
-| [Discussions and snippets](roadmap/beyond.md#discussions-and-snippets) | Planned | A forum for projects and shareable snippets. |
-| [Cloud development environments](roadmap/beyond.md#cloud-development-environments) | Planned | Ready-made Airfields to work on a project from a browser. |
+| [Discussions and snippets](roadmap/beyond.md#discussions-and-snippets) | Planned | A forum for Flights and shareable snippets. |
+| [Cloud development environments](roadmap/beyond.md#cloud-development-environments) | Planned | Ready-made Airfields to work on a Flight from a browser. |
 | [Runtime and API protection](roadmap/beyond.md#runtime-and-api-protection) | Planned | Protect running services from known attack patterns. |
 | [Ticket to code agent](roadmap/beyond.md#ticket-to-code-agent) | Planned | An agent that takes a work item to a proposed change. |
 | [Attestation programme](roadmap/beyond.md#attestation-programme) | Planned | Publish signed attestations about how Launchway itself is built. |

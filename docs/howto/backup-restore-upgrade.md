@@ -30,9 +30,9 @@ operators.
 | Cargo and SBOMs | The database (the default on PostgreSQL, so already in its backup), the S3 bucket, or `artifacts/` in the data directory | Yes, at the same time as the database when they are outside it: the database records which objects exist. Hosted HTML reports and test attachments are Cargo too. |
 | Configuration | `launchway.yaml`, `runner.yaml`, your Helm values | Yes, with your other configuration (in Git, for example). |
 | **The root key** (encryption at rest) | The key file named by `encryption.key_file` (or the chart's `<release>-launchway-root-key` Secret), the keystore and its passphrase, or the Vault or OpenBao transit key | **Yes, and apart from the database's backups.** A database dump holds only ciphertext for the server's own secrets and is useless without the key; the key cannot be recovered if lost. See [Encryption at rest](../guide/encryption-at-rest.md#back-up-the-key-separately). |
-| Secrets the configuration names | OIDC client secret, `LAUNCHWAY_RUNNER_TOKEN` if you set one, Flight line (Station (runner) pool) tokens, S3 keys | Yes, in your secret manager. They are never in the database. |
+| Secrets the configuration names | OIDC client secret, `LAUNCHWAY_RUNNER_TOKEN` if you set one, Ramp (Station (runner) pool) tokens, S3 keys | Yes, in your secret manager. They are never in the database. |
 | `runner-token` | Data directory | Optional: a copy of the generated token, which is also in the database. |
-| Mirrors of project repositories | `repos/` in the data directory | No. They are rebuilt from the repositories when a server starts. |
+| Mirrors of Flight (codebase) repositories | `repos/` in the data directory | No. They are rebuilt from the repositories when a server starts. |
 | Station workspaces and step pods | Station data directories, the step namespace | No. A step that was running Sorties again. |
 
 Secret values from Vault or OpenBao never reach Launchway, so there is nothing of them to back up.
@@ -321,7 +321,7 @@ config import --apply` before rolling forward.
 Two protections keep a wrong configuration from locking everyone out:
 
 - A change that would leave nobody able to administer everything is refused: with sign-in on, at
-  least one role binding must give the `admin` role on every project (or the bootstrap file's
+  least one role binding must give the `admin` role on every Flight (or the bootstrap file's
   `auth.admins` must name someone, which cannot be changed through the API).
 - A server that cannot load the stored configuration at start-up does **not** exit. It starts in
   **safe mode**, logs `SAFE MODE` with the reason, runs with the last configuration that worked (kept in
@@ -345,6 +345,6 @@ leaves the database untouched; restart without it after the repair.
 ### Restoring one object
 
 Every change is in the object's history, and a deleted object is kept: `launchway config history
-projects shop` shows who changed it, and `launchway config restore projects shop` brings a deleted
-project back. To go back to an earlier version of the settings, take the spec from the history and
+Flights shop` shows who changed it, and `launchway config restore Flights shop` brings a deleted
+Flight back. To go back to an earlier version of the settings, take the spec from the history and
 `launchway config set` it.

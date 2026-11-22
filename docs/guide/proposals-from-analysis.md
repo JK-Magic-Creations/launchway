@@ -31,7 +31,7 @@ group title may contain `{n}`, which stands for the occurrences still open.
 
 ## The cap and "and N more"
 
-One source opens at most **10 new items** in one project in one Sortie (`proposals.max_items` in the
+One source opens at most **10 new items** in one Flight (codebase) in one Sortie (`proposals.max_items` in the
 [settings](../reference/work-format.md#settings) changes it). The groups beyond the cap are not lost: they
 fold into one summary item that lists them, marked as folded in the review list, and you can accept any of
 them from there.
@@ -51,7 +51,7 @@ launchway work proposals merge --repo acme/shop --source security-scan lint-a li
 
 Accepting opens the item of the group, with its checklist. You may change its title, description or
 priority as you accept. Dismissing needs a reason. Merging joins groups into one item. Only people who may
-operate the project review, and an agent's token cannot propose or review: an analysis is run by your
+operate the Flight review, and an agent's token cannot propose or review: an analysis is run by your
 tools, and a person decides what becomes work.
 
 A level can let a source file without a review. In the settings, `proposals.auto_accept` lists the sources

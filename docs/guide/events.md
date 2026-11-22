@@ -11,10 +11,10 @@ or started when you did not expect it, the event log says why, in words.
 | `pull_request` | A pull request was opened or its head moved |
 | `schedule` | A schedule fired |
 | `webhook` | A webhook trigger was called |
-| `event_source` | An event source of the project received a call (see [Event sources](event-sources.md)) |
+| `event_source` | An event source of the Flight (codebase) received a call (see [Event sources](event-sources.md)) |
 | `manual` | A person, a token or an agent started a Sortie (run), or re-ran one |
-| `run_result` | Another project's run ended (see [Triggers on results](result-triggers.md)) |
-| `launch_result` | Another project's launch ended (see [Triggers on results](result-triggers.md)) |
+| `run_result` | Another Flight's run ended (see [Triggers on results](result-triggers.md)) |
+| `launch_result` | Another Flight's launch ended (see [Triggers on results](result-triggers.md)) |
 
 Each event records when it arrived, whether its sender was **verified** (a signed webhook is; a call with a wrong
 signature is recorded too, as not verified), a one-line summary, the ref and commit it was about, and a small
@@ -45,7 +45,7 @@ The guarantee for every event and trigger is **one start, or one recorded reason
 
 ## Reading the log
 
-The **Events** page under Activity lists events newest first with filters (source, decision, verified, project) and
+The **Events** page under Activity lists events newest first with filters (source, decision, verified, Flight) and
 opens one to show its payload, its decisions and the runs it started. From the command line:
 
 ```sh
@@ -53,12 +53,12 @@ launchway events list --project payments --decision filtered
 launchway events show evt_0f3a...
 ```
 
-You see the events of the projects you may read. The same data is `GET /api/v1/events` and the MCP tool `list_events`.
-The newest 5000 events of each project are kept, and only the newest 200 that were not verified (anyone can send those).
+You see the events of the Flights you may read. The same data is `GET /api/v1/events` and the MCP tool `list_events`.
+The newest 5000 events of each Flight are kept, and only the newest 200 that were not verified (anyone can send those).
 
 ## Replay
 
-An operator of a project can **replay** an event: the same run is started again, at the same commit and with the same
+An operator of a Flight can **replay** an event: the same run is started again, at the same commit and with the same
 inputs, as a new event that points back to the first. Replaying is for "start what that event should have started"
 after you fixed the cause. It is a manual start in every other way: the pipeline's lane and limits apply, and the
 Logbook records `event.replay` with your name and the event.

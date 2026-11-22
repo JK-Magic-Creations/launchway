@@ -17,6 +17,8 @@ const allow = loadList(root, 'quality/vocabulary-allow.json')?.allow ?? []
 // A roadmap name or title is also the address of its anchor, and addresses are stable identifiers.
 const allowed = (f, line) => (f.kind === 'json' && /^\s*"(name|title|short)"\s*:/.test(line)) || allow.some((a) => (f.path === a.path || (a.path.endsWith('/') && f.path.startsWith(a.path))) && (!a.rule || a.rule === f.rule) && (!a.contains || line.includes(a.contains)))
 const only = args.filter((a) => !a.startsWith('--'))
+// VOCAB_WORD=project limits the fixer to the rules of one word (a key of the table), for a staged rename.
+const onlyWord = process.env.VOCAB_WORD || ''
 
 if (args.includes('--docs')) {
   const page = 'docs/reference/vocabulary.md'
@@ -57,7 +59,7 @@ for (const { path, kind } of listFiles(root, vocab)) {
     continue
   }
   if (args.includes('--web')) continue
-  const found = fileFindings(path, kind, text, checks, labels).filter((f) => f.severity === 'error' && !allowed(f, lines[f.line - 1]))
+  const found = fileFindings(path, kind, text, checks, labels).filter((f) => f.severity === 'error' && (!onlyWord || f.word === onlyWord) && !allowed(f, lines[f.line - 1]))
   // Longest first at the same place, and no two replacements overlap (runner groups before runners).
   found.sort((a, b) => a.start - b.start || b.end - a.end)
   const fs = []
@@ -72,7 +74,7 @@ for (const { path, kind } of listFiles(root, vocab)) {
     if (f.word && kind === 'docs' && !introduced.has(f.word) && nameForm && !/^['\u2019]s/.test(text.slice(f.end, f.end + 2))) {
       // The first use on a page carries the plain word, once: "Station (runner)".
       introduced.add(f.word)
-      if (!/^\s*\(/.test(text.slice(f.end, f.end + 3))) to = `${to} (${f.match.toLowerCase()})`
+      if (!/^\s*\(/.test(text.slice(f.end, f.end + 3))) to = `${to} (${(f.themed.plain || f.match).toLowerCase()})`
     }
     // "a" or "an" before the new word.
     let from = f.start + shift

@@ -20,10 +20,10 @@ func addDebriefTools(srv *mcp.Server, c *mcpCall) {
 		Description: "The Debrief of a run: a summary of its tests, how they moved against the default branch's last good run (newly failing and passing, slower), each failure with its message, expected against actual values, where it first failed on this branch and whether it also fails on the default branch, flaky and quarantined tests, and coverage including the coverage of a pull request's change."},
 		mcpCallTimeout, getDebrief)
 	addTool(srv, c, &mcp.Tool{Name: "list_flaky_tests", Annotations: readOnly("List flaky tests"),
-		Description: "A project's flaky tests from the history of its test results: the same commit both passing and failing a test, or single-commit failures between passes, with a score, the branches affected, when each was first seen and a quarantine entry the owner may add to the repository's quarantine file."},
+		Description: "A Flight's flaky tests from the history of its test results: the same commit both passing and failing a test, or single-commit failures between passes, with a score, the branches affected, when each was first seen and a quarantine entry the owner may add to the repository's quarantine file."},
 		mcpCallTimeout, listFlakyTests)
 	addTool(srv, c, &mcp.Tool{Name: "split_tests", Annotations: readOnly("Split tests among shards"),
-		Description: "A balanced split of a project's tests among 1 to 256 shards by their typical durations, longest first, the same history giving the same split. With shard, returns the names (suite::name) of that shard's tests for a test tool's arguments."},
+		Description: "A balanced split of a Flight's tests among 1 to 256 shards by their typical durations, longest first, the same history giving the same split. With shard, returns the names (suite::name) of that shard's tests for a test tool's arguments."},
 		mcpCallTimeout, splitTests)
 }
 
@@ -91,7 +91,7 @@ func getDebrief(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in debr
 }
 
 type flakyIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"how many, at most 50; default 20"`
 }
 
@@ -149,7 +149,7 @@ func listFlakyTests(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 }
 
 type splitIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	Shards  int    `json:"shards" jsonschema:"how many shards, 1 to 256"`
 	Shard   *int   `json:"shard,omitempty" jsonschema:"return only this shard (from 0)"`
 }

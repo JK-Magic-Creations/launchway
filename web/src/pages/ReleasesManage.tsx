@@ -30,17 +30,17 @@ export function ReleaseMatrixPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Where each release is"
-        sentence="Each row is a project, each column an Airfield. What runs in an Airfield is what was last launched there; a release is what gets promoted from one to the next." />
+        sentence={terms().say("Each row is a {project}, each column an Airfield. What runs in an Airfield is what was last launched there; a release is what gets promoted from one to the next.")} />
       <ReleasesNav path="/deployments/releases/matrix" />
       <ErrorBox error={data.error} />
       {data.loading && !m && <div className="loading">Loading…</div>}
-      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">Once a project has a release, or a pipeline has launched something into an Airfield, it appears here.</EmptyState></Sheet>}
+      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">{terms().say("Once a {project} has a release, or a pipeline has launched something into an Airfield, it appears here.")}</EmptyState></Sheet>}
       {m && m.rows.length > 0 && (
         <Sheet>
           <div className="rel-table-wrap">
             <table className="rel-table">
               <caption className="visually-hidden">Which release runs in which Airfield</caption>
-              <thead><tr><th scope="col">Project</th>{m.airfields.map((a) => <th key={a} scope="col">{a}</th>)}</tr></thead>
+              <thead><tr><th scope="col">{terms().say("{Project}")}</th>{m.airfields.map((a) => <th key={a} scope="col">{a}</th>)}</tr></thead>
               <tbody>
                 {m.rows.map((row) => (
                   <tr key={row.project}>
@@ -73,7 +73,7 @@ function CellView({ c, project, now, latest, mayPromote, mayReturn, onPromote, o
     <div className="rel-cell">
       {c.version && <span className="v">{c.release_id ? <a href={relHref(project, c.version)} onClick={onLink}>{c.version}</a> : c.version}{" "}{h && <Chip tone={h.tone}>{h.word}</Chip>}</span>}
       {c.version && <span className="m">since {ago(c.since ?? 0, now)} <span className="faint">({clock(c.since ?? 0)})</span>{c.by ? ` by ${c.by}` : ""}{c.run && <> · <EntityLink kind="run" name={`Sortie #${c.run_number}`} id={c.run} /></>}</span>}
-      {!c.release_id && c.version && <span className="m">not a release of this project</span>}
+      {!c.release_id && c.version && <span className="m">{terms().say("not a release of this {project}")}</span>}
       {c.launching && <span className="m"><Chip tone="run">launching {c.launching.version}</Chip> since {ago(c.launching.since, now)}</span>}
       <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {mayPromote && latest && c.version !== latest && !c.launching && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<span className="visually-hidden"> to {c.airfield}</span></Button>}
@@ -130,20 +130,20 @@ export function ReleaseCalendarPage() {
       {(mayFreezeAll || projects.length > 0) && (
         <Sheet title={`Start a ${hold}`}>
           <form className="rel-inline" onSubmit={(e) => { e.preventDefault(); if (to && reason.trim()) make(); }}>
-            <label>For<select value={project} onChange={(e) => setProject(e.target.value)}>{mayFreezeAll && <option value="">Every project</option>}{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
+            <label>For<select value={project} onChange={(e) => setProject(e.target.value)}>{mayFreezeAll && <option value="">{terms().say("Every {project}")}</option>}{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
             <label>In<input type="text" value={airfield} onChange={(e) => setAirfield(e.target.value)} placeholder="every Airfield" /></label>
             <label>Until<input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} required /></label>
             <label>Why<input type="text" value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={500} /></label>
             <Button kind="pri" type="submit" disabled={!to || !reason.trim()}>Start the {hold}</Button>
           </form>
-          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} nothing is promoted unless an administrator of the project overrides, with a reason that is kept in the {terms().lower("logbook")}.</p>
+          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} {terms().say("nothing is promoted unless an administrator of the {project} overrides, with a reason that is kept in the")} {terms().lower("logbook")}.</p>
           <ErrorBox error={error} />
         </Sheet>
       )}
       {(freezes.data ?? []).filter((f) => !f.canceled && f.to > now).length > 0 && (
         <Sheet title={`Current and coming ${terms().plural("hold").toLowerCase()}`}>
           <ul className="rowlist">{(freezes.data ?? []).filter((f) => !f.canceled && f.to > now).map((f) => (
-            <li key={f.id}><div className="main"><div className="nm">{f.project || "Every project"} · {f.airfield || "every Airfield"}</div><div className="sb">{f.reason} · until {clock(f.to)}</div></div>
+            <li key={f.id}><div className="main"><div className="nm">{f.project || terms().say("Every {project}")} · {f.airfield || "every Airfield"}</div><div className="sb">{f.reason} · until {clock(f.to)}</div></div>
               {(f.project ? me?.roles[f.project] === "admin" || me?.admin : me?.admin) && <div className="cell"><Button sm onClick={async () => { try { await releasesApi.cancelFreeze(f.id); freezes.reload(); data.reload(); } catch (e) { setError(e); } }}>End it<span className="visually-hidden"> ({f.reason})</span></Button></div>}</li>))}</ul>
         </Sheet>
       )}
@@ -172,7 +172,7 @@ export function ReleaseFormationsPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Formations"
-        sentence="A Formation groups releases of several projects that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started." />
+        sentence={terms().say("A Formation groups releases of several {projects} that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started.")} />
       <ReleasesNav path="/deployments/releases/formations" />
       <ErrorBox error={data.error} />
       {data.loading && !data.data && <div className="loading">Loading…</div>}
@@ -197,7 +197,7 @@ export function ReleaseFormationsPage() {
         <Sheet title="Make a formation">
           <form className="rel-inline" onSubmit={(e) => { e.preventDefault(); if (name.trim() && members.trim()) make(); }}>
             <label>Name<input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={64} /></label>
-            <label>Releases, in order, as project@version<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
+            <label>{terms().say("Releases, in order, as {project}@version")}<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
             <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> Order by dependencies (the software graph puts what others depend on first)</label>
             <Button kind="pri" type="submit" disabled={!name.trim() || !members.trim()}>Make the formation</Button>
           </form>
@@ -229,7 +229,7 @@ export function ReleaseReportPage() {
       <PageHead eyebrow="Deployments · Releases" title="Release report" sentence="What shipped, when it reached each Airfield, and the four measures of delivery worked out from what Launchway already records." />
       <ReleasesNav path="/deployments/releases/report" />
       <div className="toolbar2">
-        <label className="select"><span className="visually-hidden">Project</span><select value={project} onChange={(e) => setProject(e.target.value)}><option value="">Every project</option>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
+        <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span><select value={project} onChange={(e) => setProject(e.target.value)}><option value="">{terms().say("Every {project}")}</option>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
         <label className="select"><span className="visually-hidden">Period</span><select value={days} onChange={(e) => setDays(e.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></label>
         <a className="btn" href={releasesApi.reportUrl({ project: project || undefined, from, format: "html" })}>Export as HTML</a>
         <a className="btn" href={releasesApi.reportUrl({ project: project || undefined, from })} target="_blank" rel="noreferrer">Open the JSON</a>

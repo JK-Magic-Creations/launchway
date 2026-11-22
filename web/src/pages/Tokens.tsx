@@ -76,9 +76,7 @@ export function TokensPage() {
   const roles = ROLES.slice(0, limits?.your_role ? ROLES.indexOf(limits.your_role) + 1 : 0);
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title={<>API tokens</>} sentence={<>For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>).
-            A token acts as you, with the rights you have when it is used, never more than the role and projects it is limited to, until it
-            expires or is revoked.</>} />
+      <PageHead eyebrow="Settings" title={<>API tokens</>} sentence={<>For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>{terms().say("). A token acts as you, with the rights you have when it is used, never more than the role and {projects} it is limited to, until it expires or is revoked.")}</>} />
 
       <section className="card">
         <form onSubmit={create} className="inputs-form" aria-label="Make a token">
@@ -102,8 +100,8 @@ export function TokensPage() {
               </select>
             </label>
             <label className="field">
-              <span>Projects</span>
-              <input value={projects} placeholder="every project, or: pay-*, web" onChange={(e) => setProjects(e.target.value)} />
+              <span>{terms().say("{Projects}")}</span>
+              <input value={projects} placeholder={terms().say("every {project}, or: pay-*, web")} onChange={(e) => setProjects(e.target.value)} />
             </label>
           </div>
           <p className="sub">Every token expires, after at most {maxDays} days on this server. The role can be no higher than your own.</p>
@@ -129,7 +127,7 @@ export function TokensPage() {
       {me.admin && all && (
         <>
           <h2 className="h-sm" style={{ marginTop: 24 }}>Everyone's tokens</h2>
-          <p className="sub">As an admin of every project you can revoke any token, for example one that leaked or whose owner left.</p>
+          <p className="sub">{terms().say("As an admin of every {project} you can revoke any token, for example one that leaked or whose owner left.")}</p>
           {all.length === 0 ? <Empty title="Nobody has a token" /> : <TokenTable tokens={all} owner onRevoke={(t) => revoke(t, true)} />}
         </>
       )}
@@ -148,7 +146,7 @@ function TokenTable({ tokens, owner, onRevoke }: { tokens: Token[]; owner?: bool
             <tr key={t.id}>
               {owner && <td>{t.user}</td>}
               <td>{t.name}<div className="faint small mono">{t.id}</div></td>
-              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.projects?.length ? t.projects.join(", ") : "every project"}</td>
+              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.projects?.length ? t.projects.join(", ") : terms().say("every {project}")}</td>
               <td title={clock(t.created_at)}>{ago(t.created_at, now)}</td>
               <td>{t.expires_at <= now ? <span className="bad-ink">expired</span> : clock(t.expires_at)}</td>
               <td>{t.last_used ? <span title={clock(t.last_used)}>{ago(t.last_used, now)}{t.last_used_from && <span className="faint"> from {t.last_used_from}</span>}</span> : "never"}</td>

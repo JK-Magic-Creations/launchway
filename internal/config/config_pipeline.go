@@ -90,7 +90,7 @@ func (p ProjectConfig) sourcePipeline() (*source.ProjectPipeline, error) {
 	}
 	prs, err := pp.On.pullRequests()
 	if err != nil {
-		return nil, fmt.Errorf("project %s: %w", p.Name, err)
+		return nil, fmt.Errorf("flight %s: %w", p.Name, err)
 	}
 	if prs {
 		sp.On.PullRequest = &pipeline.PullRequestTrigger{}

@@ -14,33 +14,33 @@ import (
 )
 
 const togglesUsage = `Usage:
-  launchway toggles list    PROJECT [--json]                 the project's toggles, with their state in each environment
-  launchway toggles get     PROJECT KEY [--json]             one toggle: state and rules per environment, stale mentions
-  launchway toggles create  PROJECT KEY --type boolean|string|number|json [--default V] [--kind K]
+  launchway toggles list    FLIGHT [--json]                 the Flight's toggles, with their state in each environment
+  launchway toggles get     FLIGHT KEY [--json]             one toggle: state and rules per environment, stale mentions
+  launchway toggles create  FLIGHT KEY --type boolean|string|number|json [--default V] [--kind K]
                             [--owner O] [--description D] [--expires 2027-03-01] [--client-visible] [--reason R]
-  launchway toggles set     PROJECT KEY ENV (--on | --off | --percent N) [--serve JSON] [--reason R] [--at TIME]
+  launchway toggles set     FLIGHT KEY ENV (--on | --off | --percent N) [--serve JSON] [--reason R] [--at TIME]
         turn a toggle on or off in an environment, or roll it out to N percent (a boolean toggle: true
         for N percent of keys, false for the rest). The rules the environment already has are kept.
-  launchway toggles rules   PROJECT KEY ENV -f FILE [--reason R] [--at TIME]   replace the environment's whole state from a YAML file
-  launchway toggles evaluate PROJECT KEY --context JSON      what it serves for a context, in each environment (not counted)
-  launchway toggles history PROJECT KEY [--environment E] [--json]
-  launchway toggles revert  PROJECT CHANGE --reason R        go back over a change (never held for approval)
-  launchway toggles waiting PROJECT                          changes that wait for an approval
-  launchway toggles approve|reject|withdraw PROJECT CHANGE [--comment C]
-  launchway toggles timeline PROJECT ENV                     the toggle changes of an environment, newest first
-  launchway toggles revert-since PROJECT ENV --since MS --reason R [--dry-run]
-  launchway toggles keys list PROJECT | create PROJECT ENV --kind server|client [--name N] [--origin URL]...
-                       | rotate PROJECT ID [--overlap-hours N] | revoke PROJECT ID
-  launchway toggles safeguards get PROJECT [--environment E]
-  launchway toggles safeguards set PROJECT [--environment E] [--require-reason=BOOL] [--require-approval=BOOL]
+  launchway toggles rules   FLIGHT KEY ENV -f FILE [--reason R] [--at TIME]   replace the environment's whole state from a YAML file
+  launchway toggles evaluate FLIGHT KEY --context JSON      what it serves for a context, in each environment (not counted)
+  launchway toggles history FLIGHT KEY [--environment E] [--json]
+  launchway toggles revert  FLIGHT CHANGE --reason R        go back over a change (never held for approval)
+  launchway toggles waiting FLIGHT                          changes that wait for an approval
+  launchway toggles approve|reject|withdraw FLIGHT CHANGE [--comment C]
+  launchway toggles timeline FLIGHT ENV                     the toggle changes of an environment, newest first
+  launchway toggles revert-since FLIGHT ENV --since MS --reason R [--dry-run]
+  launchway toggles keys list FLIGHT | create FLIGHT ENV --kind server|client [--name N] [--origin URL]...
+                       | rotate FLIGHT ID [--overlap-hours N] | revoke FLIGHT ID
+  launchway toggles safeguards get FLIGHT [--environment E]
+  launchway toggles safeguards set FLIGHT [--environment E] [--require-reason=BOOL] [--require-approval=BOOL]
                             [--approvals N] [--watch-minutes N] [--lock NAME]... --reason R
-  launchway toggles export  PROJECT [-o FILE]                the project's toggles as a file (.launchway/toggles.yaml)
-  launchway toggles plan    PROJECT -f FILE                  how the file and the live toggles differ; changes nothing
-  launchway toggles apply   PROJECT -f FILE --reason R       make the live toggles match the file; never removes what it leaves out
-  launchway toggles usage   PROJECT KEY                     where a toggle is evaluated and how often (counts only, nothing about who)
-  launchway toggles schedules list PROJECT | cancel PROJECT ID   changes scheduled for later (made with set --at)
-  launchway toggles lock|unlock PROJECT KEY [--reason R]     for a toggle shared from a level above: stop nearer levels defining it
-  launchway toggles segments list PROJECT | set PROJECT NAME -f FILE [--reason R] | delete PROJECT NAME --reason R
+  launchway toggles export  FLIGHT [-o FILE]                the Flight's toggles as a file (.launchway/toggles.yaml)
+  launchway toggles plan    FLIGHT -f FILE                  how the file and the live toggles differ; changes nothing
+  launchway toggles apply   FLIGHT -f FILE --reason R       make the live toggles match the file; never removes what it leaves out
+  launchway toggles usage   FLIGHT KEY                     where a toggle is evaluated and how often (counts only, nothing about who)
+  launchway toggles schedules list FLIGHT | cancel FLIGHT ID   changes scheduled for later (made with set --at)
+  launchway toggles lock|unlock FLIGHT KEY [--reason R]     for a toggle shared from a level above: stop nearer levels defining it
+  launchway toggles segments list FLIGHT | set FLIGHT NAME -f FILE [--reason R] | delete FLIGHT NAME --reason R
 
 Safeguards are on by default: a change needs a reason, and in a protected environment another person's approval.
 A team may turn them down at its level (with a reason, which is recorded); a level above may lock them.
@@ -114,7 +114,7 @@ func (cl *client) togglesGeneric(args []string, name, method, tail string) error
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway toggles %s PROJECT", name)
+		return usageErr("launchway toggles %s FLIGHT", name)
 	}
 	var out any
 	if err := cl.call(method, tgPath(pos[0], tail), nil, &out); err != nil {
@@ -191,7 +191,7 @@ func (cl *client) togglesList(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway toggles list PROJECT [--json]")
+		return usageErr("launchway toggles list FLIGHT [--json]")
 	}
 	var out struct {
 		Toggles []tgSummary `json:"toggles"`
@@ -201,7 +201,7 @@ func (cl *client) togglesList(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		if len(out.Toggles) == 0 {
-			fmt.Fprintln(cl.out, "No toggles yet. Make one with: launchway toggles create PROJECT KEY --type boolean")
+			fmt.Fprintln(cl.out, "No toggles yet. Make one with: launchway toggles create FLIGHT KEY --type boolean")
 		}
 		for _, t := range out.Toggles {
 			cl.printToggle(t, false)
@@ -217,7 +217,7 @@ func (cl *client) togglesGet(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles get PROJECT KEY [--json]")
+		return usageErr("launchway toggles get FLIGHT KEY [--json]")
 	}
 	var t tgSummary
 	if err := cl.call("GET", tgPath(pos[0], "/toggles/"+url.PathEscape(pos[1])), nil, &t); err != nil {
@@ -265,7 +265,7 @@ func (cl *client) togglesCreate(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles create PROJECT KEY --type T [...]")
+		return usageErr("launchway toggles create FLIGHT KEY --type T [...]")
 	}
 	body := map[string]any{"key": pos[1], "type": *typ, "description": *desc, "owner": *owner, "client_visible": *visible, "reason": *reason}
 	if *kind != "" {
@@ -324,7 +324,7 @@ func (cl *client) togglesSet(args []string) error {
 		}
 	}
 	if len(pos) != 3 || n != 1 {
-		return usageErr("launchway toggles set PROJECT KEY ENV (--on | --off | --percent N) [--reason R]")
+		return usageErr("launchway toggles set FLIGHT KEY ENV (--on | --off | --percent N) [--reason R]")
 	}
 	st, t, err := cl.stateOf(pos[0], pos[1], pos[2])
 	if err != nil {
@@ -396,7 +396,7 @@ func (cl *client) togglesRules(args []string) error {
 		return err
 	}
 	if len(pos) != 3 || *file == "" {
-		return usageErr("launchway toggles rules PROJECT KEY ENV -f FILE [--reason R]")
+		return usageErr("launchway toggles rules FLIGHT KEY ENV -f FILE [--reason R]")
 	}
 	data, err := os.ReadFile(*file) //nolint:gosec // the person named their own file
 	if err != nil {
@@ -417,7 +417,7 @@ func (cl *client) togglesEvaluate(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles evaluate PROJECT KEY --context JSON")
+		return usageErr("launchway toggles evaluate FLIGHT KEY --context JSON")
 	}
 	var c map[string]any
 	if err := json.Unmarshal([]byte(*ctxText), &c); err != nil {
@@ -452,7 +452,7 @@ func (cl *client) togglesHistory(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles history PROJECT KEY [--environment E]")
+		return usageErr("launchway toggles history FLIGHT KEY [--environment E]")
 	}
 	var out struct {
 		Changes []struct {
@@ -498,7 +498,7 @@ func (cl *client) togglesChange(args []string, what string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles %s PROJECT CHANGE", what)
+		return usageErr("launchway toggles %s FLIGHT CHANGE", what)
 	}
 	var out any
 	body := map[string]any{"reason": *reason, "comment": *comment}
@@ -516,7 +516,7 @@ func (cl *client) togglesTimeline(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles timeline PROJECT ENV")
+		return usageErr("launchway toggles timeline FLIGHT ENV")
 	}
 	var out any
 	if err := cl.call("GET", tgPath(pos[0], "/toggle-timeline?environment="+url.QueryEscape(pos[1])), nil, &out); err != nil {
@@ -535,7 +535,7 @@ func (cl *client) togglesRevertSince(args []string) error {
 		return err
 	}
 	if len(pos) != 2 || *since <= 0 {
-		return usageErr("launchway toggles revert-since PROJECT ENV --since MS --reason R [--dry-run]")
+		return usageErr("launchway toggles revert-since FLIGHT ENV --since MS --reason R [--dry-run]")
 	}
 	var out any
 	if err := cl.call("POST", tgPath(pos[0], "/toggle-revert-since"), map[string]any{"environment": pos[1], "since": *since, "reason": *reason, "dry_run": *dry}, &out); err != nil {
@@ -561,7 +561,7 @@ func (cl *client) togglesKeys(args []string) error {
 	switch args[0] {
 	case "list":
 		if len(pos) != 1 {
-			return usageErr("launchway toggles keys list PROJECT")
+			return usageErr("launchway toggles keys list FLIGHT")
 		}
 		var out any
 		if err := cl.call("GET", tgPath(pos[0], "/toggle-keys"), nil, &out); err != nil {
@@ -570,7 +570,7 @@ func (cl *client) togglesKeys(args []string) error {
 		return cl.print(out, true, nil)
 	case "create":
 		if len(pos) != 2 {
-			return usageErr("launchway toggles keys create PROJECT ENV --kind server|client [--name N]")
+			return usageErr("launchway toggles keys create FLIGHT ENV --kind server|client [--name N]")
 		}
 		var out struct {
 			Key  string `json:"key"`
@@ -583,7 +583,7 @@ func (cl *client) togglesKeys(args []string) error {
 		return nil
 	case "rotate":
 		if len(pos) != 2 {
-			return usageErr("launchway toggles keys rotate PROJECT ID")
+			return usageErr("launchway toggles keys rotate FLIGHT ID")
 		}
 		var out struct {
 			Key  string `json:"key"`
@@ -596,7 +596,7 @@ func (cl *client) togglesKeys(args []string) error {
 		return nil
 	case "revoke":
 		if len(pos) != 2 {
-			return usageErr("launchway toggles keys revoke PROJECT ID")
+			return usageErr("launchway toggles keys revoke FLIGHT ID")
 		}
 		if err := cl.call("DELETE", tgPath(pos[0], "/toggle-keys/"+url.PathEscape(pos[1])), nil, nil); err != nil {
 			return err
@@ -609,7 +609,7 @@ func (cl *client) togglesKeys(args []string) error {
 
 func (cl *client) togglesSafeguards(args []string) error {
 	if len(args) == 0 {
-		return usageErr("launchway toggles safeguards get|set PROJECT ...")
+		return usageErr("launchway toggles safeguards get|set FLIGHT ...")
 	}
 	fs := flag.NewFlagSet("toggles safeguards", flag.ContinueOnError)
 	env := fs.String("environment", "", "only this Airfield (default: all of them)")
@@ -625,7 +625,7 @@ func (cl *client) togglesSafeguards(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway toggles safeguards get|set PROJECT")
+		return usageErr("launchway toggles safeguards get|set FLIGHT")
 	}
 	switch args[0] {
 	case "get":
@@ -675,7 +675,7 @@ func (cl *client) togglesExport(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway toggles export PROJECT [-o FILE]")
+		return usageErr("launchway toggles export FLIGHT [-o FILE]")
 	}
 	var out struct {
 		File string `json:"file"`
@@ -700,7 +700,7 @@ func (cl *client) togglesFile(args []string, what string) error {
 		return err
 	}
 	if len(pos) != 1 || *file == "" {
-		return usageErr("launchway toggles %s PROJECT -f FILE", what)
+		return usageErr("launchway toggles %s FLIGHT -f FILE", what)
 	}
 	data, err := os.ReadFile(*file) //nolint:gosec // the person named their own file
 	if err != nil {
@@ -730,7 +730,7 @@ func (cl *client) togglesFile(args []string, what string) error {
 
 func (cl *client) togglesSegments(args []string) error {
 	if len(args) == 0 {
-		return usageErr("launchway toggles segments list|set|delete PROJECT ...")
+		return usageErr("launchway toggles segments list|set|delete FLIGHT ...")
 	}
 	fs := flag.NewFlagSet("toggles segments", flag.ContinueOnError)
 	file := fs.String("f", "", "the segment as YAML or JSON: included, excluded, rules")
@@ -740,7 +740,7 @@ func (cl *client) togglesSegments(args []string) error {
 		return err
 	}
 	if len(pos) < 1 {
-		return usageErr("launchway toggles segments list|set|delete PROJECT [NAME]")
+		return usageErr("launchway toggles segments list|set|delete FLIGHT [NAME]")
 	}
 	switch args[0] {
 	case "list":
@@ -751,7 +751,7 @@ func (cl *client) togglesSegments(args []string) error {
 		return cl.print(out, true, nil)
 	case "set":
 		if len(pos) != 2 || *file == "" {
-			return usageErr("launchway toggles segments set PROJECT NAME -f FILE [--reason R]")
+			return usageErr("launchway toggles segments set FLIGHT NAME -f FILE [--reason R]")
 		}
 		data, err := os.ReadFile(*file) //nolint:gosec // the person named their own file
 		if err != nil {
@@ -776,7 +776,7 @@ func (cl *client) togglesSegments(args []string) error {
 		return nil
 	case "delete":
 		if len(pos) != 2 {
-			return usageErr("launchway toggles segments delete PROJECT NAME --reason R")
+			return usageErr("launchway toggles segments delete FLIGHT NAME --reason R")
 		}
 		if err := cl.call("DELETE", tgPath(pos[0], "/toggle-segments/"+url.PathEscape(pos[1])+"?reason="+url.QueryEscape(*reason)), nil, nil); err != nil {
 			return err
@@ -800,7 +800,7 @@ func (cl *client) togglesUsage(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles usage PROJECT KEY")
+		return usageErr("launchway toggles usage FLIGHT KEY")
 	}
 	var out any
 	if err := cl.call("GET", tgPath(pos[0], "/toggles/"+url.PathEscape(pos[1])+"/usage"), nil, &out); err != nil {
@@ -811,7 +811,7 @@ func (cl *client) togglesUsage(args []string) error {
 
 func (cl *client) togglesSchedules(args []string) error {
 	if len(args) == 0 {
-		return usageErr("launchway toggles schedules list PROJECT | cancel PROJECT ID")
+		return usageErr("launchway toggles schedules list FLIGHT | cancel FLIGHT ID")
 	}
 	fs := flag.NewFlagSet("toggles schedules", flag.ContinueOnError)
 	pos, err := parseArgs(fs, args[1:])
@@ -832,7 +832,7 @@ func (cl *client) togglesSchedules(args []string) error {
 		fmt.Fprintln(cl.out, "Canceled: it will not run.")
 		return nil
 	}
-	return usageErr("launchway toggles schedules list PROJECT | cancel PROJECT ID")
+	return usageErr("launchway toggles schedules list FLIGHT | cancel FLIGHT ID")
 }
 
 func (cl *client) togglesLock(args []string, what string) error {
@@ -843,7 +843,7 @@ func (cl *client) togglesLock(args []string, what string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway toggles %s PROJECT KEY [--reason R]", what)
+		return usageErr("launchway toggles %s FLIGHT KEY [--reason R]", what)
 	}
 	method, body := "DELETE", any(nil)
 	if what == "lock" {

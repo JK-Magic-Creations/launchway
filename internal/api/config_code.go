@@ -643,7 +643,7 @@ func (s *Server) configReport(w http.ResponseWriter, r *http.Request) {
 // pipeline names the input it takes the limit from ({"input": "limit"}).
 func (s *Server) configRerunFailed(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	id, step := r.PathValue("id"), r.PathValue("step")

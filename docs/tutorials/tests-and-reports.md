@@ -5,7 +5,7 @@ are flaky, and how tests behave over time. For developers. Takes about 15 minute
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, Podman
 > and `python:3.13-slim` (pytest installed from PyPI in the step). **Not verified:** other test
-> frameworks than pytest here; the JUnit and `go test -json` readers are covered by the project's tests.
+> frameworks than pytest here; the JUnit and `go test -json` readers are covered by the Flight's tests.
 
 ## What you need
 
@@ -123,7 +123,7 @@ Commit it. The Sortie succeeds on the step's second attempt, and on the **Tests*
 
 ## 5 Watch tests over time
 
-Open **Projects → hello → Tests**. For the default branch it shows the totals and time of recent
+Open **Flights (codebase) → hello → Tests**. For the default branch it shows the totals and time of recent
 runs, the tests that fail most, the flaky tests, the slowest, and each test's recent results as a
 strip of links to their Sorties. A test that passed in the previous run of the branch and fails now
 is marked as a **new failure**.

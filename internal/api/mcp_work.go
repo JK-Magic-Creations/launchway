@@ -140,7 +140,7 @@ func (i itemIn) itemRef() string { return i.Item }
 
 // scopeIn is the input of the tools that work at one level.
 type scopeIn struct {
-	Scope string `json:"scope" jsonschema:"where: project:owner/name (a bare owner/name is a project), unit:NAME for a Squadron, organization for the Wing, or installation for Base"`
+	Scope string `json:"scope" jsonschema:"where: Flight:owner/name (a bare owner/name is a Flight), unit:NAME for a Squadron, organization for the Wing, or installation for Base"`
 }
 
 func (s scopeIn) scopeQuery() (url.Values, error) {
