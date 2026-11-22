@@ -50,6 +50,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"get_security_findings":  {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"list_artifacts":         {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"read_artifact_file":     {map[string]any{"run_id": "{pay}", "artifact_id": "art_nope", "path": "a"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_run_usage":          {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"list_images":            {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_deployments":        {map[string]any{"project": "pay-api"}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_approvals":         {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},

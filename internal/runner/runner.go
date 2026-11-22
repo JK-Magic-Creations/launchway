@@ -596,6 +596,9 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
 	sys("Image %s", job.Image)
+	if job.Sizing != nil && job.Sizing.Text != "" {
+		sys("%s", job.Sizing.Text)
+	}
 	tctx, cancel := context.WithTimeout(ctx, job.Timeout.D())
 	defer cancel()
 	start := time.Now()

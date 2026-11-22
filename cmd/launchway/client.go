@@ -56,6 +56,7 @@ var clientUsage = themed(`Usage:
   launchway runs lanes <Flight> [--json]          each lane: the {run} that holds it, and the {runs} waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
+  launchway runs usage <run-id> [--step NAME] [--json]
   launchway runs reports <run-id> [--json]                links to its HTML reports
 
 LAUNCHWAY_SERVER and LAUNCHWAY_TOKEN, if set, are used instead of what login
@@ -396,6 +397,8 @@ func cmdRuns(args []string) error {
 			return cl.tests(args[1:])
 		case "coverage":
 			return cl.coverage(args[1:])
+		case "usage":
+			return cl.usage(args[1:])
 		case "reports":
 			return cl.reports(args[1:])
 		case "cancel":

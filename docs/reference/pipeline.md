@@ -1316,6 +1316,22 @@ uses for how many packages it compiles at once), `MAKEFLAGS=-jN`, `CARGO_BUILD_J
 starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well, and
 `cpu: 16, memory: 6Gi` is 6.
 
+**Automatic memory.** A step that writes no memory of its own (no `memory` or `memory_limit` in its
+`resources`, in its stage's, in its plan's, and no `memory` on its container under `containers`) does
+not have to be sized by hand. Each attempt is measured (see `launchway runs usage`), and when the
+installation sizes steps at all (its default for the kind has a memory), the server reads the highest
+memory use of the step's last 20 measured attempts on the same pipeline of the same Flight and the
+same branch family (`main` is its own family; `feat/a` and `feat/b` are the family `feat`). From 3
+attempts on it takes the 95th percentile, adds a quarter, rounds up to 64Mi and gives the step that,
+promised and as its limit. It never gives less than the installation's default, so learning only
+raises; it never gives more than the installation's `max_memory` (twice the default's limit where none
+is set). A step killed for memory (exit 137, with the Station's explanation) that was sized this way is
+run once more with twice the memory it had, within the same cap, and its log says so; a second kill
+fails the step. A step that writes its own memory is never changed and never run again for memory.
+The step's log says where its memory came from, and so do the run page, `runs show` and
+`GET /api/v1/runs/{id}/usage`: *declared in the pipeline file*, *learned from N runs*, *default*, or
+*raised after a memory kill*. CPU is not learned.
+
 **Where it is applied.** Kubernetes sets the pod's requests and limits. Podman and Docker run each
 step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
 a step that writes `resources` there is refused with a message saying so. A step that does not

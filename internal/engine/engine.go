@@ -251,6 +251,9 @@ type Job struct {
 	// StepContainer is Container sized for this step alone (Containers sizes it for the largest step
 	// that shares its image): what a runner that makes a pod for each step uses; nil: use Containers.
 	StepContainer *pipeline.Container `json:"step_container,omitempty"`
+	// Sizing says where the step's memory came from (declared, learned, default, raised); the Station
+	// writes it to the step's log. nil: the server does not size this step.
+	Sizing *Sizing `json:"sizing,omitempty"`
 	// WorkspaceExclude is the pipeline's workspace.exclude: paths a runner that carries the workspace leaves out.
 	WorkspaceExclude []string `json:"workspace_exclude,omitempty"`
 	// Workspace names the run's workspace on this runner: the same for every
@@ -1215,7 +1218,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
-			c.failAttempt(l.stepID, s, &p, res, failureCause(res), false)
+			if !c.memoryRetry(l, s, &p, res) {
+				c.failAttempt(l.stepID, s, &p, res, failureCause(res), false)
+			}
 		}
 		c.advance()
 		return nil

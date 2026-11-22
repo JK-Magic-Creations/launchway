@@ -28,6 +28,11 @@ export interface StepUsage {
   reserved_memory_bytes?: number;
   reserved_cpu_milli?: number;
   attempt?: number;
+  /** Where the step's numbers came from: declared, learned, default or raised (after a memory kill). */
+  sizing?: string;
+  sizing_runs?: number;
+  sizing_text?: string;
+  killed_for_memory?: boolean;
 }
 
 /** A size in the units quantities use: 1.1Gi, 256Mi. */
@@ -38,12 +43,17 @@ export function sizeText(n: number): string {
   return String(n);
 }
 
-/** What a step reserved and used, in a line; a step that was not measured says so. */
+/** What a step reserved and used, in a line; a step that was not measured says so. Then where its numbers came from. */
 export function stepUsageText(u: StepUsage): string {
-  if (!u.measured) return "use not measured";
   const parts: string[] = [];
-  if (u.reserved_memory_bytes) parts.push(`reserved ${sizeText(u.reserved_memory_bytes)}`);
-  parts.push(`used ${sizeText(u.memory_peak_bytes ?? 0)} peak`);
-  if (u.cpu_peak_milli) parts.push(`${Number((u.cpu_peak_milli / 1000).toPrecision(2))} CPU peak`);
+  if (u.measured) {
+    if (u.reserved_memory_bytes) parts.push(`reserved ${sizeText(u.reserved_memory_bytes)}`);
+    parts.push(`used ${sizeText(u.memory_peak_bytes ?? 0)} peak`);
+    if (u.cpu_peak_milli) parts.push(`${Number((u.cpu_peak_milli / 1000).toPrecision(2))} CPU peak`);
+  } else if (u.note || !u.sizing) {
+    parts.push("use not measured");
+  }
+  if (u.killed_for_memory) parts.push("killed for memory");
+  if (u.sizing_text) parts.push(`numbers: ${u.sizing_text}`);
   return parts.join(", ");
 }

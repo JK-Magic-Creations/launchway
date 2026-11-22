@@ -14689,6 +14689,37 @@ paths:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.trust
+    /api/v1/runs/{id}/usage:
+        get:
+            description: 'What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from. ?step= limits it to one step. {"steps": [{"step", "attempts": [{"attempt", "measured", "method", "memory_peak_bytes", "cpu_peak_milli", "cpu_ms", "reserved_memory_bytes", "reserved_cpu_milli", "sizing", "sizing_runs", "sizing_text", "killed_for_memory", "note"}]}]}. sizing is declared (written in the pipeline file), learned (from the step''s earlier runs), default (the installation''s) or raised (doubled after a kill for memory)'
+            operationId: get_api_v1_runs_id_usage
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from.
+            tags:
+                - runs
+            x-launchway-access: run-viewer
     /api/v1/runs/{id}/variables:
         get:
             description: The variables the Sortie used, as recorded when it was created; a re-run shows the original's

@@ -493,22 +493,28 @@ func (c *cmd) runContainers() []pipeline.Container {
 // image (runContainers). It is nil when the step runs in no container, when
 // the server does not size containers, or when the policy cannot be read; the
 // runner then uses the run's container as it always did.
-func (c *cmd) stepContainer(def *pipeline.Step) *pipeline.Container {
+func (c *cmd) stepContainer(def *pipeline.Step) (*pipeline.Container, *Sizing) {
 	name := c.st.Pipeline.ContainerFor(def)
 	if name == "" || !c.e.knows(schemaResources) {
-		return nil
+		return nil, nil
 	}
 	pol, err := c.e.loadPolicy(c.tx)
 	if err != nil {
-		return nil // runContainers has logged it
+		return nil, nil // runContainers has logged it
 	}
 	for _, ct := range c.st.Pipeline.RunContainers() {
 		if ct.Name == name && !ct.Service {
+			orig := ct
 			sized := sizeContainer(c.st.Pipeline, &ct, []*pipeline.Step{def}, pol)
-			return &sized
+			var sz *Sizing
+			if def.ResourceKind() != "" {
+				s := c.autoSize(def, &sized, &orig, pol)
+				sz = &s
+			}
+			return &sized, sz
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourcePolicy) []pipeline.Container {

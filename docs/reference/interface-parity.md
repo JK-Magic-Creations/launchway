@@ -467,6 +467,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/compare` | `get_test_results` | `runs tests` | — | equal |
 | `POST /api/v1/runs/{id}/trust` | `trust_run` | `runs trust` | `not needed by terraform` | equal |
+| `GET /api/v1/runs/{id}/usage` | `get_run_usage` | `runs usage` | — | equal |
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/search` | — | — | — | exempt: the finder in the top bar: list_projects, list_runs and the repositories commands list and filter the same things for agents and scripts |
