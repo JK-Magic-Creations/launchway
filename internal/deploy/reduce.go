@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"sort"
 	"strconv"
@@ -138,10 +139,10 @@ func ReduceRollout(obj map[string]any, workloadGeneration *int64) *Rollout {
 	ro.CurrentPodHash = str(status, "currentPodHash")
 	ro.StableRS = str(status, "stableRS")
 	ro.Aborted, _ = status["abort"].(bool)
-	ro.Replicas = int(integer(status["replicas"]))
-	ro.Ready = int(integer(status["readyReplicas"]))
-	ro.Updated = int(integer(status["updatedReplicas"]))
-	ro.Available = int(integer(status["availableReplicas"]))
+	ro.Replicas = clampInt(integer(status["replicas"]))
+	ro.Ready = clampInt(integer(status["readyReplicas"]))
+	ro.Updated = clampInt(integer(status["updatedReplicas"]))
+	ro.Available = clampInt(integer(status["availableReplicas"]))
 	observed := ro.ObservedGeneration != "" && ro.ObservedGeneration == strconv.FormatInt(ro.Generation, 10)
 	if mapAt(spec, "workloadRef") != nil {
 		ro.WorkloadRef = true
@@ -170,12 +171,12 @@ func ReduceRollout(obj map[string]any, workloadGeneration *int64) *Rollout {
 		ro.StepNames = append(ro.StepNames, stepName(asMap(s)))
 	}
 	if v, ok := status["currentStepIndex"]; ok && v != nil {
-		i := int(integer(v))
+		i := clampInt(integer(v))
 		ro.Step = &i
 	}
 	if w := mapAt(mapAt(mapAt(status, "canary"), "weights"), "canary"); w != nil {
 		if v, ok := w["weight"]; ok {
-			n := int(integer(v))
+			n := clampInt(integer(v))
 			ro.CanaryWeight = &n
 		}
 	}
@@ -245,8 +246,8 @@ func ReduceAnalysisRuns(items []map[string]any, rolloutUID string) []AnalysisRun
 		for _, m := range list(status, "metricResults") {
 			mm := asMap(m)
 			m := Metric{Name: str(mm, "name"), Phase: str(mm, "phase"), Message: str(mm, "message"),
-				Count: int(integer(mm["count"])), Successful: int(integer(mm["successful"])), Failed: int(integer(mm["failed"])),
-				Inconclusive: int(integer(mm["inconclusive"])), Error: int(integer(mm["error"]))}
+				Count: clampInt(integer(mm["count"])), Successful: clampInt(integer(mm["successful"])), Failed: clampInt(integer(mm["failed"])),
+				Inconclusive: clampInt(integer(mm["inconclusive"])), Error: clampInt(integer(mm["error"]))}
 			reduceMetricSpec(&m, specs[m.Name])
 			reduceMeasurements(&m, list(mm, "measurements"), a.Namespace)
 			a.Metrics = append(a.Metrics, m)
@@ -402,6 +403,13 @@ func integer(v any) int64 {
 	return 0
 }
 
+// clampInt narrows a number read from the cluster to an int, holding it to
+// the range every platform's int has (a count past +-2^31 is not a count of
+// anything real; it is kept at the edge, never wrapped to something else).
+func clampInt(n int64) int {
+	return int(min(max(n, math.MinInt32), math.MaxInt32))
+}
+
 // scalarString writes a number or a string as a string: Argo Rollouts has
 // written observedGeneration both ways.
 func scalarString(v any) string {
@@ -434,7 +442,7 @@ func reduceMetricSpec(m *Metric, spec map[string]any) {
 		return
 	}
 	m.SuccessCondition, m.FailureCondition = str(spec, "successCondition"), str(spec, "failureCondition")
-	m.Interval, m.FailureLimit = str(spec, "interval"), int(integer(spec["failureLimit"]))
+	m.Interval, m.FailureLimit = str(spec, "interval"), clampInt(integer(spec["failureLimit"]))
 	for k := range mapAt(spec, "provider") {
 		m.Provider = k
 		break
