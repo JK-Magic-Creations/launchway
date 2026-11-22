@@ -7,7 +7,7 @@
 #     launchway/launchway only, images.signing (the runner's own key), a secret store `ci`.
 #   - server: environments launchway-sandbox and launchway-dev (dev protected), a deploy runner pool,
 #     verification sources `prometheus` and `loki`.
-#   - deploy runner: repos.gitops (homelab-gitops, paths limited to the two launchway files per
+#   - deploy runner: repos.gitops (the GitOps repository, paths limited to the two launchway files per
 #     environment), applications limited to launchway-sandbox and launchway-dev, accept: limited to the same.
 pipeline: launchway
 on:

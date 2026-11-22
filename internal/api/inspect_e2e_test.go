@@ -87,7 +87,7 @@ func setupInspectWith(t *testing.T, cfg argocd.Inspect, broken bool) *inspectEnv
 		t.Fatal(err)
 	}
 	agent := &argocd.Agent{
-		Config: argocd.Config{Targets: map[string]argocd.Target{"homelab": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
+		Config: argocd.Config{Targets: map[string]argocd.Target{"cluster-a": {Kubernetes: argocd.Kubernetes{InCluster: true}, ArgoCDNamespace: "argocd",
 			Applications: []argocd.AppRule{{Projects: []string{"shop"}, Names: []string{"shop"}}}, RolloutNamespaces: []string{"shop"}, Inspect: cfg}}},
 		DataDir: t.TempDir(), Secrets: secrets.NewResolver(),
 		Connect: func(string, argocd.Target) (*argocd.Cluster, error) {
@@ -97,7 +97,7 @@ func setupInspectWith(t *testing.T, cfg argocd.Inspect, broken bool) *inspectEnv
 		},
 	}
 	d := &runner.DeployRunner{Client: runner.NewClient(de.srv.URL, poolToken), Agent: agent,
-		Info: engine.RunnerInfo{ID: "inspector", Name: "inspector", Targets: []string{"homelab"}}, Log: quiet()}
+		Info: engine.RunnerInfo{ID: "inspector", Name: "inspector", Targets: []string{"cluster-a"}}, Log: quiet()}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { defer close(done); d.RunInspections(ctx) }()
@@ -108,7 +108,7 @@ func setupInspectWith(t *testing.T, cfg argocd.Inspect, broken bool) *inspectEnv
 		t.Fatal(err)
 	}
 	s2 := &Server{Engine: eng2, RunnerToken: "secret", Actor: "tester", Log: quiet(),
-		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+		RunnerPools: []RunnerPool{{Name: "deploy-cluster-a", Token: poolToken, Targets: []string{"cluster-a"}}}}
 	srv2 := httptest.NewServer(s2.Handler())
 	t.Cleanup(func() { srv2.Close(); eng2.Close() })
 	return &inspectEnv{deployEnv: de, runID: r.ID, dep: r.Deployments[0].ID, srv2: srv2, eng2: eng2}
@@ -226,7 +226,7 @@ func TestFollowedLogsAcrossTwoServers(t *testing.T) {
 	// the runner's next chunk is told to stop).
 	deadline := time.Now().Add(15 * time.Second)
 	for {
-		n, err := ie.eng.OpenInspects("homelab")
+		n, err := ie.eng.OpenInspects("cluster-a")
 		if err != nil {
 			t.Fatal(err)
 		}

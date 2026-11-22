@@ -45,13 +45,13 @@ export function launchTree(broken = false): TreeView {
           points: [{ at: T0 - 20_000, phase: "Successful", value: "[0.99]" }, { at: T0 - 10_000, phase: "Failed", value: "[0.91]" }] }] }] },
     },
     actions: [{ action: "pause", ok: true }, { action: "resume", ok: false, why: "it is not paused by a person" }, { action: "restart", ok: true }, { action: "scale", ok: false, why: "the autoscaler shop manages the replica count" }],
-    run: "run_7", deployment: "dep_1", project: "shop-api", environment: "prod", application: "shop", target: "homelab", closed: false, protected: true, can_logs: true, can_control: true,
+    run: "run_7", deployment: "dep_1", project: "shop-api", environment: "prod", application: "shop", target: "cluster-a", closed: false, protected: true, can_logs: true, can_control: true,
   };
 }
 
 export function launchDeployment(): DeploymentView {
   return {
-    id: "dep_1", run_id: "run_7", run_number: 7, project: "shop-api", step: "deploy-prod", environment: "prod", service: "shop", target: "homelab", application: "shop", mode: "deploy",
+    id: "dep_1", run_id: "run_7", run_number: 7, project: "shop-api", step: "deploy-prod", environment: "prod", service: "shop", target: "cluster-a", application: "shop", mode: "deploy",
     version: "1.4.0", previous_version: "1.3.2", changed: true, phase: "rolling_out", detail: "", opened_at: Date.now() - 600_000, holding: true, commands: [],
   } as unknown as DeploymentView;
 }
