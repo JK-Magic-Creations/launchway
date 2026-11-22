@@ -9,7 +9,10 @@ package runner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -74,6 +77,9 @@ func (r *Runner) customStart(job *engine.Job, ws string, env map[string]string, 
 		if _, ok := secretValues[stepkit.EnvPart(n)]; ok {
 			secretEnv[n] = stepkit.EnvPart(n)
 		}
+	}
+	if err := verifyManifest(ws, c); err != nil {
+		return nil, err
 	}
 	cr := &customRun{job: job, step: c, rel: ioDirFor(job.StepID), inside: r.Exec.WorkspacePath(ws)}
 	io, err := stepkit.PrepareIO(ws, cr.rel, cr.inside, c.Name, c.InputTypes, c.Values, secretEnv)
@@ -203,4 +209,26 @@ func (cr *customRun) settle(ctx context.Context, r *Runner, spec executor.Spec, 
 	}
 	d := cr.finish(ctx, r, spec, code, mask, sys)
 	return d.outputs, d.notes, d.why, d.code
+}
+
+// verifyManifest checks that the manifest in the workspace is the one the Sortie was made with: what a step
+// may do was read from it when the Sortie was created, and it is not run if its files are not those.
+func verifyManifest(ws string, c *pipeline.CustomStep) error {
+	rel := stepkit.ManifestPath(c.Name)
+	if c.Library != pipeline.SelfLibrary {
+		rel = LibDir + "/" + c.Library + "/" + rel
+	}
+	path, err := stepkit.SafeJoin(ws, rel)
+	if err != nil {
+		return fmt.Errorf("the step's manifest: %w", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("the step's manifest %s is not in the workspace: %w", rel, err)
+	}
+	sum := sha256.Sum256(data)
+	if hex.EncodeToString(sum[:]) != c.Digest {
+		return fmt.Errorf("%s is not the manifest this Sortie was made with (what the step may do was read from that one); not running it", rel)
+	}
+	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/starters"
 	"github.com/jk-magic-creations/launchway/internal/stepkit"
 	"github.com/jk-magic-creations/launchway/internal/steptest"
+	"github.com/jk-magic-creations/launchway/sdk"
 )
 
 // Three of the starters' scripts are also written as custom steps, against the step contract, in
@@ -252,5 +253,30 @@ func TestPythonLicensesStepPassesSeveralNamesAsOneArgument(t *testing.T) {
 	runStep(t, ws, "python-licenses", map[string]string{"license_deny": `["GPL-3.0","AGPL-3.0"]`})
 	if got := calls(t, log); !strings.Contains(got, "pip-licenses --fail-on=GPL-3.0;AGPL-3.0\n") {
 		t.Errorf("%q", got)
+	}
+}
+
+// The kits inside the starters' steps are copies of the published ones (sdk/steps); a change to a kit
+// that is not copied here is caught.
+func TestStartersStepsCarryThePublishedKits(t *testing.T) {
+	for kit, copyIn := range map[string]string{
+		"steps/sh/launchway-step.sh":     "steps/scan-secrets/launchway-step.sh",
+		"steps/python/launchway_step.py": "steps/python-licenses/launchway_step.py",
+		"steps/go/lwstep/lwstep.go":      "steps/go-licenses/lwstep.go",
+	} {
+		want, err := sdk.Kits.ReadFile(kit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := starters.File(copyIn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.HasSuffix(kit, ".go") { // the Go step is one package, so its copy says main
+			want = []byte(strings.Replace(string(want), "package lwstep", "package main", 1))
+		}
+		if string(got) != string(want) {
+			t.Errorf("%s is not the published %s: copy it again", copyIn, kit)
+		}
 	}
 }

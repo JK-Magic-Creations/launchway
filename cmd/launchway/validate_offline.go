@@ -76,6 +76,7 @@ func validateOffline(path string, libs []string, resolved bool, facts pipeline.P
 			fmt.Printf("  custom step %s: %s, from %s\n    %s\n", s.ID, s.Custom.Name, customSource(s.Custom), s.Custom.Permissions())
 		}
 	}
+	printStepNotices(p, dirs)
 	for _, w := range append(append(pipeline.OutputWarnings(p), pipeline.DeliveryWarnings(p)...), pipeline.ServiceWarnings(p)...) {
 		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
 	}

@@ -67,7 +67,7 @@ func stepNew(args []string) error {
 	if *name == "" {
 		*name = "my-step"
 	}
-	made, err := steptest.Scaffold(*dir, *name, *lang)
+	made, err := scaffoldFor(*dir, *name, *lang)
 	if err != nil {
 		return err
 	}
@@ -298,3 +298,5 @@ func manifestAt(dir, ref string) (*stepkit.Manifest, error) {
 	}
 	return m, nil
 }
+
+func scaffoldFor(dir, name, lang string) (string, error) { return steptest.Scaffold(dir, name, lang) }
