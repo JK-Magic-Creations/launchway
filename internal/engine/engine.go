@@ -1264,6 +1264,7 @@ func (e *Engine) reaper(ctx context.Context) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	var pruned time.Time
+	e.refreshOlder(ctx)
 	for {
 		select {
 		case <-ctx.Done():
@@ -1273,6 +1274,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			continue
 		case <-t.C:
 			e.markAlive()
+			e.refreshOlder(ctx)
 			e.reap()
 			e.expireWaits()
 			e.expireRunTimeouts()

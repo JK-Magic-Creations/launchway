@@ -116,15 +116,21 @@ type olderCheck struct {
 }
 
 // olderServersRunning says whether a server of an older release is still connected (PostgreSQL only; SQLite has one
-// process). The answer is kept for twenty seconds. When the servers cannot be told apart it says no.
+// process), as the reaper last found out (refreshOlder, every few seconds); until it has looked, it says no. It asks
+// the database nothing itself: it is called inside commands that hold a transaction.
 func (e *Engine) olderServersRunning() bool {
 	if v, ok := olderSeen.Load(e); ok {
-		if c := v.(olderCheck); time.Since(c.at) < 20*time.Second {
-			return c.some
-		}
+		return v.(olderCheck).some
 	}
-	n, err := e.OlderServers(context.Background())
-	some := err == nil && n > 0
-	olderSeen.Store(e, olderCheck{at: time.Now(), some: some})
-	return some
+	return false
+}
+
+// refreshOlder asks the database whether a server of an older release is connected, at most every ten seconds.
+// When the servers cannot be told apart it says no.
+func (e *Engine) refreshOlder(ctx context.Context) {
+	if v, ok := olderSeen.Load(e); ok && time.Since(v.(olderCheck).at) < 10*time.Second {
+		return
+	}
+	n, err := e.OlderServers(ctx)
+	olderSeen.Store(e, olderCheck{at: time.Now(), some: err == nil && n > 0})
 }

@@ -600,14 +600,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		}
 		// One restriction for both ways a pull request can be known to come from a fork: a hosted repository's
 		// fork gate and an outside host's own flag. Either way the run takes the default branch's pipeline.
-		fork := m.forkVerdict(ctx, p, n, r.SHA)
-		if fromHost && meta.Fork && !fork.Fork {
-			fork = ForkVerdict{Fork: true, Reason: "pull request from a fork"}
-		}
-		pipelineAt, restr := p.trustedPipelineSHA(refs, r, fork.Fork)
-		if fork.Fork {
-			pipelineAt, restr = p.forkPipelineSHA(refs, r, fork.Reason)
-		}
+		fork, pipelineAt, restr := m.pullFork(ctx, p, refs, r, n, fromHost && meta.Fork)
 		pl, from, err := p.parsedAt(ctx, pipelineAt)
 		asks := err == nil && pl.On.MatchPullRequest()
 		if !gateOn {
@@ -677,11 +670,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				}
 				t.PullRequestInto = into.Target
 				t.Inputs = vals
-				note := p.note(from)
-				if into.Target != "" {
-					note = strings.TrimSpace("into " + into.Target + "; " + into.Note + " " + note)
-					note = strings.ReplaceAll(note, "; ;", ";")
-				}
+				note := pullNote(p.note(from), into)
 				run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: note,
 					PullRequestSecrets: p.PullRequestSecrets, Restricted: restr}, rec)
@@ -703,6 +692,29 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		m.noteForge(ctx, p, change, d.Outcome, d.Detail)
 	}
 	return nil
+}
+
+// pullFork says whether a pull request is from a fork (a hosted repository's fork gate, or the outside host's own
+// flag, hostFork) and which pipeline it takes: the default branch's, restricted, for a fork.
+func (m *Manager) pullFork(ctx context.Context, p *project, refs []Ref, r Ref, n int, hostFork bool) (ForkVerdict, string, *engine.RestrictedEvent) {
+	fork := m.forkVerdict(ctx, p, n, r.SHA)
+	if hostFork && !fork.Fork {
+		fork = ForkVerdict{Fork: true, Reason: "pull request from a fork"}
+	}
+	pipelineAt, restr := p.trustedPipelineSHA(refs, r, fork.Fork)
+	if fork.Fork {
+		pipelineAt, restr = p.forkPipelineSHA(refs, r, fork.Reason)
+	}
+	return fork, pipelineAt, restr
+}
+
+// pullNote is the note of a pull request's run: the target branch it was judged against, and what was said of it.
+func pullNote(note string, into intoResult) string {
+	if into.Target == "" {
+		return note
+	}
+	note = strings.TrimSpace("into " + into.Target + "; " + into.Note + " " + note)
+	return strings.ReplaceAll(note, "; ;", ";")
 }
 
 // pullRequestsOn reports whether the pipeline at the tip of the project's

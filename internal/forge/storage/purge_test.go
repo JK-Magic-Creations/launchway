@@ -233,10 +233,10 @@ func TestPurgeOfAForkedPairStoppedAtEveryStepKeepsWhatTheOtherNames(t *testing.T
 			}
 			pushOK(t, c, a, w.repo, &ack, 4000) // a pack only the parent has
 			parentKeys, forkKeys := blobsOf(t, w, w.repo), blobsOf(t, w, "frk1")
-			first, second := w.repo, "frk1"
+			second := "frk1"
 			firstKeys, secondKeys := parentKeys, forkKeys
 			if order == "fork-first" {
-				first, second, firstKeys, secondKeys = second, first, secondKeys, firstKeys
+				second, firstKeys, secondKeys = w.repo, secondKeys, firstKeys
 			}
 			wantSecond := fingerprint(t, cloneMirror(t, a, second))
 			// Stop the first one's removal at every point of its steps (the first and the second time the point

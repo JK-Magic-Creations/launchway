@@ -26,6 +26,44 @@ come from the same role bindings as a Flight's, matched on that path. Changes ar
 recorded in the audit trail. Delete keeps the data and frees the name.
 ` + "\n" + reposMirrorUsage + reposArchiveUsage + reposFilesUsage + reposBrowseUsage + reposForksUsage + "\n" + reposHostUsage
 
+// reposCommands is what `launchway repos <word>` runs; the browsing words (tree, cat, log ...) share one handler.
+var reposCommands = map[string]func(*client, []string) error{
+	"mirror":             (*client).reposMirror,
+	"connection":         (*client).reposConnection,
+	"host":               (*client).reposHost,
+	"outside":            (*client).reposOutside,
+	"import":             (*client).reposImport,
+	"import-all":         (*client).reposImportAll,
+	"verify":             (*client).reposVerify,
+	"commits":            (*client).reposCommits,
+	"files":              (*client).reposFiles,
+	"put-file":           (*client).reposPutFile,
+	"upload":             (*client).reposUpload,
+	"delete-file":        (*client).reposDeleteFile,
+	"import-archive":     (*client).reposImportArchive,
+	"archive":            (*client).reposArchive,
+	"list":               (*client).reposList,
+	"get":                (*client).reposGet,
+	"create":             (*client).reposCreate,
+	"update":             (*client).reposUpdate,
+	"delete":             (*client).reposDelete,
+	"fork":               (*client).reposFork,
+	"forks":              (*client).reposForks,
+	"fork-status":        (*client).reposForkStatus,
+	"sync":               (*client).reposSync,
+	"template":           (*client).reposTemplate,
+	"fork-settings":      (*client).reposForkSettings,
+	"deploy-keys":        (*client).deployKeys,
+	"hooks":              (*client).hooks,
+	"protected-branches": (*client).protectedBranches,
+	"protected-tags":     (*client).protectedTags,
+	"download":           (*client).reposDownload,
+	"settings":           (*client).reposSettings,
+	"trash":              (*client).reposTrash,
+	"restore":            (*client).reposRestore,
+	"purge":              (*client).reposPurge,
+}
+
 func cmdRepos(args []string) error {
 	return runClient(func() error {
 		if len(args) == 0 {
@@ -38,75 +76,10 @@ func cmdRepos(args []string) error {
 		}
 		cl := newClient(c, os.Stdout)
 		cl.http.Timeout = 2 * time.Hour // a first sync of a large repository takes a while
+		if f, ok := reposCommands[args[0]]; ok {
+			return f(cl, args[1:])
+		}
 		switch args[0] {
-		case "mirror":
-			return cl.reposMirror(args[1:])
-		case "connection":
-			return cl.reposConnection(args[1:])
-		case "host":
-			return cl.reposHost(args[1:])
-		case "outside":
-			return cl.reposOutside(args[1:])
-		case "import":
-			return cl.reposImport(args[1:])
-		case "import-all":
-			return cl.reposImportAll(args[1:])
-		case "verify":
-			return cl.reposVerify(args[1:])
-		case "commits":
-			return cl.reposCommits(args[1:])
-		case "files":
-			return cl.reposFiles(args[1:])
-		case "put-file":
-			return cl.reposPutFile(args[1:])
-		case "upload":
-			return cl.reposUpload(args[1:])
-		case "delete-file":
-			return cl.reposDeleteFile(args[1:])
-		case "import-archive":
-			return cl.reposImportArchive(args[1:])
-		case "archive":
-			return cl.reposArchive(args[1:])
-		case "list":
-			return cl.reposList(args[1:])
-		case "get":
-			return cl.reposGet(args[1:])
-		case "create":
-			return cl.reposCreate(args[1:])
-		case "update":
-			return cl.reposUpdate(args[1:])
-		case "delete":
-			return cl.reposDelete(args[1:])
-		case "fork":
-			return cl.reposFork(args[1:])
-		case "forks":
-			return cl.reposForks(args[1:])
-		case "fork-status":
-			return cl.reposForkStatus(args[1:])
-		case "sync":
-			return cl.reposSync(args[1:])
-		case "template":
-			return cl.reposTemplate(args[1:])
-		case "fork-settings":
-			return cl.reposForkSettings(args[1:])
-		case "deploy-keys":
-			return cl.deployKeys(args[1:])
-		case "hooks":
-			return cl.hooks(args[1:])
-		case "protected-branches":
-			return cl.protectedBranches(args[1:])
-		case "protected-tags":
-			return cl.protectedTags(args[1:])
-		case "download":
-			return cl.reposDownload(args[1:])
-		case "settings":
-			return cl.reposSettings(args[1:])
-		case "trash":
-			return cl.reposTrash(args[1:])
-		case "restore":
-			return cl.reposRestore(args[1:])
-		case "purge":
-			return cl.reposPurge(args[1:])
 		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags", "activity", "languages", "contributors":
 			return cl.reposBrowse(args[0], args[1:])
 		}

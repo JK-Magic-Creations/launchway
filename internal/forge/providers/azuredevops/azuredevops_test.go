@@ -120,7 +120,7 @@ func TestWhoamiAndProbe(t *testing.T) {
 	}
 	unproven := 0
 	for _, c := range r.Checks {
-		if !(c.OK || c.NotChecked) || c.Needs == "" {
+		if (!c.OK && !c.NotChecked) || c.Needs == "" {
 			t.Errorf("unexpected lack: %+v", c)
 		}
 		if c.OK && c.NotChecked {

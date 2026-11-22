@@ -638,34 +638,12 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		}
 	})
 	took := time.Since(start).Round(100 * time.Millisecond)
-	switch {
-	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
-		sys("Timed out after %s. %s", job.Timeout.D(), timeoutHint)
-		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s. %s", job.Timeout.D(), timeoutHint), Excerpt: tail.excerpt()}, collect
-	case err != nil && ctx.Err() != nil:
-		return engine.Result{Outcome: "canceled"}, collect
-	case errors.Is(err, executor.ErrInfrastructure):
-		msg := mask.Mask(err.Error())
-		sys("%s. The step will be run again.", msg)
-		return engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}, nil
-	case errors.Is(err, executor.ErrCapacity):
-		// No room yet: not a failure. The server queues the step again after a
-		// pause, and says on the run page what it waits for.
-		msg := mask.Mask(err.Error())
-		code := ""
-		if c, ok := executor.AsCapacity(err); ok {
-			code = c.Code
+	if err != nil {
+		res, keep := runFailure(ctx, err, job, tail, mask, sys)
+		if keep {
+			return res, collect
 		}
-		sys("%s. The step stays queued and is tried again.", msg)
-		return engine.Result{Outcome: engine.OutcomeWaiting, Cause: pipeline.CauseInfrastructure, Error: msg, WaitCode: code}, nil
-	case err != nil:
-		msg := mask.Mask(err.Error())
-		sys("Could not run the step: %s", msg)
-		res := engine.Result{Outcome: "failed", Error: msg}
-		if errors.Is(err, executor.ErrCannotStart) {
-			res.Cause = pipeline.CauseInfrastructure
-		}
-		return res, collect
+		return res, nil
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
 	outputs, notes, customWhy, code := cust.settle(ctx, r, spec, code, mask, sys, outputs)
@@ -693,6 +671,41 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		sys("%s", line)
 	}
 	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Notes: notes, Usage: usageOf(spec.Usage)}, collect
+}
+
+// runFailure turns an error from the executor into the step's result; keep says the step's report files are still
+// collected (it ran, or timed out, rather than being lost or not started).
+func runFailure(ctx context.Context, err error, job *engine.Job, tail *outputTail, mask *secrets.Masker, sys func(string, ...any)) (engine.Result, bool) {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
+		sys("Timed out after %s. %s", job.Timeout.D(), timeoutHint)
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s. %s", job.Timeout.D(), timeoutHint), Excerpt: tail.excerpt()}, true
+	case err != nil && ctx.Err() != nil:
+		return engine.Result{Outcome: "canceled"}, true
+	case errors.Is(err, executor.ErrInfrastructure):
+		msg := mask.Mask(err.Error())
+		sys("%s. The step will be run again.", msg)
+		return engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}, false
+	case errors.Is(err, executor.ErrCapacity):
+		// No room yet: not a failure. The server queues the step again after a
+		// pause, and says on the run page what it waits for.
+		msg := mask.Mask(err.Error())
+		code := ""
+		if c, ok := executor.AsCapacity(err); ok {
+			code = c.Code
+		}
+		sys("%s. The step stays queued and is tried again.", msg)
+		return engine.Result{Outcome: engine.OutcomeWaiting, Cause: pipeline.CauseInfrastructure, Error: msg, WaitCode: code}, false
+	case err != nil:
+		msg := mask.Mask(err.Error())
+		sys("Could not run the step: %s", msg)
+		res := engine.Result{Outcome: "failed", Error: msg}
+		if errors.Is(err, executor.ErrCannotStart) {
+			res.Cause = pipeline.CauseInfrastructure
+		}
+		return res, true
+	}
+	return engine.Result{}, false
 }
 
 // Limits on a failed step's excerpt, as sent to the server.
