@@ -60,3 +60,13 @@ func TestIgnoredValuesNotice(t *testing.T) {
 		t.Fatal(m)
 	}
 }
+
+func TestNetworkPolicyNotice(t *testing.T) {
+	env := func(v string) func(string) string { return func(string) string { return v } }
+	if NetworkPolicyNotice(env("")) != "" {
+		t.Fatal("no chart policies, nothing to say")
+	}
+	if m := NetworkPolicyNotice(env("chart")); !strings.Contains(m, "let ONE system be the authority") || !strings.Contains(m, "doctor network") {
+		t.Fatal(m)
+	}
+}

@@ -306,7 +306,7 @@ func TestChartDatabaseStoreSettings(t *testing.T) {
 	// With the bundled database the chart writes ONE setting, the artifact cap derived from the
 	// volume (at least 1 under the 1Gi default); with a database of your own it writes none.
 	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
-		def := strings.ReplaceAll(renderChart(t, values)["server"], "artifacts:\n  database:\n    max_total_gib: 1\n", "")
+		def := strings.ReplaceAll(renderChart(t, values)["server"], "artifacts:\n  database:\n    max_blob_mib: 512\n    max_total_gib: 1\n", "")
 		if strings.Contains(values, "postgresql") && def == renderChart(t, values)["server"] {
 			t.Errorf("the bundled database's default configuration has no derived artifact cap:\n%s", def)
 		}
@@ -452,8 +452,8 @@ func TestChartDefaultWritesNoNewKeys(t *testing.T) {
 			}
 			if a, ok := doc["artifacts"].(map[string]any); ok {
 				for _, key := range []string{"store", "database"} {
-					// The bundled database's derived cap is the one allowed setting.
-					if d, isMap := a[key].(map[string]any); key == "database" && isMap && len(d) == 1 && d["max_total_gib"] != nil && strings.Contains(values, "postgresql") {
+					// The bundled database's derived cap (and, on a small volume, the largest file that fits under it) are the allowed settings.
+					if d, isMap := a[key].(map[string]any); key == "database" && isMap && len(d) <= 2 && d["max_total_gib"] != nil && strings.Contains(values, "postgresql") {
 						continue
 					}
 					if _, ok := a[key]; ok {

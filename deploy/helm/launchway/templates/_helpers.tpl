@@ -248,6 +248,10 @@ owns may not appear in it.
 {{- /* With the bundled database the artifact cap follows its volume (half of it, or what is set and fits). */ -}}
 {{- if and (include "launchway.bundledDB" . | trim) (has (toString $a.store) (list "" "database" "<nil>")) (not $d.maxTotalGiB) -}}
 {{- $_ := set $db "max_total_gib" (int64 (include "launchway.derivedArtifactCapGiB" .)) -}}
+{{- /* The largest single file must fit under the cap (the server refuses to start otherwise): on a small volume, 512 MiB unless the person set one. */ -}}
+{{- if and (lt (int64 (include "launchway.derivedArtifactCapGiB" .)) 3) (not $d.maxBlobMiB) -}}
+{{- $_ := set $db "max_blob_mib" (int64 512) -}}
+{{- end -}}
 {{- end -}}
 {{- if $db -}}
 {{- if not (has (toString $a.store) (list "" "database" "<nil>")) }}{{ fail "config.artifacts.database is set, but config.artifacts.store is not database (or unset)" }}{{ end -}}

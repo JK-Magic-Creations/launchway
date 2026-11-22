@@ -120,3 +120,19 @@ func TestChartServerIngressIsNeverAnySource(t *testing.T) {
 	}
 	t.Fatal("no server policy")
 }
+
+// A fresh install with the defaults must start: the artifact limits the chart derives for the 1Gi
+// default volume have to be ones the server accepts (found by the upgrade matrix's install cell: the
+// largest single file, 2 GiB by default, was above the 1 GiB cap and the servers refused to start).
+func TestChartDefaultArtifactLimitsAreAccepted(t *testing.T) {
+	for _, values := range []string{"", "postgresql: { persistence: { size: 8Gi } }\n", "postgresql: { persistence: { size: 3Gi } }\n"} {
+		srv := renderChart(t, values)["server"]
+		c, err := Load(writeTemp(t, srv))
+		if err != nil {
+			t.Fatalf("%q: %v\n%s", values, err, srv)
+		}
+		if _, err := c.ArtifactLimits(); err != nil {
+			t.Errorf("%q: the derived artifact limits are refused by the server: %v\n%s", values, err, srv)
+		}
+	}
+}
