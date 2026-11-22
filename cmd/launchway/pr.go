@@ -15,6 +15,7 @@ import (
 )
 
 const prUsage = `Usage:
+  launchway pr template [-R OWNER/NAME] [--ref BRANCH] [--json]   the description a pull request starts with (.launchway/pull_request_template.md)
   launchway pr list [-R OWNER/NAME] [--state open|closed|merged|all] [--mine] [--review-requested]
                     [--author U] [--label L] [--json]       the pull requests of a repository
   launchway pr view N [-R OWNER/NAME] [--files] [--commits] [--comments] [--json]
@@ -227,6 +228,8 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prApply(args)
 	case "settings":
 		return cl.prSettings(args)
+	case "template":
+		return cl.prTemplate(args)
 	case "rules":
 		return cl.prRules(args)
 	case "owners":
@@ -972,5 +975,32 @@ func (cl *client) prRules(args []string) error {
 				fmt.Fprintf(cl.out, "  also: %s\n", strings.Join(more, "; "))
 			}
 		}
+	})
+}
+
+// prTemplate prints the description a pull request into a branch starts with, from the repository.
+func (cl *client) prTemplate(args []string) error {
+	f := newPRFlags("template")
+	ref := f.fs.String("ref", "", "the target branch (default: the default branch)")
+	if err := f.parse(args); err != nil {
+		return err
+	}
+	path := f.base + "/pull-template"
+	if *ref != "" {
+		path += "?ref=" + url.QueryEscape(*ref)
+	}
+	var out struct {
+		Path     string `json:"path"`
+		Template string `json:"template"`
+	}
+	if err := cl.call("GET", path, nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if out.Path == "" {
+			fmt.Fprintln(cl.out, "This repository has no pull request template. Add .launchway/pull_request_template.md to the branch.")
+			return
+		}
+		fmt.Fprint(cl.out, out.Template)
 	})
 }

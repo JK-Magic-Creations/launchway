@@ -66,6 +66,7 @@ export const pullsApi = {
   commits: (path: string, n: number) => call<{ items: Commit[] }>("GET", `${base(path)}/pulls/${n}/commits`).then((r) => r.items),
   conversation: (path: string, n: number) => call<Conversation>("GET", `${base(path)}/pulls/${n}/conversation`),
   compare: (path: string, head: string, target?: string) => call<BranchComparison>("GET", `${base(path)}/compare${qs({ head, base: target })}`),
+  template: (path: string, ref?: string) => call<{ path: string; template: string }>("GET", `${base(path)}/pull-template${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`),
   create: (path: string, b: { title: string; body: string; source_branch: string; target_branch?: string; draft?: boolean }) => call<Pull>("POST", `${base(path)}/pulls`, b),
   update: (path: string, n: number, b: Record<string, unknown>) => call<Pull>("PATCH", `${base(path)}/pulls/${n}`, b),
   merge: (path: string, n: number, b: { method?: string; delete_branch?: boolean; expect_head?: string; bypass_reason?: string }) => call<{ pull: Pull; commit: string }>("POST", `${base(path)}/pulls/${n}/merge`, b),

@@ -330,6 +330,7 @@ var permissionTable = map[string]matrixRow{
 	"PUT /api/v1/projects/{name}/badges":                         {"PUT", "/api/v1/projects/pay-api/badges", `{"enabled":false}`, [6]int{401, 404, 403, 403, 404, 200}},
 	"GET /public/badges/{name}/status.svg":                       {"GET", "/public/badges/pay-api/status.svg", "", [6]int{404, 404, 404, 404, 404, 404}},
 	"GET /public/badges/{name}/release.svg":                      {"GET", "/public/badges/pay-api/release.svg", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/pull-template":      {"GET", "/api/v1/repositories/o/x/pull-template", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/hosting-settings":                               {"GET", "/api/v1/hosting-settings", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/hosting-settings":                               {"PUT", "/api/v1/hosting-settings", `{}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/repositories/{owner}/{name}/protected-tags":     {"GET", "/api/v1/repositories/o/x/protected-tags", "", [6]int{401, 404, 404, 404, 404, 404}},

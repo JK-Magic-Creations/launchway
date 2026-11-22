@@ -379,6 +379,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/repositories/{owner}/{name}/protected-tags` | `set_protected_tags` | `repos protected-tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pull-settings` | `get_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/pull-settings` | `set_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pull-template` | `get_pull_template` | `pr template` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls` | `list_pull_requests` | `pr list` | `planned: launchway_pull_request` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls` | `create_pull_request` | `pr create` | `planned: launchway_pull_request` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |

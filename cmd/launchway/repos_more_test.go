@@ -120,3 +120,34 @@ func TestCLIReleaseBadges(t *testing.T) {
 		t.Error("on and off together")
 	}
 }
+
+// pr template prints the repository's template, or says there is none.
+func TestCLIPullTemplate(t *testing.T) {
+	hc := newHostedCLI(t)
+	root := t.TempDir()
+	bare, _ := bareWith(t)
+	if err := os.MkdirAll(filepath.Join(root, "old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(bare, filepath.Join(root, "old", "shop.git")); err != nil {
+		t.Fatal(err)
+	}
+	other := otherServer(t, root)
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	if err := ada.reposImport([]string{"--url", other.URL + "/old/shop.git", "--once"}); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := ada.pr("template", []string{"-R", "old/shop"}); err != nil || !strings.Contains(out.String(), "no pull request template") {
+		t.Fatalf("none: %v %q", err, out.String())
+	}
+	out.Reset()
+	if err := ada.reposPutFile([]string{"old/shop", ".launchway/pull_request_template.md", "--text", "## Why\n", "--message", "template"}); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := ada.pr("template", []string{"-R", "old/shop"}); err != nil || out.String() != "## Why\n" {
+		t.Fatalf("template: %v %q", err, out.String())
+	}
+}

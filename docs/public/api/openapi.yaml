@@ -11498,6 +11498,42 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.pull_settings
+    /api/v1/repositories/{owner}/{name}/pull-template:
+        get:
+            description: 'The description a pull request starts with, read at ?ref= (the target branch; default the default branch): {"path", "template", "commit"} from .launchway/pull_request_template.md, else a top-level pull_request_template.md or PULL_REQUEST_TEMPLATE.md. A repository with none answers with an empty template, not an error.'
+            operationId: get_api_v1_repositories_owner_name_pull_template
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The description a pull request starts with, read at ?ref= (the target branch; default the default branch): {"path", "template", "commit"} from .launchway/pull_request_template.md, else a top-level pull_request_template.md or PULL_REQUEST_TEMPLATE.md.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/pulls:
         get:
             description: 'The repository''s pull requests, newest first: ?state= open (the default), closed, merged or all, author, assignee, reviewer (@me is the caller), label, source, target, q (title), limit, offset. {"items": [...], "total"}.'

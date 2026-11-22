@@ -76,6 +76,8 @@ export function NewPullRequestPage({ path, branches }: { path: string; branches?
   const [cmp, setCmp] = useState<BranchComparison | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [typed, setTyped] = useState(false); // once the person has written, the repository's template is not put over it
+  const [templateFrom, setTemplateFrom] = useState("");
   const [draft, setDraft] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +86,13 @@ export function NewPullRequestPage({ path, branches }: { path: string; branches?
     const t = setTimeout(() => { pullsApi.compare(path, head.trim(), target.trim() || undefined).then((c) => { setCmp(c); setError(null); }).catch((e) => { setCmp(null); setError(e); }); }, 250);
     return () => clearTimeout(t);
   }, [path, head, target]);
+  useEffect(() => {
+    if (typed) return;
+    const t = setTimeout(() => {
+      pullsApi.template(path, target.trim() || undefined).then((r) => { setBody(r.template); setTemplateFrom(r.path); }).catch(() => setTemplateFrom(""));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [path, target, typed]);
   const shown = head.trim() ? cmp : null;
   const titled = title || (shown && shown.commits.length === 1 ? shown.commits[0].subject : "");
   const create = async (e: React.FormEvent) => {
@@ -120,7 +129,7 @@ export function NewPullRequestPage({ path, branches }: { path: string; branches?
             <Sheet title="Open it" pad>
               <form onSubmit={create} className="inputs-form" aria-label="Open a pull request">
                 <label className="field"><span>Title</span><input value={titled} required maxLength={256} onChange={(e) => setTitle(e.target.value)} /></label>
-                <label className="field"><span>Description (Markdown)</span><textarea value={body} rows={6} onChange={(e) => setBody(e.target.value)} /></label>
+                <label className="field"><span>Description (Markdown)</span><textarea value={body} rows={6} onChange={(e) => { setTyped(true); setBody(e.target.value); }} />{templateFrom && !typed && <small>Started from <Mono>{templateFrom}</Mono> in the repository.</small>}</label>
                 {body.trim() && <div className="pr-preview" aria-label="Preview"><Markdown text={body} /></div>}
                 <label className="check"><input type="checkbox" checked={draft} onChange={(e) => setDraft(e.target.checked)} /> Open it as a draft</label>
                 <div><button type="submit" className="btn btn-primary" disabled={busy || !titled.trim()}>{busy ? "Opening…" : "Open pull request"}</button></div>

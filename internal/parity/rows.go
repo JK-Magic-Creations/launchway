@@ -365,6 +365,7 @@ var rows = []Row{
 	{Route: "PUT /api/v1/projects/{name}/badges", MCP: "set_flight_badges", CLI: "release badges", Status: Equal},
 	{Route: "GET /public/badges/{name}/status.svg", MCP: "", CLI: "", Status: Exempt, Reason: "the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same status is in list_runs"},
 	{Route: "GET /public/badges/{name}/release.svg", MCP: "", CLI: "", Status: Exempt, Reason: "the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same version is in list_releases"},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/pull-template", MCP: "get_pull_template", CLI: "pr template", Status: Equal},
 	{Route: "GET /api/v1/hosting-settings", MCP: "get_hosting_settings", CLI: "repos settings", Status: Equal},
 	{Route: "PUT /api/v1/hosting-settings", MCP: "set_hosting_settings", CLI: "repos settings", Status: Equal},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/download", MCP: "", CLI: "repos download", Status: Exempt, Reason: "a snapshot of a ref is a byte stream (tar.gz or zip), not a tool result; list_repository_tags and the file tools give an agent the content it can read"},

@@ -71,3 +71,27 @@ func (s *Server) downloadSnapshot(w http.ResponseWriter, r *http.Request) {
 		s.failFiles(w, err)
 	}
 }
+
+// The description a pull request starts with, from the repository (internal/forge/files/template.go):
+//
+//	GET /api/v1/repositories/{owner}/{name}/pull-template?ref=TARGET
+//
+// It reads the target branch (default: the default branch) and answers with the file's path and text, or an empty
+// template when the repository has none, so a page or a script needs no second answer for that case.
+
+func (s *Server) pullTemplateRoutes() []route {
+	return []route{{"GET /api/v1/repositories/{owner}/{name}/pull-template", repoRead, "", s.getPullTemplate}}
+}
+
+func (s *Server) getPullTemplate(w http.ResponseWriter, r *http.Request) {
+	repo, ok := s.filesRepo(w, r)
+	if !ok {
+		return
+	}
+	t, err := s.filesService().PullTemplate(r.Context(), repo.ID, defaultRef(r, repo))
+	if err != nil {
+		s.failFiles(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, t)
+}

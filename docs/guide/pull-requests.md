@@ -64,6 +64,10 @@ you choose **Load anyway** (`--full`), and no answer is larger than 16 MiB.
 **Changes since your last review** compares the head you reviewed with the head now
 (`launchway pr diff N --since REVISION`).
 
+### A description to start from
+
+A repository can say what a pull request description should hold. Put the text in `.launchway/pull_request_template.md` on the branch the pull request goes into (the branch you choose under **Into**; the default branch otherwise); a top-level `pull_request_template.md` or `PULL_REQUEST_TEMPLATE.md` is used when there is no `.launchway` one. The web page starts the description from it, saying which file it came from, and never writes over what you have already typed. `launchway pr template`, `GET .../pull-template` and the `get_pull_template` tool give the same text, so a script or an agent can start from it too. A file that is not text, or over 64 KiB, is not used.
+
 ## Reviewing
 
 - A **comment** on the conversation, or on a **line or range** of a file at a commit. When the code moves,
