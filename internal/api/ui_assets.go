@@ -13,6 +13,15 @@ import (
 // with such a name never changes, so it is cached for a year, and the hash is its ETag.
 var hashedName = regexp.MustCompile(`-([A-Za-z0-9_-]{8})\.[a-z0-9]+$`)
 
+// textFiles serves the text files of the web build as serveText says and every other file with next.
+func textFiles(ui fs.FS, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !serveText(w, r, ui, strings.TrimPrefix(r.URL.Path, "/")) {
+			next.ServeHTTP(w, r)
+		}
+	})
+}
+
 // serveText sends one of the text files of the web build (assets/*.json: the long text of the pages, the word table).
 // The build writes name.json.gz beside each; a browser that accepts gzip gets that file as it is, with the headers
 // that let it keep and re-check it. It reports false when the path is not such a file, so the caller serves it as any

@@ -363,7 +363,7 @@ Flight may override these settings.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `queues.max_wait` | duration or `off` | `60m` | The longest a step waits for room (the step namespace's quota, a node with space) before it fails with the reason and what to change. `off` waits for ever |
-| `queues.deploy_pickup_wait` | duration or `off` | `15m` | The longest a deploy or rollback step waits for a deploy Station to take it before it fails saying that nobody did. The step's own time limit starts when a Station takes it, not before. `off` waits for ever |
+| `queues.deploy_pickup_wait` | duration or `off` | `15m` | The longest a Launch step (or its return to base) waits for a Station to take it before it fails saying that nobody did. The step's own time limit starts when a Station takes it, not before. `off` waits for ever |
 | `queues.runs` | whole number | `10` | How many Sorties of a Flight go at once. `0` means no limit. Pushes to protected branches and runs started by hand are never held by it |
 | `queues.pipeline_runs` | whole number | no limit | How many Sorties of one pipeline go at once |
 | `queues.pull_request_runs` | whole number | `4` | How many pull-request runs of a Flight go at once |

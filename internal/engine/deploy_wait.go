@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // targetOf is the target a queued deploy, rollback or verify step waits for a deploy runner to serve ("" for any
@@ -93,4 +95,21 @@ func (e *Engine) clockText(ms int64) string {
 		return t.Format("15:04 UTC")
 	}
 	return t.Format("2 Jan 15:04 UTC")
+}
+
+// noDeployRunnerPrefix starts the reason of a deploy step that no deploy runner took in time (cause.go reads it).
+const noDeployRunnerPrefix = "no deploy runner serving target"
+
+// noRunnerReason is why a queued deploy step failed at its deadline: nobody took it within the pickup wait, or, when
+// a runner had taken it and was lost, the step's own time ran out while it waited to be taken again.
+func (c *cmd) noRunnerReason(s *StepState, def *pipeline.Step, target string) string {
+	if s.Dep != nil && s.Dep.TakenAt > 0 {
+		return fmt.Sprintf("the step's %s ran out while it waited for a deploy runner serving target %s to take it again", def.Timeout.Short(), target)
+	}
+	wait := c.e.queueSettings(c.st.Project).DeployPickupWait
+	if wait <= 0 {
+		wait = DefaultDeployPickupWait
+	}
+	return fmt.Sprintf("%s %s took the step within %s. Start a runner of the pool serving it, or change queues.deploy_pickup_wait",
+		noDeployRunnerPrefix, target, pipeline.Duration(wait).Short())
 }

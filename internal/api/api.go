@@ -994,14 +994,11 @@ func (s *Server) ui() http.Handler {
 	if _, err := fs.Stat(s.UI, "index.html"); err != nil {
 		return http.HandlerFunc(noUI)
 	}
-	files := http.FileServerFS(s.UI)
+	files := textFiles(s.UI, http.FileServerFS(s.UI))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path != "" {
 			if _, err := fs.Stat(s.UI, path); err == nil {
-				if serveText(w, r, s.UI, path) {
-					return
-				}
 				if strings.HasPrefix(path, "assets/") {
 					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 				}
