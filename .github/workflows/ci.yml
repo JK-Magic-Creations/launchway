@@ -54,7 +54,7 @@ jobs:
       matrix:
         # GROUP[:SHARD/SHARDS], see scripts/ci/race-group.sh. api, engine and storage are one package each,
         # split by test name; rest is every package no other group names, split by package.
-        group: ["api:1/4", "api:2/4", "api:3/4", "api:4/4", "engine:1/2", "engine:2/2", "storage:1/2", "storage:2/2", "forge", "rest:1/2", "rest:2/2"]
+        group: ["api:1/4", "api:2/4", "api:3/4", "api:4/4", "engine:1/4", "engine:2/4", "engine:3/4", "engine:4/4", "storage:1/2", "storage:2/2", "forge", "rest:1/2", "rest:2/2"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

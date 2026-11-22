@@ -220,7 +220,7 @@ already did: `TestAttentionAndSearchAtScale`, `TestFiftyThousandItems`, the thre
 | Job | What it runs | Race detector |
 |---|---|---|
 | `test` | `go vet ./...` and `go test -count=1 -timeout 18m ./...`: the pipeline's own `test` step, every test, every limit | no |
-| `race` (10 matrix entries) | `scripts/ci/race-group.sh GROUP`: `api` in 4 shards, `engine` and `storage` in 2 each (by test name), `forge` (the rest of `internal/forge`), `rest` in 2 shards (by package); `-short`, 20 minute package timeout, 25 minute job timeout | yes |
+| `race` (12 matrix entries) | `scripts/ci/race-group.sh GROUP`: `api` and `engine` in 4 shards each, `storage` in 2 (by test name), `forge` (the rest of `internal/forge`), `rest` in 2 shards (by package); `-short`, 20 minute package timeout, 25 minute job timeout | yes |
 | `postgres` (10 matrix entries) | `internal/source`, `internal/engine` in 4 shards and `internal/api` in 5 (by test name, `MODE=plain`: no race detector, no `-short`) against a PostgreSQL service; 20 minute package timeout, 30 minute job timeout | no |
 | `containers` | `internal/executor` with real containers | no |
 | `supply-chain` | vulnerabilities, licenses, script and workflow lint, charts, reproducible release build | n/a |
