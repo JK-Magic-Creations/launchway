@@ -18,7 +18,7 @@ does not evaluate expressions or program code in them. It never changes your old
 | Jobs-and-workflows config file | `config.yml` in a dot-directory at the top of the repository, usually `.circleci/config.yml` | `jobs-config` |
 | Tasks-and-stages pipeline file | a file named `*-pipelines.yml` at the top of the repository, usually `bitbucket-pipelines.yml` | `tasks-pipelines` |
 
-The file names are given only so that you can recognise your own files; the importer tells the format from the file's name and its contents, and the names mean nothing more here.
+The file names are given only so that you can recognize your own files; the importer tells the format from the file's name and its contents, and the names mean nothing more here.
 
 The last two were chosen for reach: the jobs-and-workflows format is the most widely used among teams that host their pipelines
 as a service, and the tasks-and-stages format is the one most enterprises on a large vendor's suite use. They are read to the depth

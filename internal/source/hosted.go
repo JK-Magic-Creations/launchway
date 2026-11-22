@@ -100,7 +100,7 @@ func SelfCheckHostedRead(ctx context.Context, dir string) error {
 		{"init", "--quiet", "--bare", src},
 		{"init", "--quiet", work},
 		{"-C", work, "-c", "user.name=self-check", "-c", "user.email=self-check@example.com", "commit", "--quiet", "--allow-empty", "-m", "one"},
-		{"-C", work, "push", "--quiet", src, "HEAD:refs/heads/main"},
+		{"-C", work, "-c", "protocol.ext.allow=always", "push", "--quiet", strings.Replace(localRemote(src), "git-upload-pack", "git-receive-pack", 1), "HEAD:refs/heads/main"}, // a plain path would start receive-pack through a shell too
 		{"-c", "protocol.ext.allow=always", "clone", "--mirror", "--quiet", localRemote(src), mirror},
 		{"-C", mirror, "-c", "protocol.ext.allow=always", "fetch", "--quiet", "--prune", localRemote(src), "+refs/heads/*:refs/heads/*"},
 	}

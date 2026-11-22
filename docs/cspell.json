@@ -17,6 +17,8 @@
     "/\\b[a-z]{3}_[0-9a-z]{16,}\\b/g"
   ],
   "words": [
+    "subkey",
+    "subkeys",
     "Unfiled", "overcommitted", "kubelet", "goroutines", "heartbeating", "preemptible", "Burstable", "rollups",
     "unfiled", "STARTTLS",
     "overwatch",

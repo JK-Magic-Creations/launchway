@@ -397,7 +397,8 @@ image-inputs:
 # lacks, fails here and not in production (it once did: every poll of a hosted repository failed).
 image-build-check:
 	$(CONTAINER) build --target web -t launchway-web-check -f Dockerfile .
-	$(CONTAINER) build -t launchway-image-check -f Dockerfile .
+	@test -n "$(REVISION)" || { echo "make image-build-check: no Git commit; set REVISION=<full commit sha> and CREATED" >&2; exit 1; }
+	$(CONTAINER) build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) --build-arg CREATED=$(CREATED) --build-arg SOURCE=$(SOURCE_REPOSITORY) -t launchway-image-check -f Dockerfile .
 	$(CONTAINER) run --rm --network none launchway-image-check self-check hosted-read
 
 ratchet:
