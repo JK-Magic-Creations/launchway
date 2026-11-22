@@ -711,9 +711,10 @@ func (e *Engine) dispatchLocks() {
 
 // ---- reading deployments ----
 
-const deploymentCols = `d.id, d.run_id, d.run_number, d.project, d.step_id, d.rollback_step, d.environment, d.service, d.target,
+// deploymentCols is what a deployment reads; the address column is schema 68's, and a build that knows less reads none.
+const deploymentColsFormat = `d.id, d.run_id, d.run_number, d.project, d.step_id, d.rollback_step, d.environment, d.service, d.target,
 	d.application, d.mode, d.version, d.previous_id, d.previous_version, d.repo, d.branch, d.commit_sha, d.changed, d.revert_sha,
-	d.phase, d.detail, d.verdict, d.opened_at, d.deployed_at, d.closed_at, d.snapshot, d.observed_at, d.observed_by, d.address,
+	d.phase, d.detail, d.verdict, d.opened_at, d.deployed_at, d.closed_at, d.snapshot, d.observed_at, d.observed_by, %s,
 	(SELECT COUNT(*) FROM deploy_locks l WHERE l.deployment = d.id)`
 
 // deployments reads deployments, newest first, with their timelines if
@@ -723,7 +724,11 @@ func (e *Engine) deployments(where string, args []any, limit int, timeline bool)
 	if !e.knows(schemaDeploy) {
 		return out, nil
 	}
-	rows, err := e.db.Query(`SELECT `+deploymentCols+` FROM deployments d WHERE `+where+` ORDER BY d.opened_at DESC, d.id DESC LIMIT ?`,
+	address := "'' AS address"
+	if e.knows(schemaWorkExtras) {
+		address = "d.address"
+	}
+	rows, err := e.db.Query(`SELECT `+fmt.Sprintf(deploymentColsFormat, address)+` FROM deployments d WHERE `+where+` ORDER BY d.opened_at DESC, d.id DESC LIMIT ?`,
 		append(args, limit)...)
 	if err != nil {
 		return nil, err
