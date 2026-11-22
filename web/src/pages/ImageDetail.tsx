@@ -12,6 +12,8 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { onLink } from "../router";
 import { terms } from "../terms";
 import { refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.ImageDetail");
 
 const LEVELS: { key: "critical" | "high" | "medium" | "low" | "unknown"; label: string }[] = [
   { key: "critical", label: "Critical" }, { key: "high", label: "High" }, { key: "medium", label: "Medium" }, { key: "low", label: "Low" }, { key: "unknown", label: "Unknown" },
@@ -36,7 +38,7 @@ export function ImageDetailPage({ digest }: { digest: string }) {
   if (hits.loading) return <div className="page"><div className="loading">Loading…</div></div>;
   if (!first) {
     return <div className="page"><PageHead eyebrow={terms().say("{Registry}")} title="Image" /><ErrorBox error={hits.error} />
-      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or {project}.")}</EmptyState></Sheet></div>;
+      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say(P.t0)}</EmptyState></Sheet></div>;
   }
   const scan = iv?.scan;
   const worst = scan ? Math.max(scan.critical + scan.high, 0) : 0;
@@ -62,12 +64,12 @@ export function ImageDetailPage({ digest }: { digest: string }) {
             <dt>Pushed</dt><dd>{first.pushed ? <StateChip state="ok">{terms().say("Pushed to the {registry}")}</StateChip> : <StateChip state="skip">Not pushed{iv?.not_pushed ? `: ${iv.not_pushed}` : ""}</StateChip>}</dd>
             <dt>Signature</dt><dd>{iv ? (iv.signed ? <StateChip state="ok">Signed{iv.key_source ? ` (${iv.key_source})` : ""}</StateChip> : <StateChip state="warn">Not signed</StateChip>) : <span className="faint">not known</span>}</dd>
             <dt>Provenance</dt><dd>{iv?.provenance === "attached" ? "Attached to the image" : iv?.provenance === "stored" ? terms().say("Kept as an {artifact}") : "None"}</dd>
-            <dt>SBOM</dt><dd>{iv?.sbom ? <>Yes{iv.sbom_artifact ? <>, kept as <Mono>{iv.sbom_artifact}</Mono></> : null}. <a href="/depot/components" onClick={onLink}>Search components</a></> : "No bill of materials was made."}</dd>
+            <dt>SBOM</dt><dd>{iv?.sbom ? <>Yes{iv.sbom_artifact ? <>, kept as <Mono>{iv.sbom_artifact}</Mono></> : null}. <a href="/depot/components" onClick={onLink}>Search components</a></> : P.t1}</dd>
           </dl>
         </Sheet>
       </div>
       <Sheet title="Findings by severity" actions={scan ? <Chip tone={worst > 0 ? "bad" : "ok"}>{worst > 0 ? `${worst} to fix first` : "none critical or high"}</Chip> : undefined}>
-        {!scan ? <p className="sh-b faint">The run did not scan this image. Add a scan to the image step and the findings appear here.</p> : (
+        {!scan ? <p className="sh-b faint">{P.t2}</p> : (
           <div className="sh-b bars">
             {LEVELS.map((l) => (
               <div className="bar" key={l.key}><span>{l.label}</span><span className="track"><i className={`fill ${l.key}`} style={{ display: "block", width: `${total ? Math.max(scan[l.key] ? 4 : 0, (scan[l.key] / total) * 100) : 0}%` }} /></span><b>{scan[l.key]}</b></div>
@@ -77,7 +79,7 @@ export function ImageDetailPage({ digest }: { digest: string }) {
         )}
       </Sheet>
       <Sheet title={terms().say("Where it is {deploy:did}")}>
-        {where.length === 0 ? <p className="sh-b faint">{terms().say("No deployment is known to run this image. Launchway matches a deployment's version to the image's tags, so an image {deploy:did} under another version name is not found.")}</p> : (
+        {where.length === 0 ? <p className="sh-b faint">{terms().say(P.t3)}</p> : (
           <ul className="rowlist">{where.map(({ env, u }) => <li key={env + u.service}><div className="main"><div className="nm"><EntityLink kind="environment" name={env} /></div><div className="sb">{u.service} of <EntityLink kind="project" name={u.project} /> runs {u.current?.version}</div></div></li>)}</ul>
         )}
       </Sheet>

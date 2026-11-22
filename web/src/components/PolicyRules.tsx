@@ -7,6 +7,8 @@ import { POINT, RULES, type RuleField } from "../configKinds";
 import { Problems, splitList } from "./ConfigForm";
 import { terms } from "../terms";
 import { SpanMono } from "../kit/bits";
+import { prose } from "../prose";
+const P = await prose("components.PolicyRules");
 
 type Rules = Record<string, unknown>;
 
@@ -24,14 +26,14 @@ export function PolicyRules({ catalogue, rules, onChange, problems }: {
   return (
     <fieldset className="cf-section">
       <legend className="cf-section-title">Rules</legend>
-      <p className="cf-help">{terms().say("A policy passes when every rule it has passes. Each rule is judged at one point of a {run}; tick the rules this policy has.")}</p>
+      <p className="cf-help">{terms().say(P.t0)}</p>
       <ul className="cf-rules">
         {catalogue.map((r) => (
           <RuleRow key={r.name} info={r} on={r.name in rules} value={rules[r.name]} onToggle={(b) => toggle(r.name, b)}
             onValue={(v) => onChange({ ...rules, [r.name]: v })} problems={problems?.[r.name]} />
         ))}
       </ul>
-      {extra.length > 0 && <p className="cf-help">Also: {extra.join(", ")} (not in this server's catalog; see the raw tab).</p>}
+      {extra.length > 0 && <p className="cf-help">Also: {extra.join(", ")} {P.t1}</p>}
     </fieldset>
   );
 }
@@ -115,7 +117,7 @@ function TemplatesValue({ value, onChange }: { value: Tmpl[]; onChange: (v: Tmpl
           const versions = splitList(rest.join(" "));
           return versions.length ? { library, template, versions } : { library, template };
         }))} />
-      <span id={id} className="cf-help">One per line: library/template, then the versions allowed, such as <SpanMono>ci-templates/security-scan v3, v3.*</SpanMono>.</span>
+      <span id={id} className="cf-help">{P.t2}<SpanMono>{P.t3}</SpanMono>.</span>
     </label>
   );
 }

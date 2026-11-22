@@ -9,6 +9,8 @@ import { Badge, HistoryStrip, ReportsHowTo, TestCounts, TestIcon, failing, passR
 import { terms } from "../terms";
 import { barX, layout, niceMax, seg, useWidth, type Layout } from "../chartKit";
 import { params, refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.ProjectTests");
 
 
 
@@ -52,7 +54,7 @@ function ProjectResultsPage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <ProjectHead name={name} on="tests" title={<>Tests and coverage of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the results move, and the tests that stand out.</> : "Results of the tests its steps report."}
+      <ProjectHead name={name} on="tests" title={<>Tests and coverage of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>{P.t0}</> : P.t1}
         actions={data && data.refs.length > 0 && (
           <div className="chips" role="group" aria-label="Branch">
             {(data.refs.includes(data.ref) || !data.ref ? data.refs : [data.ref, ...data.refs]).slice(0, 8).map((r) => (
@@ -67,7 +69,7 @@ function ProjectResultsPage({ name }: { name: string }) {
       {!data && !error && <div className="loading">Loading…</div>}
       {data && withTests.length === 0 && (
         <Empty title={data.ref ? `No test results on ${refName(data.ref)} yet` : "No test results yet"}>
-          {data.refs.length > 0 && <p>Other branches have some: choose one above.</p>}
+          {data.refs.length > 0 && <p>{P.t2}</p>}
           <ReportsHowTo />
         </Empty>
       )}
@@ -104,11 +106,11 @@ function ProjectResultsPage({ name }: { name: string }) {
           </section>
           {cov && cov.runs.length > 0 && <CoverageCard trend={cov} />}
           <div className="pgrid">
-            <StatList title="Failing most" empty={terms().say("Nothing failed in these {runs}.")} stats={data.failing} name={name} go={go}
+            <StatList title="Failing most" empty={terms().say(P.t3)} stats={data.failing} name={name} go={go}
               detail={(s) => <><strong>{s.failures}</strong> of {s.runs} runs{s.last_failed ? <>, last in #{s.last_failed}</> : null}</>} tone="bad" />
-            <StatList title="Flaky" empty="No test both passed and failed on the same commit." stats={data.flaky} name={name} go={go}
+            <StatList title="Flaky" empty={P.t4} stats={data.flaky} name={name} go={go}
               detail={(s) => <>{s.commits ? <>passed and failed on <strong>{s.commits}</strong> commit{s.commits > 1 ? "s" : ""}</> : null}
-                {s.tool_retry ? <>{s.commits ? "; " : ""}passed only when the test tool ran it again</> : null}</>} tone="flaky" />
+                {s.tool_retry ? <>{s.commits ? "; " : ""}{P.t5}</> : null}</>} tone="flaky" />
             <StatList title="Slowest" empty="No timings yet." stats={data.slowest} name={name} go={go}
               detail={(s) => <><strong>{testDuration(s.avg_ms ?? 0)}</strong> on average{(s.max_ms ?? 0) > (s.avg_ms ?? 0) * 1.05 ? <>, up to {testDuration(s.max_ms ?? 0)}</> : null} over {s.runs} run{s.runs > 1 ? "s" : ""}</>} />
           </div>
@@ -143,7 +145,7 @@ function CoverageCard({ trend }: { trend: CoverageTrend }) {
           ))}
         </dl>
       </div>
-      {runs.length > 1 ? <CoverageTrendChart trend={trend} /> : <p className="sub small">{terms().say("The chart appears once two {runs} have reported coverage.")}</p>}
+      {runs.length > 1 ? <CoverageTrendChart trend={trend} /> : <p className="sub small">{terms().say(P.t6)}</p>}
       <details className="ptable">
         <summary>Show as a table</summary>
         <div className="table-scroll">
@@ -266,7 +268,7 @@ function ResultsChart({ runs }: { runs: OverviewRun[] }) {
   const plot = H - PAD_B - PAD_T;
   return (
     <>
-      <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label={terms().say("Tests per {run}: passed, failed and skipped")} ticks={(v) => String(Math.round(v * 10) / 10)}
+      <ChartFrame runs={runs} max={max} tip={tip} l={l} boxRef={box} label={terms().say(P.t7)} ticks={(v) => String(Math.round(v * 10) / 10)}
         describe={terms().say(`Tests per {run}, the last ${runs.length} runs, oldest first`)}>
         {runs.map((r, i) => {
           const x = barX(l, i);
@@ -357,7 +359,7 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
         </div>
       </div>
       {error ? <ErrorBox error={error instanceof ApiError && error.status === 404
-        ? (everyRef || !gref ? terms().say("This test has no results in the {runs} kept.") : `This test has no results on ${refName(gref)}; try every branch.`) : error} />
+        ? (everyRef || !gref ? terms().say(P.t8) : `This test has no results on ${refName(gref)}; try every branch.`) : error} />
         : !h ? <div className="loading">Loading…</div> : (
           <>
             <HistoryStrip results={h.results} />
@@ -375,7 +377,7 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
                   <span className="mono faint">{shortSha(r.sha)}</span>
                   {!h.ref && <span className="faint">{refName(r.ref)}</span>}
                   <span>{testStatusLabel(r.status)}</span>
-                  {r.flaky && <Badge kind="flaky" title="Failed on an earlier attempt of the step">Passed on retry</Badge>}
+                  {r.flaky && <Badge kind="flaky" title={P.t9}>Passed on retry</Badge>}
                   <span className="faint">{testDuration(r.duration_ms)}</span>
                   {r.message && (r.status === "failed" || r.status === "errored") && <span className="phist-msg">{r.message.split("\n")[0]}</span>}
                   <span className="faint phist-ago">{ago(r.created_at)}</span>

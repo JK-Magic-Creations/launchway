@@ -18,6 +18,8 @@ import { ProjectCard } from "../HomeSections";
 import { addFlightHref, SQUADRONS, WhyNot } from "./shared";
 import "../../squadrons.css";
 import "../../config.css";
+import { prose } from "../../prose";
+const P = await prose("pages.squadrons.SquadronPage");
 
 const TABS = ["flights", "people", "operations"] as const;
 type Tab = (typeof TABS)[number];
@@ -36,7 +38,7 @@ export function SquadronViewPage({ name }: { name: string }) {
 
   if (error && !data) {
     if (error instanceof ApiError && error.status === 404) {
-      return <div className="page sq-page"><Empty title={t.say("There is no {unit} called " + name)}>{t.say("It may have been renamed or removed.")} <a href={SQUADRONS} onClick={onLink}>{t.say("See every {unit}")}</a>.</Empty></div>;
+      return <div className="page sq-page"><Empty title={t.say("There is no {unit} called " + name)}>{t.say(P.t0)} <a href={SQUADRONS} onClick={onLink}>{t.say("See every {unit}")}</a>.</Empty></div>;
     }
     return <div className="page sq-page"><ErrorBox error={error} /></div>;
   }
@@ -53,7 +55,7 @@ export function SquadronViewPage({ name }: { name: string }) {
   return (
     <div className="page sq-page">
       <PageHead eyebrow={t.say("{Unit}")} title={title}
-        sentence={data.description || (flights.length === 0 ? t.say("No {projects} yet.") : needs.length > 0 ? <><b>{needs.length} {needs.length === 1 ? "thing needs" : "things need"} a person.</b></> : failing > 0 ? `${failing} of ${flights.length} latest results failed.` : "Everything here is fine or still going.")}
+        sentence={data.description || (flights.length === 0 ? t.say("No {projects} yet.") : needs.length > 0 ? <><b>{needs.length} {needs.length === 1 ? "thing needs" : "things need"} a person.</b></> : failing > 0 ? `${failing} of ${flights.length} latest results failed.` : P.t1)}
         actions={<>{flights.length > 0 ? addFlight : null}<LinkButton href={`/units/${encodeURIComponent(data.name)}/insights`}>Insights</LinkButton></>} />
       {flights.length > 0 && (
         <Band cells={[
@@ -82,8 +84,8 @@ export function SquadronViewPage({ name }: { name: string }) {
         tabs={[{ id: "flights", label: t.say("{Projects}") }, { id: "people", label: "People and shared settings" }, { id: "operations", label: "Operations" }]} />
       <div role="tabpanel" aria-labelledby={`tab-${tab}`} className="sq-panel">
         {tab === "flights" && (flights.length === 0 ? (
-          <Sheet><EmptyState title={t.say("This {unit} has no {projects} yet")} action={addFlight}>
-            {t.say("A {unit} is a named folder of {projects} with its own people and shared settings. A {project} is one repository and its pipelines. Add the first one and its results appear here.")}
+          <Sheet><EmptyState title={t.say(P.t2)} action={addFlight}>
+            {t.say(P.t3)}
           </EmptyState></Sheet>
         ) : (
           <Sheet title={t.say("{Projects}")}>
@@ -109,12 +111,12 @@ function PeopleTab({ data }: { data: SquadronPage }) {
     <>
       <Sheet title="People with a role here" actions={<LinkButton href="/settings/access" sm>People and access</LinkButton>}>
         {!data.may_manage ? <div className="sh-b"><WhyNot why={data.why ?? ""} /></div>
-          : people.length === 0 ? <p className="sh-b faint">{t.say("No one has been given a role on this {unit} itself. People keep the roles they hold above it.")}</p>
+          : people.length === 0 ? <p className="sh-b faint">{t.say(P.t4)}</p>
           : <ul className="rowlist">{people.map((p) => <li key={p.who + p.role}><div className="main"><div className="nm">{p.who}</div></div><div className="cell"><Chip>{p.role}</Chip></div></li>)}</ul>}
       </Sheet>
-      <Sheet title={t.say("Settings shared by its {projects}")} actions={<LinkButton href={`/config/units/${encodeURIComponent(data.name)}`} sm>{t.say("Edit this {unit}")}</LinkButton>}>
+      <Sheet title={t.say(P.t5)} actions={<LinkButton href={`/config/units/${encodeURIComponent(data.name)}`} sm>{t.say("Edit this {unit}")}</LinkButton>}>
         {!data.may_manage ? <div className="sh-b"><WhyNot why={data.why ?? ""} /></div>
-          : settings.length === 0 ? <p className="sh-b faint">{t.say("This {unit} sets nothing of its own: its {projects} use the settings of the levels above.")}</p>
+          : settings.length === 0 ? <p className="sh-b faint">{t.say(P.t6)}</p>
           : <ul className="rowlist">{settings.map((s) => (
             <li key={s.kind}>
               <div className="main"><div className="nm"><a href={`/config/${encodeURIComponent(s.path)}`} onClick={onLink}>{s.title}</a></div></div>
@@ -130,9 +132,9 @@ function OperationsTab({ data, now }: { data: SquadronPage; now: number }) {
   const t = terms();
   return (
     <Sheet title="Started by hand">
-      <p className="sh-b faint">{t.say("These pipelines have no trigger: nothing starts them but a person. They are how operations work (a rollout, a restore, a cleanup) is done here.")}</p>
-      {data.operations_complete === false && <p className="sh-b sq-note" role="status">This list may be missing some. Reading every pipeline took too long, so not every {t.lower("project")} was checked. Open a {t.lower("project")} to see its own.</p>}
-      {ops.length === 0 ? <p className="sh-b faint">{data.operations_complete === false ? "None found in the time allowed." : "None: something starts every pipeline here."}</p> : (
+      <p className="sh-b faint">{t.say(P.t7)}</p>
+      {data.operations_complete === false && <p className="sh-b sq-note" role="status">{P.t8}{t.lower("project")} was checked. Open a {t.lower("project")} to see its own.</p>}
+      {ops.length === 0 ? <p className="sh-b faint">{data.operations_complete === false ? P.t9 : P.t10}</p> : (
         <ul className="rowlist">
           {ops.map((o) => (
             <li key={o.flight + "/" + o.pipeline}>

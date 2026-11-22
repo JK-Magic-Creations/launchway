@@ -11,6 +11,8 @@ import { navigate } from "../router";
 import { terms } from "../terms";
 import { sayField } from "../configKinds";
 import { BtnPrimary, BtnSm, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
+import { prose } from "../prose";
+const P = await prose("components.ConfigForm");
 
 // ---- spec paths ----
 
@@ -436,7 +438,7 @@ export function CheckLine({ check, okText = "The server's checks pass." }: { che
   return (
     <div className="cf-checkstate" aria-live="polite">
       {check.checking ? <SpanFaint>Checking with the server…</SpanFaint>
-        : check.failure ? <span className="cf-problem">The server could not check this: {check.failure instanceof Error ? check.failure.message : String(check.failure)}</span>
+        : check.failure ? <span className="cf-problem">{P.t0}{check.failure instanceof Error ? check.failure.message : String(check.failure)}</span>
         : check.problems.length === 0 ? <span className="cf-ok">{okText}</span>
         : <span className="cf-problem">{check.problems.length === 1 ? "The server found a problem." : `The server found ${check.problems.length} problems.`}</span>}
     </div>
@@ -582,7 +584,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
     head.current?.focus();
   }, [at]);
   const cancel = () => {
-    if (window.confirm("Leave this wizard? Nothing has been created, and your answers will be lost.")) navigate(cancelTo);
+    if (window.confirm(P.t1)) navigate(cancelTo);
   };
   const step = steps[at];
   return (
@@ -623,7 +625,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
 export function WillCreate({ changes, labels }: { changes: ChangeRequest[]; labels?: Record<string, string> }) {
   return (
     <div className="cf-summary">
-      <p>Here is exactly what will be created. Nothing exists yet: <strong>Create</strong> makes all of it at once, or, if anything is refused, none of it.</p>
+      <p>{P.t2}<strong>Create</strong> {P.t3}</p>
       <ol className="cf-willlist">
         {changes.map((c) => (
           <li key={c.kind + "/" + c.name} className="cf-will">

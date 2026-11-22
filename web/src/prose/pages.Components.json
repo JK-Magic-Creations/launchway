@@ -1,0 +1,9 @@
+{
+  "t0": "Find the {runs} whose software bill of materials lists a component: which {projects} use it, at which version, on which branch.",
+  "t1": "The name must match exactly, ignoring case; newest runs first.",
+  "t2": "Search the SBOMs your {runs} report",
+  "t3": "Type a component's name above, such as a library your {projects} depend on.",
+  "t4": ". Names match exactly, ignoring case.",
+  "t5": "There are more results than shown: only the newest ",
+  "t6": "are listed. Give a version to narrow the search."
+}

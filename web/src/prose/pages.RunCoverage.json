@@ -1,0 +1,6 @@
+{
+  "t0": "coverage reports, but none were read. The step's log says why, for example a path that matched no files.",
+  "t1": "files were kept for the table below; the totals count them all.",
+  "t2": "The files were removed to keep the {project}'s storage within its limit; the totals remain.",
+  "t3": "No per-file coverage was kept for this {run}."
+}

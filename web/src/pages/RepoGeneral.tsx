@@ -5,6 +5,8 @@ import { forgeApi, type HostedRepo } from "../forgeApi";
 import { Button, Sheet } from "../kit/layout";
 import { navigate } from "../router";
 import { RepoTransfer } from "./RepoTransfer";
+import { prose } from "../prose";
+const P = await prose("pages.RepoGeneral");
 
 /** A destructive change asks for the repository's name, typed in, and says what is lost. */
 function Confirm({ repo, what, lost, action, busy, onGo, onCancel }: { repo: HostedRepo; what: string; lost: string; action: string; busy: boolean; onGo: () => void; onCancel: () => void }) {
@@ -48,7 +50,7 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
   if (!admin) {
     return (
       <Sheet title="General" pad>
-        <p className="sub" role="status">Only an administrator of this repository can rename it, change who may see it, change its default branch, archive it or delete it. You can read it{repo.archived ? ", and it is archived" : ""}.</p>
+        <p className="sub" role="status">{P.t0}{repo.archived ? ", and it is archived" : ""}.</p>
       </Sheet>
     );
   }
@@ -59,37 +61,37 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
       {saved && <p className="sub" role="status">{saved}</p>}
       <form className="inputs-form" aria-label="Rename the repository" onSubmit={(e) => { e.preventDefault(); void rename(); }}>
         <label className="field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <p className="sub">Renaming moves the repository to <Mono>{owner}/{name.trim() || "…"}</Mono>. Its history, pull requests and settings stay. The old address keeps working, for Git (which says where the repository is now) and as a redirect for the API and web pages, until another repository takes the name. Anyone with a clone should change its remote.</p>
+        <p className="sub">{P.t1}<Mono>{owner}/{name.trim() || "…"}</Mono>{P.t14}</p>
         <div><Button type="submit" disabled={busy || !name.trim() || name.trim() === repo.name}>Rename</Button></div>
       </form>
       <RepoTransfer repo={repo} owner={owner} />
       <form className="inputs-form" aria-label="Visibility of the repository" onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { visibility }), "Visibility changed."); }}>
         <label className="field"><span>Who may see it</span>
           <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-            <option value="private">Private: only people given access</option>
-            <option value="internal">Internal: everyone who signs in</option>
-            <option value="public">Public: anyone who can reach this server</option>
+            <option value="private">{P.t3}</option>
+            <option value="internal">{P.t4}</option>
+            <option value="public">{P.t5}</option>
           </select></label>
         <div><Button type="submit" disabled={busy || visibility === repo.visibility}>Change visibility</Button></div>
       </form>
-      <form className="inputs-form" aria-label="Default branch of the repository" onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { default_branch: branch }), "Default branch changed."); }}>
+      <form className="inputs-form" aria-label={P.t6} onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { default_branch: branch }), "Default branch changed."); }}>
         <label className="field"><span>Default branch</span>
           <select value={branch} onChange={(e) => setBranch(e.target.value)}>{branchChoices.map((b) => <option key={b} value={b}>{b}</option>)}</select></label>
-        <p className="sub">New pull requests, the code page and Inspections start from the default branch.</p>
+        <p className="sub">{P.t7}</p>
         <div><Button type="submit" disabled={busy || branch === (repo.default_branch ?? "main")}>Change default branch</Button></div>
       </form>
       <h3 className="h-sm">Archive and delete</h3>
       {repo.archived
-        ? <p className="sub">This repository is archived: it takes no pushes. <Button disabled={busy} onClick={() => run(() => forgeApi.update(owner, repo.name, { archived: false }), "Unarchived: it takes pushes again.")}>Unarchive</Button></p>
+        ? <p className="sub">{P.t8}<Button disabled={busy} onClick={() => run(() => forgeApi.update(owner, repo.name, { archived: false }), P.t9)}>Unarchive</Button></p>
         : asking === "archive"
           ? <Confirm repo={repo} what="Archive this repository" action="Archive" busy={busy} onCancel={() => setAsking("")}
               lost="It stops taking pushes, branch changes, edits and new pull requests. Nothing is deleted; an administrator can unarchive it." onGo={() => run(() => forgeApi.update(owner, repo.name, { archived: true }), "Archived.")} />
-          : <p className="sub">Archiving stops pushes and changes; everything stays readable. <Button onClick={() => setAsking("archive")}>Archive this repository</Button></p>}
+          : <p className="sub">{P.t11}<Button onClick={() => setAsking("archive")}>Archive this repository</Button></p>}
       {asking === "delete"
         ? <Confirm repo={repo} what="Delete this repository" action="Delete" busy={busy} onCancel={() => setAsking("")}
             lost="It stops being served and listed: clones, pushes, pull requests and webhooks of it stop working at once. Its data is kept in the server's trash, not erased, until the retention ends: you can bring it back from Deleted repositories."
             onGo={() => run(async () => { await forgeApi.remove(owner, repo.name); navigate("/repositories"); }, "Deleted.")} />
-        : <p className="sub">Deleting takes the repository out of service. <Button onClick={() => setAsking("delete")}>Delete this repository</Button></p>}
+        : <p className="sub">{P.t13}<Button onClick={() => setAsking("delete")}>Delete this repository</Button></p>}
     </Sheet>
   );
 }

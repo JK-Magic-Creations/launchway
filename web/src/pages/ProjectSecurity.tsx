@@ -9,6 +9,8 @@ import { FindingRow } from "./RunSecurity";
 import { terms } from "../terms";
 import { barX, layout, niceMax, seg, useWidth } from "../chartKit";
 import { params, refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.ProjectSecurity");
 
 
 
@@ -43,7 +45,7 @@ export function ProjectSecurityPage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <ProjectHead name={name} on="security" title={<>Security of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the findings move, and those still open.</> : "What the scanners its steps run have found."}
+      <ProjectHead name={name} on="security" title={<>Security of {name}</>} sentence={data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>{P.t0}</> : P.t1}
         actions={data && data.refs.length > 0 && (
           <div className="chips" role="group" aria-label="Branch">
             {(data.refs.includes(data.ref) || !data.ref ? data.refs : [data.ref, ...data.refs]).slice(0, 8).map((r) => (
@@ -57,7 +59,7 @@ export function ProjectSecurityPage({ name }: { name: string }) {
       {!data && !error && <div className="loading">Loading…</div>}
       {data && withFindings.length === 0 && (
         <Empty title={data.ref ? `No findings on ${refName(data.ref)} yet` : "No findings yet"}>
-          {data.refs.length > 0 && <p>Other branches have some: choose one above.</p>}
+          {data.refs.length > 0 && <p>{P.t2}</p>}
           <FindingsHowTo />
         </Empty>
       )}
@@ -156,7 +158,7 @@ function OpenFindings({ data }: { data: ProjectSecurity }) {
         </div>
       </div>
       {shown.length === 0 ? (
-        <div className="empty empty-sm">{data.open.length === 0 ? terms().say("Nothing is open: the latest {run} found nothing.") : "No open findings match these filters."}</div>
+        <div className="empty empty-sm">{data.open.length === 0 ? terms().say(P.t3) : P.t4}</div>
       ) : (
         <div className="tgroups">
           <ul className="tlist">

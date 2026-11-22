@@ -1,0 +1,12 @@
+{
+  "t0": ": how the results move, and the tests that stand out.",
+  "t1": "Results of the tests its steps report.",
+  "t2": "Other branches have some: choose one above.",
+  "t3": "Nothing failed in these {runs}.",
+  "t4": "No test both passed and failed on the same commit.",
+  "t5": "passed only when the test tool ran it again",
+  "t6": "The chart appears once two {runs} have reported coverage.",
+  "t7": "Tests per {run}: passed, failed and skipped",
+  "t8": "This test has no results in the {runs} kept.",
+  "t9": "Failed on an earlier attempt of the step"
+}

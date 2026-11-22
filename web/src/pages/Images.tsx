@@ -8,6 +8,8 @@ import { CopyValue } from "../components/Security";
 import { DIGEST_KEEP, shortDigest } from "../components/Images";
 import { terms } from "../terms";
 import { params, refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.Images");
 
 type By = "digest" | "repository" | "project";
 
@@ -45,7 +47,7 @@ function tidy(by: By, value: string, tag: string): { value: string; tag: string 
 }
 
 const PLACEHOLDER: Record<By, string> = {
-  digest: "sha256:… or host/repo@sha256:…",
+  digest: P.t0,
   repository: "registry.example.com/team/shop",
   project: "shop",
 };
@@ -86,7 +88,7 @@ export function ImagesPage() {
     e.preventDefault();
     const t = tidy(by, value, tag);
     if (by === "digest" && !t.value.startsWith("sha256:")) {
-      setProblem("A digest starts with sha256:, such as sha256:1972…, or paste the whole image reference.");
+      setProblem(P.t2);
       return;
     }
     setProblem("");
@@ -102,7 +104,7 @@ export function ImagesPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a {project}.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say(P.t3)} />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
         <div className="imgform-by">
@@ -128,23 +130,23 @@ export function ImagesPage() {
         <button type="submit" className="btn btn-primary" disabled={!value.trim() || busy}>{busy ? "Searching…" : "Search"}</button>
         {problem && <p className="tfile-err compform-note" id="img-problem" role="alert">{problem}</p>}
         <p className="sub small compform-note">
-          {by === "digest" ? "The digest of an image or of one of its platforms; newest runs first."
-            : by === "repository" ? "The repository without a tag, such as host/team/app; the newest image first."
-            : terms().say("The {project}'s name; its newest images first.")}
+          {by === "digest" ? P.t4
+            : by === "repository" ? P.t5
+            : terms().say(P.t6)}
         </p>
       </form>
 
       <ErrorBox error={error} />
       {!asked.value && !error && (
-        <Empty title={terms().say("Search the images your {runs} built")}>
-          {terms().say("Paste a digest to find the {run} that built it, or give a repository to see its latest image.")}
+        <Empty title={terms().say(P.t7)}>
+          {terms().say(P.t8)}
         </Empty>
       )}
       {hits && hits.length === 0 && (
         <Empty title="Not found">
-          {asked.by === "digest" ? <>{terms().say("No {run} built an image with the digest")} <span className="mono imgref">{shortDigest(asked.value)}</span>.</>
+          {asked.by === "digest" ? <>{terms().say(P.t9)} <span className="mono imgref">{shortDigest(asked.value)}</span>.</>
             : asked.by === "repository" ? <>{terms().say("No {run} built an image for")} <span className="mono imgref">{asked.value}{asked.tag ? `:${asked.tag}` : ""}</span>{terms().say(". The repository must match exactly, {registry} host included.")}</>
-            : <>{terms().say("The {project}")} <strong>{asked.value}</strong> has built no images, or does not exist.</>}
+            : <>{terms().say("The {project}")} <strong>{asked.value}</strong> {P.t11}</>}
         </Empty>
       )}
       {hits && hits.length > 0 && (
@@ -212,7 +214,7 @@ function DigestSummary({ hits }: { hits: ImageHit[] }) {
       </h2>
       <p className="sub">
         First by <Link href={runHref(h)}>{h.project} #{h.run_number}</Link>, step {h.step}, on {refName(h.ref)}, {ago(h.created_at)}
-        {runs.length > 1 && <>; later runs built the same image again</>}.
+        {runs.length > 1 && <>{P.t13}</>}.
       </p>
     </section>
   );

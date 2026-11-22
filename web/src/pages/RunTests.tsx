@@ -6,6 +6,8 @@ import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing,
 import { CaseDetail } from "../components/TestCase";
 import { SearchIcon, CaretIcon } from "../components/Security";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.RunTests");
 
 type Filter = "" | "failed" | "passed" | "skipped" | "flaky";
 type Grouping = "none" | "step" | "suite" | "variant";
@@ -67,7 +69,7 @@ export function TestsTab({ run, version, step, onStep }: {
         <Empty title={running.length ? "No test results yet" : "No test results"}>
           {running.length
             ? <>Results appear when {running.map((s) => s.id).join(", ")} {running.length > 1 ? "end" : "ends"}.</>
-            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} {terms().say("{debriefs}, but none were collected: the tests ran (or were skipped) and no report came out of them.")} <strong>The step's log says why.</strong> A step of a built-in template prints a box that starts “TESTS RAN, BUT NO TEST REPORT WAS PRODUCED” with the one line to add; for your own step, make the test command write JUnit XML to the path it declares.</>}
+            : <>{tests.declared.join(", ")} {tests.declared.length > 1 ? "declare" : "declares"} {terms().say(P.t0)} <strong>The step's log says why.</strong> {P.t1}</>}
         </Empty>
       );
     }
@@ -181,10 +183,10 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
         <div className="tsum-notes">
           {tests.flaky > 0 && (
             <button type="button" className="linkbtn" onClick={() => setFilter("flaky")}>
-              <Badge kind="flaky" title="Failed, then passed when run again">{tests.flaky} flaky: show them</Badge>
+              <Badge kind="flaky" title={P.t2}>{tests.flaky} flaky: show them</Badge>
             </button>
           )}
-          {t.truncated && <span className="faint small">Not every result was kept; see the notes under each step.</span>}
+          {t.truncated && <span className="faint small">{P.t3}</span>}
         </div>
         {tests.steps.length > 0 && <StepReports steps={tests.steps} run={run} active={step} onStep={onStep} />}
       </section>
@@ -212,7 +214,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
           <label className="search">
             <span className="visually-hidden">Search tests</span>
             <SearchIcon />
-            <input type="search" placeholder="Search names, suites, messages" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="search" placeholder={P.t4} value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
         </div>
       </div>
@@ -292,7 +294,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
       <ErrorBox error={error} />
       {!page ? <div className="loading">Loading…</div> : page.cases.length === 0 ? (
         <div className="empty empty-sm">
-          {query ? <>No results match <strong>{query}</strong>.</> : filter === "failed" && !narrowed ? "No failures. Every test that ran passed." : "Nothing to show."}
+          {query ? <>No results match <strong>{query}</strong>.</> : filter === "failed" && !narrowed ? P.t5 : "Nothing to show."}
         </div>
       ) : (
         <div className="tgroups">
@@ -361,14 +363,14 @@ function CompareStrip({ run, version, openCase }: { run: RunDetail; version: str
         <h2 className="h-sm">Since <Link href={`/runs/${cmp.previous.id}?tab=tests`}>#{cmp.previous.number}</Link></h2>
         <span className="faint small">the previous run of {run.branch || run.tag || "this ref"} with test results</span>
       </div>
-      {same ? <p className="sub tcmp-same">Same results: nothing newly failed, nothing was fixed.</p> : (
+      {same ? <p className="sub tcmp-same">{P.t7}</p> : (
         <div className="tcmp-cols">
           <CompareGroup kind="new" title="New failures" items={cmp.new_failures} count={n.new_failures} run={run} openCase={openCase}
             none="Nothing that passed before fails now." />
           <CompareGroup kind="fixed" title="Fixed" items={cmp.fixed} count={n.fixed} run={run} openCase={openCase}
             none="Nothing that failed before passes now." />
           <CompareGroup kind="still" title="Still failing" items={cmp.still_failing} count={n.still_failing} run={run} openCase={openCase}
-            none={terms().say("Nothing failed in both {runs}.")} />
+            none={terms().say(P.t10)} />
         </div>
       )}
     </section>
@@ -438,7 +440,7 @@ function CaseView({ run, id, onBack }: { run: RunDetail; id: number; onBack: () 
           All test results
         </button>
       </div>
-      {error ? <ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run has no such test result." : error} />
+      {error ? <ErrorBox error={error instanceof ApiError && error.status === 404 ? P.t12 : error} />
         : !c ? <div className="loading">Loading…</div> : (
           <section className={"card tcv tcase-" + c.status} aria-label="Test result">
             <header className="tcv-head">
@@ -494,12 +496,12 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
                 </li>
               ))}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-              {s.pruned && <li className="tfile-note">{terms().say("The individual results were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
+              {s.pruned && <li className="tfile-note">{terms().say(P.t13)}</li>}
             </ul>
           </li>
         ))}
       </ul>
-      {run.reruns.length > 0 && <p className="sub small">{terms().say("Re-runs of this {run} show these results for the steps they reuse.")}</p>}
+      {run.reruns.length > 0 && <p className="sub small">{terms().say(P.t14)}</p>}
     </details>
   );
 }
@@ -532,8 +534,8 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
           {bad && c.message && !open && <span className="tcase-msg">{firstLine(c.message)}</span>}
         </span>
         <span className="tcase-badges">
-          {c.new_failure && <Badge kind="new" title="Passed in the previous run of the same branch">New failure</Badge>}
-          {c.flaky && <Badge kind="flaky" title="Failed, then passed when run again">Flaky</Badge>}
+          {c.new_failure && <Badge kind="new" title={P.t15}>New failure</Badge>}
+          {c.flaky && <Badge kind="flaky" title={P.t2}>Flaky</Badge>}
           {retries > 0 && !c.flaky && <Badge kind="info" title="The test tool ran it again">{retries + 1} tries</Badge>}
           <span className="visually-hidden">{testStatusLabel(c.status)}</span>
         </span>

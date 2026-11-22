@@ -1,0 +1,6 @@
+{
+  "t0": "Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or {project}.",
+  "t1": "No bill of materials was made.",
+  "t2": "The run did not scan this image. Add a scan to the image step and the findings appear here.",
+  "t3": "No deployment is known to run this image. Launchway matches a deployment's version to the image's tags, so an image {deploy:did} under another version name is not found."
+}

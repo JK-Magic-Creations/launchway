@@ -6,6 +6,8 @@ import { Badge, TestIcon, testDuration } from "../components/Tests";
 import "../debrief.css";
 import { terms } from "../terms";
 import { refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.Debrief");
 
 // The Debrief of a run: what its tests say, in the order a person needs
 // them: the summary, what changed, the failures with what each expected and
@@ -26,7 +28,7 @@ export function DebriefView({ runId, version, openCase }: { runId: string; versi
   }, [runId, version]);
   if (error) return <ErrorBox error={error} />;
   if (!d) return <div className="loading">Loading the Debrief…</div>;
-  if (d.summary.total === 0) return <Empty title="No test results to report">{d.notes[0] ?? terms().say("Results appear when a step that declares {debriefs} ends.")}</Empty>;
+  if (d.summary.total === 0) return <Empty title="No test results to report">{d.notes[0] ?? terms().say(P.t0)}</Empty>;
   return (
     <div className="debrief">
       <Summary d={d} />
@@ -68,7 +70,7 @@ function ResultBar({ d }: { d: Debrief }) {
     <figure className="dchart">
       <svg role="img" aria-labelledby={id + "t " + id + "d"} width="100%" height="26" viewBox="0 0 1000 26" preserveAspectRatio="none">
         <title id={id + "t"}>Results of {s.total} tests</title>
-        <desc id={id + "d"}>{s.passed} passed, {bad} failed, {s.skipped} skipped. The table below has the same numbers.</desc>
+        <desc id={id + "d"}>{s.passed} passed, {bad} failed, {s.skipped} {P.t1}</desc>
         <defs>
           <pattern id={id + "p"} width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" className="dp-pass" /></pattern>
           <pattern id={id + "f"} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" className="dp-fail" /><rect width="3" height="8" fill="#fff" opacity=".6" /></pattern>
@@ -152,7 +154,7 @@ function DiffView({ diff }: { diff: DebriefDiff }) {
     );
   }
   return (
-    <div className="ddiff" role="group" aria-label="Expected against actual, line by line">
+    <div className="ddiff" role="group" aria-label={P.t2}>
       {(diff.lines ?? []).map((l, i) => (
         <div key={i} className={l.op === "-" ? "ddiff-del" : l.op === "+" ? "ddiff-add" : ""}>
           <span className="op" aria-hidden="true">{l.op === "-" ? "−" : l.op === "+" ? "+" : " "}</span>
@@ -172,7 +174,7 @@ function FailureCard({ f, runId, openCase, open }: { f: DebriefFailure; runId: s
         <span className="dfail-name">{f.name}</span>
         {f.suite && <span className="dfail-suite">in {f.suite}</span>}
         {f.new_here && <Badge kind="new">New here</Badge>}
-        {(f.flaky_score ?? 0) > 0 && <Badge kind="flaky" title="Its history says this test is flaky, so the failure may not be caused by this change">Flaky history</Badge>}
+        {(f.flaky_score ?? 0) > 0 && <Badge kind="flaky" title={P.t3}>Flaky history</Badge>}
       </summary>
       <div className="dfail-body">
         <ul className="dfacts">
@@ -181,9 +183,9 @@ function FailureCard({ f, runId, openCase, open }: { f: DebriefFailure; runId: s
           {f.variant && <li>Variant <strong>{f.variant}</strong></li>}
           {f.owner && <li>{terms().say("{Owner}")} <strong>{f.owner}</strong></li>}
           {f.first_failed_in && <li>First failed in <Link href={`/runs/${f.first_failed_in.id}?tab=tests`}>{terms().say("{run} #")}{f.first_failed_in.number}</Link> ({shortSha(f.first_failed_in.sha)}, {ago(f.first_failed_in.created_at)})</li>}
-          {base === "yes" && <li>Also failing on the default branch: <strong>yes</strong>, so this change did not break it</li>}
-          {base === "no" && <li>Also failing on the default branch: <strong>no</strong>, so this change broke it</li>}
-          {base === "unknown" && <li>Also failing on the default branch: <strong>not known</strong>, it did not run there</li>}
+          {base === "yes" && <li>{P.t4}<strong>yes</strong>{P.t5}</li>}
+          {base === "no" && <li>{P.t4}<strong>no</strong>, so this change broke it</li>}
+          {base === "unknown" && <li>{P.t4}<strong>not known</strong>, it did not run there</li>}
         </ul>
         {f.message && <pre className="dpre">{f.message}</pre>}
         {f.diff && <DiffView diff={f.diff} />}
@@ -231,9 +233,9 @@ function Flaky({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dfl-h">
       <h2 className="h-sm" id="dfl-h">Flaky tests {d.flaky.length > 0 && <span className="dcount">{d.flaky.length}</span>}</h2>
-      {d.flaky.length === 0 ? <p className="sub">No test in this run has a flaky history.</p> : (
+      {d.flaky.length === 0 ? <p className="sub">{P.t6}</p> : (
         <div className="dscroll"><table className="dtable">
-          <caption className="sub small">A test that passed on a retry is listed here and never counted as a plain pass.</caption>
+          <caption className="sub small">{P.t7}</caption>
           <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("In this {run}")}</th><th scope="col" className="num">Score</th><th scope="col">Why</th><th scope="col">First seen</th></tr></thead>
           <tbody>{d.flaky.map((f) => (
             <tr key={f.key}><th scope="row"><span className="dname">{f.name}</span><span className="dsuite">{f.suite}</span></th>
@@ -250,7 +252,7 @@ function Quarantined({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dq-h">
       <h2 className="h-sm" id="dq-h">Quarantined tests <span className="dcount">{d.quarantined.length}</span></h2>
-      <p className="sub">{terms().say("These tests are listed in the repository's quarantine file. A failure here does not fail the {run}, and is counted until the entry expires.")}</p>
+      <p className="sub">{terms().say(P.t8)}</p>
       <div className="dscroll"><table className="dtable">
         <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("This {run}")}</th><th scope="col">{terms().say("{Owner}")}</th><th scope="col">Expires</th><th scope="col">Why</th></tr></thead>
         <tbody>{d.quarantined.map((q) => (
@@ -314,7 +316,7 @@ function Matrix({ d }: { d: Debrief }) {
     <section className="card" aria-labelledby="dm-h">
       <h2 className="h-sm" id="dm-h">Combinations</h2>
       <div className="dscroll"><table className="dtable dmatrix">
-        <caption className="sub small">Each test across the browsers or versions it ran in.</caption>
+        <caption className="sub small">{P.t9}</caption>
         <thead><tr><th scope="col">Test</th>{m.columns.map((c) => <th scope="col" key={c}>{c}</th>)}</tr></thead>
         <tbody>{m.rows.map((r) => (
           <tr key={r.suite + r.name}><th scope="row"><span className="dname">{r.name}</span><span className="dsuite">{r.suite}</span></th>
@@ -330,7 +332,7 @@ function CoverageSection({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dc-h">
       <h2 className="h-sm" id="dc-h">Coverage</h2>
-      {!c ? <p className="sub">{terms().say("No coverage report was collected for this {run}.")}</p> : (
+      {!c ? <p className="sub">{terms().say(P.t10)}</p> : (
         <>
           <dl className="dstats">
             <Stat label="Lines covered" value={pct(Math.round(c.lines.percent * 10) / 10)} />
@@ -341,7 +343,7 @@ function CoverageSection({ d }: { d: Debrief }) {
           </dl>
           {c.change && (
             <div className="dchangecov">
-              <p><strong>Coverage of the change:</strong> {c.change.covered} of {c.change.total} changed lines that hold code are covered.</p>
+              <p><strong>Coverage of the change:</strong> {c.change.covered} of {c.change.total} {P.t11}</p>
               {c.change.advisory && <p className="dadvice"><Badge kind="flaky">Advice</Badge> {c.change.advisory}</p>}
               {c.change.files.length > 0 && <FileTable title="Changed files" files={c.change.files} />}
             </div>
@@ -372,7 +374,7 @@ function floorOf(t: DebriefTrendPoint[]): number {
 function Trend({ d }: { d: Debrief }) {
   const t = d.trend;
   if (t.length < 2) return (
-    <section className="card" aria-labelledby="dt-h"><h2 className="h-sm" id="dt-h">Trend</h2><p className="sub">A trend needs at least two runs with tests on this branch.</p></section>
+    <section className="card" aria-labelledby="dt-h"><h2 className="h-sm" id="dt-h">Trend</h2><p className="sub">{P.t12}</p></section>
   );
   const W = 640, H = 220, L = 40, R = 16, T = 14, B = 28, lo = floorOf(t);
   const y = (v: number) => T + (H - T - B) * (1 - (v - lo) / (100 - lo));
@@ -396,7 +398,7 @@ function Trend({ d }: { d: Debrief }) {
             </g>
           ))}
         </svg>
-        <figcaption className="sub small">{terms().say("Pass rate per {run}; the vertical axis starts at")} {lo}{terms().say("%. A circle is a {run} where everything that ran passed; a triangle is a run with failures.")}</figcaption>
+        <figcaption className="sub small">{terms().say(P.t13)} {lo}{terms().say(P.t14)}</figcaption>
       </figure>
       <details className="dmore"><summary>Show the trend as a table</summary>
         <div className="dscroll"><table className="dtable"><thead><tr><th scope="col">{terms().say("{Run}")}</th><th scope="col">Commit</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Pass rate</th><th scope="col" className="num">Duration</th><th scope="col" className="num">Flaky</th></tr></thead>

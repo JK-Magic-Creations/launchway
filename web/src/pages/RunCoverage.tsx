@@ -5,6 +5,8 @@ import { bytes, SearchIcon } from "../components/Security";
 import { CoverageHowTo, Delta, MEASURES, Meter, MiniBar, level, measureLabel, pct, ratio, type Measure } from "../components/Coverage";
 import { terms } from "../terms";
 import { refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.RunCoverage");
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 const PAGE = 50;
@@ -36,7 +38,7 @@ export function CoverageTab({ run, version }: { run: RunDetail; version: string 
         <Empty title={going.length ? "No coverage yet" : "No coverage collected"}>
           {going.length
             ? <>Coverage appears when {going.map((s) => s.id).join(", ")} {going.length > 1 ? "end" : "ends"}.</>
-            : <>{cov.declared.join(", ")} {cov.declared.length > 1 ? "declare" : "declares"} coverage reports, but none were read. The step's log says why, for example a path that matched no files.</>}
+            : <>{cov.declared.join(", ")} {cov.declared.length > 1 ? "declare" : "declares"} {P.t0}</>}
         </Empty>
       );
     }
@@ -140,8 +142,8 @@ function StepCoverage({ s, run }: { s: CoverageStep; run: RunDetail }) {
           </li>
         ))}
         {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-        {s.stored < s.source_files && <li className="tfile-note">{s.stored.toLocaleString()} of {s.source_files.toLocaleString()} files were kept for the table below; the totals count them all.</li>}
-        {s.pruned && <li className="tfile-note">{terms().say("The files were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
+        {s.stored < s.source_files && <li className="tfile-note">{s.stored.toLocaleString()} of {s.source_files.toLocaleString()} {P.t1}</li>}
+        {s.pruned && <li className="tfile-note">{terms().say(P.t2)}</li>}
       </ul>
     </li>
   );
@@ -226,7 +228,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
         </div>
         <ErrorBox error={error} />
         {!data ? <div className="loading">Loading…</div> : data.files.length === 0 ? (
-          <div className="empty empty-sm">{query ? <>No files match <strong>{query}</strong>.</> : terms().say("No per-file coverage was kept for this {run}.")}</div>
+          <div className="empty empty-sm">{query ? <>No files match <strong>{query}</strong>.</> : terms().say(P.t3)}</div>
         ) : (
           <>
             <div className="table-scroll">

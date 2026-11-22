@@ -7,6 +7,8 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo } from "../components/Security";
 import { terms } from "../terms";
 import { params, refName } from "../refs";
+import { prose } from "../prose";
+const P = await prose("pages.Components");
 
 
 
@@ -49,7 +51,7 @@ export function ComponentsPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which {projects} use it, at which version, on which branch.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say(P.t0)} />
 
       <form className="card compform" role="search" onSubmit={submit}>
         <label className="field">
@@ -61,20 +63,19 @@ export function ComponentsPage() {
           <input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="any version" maxLength={200} />
         </label>
         <button type="submit" className="btn btn-primary" disabled={!name.trim() || busy}>{busy ? "Searching…" : "Search"}</button>
-        <p className="sub small compform-note">The name must match exactly, ignoring case; newest runs first.</p>
+        <p className="sub small compform-note">{P.t1}</p>
       </form>
 
       <ErrorBox error={error} />
       {!asked.name && (
-        <Empty title={terms().say("Search the SBOMs your {runs} report")}>
-          {terms().say("Type a component's name above, such as a library your {projects} depend on.")}
+        <Empty title={terms().say(P.t2)}>
+          {terms().say(P.t3)}
           <FindingsHowTo compact />
         </Empty>
       )}
       {data && data.hits.length === 0 && (
         <Empty title="Not found">
-          No SBOM kept lists <strong>{asked.name}</strong>{asked.version ? <> at version <strong>{asked.version}</strong></> : null}. Names match exactly, ignoring case.
-        </Empty>
+          No SBOM kept lists <strong>{asked.name}</strong>{asked.version ? <> at version <strong>{asked.version}</strong></> : null}{P.t4}</Empty>
       )}
       {data && data.hits.length > 0 && (
         <>
@@ -110,7 +111,7 @@ export function ComponentsPage() {
                 </tbody>
               </table>
             </div>
-            {data.more && <p className="sub small">There are more results than shown: only the newest {data.hits.length} are listed. Give a version to narrow the search.</p>}
+            {data.more && <p className="sub small">{P.t5}{data.hits.length} {P.t6}</p>}
           </section>
         </>
       )}

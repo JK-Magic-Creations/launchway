@@ -1,0 +1,6 @@
+{
+  "t0": "A policy passes when every rule it has passes. Each rule is judged at one point of a {run}; tick the rules this policy has.",
+  "t1": "(not in this server's catalog; see the raw tab).",
+  "t2": "One per line: library/template, then the versions allowed, such as ",
+  "t3": "ci-templates/security-scan v3, v3.*"
+}
