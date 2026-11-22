@@ -167,6 +167,7 @@
         "howto/backup-restore-upgrade",
         "howto/self-deploy",
         "howto/monitoring",
+        "howto/metrics-and-traces",
         "howto/troubleshooting"
       ]
     },
@@ -200,7 +201,8 @@
         "reference/events",
         "reference/roles",
         "reference/policy-rules",
-        "reference/environment-variables"
+        "reference/environment-variables",
+        "reference/metrics"
       ]
     },
     {
