@@ -321,7 +321,7 @@ func TestInspectPermissionsAndAudit(t *testing.T) {
 		}
 	}
 	dana.get(in).json(t, &v)
-	if v.CanControl || !strings.Contains(v.Why, "environment prod") || !v.Protected {
+	if v.CanControl || !strings.Contains(v.Why, "Airfield prod") || !v.Protected {
 		t.Errorf("dana's tree view: %+v", v)
 	}
 	if r := ada.get(in + "/logs?pod=p"); r.status != 200 {
