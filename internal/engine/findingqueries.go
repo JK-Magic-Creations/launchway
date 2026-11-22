@@ -465,15 +465,7 @@ func (e *Engine) RunFindings(runID string, q FindingQuery) (*RunFindings, error)
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range all {
-		switch f.Status {
-		case FindingNew:
-			out.Statuses.New++
-		case FindingExisting:
-			out.Statuses.Existing++
-		}
-	}
-	out.Statuses.Fixed = len(fixed)
+	out.Statuses = countStatuses(all, len(fixed))
 	if err := e.applyDecisions(st.Project, out, all); err != nil {
 		return nil, err
 	}
@@ -481,19 +473,7 @@ func (e *Engine) RunFindings(runID string, q FindingQuery) (*RunFindings, error)
 	if q.Status == FindingFixed {
 		pool = fixed
 	}
-	search := strings.ToLower(strings.TrimSpace(q.Search))
-	var matched []FindingView
-	for _, f := range pool {
-		switch {
-		case len(q.Severities) > 0 && !slices.Contains(q.Severities, f.Severity):
-		case q.Tool != "" && f.Tool != q.Tool:
-		case q.Step != "" && f.Step != q.Step:
-		case (q.Status == FindingNew || q.Status == FindingExisting) && f.Status != q.Status:
-		case search != "" && !strings.Contains(strings.ToLower(f.RuleID+"\x00"+f.Message+"\x00"+f.File+"\x00"+f.Tool), search):
-		default:
-			matched = append(matched, f)
-		}
-	}
+	matched := filterFindings(pool, q)
 	slices.SortStableFunc(matched, func(a, b FindingView) int {
 		return cmp.Or(cmp.Compare(severityRank[a.Severity], severityRank[b.Severity]),
 			cmp.Compare(statusRank(a.Status), statusRank(b.Status)),
@@ -943,4 +923,36 @@ func (e *Engine) applyDecisions(project string, out *RunFindings, all []FindingV
 		out.Open = &open
 	}
 	return nil
+}
+
+// countStatuses counts the findings that are new and those already there, with the number that were fixed.
+func countStatuses(all []FindingView, fixed int) StatusCounts {
+	c := StatusCounts{Fixed: fixed}
+	for _, f := range all {
+		switch f.Status {
+		case FindingNew:
+			c.New++
+		case FindingExisting:
+			c.Existing++
+		}
+	}
+	return c
+}
+
+// filterFindings keeps the findings that match the query's severities, tool, step, status and search text.
+func filterFindings(pool []FindingView, q FindingQuery) []FindingView {
+	search := strings.ToLower(strings.TrimSpace(q.Search))
+	var matched []FindingView
+	for _, f := range pool {
+		switch {
+		case len(q.Severities) > 0 && !slices.Contains(q.Severities, f.Severity):
+		case q.Tool != "" && f.Tool != q.Tool:
+		case q.Step != "" && f.Step != q.Step:
+		case (q.Status == FindingNew || q.Status == FindingExisting) && f.Status != q.Status:
+		case search != "" && !strings.Contains(strings.ToLower(f.RuleID+"\x00"+f.Message+"\x00"+f.File+"\x00"+f.Tool), search):
+		default:
+			matched = append(matched, f)
+		}
+	}
+	return matched
 }

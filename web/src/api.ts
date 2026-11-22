@@ -1216,8 +1216,6 @@ export interface FindingView {
   file?: string; start_line?: number; end_line?: number; start_column?: number;
   /** About a secret: its value is never kept. */
   secret?: boolean;
-  /** A decision about it in force: accepted risk or false positive, with who and why. */
-  decision?: { status: string; reason: string; by: string; at: number; expires_at: number; active: boolean };
   status?: FindingStatus;
   first_seen?: RunLink;
   rule?: RuleView;
@@ -1253,9 +1251,6 @@ export interface RunFindings {
   tools: string[];
   findings: FindingView[];
   matched: number;
-  /** What still counts: the counts without the findings a person accepted or marked as false positives; set when some are. */
-  open?: FindingCounts;
-  accepted?: number;
 }
 
 export interface SecurityRun { id: string; number: number; sha: string; status: RunStatus; created_at: number; findings?: FindingCounts }
