@@ -218,6 +218,17 @@ var permissionTable = map[string]matrixRow{
 	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 	// Git over SSH: keys, deploy keys and protected branches; with hosting off the answer is 404 feature_off (the SSH status is plain: off).
 	"GET /api/v1/ssh": {"GET", "/api/v1/ssh", "", [6]int{401, 200, 200, 200, 200, 200}},
+	// Notifications people receive: the person's own inbox and choices (feature off answers 404), the administrators' mail settings, and the public mute link.
+	"GET /api/v1/inbox":               {"GET", "/api/v1/inbox", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/inbox/count":         {"GET", "/api/v1/inbox/count", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/inbox/read":          {"PUT", "/api/v1/inbox/read", `{"ids":["x"]}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/inbox/done":          {"PUT", "/api/v1/inbox/done", `{"ids":["x"]}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/notices/preferences": {"GET", "/api/v1/notices/preferences", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/notices/preferences": {"PUT", "/api/v1/notices/preferences", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/mail":                {"GET", "/api/v1/mail", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/mail/test":          {"POST", "/api/v1/mail/test", `{}`, [6]int{401, 403, 403, 403, 403, 409}},
+	"GET /notices/unsubscribe":        {"GET", "/notices/unsubscribe?token=x", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"POST /notices/unsubscribe":       {"POST", "/notices/unsubscribe?token=x", "", [6]int{404, 404, 404, 404, 404, 404}},
 	// Verified commits: signing keys of the person, signatures of a repository's objects, the installation's key; feature off answers 404.
 	"GET /api/v1/user/signing-keys":                                   {"GET", "/api/v1/user/signing-keys", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/user/signing-keys":                                  {"POST", "/api/v1/user/signing-keys", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
@@ -655,7 +666,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
-var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info", "GET /.well-known/launchway/signing-key.pub",
+var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info", "GET /.well-known/launchway/signing-key.pub", "GET /notices/unsubscribe", "POST /notices/unsubscribe",
 	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate", "GET /api/state/v1/{project}/{workspace}", "POST /api/state/v1/{project}/{workspace}", "PUT /api/state/v1/{project}/{workspace}", "DELETE /api/state/v1/{project}/{workspace}",
 	"LOCK /api/state/v1/{project}/{workspace}/lock", "UNLOCK /api/state/v1/{project}/{workspace}/lock"}
 

@@ -33,6 +33,14 @@ type InboxEntry struct {
 // these into events and notifications. It must not block.
 type Hook func(ctx context.Context, e Event)
 
+// SetInboxed sets the receiver of what lands in a person's inbox, so the
+// server can also tell them in other ways (e-mail, per their choices). It is
+// called after the entry is stored, with the person, who did it, the kind (an
+// Inbox kind), the item and the text; it must not block.
+func (s *Store) SetInboxed(f func(ctx context.Context, who, by, kind, itemID, text string)) {
+	s.inboxed = f
+}
+
 // SetHook sets the receiver of events.
 func (s *Store) SetHook(h Hook) { s.hook = h }
 
@@ -63,8 +71,13 @@ func (s *Store) notify(ctx context.Context, tx DB, who, by, kind, itemID, text s
 	if n > 0 {
 		return nil
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO work_inbox(who, kind, item_id, text, at) VALUES(?,?,?,?,?)`, who, kind, itemID, text, ms(s.now()))
-	return err
+	if _, err := tx.Exec(ctx, `INSERT INTO work_inbox(who, kind, item_id, text, at) VALUES(?,?,?,?,?)`, who, kind, itemID, text, ms(s.now())); err != nil {
+		return err
+	}
+	if s.inboxed != nil {
+		s.inboxed(ctx, who, by, kind, itemID, text)
+	}
+	return nil
 }
 
 func (s *Store) notifyAssigned(ctx context.Context, tx DB, c Caller, itemID, title string, names map[string]bool) error {

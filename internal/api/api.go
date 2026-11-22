@@ -20,10 +20,13 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge/signing"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/keyring"
+	"github.com/jk-magic-creations/launchway/internal/mail"
+	"github.com/jk-magic-creations/launchway/internal/notices"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -72,16 +75,19 @@ type Server struct {
 	AI        *ai.Client
 	AISecrets *secrets.Resolver
 	// RunnersRole is the role needed on every project to manage runners (join tokens, revoke, rotate: runner_admin); nil means admin, NoRole nobody.
-	RunnersRole *auth.Role
-	Settings    *settings.Service         // the configuration kept in the database (schema 23), under /api/v1/config; nil if none
-	Variables   *settings.VariableService // variables set at levels (schema 29)
-	Releases    ReleaseOptions            // see releases.go
-	Toggles     *togglestore.Service      // feature toggles (schema 41); nil: off
-	Signing     *signing.Service          // verified commits and tags (schema 61, signing.go); nil: off
-	Secrets     *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
-	sealerMu    sync.Mutex
-	sealer      *auth.Sealer // seals the state of sign-ins in progress
-	reportKey   []byte       // signs links to HTML reports
+	RunnersRole  *auth.Role
+	Settings     *settings.Service         // the configuration kept in the database (schema 23), under /api/v1/config; nil if none
+	Variables    *settings.VariableService // variables set at levels (schema 29)
+	Releases     ReleaseOptions            // see releases.go
+	Toggles      *togglestore.Service      // feature toggles (schema 41); nil: off
+	Signing      *signing.Service          // verified commits and tags (schema 61, signing.go); nil: off
+	Notices      *notices.Service          // notifications for people (schema 60, notices.go); nil: off
+	Mail         *mail.Queue               // the mail queue; nil: no mail server is set
+	MailSettings config.MailConfig         // the installation's mail section
+	Secrets      *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
+	sealerMu     sync.Mutex
+	sealer       *auth.Sealer // seals the state of sign-ins in progress
+	reportKey    []byte       // signs links to HTML reports
 
 	MCP      *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
 	Forge    *ForgeHosting    // Git hosting; nil is off

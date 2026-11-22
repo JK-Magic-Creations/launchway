@@ -137,6 +137,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
+| `GET /api/v1/inbox` | `get_inbox` | `inbox list` | `not needed by terraform` | equal |
+| `GET /api/v1/inbox/count` | `get_inbox` | `inbox count` | `not needed by terraform` | equal |
+| `PUT /api/v1/inbox/done` | `mark_inbox` | `inbox done` | `not needed by terraform` | equal |
+| `PUT /api/v1/inbox/read` | `mark_inbox` | `inbox read` | `not needed by terraform` | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
 | `GET /api/v1/layouts-export` | `organize` | `organize` | — | equal |
@@ -146,12 +150,16 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
+| `GET /api/v1/mail` | `get_mail_status` | `notices mail` | `the mail section of launchway_installation` | equal |
+| `POST /api/v1/mail/test` | `send_test_mail` | `notices mail-test` | `not needed by terraform` | equal |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
 | `POST /api/v1/me/favorites` | — | — | — | exempt: a person's own favorites; a token or agent has no pages |
 | `DELETE /api/v1/me/layouts` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `DELETE /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `PUT /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `GET /api/v1/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
+| `GET /api/v1/notices/preferences` | `get_notice_preferences` | `notices prefs` | `not needed by terraform` | equal |
+| `PUT /api/v1/notices/preferences` | `set_notice_preferences` | `notices set`, `notices watch`, `notices quiet`, `notices digest` | `not needed by terraform` | equal |
 | `GET /api/v1/notifications` | `list_notifications` | `notifications` | — | equal |
 | `DELETE /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
 | `PATCH /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
@@ -619,6 +627,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /notices/unsubscribe` | `set_notice_preferences` | `notices set` | — | exempt: the page behind the mute link in a message: for a person who is not signed in, signed so that it can only mute one kind of mail for the person it was made for; signed in, the preferences do the same and more |
+| `POST /notices/unsubscribe` | `set_notice_preferences` | `notices set` | — | exempt: the mute link in a message (also what a mail program's one-click unsubscribe sends): signed, for a person who is not signed in |
 | `GET /public/releases/{name}/{version}/{asset}` | — | — | — | exempt: the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found |
 | `GET /readyz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /schema/pipeline.json` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

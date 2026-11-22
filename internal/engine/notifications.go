@@ -83,7 +83,8 @@ func (e *Engine) notifyOnce(ctx context.Context, n *Notifier) {
 		n.Log = slog.Default()
 	}
 	cfg := e.live().notify
-	if len(cfg.Rules) > 0 {
+	people := e.personHook()
+	if len(cfg.Rules) > 0 || people != nil {
 		for i, f := range []func(context.Context, *Notifier) ([]notify.Event, error){e.eventsFromLog, e.eventsWaiting, e.eventsRollbackReviews, e.eventsFreezes} {
 			evs, err := f(ctx, n)
 			if err != nil {
@@ -91,7 +92,12 @@ func (e *Engine) notifyOnce(ctx context.Context, n *Notifier) {
 				continue
 			}
 			for _, ev := range evs {
-				e.enqueueNotifications(ctx, cfg, ev)
+				if len(cfg.Rules) > 0 {
+					e.enqueueNotifications(ctx, cfg, ev)
+				}
+				if people != nil {
+					people(ctx, ev)
+				}
 			}
 		}
 	}
@@ -192,6 +198,9 @@ func (e *Engine) logEvent(ctx context.Context, n *Notifier, runID, kind string, 
 	ev := notify.Event{Project: project, Branch: branch, RunID: runID, RunNumber: number, At: time.Now().UnixMilli(),
 		Key: fmt.Sprintf("log:%d", seq), Link: n.link("/runs/" + runID)}
 	switch {
+	case kind == string(RunFinished) && p.Status == string(RunSucceeded) && e.personHook() != nil && e.priorRunFailed(project, branch, number):
+		ev.Kind, ev.Title = RunFixedEvent, fmt.Sprintf("Run #%d of %s succeeded after a failure", number, project)
+		ev.Detail = firstLine(message)
 	case kind == string(RunFinished) && p.Status == string(RunFailed):
 		ev.Kind, ev.Title = notify.RunFailed, fmt.Sprintf("Run #%d of %s failed", number, project)
 		ev.Detail = firstLine(message) + " Open the run to see which step failed and why."

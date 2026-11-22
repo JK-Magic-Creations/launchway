@@ -42,6 +42,7 @@ type Store struct {
 	mu       sync.Mutex
 	cache    map[Scope]cached
 	hook     Hook
+	inboxed  func(ctx context.Context, who, by, kind, itemID, text string)
 	closed   map[string]bool
 	prefixes map[Scope]string
 }

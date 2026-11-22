@@ -741,6 +741,30 @@ policy:
 - [Helm values](helm-values.md): the same settings when Launchway runs on Kubernetes.
 - [Back up, restore and upgrade](../howto/backup-restore-upgrade.md).
 
+## Mail
+
+E-mail sent to people (a review asked of them, a mention, an approval waiting, a credential about to expire). An installation setting; unset, no mail is sent and people still have their inbox. See [Notifications for people](../guide/notifications-for-people.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `mail.host` | host | none (no mail) | The mail server (SMTP submission). It must be a public host, or one listed under `egress.allow`: mail goes through the same guard as every other address the server connects to |
+| `mail.port` | number | `587` (`465` for `tls`, `25` for `none`) | The server's port |
+| `mail.security` | text | `starttls` | `starttls` (an encrypted connection is started before anything is sent; a server that does not offer it is refused), `tls` (encrypted from the first byte) or `none` |
+| `mail.allow_plain` | boolean | `false` | Required for `security: none` and for a server that does not offer encryption: say that unencrypted mail is acceptable on this network |
+| `mail.username.store` | name | none | The server's secret store (`ai.secrets`) that holds the user name. Credentials are only ever references |
+| `mail.username.key` | text | | The key in the store |
+| `mail.username.field` | text | | The field of the key |
+| `mail.password.store` | name | none | The store that holds the password |
+| `mail.password.key` | text | | The key in the store |
+| `mail.password.field` | text | | The field of the key |
+| `mail.from` | address | required with `mail.host` | The sender, such as `Launchway <notify@example.com>` |
+| `mail.public_url` | URL | none (no links) | The installation's public address: every link in mail leads there |
+| `mail.rate_per_minute` | number | `30` | The most messages the installation sends in a minute; more wait |
+| `mail.rate_per_hour` | number | `300` | The most in an hour |
+| `mail.max_attempts` | number | `5` | How many times a message is tried (with growing pauses) before it is given up on |
+| `mail.include_private_details` | boolean | `false` | Let titles and comments of repositories that are not public travel by mail. Off: such mail carries the repository's name and a link and nothing else, because mail leaves the installation's trust boundary |
+
 ## Notifications
 
 Who is told when an approval waits or something went wrong, and where. See [Notifications](../guide/notifications.md).

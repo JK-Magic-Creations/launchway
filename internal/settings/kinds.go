@@ -194,6 +194,9 @@ type Installation struct {
 	// Notifications are the channels and rules that tell people an approval
 	// waits or something went wrong.
 	Notifications notify.Config `yaml:"notifications"`
+	// Mail is the e-mail sent to people; a change takes effect when each
+	// server next restarts.
+	Mail config.MailConfig `yaml:"mail"`
 }
 
 // EgressAllow is the allowed hosts of the installation.

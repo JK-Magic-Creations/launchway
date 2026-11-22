@@ -111,6 +111,8 @@ Usage:
                                                 (launchway work, for more)
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway signing  keys|verify|installation-key     your signing keys, and whether commits and tags are verified
+  launchway inbox    list|count|read|done             your one inbox: notices, work entries, pull requests waiting on you
+  launchway notices  prefs|set|watch|quiet|digest|mail how and when you are told, by e-mail or in the inbox
   launchway attention [--json]                          what needs you: the Tower's rule, for a script or an agent
   launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
@@ -207,6 +209,10 @@ func main() {
 		err = cmdHosting(os.Args[1], args)
 	case "signing":
 		err = cmdSigning(args)
+	case "inbox":
+		err = cmdInbox(args)
+	case "notices":
+		err = cmdNotices(args)
 	case "fleet":
 		err = cmdFleet(args)
 	case "deps":
