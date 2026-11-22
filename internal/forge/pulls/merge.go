@@ -65,6 +65,9 @@ type MergeResult struct {
 	BranchDeleted bool        `json:"branch_deleted"`
 	// Bypassed lists what the rules asked that an administrator waived.
 	Bypassed []string `json:"bypassed,omitempty"`
+	// Note says, in plain words, that the merge commit is not signed and why (signing is off, or the signature failed);
+	// empty when it is signed.
+	Note string `json:"note,omitempty"`
 }
 
 const mergeAttempts = 5
@@ -229,6 +232,11 @@ func (s *Service) land(ctx context.Context, repoID string, p PullRequest, in Mer
 // the rest of the system.
 func (s *Service) recordMerge(ctx context.Context, repoID string, p PullRequest, in MergeInput, g gate, merged string, ups []storage.RefUpdate) (MergeResult, error) {
 	res := MergeResult{Bypassed: g.bypassed, Commit: merged}
+	if s.Sign == nil {
+		res.Note = "The merge commit is not signed: signing is off on this server."
+	} else if e, _ := s.signErr.Load().(string); e != "" {
+		res.Note = "The merge commit is not signed: " + e
+	}
 	if err := s.Store.SetMerged(ctx, p.ID, merged, g.method, in.Actor); err != nil {
 		return MergeResult{}, err
 	}

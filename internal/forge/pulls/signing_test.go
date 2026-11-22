@@ -77,6 +77,16 @@ func TestRequireSignedMergesAreSignedByTheInstallation(t *testing.T) {
 			t.Fatalf("%v", err)
 		}
 	})
+	t.Run("with signing off and no rule, merges work, unsigned, with a plain note", func(t *testing.T) {
+		w, p := mergeWorld(t) // no signing function, no rule
+		res, err := w.svc.Merge(w.ctx, repoID, p, MergeInput{Method: MethodMerge, Actor: "grace", ActorRole: RoleOperator, RepoPath: "ada/demo"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(res.Note, "not signed") || !strings.Contains(res.Note, "off") {
+			t.Fatalf("note %q", res.Note)
+		}
+	})
 	t.Run("a rule that does not ask changes nothing", func(t *testing.T) {
 		w, p := mergeWorld(t)
 		w.signingOn(Rule{Pattern: "main", ApprovalRole: RoleOperator})

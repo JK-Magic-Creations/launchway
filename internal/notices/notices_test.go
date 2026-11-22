@@ -333,3 +333,31 @@ func TestAPITokensAreWarnedAboutBeforeTheyExpire(t *testing.T) {
 		t.Fatalf("a service account's token was warned about as a person: %+v", other)
 	}
 }
+
+// With mail off (no sender configured) nothing is queued and nothing is attempted, even for a person whose choice is
+// e-mail; the notice still lands in the inbox.
+func TestWithMailOffNothingIsQueuedOrAttempted(t *testing.T) {
+	w := newWorld(t)
+	w.svc.Mail = nil
+	if err := w.svc.Store.SetPref(t0(), "bob", review.Kind, Email); err != nil {
+		t.Fatal(err)
+	}
+	if told := w.notify(review); len(told) == 0 {
+		t.Fatal("nobody was told")
+	}
+	ns, _ := w.svc.Store.List(t0(), "bob", Filter{})
+	if len(ns) != 1 {
+		t.Fatalf("the notice must land in the inbox: %d", len(ns))
+	}
+	var queued int
+	if err := w.svc.Store.DB.QueryRow(t0(), `SELECT count(*) FROM mail_queue`).Scan(&queued); err != nil || queued != 0 {
+		t.Fatalf("%d messages queued with mail off: %v", queued, err)
+	}
+	if n := w.srv.Connections(); n != 0 {
+		t.Fatalf("%d connections to a mail server with mail off", n)
+	}
+	w.svc.ScanCredentials(t0(), 24*time.Hour) // the other paths that mail are off too
+	if n := w.srv.Connections(); n != 0 {
+		t.Fatalf("%d connections", n)
+	}
+}
