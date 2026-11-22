@@ -7,7 +7,7 @@ import { installServer } from "./test/mockApi";
 // Walks pages and checks the rule "every view has an address": change the view, read the address, mount the page again from that
 // address alone, and expect the same view; an address that names a view opens it directly.
 beforeEach(() => { HTMLCanvasElement.prototype.getContext = (() => null) as never; installServer(); });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const open = async (path: string) => {
   history.replaceState(null, "", path);

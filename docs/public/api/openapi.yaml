@@ -1618,7 +1618,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/attention:
         get:
-            description: 'What needs a person: needs (each with why and do), dismissed (set aside by the caller), retrying (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and count. The rule is in the guide page *What the home page shows*.'
+            description: 'What needs a person: needs (each with why and do), dismissed (set aside by the caller), retrying (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and count. The rule is in the guide page *What the Tower shows*.'
             operationId: get_api_v1_attention
             responses:
                 "200":
@@ -3201,7 +3201,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/home:
         get:
-            description: 'The Home page in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately. ?view=mine or all. Only what the caller may see; counts never include anything else.'
+            description: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately. ?view=mine or all. Only what the caller may see; counts never include anything else.'
             operationId: get_api_v1_home
             responses:
                 "200":
@@ -3218,7 +3218,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The Home page in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately.'
+            summary: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately.'
             tags:
                 - home
             x-launchway-access: signed-in
@@ -16309,7 +16309,7 @@ paths:
             x-launchway-audit: work.comment
     /api/v1/work/items/{ref}/delivery:
         get:
-            description: Where the item's merged change is running, per environment, from real deployments, with a sentence. null before anything merged.
+            description: Where the item's merged change is running, per Airfield (environment), from real deployments, with a sentence. null before anything merged.
             operationId: get_api_v1_work_items_ref_delivery
             parameters:
                 - in: path
@@ -16334,7 +16334,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Where the item's merged change is running, per environment, from real deployments, with a sentence.
+            summary: Where the item's merged change is running, per Airfield (environment), from real deployments, with a sentence.
             tags:
                 - work
             x-launchway-access: signed-in

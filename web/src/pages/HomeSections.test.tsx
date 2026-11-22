@@ -62,7 +62,7 @@ describe("Home sections", () => {
     render(<HomeSections />);
     await screen.findByRole("heading", { name: /Needs you/ });
     await userEvent.click(screen.getByText("Arrange"));
-    expect(screen.getByText(/changes only your Home page/)).toBeInTheDocument();
+    expect(screen.getByText(/changes only your Tower/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Move Running now up" }));
     await waitFor(() => expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ order: ["running", "needs", "favorites", "continue", "categories", "recent"] }));
     await userEvent.click(screen.getByRole("button", { name: /^Hide\s*Recently finished/ }));
