@@ -92,7 +92,7 @@ cell_env() { # name  (sets NS REL STEPNS and makes the namespace with the test G
 	kc -n "$NS" rollout status deploy/git-server --timeout=120s >/dev/null
 }
 cell_cleanup() { # name
-	[ "${KEEP:-}" = 1 ] && return 0
+	[ "${KEEP:-}" = 2 ] && return 0   # KEEP=1 keeps the cluster; KEEP=2 also the cells' namespaces
 	hm -n "u-$1" uninstall lw >/dev/null 2>&1 || true
 	kc delete namespace "u-$1" "lw-$1-steps" --ignore-not-found --wait=false >/dev/null 2>&1 || true
 }
@@ -122,9 +122,14 @@ ensure_repo() { [ -f "$WORK/repo/demo-repo.tar.gz" ] || sh "$ROOT/deploy/test/ma
 wait_ready() { # seconds
 	kc -n "$NS" rollout status "deploy/$FULL-server" --timeout="${1:-240}s" >/dev/null 2>&1
 }
-pods_ok() { # every server pod Running, Ready, no restarts
+ready_ok() { # the servers that are not being replaced are Ready (a restart at first start is the previous release's habit)
 	local bad
-	bad=$(kc -n "$NS" get pods -l app.kubernetes.io/component=server -o json | jq -r '.items[] | select(.status.phase!="Running" or ([.status.containerStatuses[]?|select(.ready!=true or .restartCount>0)]|length>0)) | .metadata.name')
+	bad=$(kc -n "$NS" get pods -l app.kubernetes.io/component=server -o json | jq -r '.items[] | select(.metadata.deletionTimestamp==null) | select(.status.phase!="Running" or ([.status.containerStatuses[]?|select(.ready!=true)]|length>0)) | .metadata.name')
+	[ -z "$bad" ] || { echo "not ready: $bad"; return 1; }
+}
+pods_ok() { # every server pod (not one that is being replaced) Running, Ready, no restarts
+	local bad
+	bad=$(kc -n "$NS" get pods -l app.kubernetes.io/component=server -o json | jq -r '.items[] | select(.metadata.deletionTimestamp==null) | select(.status.phase!="Running" or ([.status.containerStatuses[]?|select(.ready!=true or .restartCount>0)]|length>0)) | .metadata.name')
 	[ -z "$bad" ] || { echo "not healthy: $bad"; return 1; }
 	[ "$(kc -n "$NS" get pods -l app.kubernetes.io/component=server --no-headers | wc -l)" -ge 1 ]
 }
@@ -190,7 +195,7 @@ verify_encryption() { # label  (waits for sealing, then reads a dump)
 	kc -n "$NS" exec "$pg" -- pg_dump -U launchway launchway >"$CELLDIR/dump.sql" 2>"$CELLDIR/dump.err"
 	check "$label: a dump was taken" test -s "$CELLDIR/dump.sql"
 	check "$label: no webhook secret readable in the dump" bash -c "! grep -q '$(cat "$CELLDIR/seedsecret")' '$CELLDIR/dump.sql'"
-	check "$label: exactly one key-encryption key" bash -c "[ \"\$(grep -ci 'key' '$CELLDIR/enc.out' >/dev/null; kubectl -n '$NS' get secrets -o name | grep -c root-key)\" = 1 ]"
+	check "$label: exactly one key-encryption key (one creation event, one root key Secret)" bash -c "[ \"\$(grep -c 'encryption.key_created' '$CELLDIR/dump.sql')\" = 1 ] && [ \"\$(kubectl -n '$NS' get secrets -o name | grep -c root-key)\" = 1 ]"
 }
 verify_doctor() { # label: doctor clean (the open sign-in of these installs is expected)
 	local out; out=$(lw_in doctor --config /etc/launchway/launchway.yaml 2>&1); echo "$out" >"$CELLDIR/doctor.out"

@@ -203,9 +203,20 @@ kubectl -n launchway get secret launchway-launchway-setup-code -o jsonpath='{.da
 > The chart applies default-deny NetworkPolicies. They take effect where your cluster's network
 > plugin enforces them. The servers may reach DNS and the database only; add your Git hosts and
 > identity provider to `networkPolicy.server.extraEgress`, and Git hosts the runners clone to
-> `networkPolicy.runner.extraEgress`. Step pods may reach the Launchway server and the internet
-> over HTTP and HTTPS, never the database, the Kubernetes API or the cloud metadata service.
-> See [network policies](../reference/helm-values.md#network-policies).
+> `networkPolicy.runner.extraEgress`. Step pods may reach DNS and the Launchway server only; the
+> internet over HTTP and HTTPS for builds that download dependencies is an opt-in
+> (`networkPolicy.steps.internet: true`), and never the database, the Kubernetes API or the cloud
+> metadata service. Behind an Ingress, name the proxy's namespace in
+> `networkPolicy.server.proxyNamespaces`. See [network policies](../reference/helm-values.md#network-policies).
+>
+> **If the cluster already has network policy**, `launchway install` says so and leaves these off. It looks
+> in your namespace for Kubernetes NetworkPolicies that are not Launchway's own, and for any
+> `*NetworkPolicy` kind of a non-core API group (a network plugin's own objects: CiliumNetworkPolicy,
+> Calico's GlobalNetworkPolicy and the like, found by listing the cluster's API, not from a fixed list). On a plugin whose own policies **add** to Kubernetes ones, adding the
+> chart's as well can widen access, and objects stay behind when they are turned off, so one system should be the
+> authority. The installer asks (default: leave Launchway's off, `networkPolicy.enabled: false`); answer
+> `--set kubernetes.network_policies=yes` to add them anyway. `launchway doctor network --namespace launchway`
+> runs the same check on an installation that exists.
 
 The servers wait for the database while it starts (each try is logged), so they should not restart.
 With the bundled database switched off (`postgresql.enabled=false`) and none of your own named, the

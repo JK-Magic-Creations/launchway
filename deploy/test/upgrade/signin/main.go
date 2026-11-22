@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,10 +34,10 @@ func main() {
 			b, _ := json.Marshal(body)
 			rd = bytes.NewReader(b)
 		}
-		req, _ := http.NewRequest(method, base+path, rd)
+		req, _ := http.NewRequestWithContext(context.Background(), method, base+path, rd) //nolint:gosec // a test helper: the address is the matrix's own port-forward
 		req.Header.Set("X-Launchway-CSRF", "1")
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := hc.Do(req)
+		resp, err := hc.Do(req) //nolint:gosec // a test helper: the address is the matrix's own port-forward
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "signin:", err)
 			os.Exit(1)
@@ -64,6 +65,9 @@ func main() {
 		die("me: %d %v", st, me)
 	}
 	fmt.Println("first sign-in: ok, administrator")
+	if project == "-" {
+		return
+	}
 	st, run := call("POST", "/api/v1/projects/"+project+"/runs", map[string]any{})
 	if st/100 != 2 {
 		die("start run: %d %v", st, run)
