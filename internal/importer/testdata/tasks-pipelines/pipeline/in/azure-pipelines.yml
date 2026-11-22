@@ -1,0 +1,140 @@
+trigger:
+  batch: true
+  branches:
+    include: [main, releases/*, refs/tags/v*]
+    exclude: [experimental/*]
+  paths:
+    include: [src/*]
+pr:
+  branches:
+    include: [main]
+schedules:
+  - cron: "0 3 * * *"
+    displayName: nightly
+    branches:
+      include: [main]
+
+parameters:
+  - name: target
+    type: string
+    default: dev
+    values: [dev, prod]
+  - name: verbose
+    type: boolean
+    default: false
+
+variables:
+  - group: shared-secrets
+  - name: buildConfig
+    value: Release
+  - template: vars.yml
+
+resources:
+  containers:
+    - container: node20
+      image: node:20
+    - container: pg
+      image: postgres:16
+      env:
+        POSTGRES_PASSWORD: test
+  repositories:
+    - repository: tools
+      type: git
+      name: team/tools
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Compile
+        container: node20
+        timeoutInMinutes: 30
+        continueOnError: true
+        services:
+          db: pg
+        steps:
+          - checkout: self
+          - task: Cache@2
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              path: $(Pipeline.Workspace)/.npm
+          - task: Cache@2
+            inputs:
+              key: 'go | go.sum'
+              path: ~/go/pkg/mod
+          - script: |
+              npm ci
+              npm run build -- --config $(buildConfig) --rev $(Build.SourceVersion) --token $(NPM_TOKEN) --x ${{ parameters.target }} ${{ variables.other }}
+            displayName: Build
+            workingDirectory: web
+            env:
+              CI: "true"
+          - pwsh: Write-Host hi
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFiles: "**/junit.xml"
+          - task: PublishCodeCoverageResults@2
+            inputs:
+              summaryFileLocation: coverage/cobertura.xml
+          - publish: web/dist
+            artifact: dist
+          - task: SomeVendorTask@1
+            inputs:
+              x: 1
+          - template: steps/extra.yml
+          - bash: echo cond
+            condition: eq(variables['Build.Reason'], 'Manual')
+      - job: Matrix
+        dependsOn: Compile
+        strategy:
+          matrix:
+            linux:
+              image: a
+            mac:
+              image: b
+        steps:
+          - script: echo $(image)
+  - stage: Test
+    dependsOn: Build
+    jobs:
+      - job: Unit
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: "3.12"
+          - download: current
+            artifact: dist
+          - script: pytest
+      - job: Report
+        dependsOn: Unit
+        condition: always()
+        steps:
+          - script: echo report
+  - stage: Deploy
+    dependsOn: [Test]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: Prod
+        environment: production
+        strategy:
+          runOnce:
+            preDeploy:
+              steps:
+                - script: echo pre
+            deploy:
+              steps:
+                - task: Docker@2
+                  inputs:
+                    command: buildAndPush
+                    repository: team/shop
+                    Dockerfile: $(Build.SourcesDirectory)/Dockerfile
+                    tags: |
+                      $(Build.SourceVersion)
+                      latest
+                - script: kubectl rollout restart deploy/shop
+      - job: Gate
+        condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+        steps:
+          - script: echo ok

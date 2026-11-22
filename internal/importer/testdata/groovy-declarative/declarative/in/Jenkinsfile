@@ -1,0 +1,116 @@
+@Library('shared-steps') _
+
+pipeline {
+  agent { label 'linux && docker' }
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    retry(2)
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    skipDefaultCheckout true
+  }
+  parameters {
+    string(name: 'TARGET', defaultValue: 'dev', description: 'Where to deploy')
+    booleanParam(name: 'VERBOSE', defaultValue: false)
+    choice(name: 'REGION', choices: ['eu', 'us'], description: 'Region')
+    password(name: 'SECRET_PARAM')
+  }
+  triggers {
+    cron('H 4 * * 1-5')
+    pollSCM('H/5 * * * *')
+  }
+  tools { maven 'M3' }
+  environment {
+    APP = 'shop'
+    REG = credentials('registry-login')
+    GREETING = "hello ${params.TARGET}"
+  }
+  stages {
+    stage('Build') {
+      agent { docker { image 'golang:1.22' args '-v /tmp:/tmp' } }
+      steps {
+        checkout scm
+        sh 'go build ./...'
+        sh """
+          echo build ${env.BUILD_NUMBER} on $BRANCH_NAME
+          echo ${params.TARGET} ${someGroovy.call()}
+        """
+        dir('web') {
+          sh 'npm ci'
+        }
+        withEnv(['CI=true']) {
+          sh 'npm test'
+        }
+        archiveArtifacts artifacts: 'bin/**, web/dist/**', fingerprint: true
+        junit 'reports/*.xml'
+        bat 'dir'
+        script {
+          def x = 1
+          echo "x ${x}"
+        }
+        stash name: 'bin', includes: 'bin/**'
+        slackSend channel: '#ci', message: 'built'
+      }
+      post {
+        always { junit 'reports/**/*.xml' }
+        failure { sh 'echo failed' }
+        changed { echo 'changed' }
+      }
+    }
+    stage('Checks') {
+      parallel {
+        stage('Lint') {
+          steps { sh 'golangci-lint run' }
+        }
+        stage('Unit') {
+          when { anyOf { branch 'main'; branch pattern: 'release-*', comparator: 'GLOB' } }
+          steps {
+            timeout(time: 5, unit: 'MINUTES') { sh 'go test ./...' }
+            retry(3) { sh 'flaky.sh' }
+          }
+        }
+      }
+    }
+    stage('Matrix') {
+      matrix {
+        axes {
+          axis { name 'PLATFORM'; values 'linux', 'mac' }
+          axis { name 'GO'; values '1.21', '1.22' }
+        }
+        excludes {
+          exclude {
+            axis { name 'PLATFORM'; values 'mac' }
+            axis { name 'GO'; values '1.21' }
+          }
+        }
+        stages {
+          stage('Cell') { steps { sh 'echo $PLATFORM $GO' } }
+        }
+      }
+    }
+    stage('Release') {
+      when { allOf { branch 'main'; changeset 'src/**'; not { tag 'v*' } } }
+      input { message 'Release now?'; submitter 'alice,bob' }
+      steps {
+        withCredentials([string(credentialsId: 'deploy-token', variable: 'TOKEN')]) {
+          sh 'kubectl apply -f deploy.yaml'
+        }
+      }
+    }
+    stage('Tagged') {
+      when { buildingTag(); expression { return env.X == '1' } }
+      steps { sh 'echo tagged' }
+    }
+    stage('Outer') {
+      stages {
+        stage('Inner one') { steps { sh 'echo 1' } }
+        stage('Inner two') { steps { sh 'echo 2' } }
+      }
+    }
+  }
+  post {
+    always { echo 'done' }
+    cleanup { deleteDir() }
+    unstable { echo 'unstable' }
+  }
+}

@@ -1,0 +1,113 @@
+version: 2.1
+
+orbs:
+  node: example/node@1.0
+
+executors:
+  gobox:
+    docker:
+      - image: cimg/go:1.22
+        environment:
+          GOFLAGS: -mod=readonly
+    resource_class: large
+
+commands:
+  prep:
+    steps:
+      - run: echo prep
+
+jobs:
+  build:
+    executor: gobox
+    working_directory: ~/project/app
+    environment:
+      MODE: ci
+    steps:
+      - checkout
+      - prep
+      - restore_cache:
+          keys:
+            - go-{{ checksum "go.sum" }}
+      - run:
+          name: Build
+          command: go build ./...
+          environment:
+            CGO_ENABLED: "0"
+      - save_cache:
+          key: go-{{ checksum "go.sum" }}
+          paths:
+            - ~/go/pkg/mod
+            - ~/.hidden
+      - store_artifacts:
+          path: bin
+      - persist_to_workspace:
+          root: .
+          paths: [bin]
+  test:
+    docker:
+      - image: cimg/go:1.22
+      - image: cimg/postgres:16.0
+        name: db
+        environment:
+          POSTGRES_PASSWORD: test
+    parallelism: 3
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: go test ./...
+      - store_test_results:
+          path: reports
+      - setup_remote_docker
+  ship:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          command: docker push registry.example.test/team/shop:$CIRCLE_SHA1
+          when: on_fail
+      - node/install
+      - when:
+          condition: << pipeline.parameters.go >>
+          steps:
+            - run: echo conditional
+      - run: echo << parameters.target >>
+
+workflows:
+  main:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: [main, develop]
+            tags:
+              only: [v1, v2]
+      - test:
+          requires: [build]
+          context: org-shared
+      - hold:
+          type: approval
+          requires: [test]
+          filters:
+            branches:
+              ignore: [wip]
+      - ship:
+          requires: [hold]
+          filters:
+            branches:
+              only: /release-.*/
+      - test:
+          name: matrixed
+          matrix:
+            parameters:
+              v: [a, b]
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"
+          filters:
+            branches:
+              only: main
+    jobs:
+      - build

@@ -1,0 +1,27 @@
+=== .ci/config.yml (jobs-config)
+# Imported from .ci/config.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: ['*']}
+steps:
+  mac:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo mac
+  vm:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo vm
+
+--- findings
+manual    jobs.pipeline_params         .ci/config.yml:3 The file uses pipeline parameters or setup, which makes the pipeline from other input at run time -> Write the pipeline out in full, or use run inputs
+manual    jobs.executor.machine        .ci/config.yml:9 The job runs on macos machines, and Launchway steps run in Linux container images -> Choose an image, or run it on a Station of that kind
+exact     jobs.job                     .ci/config.yml:9 The job became a step; its steps run in order in one script
+different write.image.default          .ci/config.yml:9 The steps mac, vm name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     jobs.step.run                .ci/config.yml:12 Commands carry over; environment and working_directory wrap that command
+manual    jobs.executor.machine        .ci/config.yml:14 The job runs on machine machines, and Launchway steps run in Linux container images -> Choose an image, or run it on a Station of that kind
+exact     jobs.job                     .ci/config.yml:14 The job became a step; its steps run in order in one script
+exact     jobs.step.run                .ci/config.yml:17 Commands carry over; environment and working_directory wrap that command
+exact     jobs.workflow                .ci/config.yml:20 Each job of a workflow became a step; requires became needs
+manual    jobs.step.orb                .ci/config.yml:20 The step missing/job comes from a shared package that Launchway does not read -> Replace it with the commands it runs, or a built-in template (launchway templates list)

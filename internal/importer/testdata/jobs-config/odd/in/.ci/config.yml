@@ -1,0 +1,20 @@
+version: 2.1
+setup: true
+parameters:
+  run-all:
+    type: boolean
+    default: false
+jobs:
+  mac:
+    macos:
+      xcode: "15.0"
+    steps:
+      - run: echo mac
+  vm:
+    machine:
+      image: ubuntu-2204:current
+    steps:
+      - run: echo vm
+workflows:
+  w:
+    jobs: [mac, vm, missing/job]

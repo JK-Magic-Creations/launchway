@@ -216,6 +216,7 @@ export default defineConfig({
           { text: 'Organizing and finding things', link: '/guide/organizing' },
           { text: 'Editing pipelines', link: '/guide/editor' },
           { text: 'Built-in accounts', link: '/guide/built-in-accounts' },
+          { text: 'Move your pipelines over', link: '/guide/move-your-pipelines' },
           { text: 'Shared libraries', link: '/guide/libraries' },
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },
           { text: 'Test reports', link: '/guide/test-reports' },

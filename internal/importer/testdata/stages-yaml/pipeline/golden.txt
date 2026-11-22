@@ -1,0 +1,159 @@
+=== .gitlab-ci.yml (stages-yaml)
+# Imported from .gitlab-ci.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: ['*'], tags: ['*']}
+  pull_request: {}
+defaults:
+  env: {GOFLAGS: -mod=readonly, APP: shop}
+containers:
+  unit: {image: 'golang:1.22'}
+  unit-db:
+    image: postgres:16
+    service: true
+    env: {POSTGRES_PASSWORD: test}
+steps:
+  build:
+    image: golang:1.22
+    timeout: 1h30m
+    retry: 1
+    env:
+      npm_config_cache: .cache/npm
+    run: |
+      echo "start $LAUNCHWAY_STEP"
+      go build ./...
+      echo $LAUNCHWAY_COMMIT > sha.txt
+    cache:
+      - {name: cache-go-mod, paths: [.cache/go-mod, .cache/npm], key: {files: [go.sum], text: gomod}}
+    artifacts:
+      - {name: binaries, paths: [bin], retain: 1w, when: always}
+  lint:
+    image: golang:1.22
+    needs: build
+    when: {branch: main, event: pull_request, upstream: failed}
+    timeout: 20m
+    retry: 1
+    run: |
+      golangci-lint run
+    fetch:
+      - {from: build, name: binaries}
+  unit:
+    container: unit
+    needs: build
+    when: {branch: main, event: pull_request}
+    timeout: 1h30m
+    retry: 1
+    on_failure: continue
+    run: |
+      echo "start $LAUNCHWAY_STEP"
+      go test ./... -coverprofile=cover.out
+      echo "start $LAUNCHWAY_STEP"
+      echo done
+    reports:
+      tests: [report.xml]
+      coverage: [coverage.xml]
+    fetch:
+      - {from: build, name: binaries}
+  shards:
+    image: golang:1.22
+    needs: build
+    timeout: 1h30m
+    retry: 1
+    for_each:
+      node-index: ["1", "2", "3"]
+    env:
+      CI_NODE_INDEX: {each: node-index}
+      CI_NODE_TOTAL: "3"
+    run: |
+      ./run-shard.sh $CI_NODE_INDEX/$CI_NODE_TOTAL
+    fetch:
+      - {from: build, name: binaries}
+  versions:
+    image: python:3.12
+    needs: build
+    timeout: 1h30m
+    retry: 1
+    for_each:
+      python: ["3.11", "3.12"]
+      db: [pg]
+    env:
+      PYTHON: {each: python}
+      DB: {each: db}
+    run: |
+      pytest --py $PYTHON
+    fetch:
+      - {from: build, name: binaries}
+  release-approval:
+    kind: approval
+    needs: build
+    message: Run release?
+  release:
+    image: golang:1.22
+    needs: [release-approval, build]
+    when: {tag: v*}
+    timeout: 1h30m
+    retry: 1
+    secrets:
+      REGISTRY_USER: {store: vault, key: REGISTRY_USER, field: value}
+      REGISTRY_PASSWORD: {store: vault, key: REGISTRY_PASSWORD, field: value}
+    run: |
+      docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD $CI_REGISTRY
+      docker push $CI_REGISTRY_IMAGE:$LAUNCHWAY_TAG
+    fetch:
+      - {from: build, name: binaries}
+
+--- findings
+exact     stages.include.local         .gitlab-ci.yml:2 The included file ci/jobs.yml was read and merged
+manual    stages.include.remote        .gitlab-ci.yml:3 The include remote https://ci.example.test/shared.yml is not in these files and is never fetched here -> Copy its content into the repository and add it to the files you import, or write a template
+manual    stages.include.remote        .gitlab-ci.yml:4 The include project team/shared is not in these files and is never fetched here -> Copy its content into the repository and add it to the files you import, or write a template
+exact     stages.stages                .gitlab-ci.yml:7 Each job waits for the jobs of the stage before its own; jobs of one stage run together
+exact     stages.variables             .gitlab-ci.yml:9 Variables written in the file carry over as environment variables
+exact     stages.default               .gitlab-ci.yml:13 Defaults were written into each job that does not set its own
+different stages.workflow              .gitlab-ci.yml:18 Pipeline-level rules decide when a pipeline starts; the triggers below were written from the jobs' own rules, or as every branch and tag push -> Check the on: section
+different stages.tags                  .gitlab-ci.yml:23 Runner tags docker are not carried; Launchway chooses the Station by its own configuration -> Use the runner key of the step to pick a Station
+different stages.tags                  .gitlab-ci.yml:23 Runner tags docker are not carried; Launchway chooses the Station by its own configuration -> Use the runner key of the step to pick a Station
+exact     stages.job                   .gitlab-ci.yml:28 The job became a step; before_script, script and after_script run in that order in one script
+different stages.predefined            .gitlab-ci.yml:30 The variable CI_JOB_NAME was replaced by LAUNCHWAY_STEP -> Check the value reads the same where you use it
+different stages.predefined            .gitlab-ci.yml:30 The variable CI_COMMIT_SHA was replaced by LAUNCHWAY_COMMIT -> Check the value reads the same where you use it
+exact     stages.artifacts             .gitlab-ci.yml:34 The files became cargo of the step, and jobs that need this one fetch them
+different stages.cache                 .gitlab-ci.yml:39 The cache for .cache/go-mod, .cache/npm is kept between runs by Launchway under its own rules for branches and pull requests -> Check the key files and paths
+different stages.cache.other           .gitlab-ci.yml:43 The cache setting policy was not carried; Launchway restores before and saves after every successful step -> Nothing, unless a pull-only cache mattered
+exact     stages.extends               .gitlab-ci.yml:46 Templates, anchors and references were resolved and written out in full
+exact     stages.job                   .gitlab-ci.yml:46 The job became a step; before_script, script and after_script run in that order in one script
+exact     stages.rules.simple          .gitlab-ci.yml:46 The rules became a when: filter
+different stages.services              .gitlab-ci.yml:49 The service db runs beside the step, but it is reached at localhost, not by its alias or host name -> Change the host name your tests use to localhost
+different stages.predefined            .gitlab-ci.yml:53 The variable CI_JOB_NAME was replaced by LAUNCHWAY_STEP -> Check the value reads the same where you use it
+different stages.predefined            .gitlab-ci.yml:53 The variable CI_JOB_NAME was replaced by LAUNCHWAY_STEP -> Check the value reads the same where you use it
+different stages.after_script          .gitlab-ci.yml:56 after_script runs as the last lines of the script, so it does not run if an earlier line fails, and it shares the script's shell -> Put the clean-up in a trap, or in a step that runs when the job before it failed
+exact     stages.allow_failure         .gitlab-ci.yml:58 The job may fail without failing the run (on_failure: continue)
+manual    stages.coverage              .gitlab-ci.yml:59 Reading a coverage number from the log is not carried -> Write a coverage report file and list it under reports: coverage
+exact     stages.artifacts.reports     .gitlab-ci.yml:62 Test and coverage reports became reports of the step
+exact     stages.artifacts.reports     .gitlab-ci.yml:63 Test and coverage reports became reports of the step
+manual    stages.artifacts.other       .gitlab-ci.yml:66 The artifact setting reports: sast is not carried -> Convert scanner reports to SARIF and list them under reports: findings
+manual    stages.artifacts.other       .gitlab-ci.yml:67 The artifact setting exclude is not carried -> Convert scanner reports to SARIF and list them under reports: findings
+exact     stages.job                   .gitlab-ci.yml:74 The job became a step; before_script, script and after_script run in that order in one script
+different stages.parallel              .gitlab-ci.yml:75 The job became a loop of 3 members; the script gets CI_NODE_INDEX and CI_NODE_TOTAL as variables, as before -> Check the numbering (it starts at 1 in both)
+exact     stages.job                   .gitlab-ci.yml:79 The job became a step; before_script, script and after_script run in that order in one script
+exact     stages.image                 .gitlab-ci.yml:81 The image became the step's image
+manual    stages.image.entrypoint      .gitlab-ci.yml:82 The image entrypoint  is not carried: Launchway runs the script with sh in the image -> Use an image whose own command does not need the entrypoint, or call it from the script
+exact     stages.parallel.matrix       .gitlab-ci.yml:84 The matrix became for_each; each key is also an environment variable
+exact     stages.needs                 .gitlab-ci.yml:88 The job needs exactly the jobs named, whatever their stage
+exact     stages.job                   .gitlab-ci.yml:91 The job became a step; before_script, script and after_script run in that order in one script
+different stages.rules.manual          .gitlab-ci.yml:91 A manual job became a step that waits behind an approval, but the old job did not block the pipeline -> Check the approvers, and whether later steps should wait for it
+exact     stages.rules.simple          .gitlab-ci.yml:91 The rules became a when: filter
+exact     stages.needs                 .gitlab-ci.yml:92 The job needs exactly the jobs named, whatever their stage
+manual    stages.needs.other           .gitlab-ci.yml:94 The dependency other-project-job of another project is not in these files -> Remove it or make the other pipeline start this one with a webhook
+different stages.environment           .gitlab-ci.yml:98 The job deploys to the environment production, so it is marked as delivering; protection and review rules of the old environment were not read -> Add an approval, or protect the Airfield
+different stages.variables.unset       .gitlab-ci.yml:103 The script reads REGISTRY_USER, which is not set in the file; it was probably set in the old system's project settings, so it was read by name from a secret store -> Create the secret or variable in Launchway (names only), or remove it if it is not a secret
+different stages.variables.unset       .gitlab-ci.yml:103 The script reads REGISTRY_PASSWORD, which is not set in the file; it was probably set in the old system's project settings, so it was read by name from a secret store -> Create the secret or variable in Launchway (names only), or remove it if it is not a secret
+manual    stages.predefined.other      .gitlab-ci.yml:103 The script uses CI_REGISTRY, which only the old system sets -> Set it yourself as an environment variable of the step, or use the Launchway variable shown in the environment variables reference
+manual    stages.predefined.other      .gitlab-ci.yml:103 The script uses CI_REGISTRY_IMAGE, which only the old system sets -> Set it yourself as an environment variable of the step, or use the Launchway variable shown in the environment variables reference
+different stages.predefined            .gitlab-ci.yml:103 The variable CI_COMMIT_TAG was replaced by LAUNCHWAY_TAG -> Check the value reads the same where you use it
+different write.secret                 .gitlab-ci.yml:103 Secret REGISTRY_USER is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+different write.secret                 .gitlab-ci.yml:103 Secret REGISTRY_PASSWORD is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+exact     stages.job                   ci/jobs.yml:2 The job became a step; before_script, script and after_script run in that order in one script
+exact     stages.rules.simple          ci/jobs.yml:2 The rules became a when: filter
+exact     stages.when                  ci/jobs.yml:7 The job runs after the jobs before it, as the old value said (upstream: always or failed)
+exact     stages.timeout               ci/jobs.yml:8 The time limit carries over
+secrets: REGISTRY_PASSWORD, REGISTRY_USER

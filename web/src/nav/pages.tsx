@@ -21,6 +21,7 @@ const ProjectsPage = lz(() => import("../pages/CodeList"), "CodeListPage");
 const ProjectPage = lz(() => import("../pages/RepoPage"), "RepoPage");
 const PipelinePage = lz(() => import("../pages/PipelineView"), "PipelineViewPage");
 const EditPipelinePage = lz(() => import("../pages/EditPipeline"), "EditPipelinePage");
+const ImportPipelinePage = lz(() => import("../pages/import/ImportWizard"), "default");
 const ProjectTestsPage = lz(() => import("../pages/ProjectTests"), "ProjectTestsPage");
 const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "ProjectSecurityPage");
 const ProjectStandardsPage = lz(() => import("../pages/Standards"), "ProjectStandardsPage");
@@ -105,6 +106,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name": return <ProjectPage key={p.name} name={p.name} />;
     case "/projects/:name/pipeline": return <PipelinePage key={p.name} name={p.name} />;
     case "/projects/:name/pipeline/edit": return <EditPipelinePage key={p.name} name={p.name} />;
+    case "/projects/:name/import": return <ImportPipelinePage key={p.name} name={p.name} />;
     case "/projects/:name/tests": return <ProjectTestsPage key={p.name} name={p.name} />;
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/standards": return <ProjectStandardsPage key={p.name} name={p.name} />;

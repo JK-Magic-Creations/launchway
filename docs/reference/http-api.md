@@ -344,6 +344,7 @@ The body is optional: `{"comment": "Looks good"}`. Answers `{"ok": true}`. An ap
 | `POST /api/v1/projects/{name}/pipeline` | `project-operator` | `pipeline.save` | Commits pipeline text to the Flight's repository, as the caller. |
 | `POST /api/v1/projects/{name}/draft-runs` | `project-draft` | `run.draft` | Runs pipeline text that is not in Git against a branch. |
 | `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. With `?project=NAME` it checks it for that Flight too, and a valid pipeline may come back with `warnings` (for example, a pull-request filter by target branch in a Flight with no forge connection). |
+| `POST /api/v1/import/pipeline` | `any-viewer` | — | Reads the pipeline files of another system sent in the body (`{"format": "auto", "files": [{"path": ".github/workflows/ci.yml", "content": "..."}], "dry": false}`) and returns the proposed Launchway pipeline for each with a finding for every construct: converted exactly, converted with a difference, or not converted. Nothing is stored or run; the files are limited in size, depth and expansion. `dry: true` switches off the steps that deliver. See [Move your pipelines over](../guide/move-your-pipelines.md). |
 
 **Read.** `{"ref", "kind", "sha", "subject", "author", "committed_at", "path", "exists", "configured", "text"}`.
 

@@ -203,6 +203,7 @@ function Added({ unit, name, result }: { unit: string; name: string; result: Add
             <div className="sq-actions">
               <Button onClick={copy}>{copied ? "Copied" : "Copy the starter"}</Button>
               <LinkButton href={`/projects/${encodeURIComponent(name)}/pipeline/edit`} kind="pri">Open the pipeline editor</LinkButton>
+              <LinkButton href={`/projects/${encodeURIComponent(name)}/import`}>Import an existing pipeline</LinkButton>
             </div>
           </>
         )}

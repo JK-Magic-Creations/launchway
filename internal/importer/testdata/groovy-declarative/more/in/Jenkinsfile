@@ -1,0 +1,21 @@
+pipeline {
+  agent any
+  environment { MODE = 'ci' }
+  options { timestamps() }
+  triggers { upstream(upstreamProjects: 'other', threshold: hudson.model.Result.SUCCESS) }
+  stages {
+    stage('Docker') {
+      agent { dockerfile true }
+      steps { sh 'true' }
+    }
+    stage('Pod') {
+      agent { kubernetes { yaml '...' } }
+      when { triggeredBy 'TimerTrigger' }
+      steps { mail to: 'a@example.test', subject: 'x', body: 'y' }
+    }
+    stage('Ok') {
+      when { changeRequest() }
+      steps { sh 'echo ok' }
+    }
+  }
+}

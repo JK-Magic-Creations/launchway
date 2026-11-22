@@ -137,6 +137,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/hosting-settings` | `get_hosting_settings` | `repos settings` | — | equal |
 | `PUT /api/v1/hosting-settings` | `set_hosting_settings` | `repos settings` | — | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
+| `POST /api/v1/import/pipeline` | `import_pipeline` | `import pipeline` | `not needed by terraform` | equal |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
 | `GET /api/v1/inbox` | `get_inbox` | `inbox list` | `not needed by terraform` | equal |

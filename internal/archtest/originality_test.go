@@ -76,6 +76,15 @@ var allowedForIntegration = []string{
 	"scripts/docs/build-roadmap.mjs",
 }
 
+// factualFileNames are the names of the pipeline files that another system's users already own, which the importer
+// reads (docs/guide/move-your-pipelines.md). A person moving over must be able to recognise their own file, so exactly
+// these names, as file names, may appear in exactly the two places in factualFileNamesIn: the guide page and the
+// importer's format picker (web/src/importApi.ts). Factual identification of a file a migrating person owns; no
+// comparison, no marketing. Launchway's own descriptive name stands beside each. Nowhere else.
+var factualFileNames = []string{"Jenkinsfile", ".gitlab-ci.yml", ".circleci/config.yml", "bitbucket-pipelines.yml"}
+
+var factualFileNamesIn = []string{"docs/guide/move-your-pipelines.md", "web/src/importApi.ts"}
+
 // exempt paths are never scanned: test data captured from real tools is data, and this file
 // holds the lists.
 func originalityExempt(path string) bool {
@@ -119,6 +128,11 @@ func TestNoOtherProductsAreNamed(t *testing.T) {
 		allowed := originalityAllowed(path)
 		for n := 1; sc.Scan(); n++ {
 			line := sc.Text()
+			if slices.Contains(factualFileNamesIn, path) {
+				for _, name := range factualFileNames {
+					line = strings.ReplaceAll(line, name, "")
+				}
+			}
 			if m := siteNames.FindString(line); m != "" && !slices.Contains(siteNamesAllowed, path) {
 				t.Errorf("%s:%d uses the site-specific name %q as an example; use a neutral one (shop, webapp, team/shop, cluster-a, example.test)", path, n, m)
 			}

@@ -1,0 +1,12 @@
+trigger: none
+pr: none
+jobs:
+  - job: Solo
+    steps:
+      - script: echo hi
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "20.x"
+      - task: Docker@2
+        inputs:
+          command: login

@@ -1,0 +1,47 @@
+=== Jenkinsfile (groovy-declarative)
+# Imported from Jenkinsfile by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: pipeline
+on:
+  push: {branches: ['*'], tags: ['*']}
+steps:
+  docker:
+    image: docker.io/library/ubuntu:24.04
+    env:
+      MODE: ci
+    run: |
+      true
+  pod:
+    image: docker.io/library/ubuntu:24.04
+    needs: docker
+    when: {event: schedule}
+    env:
+      MODE: ci
+    run: |
+      echo 'NEEDS A PERSON: the plug-in step mail ran here'; exit 1
+  ok:
+    image: docker.io/library/ubuntu:24.04
+    needs: pod
+    when: {event: pull_request}
+    env:
+      MODE: ci
+    run: |
+      echo ok
+
+--- findings
+exact     groovy.pipeline              Jenkinsfile:1 The stages became steps that run one after the other
+different groovy.agent.any             Jenkinsfile:2 No agent label is carried: Launchway runs each step in a container image on a Station it chooses -> Name the image the steps need
+exact     groovy.environment           Jenkinsfile:3 Variables carry over as the environment of the steps
+different groovy.options.ignored       Jenkinsfile:4 The option timestamps is not carried: log retention is the server's policy and logs are timestamped by default -> Nothing
+manual    groovy.triggers.other        Jenkinsfile:5 The trigger upstream is not carried -> Pushes start runs on their own; use a result trigger or a webhook for the rest
+exact     groovy.stage                 Jenkinsfile:7 The stage became a step that needs the stage before it
+different write.image.default          Jenkinsfile:7 The steps docker, pod, ok name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+manual    groovy.agent.other           Jenkinsfile:8 The agent dockerfile is not carried -> Build the image with an image step, or name a ready image for the step
+exact     groovy.step.sh               Jenkinsfile:9 Commands carry over
+exact     groovy.stage                 Jenkinsfile:11 The stage became a step that needs the stage before it
+manual    groovy.agent.other           Jenkinsfile:12 The agent kubernetes is not carried -> Build the image with an image step, or name a ready image for the step
+exact     groovy.when                  Jenkinsfile:13 The condition became a when: filter
+manual    groovy.step.other            Jenkinsfile:14 The step mail comes from a plug-in that Launchway does not know -> Replace it with the command it runs, or ask a person to decide
+exact     groovy.stage                 Jenkinsfile:16 The stage became a step that needs the stage before it
+exact     groovy.when                  Jenkinsfile:17 The condition became a when: filter
+exact     groovy.step.sh               Jenkinsfile:18 Commands carry over

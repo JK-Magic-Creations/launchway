@@ -1,0 +1,19 @@
+.imp-page .imp-tabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.imp-page .imp-files { border: 1px solid var(--line, #888); padding: 8px 12px; margin: 8px 0; display: grid; gap: 4px; }
+.imp-page .imp-field { display: block; margin: 8px 0; }
+.imp-page .imp-paste { width: 100%; }
+.imp-page .imp-switch { display: block; margin: 8px 0 12px; }
+.imp-page .imp-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.imp-page .imp-code { max-height: 420px; overflow: auto; margin: 0; padding: 8px; border: 1px solid var(--line, #888); font-size: 12.5px; line-height: 1.45; white-space: pre; }
+.imp-page .imp-line { display: block; }
+.imp-page .imp-line.on { background: var(--hl, rgba(255, 200, 0, 0.3)); }
+.imp-page .imp-no { display: inline-block; width: 3.2ch; margin-right: 1ch; text-align: right; opacity: 0.75; user-select: none; }
+.imp-page .imp-findings { list-style: none; padding: 0; display: grid; gap: 8px; }
+.imp-page .imp-f { border-left: 4px solid var(--line, #888); padding: 4px 10px; }
+.imp-page .imp-manual { border-left-color: var(--bad, #b00020); }
+.imp-page .imp-different { border-left-color: var(--warn, #946b00); }
+.imp-page .imp-exact { border-left-color: var(--ok, #1b6e3c); }
+.imp-page .imp-next { display: block; opacity: 0.9; }
+.imp-page .linklike { background: none; border: 0; padding: 0; color: var(--link, inherit); text-decoration: underline; cursor: pointer; font: inherit; }
+.imp-page .imp-fixes { margin: 12px 0; padding: 8px 12px; border: 1px solid var(--line, #888); display: grid; gap: 8px; }
+.imp-page .imp-commit { margin-top: 16px; }

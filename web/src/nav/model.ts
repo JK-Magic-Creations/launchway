@@ -236,6 +236,8 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/pipeline", "pipelines", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline/edit", "pipelines", undefined, (p) => `Edit the pipeline of ${p.name}`,
     (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Edit" }]),
+  page("/projects/:name/import", "pipelines", undefined, (p) => `Import a pipeline into ${p.name}`,
+    (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Import an existing pipeline" }]),
   projectSub("tests", "Tests", "Tests and coverage"),
   projectSub("security", "Security", "Security"),
   projectSub("caches", "Caches", "Build caches"),

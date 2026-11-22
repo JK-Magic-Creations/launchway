@@ -56,6 +56,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"list_approvals":         {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_notifications":     {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"validate_pipeline":      {map[string]any{"text": "pipeline: x\nsteps:\n  a: {image: alpine, run: true}\n"}, false, [5]string{mRefused, mOK, mOK, mOK, mOK}},
+	"import_pipeline":        {map[string]any{"files": []any{map[string]any{"path": ".ci.yml", "content": "x"}}}, false, [5]string{mRefused, mOK, mOK, mOK, mOK}},
 	"get_pipeline_reference": {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_templates":         {nil, false, [5]string{mRefused, mOK, mOK, mOK, mOK}},
 	"start_run":              {map[string]any{"project": "pay-api", "ref": "main"}, false, [5]string{mUnlisted, mUnlisted, mOK, mNotFound, mOK}},

@@ -180,6 +180,7 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/environments":                    {"GET", "/api/v1/environments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/deployments":                     {"GET", "/api/v1/deployments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/validate":                       {"POST", "/api/v1/validate", "pipeline: x", [6]int{401, 403, 200, 200, 200, 200}},
+	"POST /api/v1/import/pipeline":                {"POST", "/api/v1/import/pipeline", `{"files":[]}`, [6]int{401, 403, 200, 200, 200, 200}},
 	"GET /api/v1/stream":                          {"GET", "/api/v1/stream", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/tokens":                          {"GET", "/api/v1/tokens", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/tokens":                         {"POST", "/api/v1/tokens", `{"name":"matrix"}`, [6]int{401, 201, 201, 201, 201, 201}},
@@ -694,7 +695,7 @@ func TestEveryRouteIsInThePermissionTable(t *testing.T) {
 			t.Errorf("route %q is not in the permission table in access_test.go; add a row saying who may call it", rt.pattern)
 		}
 		if strings.HasPrefix(rt.pattern, "POST ") || strings.HasPrefix(rt.pattern, "DELETE ") {
-			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && rt.pattern != "POST /api/v1/config/validate" && !strings.HasPrefix(rt.pattern, "POST /api/v1/config/check/") && !strings.HasSuffix(rt.pattern, "/git-upload-pack") {
+			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && rt.pattern != "POST /api/v1/import/pipeline" && rt.pattern != "POST /api/v1/config/validate" && !strings.HasPrefix(rt.pattern, "POST /api/v1/config/check/") && !strings.HasSuffix(rt.pattern, "/git-upload-pack") {
 				t.Errorf("route %q changes something but records nothing in the audit trail", rt.pattern)
 			}
 		}

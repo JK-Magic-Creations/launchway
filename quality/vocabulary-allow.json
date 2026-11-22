@@ -902,6 +902,10 @@
     {
       "path": "docs/development/automatic-resources.md",
       "why": "A contributor design page that discusses the code's own terms (run, runner, queue, environment) and the Kubernetes objects they map to."
+    },
+    {
+      "path": "docs/guide/move-your-pipelines.md",
+      "why": "The page names constructs of other systems (their environments, registries, runners, artifacts, projects, runs, canary releases and deploy steps) by the words those systems use, because a person migrating has to recognize them; the importer's own words are used for what Launchway does."
     }
   ]
 }
