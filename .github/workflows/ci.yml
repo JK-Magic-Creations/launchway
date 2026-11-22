@@ -45,7 +45,8 @@ jobs:
           # Every package under the race detector except the storage spike, which starts the test
           # binary again as each git hook (seconds per start when race-instrumented) and is raced
           # for no benefit; it runs on its own below. A package gets 45 minutes, not the job's hour.
-          go test -race -count=1 -timeout 45m $(go list ./... | grep -v '/internal/forge/storagespike$')
+          mapfile -t pkgs < <(go list ./... | grep -v '/internal/forge/storagespike$')
+          go test -race -count=1 -timeout 45m "${pkgs[@]}"
           go test -count=1 -timeout 10m ./internal/forge/storagespike
       - name: Test with several servers (PostgreSQL)
         env:
