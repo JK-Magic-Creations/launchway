@@ -20,6 +20,11 @@ paths = [
   # (a private key header written to a file in a throwaway repository). Nothing in them is a secret.
   '''internal/cac/ansible/report_test\.go''',
   '''internal/starters/library/tests/run\.sh''',
+  # The deploy runner's own HTTP and TCP checks: a fake token in a test, its fixture and the example file shows (they came
+  # in with the verify work, before the baseline was last made).
+  '''internal/verify/source/check_test\.go''',
+  '''internal/deploy/inspect/''',
+  '''deploy/helm/launchway-runner/examples/deploy-runner-inspect\.yaml''',
 ]
 # Test canaries are fake by construction: the tests plant a value that starts with CANARY- to prove
 # it appears nowhere in output. A real secret never starts that way.
