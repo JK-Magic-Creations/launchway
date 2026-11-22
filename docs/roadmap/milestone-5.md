@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 5 in progress · 25 planned · 32 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 4 in progress · 22 planned · 28 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -18,7 +18,7 @@ Milestone 5 connects code, dependencies, images and deployments in one graph kep
 
 - A new advisory arrives; Launchway lists the services affected and who owns each.
 - You search for a function across every repository you can see.
-- Automatic patching is switched on for one zone; a Maintenance arrives as a change, passes its tests and rolls out.
+- Automatic patching is switched on for one zone; a dependency update arrives as a change, passes its tests and rolls out.
 - An agent asks which services use a library and gets an answer from the graph, not from reading files.
 
 ## How it fits together
@@ -47,43 +47,19 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Know what you run](#g-know-what-you-run) | 15 | 1 | 4 | 10 |
+| [Know what you run](#g-know-what-you-run) | 11 | 1 | 2 | 8 |
 | [Fix it safely](#g-fix-it-safely) | 6 | 1 | 1 | 4 |
-| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
+| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 1 | 10 |
 
 ### Know what you run {#g-know-what-you-run}
 
 One connected picture of code, dependencies, images and deployments.
 
-#### What software needs, and what can run it {#what-software-needs-and-what-can-run-it}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet. Built and tested, in final integration; not yet on the main branch.
-
-[Read the documentation](../reference/requirements-file.md)
-
-#### Build order across repositories {#build-order-across-repositories}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.
-
-[Read the documentation](../guide/software-graph.md)
-
-#### One graph from code to where it runs {#one-graph-from-code-to-where-it-runs}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer. Built and tested, in final integration; not yet on the main branch.
-
-[Read the documentation](../guide/software-graph.md)
-
 #### Findings and SBOMs per run {#findings-and-sboms-per-run}
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The starting point already works: findings and components recorded for every Sortie. Components are recorded as bills of materials and findings are kept with the Sortie.
+The starting point already works: findings and components recorded for every run. Components are recorded as bills of materials and findings are kept with the run.
 
 [Read the documentation](../guide/security-findings.md)
 
@@ -91,11 +67,11 @@ The starting point already works: findings and components recorded for every Sor
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.
+Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. Built, tested on its own branch and in final integration; not yet on the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.
 
-**Depends on:** Built-in Depot (registry).
+**Depends on:** Built-in registry.
 
-[Read the documentation](../guide/software-graph.md) · [Area page](software-graph.md)
+[Area page](software-graph.md)
 
 #### A continuous observer of what runs {#a-continuous-observer-of-what-runs}
 
@@ -169,29 +145,17 @@ Answer AI questions from a graph of code and deployments instead of pasting file
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-From an advisory, see which deployed services and Airfields are affected and who owns them. The list becomes a set of proposed fixes.
+From an advisory, see which deployed services and environments are affected and who owns them. The list becomes a set of proposed fixes.
 
 **Depends on:** What is deployed where.
 
 [Area page](software-graph.md)
 
-#### Machines and platforms in the graph {#machines-and-platforms-in-the-graph}
+#### One graph from code to hardware {#one-graph-from-code-to-hardware}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Machines with their discovered facts, clusters, serverless runtimes, databases and queues, so every placement question has real answers. The adapters and their tests are in place; they are filled in as host inventory, the built-in Depot and configuration as code arrive.
-
-**Depends on:** Host inventory.
-
-[Area page](software-graph.md)
-
-#### Build downstream repositories in order {#build-downstream-repositories-in-order}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-After a push, start the builds of what depends on it, in order, each once. The list is available today; the trigger is not.
-
-**Depends on:** One graph from code to where it runs.
+The software graph holds code and what it needs, what is built from it (images per architecture, operating-system images, machine images), the machines that satisfy those needs, and what is deployed where, with the source of every link. Built, tested on its own branch and in final integration; not yet on the main branch. It feeds dependency order and impact.
 
 [Area page](dependency-order.md)
 
@@ -225,7 +189,7 @@ Launchway finds outdated and vulnerable dependencies in a repository and propose
 
 When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
 
-**Depends on:** Built-in Maintenance.
+**Depends on:** Built-in dependency updates.
 
 [Area page](software-graph.md)
 
@@ -297,9 +261,9 @@ Batching and caps keep one library change from starting a flood of dependent bui
 
 #### Order you can override {#order-you-can-override}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Set build and release order by hand, pin a version, and mark an edge wrong; the system works out the order and a person can always override. Overrides are kept in the repository or in settings.
+Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. Built, tested on its own branch and in final integration; not yet on the main branch. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.
 
 [Area page](dependency-order.md)
 
@@ -339,7 +303,7 @@ One change that spans several repositories is tracked, tested and merged togethe
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, Airfields and fixes.
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
 
 [Area page](dependency-order.md)
 

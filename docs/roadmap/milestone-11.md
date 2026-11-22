@@ -235,7 +235,7 @@ Release a machine with the same plan, proofs, watch and return as a container. I
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Drain and upgrade nodes with virtual machines moved safely, and move machines between Airfields. Maintenance is a plan with a watch.
+Drain and upgrade nodes with virtual machines moved safely, and move machines between environments. Maintenance is a plan with a watch.
 
 **Depends on:** Virtual machine delivery.
 

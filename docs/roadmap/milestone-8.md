@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 4 in progress · 43 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 5 in progress · 42 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -16,10 +16,10 @@ Milestone 8 gives delivery one model for everything: a plan, a mover that shifts
 
 ## What you will be able to do
 
-- You describe a service in a few plain questions and get a plan with a picture. It is rehearsed in a safe Airfield, and written to Git for review.
+- You describe a service in a few plain questions and get a plan with a picture. It is rehearsed in a safe environment, and written to Git for review.
 - A release reaches 5 percent of users, then 25, and each step shows the traffic you intended next to the traffic that actually arrived.
 - Thirty minutes after a release has reached everyone, error rates climb. Launchway sees it, returns to the last stable state, and the Logbook says who and what decided.
-- You switch on a Switch, errors rise, and Launchway switches it back off and tells you which toggle it was.
+- You switch on a feature toggle, errors rise, and Launchway switches it back off and tells you which toggle it was.
 - You open one page and see every Argo CD application, its parent and children, and a sentence saying why one of them cannot sync.
 - A rollout command that cannot work is never offered as a button.
 
@@ -38,9 +38,9 @@ flowchart TD
   Control["Controls<br/>pause, go, stop"] -.-> Shift
 ```
 
-*One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a Holding pattern reader or a function alias.*
+*One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a queue reader or a function alias.*
 
-**Builds on:** [Milestone 3: Delivery depth](milestone-3.md). **Leads to:** [Milestone 10: Databases](milestone-10.md), [Milestone 11: Kubernetes and VMs](milestone-11.md).
+**Builds on:** [Milestone 3: Delivery depth](milestone-3.md). **Leads to:** [Milestone 10: Databases](milestone-10.md), [Milestone 11: Kubernetes and VMs](milestone-11.md), [Milestone 13: Work, releases and health](milestone-13.md).
 
 **Go deeper:** [Zero-downtime delivery](zero-downtime.md) · [How the build is ordered](build-order.md).
 
@@ -49,7 +49,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
-| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 0 | 5 |
+| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 1 | 4 |
 | [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
 | [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 3 | 3 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
@@ -66,7 +66,7 @@ First phase. A plan, a shifter, a proof, controls and a stable state, the same f
 
 Describe how a release rolls out as a plan kept in Git: the steps, how much at each, what to check and how careful to be. You will be able to read a plan as a picture, review it like code, and reuse a standard plan from your organization.
 
-**Depends on:** Rollout control inside a Sortie.
+**Depends on:** Rollout control inside a run.
 
 [Area page](zero-downtime.md)
 
@@ -74,7 +74,7 @@ Describe how a release rolls out as a plan kept in Git: the steps, how much at e
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The part of a plan that moves traffic or work to the new version: a traffic split, a load balancer pool, a Holding pattern reader or a function alias. One interface lets every kind of workload take the same journey and show the same controls.
+The part of a plan that moves traffic or work to the new version: a traffic split, a load balancer pool, a queue reader or a function alias. One interface lets every kind of workload take the same journey and show the same controls.
 
 **Depends on:** Delivery plans.
 
@@ -102,7 +102,7 @@ Questions put to a metrics or log store pass through a guarded layer that limits
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-For each Airfield Launchway records the version, settings, secret versions, toggles and routes that were known to work. The last good state is always one click, or one automatic decision, away.
+For each environment Launchway records the version, settings, secret versions, toggles and routes that were known to work. The last good state is always one click, or one automatic decision, away.
 
 **Depends on:** Delivery plans.
 
@@ -122,7 +122,7 @@ Go, go all the way, pause, resume, stop and go back, try again, skip a step, set
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every protection starts on and your team can tune or turn it off per project and Airfield; only a level above can require one. You stay in charge, and Launchway says plainly when a safeguard has been relaxed.
+Every protection starts on and your team can tune or turn it off per project and environment; only a level above can require one. You stay in charge, and Launchway says plainly when a safeguard has been relaxed.
 
 **Depends on:** Variables at levels.
 
@@ -146,9 +146,9 @@ First phase. Complete coverage of Argo Rollouts, created, seen and controlled fr
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Pathfinder and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway. Today Launchway reads a rollout; this makes it create and edit the files in Git, with every field accounted for.
+Canary and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway. Today Launchway reads a rollout; this makes it create and edit the files in Git, with every field accounted for.
 
-**Depends on:** Rollout control inside a Sortie.
+**Depends on:** Rollout control inside a run.
 
 [Area page](zero-downtime.md)
 
@@ -164,9 +164,9 @@ A few plain questions (what is it, how do users reach it, how do we know it is h
 
 #### The rollout panel {#the-rollout-panel}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
+One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. Built, tested on its own branch and in final integration; not yet on the main branch. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
 
 **Depends on:** Every rollout strategy.
 
@@ -176,7 +176,7 @@ One panel shows the line of steps, where traffic really goes next to where it is
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Try a rollout in a short-lived Airfield with a traffic generator and injected faults before it reaches production. Rehearsal is a feature of the product, not only of its tests.
+Try a rollout in a short-lived environment with a traffic generator and injected faults before it reaches production. Rehearsal is a feature of the product, not only of its tests.
 
 **Depends on:** An assistant for creating a rollout.
 
@@ -254,31 +254,31 @@ Second phase. Everything that can change behavior without a new build is version
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
+Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base. Built, tested on its own branch and in final integration; not yet on the main branch. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
 
-**Depends on:** Switches.
+**Depends on:** Feature toggles.
 
-[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
+[Area page](zero-downtime.md)
 
 #### Kill switches and automatic toggle-back {#kill-switches-and-automatic-toggle-back}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
+A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval. Built, tested on its own branch and in final integration; not yet on the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
 
 **Depends on:** The watch; a toggle service in the model.
 
-[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
+[Area page](zero-downtime.md)
 
 #### Stale-toggle hygiene {#stale-toggle-hygiene}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. A suggested pull request that removes the check and the toggle is still to come.
+Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. Built, tested on its own branch and in final integration; not yet on the main branch. A suggested pull request that removes the check and the toggle is still to come.
 
 **Depends on:** A toggle service in the model.
 
-[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
+[Area page](zero-downtime.md)
 
 #### Configuration and secrets as rollouts {#configuration-and-secrets-as-rollouts}
 
@@ -294,7 +294,7 @@ A change to configuration or to a secret’s version is rolled out by a plan and
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Find configuration that differs between what is declared and what runs, and between Airfields. Drift is a finding with its cause, not an alarm without context.
+Find configuration that differs between what is declared and what runs, and between environments. Drift is a finding with its cause, not an alarm without context.
 
 **Depends on:** Configuration and secrets as rollouts.
 
@@ -358,7 +358,7 @@ Shift traffic between function versions and managed services using aliases and r
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Roll out a new version of a worker that reads a Holding pattern, by moving which copies read which part, and prove it with lag. A seeded backlog tests that the new version keeps up.
+Roll out a new version of a worker that reads a queue, by moving which copies read which part, and prove it with lag. A seeded backlog tests that the new version keeps up.
 
 **Depends on:** Hosts and pools.
 
@@ -412,7 +412,7 @@ All applications from root to leaf, with a problem rolled up so a parent that lo
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-For each application: which change made it what it is, which run wrote that change, which version runs where and who owns it. It also lists the same service in other Airfields side by side.
+For each application: which change made it what it is, which run wrote that change, which version runs where and who owns it. It also lists the same service in other environments side by side.
 
 **Depends on:** See every application and its tree.
 
@@ -462,7 +462,7 @@ An assistant writes an Application, an ApplicationSet or a Project into Git and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Discover the applications you already have and map them to projects and Airfields without changing them. Discovery is opt-in and read-only.
+Discover the applications you already have and map them to projects and environments without changing them. Discovery is opt-in and read-only.
 
 **Depends on:** See every application and its tree.
 
@@ -472,7 +472,7 @@ Discover the applications you already have and map them to projects and Airfield
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A joined timeline of a sync and its rollout, and a matrix of what version runs in each Airfield. Notification rules and Argo CD’s own notices appear in the same place.
+A joined timeline of a sync and its rollout, and a matrix of what version runs in each environment. Notification rules and Argo CD’s own notices appear in the same place.
 
 **Depends on:** Every rollout strategy.
 
@@ -490,7 +490,7 @@ The same panels over another GitOps engine or plain apply and Helm, through an a
 
 ### Prove it: chaos, performance and temporary capacity {#g-prove-it-chaos-performance-and-temporary-capacity}
 
-First phase for the first Station, later for more tools. Each is a plan or a proof, so they add no new concepts.
+First phase for the first runner, later for more tools. Each is a plan or a proof, so they add no new concepts.
 
 #### Chaos experiments as plans {#chaos-experiments-as-plans}
 
@@ -508,7 +508,7 @@ A controlled, authorized experiment that injects a fault, checks that steady sta
 
 Experiments are off until switched on, allowed only where declared, bounded in what they can reach, and cleared by someone other than the starter. Production may require a lock from a level above.
 
-**Depends on:** Drills as plans.
+**Depends on:** Chaos experiments as plans.
 
 [Area page](zero-downtime.md)
 
@@ -518,7 +518,7 @@ Experiments are off until switched on, allowed only where declared, bounded in w
 
 Scheduled game days, rehearsals with a fault, and a scorecard of what the system survived. Findings such as “never survived losing a replica” join the findings list.
 
-**Depends on:** Drills as plans.
+**Depends on:** Chaos experiments as plans.
 
 [Area page](zero-downtime.md)
 
@@ -526,7 +526,7 @@ Scheduled game days, rehearsals with a fault, and a scorecard of what the system
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Run a load test from the repository as a step and get a report with percentiles, throughput, errors and the saturation of the system under test. A built-in constant-rate Station needs no install; popular open-source load tools run as separate containers.
+Run a load test from the repository as a step and get a report with percentiles, throughput, errors and the saturation of the system under test. A built-in constant-rate runner needs no install; popular open-source load tools run as separate containers.
 
 **Depends on:** Proofs.
 
@@ -556,7 +556,7 @@ Raise a namespace’s quota or a workload’s size for the length of a test, the
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Require a passing performance result before a promotion to production, advisory until a level makes it required. Tests run only against Airfields declared for performance or not production.
+Require a passing performance result before a promotion to production, advisory until a level makes it required. Tests run only against environments declared for performance or not production.
 
 **Depends on:** Baselines and regression detection.
 
@@ -567,8 +567,8 @@ Require a passing performance result before a promotion to production, advisory 
 This milestone is done when all of these are true.
 
 - The same plan runs a progressive rollout on Kubernetes, with every Argo Rollouts strategy covered and shown.
-- A seeded bad release is stopped and returned within the time the plan states, and a seeded good one is promoted, in the rehearsal Airfield and in the automated tests.
-- After the last step, the watch returns to the last stable state when signals worsen, and a Return to base after a success works from the interface, the API, the agent endpoint and the command line.
+- A seeded bad release is stopped and returned within the time the plan states, and a seeded good one is promoted, in the rehearsal environment and in the automated tests.
+- After the last step, the watch returns to the last stable state when signals worsen, and a rollback after a success works from the interface, the API, the agent endpoint and the command line.
 - A toggle that causes errors is switched back automatically, and a configuration or secret change can be rolled and returned by a plan.
 - Every Argo CD application and its tree are visible, with a plain-language diagnosis for the common failures.
 - No control is offered that cannot work, and every control says what it will do and who may press it.

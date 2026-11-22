@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 12 in progress · 80 planned · 96 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 17 in progress · 82 planned · 103 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -50,17 +50,17 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 17 | 4 | 3 | 10 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 19 | 4 | 3 | 12 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
-| [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
-| [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 3 | 2 |
+| [Where it deploys](#g-where-it-deploys) | 14 | 0 | 3 | 11 |
+| [Infrastructure as code](#g-infrastructure-as-code) | 8 | 0 | 4 | 4 |
 | [Runtime configuration](#g-runtime-configuration) | 6 | 0 | 1 | 5 |
 | [Watch and protect](#g-watch-and-protect) | 10 | 0 | 0 | 10 |
 | [Change and insight](#g-change-and-insight) | 7 | 0 | 0 | 7 |
 | [Moving over from other delivery platforms](#g-moving-over-from-other-delivery-platforms) | 3 | 0 | 0 | 3 |
 | [The golden path](#g-the-golden-path) | 13 | 0 | 0 | 13 |
 | [Built-in platform services](#g-built-in-platform-services) | 9 | 0 | 0 | 9 |
-| [Configuration as code and the automation control center](#g-configuration-as-code-and-the-automation-control-center) | 9 | 0 | 3 | 6 |
+| [Configuration as code and the automation control center](#g-configuration-as-code-and-the-automation-control-center) | 9 | 0 | 4 | 5 |
 
 ### Applications and rollouts {#g-applications-and-rollouts}
 
@@ -110,7 +110,7 @@ Use an Argo CD that Launchway runs for you, or connect one you already have. Bot
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Verification tests run between steps, and the Sortie keeps the evidence. Today the commands shown are the ones that really work, and a failed command says so.
+A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an emergency rollback even after a rollout succeeded.
 
 **Depends on:** Argo CD in depth.
 
@@ -140,7 +140,7 @@ Send a share of traffic, by client type, to a new version through the Gateway AP
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Ship several services as one ordered, gated release with a promotion view across Airfields. Promotion moves the same digest, never a rebuild, and every step shows who approved it.
+Ship several services as one ordered, gated release with a promotion view across environments. Promotion moves the same digest, never a rebuild, and every step shows who approved it.
 
 **Depends on:** A single pane of glass.
 
@@ -150,7 +150,7 @@ Ship several services as one ordered, gated release with a promotion view across
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move a version from one Airfield to the next with checks and approvals in between. The matrix shows what runs where, which places are behind, and a button to move a version.
+Move a version from one environment to the next with checks and approvals in between. The matrix shows what runs where, which places are behind, and a button to move a version.
 
 **Depends on:** Releases across services.
 
@@ -170,33 +170,17 @@ Keep watching after release, roll back automatically, and tie incidents to the c
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Let a verification step use AI analysis of metrics and logs to trigger automatic Return to base, off by default and able to require a person for production. Plain threshold checks remain the default, and AI can decide only where you allow it.
+Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production. Plain threshold checks remain the default, and AI can decide only where you allow it.
 
 **Depends on:** A built-in model gateway.
 
 [Area page](ai.md)
 
-#### An HTTP health proof for verifying deployments {#an-http-health-proof-for-verifying-deployments}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Verify a deployment by having the deploy Station call an address you name over HTTP or TCP and check the answer, with no metrics store needed. Built and tested, in final integration; not yet on the main branch.
-
-[Area page](delivery.md)
-
-#### GitOps write-back to a hosted repository {#gitops-write-back-to-a-hosted-repository}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-After a build, Launchway writes the new version into the Airfield repository for the GitOps controller to pick up, by a direct push or by a pull request, using a credential that belongs to that one deployment. Built and tested, in final integration; not yet on the main branch. The image tag and its digest are written together, and a race with another writer is retried safely.
-
-[Area page](delivery.md)
-
 #### A health proof built into verification {#a-health-proof-built-into-verification}
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. HTTP and TCP checks from the deploy Station, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.
+A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.
 
 **Depends on:** Argo CD in depth.
 
@@ -206,7 +190,7 @@ A verify step can call the service it just deployed, over its window, with no mo
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. Not yet: returning to base several deployments at once by pull request.
+Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. Not yet: rolling back several deployments at once by pull request.
 
 **Depends on:** Argo CD in depth.
 
@@ -216,7 +200,7 @@ Several pipelines may write one manifest at once, a tag can sit beside its diges
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-An approval that waits, a failed Sortie or deployment, a Return to base and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. Email, per-person muting and a Return to base review on Home are not done yet.
+An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. Email, per-person muting and a rollback review on Home are not done yet.
 
 **Depends on:** Argo CD in depth.
 
@@ -226,11 +210,43 @@ An approval that waits, a failed Sortie or deployment, a Return to base and a st
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or Airfields a server allows.
+A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.
 
 **Depends on:** Argo CD in depth.
 
 [Read the documentation](../guide/libraries.md) · [Area page](delivery.md)
+
+#### Delivery by choice {#delivery-by-choice}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A pipeline chooses how to deliver per environment: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller. None is required. Short-lived environments for feature branches use direct installs; long-lived branches default to the GitOps path.
+
+[Area page](delivery.md)
+
+#### Progressive delivery without the GitOps controller {#progressive-delivery-without-the-gitops-controller}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Use the rollout controller alone, or plain chart installs, when the GitOps controller is not wanted. The rollout resource and its operator must be present; Launchway checks and says so.
+
+[Area page](delivery.md)
+
+#### Ordered GitOps sync, parent then child {#ordered-gitops-sync-parent-then-child}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+An application and its values are written as two ordered commits, the values only once the cluster shows the new pin, and parents sync before children. The write-back half is on the main branch; the full ordered app-of-apps flow and its guard are in final integration.
+
+[Area page](delivery.md)
+
+#### Drill down into everything a delivery created {#drill-down-into-everything-a-delivery-created}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back. Built, tested on its own branch and in final integration; not yet on the main branch. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.
+
+[Area page](delivery.md)
 
 ### Debug a deployment, then see everything {#g-debug-a-deployment-then-see-everything}
 
@@ -240,7 +256,7 @@ Why did it fail, in one sentence, then every resource behind it.
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action. Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts. Today a failed deployment opens with a one-sentence diagnosis; the full catalog of causes grows with the Argo CD work in Milestone 8.
+A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action. Built, tested on its own branch and in final integration; not yet on the main branch. A failed deploy states its cause in one sentence with the evidence; a crash-looping pod fails the step with its own last words, and a stuck sync is named and ended (the last two are on the main branch).
 
 **Depends on:** Argo CD in depth.
 
@@ -294,7 +310,7 @@ Clusters, virtual machines, machine images, clouds and serverless.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Deploy and roll back without Argo CD; Argo stays first class for long-lived Airfields. The deploy is a typed step with a plan, a diff, health checks and a Return to base to the last good release.
+Deploy and roll back without Argo CD; Argo stays first class for long-lived environments. The deploy is a typed step with a plan, a diff, health checks and a rollback to the last good release.
 
 **Depends on:** Container images.
 
@@ -312,9 +328,9 @@ Every pull request or branch gets its own environment and address, tested and cl
 
 #### VM deploys {#vm-deploys}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Roll a change across virtual machines in batches over SSH, with verification between batches. Hosts appear next to applications on the fleet page, with what runs on each.
+Roll a change across virtual machines in batches over SSH, with verification between batches. Built, tested on its own branch and in final integration; not yet on the main branch. Hosts appear next to applications on the fleet page, with what runs on each.
 
 [Area page](delivery.md)
 
@@ -328,9 +344,9 @@ Bake machine images in a pipeline and roll them through instance groups. Images 
 
 #### Image-based hosts {#image-based-hosts}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Machines that are really images (built on bootc), built, signed, upgraded and returned to base like container images, with host setup done at first boot. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.
+Machines that are really images (built on bootc), built, signed, upgraded and rolled back like container images, with host setup done at first boot. Built, tested on its own branch and in final integration; not yet on the main branch. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.
 
 **Depends on:** Machine images with Packer.
 
@@ -400,9 +416,25 @@ Deploy to the three major clouds with their own features, with no stored cloud k
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Functions, container services and managed instance groups as deploy targets. Rollouts, health checks and Returns to base follow the same model as on Kubernetes.
+Functions, container services and managed instance groups as deploy targets. Rollouts, health checks and rollbacks follow the same model as on Kubernetes.
 
 **Depends on:** Cloud targets: AWS, Google Cloud and Azure.
+
+[Area page](delivery.md)
+
+#### Every cloud and on-premises, within the limits of the environment {#every-cloud-and-on-premises-within-the-limits-of-the-environment}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The same behavior on the major clouds, on-premises hypervisors, bare metal and sites with no internet. Before acting, Launchway discovers what the environment allows (quotas, permissions, network reach, services, approved images and regions) and works inside it. Anything that cannot be done there is said plainly before it is attempted.
+
+[Area page](delivery.md)
+
+#### Delivery to machines over SSH {#delivery-to-machines-over-ssh}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic rollback on a failed health check. Built, tested on its own branch and in final integration; not yet on the main branch. Also boots a new operating-system image in a throwaway virtual machine as a test.
 
 [Area page](delivery.md)
 
@@ -414,27 +446,27 @@ State, plans and checks you can trust.
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. Plan, Clearance and the apply of exactly the reviewed plan (refused when the commit or the state has changed), a plan report with destroys and replacements first, OpenTofu by default. Built in this release: the Maneuvers and the report. Not yet: plan results posted to the pull request, a scheduled drift Patrol with its own page, short-lived cloud credentials through OIDC.
+Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. Built, tested on its own branch and in final integration; not yet on the main branch. Users never wonder where state goes, and Launchway guides them to good practice by default.
 
-[Read the documentation](../guide/terraform-opentofu.md) · [Area page](config-as-code.md)
+[Area page](config-as-code.md)
 
 #### State and locking built in {#state-and-locking-built-in}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.
+Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. Built, tested on its own branch and in final integration; not yet on the main branch. The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.
 
 **Depends on:** Terraform and OpenTofu.
 
-[Read the documentation](../guide/terraform-opentofu.md) · [Area page](platform-services.md)
+[Area page](platform-services.md)
 
 #### Ansible {#ansible}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Typed steps with per-host results and a check mode before apply. Maneuver and Flight plan with check mode, diff, pinned host keys, keys and vault passwords by reference, cached collections, and a per-host report. Not yet: inventory from the Airfield's hosts, from clouds or hypervisors, and short-lived SSH certificates.
+Typed steps with per-host results and a check mode before apply. Built, tested on its own branch and in final integration; not yet on the main branch. Results show per host, with the check result shown before anything is changed.
 
-[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
+[Area page](config-as-code.md)
 
 #### Chef {#chef}
 
@@ -448,27 +480,51 @@ A real step with per-node results where Chef reports them, check mode before app
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Run image builds with their results, logs and Cargo attached to the Sortie. Output images go to the Depot or the image store with provenance.
+Run image builds with their results, logs and artifacts attached to the run. Output images go to the registry or the image store with provenance.
+
+[Area page](delivery.md)
+
+#### Adopt a machine that already exists {#adopt-a-machine-that-already-exists}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Scan a running system read-only, understand its configuration, generate the playbooks that describe it as a pull request, prove them with a no-change check, then manage it. Nothing is changed on the machine until you approve.
+
+[Area page](delivery.md)
+
+#### Convert a server to an image-based system {#convert-a-server-to-an-image-based-system}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A guided path from a conventionally installed server to an image-based one that is built, tested and rolled back like a container image. Needs the adopt step first.
+
+[Area page](delivery.md)
+
+#### Configuration as code, first slice {#configuration-as-code-first-slice}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Ansible run reports, plan reports and a built-in state backend for OpenTofu, with runs that show hosts by plays, drift and plan. Built, tested on its own branch and in final integration; not yet on the main branch. 
 
 [Area page](delivery.md)
 
 ### Runtime configuration {#g-runtime-configuration}
 
-Settings, keys and toggles managed together, per zone and Airfield.
+Settings, keys and toggles managed together, per zone and environment.
 
 #### Feature toggles {#feature-toggles}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Toggles per Airfield with rules, percentages that keep the same people, Master switches, approvals and a reason on every change, history with revert, and Go and TypeScript libraries. Built: the model, the safeguards, the history and revert, scheduled changes, SDK keys, the evaluation protocol with streaming and the Go and TypeScript libraries with OpenFeature providers, the toggles file, and the web, command line and agent tools. Still to come: a pipeline keyword, plans with proofs between steps, webhook events, and libraries for more languages.
+A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules. Built, tested on its own branch and in final integration; not yet on the main branch. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
 
-[Read the documentation](../guide/feature-toggles.md) · [Area page](traffic.md)
+[Area page](platform-services.md)
 
 #### Configuration, keys and toggles per zone {#configuration-keys-and-toggles-per-zone}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Manage settings and secrets together per zone and Airfield, for virtual machines and Kubernetes alike. A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.
+Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike. A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.
 
 [Area page](traffic.md)
 
@@ -478,7 +534,7 @@ Manage settings and secrets together per zone and Airfield, for virtual machines
 
 Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network. The effective exposure of route share times toggle share is always shown.
 
-**Depends on:** Switches.
+**Depends on:** Feature toggles.
 
 [Area page](traffic.md)
 
@@ -488,7 +544,7 @@ Decide which version a request gets from who sent it, such as a share of mobile 
 
 Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits. Moving a lever to its safe state is never gated, and moving away from it always is.
 
-**Depends on:** Switches.
+**Depends on:** Feature toggles.
 
 [Area page](traffic.md)
 
@@ -496,9 +552,9 @@ Preview, policy check, approval where required, applied and audited, with an und
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the Airfield already work. The store stays authoritative and values never reach the control plane.
+Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work. The store stays authoritative and values never reach the control plane.
 
-**Depends on:** Secrets that stay with Stations.
+**Depends on:** Secrets that stay with runners.
 
 [Area page](traffic.md)
 
@@ -508,7 +564,7 @@ Read secrets from more external stores, such as the cloud providers’ own secre
 
 Traffic, identity and policy for services on a mesh, and for virtual machines that join it. Machines outside the mesh still appear on the map as declared.
 
-**Depends on:** Weighted Pathfinders and traffic control.
+**Depends on:** Weighted canaries and traffic control.
 
 [Area page](traffic.md)
 
@@ -592,7 +648,7 @@ Services ranked by error budget, saturation and restarts, with deploys, settings
 
 Which features are on where and for whom, with the effect of a toggle shown and one button to turn it off. Toggle first, roll back second, in seconds.
 
-**Depends on:** Switches.
+**Depends on:** Feature toggles.
 
 [Area page](traffic.md)
 
@@ -622,7 +678,7 @@ Know what changed, who approved it, and how delivery is going.
 
 Automatic change records with risk scores, freezes and approvals, and optional two-way sync with an IT service tool. Works standalone, so a team without such a tool still has records.
 
-**Depends on:** Approvals and protected Airfields.
+**Depends on:** Approvals and protected environments.
 
 [Area page](delivery.md)
 
@@ -640,7 +696,7 @@ Create and update change records in ServiceNow or Jira Service Management and ta
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the Sorties behind each number. Graphs are meant for people who do not use Launchway daily.
+Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number. Graphs are meant for people who do not use Launchway daily.
 
 [Area page](delivery.md)
 
@@ -670,7 +726,7 @@ Write extra policy rules in an open policy language alongside the built-in rules
 
 A bill of materials across every image as well as every project, with export. Searching components across projects already works. Pairs with the software graph.
 
-**Depends on:** Findings and SBOMs per Sortie.
+**Depends on:** Findings and SBOMs per run.
 
 [Area page](delivery.md)
 
@@ -680,7 +736,7 @@ A bill of materials across every image as well as every project, with export. Se
 
 Compare outcomes between users with a toggle on and off. Results join delivery data, so you see effect and cost.
 
-**Depends on:** Switches.
+**Depends on:** Feature toggles.
 
 [Area page](traffic.md)
 
@@ -692,7 +748,7 @@ Importers and proof for teams that already have a delivery platform.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Convert pipelines, services and Airfields from other delivery and GitOps platforms, with a report of what needs a person. The report is honest about gaps.
+Convert pipelines, services and environments from other delivery and GitOps platforms, with a report of what needs a person. The report is honest about gaps.
 
 
 #### Published proof points {#published-proof-points}
@@ -733,7 +789,7 @@ The workload description reads and writes the open Score specification, so you a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The platform team chooses where each Airfield lands, and the same description is delivered there. Kubernetes first.
+The platform team chooses where each environment lands, and the same description is delivered there. Kubernetes first.
 
 [Area page](developer-experience.md)
 
@@ -819,13 +875,13 @@ See how many deliveries follow the path, where developers leave it and which sta
 
 ### Built-in platform services {#g-built-in-platform-services}
 
-Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and Switches. Each can be swapped for the product you already run.
+Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and feature toggles. Each can be swapped for the product you already run.
 
 #### S3-compatible object storage {#s3-compatible-object-storage}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, Depots, backup tools and build caches use. Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.
+A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, registries, backup tools and build caches use. Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.
 
 [Area page](platform-services.md)
 
@@ -849,7 +905,7 @@ Keep versions, expire objects by rule and send events when objects change. Secon
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and Return to base. Second phase, after state and locking.
+Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and rollback. Second phase, after state and locking.
 
 **Depends on:** State and locking built in.
 
@@ -859,7 +915,7 @@ Terraform and OpenTofu state is shown as a difference with secrets masked and ne
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Give an application a cache in an Airfield: a managed Valkey, installed through GitOps, with its credentials in the vault. Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.
+Give an application a cache in an environment: a managed Valkey, installed through GitOps, with its credentials in the vault. Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.
 
 [Area page](platform-services.md)
 
@@ -867,7 +923,7 @@ Give an application a cache in an Airfield: a managed Valkey, installed through 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same pattern provisions a cache, a database, a Holding pattern or object storage for an application and wires it in as a connection. Third phase.
+The same pattern provisions a cache, a database, a queue or object storage for an application and wires it in as a connection. Third phase.
 
 [Area page](platform-services.md)
 
@@ -903,15 +959,15 @@ Everything that configures a system is code in Git, reviewed like code, applied 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.
+A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. Built, tested on its own branch and in final integration; not yet on the main branch. For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.
 
-[Read the documentation](../learn/concepts/configuration-as-code.md) · [Area page](config-as-code.md)
+[Area page](config-as-code.md)
 
 #### Inventories {#inventories}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each. Inventory stays on your side on the hosted service.
+Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each. Built, tested on its own branch and in final integration; not yet on the main branch. Inventory stays on your side on the hosted service.
 
 [Area page](config-as-code.md)
 
@@ -927,17 +983,17 @@ A stack or playbook becomes a Flight plan with a form for its inputs, a schedule
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See per host and per task what changed, with the tool’s own output kept alongside. Hosts by plays, what changed with the diff, the failed task first, the recap on the report, filter by host and outcome, and a button to run again on the failed hosts. The tool's own output stays in the step's log.
+See per host and per task what changed, with the tool’s own output kept alongside. Built, tested on its own branch and in final integration; not yet on the main branch. Launchway keeps the tool’s own output beside a readable summary.
 
-[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
+[Area page](config-as-code.md)
 
 #### Drift and converge now {#drift-and-converge-now}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. A scheduled check-mode run is the drift report, shown per Airfield on the Configuration page. Not yet: a converge button that carries the check's diff into the Clearance request, and a Patrol screen of its own.
+See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. Built, tested on its own branch and in final integration; not yet on the main branch. Drift is checked on a schedule and shown per host.
 
-[Read the documentation](../guide/ansible.md) · [Area page](config-as-code.md)
+[Area page](config-as-code.md)
 
 #### Short-lived access to hosts {#short-lived-access-to-hosts}
 
@@ -975,16 +1031,16 @@ Agent-based tools and other infrastructure tools join through one common interfa
 
 This milestone is done when all of these are true.
 
-- An application, a virtual machine and an image-based host can each be deployed, verified and returned to base from the interface.
+- An application, a virtual machine and an image-based host can each be deployed, verified and rolled back from the interface.
 - A failed deployment shows a diagnosis, its evidence and the full resource tree with logs.
-- Pathfinder weights by client type work on the gateway and on a mesh, and the map shows them.
+- Canary weights by client type work on the gateway and on a mesh, and the map shows them.
 - State for infrastructure code is stored, locked and recoverable inside Launchway.
 - Toggles, settings and secrets resolve per zone with one clear rule.
 - Every lever change goes through preview, policy and audit, with an undo.
 
 ## What is deliberately not in it
 
-- The built-in Depot (Milestone 4).
+- The built-in registry (Milestone 4).
 - The software graph and patching loop (Milestone 5).
 - Hosted-service features (Milestone 7).
 

@@ -305,7 +305,7 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 	// A deploy that succeeded as a step may still be rolling out.
 	if b.State == stationDone && strings.HasPrefix(b.Key, "env:") {
 		for _, st := range b.steps {
-			if dep, ok := deps[st.ID]; ok && dep.Phase != "" && dep.Phase != "healthy" && dep.Verdict == "" {
+			if dep, ok := deps[st.ID]; ok && dep.Phase != "" && dep.Phase != "healthy" && dep.Phase != "leftovers" && dep.Verdict == "" {
 				b.State, b.Step, b.Detail = stationRunning, st.ID, dep.Detail
 			}
 		}
@@ -436,7 +436,7 @@ func healthyEverywhere(d *engine.RunDetail) bool {
 			continue
 		}
 		seen[dp.Step] = true
-		if dp.Phase != "healthy" && dp.Verdict != "deployed" {
+		if dp.Phase != "healthy" && dp.Phase != "leftovers" && dp.Verdict != "deployed" {
 			return false
 		}
 	}

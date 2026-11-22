@@ -320,7 +320,7 @@ func (e *Engine) observeOpen(r RunnerInfo, held []string, o Observation, parts [
 		return res, err
 	}
 	v := deploy.Evaluate(item.Spec, o.Snapshot)
-	if v.Outcome == deploy.Succeeded && v.Phase == deploy.PhaseHealthy {
+	if v.Outcome == deploy.Succeeded && (v.Phase == deploy.PhaseHealthy || v.Phase == deploy.PhaseLeftovers) {
 		v.Detail = "the rollout is complete; " + v.Detail
 	}
 	res.Accepted, res.Phase, res.Detail = true, v.Phase, v.Detail

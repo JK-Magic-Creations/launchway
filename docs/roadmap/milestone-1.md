@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 34 in progress · 54 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 34 available · 31 in progress · 59 planned · 124 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -18,7 +18,7 @@ Milestone 1 makes Launchway a complete home for day-to-day engineering. Code can
 
 - You push a branch and open a change. The page shows the pipeline running, the tests and findings as they arrive, and a plain sentence saying what stops it from merging.
 - A teammate suggests a one-line fix in review and you apply it with one click; the checks run again by themselves.
-- You keep your code on another host. Launchway runs the pipeline and writes the result back to the pull request, and a failing Sortie blocks the merge there too.
+- You keep your code on another host. Launchway runs the pipeline and writes the result back to the pull request, and a failing run blocks the merge there too.
 - You re-run a failed run from the third step, and the first two steps use what they produced last time.
 - A new colleague opens Home and is told, in order, what to set up next.
 
@@ -29,8 +29,8 @@ flowchart TD
   Dev["Developer"] -->|push| Host["Git hosting<br/>built in or connected"]
   Host --> PR["Change for review"]
   PR -->|starts| Run["Pipeline run"]
-  Run --> Stations["Stations"]
-  Stations -->|results| Run
+  Run --> Runners["Runners"]
+  Runners -->|results| Run
   Run -->|status and evidence| PR
   Rules["Branch rules and policy"] --> PR
   Reviewer["Reviewer"] -->|approve| PR
@@ -40,7 +40,7 @@ flowchart TD
 
 *A change from push to merge. The built-in host and a connected host look the same to the pipeline engine.*
 
-**Builds on:** nothing; this is where it starts. **Leads to:** [Milestone 2: Pipeline power](milestone-2.md), [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md), [Milestone 6: AI helper](milestone-6.md), [Milestone 7: Hosted service](milestone-7.md), [Milestone 12: Security and trust](milestone-12.md).
+**Builds on:** nothing; this is where it starts. **Leads to:** [Milestone 2: Pipeline power](milestone-2.md), [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md), [Milestone 6: AI helper](milestone-6.md), [Milestone 7: Hosted service](milestone-7.md), [Milestone 12: Security and trust](milestone-12.md), [Milestone 13: Work, releases and health](milestone-13.md), [Milestone 14: Editors and extension points](milestone-14.md).
 
 **Go deeper:** [Git hosting and change review](git-hosting.md) · [Pipelines and flow control](pipelines.md) · [The guided interface](guided-interface.md) · [Installing Launchway](installing.md).
 
@@ -50,16 +50,17 @@ flowchart TD
 |---|---|---|---|---|
 | [Host your code](#g-host-your-code) | 20 | 4 | 4 | 12 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 3 | 4 |
-| [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
+| [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 3 | 8 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
-| [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
-| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 16 | 8 | 5 | 3 |
-| [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 10 | 0 | 10 | 0 |
+| [Move your repositories in](#g-move-your-repositories-in) | 5 | 2 | 1 | 2 |
+| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 7 | 0 | 0 | 7 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 8 | 2 | 3 |
+| [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 8 | 2 | 6 | 0 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
-| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 6 | 1 | 3 | 2 |
-| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 3 | 6 | 3 |
+| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 11 | 4 | 4 | 3 |
+| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 8 | 1 | 3 |
+| [Organized, and yours to arrange](#g-organized-and-yours-to-arrange) | 10 | 0 | 5 | 5 |
 
 ### Host your code {#g-host-your-code}
 
@@ -69,7 +70,7 @@ Launchway stores your repositories and serves them, so one product and a databas
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a Sortie.
+Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.
 
 **Depends on:** A database; the shared blob store that already exists.
 
@@ -109,7 +110,7 @@ The everyday repository lifecycle: create, rename with redirects, transfer, arch
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges. A go-to-file finder (press t), a branch and tag switcher, syntax colors, a file's history that follows renames, raw downloads that can never run in the page, and branches and tags pages. Not yet: archives, and the newest commit drawn on its journey above the file tree.
+History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder. Built, tested on its own branch and in final integration; not yet on the main branch. Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.
 
 **Depends on:** Built-in Git hosting.
 
@@ -119,7 +120,7 @@ The files of a repository at any branch, tag or commit, with the last commit of 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
+Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Built, tested on its own branch and in final integration; not yet on the main branch. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
 
 **Depends on:** Browse and search your code.
 
@@ -139,7 +140,7 @@ Markdown, diagrams, math, tables of data, images with before and after, document
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
+Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. Built, tested on its own branch and in final integration; not yet on the main branch. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
 
 **Depends on:** Built-in Git hosting.
 
@@ -189,7 +190,7 @@ Pull a repository from another host on a schedule, or push every change to anoth
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
+Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Built, tested on its own branch and in final integration; not yet on the main branch. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
 
 **Depends on:** Built-in Git hosting.
 
@@ -209,7 +210,7 @@ List, rename, delete and restore branches, set the default, and delete merged br
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Store large binary files outside the normal history, with locks and quotas. Quotas and usage are shown next to the repository. The Station image includes the tooling, so builds fetch large files without extra setup.
+Store large binary files outside the normal history, with locks and quotas. Quotas and usage are shown next to the repository. The runner image includes the tooling, so builds fetch large files without extra setup.
 
 **Depends on:** Built-in Git hosting.
 
@@ -219,7 +220,7 @@ Store large binary files outside the normal history, with locks and quotas. Quot
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Fork a repository to propose changes from your own copy, and start new repositories from templates. A template can carry a pipeline and an Airfield setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.
+Fork a repository to propose changes from your own copy, and start new repositories from templates. A template can carry a pipeline and an environment setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -229,7 +230,7 @@ Fork a repository to propose changes from your own copy, and start new repositor
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Limits on repository size, large-file storage and per-organization usage, shared with Cargo and log quotas. One quota model for everything that takes space, with warnings before a limit is reached.
+Limits on repository size, large-file storage and per-organization usage, shared with artifact and log quotas. One quota model for everything that takes space, with warnings before a limit is reached.
 
 **Depends on:** Built-in Git hosting.
 
@@ -267,13 +268,13 @@ An inbox, watching and muting, and email for mentions, reviews and failures, inc
 
 ### Review and merge changes {#g-review-and-merge-changes}
 
-Pull requests that show the Sortie, the tests and the policy verdict on one page.
+Pull requests that show the run, the tests and the policy verdict on one page.
 
 #### Pull requests on the built-in host {#pull-requests-on-the-built-in-host}
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest Sortie's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview Airfield and deployment on the same page.
+Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest run's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview environment and deployment on the same page.
 
 **Depends on:** Built-in Git hosting.
 
@@ -283,7 +284,7 @@ Open, review, discuss and merge changes inside Launchway, with branch rules that
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back, to people and to groups. Built on the review-depth branch, not on main yet: several suggestions applied as one commit, files marked viewed (remembered for you and lapsing when the file changes), keyboard shortcuts, a work-in-progress title that blocks a merge, and the pull requests that wait on you in Needs you and in the notification channels. Not built: a pending review kept as a draft between visits, comments on a whole file, a diff that hides whitespace, and a file tree.
+Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -303,7 +304,7 @@ Required approvals, stale-approval dismissal, blocked merges, linear history, pr
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Name who must review changes to which paths, using people or groups. Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an Airfield, and the owners file checked when it is pushed.
+Name who must review changes to which paths, using people or groups. Built, tested on its own branch and in final integration; not yet on the main branch. Owners can be the group that owns the deployment environment, so the people who run a service review the changes to it.
 
 **Depends on:** Review with inline comments and suggestions.
 
@@ -323,7 +324,7 @@ Merge commit, squash and rebase, chosen per repository, and merge automatically 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Queue approved changes and test the real merged result with the real pipeline before it lands. Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The Holding pattern shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.
+Queue approved changes and test the real merged result with the real pipeline before it lands. Built, tested on its own branch and in final integration; not yet on the main branch. The queue is visible on each change, so people see where they stand and why a change was held back.
 
 **Depends on:** Merge styles and auto-merge.
 
@@ -363,7 +364,7 @@ Templates that pre-fill the description of a pull request or work item, and issu
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Report each Sortie back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one. Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest Sortie and the required checks.
+Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one. Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest run and the required checks.
 
 **Depends on:** Every Git host, equally.
 
@@ -374,9 +375,9 @@ Track work, decisions and releases next to the code.
 
 #### Issues and work items {#issues-and-work-items}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.
+Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. Built, tested on its own branch and in final integration; not yet on the main branch. An item also traces to commits, runs and deployments, so the question which environment a request reached has a one-click answer.
 
 **Depends on:** Built-in Git hosting.
 
@@ -404,9 +405,9 @@ Mark that one item blocks another, and group items under a parent. A blocked ite
 
 #### Boards that show delivery {#boards-that-show-delivery}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. The board is the same data as the list, drawn differently.
+A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. Built, tested on its own branch and in final integration; not yet on the main branch. The board is the same data as the list, drawn differently.
 
 **Depends on:** Issues and work items.
 
@@ -474,9 +475,9 @@ Publish a static site from a branch of a repository, built by a pipeline. The si
 
 #### Releases with notes and evidence {#releases-with-notes-and-evidence}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.
+Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. Built, tested on its own branch and in final integration; not yet on the main branch. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.
 
 **Depends on:** Issues and work items.
 
@@ -490,7 +491,7 @@ Accounts, organizations, tokens and administration for the built-in host.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Teams with their own permissions on repositories, and invitations for people from outside. One permission model covers code, work items, pipelines and Airfields, so there is no second set of users to maintain.
+Teams with their own permissions on repositories, and invitations for people from outside. One permission model covers code, work items, pipelines and environments, so there is no second set of users to maintain.
 
 **Depends on:** Built-in Git hosting.
 
@@ -581,10 +582,18 @@ Discussions, snippets, notifications, activity feeds and the rest of a hosted Gi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A guide and a checklist for retiring a self-hosted Git server in favor of Launchway. Covers moving, redirects, users, hooks, integrations, backups and a Return to base plan, with each step verified by the acceptance suite.
+A guide and a checklist for retiring a self-hosted Git server in favor of Launchway. Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.
 
 **Depends on:** An acceptance suite for hosting.
 
+
+#### Full-ref import and a read-only issue archive {#full-ref-import-and-a-read-only-issue-archive}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Import brings every ref, including the source's pull request refs kept read-only, and the verify step reports ref by ref; another server's issues and comments are kept as a read-only archive. On the main branch. The archive can be promoted to live work items when work tracking lands.
+
+[Area page](git-hosting.md)
 
 ### Keep your Git host, if you prefer {#g-keep-your-git-host-if-you-prefer}
 
@@ -612,7 +621,7 @@ Hosts you run yourself, with their own addresses and certificates, are first-cla
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Hosts that cannot call Launchway are watched through polling or a bridge from their event service. The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature.
+Hosts that cannot call Launchway are watched through polling or a bridge from their event service. The result is the same: a push starts a run. Launchway posts status as a comment and an approval where the host has no status feature.
 
 **Depends on:** Every Git host, equally.
 
@@ -632,6 +641,22 @@ Map the same person on different hosts to one Launchway user. Reviews, approvals
 
 One internal contract every host, including the built-in one, must satisfy. The built-in host is a provider like the others, so a feature that works on one works on all, or the docs say it does not.
 
+
+#### Connect your repositories without moving them {#connect-your-repositories-without-moving-them}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Sign in with your code host account, pick repositories, and Launchway runs pipelines on your own machines and reports checks back to the pull request there. Moving the code into Launchway stays optional and can come later.
+
+[Area page](git-hosting.md)
+
+#### Run the hosted-CI workflow files you already have {#run-the-hosted-ci-workflow-files-you-already-have}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Read the common hosted workflow format and run the usual cases as they are, or convert them with a report of what did not map. Other popular formats come later.
+
+[Area page](pipelines.md)
 
 ### Pipelines that match what teams expect from hosted CI {#g-pipelines-that-match-what-teams-expect-from-hosted-ci}
 
@@ -657,7 +682,7 @@ Keep dependencies between runs so builds start warm, with rules for who may read
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Services with readiness checks and logs, a Station and workspace of their own per step, approval quorums, and loops that tolerate chosen members. This completes the control a complex pipeline needs without dropping into scripts.
+Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members. This completes the control a complex pipeline needs without dropping into scripts.
 
 [Area page](pipelines.md)
 
@@ -665,7 +690,7 @@ Services with readiness checks and logs, a Station and workspace of their own pe
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.
+Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Built, tested on its own branch and in final integration; not yet on the main branch. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.
 
 [Area page](pipelines.md)
 
@@ -673,7 +698,7 @@ Run the same steps across versions, systems and architectures from one definitio
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the project, branch and Airfield.
+Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the project, branch and environment.
 
 [Area page](pipelines.md)
 
@@ -681,7 +706,7 @@ Each step proves its identity to a cloud with short-lived tokens, so no long-liv
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Re-run just the failed steps of a Sortie, with earlier results reused. Re-running from a chosen step already works. Combined with caches, a flaky test costs minutes instead of a full run.
+Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works. Combined with caches, a flaky test costs minutes instead of a full run.
 
 [Area page](pipelines.md)
 
@@ -689,7 +714,7 @@ Re-run just the failed steps of a Sortie, with earlier results reused. Re-runnin
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each step can choose its own image, Station and working area. A step that needs a large machine or special hardware asks for it without moving the whole pipeline.
+Each step can choose its own image, runner and working area. A step that needs a large machine or special hardware asks for it without moving the whole pipeline.
 
 [Area page](pipelines.md)
 
@@ -697,7 +722,7 @@ Each step can choose its own image, Station and working area. A step that needs 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Steps that run together are drawn side by side on the Sortie page, so the shape of a pipeline is the shape you see. Steps are drawn from their dependencies, so a Sortie reads like the pipeline you wrote.
+Steps that run together are drawn side by side on the run page, so the shape of a pipeline is the shape you see. Steps are drawn from their dependencies, so a run reads like the pipeline you wrote.
 
 [Area page](pipelines.md)
 
@@ -705,31 +730,7 @@ Steps that run together are drawn side by side on the Sortie page, so the shape 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work. Applies to steps on Stations and on Kubernetes.
-
-[Area page](pipelines.md)
-
-#### Runs wait for room instead of failing {#runs-wait-for-room-instead-of-failing}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing. Built and tested, in final integration; not yet on the main branch. The Sortie page, API and command line say what the step waits for and where it stands in line.
-
-[Area page](pipelines.md)
-
-#### Run priority and limits {#run-priority-and-limits}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Set which runs go first and how many may run at once, per installation or project. Built and tested, in final integration; not yet on the main branch. Fair queues keep one project from using every Station.
-
-[Area page](pipelines.md)
-
-#### Path filters {#path-filters}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Start a pipeline only when the files that changed match, or do not match, paths you name. Built and tested, in final integration; not yet on the main branch. Start a pipeline only for the paths that matter, so a change to the docs does not rebuild the service.
+The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work. Applies to steps on runners and on Kubernetes.
 
 [Area page](pipelines.md)
 
@@ -737,7 +738,7 @@ Start a pipeline only when the files that changed match, or do not match, paths 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A full step namespace makes a step wait, with the reason, the Sorties that hold the room and its place in line, instead of failing the build. A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.
+A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build. A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.
 
 **Depends on:** Nothing beyond what runs pipelines today.
 
@@ -747,7 +748,7 @@ A full step namespace makes a step wait, with the reason, the Sorties that hold 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Runs over a limit are held with a reason, in a visible order, and the main build is never held. Limits on concurrent Sorties of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.
+Runs over a limit are held with a reason, in a visible order, and the main build is never held. Limits on concurrent runs of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.
 
 **Depends on:** Nothing beyond what runs pipelines today.
 
@@ -757,7 +758,7 @@ Runs over a limit are held with a reason, in a visible order, and the main build
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A documentation-only change builds the docs and skips the image and the deploy approvals. paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a Sortie that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.
+A documentation-only change builds the docs and skips the image and the deploy approvals. paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a run that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.
 
 **Depends on:** Nothing beyond what runs pipelines today.
 
@@ -767,7 +768,7 @@ A documentation-only change builds the docs and skips the image and the deploy a
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves. A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a Depot; a maintainer can choose Run with secrets, which is recorded. The Sortie page says which mode it is in and why.
+Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves. A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a registry; a maintainer can choose Run with secrets, which is recorded. The run page says which mode it is in and why.
 
 **Depends on:** Nothing beyond what runs pipelines today.
 
@@ -781,7 +782,7 @@ Write a pipeline from a starter, from detection, or from nothing at all, and hav
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Write a step once as a template and use it in many pipelines, with its inputs checked. Being built now. Templates declare what they need and what they offer, so a mistake is caught before a Sortie.
+Write a step once as a template and use it in many pipelines, with its inputs checked. Being built now. Templates declare what they need and what they offer, so a mistake is caught before a run.
 
 [Area page](pipelines.md)
 
@@ -827,33 +828,17 @@ A published description of the pipeline format that gives completion and inline 
 
 #### Validate pipelines offline {#validate-pipelines-offline}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server. Built and tested, in final integration. You can name a library and a directory to check against, and see the fully resolved result.
-
-[Area page](pipelines.md)
-
-#### More power in templates {#more-power-in-templates}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-Template defaults derived from other inputs, conditions on every kind of step and optional list entries. Built and tested, in final integration. These close the gaps that forced copy-and-paste.
+Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server. On the main branch: `launchway validate` checks a pipeline without a server, can name a library and a directory to check against, and shows the fully resolved result.
 
 [Area page](pipelines.md)
 
 #### Notifications to webhooks and chat services {#notifications-to-webhooks-and-chat-services}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Rules that send a signed webhook or a chat message when a Sortie, a gate or a deployment changes, with a delivery log and retries. Built and tested, in final integration. Email is separate and still planned.
-
-[Area page](pipelines.md)
-
-#### Restricted mode for untrusted pull requests {#restricted-mode-for-untrusted-pull-requests}
-
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
-
-A pull request from outside the team runs in a restricted mode: no secrets, no writes to shared caches and no deployment. Built and tested, in final integration. A maintainer can approve a full run after reading the change.
+Rules that send a signed webhook or a chat message when a run, a gate or a deployment changes, with a delivery log and retries. On the main branch: rules, signed webhook and chat channels, and a delivery log with retries. Email is separate and still planned.
 
 [Area page](pipelines.md)
 
@@ -923,7 +908,7 @@ A search box that finds pages and starts guided actions such as turn a toggle of
 
 An approval is a card with what, who, risk, evidence and what happens next, readable in seconds. Reject needs a reason. A decision can be undone until it has acted.
 
-**Depends on:** Approvals and protected Airfields.
+**Depends on:** Approvals and protected environments.
 
 [Area page](guided-interface.md)
 
@@ -931,7 +916,7 @@ An approval is a card with what, who, risk, evidence and what happens next, read
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs. Parallel steps are already drawn side by side on the Sortie page. The rest, stations on tracks with live motion, is still to come.
+A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs. Parallel steps are already drawn side by side on the run page. The rest, stations on tracks with live motion, is still to come.
 
 **Depends on:** The guided interface.
 
@@ -990,7 +975,7 @@ High availability that covers the database and repository storage as well as the
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. Stations on virtual machines and customer machines update themselves too (see the Station update item). The pipeline and the runbook are written and checked; a first real run, with its Return to base, is still to come.
+Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. Runners on virtual machines and customer machines update themselves too (see the runner update item). The pipeline and the runbook are written and checked; a first real run, with its rollback, is still to come.
 
 [Read the documentation](../howto/self-deploy.md)
 
@@ -998,14 +983,14 @@ Launchway is built, tested, signed and rolled out by Launchway, in a group of se
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-No pile of connectors, services and Airfields to define before anything works. Six words cover everyday use: project, pipeline, step, run, Airfield and Station.
+No pile of connectors, services and environments to define before anything works. Six words cover everyday use: project, pipeline, step, run, environment and runner.
 
 
 #### Signed releases and installers {#signed-releases-and-installers}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Reproducible release builds with SBOMs, deb and rpm packages, an install script for Stations and a runner-only Helm chart, with signing and provenance in the release workflow. All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.
+Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow. All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.
 
 [Read the documentation](../security/verify-downloads.md)
 
@@ -1015,6 +1000,46 @@ Reproducible release builds with SBOMs, deb and rpm packages, an install script 
 
 Run Launchway's own checks locally in the same containers the pipeline uses, so a change that passes locally passes there. The local run gives each step the same user and files as the server run.
 
+
+#### The upgrade gate {#the-upgrade-gate}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+An upgrade that cannot half-apply: the server learns which chart revision rendered it and warns when it is older than the binary expects, the encryption key is never generated on a shared database, and parent applications sync before their children. The first self-upgrade exposed ordering problems; they are fixed and guarded by tests, and the remaining gate work is in progress.
+
+[Area page](installing.md)
+
+#### Install and upgrade never need hand-made network fixes {#install-and-upgrade-never-need-hand-made-network-fixes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The installer and the deploy step detect network conditions, such as pod-to-pod and gateway reachability, and say plainly what to change, so nobody edits network rules by hand mid-deploy. Detection is planned and comes before the first outside user.
+
+[Area page](installing.md)
+
+#### A step killed for memory says so {#a-step-killed-for-memory-says-so}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+The step log states the limit and the setting to raise, instead of a bare exit code. On the main branch.
+
+[Area page](pipelines.md)
+
+#### Recover from an empty encryption key {#recover-from-an-empty-encryption-key}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+`launchway encryption recover` discards an empty key-encryption key that the configured root key cannot open, and the installer never generates a root key for a shared database. On the main branch.
+
+[Area page](installing.md)
+
+#### Audit lines for every sensitive action {#audit-lines-for-every-sensitive-action}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Audit entries also go to standard output as JSON lines with a request id, for any log collector. On the main branch.
+
+[Area page](security-trust.md)
 
 ### Install Launchway in minutes {#g-install-launchway-in-minutes}
 
@@ -1032,7 +1057,7 @@ The chart starts a secure working installation from about ten lines or fewer: th
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the Station token and the database password it found; installing again, and upgrading with unchanged values, kept them.
+The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the runner token and the database password it found; installing again, and upgrading with unchanged values, kept them.
 
 [Area page](installing.md)
 
@@ -1046,41 +1071,41 @@ Default-deny network policies, restricted pods and no public exposure come with 
 
 #### One-time setup code and built-in accounts {#one-time-setup-code-and-built-in-accounts}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A new installation requires sign-in from the first moment and offers a built-in first administrator with a second step. Being built: a one-time setup code is printed once, and the rest happens in the browser.
+A new installation requires sign-in from the first moment and offers a built-in first administrator with a second step. On the main branch: a one-time setup code is printed once, and the rest happens in the browser. Passkeys are planned and not built yet.
 
 [Area page](installing.md)
 
 #### One command, three targets {#one-command-three-targets}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-launchway install asks the same few plain questions for a laptop, a single server or Kubernetes, and ends by printing the address and the one-time step. Being built. It is safe to run again and never regenerates keys.
+launchway install asks the same few plain questions for a laptop, a single server or Kubernetes, and ends by printing the address and the one-time step. On the main branch: `launchway install` for this machine or a Kubernetes cluster. It is safe to run again and never regenerates keys.
 
 [Area page](installing.md)
 
 #### Asks before it touches a cluster {#asks-before-it-touches-a-cluster}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-On Kubernetes the installer shows the cluster it will change and asks by name, then writes a small values file and runs Helm, or writes files to commit where a GitOps controller manages the cluster. Being built.
+On Kubernetes the installer shows the cluster it will change and asks by name, then writes a small values file and runs Helm, or writes files to commit where a GitOps controller manages the cluster. On the main branch: the installer shows what it is about to do and asks first.
 
 [Area page](installing.md)
 
 #### A first-run wizard {#a-first-run-wizard}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a Station and Git hosting, imports repositories and starts a first pipeline. Being built: the remaining steps. A new sign-in provider is tested before sign-in is switched to it.
+After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a runner and Git hosting, imports repositories and starts a first pipeline. On the main branch: the first-run guide in the web interface. A new sign-in provider is tested before sign-in is switched to it.
 
 [Area page](installing.md)
 
 #### A security checklist at the end {#a-security-checklist-at-the-end}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The installer finishes with a plain checklist of what is protected and what to do next, and the doctor repeats it later. Being built.
+The installer finishes with a plain checklist of what is protected and what to do next, and the doctor repeats it later. On the main branch: `launchway doctor security` prints the plain checklist the installer ends with.
 
 [Area page](installing.md)
 
@@ -1088,7 +1113,7 @@ The installer finishes with a plain checklist of what is protected and what to d
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-The installer carries the chart, the exact image references of its own release and what it needs to talk to a cluster, so no other tool is required. Being built. A release image already carries the chart.
+The installer carries the chart, the exact image references of its own release and what it needs to talk to a cluster, so no other tool is required. Partly there: the installer needs no other tool, and a release image carries the chart. The single offline bundle is not built yet.
 
 [Area page](installing.md)
 
@@ -1116,13 +1141,97 @@ One file with everything Launchway needs, for networks with no internet. The sam
 
 [Area page](installing.md)
 
+### Organized, and yours to arrange {#g-organized-and-yours-to-arrange}
+
+Every list is a hierarchy you can search, and the home page shows what needs a person.
+
+#### Folders and search on every list {#folders-and-search-on-every-list}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Pipelines, repositories, projects and runs sit in folders you can search, grouped by level. Built, tested on its own branch and in final integration; not yet on the main branch. A long flat list gets cluttered; folders keep it findable.
+
+[Area page](guided-interface.md)
+
+#### Folders made from names {#folders-made-from-names}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Name a pipeline payments/api/build and the folders appear without anyone filing it. Built, tested on its own branch and in final integration; not yet on the main branch. No setup: the name is the filing.
+
+[Area page](guided-interface.md)
+
+#### Shared layouts and personal layouts {#shared-layouts-and-personal-layouts}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A default layout per level, and your own on top: order, pins and hidden sections, with drag and drop, keyboard equivalents and a reset. Built, tested on its own branch and in final integration; not yet on the main branch. Arrange for everyone and arrange for me are separate, explicit modes. A layout can be exported and kept in Git.
+
+[Area page](guided-interface.md)
+
+#### A home page that shows what needs a person {#a-home-page-that-shows-what-needs-a-person}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Cards by category, what is running, and what truly needs attention; a failure that is already being retried is not shown as needing you. Built, tested on its own branch and in final integration; not yet on the main branch. The home page is calm when nothing needs you.
+
+[Area page](guided-interface.md)
+
+#### Home panels that you choose {#home-panels-that-you-choose}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Add the panels you want to the home page, including one that remembers what you were looking at and working on so you can go straight back. Panels are personal and can be shared as a default for a team.
+
+[Area page](guided-interface.md)
+
+#### Every view has an address {#every-view-has-an-address}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+As you move around the interface the address changes, so any page, filter and tab can be bookmarked and shared. This includes the history view of a pipeline and each tab of a run.
+
+[Area page](guided-interface.md)
+
+#### Live streaming and time estimates {#live-streaming-and-time-estimates}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier runs. Built, tested on its own branch and in final integration; not yet on the main branch. A queued step is never drawn as running, and the list, the launch line and the run page agree.
+
+[Area page](guided-interface.md)
+
+#### Views that agree with each other {#views-that-agree-with-each-other}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The run list, the run page and the checks on a pull request always show the same state, and a check never stays open after its run has ended. An empty page says why it is empty: for example, the build cache page says what was stored and where, or why nothing has been.
+
+[Area page](guided-interface.md)
+
+#### A calmer look {#a-calmer-look}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Less green, more meaning in color, an overview first and detail one click down; pages do not need to look the same to be easy to read. Statuses always carry an icon and a word, never color alone.
+
+[Area page](guided-interface.md)
+
+#### You can approve what you started, if policy allows {#you-can-approve-what-you-started-if-policy-allows}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A person who starts a run on a one-person team can be allowed to approve it, with a plain note in the record; larger teams keep separation of duties. Pending approvals show up in the running list, so nothing waits where nobody looks, and the page says who can approve and why.
+
+[Area page](guided-interface.md)
+
 ## What done means
 
 This milestone is done when all of these are true.
 
 - A repository can be created, cloned, pushed to, reviewed and merged in Launchway, and a deliberate failure of a server during a push never loses an acknowledged push.
 - A written acceptance suite for hosting passes, including importing from another host.
-- A pull request on a connected host receives a status from Launchway and cannot be merged when the Sortie fails.
+- A pull request on a connected host receives a status from Launchway and cannot be merged when the run fails.
 - Every pipeline feature in the milestone has a reference page and a worked example.
 - Every setting introduced has a command, an API call, an agent tool and a Terraform resource, checked by a test.
 - A new user can complete setup from Home without editing a file.
@@ -1131,8 +1240,8 @@ This milestone is done when all of these are true.
 
 - Custom step languages, generated pipelines and the visual designer (Milestone 2).
 - Deep application and host delivery (Milestone 3).
-- The built-in Depot (Milestone 4).
-- Hosted service and sandboxed Stations (Milestone 7).
+- The built-in registry (Milestone 4).
+- Hosted service and sandboxed runners (Milestone 7).
 
 ---
 

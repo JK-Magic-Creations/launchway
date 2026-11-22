@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 2 in progress · 32 planned · 38 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 6 in progress · 28 planned · 38 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -12,7 +12,7 @@ Everything Launchway holds is encrypted at rest with a key kept outside the data
 
 Milestone 12 raises the foundation. A root key kept outside the database protects a small hierarchy of keys that protects every secret and stored file, so a database copy alone is useless. Launchway gets its own vault, and every built-in is optional: you can use a popular backend instead. Scans become gates with a stated policy, and the certification path is written down in an honest order.
 
-**Who it is for.** Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated Airfield.
+**Who it is for.** Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated environment.
 
 ## What you will be able to do
 
@@ -48,7 +48,7 @@ flowchart TD
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 1 | 14 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 5 | 10 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -76,7 +76,7 @@ Take the installation key from a mounted secret, a passphrase, a cloud key servi
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. Every stored secret goes through one helper and a Depot that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.
+The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. Every stored secret goes through one helper and a registry that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -86,7 +86,7 @@ The keys that sat in plaintext in the database are sealed under the hierarchy, i
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Cargo, caches, repository data and logs are encrypted as streams, re-encrypted lazily. Large files are never loaded whole.
+Artifacts, caches, repository data and logs are encrypted as streams, re-encrypted lazily. Large files are never loaded whole.
 
 **Depends on:** Encrypt stored secrets and tokens.
 
@@ -134,7 +134,7 @@ Built-in transport encryption, refusal of unencrypted database connections, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-For the hosted service, keep logs and Cargo under a key you hold, and prove deletion by destroying it. Leaving is complete.
+For the hosted service, keep logs and artifacts under a key you hold, and prove deletion by destroying it. Leaving is complete.
 
 **Depends on:** Rotation without downtime.
 
@@ -158,7 +158,7 @@ Keep secrets in Launchway with policies and an audit trail, sealed by the same k
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for Stations; this widens it.
+Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for runners; this widens it.
 
 **Depends on:** A built-in secret store.
 
@@ -244,7 +244,7 @@ Signed provenance for every release, then a build platform that isolates runs an
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A specialist firm audits the server, sign-in, Station protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault.
+A specialist firm audits the server, sign-in, runner protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -284,33 +284,33 @@ The scans Launchway holds itself to are offered to every repository it hosts or 
 
 #### A profile for each repository {#a-profile-for-each-repository}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended. Checks are on from the first push.
+Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended. Built, tested on its own branch and in final integration; not yet on the main branch. Checks are on from the first push.
 
 [Area page](repository-standards.md)
 
 #### Every check on, advice or block {#every-check-on-advice-or-block}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum. The team in charge of a repository keeps the choice unless a level above locks it.
+Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum. Built, tested on its own branch and in final integration; not yet on the main branch. The team in charge of a repository keeps the choice unless a level above locks it.
 
 [Area page](repository-standards.md)
 
 #### Vulnerability, secret, dependency and license checks {#vulnerability-secret-dependency-and-license-checks}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own. Checks are visible steps, never hidden magic.
+Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own. Built, tested on its own branch and in final integration; not yet on the main branch. Checks are visible steps, never hidden magic.
 
 [Area page](repository-standards.md)
 
 #### Language profiles {#language-profiles}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow. Each profile brings starter files the team may change.
+Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow. Built, tested on its own branch and in final integration; not yet on the main branch. Each profile brings starter files the team may change.
 
 [Area page](repository-standards.md)
 
@@ -366,7 +366,7 @@ Start a campaign that opens one fix per affected repository and tracks it until 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.
+A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Built, tested on its own branch and in final integration; not yet on the main branch. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.
 
 **Depends on:** Every check on, advice or block.
 
@@ -376,7 +376,7 @@ A level’s standards can live as files in a repository that level owns, so a ch
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The results of commercial Cargo repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
+The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
 
 **Depends on:** Findings in one list.
 
@@ -386,7 +386,7 @@ The results of commercial Cargo repositories, code-analysis and security product
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself. The first slice is built and not yet merged: which repositories have which checks, and each project's open findings over time with the mean time to fix. A score is not built.
+See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself.
 
 [Area page](repository-standards.md)
 
@@ -402,7 +402,7 @@ A report for a period shows which checks were on, evidence that they ran, findin
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-On the hosted service checks run on your Stations, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
+On the hosted service checks run on your runners, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
 
 [Area page](repository-standards.md)
 
@@ -422,4 +422,4 @@ This milestone is done when all of these are true.
 
 ---
 
-[← Milestone 11: Kubernetes and VMs](milestone-11.md) · [Beyond: Beyond →](beyond.md)
+[← Milestone 11: Kubernetes and VMs](milestone-11.md) · [Milestone 13: Work, releases and health →](milestone-13.md)

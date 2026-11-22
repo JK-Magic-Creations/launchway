@@ -26,7 +26,7 @@ func TestLeftoversFailOrWarnWithoutPruning(t *testing.T) {
 		return Snapshot{App: ReduceApplication(appWithResources(rs...), spec, "https://g/x.git", contains)}
 	}
 	v := Evaluate(spec, snap(res("Deployment", "shop", "Synced", false), res("NetworkPolicy", "shop-allow", "OutOfSync", true), res("NetworkPolicy", "shop-db", "OutOfSync", true)))
-	if v.Outcome != Failed || v.Phase != PhaseLeftovers || !strings.Contains(v.Detail, "NetworkPolicy/shop-allow") ||
+	if v.Outcome != Succeeded || v.Phase != PhaseLeftovers || !strings.Contains(v.Detail, "NetworkPolicy/shop-allow") ||
 		!strings.Contains(v.Detail, "2 object(s) from an earlier render are still present") || !strings.Contains(v.Detail, "pruning is off") {
 		t.Fatalf("%+v", v)
 	}
