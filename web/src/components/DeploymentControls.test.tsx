@@ -47,7 +47,10 @@ describe("rollout controls follow what the server reports", () => {
     await user.click(await screen.findByRole("button", { name: "Promote full" }));
     expect(api.command).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog", { name: "Confirm full promotion" }).textContent).toMatch(/failed.*Suggestion/);
+    // Promoting fully needs a reason, which the server also asks for.
+    expect(screen.getByRole("button", { name: "Yes, promote fully" })).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "Comment on the command" }), "the analysis is flaky");
     await user.click(screen.getByRole("button", { name: "Yes, promote fully" }));
-    expect(api.command).toHaveBeenCalledWith("run_1", "d1", "promote-full", "");
+    expect(api.command).toHaveBeenCalledWith("run_1", "d1", "promote-full", "the analysis is flaky");
   });
 });

@@ -19,6 +19,7 @@ func addVerifyTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_verification", Annotations: readOnly("Get verifications"),
 		Description: "A Sortie's verifications (verify steps): for each, what it watches, its outcome (running, passed, failed or inconclusive) and why, each metric's and log query's outcome, how many intervals were judged, and whether a person marked it. With step, only that verify step."},
 		mcpCallTimeout, getVerification)
+	addDeliveryTools(srv, c)
 }
 
 func addVerifyChangeTools(srv *mcp.Server, c *mcpCall) {

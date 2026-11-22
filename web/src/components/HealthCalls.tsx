@@ -26,7 +26,7 @@ export function HealthCalls({ v, name }: { v: VerificationView; name: string }) 
         <div className="table-scroll">
           <table className="inputs-table vreadings-table">
             <caption className="sr-only">Calls that did not answer as expected</caption>
-            <thead><tr><th>Time</th><th>Status</th><th>Latency</th><th>What happened</th></tr></thead>
+            <thead><tr><th>Time</th><th>Status</th><th>Latency</th><th>What happened</th><th>What came back</th></tr></thead>
             <tbody>
               {shown.map((c) => (
                 <tr key={c.t} className="vrow-bad">
@@ -34,6 +34,7 @@ export function HealthCalls({ v, name }: { v: VerificationView; name: string }) 
                   <td data-label="Status" className="mono">{c.status ?? "no answer"}</td>
                   <td data-label="Latency" className="mono">{c.latency_ms} ms</td>
                   <td data-label="What happened">{c.error ?? "it did not answer as expected"}</td>
+                  <td data-label="What came back" className="mono">{c.excerpt || "-"}</td>
                 </tr>
               ))}
             </tbody>

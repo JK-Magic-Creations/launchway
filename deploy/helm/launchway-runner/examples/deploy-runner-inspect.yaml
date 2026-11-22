@@ -1,0 +1,27 @@
+# The deploy runner of deploy-runner.yaml with looking into deliveries turned on: the Launch page's
+# object tree, logs, and pause/resume/restart/scale of the shop workload. Each right is off unless
+# written here; secrets are read only to hide their values (they never leave the runner).
+server:
+  url: https://launchway.example.com
+runner:
+  enabled: false
+deployRunner:
+  enabled: true
+  target: prod-eu
+  token:
+    existingSecret: launchway-deploy-pool-token
+  applications:
+    - { projects: [shop], names: [shop] }
+  rolloutNamespaces: [shop]
+  repos:
+    gitops:
+      url: https://git.example.com/platform/gitops.git
+      credentials: { store: vault, key: gitops/launchway }
+      paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+  rbac:
+    controlRollouts: { shop: [shop] }
+    inspect:
+      read: true
+      logs: true
+      secrets: true
+      controlWorkloads: { shop: [shop] }

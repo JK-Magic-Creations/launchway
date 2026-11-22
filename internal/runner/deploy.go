@@ -96,10 +96,11 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func() { defer wg.Done(); d.verifications(ctx) }()
 	}
-	wg.Add(3)
+	wg.Add(4)
 	go func() { defer wg.Done(); d.actions(ctx) }()
 	go func() { defer wg.Done(); d.observe(ctx) }()
 	go func() { defer wg.Done(); d.commands(ctx) }()
+	go func() { defer wg.Done(); d.inspections(ctx) }()
 	wg.Wait()
 	lctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

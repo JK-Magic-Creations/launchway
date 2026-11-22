@@ -96,6 +96,11 @@ the configuration stays readable by releases that do not know these settings.
 {{- if not $r.repos -}}
 {{- fail "delivery.deployRunner.repos: list the GitOps repositories deploy steps may commit to" -}}
 {{- end -}}
+{{- range $ns, $names := (($r.rbac.inspect | default dict).controlWorkloads | default dict) -}}
+{{- if not (has $ns ($r.rolloutNamespaces | default list)) -}}
+{{- fail (printf "delivery.deployRunner.rbac.inspect.controlWorkloads names namespace %s, which is not in delivery.deployRunner.rolloutNamespaces" $ns) -}}
+{{- end -}}
+{{- end -}}
 {{- range $ns, $names := ($r.rbac.controlRollouts | default dict) -}}
 {{- if not (has $ns ($r.rolloutNamespaces | default list)) -}}
 {{- fail (printf "delivery.deployRunner.rbac.controlRollouts names namespace %s, which is not in delivery.deployRunner.rolloutNamespaces" $ns) -}}

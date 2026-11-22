@@ -2,7 +2,7 @@
 
 This page describes every `launchway` command, subcommand and flag, with defaults, environment variables, exit codes and an example of each. It is for anyone who runs Launchway from a terminal or a script.
 
-> **Verified** on 2026-11-19 against commit f717337: every command was run from a binary built with `make web build`, against a local server on `127.0.0.1` started from a configuration like `examples/local.yaml` and the `make demo` repositories, first without sign-in and then with OpenID Connect sign-in (a test provider) and real API tokens; the help texts and exit codes below are copied from those Sorties (runs). **Not verified:** the Kubernetes flags (`--k8s-*`), `--images-config`, `--secrets-config`, `--health-listen`, a deploy Station (`runner --config` with a `deploy:` section) and `login` reading a token typed at a terminal.
+> **Verified** on 2026-11-19 against commit f717337: every command was run from a binary built with `make web build`, against a local server on `127.0.0.1` started from a configuration like `examples/local.yaml` and the `make demo` repositories, first without sign-in and then with OpenID Connect sign-in (a test provider) and real API tokens; the help texts and exit codes below are copied from those Sorties (runs). **Not verified:** the Kubernetes flags (`--k8s-*`), `--images-config`, `--secrets-config`, `--health-listen`, a launch Station (`runner --config` with a `deploy:` section) and `login` reading a token typed at a terminal.
 
 One binary does everything: the server, Stations, local runs and the API client.
 
@@ -22,6 +22,7 @@ launchway blobs    status|copy                see and move where artifacts are k
 launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
 launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
 launchway release list|show|next|create|publish|promote|...  releases: version, notes, assets, promotion across Airfields, freezes, the report
+launchway rollout  status|tree|manifest|logs|pause|resume|restart|scale|promote|abort ...  look into a delivery and steer it
 launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
@@ -133,7 +134,7 @@ With `--join`, the Station enrols once: it makes a key that never leaves it (`<d
 | `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared Station token, or a Flight line's token. Never read from the file. Give this or `--join`, not both; neither is needed once the Station is enrolled. |
 | `--join` | `LAUNCHWAY_JOIN` | A join token, to enrol this Station once and give it an identity of its own. Never read from the file. |
 | `--labels` | `labels:` in the file | Labels this Station has, separated by commas, such as `arm64,gpu`. |
-| `--config` | none | A YAML file of Station settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the Station is a deploy Station. |
+| `--config` | none | A YAML file of Station settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the Station is a launch Station. |
 | `--name` | `name:` in the file, else the host name | The Station's name. Its ID is `runner-<name>`. |
 | `--data` | `data:` in the file, else `launchway-runner` | The directory for workspaces. |
 | `--concurrency` | `concurrency:` in the file, else `2` | Steps to run at once. |
@@ -783,6 +784,16 @@ launchway release formation list | show NAME | create NAME PROJECT@VERSION ... [
 ```
 
 A published release never changes; `yank` withdraws one with a recorded reason. `--override` is for administrators and only for a window, a soak time or a freeze. The same operations are MCP tools (`list_releases`, `get_release`, `propose_next_release_version`, `create_release`, `publish_release`, `promote_release`, `return_to_base`, `get_release_matrix` and the rest: see the [interface parity](interface-parity.md) table) and routes of the [HTTP API](http-api.md#releases).
+## launchway rollout
+Looks into a delivery and steers it. It uses the stored credentials. The server decides who may; the tree and manifests need the viewer role, logs and controls the operator role on the Airfield (environment). See [watching and steering a Launch](../guide/watching-and-steering-a-launch.md).
+launchway rollout status   RUN DEPLOYMENT [--json]
+launchway rollout tree     RUN DEPLOYMENT [--json]
+launchway rollout manifest RUN DEPLOYMENT OBJECT
+launchway rollout logs     RUN DEPLOYMENT (--pod P | --replica-set R | --role stable|Pathfinder (canary)|preview|active | --job J) [--container C] [--previous] [--tail N] [--follow]
+launchway rollout pause|resume|restart RUN DEPLOYMENT --reason TEXT [--object KIND/NS/NAME]
+launchway rollout scale    RUN DEPLOYMENT --replicas N --reason TEXT [--object KIND/NS/NAME]
+launchway rollout promote|promote-full|abort|retry RUN DEPLOYMENT --reason TEXT
+`status` prints the strategy, its steps with the current one marked, the wanted and actual share of real traffic, and which controls are possible now (and why not for the rest); `tree` adds every object with its health, role, replicas and what changed. `logs --follow` reads the live stream; secrets are masked before a line leaves the launch Station (runner). `--reason` is required for every control and is kept in the Logbook; `promote-full` needs one too. The same operations are the MCP tools `get_delivery`, `get_delivery_manifest`, `get_delivery_logs`, `control_delivery` and `control_rollout`.
 
 ## launchway health-sources and launchway models
 

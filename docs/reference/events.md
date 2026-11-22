@@ -98,13 +98,13 @@ and `deploy` holds the details. None of them holds a credential.
 |---|---|---|---|
 | `deploy.waiting_lock` | 11 | a deploy step waits for its Airfield's lock | `environment`, `service`, `holder` (the deployment holding the lock: `deployment`, `run`, `number`, `step`, `version`) |
 | `deploy.opened` | 11 | a deploy step takes the lock and opens a deployment | `id` (`dep_...`), `environment`, `service`, `target`, `application`, `mode`, `version`, `previous`, `deadline` |
-| `deploy.action_done` | 11 | a deploy Station finished an action: commit and sync, or revert | `action` (`apply` or `revert`), `outcome`, `facts` (`repo`, `branch`, `commit`, `changed`, `files`, `revert`, `reverted`, `sync`, `abort`) |
-| `deploy.observing` | 11 | the step waits for what deploy Stations observe | `until` (such as `healthy`), `commit`, `deadline` |
+| `deploy.action_done` | 11 | a launch Station finished an action: commit and sync, or revert | `action` (`apply` or `revert`), `outcome`, `facts` (`repo`, `branch`, `commit`, `changed`, `files`, `revert`, `reverted`, `sync`, `abort`) |
+| `deploy.observing` | 11 | the step waits for what launch Stations observe | `until` (such as `healthy`), `commit`, `deadline` |
 | `deploy.phase` | 11 | what is observed moved to another phase | `phase`, `detail` |
 | `deploy.closed` | 11 | every step of the deployment is done and the lock is released | `id`, `verdict`: `deployed`, `failed`, `rolled_back`, `rollback_failed` or `abandoned` |
 | `deploy.command` | 14 | someone (or a step) asks for promote, promote-full, abort or retry on a rollout | `command` (`id`, `deployment`, `action`, `actor`, `comment`, `origin`, `expect`) |
-| `deploy.command_withdrawn` | 14 | the command is withdrawn before a deploy Station took it | `command` (`id`, `actor`, `detail`) |
-| `deploy.command_taken` | 14 | a deploy Station takes the command, until a time | `command` (`id`, `take`, `runner`, `until`); `runner` on the event |
+| `deploy.command_withdrawn` | 14 | the command is withdrawn before a launch Station took it | `command` (`id`, `actor`, `detail`) |
+| `deploy.command_taken` | 14 | a launch Station takes the command, until a time | `command` (`id`, `take`, `runner`, `until`); `runner` on the event |
 | `deploy.command_done` | 14 | the command was applied, was already applied, was not applied, or failed | `command` (`id`, `result`: `applied`, `already_applied`, `not_applied` or `failed`, `detail`) |
 
 ### Policy events
@@ -121,7 +121,7 @@ The step's `data.verify` holds the fields below.
 | Type | Schema | Written when | Main fields in `data.verify` |
 |---|---|---|---|
 | `verify.started` | 19 | the verification's window begins | `environment`, `service`, `target`, `deployment`, `version`, `start`, `deadline`, `spec` (what is checked), `params` (as resolved), `baseline` (what it is judged against) |
-| `verify.interval` | 19 | a deploy Station read one interval's metrics and logs | `interval`: each metric's readings and the log clusters seen |
+| `verify.interval` | 19 | a launch Station read one interval's metrics and logs | `interval`: each metric's readings and the log clusters seen |
 | `verify.verdict` | 19 | the verification is decided: passed, failed or inconclusive | `verdict` (with the reason for each check), `explanation` (a model's, if one was asked; untrusted text), `pause` (it now waits for a person) |
 | `verify.override` | 19 | a person marked a running or paused verification passed or failed | `outcome` (`passed` or `failed`); the person and the reason are the payload's `actor` and `comment` |
 
@@ -295,7 +295,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.promote_full` | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` |
 | `deployment.abort` | `POST /api/v1/runs/{id}/deployments/{dep}/abort` |
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
-| `deployment.command_outcome` | what a deploy Station did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the Station |
+| `deployment.command_outcome` | what a launch Station did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the Station |
 | `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
 | `release.settings` | `PUT /api/v1/projects/{name}/release-settings`: scheme, tag prefix, changelog file and public setting |
 | `release.create` | `POST /api/v1/projects/{name}/releases`: a draft, from which commit or tag |
@@ -321,6 +321,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `release.formation.advance` | `POST /api/v1/release-formations/{id}/advance` |
 | `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an Abort, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
+| `deployment.inspect` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect` (recorded once every few minutes per person, not at each refresh) |
+| `deployment.manifest` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest` |
+| `deployment.logs` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs` and `/logs/stream` |
+| `deployment.control` | `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` (the reason is in the detail) |
+| `deployment.control_outcome` | what the launch Station (runner) did with a control, recorded when it answers (outcome `ok` or `failed`) |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |
 | `token.revoke` | `DELETE /api/v1/tokens/{id}`, and an admin's `DELETE /api/v1/admin/tokens/{id}` |

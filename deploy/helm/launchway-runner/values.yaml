@@ -3,10 +3,10 @@
 # deploy/README.md, "Connect a Station on another machine or cluster".
 #
 # Required: server.url, and token.existingSecret (build Stations) or deployRunner.token.existingSecret
-# (a deploy Station).
+# (a launch Station).
 #
 # The templates for the Stations themselves (their file, the step namespace, the RBAC of the
-# Kubernetes executor, the Deployments, the deploy Station's RBAC and admission policies) are the
+# Kubernetes executor, the Deployments, the launch Station's RBAC and admission policies) are the
 # same as the launchway chart's: both charts copy them from deploy/helm/shared.
 
 # -- Overrides the chart name in resource names.
@@ -307,18 +307,18 @@ networkPolicy:
 # ---------------------------------------------------------------------------------------------
 # Health sources for verify steps, using the same entries as delivery.verification.sources in the
 # launchway chart. Register the same names, types and projects in the server's configuration;
-# this chart gives their connection details only to the deploy Station.
+# this chart gives their connection details only to the launch Station.
 # ---------------------------------------------------------------------------------------------
 verification:
   sources: null
 
 # ---------------------------------------------------------------------------------------------
-# A deploy Station: does the work of deploy and Return to base steps for one target cluster (Argo CD
+# A launch Station: does the work of deploy and Return to base steps for one target cluster (Argo CD
 # Applications, Argo Rollouts) and runs no scripts. The same values as delivery.deployRunner in
 # the launchway chart, except the token, which here must be an existing Secret.
 # ---------------------------------------------------------------------------------------------
 deployRunner:
-  # -- Run a deploy Station in this cluster, with the token of a deploy Flight line. It serves
+  # -- Run a launch Station in this cluster, with the token of a deploy Flight line. It serves
   # deployRunner.target, which must be this cluster.
   enabled: false
   # -- The target this cluster is, as the server's Airfields name it (Airfields: in its
@@ -334,24 +334,24 @@ deployRunner:
   # -- Namespaces whose Argo Rollouts rollouts deploy steps may watch.
   rolloutNamespaces: []
   # -- GitOps repositories deploy steps may commit to, by name: the same map as deploy.repos
-  # in a deploy Station's file (url, argocd_url, credentials, username, paths, author).
+  # in a launch Station's file (url, argocd_url, credentials, username, paths, author).
   # Credentials name a secret in secretStores, never a value.
   repos: {}
-  # -- Secret stores the deploy Station may read (as runner.secretStores).
+  # -- Secret stores the launch Station may read (as runner.secretStores).
   secretStores: {}
   # -- Ask Argo CD to look at the repository at once after a commit (the refresh
   # annotation). Default (unset): true.
   refresh: null
-  # -- Let the deploy Station call models configured on the servers to explain verification
+  # -- Let the launch Station call models configured on the servers to explain verification
   # verdicts, with keys read from deployRunner.secretStores. Written only when true. Unset: false.
   ai: null
-  # -- The deploy Station's own limits on the work it takes (accept: in its runner.yaml), checked
+  # -- The launch Station's own limits on the work it takes (accept: in its runner.yaml), checked
   # on the Station before anything runs: which projects it serves and which Airfields it
   # deploys to. Written only when set. For example:
   #   accept: { projects: [launchway], Airfields: [launchway-dev, launchway-sandbox], executors: [deploy] }
   accept: null
   rbac:
-    # -- Create the Roles below and bind them to the deploy Station.
+    # -- Create the Roles below and bind them to the launch Station.
     create: true
     # -- Grant patch on the named Applications, needed to request syncs and refreshes. With
     # automated sync and a Git webhook it may be turned off (deploy steps then need
@@ -366,14 +366,31 @@ deployRunner:
     # run page can show the end of a failed analysis job's log and the pods of a rollout. Off
     # by default: logs can hold anything a job prints.
     readPods: false
-    # -- Rollouts the deploy Station may promote, abort and retry (rollout steps, the Sortie
+    # -- Rollouts the launch Station may promote, abort and retry (rollout steps, the Sortie
     # page's buttons, abort_first, on_cancel: abort), by namespace; each namespace must be in
     # rolloutNamespaces. Grants patch on rollouts/status for exactly these names; the
     # admission policy keeps the patch to the fields those commands set. Default (unset):
     # none, and commands are not applied (the Station reports that it may not).
     #   shop: [shop]
     controlRollouts: null
-  # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy Station change
+    # -- Looking into a delivery from the Launch page (each is off by default, and each also
+    # needs the matching setting in the launch Station's targets: deploy.targets.NAME.inspect).
+    # Everything is limited to rolloutNamespaces.
+    inspect:
+      # -- Read the objects a delivery made (pods, ReplicaSets, Services, routes, ConfigMaps,
+      # events, autoscalers and the like), so the Launch page can show the object tree.
+      read: false
+      # -- Read the logs of those pods. Logs can hold anything a container prints.
+      logs: false
+      # -- Read Secrets, only to hide their values wherever they appear (a log line, a
+      # ConfigMap). Their values never leave the launch Station. The broadest right here.
+      secrets: false
+      # -- Workloads the launch Station may pause, resume, restart and scale, by namespace; each
+      # namespace must be in rolloutNamespaces. Grants patch on exactly these names (RBAC cannot
+      # limit a patch to some fields). Default (unset): none.
+      #   shop: [shop]
+      controlWorkloads: null
+  # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the launch Station change
   # only an Application's operation and refresh annotation, never its spec.
   admissionPolicy:
     enabled: true

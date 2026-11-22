@@ -65,6 +65,7 @@ Usage:
   launchway notifications [--limit N]           the log of notifications sent, retried or failed
   launchway deployments options|rollback|review  send a service back after a deployment succeeded ({rollback}); review {emergency_rollbacks}
   launchway release list|show|next|create|publish|promote|...  releases: version, notes, assets, promotion across Airfields, freezes, the report
+  launchway rollout  status|tree|manifest|logs|pause|resume|restart|scale|promote|abort ...  look into a delivery and steer it
   launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
@@ -128,6 +129,7 @@ var commands = map[string]func([]string) error{
 	"notifications":  cmdNotifications,
 	"deployments":    cmdDeployments,
 	"release":        cmdRelease,
+	"rollout":        cmdRollout,
 	"templates":      cmdTemplates,
 	"policy":         cmdPolicy,
 	"waivers":        cmdWaivers,

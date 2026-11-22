@@ -375,6 +375,12 @@ spec:
 {{- $r := .r -}}
 {{- $target := dict "kubernetes" (dict "in_cluster" true) "argocd_namespace" $r.argocdNamespace "applications" $r.applications "rollout_namespaces" ($r.rolloutNamespaces | default list) -}}
 {{- if not (kindIs "invalid" $r.refresh) }}{{ $_ := set $target "refresh" $r.refresh }}{{ end -}}
+{{- /* Only what rbac.inspect grants: the runner's own settings say the same, so the page offers only what works. */ -}}
+{{- $in := $r.rbac.inspect | default dict -}}
+{{- if $in.read }}
+{{- $ins := dict "read" ($in.read | default false) "logs" (and $in.read $in.logs | default false) "control" (and $in.read (not (empty $in.controlWorkloads)) | default false) -}}
+{{- $_ := set $target "inspect" $ins }}
+{{- end -}}
 {{- $file := dict "server" .server "data" "/var/lib/launchway-runner" "secrets" ($r.secretStores | default dict) "deploy" (dict "targets" (dict $r.target $target) "repos" $r.repos) -}}
 {{- /* Only when set: a deploy runner of the version before does not know these settings. */ -}}
 {{- with include "launchway.shared.healthSources" . | fromYaml }}{{ if . }}{{ $_ := set $file "health_sources" . }}{{ end }}{{ end -}}
@@ -486,7 +492,7 @@ subjects:
 {{- range $ns := $r.rolloutNamespaces }}
 ---
 # Read rollouts and their analysis runs (analysis runs have generated names, so they cannot
-# be named here). No pods, no secrets. The only change: the status of the rollouts named in
+# be named here). No pods and no secrets unless rbac.readPods or rbac.inspect say so. The only change: the status of the rollouts named in
 # rbac.controlRollouts, if any (promote, abort and the like are status changes).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -516,6 +522,72 @@ rules:
   {{- with (index ($r.rbac.controlRollouts | default dict) $ns) }}
   - apiGroups: [argoproj.io]
     resources: [rollouts/status]
+    resourceNames: {{ . | toJson }}
+    verbs: [patch]
+  {{- end }}
+  {{- $inspect := $r.rbac.inspect | default dict }}
+  {{- if $inspect.read }}
+  # Looking into a delivery (rbac.inspect.read): the objects its Launch page shows, read-only, in
+  # this namespace only. Secrets are not here (see rbac.inspect.secrets), and nothing can be
+  # changed with these rights.
+  - apiGroups: [""]
+    resources: [pods, services, configmaps, serviceaccounts, persistentvolumeclaims, events]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [replicasets, deployments, statefulsets, daemonsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list]
+  - apiGroups: [argoproj.io]
+    resources: [experiments]
+    verbs: [get, list]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list]
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [httproutes]
+    verbs: [get, list]
+  - apiGroups: [networking.istio.io]
+    resources: [virtualservices, destinationrules]
+    verbs: [get, list]
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [roles, rolebindings]
+    verbs: [get, list]
+  {{- end }}
+  {{- if $inspect.logs }}
+  # Logs of the delivery's pods (rbac.inspect.logs): anything a container prints.
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  {{- end }}
+  {{- if $inspect.secrets }}
+  # The release's Secrets (rbac.inspect.secrets): read so that their values are hidden wherever
+  # they turn up in a log line or a ConfigMap. The values stay in the deploy runner's memory and
+  # are never sent to the server. This is the broadest right here: leave it off unless needed.
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list]
+  {{- end }}
+  {{- with (index ($inspect.controlWorkloads | default dict) $ns) }}
+  # Pause, resume, restart and scale (rbac.inspect.controlWorkloads): patch on exactly these
+  # workloads. RBAC cannot limit a patch to some fields, so this lets the deploy runner change
+  # their spec: name only workloads whose spec the runner should be able to patch.
+  - apiGroups: [argoproj.io]
+    resources: [rollouts]
+    resourceNames: {{ . | toJson }}
+    verbs: [patch]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets]
     resourceNames: {{ . | toJson }}
     verbs: [patch]
   {{- end }}

@@ -1,0 +1,8 @@
+package engine
+
+// What schema 53 (inspect requests) brought, in the shape of an entry of
+// schemaMarkers.
+var schemaMarkersInspect = schemaMarker{
+	schema: schemaInspect, feature: "inspect requests",
+	tables: []string{"inspect_requests", "inspect_chunks"},
+}

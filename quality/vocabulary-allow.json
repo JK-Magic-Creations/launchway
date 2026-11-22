@@ -780,6 +780,18 @@
       "rule": "word:queue/3",
       "contains": "get_work_queue",
       "why": "The name of the MCP tool get_work_queue, part of the interface."
+    },
+    {
+      "path": "cmd/launchway/rollout.go",
+      "rule": "word:canary/2",
+      "contains": "canary",
+      "why": "The role a ReplicaSet has in a rollout (stable, canary, preview, active) is the Kubernetes tool's own value, typed as it is."
+    },
+    {
+      "path": "internal/api/mcp_delivery.go",
+      "rule": "word:canary/2",
+      "contains": "canary",
+      "why": "The role a ReplicaSet has in a rollout (stable, canary, preview, active) is the Kubernetes tool's own value, typed as it is."
     }
   ]
 }

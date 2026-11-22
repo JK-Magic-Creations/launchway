@@ -32,7 +32,7 @@ const (
 // MaxGaps is the number of gaps recorded. It may only go down: closing a gap
 // lowers it, and a new operation must come with its tool and command, not a
 // new gap.
-const MaxGaps = 50
+const MaxGaps = 46
 
 // Row is one API operation.
 type Row struct {

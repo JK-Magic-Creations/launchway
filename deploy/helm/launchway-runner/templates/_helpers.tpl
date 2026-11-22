@@ -167,6 +167,11 @@ CAs needed as well as a private one.
 {{- end -}}
 {{- if not $r.applications }}{{ fail "deployRunner.applications: list which projects may deploy which applications" }}{{ end -}}
 {{- if not $r.repos }}{{ fail "deployRunner.repos: list the GitOps repositories deploy steps may commit to" }}{{ end -}}
+{{- range $ns, $names := (($r.rbac.inspect | default dict).controlWorkloads | default dict) -}}
+{{- if not (has $ns ($r.rolloutNamespaces | default list)) -}}
+{{- fail (printf "deployRunner.rbac.inspect.controlWorkloads names namespace %s, which is not in deployRunner.rolloutNamespaces" $ns) -}}
+{{- end -}}
+{{- end -}}
 {{- range $ns, $names := ($r.rbac.controlRollouts | default dict) -}}
 {{- if not (has $ns ($r.rolloutNamespaces | default list)) -}}
 {{- fail (printf "deployRunner.rbac.controlRollouts names namespace %s, which is not in deployRunner.rolloutNamespaces" $ns) -}}

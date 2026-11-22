@@ -24,6 +24,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v1/config/state-credential` | — | — | — | exempt: the runner protocol: only runners call it, under a lease, to give a step its state credential |
 | `POST /api/runner/v1/deploy/command-done` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/commands` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/deploy/inspect` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/deploy/inspect-chunk` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/deploy/inspect-done` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/observe` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/pull-request` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -417,12 +420,17 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/debrief` | `get_debrief` | `debrief show` | — | equal |
 | `GET /api/v1/runs/{id}/debrief/export` | `get_debrief` | `debrief export` | — | equal |
 | `GET /api/v1/runs/{id}/debrief/summary` | `get_debrief` | `debrief summary` | — | equal |
-| `POST /api/v1/runs/{id}/deployments/{dep}/abort` | `control_rollout` | — | — | gap: launchway has no rollout commands yet |
+| `POST /api/v1/runs/{id}/deployments/{dep}/abort` | `control_rollout` | `rollout abort` | — | equal |
 | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` | `control_rollout` | — | — | gap: withdrawing a queued rollout command is UI only so far |
 | `GET /api/v1/runs/{id}/deployments/{dep}/controls` | `get_deployments` | — | — | gap: launchway has no rollout commands yet |
-| `POST /api/v1/runs/{id}/deployments/{dep}/promote` | `control_rollout` | — | — | gap: launchway has no rollout commands yet |
-| `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` | `control_rollout` | — | — | gap: launchway has no rollout commands yet |
-| `POST /api/v1/runs/{id}/deployments/{dep}/retry` | `control_rollout` | — | — | gap: launchway has no rollout commands yet |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect` | `get_delivery` | `rollout status`, `rollout tree` | — | equal |
+| `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` | `control_delivery` | `rollout pause`, `rollout resume`, `rollout restart`, `rollout scale` | — | equal |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs` | `get_delivery_logs` | `rollout logs` | — | equal |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream` | — | `rollout logs` | — | exempt: a followed log is a server-sent event stream for the browser and the command line (rollout logs --follow); an MCP call returns the tail with get_delivery_logs |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest` | `get_delivery_manifest` | `rollout manifest` | — | equal |
+| `POST /api/v1/runs/{id}/deployments/{dep}/promote` | `control_rollout` | `rollout promote` | — | equal |
+| `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` | `control_rollout` | `rollout promote-full` | — | equal |
+| `POST /api/v1/runs/{id}/deployments/{dep}/retry` | `control_rollout` | `rollout retry` | — | equal |
 | `GET /api/v1/runs/{id}/events` | `wait_for_run` | `runs logs` | — | equal |
 | `GET /api/v1/runs/{id}/findings` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `GET /api/v1/runs/{id}/images` | `list_images` | — | — | gap: launchway has no images command yet |

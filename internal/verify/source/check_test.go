@@ -194,3 +194,38 @@ func TestCheckTCP(t *testing.T) {
 		t.Fatalf("note %q", res.Note)
 	}
 }
+
+// A slow answer fails a call that has max_latency, and every call keeps a
+// short, redacted excerpt of what came back.
+func TestCheckMaxLatencyAndExcerpt(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/slow" {
+			time.Sleep(80 * time.Millisecond)
+		}
+		_, _ = w.Write([]byte(`{"status":"ok","note":"password=hunter2-LWCANARY"}`))
+	}))
+	defer srv.Close()
+	s := checkSources(t, Config{Type: Check, Hosts: []string{"127.0.0.1"}}, nil)
+	fast := healthCheck(srv.URL + "/fast")
+	fast.MaxLatency = pipeline.Duration(2 * time.Second)
+	res, err := runCheck(t, s, fast)
+	if err != nil || len(res.Attempts) == 0 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	for _, a := range res.Attempts {
+		if !a.OK || !strings.Contains(a.Excerpt, `"status":"ok"`) || strings.Contains(a.Excerpt, "hunter2-LWCANARY") {
+			t.Fatalf("a fast answer: %+v", a)
+		}
+	}
+	slow := healthCheck(srv.URL + "/slow")
+	slow.MaxLatency = pipeline.Duration(20 * time.Millisecond)
+	res, err = runCheck(t, s, slow)
+	if err != nil || len(res.Attempts) == 0 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	for _, a := range res.Attempts {
+		if a.OK || !strings.Contains(a.Error, "over max_latency") || a.Status != 200 {
+			t.Fatalf("a slow answer should fail: %+v", a)
+		}
+	}
+}

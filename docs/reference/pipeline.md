@@ -832,7 +832,8 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `name` | Kubernetes name | required | The rollout's name |
 | `namespace` | namespace | required | Its namespace |
 | `until` | text | `healthy` | `healthy`, or `paused`: end the step at the rollout's first indefinite pause. With `paused`, a [`kind: rollout`](#kind-rollout) step naming this deployment must carry it on |
-| `pauses` | text | `wait` | What to do at an indefinite pause on the way to healthy: `wait` (a person promotes from the Sortie page), `promote` (promote each such pause once) or `fail`. Not with `until: paused` |
+| `pauses` | text | `wait` | What to do at an indefinite pause on the way to healthy: `wait` (a person promotes from the Sortie (run) page), `promote` (promote each such pause once) or `fail`. Not with `until: paused` |
+| `unverified` | boolean | `false` | Say that real traffic may reach the new version before a verify step proved it. Without it, `launchway validate` warns when a rollout has no verify step watching it, or when the deploy step waits until the rollout is healthy (after real traffic arrived). See [testing before real traffic](../guide/testing-before-real-traffic.md) |
 
 The key `target` (a rollout on another target) is refused as not available yet.
 
@@ -995,6 +996,7 @@ the limits the launch Station enforces.
 | `headers` | mapping | none | Headers sent as written, at most 10. `Host` sets the request's host, for a service that routes by it. `Authorization` and `Cookie` are refused here |
 | `secret_headers` | mapping | none | Header name to a secret reference (`store`, `key`, `field`); the launch Station reads the value for each interval and it is never shown or recorded |
 | `timeout` | duration | `5s` | One call, 1s to 30s |
+| `max_latency` | duration | none | The slowest answer that counts as healthy: a slower one fails the call even when its status and body are right. 1ms or more, within the timeout |
 | `every` | duration | `5s` | The time between calls, at least `1s`; an interval of `30s` makes six calls |
 | `success` | number | `1` | The share of calls in an interval that must be healthy, above 0 and at most 1. `0.95` allows one failure in twenty. It becomes the metric's `min` unless the metric sets its own bounds |
 | `server_name` | text | | The name to verify in the TLS certificate, when the address is not that name |

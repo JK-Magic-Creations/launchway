@@ -45,7 +45,7 @@ func cmdValidate(args []string) error {
 		return validateOffline(path, nil, false, pipeline.ProjectFacts{}, nil)
 	}
 	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s)\n", path, p.Name, len(p.Steps), len(p.Levels()))
-	for _, w := range append(pipeline.OutputWarnings(p), pipeline.CacheWarnings(p)...) {
+	for _, w := range append(append(pipeline.OutputWarnings(p), pipeline.CacheWarnings(p)...), pipeline.DeliveryWarnings(p)...) {
 		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
 	}
 	for _, n := range p.PathNotes() {

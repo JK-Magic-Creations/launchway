@@ -253,6 +253,12 @@
     },
     {
       "theme": "Delivery",
+      "title": "Watch and steer a delivery",
+      "value": "A Launch page shows every object a delivery made, live, with the logs of any pod (stable and Pathfinder side by side), the rollout's steps and weights, what was measured against what, and pause, restart, scale and an emergency return, each checked, audited and shown only where it works.",
+      "link": "guide/watching-and-steering-a-launch"
+    },
+    {
+      "theme": "Delivery",
       "title": "Rollback after a successful deployment",
       "value": "Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry.",
       "link": "guide/rollback-after-success"

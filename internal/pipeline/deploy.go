@@ -161,6 +161,9 @@ type RolloutRef struct {
 	// Pauses says what to do at an indefinite pause on the way to healthy:
 	// wait for a person (the default; empty means wait), promote, or fail.
 	Pauses string `json:"pauses,omitempty"`
+	// Unverified says the author chose to let real traffic reach the new
+	// version without a verify step proving it first (see DeliveryWarnings).
+	Unverified bool `json:"unverified,omitempty"`
 
 	untilLine, pausesLine int // where until: paused and pauses were written
 }
@@ -287,7 +290,7 @@ var (
 	changeKeys   = []string{"file", "image", "tag", "digest", "format", "set", "value"}
 	syncKeys     = []string{"request", "resources", "prune", "windows", "leftovers"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
-	rolloutKeys  = []string{"name", "namespace", "until", "pauses"}
+	rolloutKeys  = []string{"name", "namespace", "until", "pauses", "unverified"}
 	// Keys of deploy steps that the design has and a later release brings.
 	deployNotYet = map[string]string{
 		"revision": "syncing an application to a revision without a commit arrives in a later release; use write_back",
@@ -837,6 +840,8 @@ func (ps *parser) parseRollout(n *yaml.Node, at string) *RolloutRef {
 			}
 		case "pauses":
 			r.Pauses, r.pausesLine = ps.pausesValue(v, where), v.Line
+		case "unverified":
+			r.Unverified = ps.bool(v, where)
 		}
 	})
 	if n.Kind == yaml.MappingNode && (r.Name == "" || r.Namespace == "") {
