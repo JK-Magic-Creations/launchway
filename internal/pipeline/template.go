@@ -30,6 +30,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/jk-magic-creations/launchway/internal/stepkit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -119,6 +120,7 @@ type Template struct {
 	Steps       []*Step // uses steps included; steps whose if is false are marked
 	Outputs     []templateOutput
 	Loops       []*Loop // the template's loops, expanded; IDs without the use's prefix
+	Custom      *stepkit.Manifest // set when the template is a custom step's (see custom.go)
 }
 
 type templateOutput struct {
@@ -126,7 +128,7 @@ type templateOutput struct {
 	Line               int
 }
 
-var templateKeys = []string{"template", "description", "params", "containers", "steps", "outputs"}
+var templateKeys = []string{"template", "description", "params", "containers", "steps", "outputs", "step_manifest"}
 
 // readTemplate reads a template for one use. Problems with the values the
 // use passes are reported through withProblem, in the file that has the
@@ -164,6 +166,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			ps.add(v, "description", "a description is one line of at most %d characters", MaxDescriptionLen)
 		}
 	}
+	t.Custom = ps.readCustom(nodes[stepkit.TemplateKey])
 	scope := &paramScope{params: map[string]*Param{}, values: map[string]string{}}
 	if v := nodes["params"]; v != nil {
 		t.Params = ps.parseParams(v)
@@ -187,6 +190,9 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		if p == nil {
 			withOK = false
 			msg := unknownParamMessage(name, k, t.Params)
+			if t.Custom != nil {
+				msg = unknownInputMessage(name, k, t.Params)
+			}
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
 		}
@@ -204,6 +210,9 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		withOK = false
 	}
 	t.Values = scope.values
+	if t.Custom != nil && !checkCustomValues(t.Custom, t.Values, withLines, usesLine, withProblem) {
+		withOK = false
+	}
 	if !withOK || len(ps.problems) > 0 {
 		// Reading the steps with missing values would only report the same
 		// problem again in other words.
@@ -226,6 +235,12 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 	}
 	ps.checkArtifacts(p)
 	t.Containers, t.Steps = p.Containers, p.Steps
+	if t.Custom != nil {
+		for _, s := range t.Steps {
+			s.Custom = customOf(t.Custom)
+			s.Custom.Values = stepValues(t.Custom, t.Values)
+		}
+	}
 	if v := nodes["outputs"]; v != nil {
 		t.Outputs = ps.parseOutputs(v, p)
 	}
@@ -429,7 +444,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	if p.Expanded() && len(p.Libraries) == 0 {
 		return p, nil
 	}
-	x := &expander{load: load, vb: vb, used: map[string]bool{}, containerNames: map[string]bool{}, loopLimit: p.maxLoop}
+	x := &expander{load: load, vb: vb, self: vb.self, used: map[string]bool{}, containerNames: map[string]bool{}, loopLimit: p.maxLoop}
 	if x.loopLimit <= 0 {
 		x.loopLimit = DefaultMaxLoopMembers
 	}
@@ -491,6 +506,9 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	// did not show.
 	out.requireDeploy()
 	out.Requires = out.requiresNewer(out.Requires) // step resources, build caches
+	if out.UsesSchemaCustomSteps() {
+		out.Requires = max(out.Requires, SchemaCustomSteps)
+	}
 	out.requireFlow()                              // likewise for the flow control keys a template's step uses
 	if ps := checkFetchLoops(out, true); len(ps) > 0 {
 		return nil, ps
@@ -499,6 +517,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 }
 
 type expander struct {
+	self           *SelfSource // the repository's own steps; nil where its files are not known
 	vb             *varBinding
 	load           TemplateLoader
 	out            *Pipeline
@@ -546,13 +565,23 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			continue
 		}
 		lib, name := sc.lib, s.Uses
+		isSelf := false
 		if sc.lib == nil {
 			var alias string
-			alias, name, _ = strings.Cut(s.Uses, "/")
+			alias, name, isSelf = SplitUses(s.Uses)
 			lib = root.Library(alias)
+			if isSelf {
+				lib = nil
+				if x.self != nil {
+					lib = x.self.Library
+				}
+			}
 		}
 		at := "steps." + s.ID
 		switch {
+		case isSelf && lib == nil:
+			x.problem(sc, s.usesLine, 0, at+".uses", "%s is a step of this repository, and the repository's files are not known here (they are, in a run and in launchway validate run in the repository)", s.Uses)
+			continue
 		case lib == nil:
 			x.problem(sc, s.usesLine, 0, at+".uses", "no library called %q is listed under libraries:", s.Uses)
 			continue
@@ -575,9 +604,20 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			continue
 		}
 		where := fmt.Sprintf("%s in library %s (%s at %s)", TemplatePath(name), lib.Name, lib.Wanted(), short(lib.Commit))
-		data, err := x.load(lib, name)
+		var data []byte
+		var err error
+		if isSelf {
+			where = stepkit.ManifestPath(name) + " in this repository"
+			data, err = TemplateOrStep(x.self.Read, name, true)
+		} else {
+			data, err = x.load(lib, name)
+		}
 		if errors.Is(err, ErrNoTemplate) {
-			x.problem(sc, s.usesLine, 0, at+".uses", "the library %s has no template %s: there is no %s", lib.Name, name, where)
+			if isSelf {
+				x.problem(sc, s.usesLine, 0, at+".uses", "this repository has no step %s: there is no %s", name, where)
+			} else {
+				x.problem(sc, s.usesLine, 0, at+".uses", "the library %s has no template or step %s: there is no %s, and no %s", lib.Name, name, where, stepkit.ManifestPath(name))
+			}
 			continue
 		}
 		if err != nil {
@@ -595,6 +635,9 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		if len(tps) > 0 {
 			for _, tp := range tps {
 				tp.File, tp.Library = TemplatePath(name), lib.Name
+				if isStepText(data) {
+					tp.File = stepkit.ManifestPath(name)
+				}
 				x.problems = append(x.problems, tp)
 			}
 			x.problem(sc, s.usesLine, 0, at+".uses", "the template %s/%s has %d problem%s, listed with its file", lib.Name, name, len(tps), plural(len(tps)))
@@ -606,7 +649,11 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			continue
 		}
 		x.used[lib.Name] = true
-		child := &scope{prefix: sc.prefix + s.ID + "/", lib: lib, file: TemplatePath(name), tmpl: t, steps: t.Steps,
+		file := TemplatePath(name)
+		if isStepText(data) {
+			file = stepkit.ManifestPath(name)
+		}
+		child := &scope{prefix: sc.prefix + s.ID + "/", lib: lib, file: file, tmpl: t, steps: t.Steps,
 			byID: map[string]*Step{}, children: map[string]*scope{}, containers: map[string]string{}}
 		child.stack = append(append([]string{}, sc.stack...), name)
 		for _, ts := range t.Steps {
@@ -808,6 +855,11 @@ func (x *expander) emit(sc *scope) {
 		if sc.group != nil {
 			c.Group = sc.group.ID
 			c.Library = sc.lib.Name
+			if c.Custom != nil {
+				cc := *c.Custom
+				cc.setSource(sc.lib)
+				c.Custom = &cc
+			}
 		}
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]

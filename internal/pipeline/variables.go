@@ -73,6 +73,7 @@ const (
 type varBinding struct {
 	vars Variables
 	used map[string]BoundVariable
+	self *SelfSource
 }
 
 func (b *varBinding) lookup(name string) (BoundVariable, bool) {
@@ -152,7 +153,13 @@ func noValueHint(from string) string {
 // template parameter that names one (from:) takes it when a use gives no
 // value. It also returns the variables it took.
 func ExpandWith(p *Pipeline, load TemplateLoader, vars Variables) (*Pipeline, []BoundVariable, error) {
-	vb := &varBinding{vars: vars}
+	return ExpandWithSelf(p, load, vars, nil)
+}
+
+// ExpandWithSelf is ExpandWith that also knows the files of the repository the pipeline is in,
+// for `uses: ./steps/<name>`.
+func ExpandWithSelf(p *Pipeline, load TemplateLoader, vars Variables, self *SelfSource) (*Pipeline, []BoundVariable, error) {
+	vb := &varBinding{vars: vars, self: self}
 	out, err := expandBound(p, load, vb)
 	return out, vb.Used(), err
 }

@@ -118,6 +118,12 @@ func (ps *parser) parseUseStep(at string, s *Step, keys map[string]*yaml.Node) {
 		}
 	}
 	lib, name, cross := strings.Cut(s.Uses, "/")
+	if _, stepName, self := SplitUses(s.Uses); self && ps.tmpl == nil {
+		if !ValidStepName(stepName) {
+			ps.add(keys["uses"], at+".uses", "%q is not a step name; write uses: ./steps/<name>, the directory of the step", clipText(stepName, 60))
+		}
+		return
+	}
 	switch {
 	case ps.tmpl != nil && cross:
 		ps.add(keys["uses"], at+".uses", "a template can use templates of its own library only, written by name alone (uses: %s); "+
@@ -307,6 +313,9 @@ func hasKey(m *yaml.Node, key string) bool {
 func (ps *parser) checkUses(p *Pipeline) {
 	for _, s := range p.Steps {
 		if !s.IsUse() || ps.tmpl != nil {
+			continue
+		}
+		if _, _, self := SplitUses(s.Uses); self {
 			continue
 		}
 		lib, _, ok := strings.Cut(s.Uses, "/")
