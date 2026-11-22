@@ -356,6 +356,7 @@ Kubernetes API.
 | `runner.kubernetes.namespaceLabels` | map | `pod-security.kubernetes.io/enforce: restricted` | Labels of a namespace the chart creates. Use `baseline` when `restricted` is false |
 | `runner.kubernetes.helperImage` | string | `""` (busybox 1.37) | The step pods' helper image; needs `sh` and `tar` |
 | `runner.kubernetes.serviceAccount` | string | `""` (none, no token mounted) | The ServiceAccount step pods run as |
+| `runner.kubernetes.priorityClassName` | string | `""` (none) | The PriorityClass copied into every step pod, so that builds give way to your services when the node runs short of memory. Not the same as `runner.priorityClassName`, which is for the Station pod itself |
 | `runner.kubernetes.nodeSelector` | map | `{}` | Node selector for step pods (`runner.nodeSelector` is for the runner pods) |
 | `runner.kubernetes.cpu` | string or number | `""` (`50m`) | CPU request of each step container, unless the pipeline asks |
 | `runner.kubernetes.memory` | string or number | `""` (`64Mi`) | Memory request of each step container, unless the pipeline asks |

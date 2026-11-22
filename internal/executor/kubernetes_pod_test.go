@@ -170,3 +170,31 @@ func TestKubeSecuritySettingsChecked(t *testing.T) {
 		t.Fatalf("restricted: true: %+v %v", o, err)
 	}
 }
+
+// priority_class_name is copied into the pod's spec when set, and the pod has none when it is empty; a
+// name that is not a DNS subdomain is refused when the options are read.
+func TestKubePodCarriesThePriorityClassWhenSet(t *testing.T) {
+	pod, _ := testKube(t, KubernetesOptions{PriorityClassName: "builds-low"}).podSpec("p", "run_1", podTestSpecs)
+	if pod.Spec.PriorityClassName != "builds-low" {
+		t.Fatalf("priority class %q", pod.Spec.PriorityClassName)
+	}
+	pod, _ = testKube(t, KubernetesOptions{}).podSpec("p", "run_1", podTestSpecs)
+	if pod.Spec.PriorityClassName != "" {
+		t.Fatalf("a pod with no setting got priority class %q", pod.Spec.PriorityClassName)
+	}
+}
+
+func TestKubePriorityClassMustBeADNSSubdomain(t *testing.T) {
+	for _, bad := range []string{"Builds", "low priority", "-low", "a_b", strings.Repeat("a", 254)} {
+		o := KubernetesOptions{PriorityClassName: bad}
+		if err := o.setDefaults(); err == nil || !strings.Contains(err.Error(), "priority_class_name") {
+			t.Errorf("%q was accepted (%v)", bad, err)
+		}
+	}
+	for _, good := range []string{"low", "builds-low", "system.low-1"} {
+		o := KubernetesOptions{PriorityClassName: good}
+		if err := o.setDefaults(); err != nil {
+			t.Errorf("%q refused: %v", good, err)
+		}
+	}
+}

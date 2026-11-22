@@ -301,3 +301,39 @@ func TestRunnerChartJoinTokens(t *testing.T) {
 		})
 	}
 }
+
+// runner.kubernetes.priorityClassName reaches the Station's file as priority_class_name in both charts, loads, and
+// is absent when it is not set, so that nothing changes for an installation that does not use it.
+func TestChartsPassThePriorityClassOfStepPods(t *testing.T) {
+	file := func(docs []map[string]any) string {
+		for _, d := range docs {
+			if d["kind"] != "ConfigMap" {
+				continue
+			}
+			labels := d["metadata"].(map[string]any)["labels"].(map[string]any)
+			if c, _ := labels["app.kubernetes.io/component"].(string); c == "runner" {
+				return d["data"].(map[string]any)["runner.yaml"].(string)
+			}
+		}
+		t.Fatal("no runner.yaml rendered")
+		return ""
+	}
+	const base = "runner:\n  labels: [remote]\n  kubernetes: { namespace: lw-steps%s }\n"
+	for _, c := range []struct {
+		chart, values string
+	}{
+		{mainChart, "postgresql: { enabled: true }\n" + base},
+		{runnerChart, "server: { url: \"http://t-launchway.lw.svc:8080\" }\ntoken: { existingSecret: t-launchway-runner-token }\n" + base},
+	} {
+		with := file(helmTemplate(t, c.chart, "lw", strings.Replace(c.values, "%s", ", priorityClassName: builds-low", 1)))
+		if !strings.Contains(with, "priority_class_name: builds-low") {
+			t.Errorf("%s: the setting did not reach the file:\n%s", c.chart, with)
+		}
+		if _, err := LoadRunner(writeTemp(t, with)); err != nil {
+			t.Errorf("%s: the file does not load: %v", c.chart, err)
+		}
+		if without := file(helmTemplate(t, c.chart, "lw", strings.Replace(c.values, "%s", "", 1))); strings.Contains(without, "priority_class_name") {
+			t.Errorf("%s: an unset setting appears in the file:\n%s", c.chart, without)
+		}
+	}
+}

@@ -195,6 +195,7 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.helper_image` | image | `docker.io/library/busybox:1.37` | The helper container's image. It needs `sh` and `tar` |
 | `kubernetes.service_account` | text | none | The service account step pods run as. Without it, no token is mounted |
 | `kubernetes.node_selector` | mapping | none | Node labels step pods must match |
+| `kubernetes.priority_class_name` | text | none | The PriorityClass copied into every step pod, so that builds give way to your services when the node runs short of memory. It must be a name Kubernetes accepts (a DNS subdomain); the class itself must exist, with a low value |
 | `kubernetes.cpu` | quantity | `50m` | CPU request of each container, unless the pipeline's container asks for its own |
 | `kubernetes.memory` | quantity | `64Mi` | Memory request of each container, unless the pipeline asks |
 | `kubernetes.memory_limit` | quantity | none | Memory limit of each container that does not ask for memory |

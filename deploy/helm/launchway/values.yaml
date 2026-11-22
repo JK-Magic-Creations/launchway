@@ -650,6 +650,9 @@ runner:
     serviceAccount: ""
     # -- Node selector for step pods (runner.nodeSelector is for the Station pods).
     nodeSelector: {}
+    # -- The PriorityClass copied into every step pod, so that builds give way to your services when
+    # the node runs short of memory (give it a low value). Default: none, and the pods are unchanged.
+    priorityClassName: ""
     # -- CPU request of each container in a step pod, unless the pipeline asks for its own.
     # Default 50m.
     cpu: ""

@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/httpstream"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -35,21 +36,24 @@ import (
 
 // KubernetesOptions configure the Kubernetes executor.
 type KubernetesOptions struct {
-	Kubeconfig       string            `yaml:"kubeconfig"`      // default: the usual rules, or in-cluster
-	Context          string            `yaml:"context"`         // default: the current context
-	Namespace        string            `yaml:"namespace"`       // must exist
-	HelperImage      string            `yaml:"helper_image"`    // holds the workspace; needs sh and tar
-	ServiceAccount   string            `yaml:"service_account"` // default: none mounted
-	NodeSelector     map[string]string `yaml:"node_selector"`
-	CPU              string            `yaml:"cpu"`          // request per container
-	Memory           string            `yaml:"memory"`       // request per container
-	MemoryLimit      string            `yaml:"memory_limit"` // optional limit per container
-	MaxCPU           string            `yaml:"max_cpu"`      // the most a container may ask for, checked before its pod is made
-	MaxMemory        string            `yaml:"max_memory"`   // likewise; see checkResources
-	ImagePullSecrets []string          `yaml:"image_pull_secrets"`
-	KeepFailed       string            `yaml:"keep_failed"`   // a grace period before a failed or canceled run's pod is removed; default 0 (see removable)
-	MaxPodAge        string            `yaml:"max_pod_age"`   // the longest any step pod may live, whatever the server says about its run; default 24h
-	StartTimeout     string            `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
+	Kubeconfig     string            `yaml:"kubeconfig"`      // default: the usual rules, or in-cluster
+	Context        string            `yaml:"context"`         // default: the current context
+	Namespace      string            `yaml:"namespace"`       // must exist
+	HelperImage    string            `yaml:"helper_image"`    // holds the workspace; needs sh and tar
+	ServiceAccount string            `yaml:"service_account"` // default: none mounted
+	NodeSelector   map[string]string `yaml:"node_selector"`
+	// PriorityClassName is copied into the spec of every step pod, so that under memory pressure the node
+	// evicts builds before services (give it a PriorityClass with a low value). Empty: the pod has none.
+	PriorityClassName string   `yaml:"priority_class_name"`
+	CPU               string   `yaml:"cpu"`          // request per container
+	Memory            string   `yaml:"memory"`       // request per container
+	MemoryLimit       string   `yaml:"memory_limit"` // optional limit per container
+	MaxCPU            string   `yaml:"max_cpu"`      // the most a container may ask for, checked before its pod is made
+	MaxMemory         string   `yaml:"max_memory"`   // likewise; see checkResources
+	ImagePullSecrets  []string `yaml:"image_pull_secrets"`
+	KeepFailed        string   `yaml:"keep_failed"`   // a grace period before a failed or canceled run's pod is removed; default 0 (see removable)
+	MaxPodAge         string   `yaml:"max_pod_age"`   // the longest any step pod may live, whatever the server says about its run; default 24h
+	StartTimeout      string   `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
 
 	// Restricted, true unless set to false, makes step pods meet the Pod
 	// Security Standard "restricted": every container, services included,
@@ -200,6 +204,12 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 // setDefaults fills in the settings that were left out, and refuses
 // security settings that would not mean what they say.
 func (o *KubernetesOptions) setDefaults() error {
+	if o.PriorityClassName != "" {
+		if errs := validation.IsDNS1123Subdomain(o.PriorityClassName); len(errs) > 0 {
+			return fmt.Errorf("kubernetes: priority_class_name %q is not a name Kubernetes accepts (a DNS subdomain: lower-case letters, digits, '-' and '.'): %s",
+				o.PriorityClassName, strings.Join(errs, "; "))
+		}
+	}
 	if o.HelperImage == "" {
 		o.HelperImage = "docker.io/library/busybox:1.37"
 	}
@@ -587,6 +597,7 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 			AutomountServiceAccountToken:  ptr(k.o.ServiceAccount != ""),
 			ServiceAccountName:            k.o.ServiceAccount,
 			NodeSelector:                  k.o.NodeSelector,
+			PriorityClassName:             k.o.PriorityClassName,
 			SecurityContext:               podSecurity,
 			InitContainers:                inits,
 			Containers:                    cs,

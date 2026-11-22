@@ -330,6 +330,7 @@
       "namespace": true,
       "namespaceLabels": true,
       "nodeSelector": true,
+      "priorityClassName": true,
       "restricted": true,
       "runAsGroup": true,
       "runAsUser": true,
