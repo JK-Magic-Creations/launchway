@@ -190,7 +190,10 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	back, err := url.Parse(redirect)
-	if err != nil {
+	// Only an absolute http(s) address is sent back to: never a relative
+	// reference, a javascript: URL or anything else a browser would treat
+	// as a place to go.
+	if err != nil || (back.Scheme != "http" && back.Scheme != "https") || back.Host == "" {
 		p.refuse(w, http.StatusBadRequest, "invalid_request", "bad redirect_uri")
 		return
 	}
