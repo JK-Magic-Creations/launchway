@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // Distinctive credentials, so a test can tell if one leaks into an error.
@@ -504,7 +506,7 @@ func TestS3RetryHonoursContext(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("got %v, want the context's deadline", err)
 	}
-	if time.Since(start) > 5*time.Second {
+	if time.Since(start) > testlib.Slow(5*time.Second) {
 		t.Fatalf("waited %v despite the context", time.Since(start))
 	}
 }

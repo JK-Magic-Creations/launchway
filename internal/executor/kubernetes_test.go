@@ -11,6 +11,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // These tests need a real cluster whose test namespace enforces Pod Security
@@ -136,7 +138,7 @@ func TestKubernetesCancel(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected the context error")
 	}
-	if time.Since(start) > 20*time.Second {
+	if time.Since(start) > testlib.Slow(20*time.Second) {
 		t.Fatalf("took %s to stop", time.Since(start))
 	}
 }

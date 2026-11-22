@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // synthetic loads a layered graph straight into the tables: repositories
@@ -109,7 +111,7 @@ func TestPerformanceOfTheQueriesOnALargeGraph(t *testing.T) {
 		}
 	})
 	t.Logf("  reached %d nodes, %d deployments, truncated %v %s", im.Total, len(im.Deployments), im.Truncated, im.Reason)
-	if d > 30*time.Second {
+	if d > testlib.Slow(30*time.Second) {
 		t.Fatalf("impact took %v", d)
 	}
 	timed("impact, default limits", func() {

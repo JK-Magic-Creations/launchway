@@ -183,16 +183,25 @@ func runStarter(t *testing.T, fixture, flight, with string, wantTests int, wantC
 }
 
 func TestStarterGoLibraryRunsGreen(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "go", "gofmt")
 	runStarter(t, "go", "go-library", "vuln_scan: false", 2, true)
 }
 
 func TestStarterNodeLibraryRunsGreen(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "node", "npm")
 	runStarter(t, "node", "node-library", "", 2, true)
 }
 
 func TestStarterPythonLibraryRunsGreen(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "python3")
 	if out, err := exec.Command("python3", "-m", "venv", "--help").CombinedOutput(); err != nil {
 		t.Skipf("python3 has no venv module: %s", out)
@@ -213,16 +222,25 @@ func TestStarterHelmChartRunsGreen(t *testing.T) {
 }
 
 func TestStarterGoServiceRunsGreenWithoutImage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "go", "gofmt")
 	runStarter(t, "go", "go-service", "vuln_scan: false, image: false, license_scan: false", 2, false)
 }
 
 func TestStarterNodeAppRunsGreenWithoutImage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "node", "npm")
 	runStarter(t, "node", "node-app", "image: false, audit: false, license_scan: false", 2, false)
 }
 
 func TestStarterPythonServiceRunsGreenWithoutImage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and tests a whole starter project; the full run (without -short) runs it")
+	}
 	need(t, "python3")
 	if out, err := exec.Command("python3", "-m", "venv", "--help").CombinedOutput(); err != nil {
 		t.Skipf("python3 has no venv module: %s", out)

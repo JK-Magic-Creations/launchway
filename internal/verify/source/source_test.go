@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"github.com/jk-magic-creations/launchway/internal/verify"
 )
 
@@ -313,7 +314,7 @@ func TestTimeoutDownRedirectAndSize(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: got %v, want %q", name, err, want)
 		}
-		if d := time.Since(began); d > 3*time.Second {
+		if d := time.Since(began); d > testlib.Slow(3*time.Second) {
 			t.Errorf("%s took %s", name, d)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"github.com/jk-magic-creations/launchway/internal/work"
 )
 
@@ -67,7 +68,9 @@ func TestFiftyThousandItems(t *testing.T) {
 		}
 		d := time.Since(start)
 		t.Logf("%s: %v", name, d.Round(time.Millisecond))
-		if d > limit {
+		// Under the race detector the times are logged but not asserted (2 to 3 times slower on a
+		// hosted runner, and the factor differs per query); the result checks inside f still run.
+		if d > limit && !testlib.SkipTimingUnderRace() {
 			t.Errorf("%s took %v, over %v", name, d, limit)
 		}
 	}

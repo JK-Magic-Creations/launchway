@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 func parseString(t *testing.T, s string, lim Limits) (*Report, error) {
@@ -140,7 +142,7 @@ func TestDeepNestingStopsPromptly(t *testing.T) {
 	sb.WriteString("</testsuite></testsuites>")
 	start := time.Now()
 	r := mustParse(t, sb.String(), Limits{})
-	if d := time.Since(start); d > 2*time.Second {
+	if d := time.Since(start); d > testlib.Slow(2*time.Second) {
 		t.Errorf("took %s", d)
 	}
 	if r.Counts.Total != 1 || !strings.Contains(r.Warning, "more than 64 deep") {
@@ -174,7 +176,7 @@ func TestBillionLaughsIsNotExpanded(t *testing.T) {
 	sb.WriteString("]>\n<testsuite name=\"&lol9;\"><testcase name=\"boom &lol9;\"><failure message=\"&lol9;\">&lol9;</failure></testcase></testsuite>\n")
 	start := time.Now()
 	r := mustParse(t, sb.String(), Limits{})
-	if d := time.Since(start); d > time.Second {
+	if d := time.Since(start); d > testlib.Slow(time.Second) {
 		t.Errorf("took %s", d)
 	}
 	c := r.Cases[0]
@@ -540,7 +542,7 @@ func TestTimeoutStopsParsing(t *testing.T) {
 	gj := generateGoJSON(100000)
 	start = time.Now()
 	r, err = Parse(context.Background(), gj, Limits{Timeout: 20 * time.Millisecond})
-	if d := time.Since(start); d > time.Second {
+	if d := time.Since(start); d > testlib.Slow(time.Second) {
 		t.Errorf("took %s", d)
 	}
 	if err == nil && !strings.HasPrefix(r.Warning, "parsing stopped after 20ms; results after line ") {
@@ -668,7 +670,7 @@ func TestLargeInputsParseQuickly(t *testing.T) {
 		data := in.gen(in.cases)
 		start := time.Now()
 		r, _ := parseMallocs(t, data)
-		if d := time.Since(start); d > 5*time.Second || r.Warning != "" {
+		if d := time.Since(start); d > testlib.Slow(5*time.Second) || r.Warning != "" {
 			t.Errorf("%s took %s (warning %q)", in.name, d, r.Warning)
 		}
 	}

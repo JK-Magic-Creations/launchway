@@ -180,6 +180,61 @@ The exit status is the step's. When neither Podman nor Docker is installed it sa
 takes several minutes and several gigabytes of memory, so run it once, after `make check` passes and
 your work is committed, and not in a loop.
 
+## Timing tests and the race detector
+
+Some tests assert a wall-clock limit: a scale test that must answer within 300 ms with 200,000
+Sorties in the database, a speed test of a list of 50,000 work items, a "stops within ten seconds"
+test. The race detector makes code 5 to 20 times slower (more for work that touches a lot of
+memory), and the hosted CI machines are slower again, so a limit written for a normal build cannot
+hold there. The rules:
+
+- A limit is asserted exactly as written in a normal build (no `-race`). Nothing is relaxed there.
+- Under `-race`, a "must finish within" limit is multiplied by `testlib.RaceFactor` (10) through
+  `testlib.Slow(limit)` (package `internal/testlib`). A limit on the *least* a thing must take, such
+  as a wait that has to happen, is never scaled.
+- A scale or speed test whose slowdown differs a lot from query to query (the hosted measurements were
+  2 to 3 times for the work-item queries and 24 to 36 times for the Sortie queries) does not assert its
+  limits under `-race` at all: it still seeds its data, runs every call, checks every result and logs
+  the times, and tests `testlib.SkipTimingUnderRace()` before it fails on time. In a normal build
+  `TestAttentionAndSearchAtScale` stretches its 300 ms limits, by at most 8 times, on a machine that is
+  measurably slower than the reference one (`testlib.Scaled` and `testlib.MachineFactor`, which time a
+  fixed piece of CPU work on two goroutines); on a machine as fast as the reference the limit is exactly
+  300 ms, and the test logs the factor it used. These are
+  `TestAttentionAndSearchAtScale` (`internal/engine`) and `TestFiftyThousandItems` (`internal/work`).
+- A test that is a long end-to-end run skips itself with `testing.Short()`, and the hosted race jobs
+  run with `-short`. Those tests run in the full non-race run.
+
+Skipped under `-short` (so not in the race jobs, but in the full run): `TestServicePlanDeliversEndToEnd`,
+`TestStarterGoLibraryRunsGreen`, `TestStarterNodeLibraryRunsGreen`, `TestStarterPythonLibraryRunsGreen`,
+`TestStarterGoServiceRunsGreenWithoutImage`, `TestStarterNodeAppRunsGreenWithoutImage`,
+`TestStarterPythonServiceRunsGreenWithoutImage`, `TestStepRidesThroughAnOutage`,
+`TestOutageLongerThanTheOldRetryWindow` (all `internal/api`), `TestKillTheServerAtEveryStepOfAPush` and
+`TestPushToAServerThatNeverAnswersFailsWithinABound` (`internal/forge/storage`), plus the ones that
+already did: `TestAttentionAndSearchAtScale`, `TestFiftyThousandItems`, the three end-to-end tests in
+`cmd/launchway`, the live-latency test and the work-script test in `internal/api`.
+
+### How the hosted jobs are split
+
+`.github/workflows/ci.yml` runs, side by side:
+
+| Job | What it runs | Race detector |
+|---|---|---|
+| `test` | `go vet ./...` and `go test -count=1 -timeout 18m ./...`: the pipeline's own `test` step, every test, every limit | no |
+| `race` (10 matrix entries) | `scripts/ci/race-group.sh GROUP`: `api` in 3 shards, `engine` and `storage` in 2 each (by test name), `forge` (the rest of `internal/forge`), `rest` in 2 shards (by package); `-short`, 20 minute package timeout, 25 minute job timeout | yes |
+| `postgres` | `internal/engine`, `internal/source`, `internal/api` against a PostgreSQL service | no |
+| `containers` | `internal/executor` with real containers | no |
+| `supply-chain` | vulnerabilities, licenses, script and workflow lint, charts, reproducible release build | n/a |
+
+`internal/forge/storagespike` is not raced (it starts the test binary as each Git hook); the `test` job
+runs it. To run one group the way the hosted job does, `scripts/ci/race-group.sh api:1/3` (it needs 8 GB
+of free memory and several minutes; `DRY_RUN=1` prints what it would run). A result of the `test` job
+is comparable with the in-cluster pipeline and with `make test-like-ci`; a result of a `race` job is a
+different question (data races) and is not.
+
+`release.yml` is gated on `checks` (vulnerabilities, licenses, scripts and workflows, charts, vet) and
+`tests` (the same full non-race run as the `test` job). It does not wait for the race jobs, which run
+on every push to `main`.
+
 ## Security gates
 
 `make check` stays fast. The Inspections (security scans) need the network (vulnerability databases, images) or

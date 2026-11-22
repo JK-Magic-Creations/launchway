@@ -10,6 +10,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 const outputGate = `
@@ -307,7 +308,7 @@ func TestWaitingLeaseWakesForARetryThatIsDue(t *testing.T) {
 	if err != nil || j == nil || j.Attempt != 2 {
 		t.Fatalf("%+v %v", j, err)
 	}
-	if took := time.Since(start); took < 900*time.Millisecond || took > 3*time.Second {
+	if took := time.Since(start); took < 900*time.Millisecond || took > testlib.Slow(3*time.Second) {
 		t.Fatalf("handed out after %v: it should come when the retry is due, 1s", took)
 	}
 }

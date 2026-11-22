@@ -490,7 +490,7 @@ func TestUnauthenticatedCloneOfAPrivateRepositoryFailsWithoutPrompting(t *testin
 	hostedRepo(t, e, "acme/shop")
 	start := time.Now()
 	out, err := git(t, t.TempDir(), "clone", "-q", e.srv.URL+"/acme/shop.git", "c")
-	if err == nil || time.Since(start) > 20*time.Second {
+	if err == nil || time.Since(start) > testlib.Slow(20*time.Second) {
 		t.Fatalf("clone of a private repository without credentials: %v after %v\n%s", err, time.Since(start), out)
 	}
 	if !strings.Contains(out, "401") && !strings.Contains(strings.ToLower(out), "authentication") && !strings.Contains(out, "terminal prompts disabled") && !strings.Contains(out, "could not read") {

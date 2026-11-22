@@ -253,7 +253,7 @@ license-check: tools
 # hosted runner's own (newer) shellcheck cannot report findings that a laptop does not.
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
 SHELL_SCRIPTS = $(shell git ls-files -co --exclude-standard 'packaging/*.sh' 'deploy/test/install/*.sh' \
-	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh' 'scripts/chart-determinism.sh')
+	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh' 'scripts/chart-determinism.sh' 'scripts/ci/race-group.sh')
 lint-scripts:
 	$(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS)
 

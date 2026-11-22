@@ -8,11 +8,78 @@ permissions:
   contents: read
 
 jobs:
+  # The whole suite exactly as the project's own pipeline runs it (.launchway/pipeline.yaml, step
+  # `test`; `make test-like-ci`): no race detector, the same flags, the same per-package timeout. This
+  # is the job whose result is comparable with the in-cluster one, and the one that asserts every
+  # timing limit (the scale and speed tests) at full strictness.
   test:
     runs-on: ubuntu-latest
-    # A hard bound for the whole job: a package that hangs fails its own -timeout below, and the job
-    # can never run longer than this (one run burned 75 minutes before it was stopped).
-    timeout-minutes: 100
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web UI
+        run: cd web && npm ci --no-audit --no-fund && npm run build
+      - name: Build the documentation into the binary (the Learn area)
+        run: make learn
+      - name: Vet and test (SQLite, no race detector, as the pipeline runs it)
+        run: |
+          go vet ./...
+          go test -count=1 -timeout 18m ./...
+      - name: Build the binary
+        run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
+
+  # The same code under the race detector, in groups that run side by side, each with its own job
+  # timeout and its own go test -timeout, so no single job needs more than about 20 minutes (the
+  # packages of the longest ones, internal/api and internal/engine, are split by test name). They run
+  # with -short: the tests that are long end-to-end runs or scale tests (listed in
+  # docs/development/quality-gates.md, "Timing tests and the race detector") skip themselves, and the
+  # job above runs every one of them. A test that asserts a wall-clock limit scales it under the
+  # detector (internal/testlib.Slow) or does not assert it (testlib.SkipTimingUnderRace).
+  race:
+    name: race (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # GROUP[:SHARD/SHARDS], see scripts/ci/race-group.sh. api, engine and storage are one package each,
+        # split by test name; rest is every package no other group names, split by package.
+        group: ["api:1/3", "api:2/3", "api:3/3", "engine:1/2", "engine:2/2", "storage:1/2", "storage:2/2", "forge", "rest:1/2", "rest:2/2"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web UI
+        run: cd web && npm ci --no-audit --no-fund && npm run build
+      - name: Build the documentation into the binary (the Learn area)
+        run: make learn
+      - name: Test under the race detector (${{ matrix.group }})
+        env:
+          GROUP: ${{ matrix.group }}
+        run: scripts/ci/race-group.sh "$GROUP"
+
+  # The packages that can run on PostgreSQL as well as SQLite, against a real server.
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17-alpine
@@ -39,25 +106,26 @@ jobs:
         run: cd web && npm ci --no-audit --no-fund && npm run build
       - name: Build the documentation into the binary (the Learn area)
         run: make learn
-      - name: Vet and test (SQLite)
-        run: |
-          go vet ./...
-          # Every package under the race detector except the storage spike, which starts the test
-          # binary again as each git hook (seconds per start when race-instrumented) and is raced
-          # for no benefit; it runs on its own below. A package gets 45 minutes, not the job's hour.
-          mapfile -t pkgs < <(go list ./... | grep -v '/internal/forge/storagespike$')
-          go test -race -count=1 -timeout 45m "${pkgs[@]}"
-          go test -count=1 -timeout 10m ./internal/forge/storagespike
-      - name: Test with several servers (PostgreSQL)
+      - name: Test with several servers (PostgreSQL, no race detector)
         env:
           LAUNCHWAY_TEST_POSTGRES: postgres://launchway:launchway@127.0.0.1:5432/launchway?sslmode=disable
-        run: go test -race -count=1 -timeout 45m ./internal/engine/ ./internal/source/ ./internal/api/
+        run: go test -count=1 -timeout 20m ./internal/engine/ ./internal/source/ ./internal/api/
+
+  # Real containers: the executor against the container runtime the runner has.
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
       - name: Test with real containers
         env:
           LAUNCHWAY_TEST_CONTAINERS: "1"
         run: go test -count=1 -timeout 30m ./internal/executor/
-      - name: Build the binary
-        run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
 
   # Supply chain: known vulnerabilities in the code's dependencies (govulncheck), their licenses,
   # the packaging scripts (shellcheck), the workflows (actionlint), both Helm charts, and a

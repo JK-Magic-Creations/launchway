@@ -108,6 +108,9 @@ func (e *outageEnv) newSpoolRunner(name string) *runner.Runner {
 // completes, its log is complete and in order, its result is recorded once,
 // and the log says the server could not be reached.
 func TestStepRidesThroughAnOutage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits out real outage windows; the full run (without -short) runs it")
+	}
 	for name, mode := range map[string]int32{"503": 1, "connection dropped": 2} {
 		t.Run(name, func(t *testing.T) {
 			e := setupGated(t)
@@ -202,6 +205,9 @@ func lineCount(log, text string) int {
 // An outage longer than the 15 seconds a runner used to give up after: the
 // step's real outcome is still recorded, once, and not turned into a failure.
 func TestOutageLongerThanTheOldRetryWindow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits out real outage windows; the full run (without -short) runs it")
+	}
 	e := setupGated(t)
 	e.startRunner(t, e.newSpoolRunner("r1"))
 	id := e.start(t, outagePipeline)

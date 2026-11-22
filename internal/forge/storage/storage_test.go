@@ -14,6 +14,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 var blobKinds = []string{"fs", "db"}
@@ -81,6 +82,9 @@ func TestPushAndFetchAcrossServers(t *testing.T) {
 // Kill -9 of the server at every step of a push: the retry succeeds, nothing
 // acknowledged is lost, no ref points at missing objects.
 func TestKillTheServerAtEveryStepOfAPush(t *testing.T) {
+	if testing.Short() {
+		t.Skip("long, and the second asserts a wall-clock bound; the full run (without -short) runs it")
+	}
 	for _, kind := range blobKinds {
 		t.Run(kind, func(t *testing.T) {
 			w := newWorld(t, kind, false)
@@ -682,7 +686,7 @@ func TestPushToADeadServerFailsPromptly(t *testing.T) {
 	if r.Acked {
 		t.Fatal("a push to a dead server was acknowledged")
 	}
-	if d := time.Since(start); d > 30*time.Second {
+	if d := time.Since(start); d > testlib.Slow(30*time.Second) {
 		t.Fatalf("the push took %v to fail", d)
 	}
 }
@@ -690,6 +694,9 @@ func TestPushToADeadServerFailsPromptly(t *testing.T) {
 // A server that is alive but never answers (a handler stuck) is given up on by
 // the client's idle limit: the push fails within a bound, not never.
 func TestPushToAServerThatNeverAnswersFailsWithinABound(t *testing.T) {
+	if testing.Short() {
+		t.Skip("long, and the second asserts a wall-clock bound; the full run (without -short) runs it")
+	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -708,7 +715,7 @@ func TestPushToAServerThatNeverAnswersFailsWithinABound(t *testing.T) {
 	c.commit(1000)
 	start := time.Now()
 	r := c.push(&proc{URL: "http://" + ln.Addr().String()}, "rep1", testFault{}, "main:refs/heads/main")
-	if r.Acked || time.Since(start) > 80*time.Second {
+	if r.Acked || time.Since(start) > testlib.Slow(80*time.Second) {
 		t.Fatalf("acked=%v after %v", r.Acked, time.Since(start))
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"github.com/jk-magic-creations/launchway/internal/verify/source/sourcetest"
 )
 
@@ -104,7 +105,7 @@ func downQuickly(t *testing.T, s *Sources, name, u string, q Query) {
 	if err == nil || !IsUnavailable(err) || !strings.Contains(err.Error(), "could not connect to the source") {
 		t.Fatalf("source down: %v", err)
 	}
-	if d := time.Since(began); d > 5*time.Second {
+	if d := time.Since(began); d > testlib.Slow(5*time.Second) {
 		t.Fatalf("source down took %s to notice", d)
 	}
 	t.Logf("source down: %v", err)
@@ -203,7 +204,7 @@ func TestContainersPrometheus(t *testing.T) {
 	began := time.Now()
 	_, err = query(t, s, "slow", Query{Kind: Metric, Text: "up", Start: start, End: end})
 	wantErr(t, err, "slow: the source did not answer within 500ms")
-	if d := time.Since(began); d > 2*time.Second {
+	if d := time.Since(began); d > testlib.Slow(2*time.Second) {
 		t.Fatalf("the slow source took %s", d)
 	}
 	_, err = query(t, s, "garbage", Query{Kind: Metric, Text: "up", Start: start, End: end})
@@ -371,7 +372,7 @@ func TestContainersClickHouse(t *testing.T) {
 	if err == nil || !IsUnavailable(err) || !(strings.Contains(err.Error(), "did not finish the query within 1s") || strings.Contains(err.Error(), "did not answer within 1s")) {
 		t.Fatalf("slow statement: %v", err)
 	}
-	if d := time.Since(began); d > 3*time.Second {
+	if d := time.Since(began); d > testlib.Slow(3*time.Second) {
 		t.Fatalf("the slow statement took %s", d)
 	}
 	_, err = query(t, s, "wrong", Query{Kind: Metric, Statement: "by_level", Params: map[string]string{"limit": "1"}, Start: start, End: end})
@@ -487,7 +488,7 @@ func TestContainersPostgres(t *testing.T) {
 	if err == nil || !IsUnavailable(err) || !strings.Contains(err.Error(), "within 1s") {
 		t.Fatalf("slow: %v", err)
 	}
-	if d := time.Since(began); d > 3*time.Second {
+	if d := time.Since(began); d > testlib.Slow(3*time.Second) {
 		t.Fatalf("the slow statement took %s", d)
 	}
 	_, err = query(t, s, "wrong", Query{Kind: Metric, Statement: "nextval", Start: start, End: end})

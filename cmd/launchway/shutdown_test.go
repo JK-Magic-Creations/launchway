@@ -12,6 +12,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // A stopping server reports not ready at once, keeps serving while it
@@ -106,7 +107,7 @@ func TestShutdownDrainsGracefully(t *testing.T) {
 	}
 
 	<-runnerStopping
-	if code := <-poll; code != http.StatusNoContent || time.Since(pollStart) > 10*time.Second {
+	if code := <-poll; code != http.StatusNoContent || time.Since(pollStart) > testlib.Slow(10*time.Second) {
 		t.Fatalf("long poll: %d after %s", code, time.Since(pollStart))
 	}
 	time.Sleep(300 * time.Millisecond) // the server is now waiting for the slow request

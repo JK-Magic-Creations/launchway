@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/ai/aitest"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // testKey is built at run time so no key-shaped string is in the source.
@@ -325,7 +326,7 @@ func TestRateLimitExhausted(t *testing.T) {
 	start := time.Now()
 	_, err = (&ai.Client{}).Call(context.Background(), m, testKey, ai.Request{Prompt: "p"})
 	wantKind(t, err, ai.ErrRateLimited, "would pass the call's time limit of 5s")
-	if time.Since(start) > 2*time.Second || len(srv2.Requests()) != 1 {
+	if time.Since(start) > testlib.Slow(2*time.Second) || len(srv2.Requests()) != 1 {
 		t.Errorf("waited %s, %d requests", time.Since(start), len(srv2.Requests()))
 	}
 }
@@ -337,7 +338,7 @@ func TestTimeoutAndCancel(t *testing.T) {
 	start := time.Now()
 	_, err := fastClient().Call(context.Background(), m, "", ai.Request{Prompt: "p"})
 	wantKind(t, err, ai.ErrTimeout, "model local: no answer within 300ms")
-	if d := time.Since(start); d > 3*time.Second {
+	if d := time.Since(start); d > testlib.Slow(3*time.Second) {
 		t.Errorf("took %s", d)
 	}
 
