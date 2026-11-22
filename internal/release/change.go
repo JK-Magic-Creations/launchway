@@ -22,6 +22,9 @@ type Change struct {
 	Labels  []string `json:"labels,omitempty"`
 	URL     string   `json:"url,omitempty"`
 	Breaks  bool     `json:"breaking,omitempty"`
+	// Parts are the subjects of the commits a merged pull request brought. They are not listed on their own; they
+	// count when the pull request itself carries no marker (a feature built from `feat:` commits is a feature).
+	Parts []string `json:"parts,omitempty"`
 	Section string   `json:"section,omitempty"` // filled by Classify
 }
 
@@ -82,6 +85,18 @@ func Classify(c Change) (section, why string) {
 		return SecFeature, "a feature"
 	case hasLabel(c.Labels, "bug", "fix", "bugfix", "patch") || typ == "fix" || typ == "perf" || typ == "revert":
 		return SecFix, "a fix"
+	}
+	if len(c.Parts) > 0 {
+		best, why := SecOther, ""
+		rank := map[string]int{SecOther: 0, SecDeps: 1, SecFix: 2, SecFeature: 3, SecSecurity: 4, SecBreaking: 5}
+		for _, part := range c.Parts {
+			if sec, _ := Classify(Change{Title: part}); rank[sec] > rank[best] {
+				best, why = sec, "its commits include "+sec
+			}
+		}
+		if best != SecOther {
+			return best, why
+		}
 	}
 	return SecOther, "no feature or fix marker"
 }

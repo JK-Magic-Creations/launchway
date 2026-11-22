@@ -31,6 +31,8 @@ type CommitInfo struct {
 	Author  string
 	Time    int64 // milliseconds
 	Parents int
+	// Parts are the subjects of the commits a merged pull request brought.
+	Parts []string
 }
 
 // TagInfo says how a tag stands.
@@ -138,6 +140,7 @@ func (m *Manager) CommitsBetween(ctx context.Context, name, from, to string) ([]
 	}
 	var list []CommitInfo
 	var joined [][2]string
+	var joinedBy []int // the index in list of the merge commit each pair belongs to
 	for _, rec := range strings.Split(out, "\x1e") {
 		rec = strings.TrimLeft(rec, "\n")
 		if rec == "" {
@@ -151,16 +154,20 @@ func (m *Manager) CommitsBetween(ctx context.Context, name, from, to string) ([]
 		list = append(list, CommitInfo{SHA: f[0], Parents: len(strings.Fields(f[1])), Author: f[2], Time: ts * 1000, Subject: f[4], Body: strings.TrimSpace(f[5])})
 		if ps := strings.Fields(f[1]); len(ps) == 2 && mergePR.MatchString(f[4]) {
 			joined = append(joined, [2]string{ps[0], ps[1]})
+			joinedBy = append(joinedBy, len(list)-1)
 		}
 	}
 	// The commits a merged pull request brought are part of that pull request: listing them again beside it would
 	// say each change twice in the notes.
 	if len(joined) > 0 {
 		inPull := map[string]bool{}
-		for _, j := range joined {
-			if out, err := gitOut(ctx, p.dir, "rev-list", "--max-count=500", j[0]+".."+j[1]); err == nil {
-				for _, c := range strings.Fields(out) {
-					inPull[c] = true
+		for n, j := range joined {
+			if out, err := gitOut(ctx, p.dir, "log", "--max-count=500", "--format=%H%x1f%s", j[0]+".."+j[1]); err == nil {
+				for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+					if h, subj, ok := strings.Cut(line, "\x1f"); ok {
+						inPull[h] = true
+						list[joinedBy[n]].Parts = append(list[joinedBy[n]].Parts, subj)
+					}
 				}
 			}
 		}
@@ -195,7 +202,7 @@ func ChangesFromCommits(commits []CommitInfo, pullURL func(n int) string) []rele
 			if title == "" {
 				title = c.Subject
 			}
-			ch := release.Change{Kind: "pull", Ref: n, SHA: c.SHA, Title: title, Body: c.Body, Author: c.Author}
+			ch := release.Change{Kind: "pull", Ref: n, SHA: c.SHA, Title: title, Body: c.Body, Author: c.Author, Parts: c.Parts}
 			if pullURL != nil {
 				ch.URL = pullURL(n)
 			}
