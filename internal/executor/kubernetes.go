@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/httpstream"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -204,11 +203,8 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 // setDefaults fills in the settings that were left out, and refuses
 // security settings that would not mean what they say.
 func (o *KubernetesOptions) setDefaults() error {
-	if o.PriorityClassName != "" {
-		if errs := validation.IsDNS1123Subdomain(o.PriorityClassName); len(errs) > 0 {
-			return fmt.Errorf("kubernetes: priority_class_name %q is not a name Kubernetes accepts (a DNS subdomain: lower-case letters, digits, '-' and '.'): %s",
-				o.PriorityClassName, strings.Join(errs, "; "))
-		}
+	if err := o.checkPriorityClass(); err != nil {
+		return err
 	}
 	if o.HelperImage == "" {
 		o.HelperImage = "docker.io/library/busybox:1.37"
