@@ -749,8 +749,9 @@ runner:
     # -- Files per step attempt.
     # Unset: the built-in default, 100.
     maxFiles:
-    # -- MiB read of one file; a larger one is cut to this.
-    # Unset: the built-in default, 10.
+    # -- MiB read of one file; a larger one is cut to this (or to what is left of maxTotalMiB, if
+    # that is less). A cut report says so, and the tests in the part that was kept are shown.
+    # Unset: the built-in default, 64.
     maxFileMiB:
     # -- MiB read of all of a step attempt's files together (and at most what the servers
     # accept: config.tests.maxUploadMiB).

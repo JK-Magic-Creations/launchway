@@ -284,7 +284,7 @@ totals stay, and the Sortie says so. Coverage files are bounded the same way.
 | `reports.max_coverage_files_per_project` | server | 2000000 | source files' coverage a Flight keeps; the oldest runs' go first |
 | `reports.origin` | server | unset | a separate origin that alone serves HTML reports |
 | `runner.reports.max_files` | Station | 100 | files collected per step attempt (the first, in name order), for tests and for coverage |
-| `runner.reports.max_file_mib` | Station | 10 | MiB read of one file; a larger one is cut, and what was read is still used |
+| `runner.reports.max_file_mib` | Station | 64 | MiB read of one file (or of what is left of `max_total_mib`, if that is less); a larger one is cut, and what was read is still used. The Tests page and `runs tests` then say "the report was larger than the limit; N tests in the part that was kept", and a test that began in the cut-off part is missing, never marked as errored |
 | `runner.reports.max_total_mib` | Station | 20 | MiB read of all of an attempt's files |
 
 With the Helm chart these are `config.tests.*`, `config.reports.*` (camel case, such as

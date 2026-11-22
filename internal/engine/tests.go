@@ -240,6 +240,7 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 		lim := testreport.DefaultLimits()
 		lim.MaxCases = max(room, 1)
 		lim.Timeout = min(lim.Timeout, left)
+		lim.InputCut = f.Cut
 		rep, err := testreport.Parse(ctx, f.Data, lim)
 		if err != nil {
 			tf.Error = cleanText(err.Error(), maxReportText)
@@ -249,11 +250,15 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 		tf.Format, tf.Cases = rep.Format, rep.Counts.Total
 		tf.Warning = cleanText(rep.Warning, maxReportText)
 		if f.Cut {
-			cut := fmt.Sprintf("the runner kept only the first %s of it", sizeText(int64(len(f.Data))))
+			// The report is only its start. The tests in that part are counted and shown; a test that began and
+			// shows no result there is missing, never errored.
+			size := sizeText(int64(len(f.Data)))
 			if f.Size > int64(len(f.Data)) {
-				cut = fmt.Sprintf("the runner kept only the first %s of its %s", sizeText(int64(len(f.Data))), sizeText(f.Size))
+				size = fmt.Sprintf("%s of its %s", size, sizeText(f.Size))
 			}
+			cut := fmt.Sprintf("the report was larger than the limit; %d tests in the part that was kept (the first %s)", rep.Counts.Total, size)
 			tf.Warning = joinText(cut, tf.Warning)
+			s.note(cut + ": " + tf.Path)
 			s.Truncated = true
 		}
 		c := rep.Counts

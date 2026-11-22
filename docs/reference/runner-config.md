@@ -96,7 +96,7 @@ secrets:
     dir: /var/run/launchway-secrets
 reports:
   max_files: 100
-  max_file_mib: 10
+  max_file_mib: 64
   max_total_mib: 20
 ```
 
@@ -380,7 +380,7 @@ Limits on the report files collected after each step. `0` means the default.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `reports.max_files` | whole number | `100` | Files collected per step attempt, the first in name order |
-| `reports.max_file_mib` | whole number | `10` | MiB read of one file; a larger one is cut. At most 1024 |
+| `reports.max_file_mib` | whole number | `64` | MiB read of one file; a larger one is cut to this, or to what is left of `max_total_mib` if that is less. A cut report is shown with the words "the report was larger than the limit; N tests in the part that was kept", and a test that began in the cut-off part is missing, not errored. At most 1024 |
 | `reports.max_total_mib` | whole number | `20` | MiB read of all of an attempt's files. At most 1024, and no more than the server accepts ([`tests.max_upload_mib`](server-config.md#tests)) |
 
 ## Images

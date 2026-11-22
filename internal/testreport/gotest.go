@@ -650,7 +650,13 @@ func (p *goPkg) release() {
 func (g *goParser) finishAll() {
 	for _, p := range g.pkgOrder {
 		if !p.finished {
-			g.closePkg(p, false, "")
+			if g.lim.InputCut {
+				// The stream was cut at a size limit: a test that began and has no result here may well have
+				// passed in the part that was never read. It is missing, not errored.
+				p.finished = true
+			} else {
+				g.closePkg(p, false, "")
+			}
 			p.release()
 		}
 	}

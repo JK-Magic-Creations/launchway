@@ -57,7 +57,7 @@ kubernetes:
 secrets: {}                   # see Secrets
 reports:                      # test report files collected after each step; see Test reports
   max_files: 100
-  max_file_mib: 10
+  max_file_mib: 64
   max_total_mib: 20
 images: {}                    # builders and registries for image steps; see Container images
 ```

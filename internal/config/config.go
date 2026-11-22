@@ -472,7 +472,7 @@ func (c *Config) Pools(sharedToken string) ([]Pool, error) {
 // Zero means the default.
 type ReportsConfig struct {
 	MaxFiles    int `yaml:"max_files"`     // files per step attempt; default 100
-	MaxFileMiB  int `yaml:"max_file_mib"`  // MiB read of one file; a larger one is cut; default 10
+	MaxFileMiB  int `yaml:"max_file_mib"`  // MiB read of one file; a larger one is cut; default 64
 	MaxTotalMiB int `yaml:"max_total_mib"` // MiB of all of them together; default 20
 }
 

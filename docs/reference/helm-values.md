@@ -380,7 +380,7 @@ Kubernetes API.
 | `runner.readinessProbe` | object | `GET /readyz`, every 10s | A runner that cannot reach the servers is not ready, which holds back a rollout that would replace working runners |
 | `runner.extraArgs` | list | `[]` | Extra arguments for `launchway runner`. [Flags](runner-config.md#how-settings-are-read) override the rendered file |
 | `runner.reports.maxFiles` | integer or null | unset (100) | Written as `reports.max_files` |
-| `runner.reports.maxFileMiB` | integer or null | unset (10) | Written as `reports.max_file_mib` |
+| `runner.reports.maxFileMiB` | integer or null | unset (64) | Written as `reports.max_file_mib` |
 | `runner.reports.maxTotalMiB` | integer or null | unset (20) | Written as `reports.max_total_mib` |
 | `runner.images.builders` | list | `[]` | BuildKit daemons for image steps: `[{ name, address, serverName, platforms, projects }]`. Unset, runners take no image steps. Set it only once every runner is upgraded |
 | `runner.images.tlsSecret` | string | `""` | A Secret with `ca.crt`, `tls.crt` and `tls.key`, mounted at `/var/run/launchway/buildkit`. Required for `tcp://` builders |

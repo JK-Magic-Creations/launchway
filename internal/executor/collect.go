@@ -35,7 +35,7 @@ type CollectLimits struct {
 // Defaults for CollectLimits.
 const (
 	DefaultCollectFiles     = 100
-	DefaultCollectFileBytes = 10 << 20
+	DefaultCollectFileBytes = 64 << 20
 	DefaultCollectBytes     = 20 << 20
 )
 

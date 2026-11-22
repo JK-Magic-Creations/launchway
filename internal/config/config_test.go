@@ -346,7 +346,7 @@ runner:
 	}
 	// Left out, the defaults.
 	c, _ = Load(filepath.Join(dir, "missing.yaml"))
-	if rl, _ := c.Runner.Reports.Limits(); rl.MaxFiles != 100 || rl.MaxFileBytes != 10<<20 || rl.MaxBytes != 20<<20 {
+	if rl, _ := c.Runner.Reports.Limits(); rl.MaxFiles != 100 || rl.MaxFileBytes != 64<<20 || rl.MaxBytes != 20<<20 {
 		t.Fatalf("default report limits %+v", rl)
 	}
 	for _, bad := range []string{"tests: { max_upload_mib: -1 }\n", "tests: { max_upload_mib: 5000 }\n",

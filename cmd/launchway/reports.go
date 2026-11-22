@@ -64,6 +64,13 @@ func (cl *client) tests(args []string) error {
 			fmt.Fprintf(cl.out, "; %d new since #%d", sum.NewFailures, sum.Previous.Number)
 		}
 		fmt.Fprintln(cl.out)
+		for _, st := range sum.Steps {
+			for _, f := range st.Files {
+				if strings.Contains(f.Warning, "the report was larger than the limit") {
+					fmt.Fprintf(cl.out, "  %s: %s: %s\n", st.Step, f.Path, f.Warning)
+				}
+			}
+		}
 		for _, c := range page.Cases {
 			name := c.Name
 			if c.Variant != "" {

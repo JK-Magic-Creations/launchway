@@ -226,6 +226,9 @@ type Limits struct {
 	MaxNameBytes    int           // default 1000, for Suite and Name; File gets at most 500
 	MaxDepth        int           // default 64: XML element nesting, and JSON nesting
 	Timeout         time.Duration // default 10s for the whole parse
+	// InputCut says the data is only the start of a larger file, cut at a size limit: a test that began and shows
+	// no result is missing, not errored.
+	InputCut bool
 
 	MaxSteps         int   // default 200 steps per case, nested ones included
 	MaxStepTextBytes int   // default 8192: a step's doc string or log
