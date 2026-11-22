@@ -129,7 +129,11 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: s.pushNotice(c, repo, r)})
+	notice := s.pushNotice(c, repo, r)
+	if old := repoSubject(r.PathValue("owner"), strings.TrimSuffix(r.PathValue("name"), ".git")); old != repo.Path {
+		notice = withMovedNotice(notice, movedNotice(old, repo))
+	}
+	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: notice})
 	if q.svc == githttp.ReceivePack && !q.advertise {
 		s.gitPushed(r.Context(), s.clientAddr(r), c, repo, res)
 	}
@@ -227,6 +231,9 @@ type gitDecision struct {
 	unauth, audit bool
 	// failed is a fault of the server, not a decision.
 	failed error
+	// movedFrom is the old address the request used, when the repository is
+	// at another now (the client is told).
+	movedFrom string
 }
 
 // gitDecide finds the repository and decides whether this caller may do this
@@ -240,6 +247,12 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 		return gitDecision{failed: err}
 	}
 	d := gitDecision{repo: repo}
+	if !found {
+		// The address a repository had before it was renamed or transferred: serve it where it is now, and say so.
+		if m, ok := s.movedRepo(ctx, q.path); ok {
+			d.movedFrom, d.repo, repo, found, q.path = q.path, m, m, true, m.Path
+		}
+	}
 	deny := func(code int, msg string) gitDecision {
 		d.code, d.msg, d.audit = code, msg, true
 		return d

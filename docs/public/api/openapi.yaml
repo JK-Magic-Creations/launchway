@@ -9638,7 +9638,7 @@ paths:
                 - repositories
             x-launchway-access: repo-viewer
         patch:
-            description: Changes visibility, default_branch, archived, or renames with owner and name. The old address stops working.
+            description: 'Changes visibility, default_branch, archived, or renames with owner and name. The old address keeps working until another repository takes it: Git over HTTPS and SSH is served from where the repository is now and says so, the API and web pages answer 308 with the new address (only to someone who may read it there). Moving it to another owner needs the admin role on the new address too. Tokens, deploy keys, webhooks, mirrors, merge rules and Flights follow it.'
             operationId: patch_api_v1_repositories_owner_name
             parameters:
                 - in: path

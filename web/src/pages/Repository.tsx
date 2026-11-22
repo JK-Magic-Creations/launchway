@@ -5,6 +5,7 @@ import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
 import { RepositorySettings } from "./Repositories";
 import { terms } from "../terms";
 import { RepoTabs } from "../components/RepoTabs";
+import { followMove } from "../movedRepo";
 
 // The imported history is a chunk of its own: it loads when its tab is opened.
 const ImportedHistory = lazy(() => import("./ImportedHistory"));
@@ -22,7 +23,7 @@ function span(s: number): string {
 export function RepositoryPage({ path, tab }: { path: string; tab: "settings" | "mirrors" | "history" }) {
   const [repo, setRepo] = useState<Repository | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const load = useCallback(() => { mirrorsApi.repository(path).then((r) => { setRepo(r); setError(null); }).catch(setError); }, [path]);
+  const load = useCallback(() => { mirrorsApi.repository(path).then((r) => { followMove(path, r.path); setRepo(r); setError(null); }).catch(setError); }, [path]);
   useEffect(load, [load]);
   return (
     <div className="page">

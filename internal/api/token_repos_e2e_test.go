@@ -192,8 +192,8 @@ func TestRepoTokenFollowsRenameAndForgetsDelete(t *testing.T) {
 	if got := gitStatus(e, tok, "/acme/store", "git-upload-pack"); got != 200 {
 		t.Errorf("the token after the rename: %d", got)
 	}
-	if got := gitStatus(e, tok, "/acme/shop", "git-upload-pack"); got != 404 {
-		t.Errorf("the old name after the rename: %d", got)
+	if got := gitStatus(e, tok, "/acme/shop", "git-upload-pack"); got != 200 {
+		t.Errorf("the old name after the rename (it keeps working until another repository takes it): %d", got)
 	}
 	// Another repository made under the old name is not covered.
 	hostedRepo(t, e, "acme/shop")

@@ -157,3 +157,14 @@ func (h *Hosting) audit(action, target, detail string) {
 		h.log.Warn("hosting maintenance: the Logbook line was not written", "err", err)
 	}
 }
+
+// ResolveAlias finds the live repository that used to be at an address (before a rename or a transfer), until
+// another repository takes the address.
+func (h *Hosting) ResolveAlias(ctx context.Context, path string) (forge.Repository, bool) {
+	r, ok, err := h.Forge.ResolveAlias(ctx, path)
+	if err != nil {
+		h.log.Warn("looking up an old repository address", "path", path, "err", err)
+		return forge.Repository{}, false
+	}
+	return r, ok
+}

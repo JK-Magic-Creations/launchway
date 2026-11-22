@@ -55,8 +55,11 @@ type ForgeHosting struct {
 	// finds a repository from its ID, which the pull request service names
 	// repositories by.
 	Pulls *pulls.Service
-	// Trash is the trash of deleted repositories (nil: not available).
+	// Trash is the trash of deleted repositories (nil: not available). Aliases
+	// finds the repository that used to be at an old address (nil: old
+	// addresses do not work).
 	Trash    TrashService
+	Aliases  AliasService
 	RepoByID func(ctx context.Context, id string) (forge.Repository, error)
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
@@ -230,6 +233,10 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		if in.Name != nil {
 			name = *in.Name
 		}
+		if dest := repoSubject(owner, name); dest != path && !s.authorize(identityFrom(r), auth.AdministerProject, dest) {
+			writeErr(w, http.StatusForbidden, "you need the admin role on "+dest+" to move a repository there")
+			return
+		}
 		if _, err := p.Rename(ctx, path, owner, name); err != nil {
 			s.failForge(w, err)
 			return
@@ -275,7 +282,15 @@ func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int,
 	if s.Forge == nil {
 		return http.StatusNotFound, featureOff
 	}
-	return s.checkRepo(r.Context(), id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
+	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
+	if m, ok := s.movedRepo(r.Context(), path); ok {
+		if isGitRequest(r) {
+			path = m.Path // Git over HTTP under an old address: the decision is made for the repository where it is now
+		} else if code, msg, ok := s.redirectToMoved(id, r, m); ok {
+			return code, msg
+		}
+	}
+	return s.checkRepo(r.Context(), id, a, path)
 }
 
 // checkRepo applies a repository access class. A repository someone may not

@@ -28,7 +28,7 @@ describe("repository general settings", () => {
   it("renames, says what stops working, and opens the new address", async () => {
     const changed = vi.fn();
     render(<RepoGeneral repo={repo} admin onChanged={changed} />);
-    expect(screen.getByText(/do not redirect/)).toBeTruthy();
+    expect(screen.getByText(/keeps working, for Git/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "store" } });
     fireEvent.click(screen.getByRole("button", { name: "Rename" }));
     await waitFor(() => expect(changed).toHaveBeenCalled());

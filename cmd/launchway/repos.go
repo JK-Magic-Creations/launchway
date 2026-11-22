@@ -191,7 +191,7 @@ func (cl *client) reposUpdate(args []string) error {
 	vis := fs.String("visibility", "", "private, internal or public")
 	branch := fs.String("branch", "", "the default branch")
 	archived := fs.Bool("archived", false, "archive the repository (no pushes); --archived=false brings it back")
-	rename := fs.String("rename-to", "", "OWNER/NAME to rename or move it to; the old address stops working")
+	rename := fs.String("rename-to", "", "OWNER/NAME to rename or move it to; the old address keeps working until another repository takes it")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
