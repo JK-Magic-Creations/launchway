@@ -111,6 +111,7 @@ func (s *Server) reportRun(ctx context.Context, rep *reportedStates, sum *engine
 		}
 	}
 	if sum.PullRequest > 0 && sum.Status.Terminal() {
+		s.withTotals(sum)
 		if ok, err := s.Hosts.ReportSummary(ctx, sum.Project, sum.PullRequest, summaryBody(sum, link)); err != nil {
 			s.Log.Warn("the pull request summary could not be written to the outside host", "project", sum.Project, "error", err)
 		} else if ok {
@@ -137,8 +138,32 @@ func summaryBody(sum *engine.RunSummary, link string) string {
 	if len(failed) > 0 {
 		fmt.Fprintf(&b, "\nFailed: %s\n", strings.Join(failed, ", "))
 	}
+	if t := sum.Tests; t != nil && t.Total > 0 {
+		fmt.Fprintf(&b, "Tests: %d passed, %d failed, %d skipped of %d.\n", t.Passed, t.Failed+t.Errored, t.Skipped, t.Total)
+	}
+	if f := sum.Findings; f != nil && f.Total > 0 {
+		fmt.Fprintf(&b, "Findings: %d (%d critical, %d high, %d medium, %d low).\n", f.Total, f.Critical, f.High, f.Medium, f.Low)
+	}
 	if link != "" {
 		fmt.Fprintf(&b, "\n[Open the Sortie](%s)\n", link)
 	}
 	return b.String()
+}
+
+// withTotals gives a finished run's summary the test totals and findings
+// counts the run page shows, when the live update did not carry them.
+func (s *Server) withTotals(sum *engine.RunSummary) {
+	if s.Engine == nil {
+		return
+	}
+	if sum.Tests == nil {
+		if rt, err := s.Engine.RunTests(sum.ID); err == nil && rt != nil {
+			sum.Tests = rt.Totals
+		}
+	}
+	if sum.Findings == nil {
+		if rf, err := s.Engine.RunFindings(sum.ID, engine.FindingQuery{}); err == nil && rf != nil {
+			sum.Findings = rf.Counts
+		}
+	}
 }

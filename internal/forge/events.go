@@ -48,4 +48,8 @@ type Event struct {
 	// Fork says the proposal's source is another repository: its run follows
 	// the restricted pull-request rule.
 	Fork bool `json:"fork,omitempty"`
+	// Author is who opened the proposal (Actor is who caused this event), and
+	// URL is where the host shows it.
+	Author string `json:"author,omitempty"`
+	URL    string `json:"url,omitempty"`
 }

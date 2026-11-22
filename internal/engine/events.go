@@ -416,6 +416,13 @@ type Trigger struct {
 	Author     string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// The pull request as its host described it (an outside Git host only):
+	// the title, who opened it, whether it is a draft, and where the host
+	// shows it. Fork, below, is set from the same answer.
+	PullRequestTitle  string `json:"pull_request_title,omitempty"`
+	PullRequestAuthor string `json:"pull_request_author,omitempty"`
+	PullRequestURL    string `json:"pull_request_url,omitempty"`
+	PullRequestDraft  bool   `json:"pull_request_draft,omitempty"`
 	// Fork says the pull request is from a repository other than the
 	// project's own; its build caches are isolated (see cacheScopes). The
 	// forge integration sets it.

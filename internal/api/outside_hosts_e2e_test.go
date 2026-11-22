@@ -1,8 +1,11 @@
 package api
 
 import (
+	"sync"
+
 	"context"
 	"encoding/json"
+	"github.com/jk-magic-creations/launchway/internal/source"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -219,5 +222,60 @@ func TestOutsideSourceGivesTheConnectionsCredentialOnlyToAttachedFlights(t *test
 	}
 	if _, ok, err := e.api.Credential(context.Background(), "not-attached"); ok || err != nil {
 		t.Fatalf("a project that is not attached got a credential: %v %v", ok, err)
+	}
+}
+
+// With no webhook arriving, the watcher asks the host about pull requests; what it learns (title, author, draft,
+// fork, address) is noted for the project's poller. A connection that receives deliveries is left alone.
+func TestOutsideWatcherPollsQuietConnections(t *testing.T) {
+	e, h := hostsEnv(t)
+	sha := strings.Repeat("d", 40)
+	h.Lock()
+	h.Pulls = append(h.Pulls, map[string]any{"number": 9, "title": "Retry the hook", "state": "open", "draft": true, "html_url": "https://git.example.com/acme/app/pull/9",
+		"user": map[string]any{"login": "dana"},
+		"head": map[string]any{"ref": "fix", "sha": sha, "repo": map[string]any{"full_name": "mallory/app"}},
+		"base": map[string]any{"ref": "main", "sha": strings.Repeat("a", 40), "repo": map[string]any{"full_name": "acme/app"}}})
+	h.Unlock()
+	cursors := &sync.Map{}
+	e.api.pollQuietFlights(context.Background(), cursors, 0)
+	got, ok := e.api.Projects.PullNote("pay-hooks", 9)
+	if !ok || got.Title != "Retry the hook" || got.Author != "dana" || !got.Draft || !got.Fork || got.Head != sha || got.Base != "main" || got.URL != "https://git.example.com/acme/app/pull/9" {
+		t.Fatalf("note = %+v %v", got, ok)
+	}
+	// A delivery just now: the connection is not polled (the pull request is not asked about again).
+	h.Lock()
+	h.Pulls = h.Pulls[:0]
+	h.Unlock()
+	e.api.Projects.NotePullRequest("pay-hooks", source.PullRequestInfo{Number: 9, Head: sha, Title: "kept"})
+	if _, err := e.api.Hosts.Store().SeeDelivery(context.Background(), connID(t, e), "d-1"); err != nil {
+		t.Fatal(err)
+	}
+	e.api.pollQuietFlights(context.Background(), cursors, time.Hour)
+	if got, _ := e.api.Projects.PullNote("pay-hooks", 9); got.Title != "kept" {
+		t.Fatalf("a connection with deliveries was polled: %+v", got)
+	}
+}
+
+func connID(t *testing.T, e *authEnv) string {
+	t.Helper()
+	cs, err := e.api.Hosts.Store().Connections(context.Background())
+	if err != nil || len(cs) != 1 {
+		t.Fatalf("connections %v %v", cs, err)
+	}
+	return cs[0].ID
+}
+
+func TestSummaryCommentCarriesTestAndFindingTotals(t *testing.T) {
+	sum := &engine.RunSummary{Number: 4, Status: engine.RunFailed, SHA: strings.Repeat("c", 40),
+		Tests:    &engine.TestTotals{Total: 120, Passed: 115, Failed: 3, Errored: 1, Skipped: 1},
+		Findings: &engine.FindingCounts{Total: 5, Critical: 1, High: 2, Medium: 1, Low: 1}}
+	b := summaryBody(sum, "https://lw.example.com/runs/run_1")
+	for _, w := range []string{"Tests: 115 passed, 4 failed, 1 skipped of 120.", "Findings: 5 (1 critical, 2 high, 1 medium, 1 low)."} {
+		if !strings.Contains(b, w) {
+			t.Errorf("missing %q in\n%s", w, b)
+		}
+	}
+	if strings.Contains(summaryBody(&engine.RunSummary{Number: 1, SHA: sum.SHA}, ""), "Tests:") {
+		t.Error("totals shown when there are none")
 	}
 }

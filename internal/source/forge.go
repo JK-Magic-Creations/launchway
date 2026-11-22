@@ -27,6 +27,15 @@ type PullRequestInfo struct {
 	Head string
 	// Base is the branch the pull request would be merged into.
 	Base string
+	// The rest is what a host that keeps the project's code says about the
+	// pull request; the host's own words, shown with the run.
+	Title  string
+	Author string
+	Draft  bool
+	// Fork says the head lives in another repository: the run is restricted.
+	Fork bool
+	// URL is where the host shows the pull request.
+	URL string
 }
 
 // Forge is a project's connection to its Git host.

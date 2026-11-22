@@ -303,3 +303,74 @@ func (s *Service) CheckedClone(ctx context.Context, project string) (CloneAuth, 
 	}
 	return ca, true, nil
 }
+
+// PullRequest reads one pull request of a Flight's repository from its host;
+// ok is false when the project is not attached.
+func (s *Service) PullRequest(ctx context.Context, project string, number int) (forge.Proposal, bool, error) {
+	p, _, repo, err := s.repoOf(ctx, project)
+	if errors.Is(err, ErrNotAttached) {
+		return forge.Proposal{}, false, nil
+	}
+	if err != nil {
+		return forge.Proposal{}, false, err
+	}
+	pr, err := p.Proposals().Get(ctx, repo, number)
+	return pr, err == nil, err
+}
+
+// QuietFlights lists the Flights whose connection has received no webhook
+// delivery since cutoff: the ones the watcher must poll (a host that cannot
+// deliver to this server, or a webhook that was never set up, still works).
+func (s *Service) QuietFlights(ctx context.Context, cutoff time.Time) ([]Flight, error) {
+	conns, err := s.st.Connections(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []Flight
+	for _, c := range conns {
+		if !c.Enabled {
+			continue
+		}
+		if at, ok, err := s.st.LastDelivery(ctx, c.ID); err != nil {
+			return nil, err
+		} else if ok && at.After(cutoff) {
+			continue
+		}
+		rows, err := s.fl.OutsideFlightsOfConnection(c.ID)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			f, err := s.flightOf(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, f)
+		}
+	}
+	return out, nil
+}
+
+// PollEvents asks the host what changed on the pull requests of a Flight's
+// repository since the cursor (the provider's Poll); it returns the events and
+// the next cursor.
+func (s *Service) PollEvents(ctx context.Context, project, cursor string) ([]forge.Event, string, error) {
+	p, f, repo, err := s.repoOf(ctx, project)
+	if err != nil {
+		return nil, cursor, err
+	}
+	evs, next, err := p.Events().Poll(ctx, repo, cursor)
+	for i := range evs {
+		evs[i].Connection = f.connID
+	}
+	return evs, next, err
+}
+
+// LastDelivery is when a connection last received a webhook delivery.
+func (s *Service) LastDelivery(ctx context.Context, name string) (time.Time, bool, error) {
+	c, err := s.conn(ctx, name)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return s.st.LastDelivery(ctx, c.ID)
+}

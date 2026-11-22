@@ -153,6 +153,7 @@ func startOutsideHosts(ctx context.Context, cfg *config.Config, eng *engine.Engi
 		srv.Projects.SetOutsideSource(srv)
 	}
 	srv.StartOutsideReports(ctx)
+	srv.StartOutsidePolls(ctx)
 	log.Info("connections to outside Git hosts are available")
 	return nil
 }

@@ -148,3 +148,25 @@ func TestCLIShowsAllowedFailureCounts(t *testing.T) {
 		t.Fatalf("%q", lines)
 	}
 }
+
+func TestCLIShowsThePullRequestAsTheHostDescribedIt(t *testing.T) {
+	var r runView
+	r.PullRequest = 12
+	if pullRequestLine(&r) != "" {
+		t.Fatal("a pull request of a hosted repository has no host line")
+	}
+	r.TriggerDetail = &struct {
+		Inputs            map[string]string `json:"inputs"`
+		Schedule          string            `json:"schedule"`
+		Webhook           string            `json:"webhook"`
+		PullRequestTitle  string            `json:"pull_request_title"`
+		PullRequestAuthor string            `json:"pull_request_author"`
+		PullRequestURL    string            `json:"pull_request_url"`
+		PullRequestDraft  bool              `json:"pull_request_draft"`
+		PullRequestFork   bool              `json:"pull_request_fork"`
+	}{PullRequestTitle: "Fix the retry", PullRequestAuthor: "dana", PullRequestURL: "https://git.example.com/acme/app/pull/12", PullRequestFork: true}
+	want := "Pull request #12: Fix the retry, by dana (from a fork: restricted)\n  https://git.example.com/acme/app/pull/12"
+	if got := pullRequestLine(&r); got != want {
+		t.Fatalf("got %q", got)
+	}
+}

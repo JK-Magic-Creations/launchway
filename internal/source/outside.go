@@ -26,6 +26,60 @@ type OutsideCredential struct {
 type OutsideSource interface {
 	// Credential answers ok=false for a project that is not attached.
 	Credential(ctx context.Context, project string) (c OutsideCredential, ok bool, err error)
+	// PullRequest reads one pull request of the project's repository from the
+	// host; ok is false for a project that is not attached.
+	PullRequest(ctx context.Context, project string, number int) (info PullRequestInfo, ok bool, err error)
+}
+
+type prKey struct {
+	project string
+	number  int
+}
+
+// NotePullRequest remembers what a webhook or a poll of the host said about a
+// pull request, for the poller to carry into the run it starts. Only the
+// newest head of a pull request is kept, and the poller uses it only for that
+// head: a stale note is never taken for the current one.
+func (m *Manager) NotePullRequest(project string, info PullRequestInfo) {
+	if info.Number == 0 || info.Head == "" {
+		return
+	}
+	m.forgeMu.Lock()
+	defer m.forgeMu.Unlock()
+	if m.pullNotes == nil || len(m.pullNotes) > 4000 {
+		m.pullNotes = map[prKey]PullRequestInfo{}
+	}
+	m.pullNotes[prKey{project, info.Number}] = info
+}
+
+// pullMeta is what the host says about the pull request whose head is sha:
+// from a note when it matches the head, else asked of the host. ok is false
+// when the project keeps its code here (nothing to ask). An error means the
+// host could not say, and the pull request must not run without knowing
+// whether it is from a fork.
+func (m *Manager) pullMeta(ctx context.Context, name string, n int, sha string) (info PullRequestInfo, ok bool, err error) {
+	o := m.outsideSource()
+	if o == nil {
+		return info, false, nil
+	}
+	m.forgeMu.Lock()
+	note, have := m.pullNotes[prKey{name, n}]
+	m.forgeMu.Unlock()
+	if have && note.Head == sha {
+		return note, true, nil
+	}
+	cctx, cancel := context.WithTimeout(ctx, forgeTimeout)
+	defer cancel()
+	info, ok, err = o.PullRequest(cctx, name, n)
+	if err != nil || !ok {
+		return info, ok, err
+	}
+	if info.Head != "" && info.Head != sha {
+		return info, true, fmt.Errorf("the host reports another head for pull request #%d (%.10s, not %.10s)", n, info.Head, sha)
+	}
+	info.Head = sha
+	m.NotePullRequest(name, info)
+	return info, true, nil
 }
 
 type outsideHolder struct{ o OutsideSource }
@@ -113,4 +167,12 @@ func outsideEnv(c OutsideCredential) ([]string, error) {
 		"GIT_CONFIG_KEY_"+strconv.Itoa(n+1)+"=http."+origin+"/.extraHeader", "GIT_CONFIG_VALUE_"+strconv.Itoa(n+1)+"=Authorization: Basic "+basic,
 		"GIT_CONFIG_COUNT="+strconv.Itoa(n+2))
 	return env, nil
+}
+
+// PullNote is what was last noted about a pull request (NotePullRequest).
+func (m *Manager) PullNote(project string, number int) (PullRequestInfo, bool) {
+	m.forgeMu.Lock()
+	defer m.forgeMu.Unlock()
+	i, ok := m.pullNotes[prKey{project, number}]
+	return i, ok
 }

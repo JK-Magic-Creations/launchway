@@ -232,6 +232,11 @@ func (s *Server) outsideHostWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, f := range d.Flights {
+		for _, e := range d.Events {
+			if e.Repository == f.Repository {
+				s.notePullRequestEvent(f.Project, e)
+			}
+		}
 		if s.Projects != nil {
 			s.Projects.PollNow(f.Project)
 		}

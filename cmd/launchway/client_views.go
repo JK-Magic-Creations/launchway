@@ -77,6 +77,12 @@ type runView struct {
 		Inputs   map[string]string `json:"inputs"`
 		Schedule string            `json:"schedule"`
 		Webhook  string            `json:"webhook"`
+		// The pull request as its outside Git host described it.
+		PullRequestTitle  string `json:"pull_request_title"`
+		PullRequestAuthor string `json:"pull_request_author"`
+		PullRequestURL    string `json:"pull_request_url"`
+		PullRequestDraft  bool   `json:"pull_request_draft"`
+		PullRequestFork   bool   `json:"pull_request_fork"`
 	} `json:"trigger_detail"`
 }
 
@@ -94,6 +100,35 @@ func runRef(r runView) string {
 		return r.Branch
 	}
 	return r.Tag
+}
+
+// pullRequestLine is "Pull request #N: title, by author" (with the host's
+// address and the draft and fork notes) for a run whose pull request an
+// outside host described; "" for any other run.
+func pullRequestLine(r *runView) string {
+	d := r.TriggerDetail
+	if d == nil || r.PullRequest == 0 || (d.PullRequestTitle == "" && d.PullRequestAuthor == "") {
+		return ""
+	}
+	line := fmt.Sprintf("Pull request #%d", r.PullRequest)
+	if d.PullRequestTitle != "" {
+		line += ": " + d.PullRequestTitle
+	}
+	if d.PullRequestAuthor != "" {
+		line += ", by " + d.PullRequestAuthor
+	}
+	switch {
+	case d.PullRequestFork && d.PullRequestDraft:
+		line += " (draft, from a fork: restricted)"
+	case d.PullRequestFork:
+		line += " (from a fork: restricted)"
+	case d.PullRequestDraft:
+		line += " (draft)"
+	}
+	if d.PullRequestURL != "" {
+		line += "\n  " + d.PullRequestURL
+	}
+	return line
 }
 
 func terminal(status string) bool {

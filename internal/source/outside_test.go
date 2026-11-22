@@ -22,6 +22,14 @@ type fakeOutside struct {
 	cred OutsideCredential
 	on   bool
 	err  error
+	pr   func(n int) (PullRequestInfo, bool, error)
+}
+
+func (f fakeOutside) PullRequest(_ context.Context, _ string, n int) (PullRequestInfo, bool, error) {
+	if f.pr == nil {
+		return PullRequestInfo{}, false, nil
+	}
+	return f.pr(n)
 }
 
 func (f fakeOutside) Credential(context.Context, string) (OutsideCredential, bool, error) {

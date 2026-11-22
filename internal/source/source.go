@@ -165,6 +165,8 @@ type Manager struct {
 	// forge is the link to the forge's connection and repository rows (see
 	// forgelink.go); empty until Start has recorded the projects.
 	hosted forgeLink
+	// pullNotes is what the outside host said about pull requests (outside.go), under forgeMu.
+	pullNotes map[prKey]PullRequestInfo
 	// hostedPtr reads this installation's own repositories from its storage (hosted.go).
 	hostedPtr atomic.Pointer[hostedHolder]
 	// outsidePtr reads repositories kept on outside Git hosts through their connections (outside.go).
@@ -580,7 +582,18 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		}
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
-		pipelineAt, restr := p.trustedPipelineSHA(refs, r)
+		n, _ := strconv.Atoi(r.Name)
+		// A host that keeps the project's code says who opened the pull request and
+		// whether it is from a fork; without its answer a pull request does not run.
+		meta, fromHost, merr := m.pullMeta(ctx, p.Name, n, r.SHA)
+		if merr != nil {
+			if err := m.eng.RecordDecision(p.Name, Decision{Ref: r.FullRef(), SHA: r.SHA, Outcome: "waiting",
+				Detail: fmt.Sprintf("waiting: pull request #%d is not run until the host says whether it is from a fork (%s)", n, clipLine(redact.URLs(merr.Error())))}); err != nil {
+				return err
+			}
+			continue
+		}
+		pipelineAt, restr := p.trustedPipelineSHA(refs, r, fromHost && meta.Fork)
 		pl, from, err := p.parsedAt(ctx, pipelineAt)
 		asks := err == nil && pl.On.MatchPullRequest()
 		if !gateOn {
@@ -613,7 +626,6 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 			case !asks:
 				d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline at the pull request's head does not ask for pull requests "+p.note(from))
 			default:
-				n, _ := strconv.Atoi(r.Name)
 				// The default branch's pipeline says whether to filter by the
 				// branch the pull request targets; only the project's forge
 				// can say which that is, and without it nothing runs.
@@ -638,6 +650,10 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				t := trigger(r, pipeline.EventPullRequest, r.Author)
 				t.Changed = cs
 				t.PullRequest = n
+				if fromHost {
+					t.PullRequestTitle, t.PullRequestAuthor, t.PullRequestURL = meta.Title, meta.Author, meta.URL
+					t.PullRequestDraft, t.Fork = meta.Draft, meta.Fork
+				}
 				t.PullRequestInto = into.Target
 				t.Inputs = vals
 				note := p.note(from)

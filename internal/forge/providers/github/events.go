@@ -110,7 +110,7 @@ func (e events) Verify(r *http.Request, secret []byte) ([]forge.Event, error) {
 		return []forge.Event{{DeliveryID: delivery, Kind: kind, Repository: in.Repository.FullName, Number: in.Number,
 			Ref: "refs/pull/" + fmt.Sprint(in.Number) + "/head", Commit: in.PullRequest.Head.SHA, Head: in.PullRequest.Head.SHA,
 			Base: in.PullRequest.Base.Ref, Title: in.PullRequest.Title, Draft: in.PullRequest.Draft, Fork: fork,
-			Proposal: fmt.Sprint(in.Number), Actor: forge.Principal{Login: in.Sender.Login, Unlinked: true}, At: now}}, nil
+			Author: in.PullRequest.User.Login, URL: in.PullRequest.HTMLURL, Proposal: fmt.Sprint(in.Number), Actor: forge.Principal{Login: in.Sender.Login, Unlinked: true}, At: now}}, nil
 	}
 	return nil, nil
 }
@@ -151,9 +151,10 @@ func (e events) Poll(ctx context.Context, repo forge.Repository, cursor string) 
 			kind = forge.EventProposalRevised
 		}
 		fork, _ := pr.Ext["fork"].(bool)
+		prURL, _ := pr.Ext["url"].(string)
 		out = append(out, forge.Event{DeliveryID: fmt.Sprintf("poll-%d-%s", pr.Number, pr.Head), Kind: kind, Repository: repo.Path, Number: pr.Number,
 			Ref: "refs/pull/" + fmt.Sprint(pr.Number) + "/head", Commit: pr.Head, Head: pr.Head, Base: strings.TrimPrefix(pr.Target.Name, "refs/heads/"),
-			Title: pr.Title, Proposal: fmt.Sprint(pr.Number), Draft: pr.State == forge.ProposalDraft, Fork: fork,
+			Title: pr.Title, Proposal: fmt.Sprint(pr.Number), Draft: pr.State == forge.ProposalDraft, Fork: fork, Author: pr.Author.Login, URL: prURL,
 			Actor: forge.Principal{Login: pr.Author.Login, Unlinked: true}, At: e.p.c.Now().UTC()})
 	}
 	b, _ := json.Marshal(next)
