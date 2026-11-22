@@ -312,8 +312,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `release.asset.add` | `PUT` or `POST` on a release's assets: a file uploaded or what a Sortie made attached |
 | `release.asset.remove` | `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` |
 | `release.candidate` | `POST /api/v1/projects/{name}/releases/{version}/candidate` |
+| `release.asset.download` | `GET .../releases/{version}/assets/{asset}` and `GET /public/releases/...`: a release file was downloaded (the file and its size; `continued` for a resumed range) |
 | `release.publish` | `POST /api/v1/projects/{name}/releases/{version}/publish`: the release and the tag it was published under |
 | `release.yank` | `POST /api/v1/projects/{name}/releases/{version}/yank`: a release withdrawn, with the reason |
+| `release.outside_publish` | the release worker made (or tried to make) a published release on a push mirror's outside Git host: the mirror, and the address of the release there (`ok`), the redacted reason (`failed`), or that it is waiting for the mirror to copy the tag (`waiting`). Written by the server itself (user `launchway`), once per attempt; never holds a credential |
+| `release.outside_retry` | `POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry`: a failed outside publish made pending again, or a release queued for a mirror that had none |
 | `release.changelog` | `POST /api/v1/projects/{name}/releases/{version}/changelog`: the changelog branch proposed |
 | `release.installation` | `PUT /api/v1/release-installation`: public downloads allowed or forbidden for the installation |
 | `release.gate` | `PUT /api/v1/projects/{name}/release-gates/{airfield}`: what a release must pass to reach an Airfield |
@@ -409,7 +412,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |
 | `repository.delete` | `DELETE /api/v1/repositories/{owner}/{name}`; the repository moves to the trash |
 | `mirror.create` | `POST /api/v1/repositories/{owner}/{name}/mirrors` (also `launchway repos mirror add`); the detail says the direction, the address and where the credential is read from, never the credential |
-| `mirror.update` | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}`: paused, resumed, a new interval or prune setting |
+| `mirror.update` | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}`: paused, resumed, a new interval or prune setting, or a push mirror's `publish_releases` turned on or off |
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |
 | `mirror.sync` | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync`: a mirror run on demand; a failed run is recorded with its redacted error |
 | `mirror.promote` | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` (also `launchway repos mirror stop`): the repository stopped being a mirror and takes pushes; the detail says whether a final sync ran first |

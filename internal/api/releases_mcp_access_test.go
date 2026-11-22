@@ -46,6 +46,7 @@ func init() {
 		"make_release_candidate":    {ref, false, write},
 		"publish_release":           {ref, false, write},
 		"withdraw_release":          {with(map[string]any{"reason": "x"}), false, write},
+		"retry_outside_release":     {with(map[string]any{"mirror_id": "mir_x"}), false, write},
 		"delete_draft_release":      {ref, false, write},
 		"propose_release_changelog": {ref, false, write},
 		"promote_release":           {with(map[string]any{"airfield": "prod"}), false, write},

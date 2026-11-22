@@ -906,6 +906,7 @@ func errText(err error) string {
 
 // RunReleaseWork moves promoting formations on in the background until ctx ends.
 func (s *Server) RunReleaseWork(ctx context.Context) {
+	go s.runOutsideWork(ctx) // publishing on an outside Git host can take long: it has its own loop
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 	for {

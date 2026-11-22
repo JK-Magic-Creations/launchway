@@ -14,6 +14,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
+	"github.com/jk-magic-creations/launchway/internal/release/outside"
 )
 
 // Launchway's own Git hosting (forge.hosting; see internal/forge/hosting).
@@ -37,7 +38,10 @@ type ForgeHosting struct {
 	// plain HTTP to a listener that is not loopback.
 	Git *githttp.Handler
 	// Mirrors runs the pull and push mirrors of repositories.
-	Mirrors           *mirror.Service
+	Mirrors *mirror.Service
+	// Outside makes a published release on the outside Git host of a push
+	// mirror (releases_outside.go); nil is the built-in REST implementation.
+	Outside           outside.Publisher
 	RunTokens         githttp.RunTokens
 	AllowInsecureHTTP bool
 	// Keys holds SSH keys and deploy keys, Rules the protected branches, SSH

@@ -5719,7 +5719,7 @@ paths:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}. from is a branch, tag or commit (default the default branch); adopt names an existing annotated tag to release instead. generate_notes writes the notes from the merged pull requests and commits since the previous release; run_id is the Sortie that built it, whose image digests are recorded. A version not higher than the highest so far is refused unless allow_lower. Answers 201.'
+            description: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower", "attach_cargo", "publish", "public"}. from is a branch, tag or commit (default the default branch); adopt names an existing annotated tag to release instead. generate_notes writes the notes from the merged pull requests and commits since the previous release; run_id is the Sortie that built it, whose image digests are recorded. A version not higher than the highest so far is refused unless allow_lower. attach_cargo copies the files the Sortie kept (the latest successful one at the commit when run_id is empty) into the release; publish then makes the annotated tag and publishes it in the same request (a cut), public as for publishing. If a later part fails the draft stands and the answer says so (409). Answers 201.'
             operationId: post_api_v1_projects_name_releases
             parameters:
                 - in: path
@@ -5745,7 +5745,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}.'
+            summary: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower", "attach_cargo", "publish", "public"}.'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -5942,7 +5942,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: release.asset.remove
         get:
-            description: Downloads a file of the release, signed in, with its checksum in X-Launchway-SHA256.
+            description: 'Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256. Answers Range (a phone resumes a broken download). The type is the file''s own (application/vnd.android.package-archive for .apk, application/zip, application/gzip, and so on; anything else, and every page or script, is application/octet-stream), always with Content-Disposition: attachment.'
             operationId: get_api_v1_projects_name_releases_version_assets_asset
             parameters:
                 - in: path
@@ -5977,10 +5977,11 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Downloads a file of the release, signed in, with its checksum in X-Launchway-SHA256.
+            summary: Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256.
             tags:
                 - projects
             x-launchway-access: project-viewer
+            x-launchway-audit: release.asset.download
         put:
             description: 'Uploads a file: the request body is the file (up to 2 GiB). X-Launchway-SHA256 may carry the checksum it must have. An asset is never replaced: a second file of the name is refused with 409.'
             operationId: put_api_v1_projects_name_releases_version_assets_asset
@@ -6211,6 +6212,49 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: release.notes
+    /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry:
+        post:
+            description: Makes a published release on a push mirror's outside Git host again after it failed, or asks for it on a mirror whose publish_releases was turned on after the publish. 409 when the publish is pending or done, or the mirror does not publish releases; 404 for a mirror the Flight's repository has not. The release view lists each mirror's state under outside.
+            operationId: post_api_v1_projects_name_releases_version_outside_mirror_retry
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: mirror
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Makes a published release on a push mirror's outside Git host again after it failed, or asks for it on a mirror whose publish_releases was turned on after the publish.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.outside_retry
     /api/v1/projects/{name}/releases/{version}/plan:
         post:
             description: 'Writes a promotion on the calendar: {"airfield", "at", "note"}. A reminder; Launchway does not start it.'
@@ -6396,7 +6440,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/releases/next:
         get:
-            description: 'The next version proposed from the changes since the last release, with the reason for each change: ?from= (branch, tag or commit), ?pre= (a pre-release label such as rc). Nothing is made.'
+            description: 'The next version proposed from the changes since the last release, with the reason for each change: ?from= (branch, tag or commit), ?pre= (a pre-release label such as rc). Nothing is made. Also says the tag prefix, whether the repository is hosted here and Launchway can write the tag, and which files the latest successful Sortie at that commit kept (build).'
             operationId: get_api_v1_projects_name_releases_next
             parameters:
                 - in: path
@@ -10885,7 +10929,7 @@ paths:
                 - repositories
             x-launchway-access: repo-viewer
         post:
-            description: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled"}. For a pull mirror the repository must have no branches or tags of its own (400: mirroring would replace them); posting again changes the existing pull mirror. The first sync starts at once. 409 when the repository already has that mirror.'
+            description: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled", and for a push mirror publish_releases (default false) and outside_api}. For a pull mirror the repository must have no branches or tags of its own (400: mirroring would replace them); posting again changes the existing pull mirror. The first sync starts at once. 409 when the repository already has that mirror.'
             operationId: post_api_v1_repositories_owner_name_mirrors
             parameters:
                 - in: path
@@ -10916,7 +10960,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled"}.'
+            summary: 'Sets a mirror up: {"direction": "pull" (default), "url", "username", "credential", "interval_seconds" (at least 60; default 3600 for pull), "prune" (default true), "enabled", and for a push mirror publish_releases (default false) and outside_api}.'
             tags:
                 - repositories
             x-launchway-access: repo-admin
@@ -10965,7 +11009,7 @@ paths:
             x-launchway-access: repo-admin
             x-launchway-audit: mirror.delete
         patch:
-            description: Pauses or resumes (enabled), changes interval_seconds or prune.
+            description: Pauses or resumes (enabled), changes interval_seconds or prune; on a push mirror publish_releases (default off) and outside_api (the outside Git host's API address, for a self-hosted host) say whether published releases are also made on the outside host.
             operationId: patch_api_v1_repositories_owner_name_mirrors_id
             parameters:
                 - in: path
@@ -11001,7 +11045,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Pauses or resumes (enabled), changes interval_seconds or prune.
+            summary: Pauses or resumes (enabled), changes interval_seconds or prune; on a push mirror publish_releases (default off) and outside_api (the outside Git host's API address, for a self-hosted host) say whether published releases are also made on the outside host.
             tags:
                 - repositories
             x-launchway-access: repo-admin
@@ -18616,6 +18660,7 @@ paths:
             tags:
                 - public
             x-launchway-access: public
+            x-launchway-audit: release.asset.download
     /readyz:
         get:
             description: 'The server can do useful work: the database answered within 2 seconds, it can be written (not only reached), and the server is not shutting down.'

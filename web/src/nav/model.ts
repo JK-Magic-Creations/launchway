@@ -269,6 +269,8 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: terms().say("{Environments}"), href: "/deployments/environments" }, { label: p.name }]),
   ...["", "/:a", "/:a/:b"].map((x) => page("/deployments/releases" + x, "deployments", "releases", (p) => (p.b ? `Release ${p.a} ${p.b}` : p.a ? `Releases: ${p.a}` : "Releases"),
     (p) => [{ label: "Releases", href: p.a ? "/deployments/releases" : undefined }, ...(p.a ? [{ label: p.b ? `${p.a} ${p.b}` : p.a }] : [])])),
+  page("/deployments/releases/:a/:b/get/:c", "deployments", "releases", (p) => `Download ${p.c}: ${p.a} ${p.b}`,
+    (p) => [{ label: "Releases", href: "/deployments/releases" }, { label: `${p.a} ${p.b}`, href: `/deployments/releases/${p.a}/${p.b}` }, { label: p.c }]),
   page("/deployments/hosts", "deployments", "hosts", () => "Hosts", () => [{ label: "Hosts" }]),
   page("/deployments/machine-images", "deployments", "machine-images", () => "Machine images", () => [{ label: "Machine images" }]),
   page("/deployments/applications", "deployments", "applications", () => "Applications", () => [{ label: "Applications" }]),

@@ -24,8 +24,9 @@ const releaseUsage = `Usage:
         propose the next version from the changes since the last release, with the reasoning
   launchway release notes --project P [--to REF] [--version V]   preview generated release notes
   launchway release create --project P --version V [--from REF | --adopt TAG] [--notes-file F | --generate-notes]
-                           [--title T] [--run RUN] [--allow-lower]
-        make a draft release; with --run the image digests of that Sortie are recorded
+                           [--title T] [--run RUN] [--allow-lower] [--attach-cargo] [--publish [--public]]
+        make a draft release; with --run the image digests of that Sortie are recorded; with --attach-cargo
+        its kept files are copied in, and with --publish the tag is made and the release published (a cut)
   launchway release edit FLIGHT VERSION [--notes-file F] [--title T] [--regenerate-notes]
   launchway release assets add FLIGHT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
   launchway release assets remove FLIGHT VERSION NAME
@@ -33,6 +34,9 @@ const releaseUsage = `Usage:
   launchway release candidate FLIGHT VERSION
   launchway release publish FLIGHT VERSION [--public]       create the annotated tag and fix the release
   launchway release yank FLIGHT VERSION --reason TEXT       withdraw a release, with a reason
+  launchway release outside retry FLIGHT VERSION --mirror mir_...
+        make a published release on a push mirror's outside Git host again (after it failed, or after the
+        mirror's --publish-releases was turned on); release show lists how each mirror stands
   launchway release delete FLIGHT VERSION                   delete a draft
   launchway release changelog FLIGHT VERSION [--base BRANCH]   propose the notes as a changelog pull request
   launchway release compare FLIGHT VERSION-A VERSION-B
@@ -109,6 +113,8 @@ func (cl *client) release(args []string) error {
 		return cl.releaseAssets(rest)
 	case "candidate", "publish", "yank", "delete", "changelog", "clearance", "promote", "plan", "checklist":
 		return cl.releaseAction(args[0], rest)
+	case "outside":
+		return cl.releaseOutside(rest)
 	case "compare":
 		return cl.releaseCompare(rest)
 	case "return":
@@ -206,6 +212,7 @@ func (cl *client) releaseShow(args []string) error {
 			fmt.Fprintf(cl.out, "  %s %-24s %s %s\n", m["kind"], m["name"], str(m["sha256"], 12), str(m["digest"], 19))
 		}
 	}
+	printOutside(cl.out, view["outside"])
 	fmt.Fprintf(cl.out, "\n%s\n", r["notes"])
 	return nil
 }
@@ -292,6 +299,9 @@ func (cl *client) releaseCreate(args []string) error {
 	title := fs.String("title", "", "a title")
 	run := fs.String("run", "", "the Sortie that built it")
 	lower := fs.Bool("allow-lower", false, "allow a version lower than the highest (a maintenance branch)")
+	attach := fs.Bool("attach-cargo", false, "copy the files the Sortie kept (and its image digests) into the release; with no --run, the latest successful Sortie at the commit")
+	publish := fs.Bool("publish", false, "make the tag and publish it at once (cut the release)")
+	public := fs.Bool("public", false, "with --publish: allow downloading its files without signing in, where the installation allows it")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
@@ -305,13 +315,17 @@ func (cl *client) releaseCreate(args []string) error {
 	}
 	var out map[string]any
 	if err := cl.call("POST", pp(*project)+"/releases", map[string]any{"version": *version, "from": *from, "adopt": *adopt, "notes": notes, "generate_notes": *gen,
-		"title": *title, "run_id": *run, "allow_lower": *lower}, &out); err != nil {
+		"title": *title, "run_id": *run, "allow_lower": *lower, "attach_cargo": *attach, "publish": *publish, "public": *public}, &out); err != nil {
 		return err
 	}
 	if *asJSON {
 		return cl.showJSON(out)
 	}
 	r, _ := out["release"].(map[string]any)
+	if *publish {
+		fmt.Fprintf(cl.out, "Published %s %s at %s as tag %s.\n", r["project"], r["version"], str(r["sha"], 8), r["tag"])
+		return nil
+	}
 	fmt.Fprintf(cl.out, "Draft %s %s at %s.\n", r["project"], r["version"], str(r["sha"], 8))
 	return nil
 }

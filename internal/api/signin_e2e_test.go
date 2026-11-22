@@ -120,22 +120,23 @@ func mustParse(t *testing.T, s string) *url.URL {
 func TestSignInRedirectsOnlyToThisServer(t *testing.T) {
 	e := setupAuth(t, envOpts{})
 	cases := map[string]string{
-		"":                            "/",
-		"/":                           "/",
-		"/approvals":                  "/approvals",
-		"/runs/r1?step=a%20b#x":       "/runs/r1?step=a%20b#x",
-		"//evil.example.com/":         "/",
-		"///evil.example.com/":        "/",
-		"/\\evil.example.com":         "/",
-		"\\\\evil.example.com":        "/",
-		"https://evil.example.com/":   "/",
-		"http:/evil.example.com":      "/",
-		"javascript:alert(1)":         "/",
-		"evil.example.com":            "/",
-		"/%0d%0aSet-Cookie:x=y":       "/%0d%0aSet-Cookie:x=y", // escaped, so harmless
-		"/a\r\nLocation: http://evil": "/",
-		"/ok\t//evil":                 "/",
-		"/auth/login?next=//evil":     "/",
+		"":           "/",
+		"/":          "/",
+		"/approvals": "/approvals",
+		"/deployments/releases/hub/0.1.0/get/hub-app.apk": "/deployments/releases/hub/0.1.0/get/hub-app.apk",
+		"/runs/r1?step=a%20b#x":                           "/runs/r1?step=a%20b#x",
+		"//evil.example.com/":                             "/",
+		"///evil.example.com/":                            "/",
+		"/\\evil.example.com":                             "/",
+		"\\\\evil.example.com":                            "/",
+		"https://evil.example.com/":                       "/",
+		"http:/evil.example.com":                          "/",
+		"javascript:alert(1)":                             "/",
+		"evil.example.com":                                "/",
+		"/%0d%0aSet-Cookie:x=y":                           "/%0d%0aSet-Cookie:x=y", // escaped, so harmless
+		"/a\r\nLocation: http://evil":                     "/",
+		"/ok\t//evil":                                     "/",
+		"/auth/login?next=//evil":                         "/",
 	}
 	for next, want := range cases {
 		b := newBrowser(t)

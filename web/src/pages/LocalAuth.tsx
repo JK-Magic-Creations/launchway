@@ -1,3 +1,4 @@
+import { safeNext } from "./signInNext";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { call, ApiError } from "../api";
 import { QrCode } from "../kit/QrCode";
@@ -43,7 +44,7 @@ export function LocalSignIn({ next }: { next: string }) {
   const [busy, setBusy] = useState(false);
 
   const go = (r: { signed_in?: boolean; ticket?: string }) => {
-    if (r.signed_in) location.assign(next);
+    if (r.signed_in) location.assign(safeNext(next));
     else if (r.ticket) { setTicket(r.ticket); setError(""); }
   };
   const submit = async (ev: FormEvent) => {

@@ -482,6 +482,7 @@ var rows = []Row{
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/candidate", MCP: "make_release_candidate", CLI: "release candidate", Status: Equal},
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/publish", MCP: "publish_release", CLI: "release publish", Status: Equal},
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/yank", MCP: "withdraw_release", CLI: "release yank", Status: Equal},
+	{Route: "POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry", MCP: "retry_outside_release", CLI: "release outside retry", Status: Equal},
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/changelog", MCP: "propose_release_changelog", CLI: "release changelog", Status: Equal},
 	{Route: "GET /public/releases/{name}/{version}/{asset}", MCP: "", CLI: "", Status: Exempt, Reason: "the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found"},
 	{Route: "GET /api/v1/releases", MCP: "list_releases", CLI: "release list", Status: Equal},

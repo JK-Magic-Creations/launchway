@@ -14,6 +14,9 @@ const release = (over: Partial<Release> = {}): Release => ({
   ], ...over,
 });
 
+/** A published release whose only file has a name so long that the address a phone would open cannot be drawn as a QR code. */
+export const releaseWithALongFileName = (): Release => release({ assets: [{ id: "ras_9", name: "shop-api-" + "very-long-name-".repeat(30) + ".tar.gz", kind: "file", size: 1000, sha256: "ef".repeat(32), run_id: "run_7", run_number: 7, source_sha: "0123456789abcdef", added_by: "ann", added_at: T - 2 * day }] });
+
 export const releaseList = (): Release[] => [
   release({ id: "rel_3", version: "1.5.0", state: "draft", published_at: undefined, published_by: undefined, tag: undefined, immutable: false, assets: [] }),
   release({ id: "rel_2", version: "1.4.1-rc.1", state: "candidate", prerelease: true, immutable: false, published_at: undefined, assets: [] }),
@@ -26,7 +29,11 @@ export const view = (r: Release, may: Partial<ReleaseView["may"]> = {}): Release
   promotions: r.state === "published" ? [{ id: "prm_1", release_id: r.id, project: r.project, version: r.version, airfield: "staging", sha: r.sha, digests: r.digests, run_id: "run_8", run_number: 8, requested_by: "ann", requested_at: T - day / 2, state: "launched" },
     { id: "prm_2", release_id: r.id, project: r.project, version: r.version, airfield: "prod", sha: r.sha, digests: r.digests, run_id: "run_9", run_number: 9, requested_by: "ada", requested_at: T - day / 4, state: "launched", override: "customer outage", overridden: "window" }] : [],
   clearances: r.state === "published" ? [{ id: "rcl_1", airfield: "prod", who: "bob", role: "operator", comment: "read the notes", at: T - day / 3 }] : [],
-  may: { edit: !r.immutable, publish: !r.immutable, promote: r.state === "published" || r.state === "candidate", yank: r.state === "published" || r.state === "candidate", administer: true, ...may },
+  may: { edit: !r.immutable, publish: !r.immutable, promote: r.state === "published" || r.state === "candidate", yank: r.state === "published" || r.state === "candidate", administer: true, outside_retry: r.state === "published", ...may },
+  outside: r.state === "published" ? [
+    { id: "rou_1", release_id: r.id, mirror_id: "mir_1", mirror_url: "https://git.example.com/acme/shop-api.git", repository: "acme/shop-api", state: "published", url: "https://git.example.com/acme/shop-api/releases/tag/v1.4.0", attempts: 2, updated_at: T - day / 2 },
+    { id: "rou_2", release_id: r.id, mirror_id: "mir_2", mirror_url: "https://git.partner.example/acme/shop-api.git", repository: "acme/shop-api", state: "failed", reason: "the outside host refused the credential (403). A token that may push may not be allowed to make releases", attempts: 1, updated_at: T - day / 3 },
+  ] : [],
 });
 
 const checklist = (ready: boolean): Checklist => ({
@@ -91,7 +98,7 @@ export function releaseFixtures(): Record<string, unknown> {
     "/api/v1/projects/shop-api/releases/1.4.0": view(release()),
     "/api/v1/projects/shop-api/releases/1.5.0": view(release({ id: "rel_3", version: "1.5.0", state: "draft", published_at: undefined, tag: undefined, immutable: false })),
     "/api/v1/projects/shop-api/releases/1.4.0/checklist": checklistAnswer(false),
-    "/api/v1/projects/shop-api/releases/next": { proposal: { next: "1.5.0", last: "1.4.0", bump: "minor", summary: "1.5.0: 2 changes since 1.4.0; the highest is minor, so 1.4.0 → 1.5.0.", reasons: [{ change: { title: "feat: a page", kind: "pull", ref: 14 }, bump: "minor", why: "new feature" }] }, source: "x", commit: "0123" },
+    "/api/v1/projects/shop-api/releases/next": { proposal: { next: "1.5.0", last: "1.4.0", bump: "minor", summary: "1.5.0: 2 changes since 1.4.0; the highest is minor, so 1.4.0 → 1.5.0.", reasons: [{ change: { title: "feat: a page", kind: "pull", ref: 14 }, bump: "minor", why: "new feature" }] }, source: "x", commit: "0123456789abcdef0123456789abcdef01234567", branch: "main", highest: "1.4.0", scheme: "semver", tag_prefix: "v", hosted: true, can_tag: true, build: { run_id: "run_7", run_number: 7, files: [{ name: "shop-api.apk", path: "dist/shop-api.apk", size: 3000000, sha256: "cd".repeat(32) }] } },
     "/api/v1/release-matrix": matrix(),
     "/api/v1/release-calendar": calendar(),
     "/api/v1/release-freezes": freezes(),

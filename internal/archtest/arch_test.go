@@ -28,7 +28,7 @@ var allowedImports = map[string][]string{
 	"internal/accept":                     {},
 	"internal/ai":                         {"internal/pipeline"},
 	"internal/ai/aitest":                  {},
-	"internal/api":                        {"internal/ai", "internal/auth", "internal/cac/ansible", "internal/cac/tfplan", "internal/cac/tfstate", "internal/debrief", "internal/depupdate", "internal/depupdate/preview", "internal/engine", "internal/findings", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/forge/githttp", "internal/forge/gitssh", "internal/forge/mirror", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/storage", "internal/forge/webhooks", "internal/graph", "internal/hub", "internal/ids", "internal/keyring", "internal/localauth", "internal/pipeline", "internal/policy", "internal/redact", "internal/registry", "internal/release", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/standards", "internal/standards/service", "internal/toggles", "internal/togglestore", "internal/verify", "internal/work", "internal/deploy/inspect"},
+	"internal/api":                        {"internal/ai", "internal/auth", "internal/cac/ansible", "internal/cac/tfplan", "internal/cac/tfstate", "internal/debrief", "internal/depupdate", "internal/depupdate/preview", "internal/engine", "internal/findings", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/forge/githttp", "internal/forge/gitssh", "internal/forge/mirror", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/storage", "internal/forge/webhooks", "internal/graph", "internal/hub", "internal/ids", "internal/keyring", "internal/localauth", "internal/pipeline", "internal/policy", "internal/redact", "internal/registry", "internal/release", "internal/release/outside", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/standards", "internal/standards/service", "internal/toggles", "internal/togglestore", "internal/verify", "internal/work", "internal/deploy/inspect"},
 	"internal/auth":                       {},
 	"internal/cac/ansible":                {},
 	"internal/cac/tfplan":                 {"internal/cac/ansible"},
@@ -102,7 +102,8 @@ var allowedImports = map[string][]string{
 	"internal/parity":                     {},
 	"internal/pipeline":                   {"internal/deploy/edit", "internal/resources", "internal/starters"},
 	"internal/notify":                     {"internal/pipeline"},
-	"internal/release":                    {}, // pure rules: versions, notes, windows, measures; imports nothing of the product
+	"internal/release":                    {},
+	"internal/release/outside":            {"internal/forge", "internal/forge/egress", "internal/redact"}, // pure rules: versions, notes, windows, measures; imports nothing of the product
 	"internal/policy":                     {},
 	"internal/redact":                     {},
 	"internal/resources":                  {},

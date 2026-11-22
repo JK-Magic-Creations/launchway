@@ -321,6 +321,12 @@ func (e *Engine) dropAssets(releaseID string) {
 // OpenReleaseAsset opens a file asset of a release for download. A release that
 // is only a draft may be read by those who may see drafts; the caller decides.
 func (e *Engine) OpenReleaseAsset(ctx context.Context, releaseID, name string) (io.ReadCloser, *ReleaseAsset, error) {
+	return e.OpenReleaseAssetAt(ctx, releaseID, name, 0)
+}
+
+// OpenReleaseAssetAt opens a release file from a byte offset, so a download can resume and a range can be answered
+// without reading what comes before it.
+func (e *Engine) OpenReleaseAssetAt(ctx context.Context, releaseID, name string, offset int64) (io.ReadCloser, *ReleaseAsset, error) {
 	var key string
 	row := e.db.QueryRow(`SELECT `+assetCols+`, store_key FROM release_assets WHERE release_id = ? AND name = ?`, releaseID, name)
 	var a ReleaseAsset
@@ -338,7 +344,7 @@ func (e *Engine) OpenReleaseAsset(ctx context.Context, releaseID, name string) (
 	if err != nil {
 		return nil, nil, err
 	}
-	rc, err := st.Open(ctx, key, 0, -1)
+	rc, err := st.Open(ctx, key, offset, -1)
 	if errors.Is(err, blobstore.ErrNotFound) {
 		return nil, nil, fmt.Errorf("%w: the content of %s is missing from the store", ErrNotFound, name)
 	}

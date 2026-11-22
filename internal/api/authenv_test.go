@@ -109,8 +109,11 @@ type envOpts struct {
 	drafts      *auth.DraftRules // who may start draft runs; default the built-in rule
 	// More projects, beside pay-api and web, and the libraries their
 	// pipelines may use.
-	projects  []source.Project
-	libraries []source.Library
+	projects []source.Project
+	// projectsAt, if set, makes more projects once the server's address is known (a Flight that reads a repository
+	// this very server hosts).
+	projectsAt func(base string) []source.Project
+	libraries  []source.Library
 	// Environments of deploy steps, and a policy to use instead of
 	// testPolicy.
 	environments []engine.Environment
@@ -141,7 +144,11 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	o.idp.Now = o.clk.Now
 	// The test repositories are paths on this machine.
 	oldEgress := egress.Default.Policy()
-	_ = egress.Default.Set(egress.Policy{AllowLocal: true})
+	pol := egress.Policy{AllowLocal: true}
+	if o.projectsAt != nil {
+		pol.Allow = []string{"127.0.0.1"} // a Flight that reads this very server
+	}
+	_ = egress.Default.Set(pol)
 	t.Cleanup(func() { _ = egress.Default.Set(oldEgress) })
 	no := false
 	var arts engine.ArtifactOptions
@@ -155,6 +162,10 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	dir := t.TempDir()
 	repos := filepath.Join(dir, "repos")
+	srv := httptest.NewUnstartedServer(nil)
+	if o.projectsAt != nil {
+		o.projects = append(o.projects, o.projectsAt("http://"+srv.Listener.Addr().String())...)
+	}
 	mgr, err := source.NewManagerWithLibraries(eng, filepath.Join(dir, "data"), append([]source.Project{
 		// The editor may save to pay-api (new branches only), not to web.
 		{Name: "pay-api", URL: gitRepo(t, filepath.Join(repos, "pay"), gatedPipeline), Poll: time.Hour, Push: &source.PushSettings{}},
@@ -168,7 +179,6 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	s.Settings = testSettings(t, eng)
 	s.Variables = testVariables(eng)
 	s.Toggles = testToggles(eng)
-	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {
 		redirect = "http://" + srv.Listener.Addr().String() + "/auth/callback"

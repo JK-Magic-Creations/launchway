@@ -840,6 +840,61 @@ func (s *Service) CreateTag(ctx context.Context, repoID, name, from string, chec
 	return s.createRef(ctx, repoID, "refs/tags/", name, from, "the tag", check)
 }
 
+// CreateAnnotatedTag makes an annotated tag at a commit: a tag object that says who made it, when and why, which
+// a release adopts. A tag that exists is never moved. It returns the tag object's id.
+func (s *Service) CreateAnnotatedTag(ctx context.Context, repoID, name, commit, message, tagger string, check func(ref, old, next string) error) (string, error) {
+	if err := validRefName(name, "tag"); err != nil {
+		return "", err
+	}
+	var object string
+	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+		ref := "refs/tags/" + name
+		if _, ok := refs[ref]; ok {
+			return nil, fmt.Errorf("%w: the tag %s exists already", ErrConflict, name)
+		}
+		for r := range refs {
+			if strings.HasPrefix(r, ref+"/") || strings.HasPrefix(ref, r+"/") {
+				return nil, fmt.Errorf("%w: %s clashes with the tag %s", ErrConflict, name, strings.TrimPrefix(r, "refs/tags/"))
+			}
+		}
+		g := runner{dir: scratch, limits: s.Git.Limits(), scratch: true}
+		at := commit
+		for _, pre := range []string{"refs/heads/", "refs/tags/"} {
+			if v, ok := refs[pre+commit]; ok {
+				at = v
+				break
+			}
+		}
+		sha, err := g.resolve(ctx, at)
+		if err != nil {
+			return nil, err
+		}
+		who := strings.Map(func(r rune) rune {
+			if r < 0x20 || r == '<' || r == '>' || r == 0x7f {
+				return -1
+			}
+			return r
+		}, strings.TrimSpace(tagger))
+		if who == "" {
+			who = "launchway"
+		}
+		body := fmt.Sprintf("object %s\ntype commit\ntag %s\ntagger %s <%s@users.noreply.launchway.invalid> %d +0000\n\n%s\n",
+			sha, name, who, strings.Join(strings.Fields(who), "-"), s.now().Unix(), strings.TrimRight(message, "\n"))
+		out, err := g.run(ctx, []byte(body), "hash-object", "-t", "tag", "-w", "--stdin")
+		if err != nil {
+			return nil, err
+		}
+		object = strings.TrimSpace(out)
+		if check != nil {
+			if err := check(ref, "", object); err != nil {
+				return nil, err
+			}
+		}
+		return []storage.RefUpdate{{Name: ref, Old: strings.Repeat("0", len(object)), New: object}}, nil
+	})
+	return object, err
+}
+
 // DeleteTag removes a tag and says which object it pointed at.
 func (s *Service) DeleteTag(ctx context.Context, repoID, name string, check func(ref, old, next string) error) (string, error) {
 	if err := validRefName(name, "tag"); err != nil {
