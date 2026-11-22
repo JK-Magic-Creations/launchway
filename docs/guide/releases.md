@@ -75,6 +75,12 @@ A published release's tag is checked again when it is promoted: if the tag no lo
 
 By default every download needs a signed-in person who can read the Flight. An installation can allow **public content**: an administrator of every Flight turns it on (`launchway release installation --public-downloads=true`, off by default), a Flight administrator asks for it in the Flight's settings (`--public`), and a release is made public when it is published (admin only). All three must agree; withdrawing a release stops its public download at once. Public files are at `/public/releases/PROJECT/VERSION/FILE`.
 
+### The latest release and download counts
+
+`latest` stands for the version wherever a version goes: `launchway release show web latest`, `GET /api/v1/projects/web/releases/latest` for the page, and `.../releases/latest/assets/app.apk` for a file by name, so a link in a README never needs a new number. It names the newest published release that is not a pre-release; a withdrawn release, a draft and a candidate are never it. Where public downloads are allowed (the three yeses above) the same words work without signing in, at `/public/releases/PROJECT/latest` for the page and `/public/releases/PROJECT/latest/FILE` for a file; if the latest release was not made public, they answer not found rather than showing an older one.
+
+The list marks the **Latest** release and each **Pre-release**. Each file counts its downloads, shown on the release page, in `launchway release show` and as `downloads` in the API. A download counts when it was sent to the end without a break: a whole file counts once, the rest of a broken download counts once (the part before it does not), and a `HEAD`, a part in the middle and a refused request count nothing.
+
 ## Release branches and urgent fixes
 
 To release from a maintenance branch, create the release from that branch and say the version is lower than the highest on purpose:
@@ -97,3 +103,14 @@ A promotion starts a pipeline too. See [Promoting a release](promoting-releases.
 ## Launchway's own release
 
 Launchway releases itself with the workflow in `.github/workflows/release.yml` (`packaging/release/release.sh`): binaries, packages, charts, SBOMs, `SHA256SUMS`, a signature and provenance, on a pushed `v*` tag. That workflow is unchanged. The same release run as a Launchway release pipeline is in `examples/release/launchway-itself.yaml`: the step runs `packaging/release/release.sh` and keeps its output as Cargo, and the next step drafts the release with notes from the merged pull requests, attaches `SHA256SUMS`, its signature and the packages, and publishes it. Moving over is a matter of running both for one release and comparing the checksums.
+
+## Badges for a README
+
+A Flight can show its state in a README with two small images: the status of its last Sortie on a branch, and the version of its latest release. Open the Flight's page, copy the Markdown from **Badges** (or `launchway release badges FLIGHT`), and paste it:
+
+```
+![shop status](https://launchway.example.com/public/badges/shop/status.svg?branch=main)
+![shop release](https://launchway.example.com/public/badges/shop/release.svg)
+```
+
+A badge is served without signing in only when the Flight's repository is public, or when the Flight's badges are switched on, which an administrator of the Flight does and which is off by default for a Flight of a private repository. In every other case, and for a Flight that does not exist, the answer is the same plain not found, so a badge never says that a private Flight is there. A badge holds only a status word (passing, failing, running, waiting, canceled, no Sorties) or a version, never a commit, a message, a person or a number of a Sortie. It is cached for a minute and carries an `ETag`. Switching badges on or off is in the Logbook as `flight.badges`.

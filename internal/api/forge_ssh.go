@@ -123,15 +123,24 @@ func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Con
 		if err != nil {
 			return errors.New("the repository's branch rules could not be read; nothing was changed")
 		}
-		if len(pats) == 0 {
-			return nil
-		}
-		isAdmin := c.id != nil && s.authorize(c.id, auth.AdministerProject, repo.Path)
 		us := make([]refrules.Update, len(ups))
 		for i, u := range ups {
 			us[i] = refrules.Update{Name: u.Name, Old: u.Old, New: u.New}
 		}
-		return refrules.Check(pats, us, isAdmin)
+		var tagRules []refrules.TagRule
+		if refrules.HasTags(us) {
+			if tagRules, err = s.Forge.Rules.TagRules(ctx, repo.ID); err != nil {
+				return errors.New("the repository's protected tags could not be read; nothing was changed")
+			}
+		}
+		if len(pats) == 0 && len(tagRules) == 0 {
+			return nil
+		}
+		isAdmin := c.id != nil && s.authorize(c.id, auth.AdministerProject, repo.Path)
+		if err := refrules.Check(pats, us, isAdmin); err != nil {
+			return err
+		}
+		return refrules.CheckTags(tagRules, us, refrules.TagActor{Admin: isAdmin})
 	}
 }
 

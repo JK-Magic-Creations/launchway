@@ -325,6 +325,16 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/work/import/archive":                           {"POST", "/api/v1/work/import/archive", `{"repository":"o/x","preview":true}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/protected-branches": {"GET", "/api/v1/repositories/o/x/protected-branches", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/repositories/{owner}/{name}/protected-branches": {"PUT", "/api/v1/repositories/o/x/protected-branches", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/download":           {"GET", "/api/v1/repositories/o/x/download", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/badges":                         {"GET", "/api/v1/projects/pay-api/badges", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"PUT /api/v1/projects/{name}/badges":                         {"PUT", "/api/v1/projects/pay-api/badges", `{"enabled":false}`, [6]int{401, 404, 403, 403, 404, 200}},
+	"GET /public/badges/{name}/status.svg":                       {"GET", "/public/badges/pay-api/status.svg", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /public/badges/{name}/release.svg":                      {"GET", "/public/badges/pay-api/release.svg", "", [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/pull-template":      {"GET", "/api/v1/repositories/o/x/pull-template", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/hosting-settings":                               {"GET", "/api/v1/hosting-settings", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/hosting-settings":                               {"PUT", "/api/v1/hosting-settings", `{}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/repositories/{owner}/{name}/protected-tags":     {"GET", "/api/v1/repositories/o/x/protected-tags", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/repositories/{owner}/{name}/protected-tags":     {"PUT", "/api/v1/repositories/o/x/protected-tags", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	// Webhooks of a repository (its administrators) and of an owner (an administrator); with hosting off what passes the check is 404 feature_off.
 	"GET /api/v1/repositories/{owner}/{name}/hooks":                                       {"GET", "/api/v1/repositories/o/x/hooks", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories/{owner}/{name}/hooks":                                      {"POST", "/api/v1/repositories/o/x/hooks", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
@@ -647,7 +657,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
-var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
+var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info", "GET /public/badges/{name}/status.svg", "GET /public/badges/{name}/release.svg",
 	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate", "GET /api/state/v1/{project}/{workspace}", "POST /api/state/v1/{project}/{workspace}", "PUT /api/state/v1/{project}/{workspace}", "DELETE /api/state/v1/{project}/{workspace}",
 	"LOCK /api/state/v1/{project}/{workspace}/lock", "UNLOCK /api/state/v1/{project}/{workspace}/lock"}
 

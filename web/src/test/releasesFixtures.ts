@@ -5,11 +5,11 @@ const day = 86400000;
 
 const release = (over: Partial<Release> = {}): Release => ({
   id: "rel_1", project: "shop-api", version: "1.4.0", scheme: "semver", state: "published", notes: "## 1.4.0\n\n### Features\n\n- the matrix (#12) by ann\n\n### Fixes\n\n- a crash on start (#13) by bob\n\n### Contributors\n\nann, bob\n",
-  notes_source: "generated from merged pull requests and commits", sha: "0123456789abcdef0123456789abcdef01234567", tag: "v1.4.0", tag_object: "t1", tag_created: true, prerelease: false,
+  notes_source: "generated from merged pull requests and commits", sha: "0123456789abcdef0123456789abcdef01234567", tag: "v1.4.0", tag_object: "t1", tag_created: true, prerelease: false, latest: true,
   run_id: "run_7", run_number: 7, digests: [{ image: "registry.example/shop-api@sha256:" + "ab".repeat(32), digest: "sha256:" + "ab".repeat(32), step: "image" }], previous: "1.3.2",
   commit_time: T - 3 * day, created_at: T - 2 * day, created_by: "ann", published_at: T - day, published_by: "ann", immutable: true,
   assets: [
-    { id: "ras_1", name: "shop-api-linux-amd64", kind: "file", size: 14_300_000, sha256: "cd".repeat(32), run_id: "run_7", run_number: 7, source_sha: "0123456789abcdef", added_by: "ann", added_at: T - 2 * day },
+    { id: "ras_1", name: "shop-api-linux-amd64", kind: "file", size: 14_300_000, sha256: "cd".repeat(32), run_id: "run_7", run_number: 7, source_sha: "0123456789abcdef", added_by: "ann", added_at: T - 2 * day, downloads: 42 },
     { id: "ras_2", name: "image-image", kind: "image", size: 0, digest: "sha256:" + "ab".repeat(32), detail: "signed true, SBOM true", run_id: "run_7", run_number: 7, source_sha: "0123456789abcdef", added_by: "ann", added_at: T - 2 * day },
   ], ...over,
 });
@@ -18,10 +18,10 @@ const release = (over: Partial<Release> = {}): Release => ({
 export const releaseWithALongFileName = (): Release => release({ assets: [{ id: "ras_9", name: "shop-api-" + "very-long-name-".repeat(30) + ".tar.gz", kind: "file", size: 1000, sha256: "ef".repeat(32), run_id: "run_7", run_number: 7, source_sha: "0123456789abcdef", added_by: "ann", added_at: T - 2 * day }] });
 
 export const releaseList = (): Release[] => [
-  release({ id: "rel_3", version: "1.5.0", state: "draft", published_at: undefined, published_by: undefined, tag: undefined, immutable: false, assets: [] }),
-  release({ id: "rel_2", version: "1.4.1-rc.1", state: "candidate", prerelease: true, immutable: false, published_at: undefined, assets: [] }),
+  release({ id: "rel_3", version: "1.5.0", latest: false, state: "draft", published_at: undefined, published_by: undefined, tag: undefined, immutable: false, assets: [] }),
+  release({ id: "rel_2", version: "1.4.1-rc.1", latest: false, state: "candidate", prerelease: true, immutable: false, published_at: undefined, assets: [] }),
   release(),
-  release({ id: "rel_0", version: "1.3.2", state: "yanked", yank_reason: "crashes on start", yanked_by: "bob", yanked_at: T - day }),
+  release({ id: "rel_0", version: "1.3.2", latest: false, state: "yanked", yank_reason: "crashes on start", yanked_by: "bob", yanked_at: T - day }),
 ];
 
 export const view = (r: Release, may: Partial<ReleaseView["may"]> = {}): ReleaseView => ({

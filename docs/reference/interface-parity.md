@@ -133,6 +133,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/graph/where` | `graph_where_running` | `graph where` | — | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/home` | — | — | — | exempt: a read model for the Home page, worked out from the same rule as attention, plus runs and projects that list_runs and list_projects give in full |
+| `GET /api/v1/hosting-settings` | `get_hosting_settings` | `repos settings` | — | equal |
+| `PUT /api/v1/hosting-settings` | `set_hosting_settings` | `repos settings` | — | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
@@ -169,6 +171,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/project-candidates` | `list_project_candidates` | `squadrons candidates` | — | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
+| `GET /api/v1/projects/{name}/badges` | `get_flight_badges` | `release badges` | — | equal |
+| `PUT /api/v1/projects/{name}/badges` | `set_flight_badges` | `release badges` | — | equal |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy clear` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `GET /api/v1/projects/{name}/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
 | `PUT /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
@@ -346,6 +350,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `delete_deploy_key` | `repos deploy-keys delete` | `planned: launchway_deploy_key` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/diff` | `get_repository_diff` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/diff/patch` | `get_repository_diff` | `repos show` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/download` | — | `repos download` | — | exempt: a snapshot of a ref is a byte stream (tar.gz or zip), not a tool result; list_repository_tags and the file tools give an agent the content it can read |
 | `DELETE /api/v1/repositories/{owner}/{name}/files` | `delete_repository_file` | `repos delete-file` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/files` | `read_repository_file` | `repos files` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/files` | `upload_repository_files` | `repos upload` | — | equal |
@@ -370,8 +375,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/owners/check` | `check_owners_file` | `pr owners` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/protected-tags` | `get_protected_tags` | `repos protected-tags` | — | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/protected-tags` | `set_protected_tags` | `repos protected-tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pull-settings` | `get_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/pull-settings` | `set_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pull-template` | `get_pull_template` | `pr template` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls` | `list_pull_requests` | `pr list` | `planned: launchway_pull_request` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls` | `create_pull_request` | `pr create` | `planned: launchway_pull_request` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |
@@ -612,6 +620,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /public/badges/{name}/release.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same version is in list_releases |
+| `GET /public/badges/{name}/status.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same status is in list_runs |
+| `GET /public/releases/{name}/{version}` | — | — | — | exempt: the public page of a release, for installations that allow public content: unauthenticated by design and a subset of what get_release returns; everything else is a not found |
 | `GET /public/releases/{name}/{version}/{asset}` | — | — | — | exempt: the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found |
 | `GET /readyz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /schema/pipeline.json` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

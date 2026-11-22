@@ -17,6 +17,7 @@ import (
 
 func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addUserTools(srv, c)
+	addParityTools(srv, c)
 	addServiceAccountTools(srv, c)
 	addHookTools(srv, c)
 	addDebriefTools(srv, c)
@@ -42,6 +43,9 @@ func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_protected_branches", Annotations: readOnly("Get the protected branches of a repository"),
 		Description: "The branch names and patterns (such as main or release/*) that take no direct push except from the repository's administrators and cannot be deleted."},
 		mcpCallTimeout, getProtectedBranches)
+	addTool(srv, c, &mcp.Tool{Name: "get_protected_tags", Annotations: readOnly("Get the protected tags of a repository"),
+		Description: "The tag patterns (such as v*) of a repository that are protected: for each, who may make a matching tag, who may move or delete one (by default nobody) and the Flights named to make one."},
+		mcpCallTimeout, getProtectedTags)
 	if c.mayOperate {
 		addTool(srv, c, &mcp.Tool{Name: "add_deploy_key", Annotations: changes("Add a deploy key to a repository", false, false),
 			Description: "Repository administrators only. Add a public key that opens this one repository over SSH: read-only unless write is true. Audited."},
@@ -49,6 +53,9 @@ func addKeyTools(srv *mcp.Server, c *mcpCall) {
 		addTool(srv, c, &mcp.Tool{Name: "delete_deploy_key", Annotations: changes("Delete a deploy key", true, true),
 			Description: "Repository administrators only. Delete a deploy key by ID; it stops working at once. Audited."},
 			mcpCallTimeout, deleteDeployKey)
+		addTool(srv, c, &mcp.Tool{Name: "set_protected_tags", Annotations: changes("Set the protected tags of a repository", false, true),
+			Description: "Repository administrators only. Replace the repository's protected tag rules: a pattern such as v*, who may make a matching tag (admin by default, or operator), who may move or delete one (nobody by default, or admin) and the Flights whose own credential may make one. An empty list removes the protection. Audited."},
+			mcpCallTimeout, setProtectedTags)
 		addTool(srv, c, &mcp.Tool{Name: "set_protected_branches", Annotations: changes("Set the protected branches of a repository", false, true),
 			Description: "Repository administrators only. Replace the repository's protected branch patterns (an empty list removes the protection). Audited."},
 			mcpCallTimeout, setProtectedBranches)
@@ -227,5 +234,43 @@ func setProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolReques
 	}
 	var out protectedOut
 	err := c.apiJSON(ctx, "set_protected_branches", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-branches", in.Owner, in.Name), map[string]any{"patterns": in.Patterns, "pipeline_writers": in.PipelineWriters}, &out)
+	return out, err
+}
+
+type tagRule struct {
+	Pattern    string   `json:"pattern" jsonschema:"the tags the rule covers, such as v* or release-*"`
+	CreateRole string   `json:"create_role,omitempty" jsonschema:"who may make a matching tag: admin (the default) or operator"`
+	ChangeRole string   `json:"change_role,omitempty" jsonschema:"who may move or delete a matching tag: empty for nobody (the default) or admin"`
+	Pipelines  []string `json:"pipelines,omitempty" jsonschema:"Flight names or patterns whose own credential may make a matching tag"`
+}
+
+type protectedTagsOut struct {
+	Rules []tagRule `json:"rules"`
+}
+
+func getProtectedTags(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in repositoryIn) (protectedTagsOut, error) {
+	if in.Owner == "" || in.Name == "" {
+		return protectedTagsOut{}, errors.New("say which repository: owner and name")
+	}
+	var out protectedTagsOut
+	err := c.apiJSON(ctx, "get_protected_tags", http.MethodGet, apiPath("/api/v1/repositories/%s/%s/protected-tags", in.Owner, in.Name), nil, &out)
+	return out, err
+}
+
+type setProtectedTagsIn struct {
+	Owner string    `json:"owner" jsonschema:"the repository's owner"`
+	Name  string    `json:"name" jsonschema:"the repository's name"`
+	Rules []tagRule `json:"rules" jsonschema:"the protected tag rules; an empty list removes the protection"`
+}
+
+func setProtectedTags(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setProtectedTagsIn) (protectedTagsOut, error) {
+	if in.Owner == "" || in.Name == "" {
+		return protectedTagsOut{}, errors.New("say which repository: owner and name")
+	}
+	if in.Rules == nil {
+		in.Rules = []tagRule{}
+	}
+	var out protectedTagsOut
+	err := c.apiJSON(ctx, "set_protected_tags", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-tags", in.Owner, in.Name), map[string]any{"rules": in.Rules}, &out)
 	return out, err
 }

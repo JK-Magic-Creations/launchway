@@ -15,6 +15,7 @@ import (
 )
 
 const prUsage = `Usage:
+  launchway pr template [-R OWNER/NAME] [--ref BRANCH] [--json]   the description a pull request starts with (.launchway/pull_request_template.md)
   launchway pr list [-R OWNER/NAME] [--state open|closed|merged|all] [--mine] [--review-requested]
                     [--author U] [--label L] [--json]       the pull requests of a repository
   launchway pr view N [-R OWNER/NAME] [--files] [--commits] [--comments] [--json]
@@ -227,6 +228,8 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prApply(args)
 	case "settings":
 		return cl.prSettings(args)
+	case "template":
+		return cl.prTemplate(args)
 	case "rules":
 		return cl.prRules(args)
 	case "owners":

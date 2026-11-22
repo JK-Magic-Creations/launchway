@@ -55,8 +55,9 @@ func init() {
 		"POST /api/v1/release-formations/{id}/promote":                           {"POST", "/api/v1/release-formations/frm_nope/promote", `{"airfield":"prod"}`, [6]int{401, 404, 404, 404, 404, 404}},
 		"POST /api/v1/release-formations/{id}/advance":                           {"POST", "/api/v1/release-formations/frm_nope/advance", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 		"GET /public/releases/{name}/{version}/{asset}":                          {"GET", "/public/releases/pay-api/1.0.0/a.bin", "", [6]int{404, 404, 404, 404, 404, 404}},
+		"GET /public/releases/{name}/{version}":                                  {"GET", "/public/releases/pay-api/1.0.0", "", [6]int{404, 404, 404, 404, 404, 404}},
 	} {
 		permissionTable[k] = v
 	}
-	publicRoutes = append(publicRoutes, "GET /public/releases/{name}/{version}/{asset}")
+	publicRoutes = append(publicRoutes, "GET /public/releases/{name}/{version}/{asset}", "GET /public/releases/{name}/{version}")
 }

@@ -80,7 +80,7 @@ export function ReleasesPage() {
               <tbody>
                 {list.data.map((r) => (
                   <tr key={r.id}>
-                    <td><a href={href(r)} onClick={onLink}><b>{r.project}</b> {r.version}</a>{r.prerelease && <> <Chip>pre-release</Chip></>}</td>
+                    <td><a href={href(r)} onClick={onLink}><b>{r.project}</b> {r.version}</a>{r.latest && <> <Chip tone="ok">Latest</Chip></>}{r.prerelease && <> <Chip>Pre-release</Chip></>}</td>
                     <td><StateChip state={r.state} /></td>
                     <td className="rel-sha">{r.sha.slice(0, 8)}</td>
                     <td className="rel-sha">{r.tag ?? "none yet"}</td>
@@ -177,7 +177,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
     r.state === "published" ? "Published: its version, commit, tag, Cargo and image digests never change. A correction is a new release." : `Withdrawn by ${r.yanked_by}: ${r.yank_reason}`;
   return (
     <div className="page">
-      <PageHead eyebrow={<><a href="/deployments/releases" onClick={onLink}>Releases</a> · <EntityLink kind="project" name={r.project} /></>} title={`${r.project} ${r.version}`} badge={<> <StateChip state={r.state} /></>} sentence={sentence}
+      <PageHead eyebrow={<><a href="/deployments/releases" onClick={onLink}>Releases</a> · <EntityLink kind="project" name={r.project} /></>} title={`${r.project} ${r.version}`} badge={<> <StateChip state={r.state} />{r.latest && <> <Chip tone="ok">Latest</Chip></>}{r.prerelease && <> <Chip>Pre-release</Chip></>}</>} sentence={sentence}
         actions={<>
           {v.may.publish && <Button kind="pri" onClick={() => setDialog("publish")}>Publish</Button>}
           {v.may.edit && r.state === "draft" && <Button onClick={() => act(() => releasesApi.candidate(r.project, r.version), "It is a candidate now.")}>Make it a candidate</Button>}
@@ -287,14 +287,15 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
   };
   return (
     <Sheet title="Cargo and images">
+      {r.latest && <p className="rel-hint" style={{ padding: "14px 16px 0" }}>This is the latest release. Its address stays the same for the next one: use <span className="mono" style={{ overflowWrap: "anywhere" }}>{releasesApi.downloadUrl(r.project, "latest", "FILE")}</span> to get a file by name.</p>}
       {assets.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No files or images are attached.</p> : (
         <div className="rel-table-wrap"><table className="rel-table rel-assets">
           <caption className="visually-hidden">Files and images of this release, with where each came from</caption>
-          <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size and downloads</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
           <tbody>{assets.map((a: ReleaseAsset) => (
             <tr key={a.id}>
               <td>{a.kind === "file" ? <a href={releasesApi.downloadUrl(r.project, r.version, a.name)} download>{a.name}</a> : a.name}</td>
-              <td className="hide-narrow">{a.kind}</td><td className="n">{a.kind === "file" ? size(a.size) : ""}</td>
+              <td className="hide-narrow">{a.kind}</td><td className="n">{a.kind === "file" ? <>{size(a.size)}<br /><span className="faint small">{a.downloads ?? 0} {a.downloads === 1 ? "download" : "downloads"}</span></> : ""}</td>
               <td className="rel-sha">{a.sha256 ?? a.digest ?? ""}{a.detail ? <span className="faint"> · {a.detail}</span> : null}</td>
               <td className="hide-narrow">{a.run_id ? <>Sortie #{a.run_number} at {a.source_sha?.slice(0, 8)}, added by {a.added_by}</> : <>uploaded by {a.added_by}</>}</td>
               <td>

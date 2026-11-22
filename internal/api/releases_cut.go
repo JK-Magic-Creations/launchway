@@ -109,7 +109,17 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request, rel *engine.
 		return g, err
 	}}
 	defer rs.Close()
-	http.ServeContent(w, r, "", time.Time{}, rs)
+	if r.Method != http.MethodGet {
+		http.ServeContent(w, r, "", time.Time{}, rs)
+		return
+	}
+	cw := &countingWriter{ResponseWriter: w, size: a.Size}
+	http.ServeContent(cw, r, "", time.Time{}, rs)
+	if cw.complete() && r.Context().Err() == nil {
+		if err := s.Engine.CountReleaseDownload(rel.ID, a.Name); err != nil {
+			s.Log.Warn("a release download could not be counted", "release", rel.ID, "file", a.Name, "err", err)
+		}
+	}
 }
 
 // assetContentType is the type a file is served as. Files are always downloads (never shown as pages), so an

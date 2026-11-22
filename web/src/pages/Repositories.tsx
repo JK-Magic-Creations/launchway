@@ -8,6 +8,7 @@ import { RepoGeneral } from "./RepoGeneral";
 import { RepoReach } from "./RepoReach";
 import { HooksPanel } from "./HooksPanel";
 import { MergeRulesPanel } from "./MergeRules";
+import { ProtectedTags } from "./ProtectedTags";
 import { PageTabs, useTab } from "../components/PageTabs";
 import { useHosting } from "./SshKeys";
 import "../styles/forge.css";
@@ -180,11 +181,11 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
       {admin && (
         <>
           <PageTabs current={tab} onChange={setTab}
-            tabs={[{ id: "keys", label: "Deploy keys" }, { id: "reach", label: "Who can reach it" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }, { id: "merge", label: "Merge rules" }]} />
+            tabs={[{ id: "keys", label: "Deploy keys" }, { id: "reach", label: "Who can reach it" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Branches and tags" }, { id: "merge", label: "Merge rules" }]} />
           {tab === "keys" && <DeployKeys repo={repo} />}
           {tab === "reach" && <RepoReach repo={repo} />}
           {tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
-          {tab === "branches" && <Protected repo={repo} />}
+          {tab === "branches" && <><Protected repo={repo} /><ProtectedTags repo={repo} /></>}
           {tab === "merge" && <MergeRulesPanel path={repo.path} />}
         </>
       )}

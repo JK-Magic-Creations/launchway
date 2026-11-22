@@ -26,9 +26,14 @@ Raw files are never able to run in the product: they are always a download, neve
 
 **Compare** puts two branches or tags side by side: commits ahead and behind, the commits, the files, and a working **Open a pull request** button (or a link to the pull request that already exists). **Branches** lists every branch with its distance from the default branch, its last commit, whether it is protected and its open pull request. Deleting a branch asks first, respects branch protection, is recorded in the Logbook (audit trail) with the commit the branch pointed at, and shows how to bring it back (a **Bring it back** button, or `git push origin <commit>:refs/heads/<name>`). **Tags** lists tags with an annotated tag's message.
 
+## Download a snapshot
+
+The code page has **Download tar.gz** and **Download zip** for the branch, tag or commit you are looking at: the files of that ref, under a folder named for the repository and the ref (`shop-v1.2/`). Anyone who may read the repository may have one; it is streamed, never built in memory or on disk, and recorded in the Logbook with the commit and its size. A ref with more files than the installation allows is refused before the first byte, in words that say how much it is: the limit is the hosting setting `archive_max_mib` (default 512 MiB of files before compression), changed by an administrator with `launchway repos settings --archive-max-mib 1024`, in the API (`PUT /api/v1/hosting-settings`) or with the `set_hosting_settings` tool. A file marked `export-ignore` in `.gitattributes` is left out, as on every Git host. Snapshots are limited to a few a minute per person.
+
 ## From the command line
 
 ```sh
+launchway repos download acme/shop --ref v1.2 --format zip -o shop.zip
 launchway repos tree acme/shop src
 launchway repos cat acme/shop src/main.go --ref v1.2
 launchway repos log acme/shop --path src/main.go
@@ -53,4 +58,4 @@ The MCP tools are `read_repository_file`, `list_repository_commits`, `get_reposi
 
 ## Limits
 
-Reading is not metered, but blame and search are limited per person. A file over 1 MiB is not shown or blamed in the page. Not yet: archives, cross-repository search, code navigation (go to definition) and releases.
+Reading is not metered, but blame and search are limited per person. A file over 1 MiB is not shown or blamed in the page. Not yet: cross-repository search, code navigation (go to definition) and releases.

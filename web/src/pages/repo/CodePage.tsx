@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { ApiError } from "../../api";
 import { canChange, useMe } from "../../auth";
 import { ErrorBox, Link } from "../../components/ui";
-import { blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
+import { archiveUrl, blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
 import { Dialog } from "../../kit/Dialog";
 import { EmptyState, LinkButton } from "../../kit/layout";
 import { navigate } from "../../router";
@@ -145,6 +145,12 @@ export function CodePage({ path }: { path: string }) {
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { new: "1" })} className="btn btn-sm">New file</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { upload: "1" })} className="btn btn-sm">Upload files</Link>}
           </div>
+          {item.type === "dir" && (
+            <div className="row wrap" role="group" aria-label={`Download ${current}`} style={{ marginBottom: 8 }}>
+              <a href={archiveUrl(path, current, "tar.gz")} className="btn btn-sm" download>Download tar.gz</a>
+              <a href={archiveUrl(path, current, "zip")} className="btn btn-sm" download>Download zip</a>
+            </div>
+          )}
           {item.type === "dir" ? (
             <>
               <section className="card tree" aria-label="Files">

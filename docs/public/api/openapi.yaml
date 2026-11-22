@@ -3297,6 +3297,54 @@ paths:
             tags:
                 - home
             x-launchway-access: signed-in
+    /api/v1/hosting-settings:
+        get:
+            description: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            operationId: get_api_v1_hosting_settings
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            tags:
+                - hosting-settings
+            x-launchway-access: signed-in
+        put:
+            description: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}. Answers with both.'
+            operationId: put_api_v1_hosting_settings
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}.'
+            tags:
+                - hosting-settings
+            x-launchway-access: admin
+            x-launchway-audit: hosting.settings
     /api/v1/images:
         get:
             description: 'Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a Flight''s images (?project=). {"hits": […]}'
@@ -4349,6 +4397,69 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/badges:
+        get:
+            description: 'Whether the Flight''s badges are shown to anyone (shown: switched on, or its repository is public), their addresses (links) and the Markdown to paste (markdown).'
+            operationId: get_api_v1_projects_name_badges
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Whether the Flight''s badges are shown to anyone (shown: switched on, or its repository is public), their addresses (links) and the Markdown to paste (markdown).'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: 'Switches the badges on or off: {"enabled": true}. Only an administrator of the Flight may; the answer is the same as the read.'
+            operationId: put_api_v1_projects_name_badges
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Switches the badges on or off: {"enabled": true}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: flight.badges
     /api/v1/projects/{name}/cache-policy:
         delete:
             description: 'Removes the override: the installation''s policy applies again.'
@@ -5789,7 +5900,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: release.delete
         get:
-            description: One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. {version} is a version, a tag or the release's id.
+            description: 'One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. {version} is a version, a tag, the release''s id or latest: the newest published release that is not a pre-release (a withdrawn release, a draft and a candidate are never it; 404 when the Flight has none). release.latest is true for that release, release.prerelease for a pre-release, and each asset carries downloads, the number of completed downloads.'
             operationId: get_api_v1_projects_name_releases_version
             parameters:
                 - in: path
@@ -5942,7 +6053,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: release.asset.remove
         get:
-            description: 'Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256. Answers Range (a phone resumes a broken download). The type is the file''s own (application/vnd.android.package-archive for .apk, application/zip, application/gzip, and so on; anything else, and every page or script, is application/octet-stream), always with Content-Disposition: attachment.'
+            description: 'Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256. Answers Range (a phone resumes a broken download). latest may stand for the version. A download counts when the whole file, or the range that ends at its last byte, was sent without a break: the rest of a broken download counts once, a HEAD, a part in the middle and a refusal not at all. The type is the file''s own (application/vnd.android.package-archive for .apk, application/zip, application/gzip, and so on; anything else, and every page or script, is application/octet-stream), always with Content-Disposition: attachment.'
             operationId: get_api_v1_projects_name_releases_version_assets_asset
             parameters:
                 - in: path
@@ -10271,6 +10382,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/download:
+        get:
+            description: 'A snapshot of a ref as an archive: ?ref= (a branch, tag or commit; default the default branch) and ?format= tar.gz (the default) or zip. Streamed, under a folder named for the repository and the ref, with the commit in X-Launchway-Commit. Refused with 413 before the first byte when the files add up to more than the hosting setting archive_max_mib, with 404 for a ref that is not there and 400 for another format; limited to a few a minute per person.'
+            operationId: get_api_v1_repositories_owner_name_download
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A snapshot of a ref as an archive: ?ref= (a branch, tag or commit; default the default branch) and ?format= tar.gz (the default) or zip.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: repository.archive
     /api/v1/repositories/{owner}/{name}/files:
         delete:
             description: 'One commit that removes one file: {"branch", "path", "message", "expected_sha"}; expected_sha (the file''s current sha) is required, so a file changed in between is never removed by mistake. The same branch rules, follow-up and answer as PUT. The file stays in the history.'
@@ -11204,6 +11352,79 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.protect
+    /api/v1/repositories/{owner}/{name}/protected-tags:
+        get:
+            description: '{"rules": [...]}: the tag patterns that are protected, each with who may make a matching tag (create_role: admin or operator), who may move or delete one (change_role: empty for nobody, or admin) and the Flights (pipelines) whose own credential may make one.'
+            operationId: get_api_v1_repositories_owner_name_protected_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"rules": [...]}: the tag patterns that are protected, each with who may make a matching tag (create_role: admin or operator), who may move or delete one (change_role: empty for nobody, or admin) and the Flights (pipelines) whose own credential may make one.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: 'Replaces the rules: {"rules": [{"pattern": "v*", "create_role": "admin", "change_role": "", "pipelines": []}]}; * matches anything but a slash; an empty list removes the protection. A push over HTTPS or SSH, the tag routes and a release that would make, move or delete a matching tag the caller may not are refused in plain words.'
+            operationId: put_api_v1_repositories_owner_name_protected_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Replaces the rules: {"rules": [{"pattern": "v*", "create_role": "admin", "change_role": "", "pipelines": []}]}; * matches anything but a slash; an empty list removes the protection.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: repository.protect_tags
     /api/v1/repositories/{owner}/{name}/pull-settings:
         get:
             description: 'The repository''s merge settings: which methods are allowed, the default, delete the branch after a merge, dismiss stale approvals, the message templates.'
@@ -11277,6 +11498,42 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.pull_settings
+    /api/v1/repositories/{owner}/{name}/pull-template:
+        get:
+            description: 'The description a pull request starts with, read at ?ref= (the target branch; default the default branch): {"path", "template", "commit"} from .launchway/pull_request_template.md, else a top-level pull_request_template.md or PULL_REQUEST_TEMPLATE.md. A repository with none answers with an empty template, not an error.'
+            operationId: get_api_v1_repositories_owner_name_pull_template
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The description a pull request starts with, read at ?ref= (the target branch; default the default branch): {"path", "template", "commit"} from .launchway/pull_request_template.md, else a top-level pull_request_template.md or PULL_REQUEST_TEMPLATE.md.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/pulls:
         get:
             description: 'The repository''s pull requests, newest first: ?state= open (the default), closed, merged or all, author, assignee, reviewer (@me is the caller), label, source, target, q (title), limit, offset. {"items": [...], "total"}.'
@@ -18621,6 +18878,95 @@ paths:
             summary: The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless).
             tags:
                 - mcp
+            x-launchway-access: public
+    /public/badges/{name}/release.svg:
+        get:
+            description: An SVG badge with the version of the Flight's latest release (the newest published one that is not a pre-release), or none. The same three rules as the status badge.
+            operationId: get_public_badges_name_release.svg
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: An SVG badge with the version of the Flight's latest release (the newest published one that is not a pre-release), or none.
+            tags:
+                - public
+            x-launchway-access: public
+    /public/badges/{name}/status.svg:
+        get:
+            description: 'An SVG badge for the last Sortie of the Flight on ?branch= (default main): passing, failing, running, waiting, canceled or no Sorties. Answers 404 (the same for a Flight that does not exist) unless the Flight''s repository is public or its badges are on. Holds only the status word. Cacheable for a minute, with an ETag.'
+            operationId: get_public_badges_name_status.svg
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'An SVG badge for the last Sortie of the Flight on ?branch= (default main): passing, failing, running, waiting, canceled or no Sorties.'
+            tags:
+                - public
+            x-launchway-access: public
+    /public/releases/{name}/{version}:
+        get:
+            description: 'The page of a public release with no sign-in, for the same three yeses as the file: its version, title, notes, tag, whether it is a pre-release or the latest, and each file with its size, SHA-256, download count and address. {version} may be latest, and the file by name is /public/releases/{name}/latest/{asset}. Anything else is 404, including a latest release that was not made public.'
+            operationId: get_public_releases_name_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'The page of a public release with no sign-in, for the same three yeses as the file: its version, title, notes, tag, whether it is a pre-release or the latest, and each file with its size, SHA-256, download count and address.'
+            tags:
+                - public
             x-launchway-access: public
     /public/releases/{name}/{version}/{asset}:
         get:

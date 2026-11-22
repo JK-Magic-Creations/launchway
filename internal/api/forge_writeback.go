@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"slices"
 	"strings"
 	"time"
@@ -65,13 +66,24 @@ func (s *Server) pushPolicyPipeline(c gitCaller, repo forge.Repository) func(con
 		if claim.Mode == githttp.ModePullRequest {
 			want = "refs/heads/" + claim.WorkBranch()
 		}
+		tagsOnly := len(ups) > 0
 		for _, u := range ups {
+			isTag := strings.HasPrefix(u.Name, "refs/tags/") && strings.Trim(u.Old, "0") == "" && strings.Trim(u.New, "0") != ""
+			tagsOnly = tagsOnly && isTag
 			switch {
+			case isTag:
+				// A new tag is a Flight's to make only where a protected-tag rule names it.
+				if err := s.pipelineTag(ctx, repo, claim.Project, want, u); err != nil {
+					return err
+				}
 			case u.Name != want:
-				return fmt.Errorf("this deploy credential may push only %s, not %s", strings.TrimPrefix(want, "refs/heads/"), strings.TrimPrefix(u.Name, "refs/heads/"))
+				return onlyBranch(want, u.Name)
 			case strings.Trim(u.New, "0") == "":
 				return errors.New("this deploy credential cannot delete a branch")
 			}
+		}
+		if tagsOnly { // admitted tags change no file of a branch
+			return nil
 		}
 		if s.Forge == nil || s.Forge.Rules == nil {
 			return errors.New("the repository's pipeline writer rules could not be read; nothing was changed")
@@ -215,4 +227,33 @@ func (s *Server) deployPullView(ctx context.Context, r *http.Request, repo forge
 		out.State = "closed"
 	}
 	return out
+}
+
+// pipelineTag judges a tag a Flight's deploy credential makes: refused unless
+// a protected-tag rule of the repository names the Flight, so a credential
+// that could only ever push its own branch gains nothing it was not given.
+func (s *Server) pipelineTag(ctx context.Context, repo forge.Repository, project, want string, u githttp.RefUpdate) error {
+	if s.Forge == nil || s.Forge.Rules == nil {
+		return errors.New("the repository's protected tags could not be read; nothing was changed")
+	}
+	rules, err := s.Forge.Rules.TagRules(ctx, repo.ID)
+	if err != nil {
+		return errors.New("the repository's protected tags could not be read; nothing was changed")
+	}
+	name := strings.TrimPrefix(u.Name, "refs/tags/")
+	covered := false
+	for _, r := range rules {
+		if m, _ := path.Match(r.Pattern, name); m {
+			covered = true
+		}
+	}
+	if !covered {
+		return onlyBranch(want, u.Name)
+	}
+	return refrules.CheckTags(rules, []refrules.Update{{Name: u.Name, Old: u.Old, New: u.New}}, refrules.TagActor{Pipeline: project})
+}
+
+// onlyBranch is the refusal of a push to a ref the credential may not push.
+func onlyBranch(want, name string) error {
+	return fmt.Errorf("this deploy credential may push only %s, not %s", strings.TrimPrefix(want, "refs/heads/"), strings.TrimPrefix(name, "refs/heads/"))
 }

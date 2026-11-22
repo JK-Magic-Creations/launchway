@@ -19,7 +19,8 @@ import (
 
 const releaseUsage = `Usage:
   launchway release list [--project P] [--state draft|candidate|published|yanked] [--json]
-  launchway release show FLIGHT VERSION [--json]
+  launchway release show FLIGHT VERSION|latest [--json]   latest is the newest published release that is not a pre-release
+  launchway release badges FLIGHT [--on|--off] [--json]   the Flight's status and release badges: where they are, what to paste, switch them on or off
   launchway release next --project P [--from REF] [--pre rc] [--json]
         propose the next version from the changes since the last release, with the reasoning
   launchway release notes --project P [--to REF] [--version V]   preview generated release notes
@@ -30,7 +31,7 @@ const releaseUsage = `Usage:
   launchway release edit FLIGHT VERSION [--notes-file F] [--title T] [--regenerate-notes]
   launchway release assets add FLIGHT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
   launchway release assets remove FLIGHT VERSION NAME
-  launchway release assets get FLIGHT VERSION NAME [-o FILE]
+  launchway release assets get FLIGHT VERSION|latest NAME [-o FILE]
   launchway release candidate FLIGHT VERSION
   launchway release publish FLIGHT VERSION [--public]       create the annotated tag and fix the release
   launchway release yank FLIGHT VERSION --reason TEXT       withdraw a release, with a reason
@@ -101,6 +102,8 @@ func (cl *client) release(args []string) error {
 		return cl.releaseList(rest)
 	case "show":
 		return cl.releaseShow(rest)
+	case "badges":
+		return cl.releaseBadges(rest)
 	case "next":
 		return cl.releaseNext(rest)
 	case "notes":
@@ -159,7 +162,14 @@ func (cl *client) releaseList(args []string) error {
 		return nil
 	}
 	for _, r := range list {
-		fmt.Fprintf(cl.out, "%-20s %-16s %-10s %s  %s\n", r["project"], r["version"], r["state"], str(r["sha"], 8), r["tag"])
+		marks := ""
+		if r["latest"] == true {
+			marks += "  Latest"
+		}
+		if r["prerelease"] == true {
+			marks += "  Pre-release"
+		}
+		fmt.Fprintf(cl.out, "%-20s %-16s %-10s %s  %s%s\n", r["project"], r["version"], r["state"], str(r["sha"], 8), r["tag"], marks)
 	}
 	return nil
 }
@@ -202,6 +212,12 @@ func (cl *client) releaseShow(args []string) error {
 	if n := num(r["run_number"]); n > 0 {
 		built = fmt.Sprintf("Sortie #%.0f", n)
 	}
+	if r["latest"] == true {
+		fmt.Fprintln(cl.out, "Latest: the newest published release that is not a pre-release")
+	}
+	if r["prerelease"] == true {
+		fmt.Fprintln(cl.out, "Pre-release")
+	}
 	fmt.Fprintf(cl.out, "%s %s (%s)\n  commit %s  tag %s  built by %s\n", r["project"], r["version"], r["state"], str(r["sha"], 12), r["tag"], built)
 	if r["yank_reason"] != nil {
 		fmt.Fprintf(cl.out, "  withdrawn by %s: %s\n", r["yanked_by"], r["yank_reason"])
@@ -209,7 +225,11 @@ func (cl *client) releaseShow(args []string) error {
 	if a, ok := r["assets"].([]any); ok {
 		for _, x := range a {
 			m, _ := x.(map[string]any)
-			fmt.Fprintf(cl.out, "  %s %-24s %s %s\n", m["kind"], m["name"], str(m["sha256"], 12), str(m["digest"], 19))
+			downloads := ""
+			if n := num(m["downloads"]); n > 0 {
+				downloads = fmt.Sprintf("  %.0f downloads", n)
+			}
+			fmt.Fprintf(cl.out, "  %s %-24s %s %s%s\n", m["kind"], m["name"], str(m["sha256"], 12), str(m["digest"], 19), downloads)
 		}
 	}
 	printOutside(cl.out, view["outside"])
@@ -478,7 +498,11 @@ func (cl *client) download(path, dest string) error {
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		return apiErr("%v", err)
 	}
-	fmt.Fprintf(cl.out, "wrote %s (SHA-256 %s)\n", dest, resp.Header.Get("X-Launchway-SHA256"))
+	if sum := resp.Header.Get("X-Launchway-SHA256"); sum != "" {
+		fmt.Fprintf(cl.out, "wrote %s (SHA-256 %s)\n", dest, sum)
+	} else {
+		fmt.Fprintf(cl.out, "wrote %s\n", dest)
+	}
 	return nil
 }
 

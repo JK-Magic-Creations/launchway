@@ -27,6 +27,8 @@ export interface Delivery {
   error?: string; response?: string; test?: boolean; redelivery_of?: string; created_at: string; next_attempt?: string; payload: unknown;
 }
 
+export interface TagRule { pattern: string; create_role: string; change_role: string; pipelines: string[] }
+
 export interface NewHook { name?: string; url: string; events: string[]; secret?: string; active?: boolean }
 
 /** A hook's scope: one repository (owner and name) or every repository of an owner. */
@@ -62,6 +64,9 @@ export const forgeApi = {
   protectedBranches: (o: string, n: string) => call<{ patterns: string[] }>("GET", `${repoBase(o, n)}/protected-branches`).then((r) => r.patterns),
   setProtectedBranches: (o: string, n: string, patterns: string[]) =>
     call<{ patterns: string[] }>("PUT", `${repoBase(o, n)}/protected-branches`, { patterns }).then((r) => r.patterns),
+  protectedTags: (o: string, n: string) => call<{ rules: TagRule[] }>("GET", `${repoBase(o, n)}/protected-tags`).then((r) => r.rules),
+  setProtectedTags: (o: string, n: string, rules: TagRule[]) =>
+    call<{ rules: TagRule[] }>("PUT", `${repoBase(o, n)}/protected-tags`, { rules }).then((r) => r.rules),
   hooks: (s: HookScope) => call<{ items: Hook[]; events: string[] }>("GET", hooksBase(s)),
   addHook: (s: HookScope, b: NewHook) => call<{ hook: Hook; secret?: string; secret_note?: string }>("POST", hooksBase(s), b),
   updateHook: (s: HookScope, id: string, b: Partial<NewHook>) => call<Hook>("PATCH", `${hooksBase(s)}/${enc(id)}`, b),

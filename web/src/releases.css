@@ -66,7 +66,7 @@
 .rel-phone p { margin: 0 0 8px; max-width: 52ch; }
 .rel-phone .addr { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; overflow-wrap: anywhere; }
 .rel-asset-qr { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.rel-asset-qr summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+.rel-asset-qr summary { cursor: pointer; font-size: 13px; color: var(--accent); min-height: 24px; display: inline-flex; align-items: center; }
 .rel-cut-notes { border: 1px solid var(--line-2); border-radius: var(--r1); padding: 8px 12px; background: var(--sheet-2); font-size: 13px; }
 .rel-cut-tag { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 13.5px; }
 .rel-cut-tag dt { color: var(--ink-3); }

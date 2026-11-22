@@ -198,6 +198,8 @@ const reposKeysUsage = `
   launchway repos deploy-keys delete OWNER/NAME ID       delete a deploy key
   launchway repos protected-branches OWNER/NAME [--set main,release/*]
                                                          show, or replace, the branches that take no direct push except from administrators
+  launchway repos protected-tags OWNER/NAME [--rule 'v*:create=admin,change=none,pipelines=ship-*'] [--clear]
+                                                         show, or replace (repeat --rule), the tags that are protected
 `
 
 func (cl *client) deployKeys(args []string) error {
@@ -350,4 +352,95 @@ func (w *writerFlag) Set(v string) error {
 	}
 	w.rules = append(w.rules, pipelineRule{Branch: strings.TrimSpace(parts[0]), Projects: split(parts[1]), Files: split(parts[2])})
 	return nil
+}
+
+// tagRuleFlag collects --rule PATTERN[:create=ROLE,change=ROLE,pipelines=A|B] flags.
+type tagRuleFlag struct{ rules []tagRuleOut }
+
+type tagRuleOut struct {
+	Pattern    string   `json:"pattern"`
+	CreateRole string   `json:"create_role"`
+	ChangeRole string   `json:"change_role"`
+	Pipelines  []string `json:"pipelines"`
+}
+
+func (f *tagRuleFlag) String() string { return "" }
+
+func (f *tagRuleFlag) Set(v string) error {
+	pat, opts, _ := strings.Cut(v, ":")
+	r := tagRuleOut{Pattern: strings.TrimSpace(pat), Pipelines: []string{}}
+	for _, o := range strings.Split(opts, ",") {
+		k, val, _ := strings.Cut(strings.TrimSpace(o), "=")
+		switch k {
+		case "":
+		case "create":
+			r.CreateRole = val
+		case "change":
+			if val != "none" {
+				r.ChangeRole = val
+			}
+		case "pipelines":
+			for _, p := range strings.Split(val, "|") {
+				if p = strings.TrimSpace(p); p != "" {
+					r.Pipelines = append(r.Pipelines, p)
+				}
+			}
+		default:
+			return fmt.Errorf("%q is not create=, change= or pipelines=", o)
+		}
+	}
+	f.rules = append(f.rules, r)
+	return nil
+}
+
+func (cl *client) protectedTags(args []string) error {
+	fs := flag.NewFlagSet("repos protected-tags", flag.ContinueOnError)
+	asJSON := fs.Bool("json", false, "print as JSON")
+	removeAll := fs.Bool("clear", false, "remove the protection")
+	var rules tagRuleFlag
+	fs.Var(&rules, "rule", "a protected tag: PATTERN[:create=admin|operator,change=none|admin,pipelines=FLIGHT|FLIGHT] (repeat; replaces the rules)")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("launchway repos protected-tags OWNER/NAME [--rule 'v*:create=admin,change=none,pipelines=ship-*'] [--clear]")
+	}
+	path, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	path += "/protected-tags"
+	var out struct {
+		Rules []tagRuleOut `json:"rules"`
+	}
+	if *removeAll || len(rules.rules) > 0 {
+		body := map[string]any{"rules": rules.rules}
+		if rules.rules == nil {
+			body["rules"] = []tagRuleOut{}
+		}
+		err = cl.call("PUT", path, body, &out)
+	} else {
+		err = cl.call("GET", path, nil, &out)
+	}
+	if err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		if len(out.Rules) == 0 {
+			fmt.Fprintln(cl.out, "No protected tags.")
+			return
+		}
+		for _, r := range out.Rules {
+			change := "nobody may move or delete one"
+			if r.ChangeRole != "" {
+				change = "the " + r.ChangeRole + " role may move or delete one"
+			}
+			line := fmt.Sprintf("%s: the %s role may make one; %s", r.Pattern, r.CreateRole, change)
+			if len(r.Pipelines) > 0 {
+				line += "; Flights admitted to make one: " + strings.Join(r.Pipelines, ", ")
+			}
+			fmt.Fprintln(cl.out, line)
+		}
+	})
 }

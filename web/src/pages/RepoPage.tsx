@@ -13,6 +13,7 @@ import { useInstallation } from "../guided/facts";
 import { useLoad } from "../guided/useLoad";
 import { Chip, Status, StateChip, stateOf } from "../kit/Status";
 import { CutReleaseButton } from "../components/CutRelease";
+import { BadgeBox } from "../components/BadgeBox";
 import { Button, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Tabs } from "../kit/Tabs";
 import { useTab } from "../components/PageTabs";
@@ -77,6 +78,7 @@ export function RepoPage({ name }: { name: string }) {
               </dl>
             </Sheet>
             <ProjectTriggers project={p.name} />
+            <BadgeBox project={p.name} canSwitch={!!me && (me.admin || me.roles[p.name] === "admin")} />
             <Sheet title={`Recent pushes (${p.decisions.length})`}>
               {p.decisions.length === 0 ? <p className="sh-b faint">No pushes seen since the server started. Launchway notes where every branch is the first time it looks, and reacts to changes after that.</p> : (
                 <ul className="rowlist">

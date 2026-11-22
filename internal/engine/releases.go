@@ -80,6 +80,9 @@ type Release struct {
 	YankedBy    string          `json:"yanked_by,omitempty"`
 	YankReason  string          `json:"yank_reason,omitempty"`
 	Assets      []ReleaseAsset  `json:"assets,omitempty"`
+	// Latest marks the newest published release that is not a pre-release of its project: what the stable "latest"
+	// address names. It is set by the lists and by a single read.
+	Latest bool `json:"latest,omitempty"`
 	// Immutable says nothing about the release can change any more but its
 	// withdrawal.
 	Immutable bool `json:"immutable"`
@@ -343,6 +346,11 @@ func (e *Engine) GetRelease(id string) (*Release, error) {
 	if r.Assets, err = e.releaseAssets(r.ID); err != nil {
 		return nil, err
 	}
+	if r.State == ReleasePublished && !r.Prerelease {
+		if ids, err := e.latestReleaseIDs(r.Project); err == nil {
+			r.Latest = ids[r.Project] == r.ID
+		}
+	}
 	return r, nil
 }
 
@@ -405,7 +413,15 @@ func (e *Engine) ListReleases(f ReleaseFilter) ([]Release, error) {
 			break
 		}
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if latest, err := e.latestReleaseIDs(f.Project); err == nil {
+		for i := range out {
+			out[i].Latest = latest[out[i].Project] == out[i].ID
+		}
+	}
+	return out, nil
 }
 
 func (e *Engine) mutable(id string) (*Release, error) {

@@ -85,6 +85,23 @@ func TestDeployCredentialWritesOnlyWhatARuleAdmits(t *testing.T) {
 			t.Errorf("%s: want a refusal saying %q, got %v\n%s", name, c.want, err, out)
 		}
 	}
+	// A protected-tag rule that names the Flight lets its credential make a matching tag (and no other, and never
+	// move or delete one); a Flight it does not name is told so.
+	if r := ada.do("PUT", api+"/protected-tags", `{"rules":[{"pattern":"v*","pipelines":["mcp-*"]}]}`); r.status != 200 {
+		t.Fatalf("tag rules: %d %s", r.status, r.body)
+	}
+	if out, err := push(w, token("shop", "dep_9", "direct"), "refs/tags/v2"); err == nil || !strings.Contains(out, "the pipeline of shop is not named by the rule") {
+		t.Errorf("a Flight the rule does not name made a protected tag: %v\n%s", err, out)
+	}
+	if out, err := push(w, tok, "refs/tags/other"); err == nil || !strings.Contains(out, "may push only main") {
+		t.Errorf("a tag no rule covers: %v\n%s", err, out)
+	}
+	if out, err := push(w, tok, "refs/tags/v2"); err != nil {
+		t.Errorf("a named Flight's tag was refused: %v\n%s", err, out)
+	}
+	if out, err := git(t, w, "push", "-q", withToken(e.srv.URL, "/git/acme/gitops.git", tok), ":refs/tags/v2"); err == nil {
+		t.Errorf("a credential deleted a protected tag: %s", out)
+	}
 	if out, err := git(t, w, "push", "-q", withToken(e.srv.URL, "/git/acme/gitops.git", tok), ":refs/heads/main"); err == nil || !strings.Contains(out, "cannot delete") {
 		t.Errorf("a deletion: %v\n%s", err, out)
 	}

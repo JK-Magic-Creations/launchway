@@ -41,6 +41,9 @@ const qs = (o: Record<string, string | number | boolean | undefined>) => {
   return s ? "?" + s : "";
 };
 
+/** archiveUrl is where a snapshot of a ref is: a tar.gz or a zip of its files, streamed by the server. */
+export const archiveUrl = (repo: string, ref: string, format: "tar.gz" | "zip") => `/api/v1/repositories/${repo.split("/").map(encodeURIComponent).join("/")}/download?ref=${encodeURIComponent(ref)}&format=${format}`;
+
 /** rawUrl is where a file's bytes are: a download, or with inline a picture shown in the page. */
 export const rawUrl = (path: string, ref: string, file: string, inline = false) => `${base(path)}/raw${qs({ ref, path: file, inline })}`;
 
