@@ -139,6 +139,10 @@ func (s *Server) releaseLinks(r *http.Request, rel *engine.Release) map[string]s
 	if rel.Tag != "" && s.Projects != nil {
 		if u := s.Projects.ProjectRepoURL(rel.Project); u != "" {
 			l["repository"] = u
+			// A repository hosted here has verified commits and tags: the page shows their badge by this path.
+			if _, path, ok := s.Resolve(r.Context(), u); ok {
+				l["hosted_repository"] = path
+			}
 		}
 	}
 	return l

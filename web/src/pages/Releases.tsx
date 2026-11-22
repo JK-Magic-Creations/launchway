@@ -20,6 +20,7 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { navigate, onLink } from "../router";
 import { terms } from "../terms";
 import { releasesApi, type Release, type ReleaseAsset, type ReleaseView, type ReleaseState, type Proposal } from "../releasesApi";
+import { SignatureBadge, useSignatures } from "../components/Signature";
 import "../releases.css";
 
 const TONE: Record<ReleaseState, Tone | undefined> = { draft: undefined, candidate: "warn", published: "ok", yanked: "bad" };
@@ -152,6 +153,12 @@ function NewReleaseDialog({ projects, initial, onClose }: { projects: string[]; 
 }
 
 /** One release. */
+/** The signature of a release's commit or tag, when the repository is hosted here (nothing otherwise). */
+function ReleaseSignature({ repo, sha }: { repo?: string; sha?: string }) {
+  const sigs = useSignatures(repo ?? "", repo && sha ? [sha] : []);
+  return sha ? <> <SignatureBadge result={sigs[sha]} /></> : null;
+}
+
 export function ReleasePage({ project, version }: { project: string; version: string }) {
   useCrumbLabel(`${project} ${version}`);
   const me = useMe();
@@ -190,8 +197,8 @@ export function ReleasePage({ project, version }: { project: string; version: st
       {(v.warnings ?? []).map((w) => <div key={w} className="callout callout-wait">{w}</div>)}
       <Sheet title="At a glance">
         <dl className="rel-dl">
-          <dt>Commit</dt><dd className="rel-sha">{r.sha}</dd>
-          <dt>Tag</dt><dd>{r.tag ? <><span className="rel-sha">{r.tag}</span> <span className="faint">({r.tag_created ? "made by Launchway, annotated" : "adopted, annotated"})</span></> : "none yet; publishing makes it"}</dd>
+          <dt>Commit</dt><dd><span className="rel-sha">{r.sha}</span><ReleaseSignature repo={v.links?.hosted_repository} sha={r.sha} /></dd>
+          <dt>Tag</dt><dd>{r.tag ? <><span className="rel-sha">{r.tag}</span> <span className="faint">({r.tag_created ? "made by Launchway, annotated" : "adopted, annotated"})</span><ReleaseSignature repo={v.links?.hosted_repository} sha={r.tag_object} /></> : "none yet; publishing makes it"}</dd>
           <dt>Built by</dt><dd>{r.run_id ? <EntityLink kind="run" name={`Sortie #${r.run_number}`} id={r.run_id} /> : "no Sortie recorded"}</dd>
           <dt>Image digests</dt><dd>{r.digests.length === 0 ? "none: this release carries no image" : <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>{r.digests.map((d) => <li key={d.digest} className="rel-sha">{d.digest}</li>)}</ul>}</dd>
           <dt>Made</dt><dd>{r.created_by} {ago(r.created_at, now)} <span className="faint">({clock(r.created_at)})</span></dd>

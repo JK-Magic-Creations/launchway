@@ -34,6 +34,13 @@ describe("releases", () => {
     expect(within(row).getByText("42 downloads")).toBeTruthy();
   }, 20000);
 
+  it("shows whether the commit and the tag of a release are signed, when its repository is hosted here", async () => {
+    await open("/deployments/releases/shop-api/1.4.0");
+    await screen.findByText(/never change/, {}, { timeout: 8000 });
+    expect(await screen.findByRole("button", { name: "Verified" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Bad signature" })).toBeTruthy();
+  }, 20000);
+
   it("shows a published release as fixed: no editing, its Cargo with checksums and where each came from", async () => {
     await open("/deployments/releases/shop-api/1.4.0");
     await screen.findByText(/never change/, {}, { timeout: 8000 });

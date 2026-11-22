@@ -26,6 +26,7 @@ export const releaseList = (): Release[] => [
 
 export const view = (r: Release, may: Partial<ReleaseView["may"]> = {}): ReleaseView => ({
   release: r, settings: { project: "shop-api", scheme: "semver", tag_prefix: "v", public: false, changelog: "CHANGELOG.md" },
+  links: { hosted_repository: "acme/shop-api" },
   promotions: r.state === "published" ? [{ id: "prm_1", release_id: r.id, project: r.project, version: r.version, airfield: "staging", sha: r.sha, digests: r.digests, run_id: "run_8", run_number: 8, requested_by: "ann", requested_at: T - day / 2, state: "launched" },
     { id: "prm_2", release_id: r.id, project: r.project, version: r.version, airfield: "prod", sha: r.sha, digests: r.digests, run_id: "run_9", run_number: 9, requested_by: "ada", requested_at: T - day / 4, state: "launched", override: "customer outage", overridden: "window" }] : [],
   clearances: r.state === "published" ? [{ id: "rcl_1", airfield: "prod", who: "bob", role: "operator", comment: "read the notes", at: T - day / 3 }] : [],
@@ -93,6 +94,9 @@ export const report = (): Report => ({ from: T - 28 * day, to: T, step_seconds: 
 
 export function releaseFixtures(): Record<string, unknown> {
   return {
+    "/api/v1/repositories/acme/shop-api/signatures": { items: [
+      { object: "0123456789abcdef0123456789abcdef01234567", kind: "commit", state: "verified", explanation: "Signed with a key registered by ada.", signer: "ada" },
+      { object: "t1", kind: "tag", state: "bad_signature", explanation: "The signature does not match the tag." }] },
     "/api/v1/releases": releaseList(),
     "/api/v1/projects/shop-api/releases": releaseList(),
     "/api/v1/projects/shop-api/releases/1.4.0": view(release()),
