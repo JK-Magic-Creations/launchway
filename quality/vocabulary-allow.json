@@ -913,6 +913,18 @@
       "rule": "level-organization",
       "contains": "users or organizations",
       "why": "Two outside hosts' own word for the accounts that own repositories."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "organization/project/repository",
+      "why": "An outside host's own word for the top level of its repository path, quoted in the form a connection takes it."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "allowed organizations",
+      "why": "An outside host's own word for the accounts that own repositories."
     }
   ]
 }

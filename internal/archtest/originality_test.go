@@ -21,11 +21,11 @@ import (
 
 // neverNamed are products with no integration in Launchway: they may not appear anywhere
 // except in test data and in this file.
-var neverNamed = regexp.MustCompile(`(?i)\b(jenkins(file)?|circle ?ci|travis[- ]?ci|buildkite|teamcity|spinnaker|tekton|octopus deploy|codefresh|gocd|concourse ci|azure devops|azure pipelines|harness\.io|harness (ci|cd|platform)|drone ci|woodpecker ci|gitlab[- ]ci|spacelift|heroku|netlify|vercel|bitbucket pipelines|appveyor|cloudbees|bamboo ci|semaphore ?ci|codebuild|codepipeline|humanitec|backstage)\b`)
+var neverNamed = regexp.MustCompile(`(?i)\b(jenkins(file)?|circle ?ci|travis[- ]?ci|buildkite|teamcity|spinnaker|tekton|octopus deploy|codefresh|gocd|concourse ci|azure pipelines|harness\.io|harness (ci|cd|platform)|drone ci|woodpecker ci|gitlab[- ]ci|spacelift|heroku|netlify|vercel|bitbucket pipelines|appveyor|cloudbees|bamboo ci|semaphore ?ci|codebuild|codepipeline|humanitec|backstage)\b`)
 
 // namedForIntegration are Git hosts and CI services Launchway connects to or runs on; they may
 // appear only in the files of allowedForIntegration.
-var namedForIntegration = regexp.MustCompile(`(?i)\b(gitlab|bitbucket|forgejo|gitea|codeberg|github actions)\b`)
+var namedForIntegration = regexp.MustCompile(`(?i)\b(gitlab|bitbucket|azure devops|forgejo|gitea|codeberg|github actions)\b`)
 
 // siteNames are the names of one installation's own projects, clusters and addresses. A product file (a
 // document, a test, a fixture, an example) uses neutral names (shop, webapp, team/shop, cluster-a,
@@ -71,7 +71,7 @@ var allowedForIntegration = []string{
 	// Outside Git hosts: a connection is of a kind the person picks, so the provider for each kind,
 	// its strict fake, the registry entries, the pages' labels and setup steps, and the guide name it
 	// (the API calls are the host's own documented ones, cited in comments).
-	"internal/forge/providers/gitlab/", "internal/forge/providers/gitea/", "internal/forge/providers/bitbucket/", "internal/forge/hosts/kind_bitbucket.go", "internal/forge/hosts/kind_gitlab.go", "internal/forge/hosts/kind_gitea.go", "internal/forge/hosts/kinds_test.go", "internal/forge/hosts/norelease_test.go",
+	"internal/forge/providers/gitlab/", "internal/forge/providers/gitea/", "internal/forge/providers/bitbucket/", "internal/forge/providers/azuredevops/", "internal/forge/hosts/kind_bitbucket.go", "internal/forge/hosts/kind_azuredevops.go", "internal/forge/hosts/kind_gitlab.go", "internal/forge/hosts/kind_gitea.go", "internal/forge/hosts/kinds_test.go", "internal/forge/hosts/norelease_test.go",
 	"internal/archtest/arch_test.go", "cmd/launchway/repos_host.go", "internal/api/mcp_outside_hosts.go", "web/src/hostKinds.ts", "web/src/pages/HostKinds.test.tsx", "docs/guide/outside-host.md",
 	// The project's own release and docs workflows run on a hosted CI service.
 	".github/", "packaging/", "docs/contributing/docs.md",

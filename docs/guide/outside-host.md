@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) and `bitbucket` (Bitbucket Cloud). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) and [Bitbucket Cloud](#bitbucket-cloud) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) and `azuredevops` (the cloud service and the self-managed server product). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) and [Azure DevOps](#azure-devops) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -237,9 +237,62 @@ launchway repos host test acme-bb
 
 This provider is labelled experimental until it has passed the conformance suite against the live service (`LAUNCHWAY_LIVE_BITBUCKET_TOKEN` and `LAUNCHWAY_LIVE_BITBUCKET_REPO` run that test).
 
-## Not yet: `azuredevops` and `codecommit`
+## Azure DevOps
 
-The kinds `azuredevops` and `codecommit` are named in the model, but **no code path offers them**: they have no provider, no strict fake and no conformance run, so a connection of either kind is refused ("a connection to keep code on is of kind ...") and they are not in the kind picker, the command line or the tools. A host kind is either complete or absent in Launchway. Until they are built, keep such a repository as a plain Git address (polled, with a credential reference) or mirror it into Launchway.
+The kind `azuredevops` is the **cloud service** (`https://dev.azure.com`; leave the base address empty) or the **self-managed server product** (give its address with the collection: `--base-url https://devops.example.com/tfs/DefaultCollection`; the API is at `<base>/{project}/_apis/...` and the reference page for the server product's version 7.1 lists the same calls). Every call names `api-version=7.1`.
+
+- A repository is `organization/project/repository` (on the server product the first element is the collection's name). The **owners** list names organizations (on the cloud service it is **required**: the calls Launchway uses name no organization of a token, so the connection lists the ones you allow; on the server product the collection is the base address's and the list may be empty). An owner entry cannot narrow to one project: limit the token's owner to the projects Launchway may reach with the host's own project permissions.
+- The token is a **personal access token**, sent as the password of HTTP Basic with an empty user name, as the host documents. Git over HTTPS uses the token as the password with the user name `launchway` (the host says the user name can be empty, so any name is accepted).
+- **Test** reads the projects and repositories of the allowed organizations and one branch policy. The REST reference has **no call that names a token's owner, lists its scopes or tells its expiry** (the profile and token-management calls are on a separate host, are previews, and need other scopes), so Test names the account "personal-access-token", and the four write features are listed with what each needs and marked "not checked": Launchway does not write to test. A token that is too narrow shows up as a refusal (401 or 403) from the call that needs it, with the host's message.
+- **Webhooks are weaker here.** A service hook carries **no signature of the body**. The Web Hooks consumer can send a basic-authentication user name and password and extra HTTP headers, and Launchway accepts the connection's webhook secret in either: as the **password** of basic authentication (any user name) or as the header `X-Launchway-Webhook-Secret`. The secret is compared in constant time; a delivery with neither, or a wrong one, is refused. The secret travels with every delivery and covers nothing of the payload, so the hook must use **HTTPS**, and nothing in a payload is trusted without asking the host. A replay is dropped by the notification's own `id` in the payload (the host sends no delivery header); a payload without one is named by its notification number, else by a hash of the body. Events: `git.push` (one event for each ref updated, a tag included), `git.pullrequest.created`, `git.pullrequest.updated` (a completed status is a landed pull request, an abandoned one a closed pull request) and `git.pullrequest.merged` (a merge attempt: treated as a revision). Polling stays on as the fallback.
+- A **commit status** is posted with context genre `launchway` and the Sortie's name, and the same context posted again is updated in place; when the token can also read pull requests, the status is posted on each active pull request whose head is that commit too (a pull request status), which is what a **status check policy** reads. The policy names the status `genre/name`: for the status `launchway/ci` it is `launchway/launchway/ci`.
+- The summary is **one comment thread** on the pull request: the comment is edited in place, and posted again if it was deleted. A draft pull request can be made; the host's reference does not list the draft flag among what an update may change, so Launchway does not change it (make it ready on the host). An abandoned pull request can be reopened.
+- **Fork** means the pull request carries `forkSource`. The host publishes no ref for a pull request's head that the reference names, so a pull request from a fork has its head named by the API but not fetched with the mirror.
+- **Write-back** commits with the pushes call (one call also cuts a new branch from the commit named as the old object id; add or edit is decided by asking whether the file is there) and opens a pull request. A direct write to a branch with a required (blocking) branch policy is refused before anything is pushed, with a message that names the pull-request mode; the API does not say whether the token's owner may bypass policies, so a user who can is refused anyway (use the pull-request mode).
+- **Tags** are annotated tags (the annotated tags call). The reference does not say that call also creates the tag's ref, so Launchway reads it back and, if it is missing, creates it.
+
+**Releases: the host has none.** Azure DevOps Git has tags and no release object. The capability is declared **none**, exactly as for Bitbucket: **Cut a release** makes the annotated tag on the host, and the release page, its notes and its files stay in Launchway, which serves the files; the page says so and the Logbook records the publish on the host as skipped, with the reason.
+
+What Azure DevOps adds (shown "from Azure DevOps" on the Flight's Code host page):
+
+| Addition | What it gives | Launchway drives it |
+| --- | --- | --- |
+| Auto-complete | the host completes a pull request itself once every required policy passes | yes: `write_back.merge: auto` sets it right after the pull request is opened (squash by default, with the pull request's author as the identity that sets it); the host refuses if the branch has nothing to wait for. **Cancelling** it is on the host: the reference names no call for it |
+| Branch policies | minimum approvers, named reviewers, a passing build, a status check | no: set on the host; Launchway reads them to refuse a direct write |
+| Required reviewers | reviewers added by path or rule, blocking completion | no: set up on the host |
+| Build validation | a build for each pull request that must pass | no: set on the host |
+| Statuses on the pull request | each Sortie and failed step with a link back | yes: the statuses above |
+
+What a connection cannot do: create or delete repositories, merge or complete a pull request itself (the host's auto-complete does it), vote or review, change branch policies, or change a draft flag (do it on Azure DevOps).
+
+Scopes and roles per feature (the scopes are the ones each reference page lists; roles are the host's default Git security groups: **Readers** may read and vote, **Contributors** may also contribute, create branches and create tags):
+
+| To | PAT scope | Role on the project |
+| --- | --- | --- |
+| Test, choose a repository | Project and team (read) `vso.project`, Code (read) `vso.code` | Readers |
+| Checkout, polling, refs, commits, pull requests read, branch policies read | Code (read) `vso.code` | Readers |
+| Commit and pull request statuses | Code (status) `vso.code_status`, or Code (read and write) `vso.code_write` | Contributors |
+| The pull request summary comment | Pull request threads (read and write) `vso.threads_full`, or `vso.code_write` | Contributors |
+| File changes and write-back pull requests, auto-complete, reopening and closing | Code (read and write) `vso.code_write` | Contributors (Contribute, Create branch) |
+| Tags | Code (full) `vso.code_manage` (the annotated tag call lists no smaller scope) | Contributors (Create tag) |
+| The service hook (set by you) | none for the connection | Project Administrators or Project Collection Administrators, to add it |
+
+Set up the webhook on the host: **Project settings, Service hooks, Create subscription, Web Hooks**; trigger **Code pushed**, **Pull request created**, **Pull request updated** and **Pull request merge attempted**, each limited to the repository; on the action give the address `https://YOUR-LAUNCHWAY/api/v1/outside-hosts/NAME/webhook` (HTTPS only; the host's resource details can be left at All), **Basic authentication password** = the connection's webhook secret (any user name, for example `launchway`) **or** the **HTTP headers** line `X-Launchway-Webhook-Secret:<the secret>`, then **Test**.
+
+```sh
+launchway repos host add acme-ado --kind azuredevops \
+  --credential-env ACME_ADO_TOKEN \
+  --webhook-secret-env ACME_ADO_HOOK \
+  --owner acme
+launchway repos host test acme-ado
+launchway repos outside attach shop --connection acme-ado --repository acme/web/shop
+```
+
+This provider is labelled experimental until it has passed the conformance suite against a live service (`LAUNCHWAY_LIVE_AZUREDEVOPS_TOKEN`, `LAUNCHWAY_LIVE_AZUREDEVOPS_REPO` as `organization/project/repository` and, for the server product, `LAUNCHWAY_LIVE_AZUREDEVOPS_BASE` run that test).
+
+## Not yet: `codecommit`
+
+The kind `codecommit` is named in the model, but **no code path offers it**: it has no provider, no strict fake and no conformance run, so a connection of it is refused ("a connection to keep code on is of kind ...") and it is not in the kind picker, the command line or the tools. A host kind is either complete or absent in Launchway. Until it is built, keep such a repository as a plain Git address (polled, with a credential reference) or mirror it into Launchway.
 
 ## In the Logbook
 

@@ -13,6 +13,8 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops/azuredevopsfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket/bitbucketfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitea/giteafake"
@@ -28,6 +30,24 @@ type hostCase struct {
 	start    func(t *testing.T) (base, token, hookSecret string, violations func() []string)
 	delivery func(t *testing.T, secret string) *http.Request // a valid push delivery for acme/app
 	lacks    forge.Capability                                // one capability the kind declares not native
+	// repo is the repository's path on the host ("acme/app" when empty), cloneEnd what its clone address ends with
+	// ("acme/app.git" when empty) and owners the connection's allow-list (none when empty).
+	repo, cloneEnd string
+	owners         []string
+}
+
+func (c hostCase) repoPath() string {
+	if c.repo != "" {
+		return c.repo
+	}
+	return "acme/app"
+}
+
+func (c hostCase) cloneSuffix() string {
+	if c.cloneEnd != "" {
+		return c.cloneEnd
+	}
+	return "acme/app.git"
 }
 
 func giteaCase(kind forge.Kind) hostCase {
@@ -82,7 +102,31 @@ func bitbucketCase() hostCase {
 	}
 }
 
-var kindCases = []hostCase{bitbucketCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
+func azureDevOpsCase() hostCase {
+	return hostCase{
+		kind: forge.KindAzureDevOps,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			h := azuredevopsfake.New()
+			t.Cleanup(h.Close)
+			adoFake = h
+			t.Cleanup(azuredevops.UseTestAPI(h.API(), h.Collection()))
+			return "", azuredevopsfake.Token, azuredevopsfake.WebhookSecret, func() []string { return h.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			body := `{"id":"notif-1","eventType":"git.push","createdDate":"2026-01-02T03:04:05Z","resource":{"refUpdates":[{"name":"refs/heads/main","oldObjectId":"` +
+				strings.Repeat("0", 40) + `","newObjectId":"` + strings.Repeat("a", 40) + `"}],"repository":{"name":"app","project":{"name":"proj"}},"pushedBy":{"displayName":"Bob"}},` +
+				`"resourceContainers":{"collection":{"baseUrl":"https://dev.azure.com/acme/"}}}`
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(body))
+			r.Header.Set("Authorization", azuredevopsfake.Basic("launchway", secret)) // a wrong secret is a wrong password
+			return r
+		},
+		lacks: forge.CapReleases, repo: "acme/proj/app", cloneEnd: "proj/_git/app", owners: []string{"acme"},
+	}
+}
+
+var adoFake *azuredevopsfake.Host
+
+var kindCases = []hostCase{bitbucketCase(), azureDevOpsCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()
@@ -116,7 +160,7 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			s.PublicURL = "https://lw.example.com"
 			ctx := t.Context()
 			v, err := s.Add(ctx, hosts.AddInput{Name: "h", Kind: c.kind, BaseURL: base, Credential: forge.SecretRef{Env: "LW_KIND_TOKEN"},
-				WebhookSecret: forge.SecretRef{Env: "LW_KIND_HOOK"}}, "dana")
+				WebhookSecret: forge.SecretRef{Env: "LW_KIND_HOOK"}, Owners: c.owners}, "dana")
 			if err != nil || v.Kind != string(c.kind) || len(v.Capabilities) == 0 {
 				t.Fatalf("%+v %v", v, err)
 			}
@@ -136,14 +180,14 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			if err != nil || len(page.Items) != 1 {
 				t.Fatalf("repositories: %+v %v", page, err)
 			}
-			if _, err := s.Attach(ctx, "shop", "h", "acme/app"); err != nil {
+			if _, err := s.Attach(ctx, "shop", "h", c.repoPath()); err != nil {
 				t.Fatal(err)
 			}
 			fv, err := s.View(ctx, "shop")
 			if err != nil || fv.Kind != string(c.kind) || len(fv.Additions) == 0 || fv.Unsupported[c.lacks].Support == "" || fv.Unsupported[c.lacks].Reason == "" {
 				t.Fatalf("view: %+v %v", fv, err)
 			}
-			if ca, err := s.Clone(ctx, "shop"); err != nil || ca.Secret != token || !strings.HasSuffix(ca.URL, "acme/app.git") {
+			if ca, err := s.Clone(ctx, "shop"); err != nil || ca.Secret != token || !strings.HasSuffix(ca.URL, c.cloneSuffix()) {
 				t.Fatalf("clone: %+v %v", ca, err)
 			}
 			if ok, err := s.ReportRun(ctx, "shop", forge.Result{Producer: "launchway", Name: "launchway/ci", SHA: strings.Repeat("d", 40), State: forge.Passing}); err != nil || !ok {
