@@ -81,7 +81,7 @@ steps:
 ```
 
 A tag or a commit never changes under a pipeline. The library's step page (`launchway steps get platform greet`,
-or the catalogue in the web interface) lists its inputs and outputs, what it may do, its versions and who uses
+or the catalog in the web interface) lists its inputs and outputs, what it may do, its versions and who uses
 it. When a newer tag changes what the step may do, the page and `launchway step validate --against v1` say so
 before anyone updates: "permission: the step may now reach registry.example.org".
 

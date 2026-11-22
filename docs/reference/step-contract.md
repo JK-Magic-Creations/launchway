@@ -13,7 +13,7 @@ in any other language implements it directly. The current version is **1**.
 | Scalar inputs | `LAUNCHWAY_WITH_<NAME>` | string, number and boolean inputs as text |
 | Outputs | write the file named by `LAUNCHWAY_STEP_OUTPUTS` | one JSON object, `{"key":value,...}` |
 | Results | append to the file named by `LAUNCHWAY_STEP_RESULTS` | one JSON object per line |
-| Artifacts | files in the directory `LAUNCHWAY_STEP_ARTIFACTS` | kept as the artifact `step` |
+| Cargo (artifacts) | files in the directory `LAUNCHWAY_STEP_ARTIFACTS` | kept as the Cargo named `step` |
 | Reports | files in `LAUNCHWAY_STEP_REPORTS` | SARIF (`*.sarif`) and JUnit XML (`*.xml`) |
 | Secrets | `{"secret":"ENV_NAME"}` in the inputs | the value is in that environment variable |
 
@@ -32,8 +32,8 @@ JSON), and the [manifest](step-manifest.md) says each one's type.
 |---|---|---|
 | `summary` | `markdown` | A summary on the step's page, shown through the product's sanitizing Markdown renderer |
 | `annotation` | `file`, `line`, `level` (`note`, `warning`, `error`), `message` | A note on a line of a file of the workspace |
-| `finding` | `rule`, `severity` (`critical`, `high`, `medium`, `low`), `file`, `line`, `message` | A finding in the run's findings, as if a scanner had reported it |
-| `test` | `name`, `status` (`passed`, `failed`, `skipped`), `suite`, `duration_ms`, `message` | A test result, in the run's tests |
+| `finding` | `rule`, `severity` (`critical`, `high`, `medium`, `low`), `file`, `line`, `message` | A finding in the Sortie's findings, as if a scanner had reported it |
+| `test` | `name`, `status` (`passed`, `failed`, `skipped`), `suite`, `duration_ms`, `message` | A test result, in the Sortie's tests |
 | `mask` | `value` | The value is hidden in everything Launchway records from then on |
 | `needs_person` | `message` | The question to put to a person; goes with exit code 65 |
 
@@ -55,10 +55,10 @@ did not, it fails with "the step broke the contract".
 
 ## The trust boundary
 
-Launchway reads **nothing** from what a step prints. Results, outputs and artifacts are read only from the
+Launchway reads **nothing** from what a step prints. Results, outputs and Cargo are read only from the
 files above, which the Station creates for this attempt and gives to the step alone. An ordinary log
 line, even one that looks like a result, is only a log line. A program the step starts, such as a build tool, can reach the
-files only if the step lets it: the environment it inherits holds their paths. The kits give a way to start a
+files only if the step lets it: the variables it inherits hold their paths. The kits give a way to start a
 tool without them (`lwstep.Environ()`, `launchway_step.environ()`, `environ()` and `lw_run_tool`), and the step
 should use it for tools it does not trust. A step that passes the variables on chooses to let that tool write
 results. Whatever a step writes is bounded in size and number, checked, and masked of secrets; the web page shows a

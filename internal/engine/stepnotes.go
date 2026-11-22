@@ -31,3 +31,10 @@ type StepNote struct {
 	// Markdown through the product's sanitizing renderer only.
 	Text string `json:"text"`
 }
+
+// How a runner authenticated (RunnerInfo.Auth).
+const (
+	AuthIdentity  = "identity" // an enrolled runner's access token
+	AuthShared    = "shared"   // the shared runner token
+	AuthPoolToken = "pool"     // a deploy pool's token
+)

@@ -81,4 +81,3 @@ func (m *Masker) Hold(s string) int {
 	}
 	return most
 }
-

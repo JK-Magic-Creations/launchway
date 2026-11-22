@@ -1575,35 +1575,33 @@
           "blurb": "Pipelines as real programs, checked before they run.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Custom steps in your own language",
               "value": "A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code.",
-              "detail": "You write the step in a language you already use and unit-test it like any application. A template is the interface and the code is what runs.",
+              "detail": "A step is a directory with a manifest and code in any language, used as uses: library/step or uses: ./steps/name. Its inputs are typed and checked against the manifest before a Sortie starts, its outputs are typed, and its summary, notes, findings and test results come through a file a build tool cannot forge. Every use is recorded on the Sortie with the library and commit. Missing: a step cannot yet ask a person to decide in the middle of a Sortie (exit code 65 fails the step with the question), and outputs of one step are not yet checked against the inputs of the next before the Sortie starts.",
               "needs": "Pipelines as code.",
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "A step contract and starter kits",
               "value": "A published contract for what a step receives and returns, with starter kits for common languages.",
-              "detail": "Starter kits include the types, a local test harness and an example, so the first step takes minutes.",
-              "needs": "Custom steps in your own language.",
+              "detail": "The contract is versioned and documented, with a conformance checker, and launchway step new scaffolds a step with a manifest, the kit, a test and a README in Go, Python, TypeScript or shell. launchway step test runs it as a Station would and checks it.",
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Steps run in a sandbox",
               "value": "Custom steps run in an isolated container with only the secrets and network they declared.",
-              "detail": "A shared step cannot read what it was not given, which makes sharing steps across teams safe.",
+              "detail": "Built: no network unless the manifest lists hosts, a read-only root filesystem, only the secrets it names, dropped capabilities, and (on Podman and Docker) a read-only workspace except the paths it lists; on Kubernetes the pod carries labels the chart's network policies select on. Missing: a list of hosts is recorded and shown but not enforced by name (a policy has addresses), the list of writable paths is not enforced on Kubernetes, and the host executor enforces nothing and refuses custom steps unless the operator allows it.",
               "needs": "Custom steps in your own language.",
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Share and pin steps and templates",
               "value": "Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works.",
-              "detail": "Releases are plain Git tags, so versions, history and review use the tools you already have.",
-              "needs": "Shared libraries.",
+              "detail": "A library holds custom steps beside its templates, pinned by tag or commit; a pinned step never changes under a pipeline, and every use is recorded.",
               "area": "pipelines"
             },
             {
@@ -1623,10 +1621,10 @@
               "link": "reference/pipeline#when"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Typed outputs between steps",
               "value": "A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it.",
-              "detail": "Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.",
+              "detail": "Built: a custom step declares the type of each output (string, number, boolean, list, record, secret), the Station checks what it wrote against them, and later steps receive them as text with the type recorded. Missing: a reference to an output that does not exist is not yet refused before the Sortie starts.",
               "area": "pipelines"
             },
             {
@@ -1639,10 +1637,10 @@
               "link": "guide/libraries"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Update notices for shared libraries",
               "value": "See which Flights use an old version of a template and open an update as a reviewable change.",
-              "detail": "Teams keep common pipeline logic current without a manual hunt.",
+              "detail": "Built for custom steps: a step's page and launchway steps get show, for every Flight that uses a version, the newer tag and what it changes in inputs, outputs and permissions, with a call-out when it asks for more. Missing: the same for templates, and opening the update as a reviewable change.",
               "needs": "A browsable catalog of templates and steps.",
               "area": "pipelines"
             },
@@ -1687,11 +1685,10 @@
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Step pages",
               "value": "Each step has a page: where its code lives, its inputs and types, and which pipelines use it.",
-              "detail": "Before changing a step, you see who it would affect.",
-              "needs": "Custom steps in your own language.",
+              "detail": "Each step of a library has a page generated from its manifest: description, inputs and outputs with types, what it may do, an example, its versions with what changed, and the Flights that use it.",
               "area": "pipelines"
             },
             {

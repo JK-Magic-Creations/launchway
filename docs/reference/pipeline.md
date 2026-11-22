@@ -1906,7 +1906,7 @@ step syntax as a pipeline, plus typed parameters and the outputs it exposes. See
 | `containers` | mapping | none | As in a pipeline's [`containers`](#containers). They are added to the run as `<step>-<name>` |
 | `steps` | mapping | required | As in a pipeline's [`steps`](#steps), with the differences below |
 | `outputs` | mapping | none | Step outputs it exposes to steps that need the using step |
-| `step_manifest` | text | none | Set only in the template Launchway makes from a [custom step](step-manifest.md): the step's `step.yaml`, which carries what the step may do into the run. A library does not write it |
+| `step_manifest` | text | none | Set only in the template Launchway makes from a [custom step](step-manifest.md): the step's `step.yaml`, which carries what the step may do into the Sortie (run). A library does not write it |
 
 ### Parameters
 

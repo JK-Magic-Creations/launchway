@@ -8,6 +8,7 @@ func (s *Server) routes() []route {
 		all = append(all, part...)
 	}
 	all = append(all, s.guideRoutes()...) // the first-run guide (guide_routes.go)
+	all = append(all, s.stepRoutes()...)  // a library's custom steps (steps.go)
 	return all
 }
 

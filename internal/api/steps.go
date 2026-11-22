@@ -82,3 +82,11 @@ func (s *Server) libraryStepPage(w http.ResponseWriter, r *http.Request) {
 		UsedBy []StepUseView `json:"used_by"`
 	}{page, used})
 }
+
+// stepRoutes are the routes of a library's custom steps.
+func (s *Server) stepRoutes() []route {
+	return []route{
+		{"GET /api/v1/libraries/{library}/steps", readAny, "", s.libraryStepList},
+		{"GET /api/v1/libraries/{library}/steps/{step}", readAny, "", s.libraryStepPage},
+	}
+}

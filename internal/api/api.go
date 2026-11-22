@@ -221,8 +221,6 @@ func (s *Server) mainRoutes() []route {
 		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
 		{"GET /api/v1/libraries", readAny, "", s.listLibraries},
 		{"GET /api/v1/libraries/{library}/templates", readAny, "", s.libraryTemplates},
-		{"GET /api/v1/libraries/{library}/steps", readAny, "", s.libraryStepList},
-		{"GET /api/v1/libraries/{library}/steps/{step}", readAny, "", s.libraryStepPage},
 		// Webhooks prove themselves with a secret, not a session or token;
 		// their handlers check and audit them (see hooks.go).
 		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},

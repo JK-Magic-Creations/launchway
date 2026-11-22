@@ -5,6 +5,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/stepkit"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // persistCustomSteps records which version of which custom step each step of
@@ -19,10 +20,9 @@ func (c *cmd) persistCustomSteps() error {
 			if cs == nil {
 				continue
 			}
-			if _, err := c.tx.Exec(`INSERT INTO custom_step_uses(run_id, step_id, project, name, library, commit_sha, digest, network, write_paths, secrets, created_at)
-				VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
-				c.st.ID, s.ID, c.st.Project, cs.Name, cs.Library, cs.Commit, cs.Digest,
-				strings.Join(cs.Network, ","), strings.Join(cs.Write, ","), strings.Join(cs.Secrets, ","), c.now); err != nil {
+			if err := store.SaveCustomStepUse(c.tx, store.CustomStepUseRow{Run: c.st.ID, Step: s.ID, Project: c.st.Project, Name: cs.Name,
+				Library: cs.Library, Commit: cs.Commit, Digest: cs.Digest, Network: strings.Join(cs.Network, ","),
+				Write: strings.Join(cs.Write, ","), Secrets: strings.Join(cs.Secrets, ","), At: c.now}); err != nil {
 				return err
 			}
 		}
@@ -81,27 +81,22 @@ func (e *Engine) CustomStepUses(library, name string, limit int) ([]CustomStepUs
 	if !e.knows(schemaCustomSteps) {
 		return []CustomStepUse{}, nil
 	}
-	rows, err := e.db.Query(`SELECT project, commit_sha, digest, count(DISTINCT run_id), max(created_at)
-		FROM custom_step_uses WHERE library = ? AND name = ? GROUP BY project, commit_sha, digest
-		ORDER BY max(created_at) DESC LIMIT ?`, library, name, limit)
+	rows, err := store.CustomStepUses(e.db, library, name, limit)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := []CustomStepUse{}
-	for rows.Next() {
-		var u CustomStepUse
-		if err := rows.Scan(&u.Project, &u.Commit, &u.Digest, &u.Runs, &u.LastRunAt); err != nil {
-			return nil, err
-		}
-		out = append(out, u)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	for i := range out {
-		_ = e.db.QueryRow(`SELECT run_id FROM custom_step_uses WHERE library = ? AND name = ? AND project = ? AND commit_sha = ? ORDER BY created_at DESC LIMIT 1`,
-			library, name, out[i].Project, out[i].Commit).Scan(&out[i].LastRunID)
+	out := make([]CustomStepUse, len(rows))
+	for i, r := range rows {
+		out[i] = CustomStepUse{Project: r.Project, Commit: r.Commit, Digest: r.Digest, Runs: r.Runs, LastRunAt: r.LastRunAt,
+			LastRunID: store.LastCustomStepRun(e.db, library, name, r.Project, r.Commit)}
 	}
 	return out, nil
+}
+
+// stepNotes is what a custom step's attempt kept of the notes its runner reported; nothing for any other step.
+func (c *cmd) stepNotes(step string, in []StepNote) []StepNote {
+	if def := c.st.Pipeline.Step(step); def == nil || def.Custom == nil || !c.e.knows(schemaCustomSteps) {
+		return nil
+	}
+	return keepNotes(in)
 }

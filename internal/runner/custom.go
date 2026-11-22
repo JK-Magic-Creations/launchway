@@ -180,3 +180,27 @@ func addReport(rep *engine.CollectedReports, path string, data []byte) *engine.C
 	rep.Files = append(rep.Files, engine.ReportFile{Path: path, Data: data, Size: int64(len(data))})
 	return rep
 }
+
+// startCustom prepares a custom step's attempt, if the job is one: the customRun, or a failed result.
+func (r *Runner) startCustom(job *engine.Job, ws string, env, values map[string]string, sys func(string, ...any)) (*customRun, *engine.Result) {
+	if job.Custom == nil {
+		return nil, nil
+	}
+	cr, err := r.customStart(job, ws, env, values)
+	if err != nil {
+		sys("Could not prepare the custom step: %v", err)
+		return nil, &engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the custom step: " + err.Error()}
+	}
+	cr.retarget(job)
+	return cr, nil
+}
+
+// settle says how a custom step's attempt counts and what it gave, after it ran: the outputs, notes, reason and
+// exit code to report. For any other step (cr nil) it returns what it was given.
+func (cr *customRun) settle(ctx context.Context, r *Runner, spec executor.Spec, code int, mask *secrets.Masker, sys func(string, ...any), outputs map[string]string) (map[string]string, []engine.StepNote, string, int) {
+	if cr == nil {
+		return outputs, nil, "", code
+	}
+	d := cr.finish(ctx, r, spec, code, mask, sys)
+	return d.outputs, d.notes, d.why, d.code
+}

@@ -166,7 +166,9 @@ func TestKubernetesSandboxedStepOnACluster(t *testing.T) {
 		}
 	}
 	kubectl("", "create", "namespace", ns)
-	t.Cleanup(func() { _ = exec.Command("kubectl", "--context", ctxName, "delete", "namespace", ns, "--wait=false").Run() })
+	t.Cleanup(func() {
+		_ = exec.Command("kubectl", "--context", ctxName, "delete", "namespace", ns, "--wait=false").Run()
+	})
 	kubectl("", "label", "--overwrite", "namespace", ns, "pod-security.kubernetes.io/enforce=restricted")
 	// What the chart installs for custom steps' pods: no egress unless the step lists hosts.
 	kubectl(fmt.Sprintf(`apiVersion: networking.k8s.io/v1

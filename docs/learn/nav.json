@@ -82,6 +82,7 @@
         "guide/built-in-accounts",
         "guide/starters",
         "guide/libraries",
+        "guide/write-your-own-step",
         "guide/approvals-and-reruns",
         "guide/watching-runs",
         "guide/test-reports",
@@ -180,6 +181,8 @@
           "title": "Overview"
         },
         "reference/pipeline",
+        "reference/step-contract",
+        "reference/step-manifest",
         "reference/server-config",
         "reference/dependency-updates",
         "reference/requirements-file",

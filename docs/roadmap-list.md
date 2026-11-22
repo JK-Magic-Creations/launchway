@@ -348,21 +348,21 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Custom steps in your own language](roadmap/milestone-2.md#custom-steps-in-your-own-language) | Planned | A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code. |
-| [A step contract and starter kits](roadmap/milestone-2.md#a-step-contract-and-starter-kits) | Planned | A published contract for what a step receives and returns, with starter kits for common languages. |
-| [Steps run in a sandbox](roadmap/milestone-2.md#steps-run-in-a-sandbox) | Planned | Custom steps run in an isolated container with only the secrets and network they declared. |
-| [Share and pin steps and templates](roadmap/milestone-2.md#share-and-pin-steps-and-templates) | Planned | Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. |
+| [Custom steps in your own language](roadmap/milestone-2.md#custom-steps-in-your-own-language) | In progress | A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code. |
+| [A step contract and starter kits](roadmap/milestone-2.md#a-step-contract-and-starter-kits) | Available | A published contract for what a step receives and returns, with starter kits for common languages. |
+| [Steps run in a sandbox](roadmap/milestone-2.md#steps-run-in-a-sandbox) | In progress | Custom steps run in an isolated container with only the secrets and network they declared. |
+| [Share and pin steps and templates](roadmap/milestone-2.md#share-and-pin-steps-and-templates) | Available | Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. |
 | [Generated pipelines](roadmap/milestone-2.md#generated-pipelines) | Planned | A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the Sortie. |
 | [Expressions for conditions](roadmap/milestone-2.md#expressions-for-conditions) | Planned | A small typed expression language with no loops and no side effects, checked before the Sortie; today's conditions keep working. ([docs](reference/pipeline.md#when)) |
-| [Typed outputs between steps](roadmap/milestone-2.md#typed-outputs-between-steps) | Planned | A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. |
+| [Typed outputs between steps](roadmap/milestone-2.md#typed-outputs-between-steps) | In progress | A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. |
 | [A browsable catalog of templates and steps](roadmap/milestone-2.md#a-browsable-catalog-of-templates-and-steps) | Planned | Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product. ([docs](guide/libraries.md)) |
-| [Update notices for shared libraries](roadmap/milestone-2.md#update-notices-for-shared-libraries) | Planned | See which Flights use an old version of a template and open an update as a reviewable change. |
+| [Update notices for shared libraries](roadmap/milestone-2.md#update-notices-for-shared-libraries) | In progress | See which Flights use an old version of a template and open an update as a reviewable change. |
 | [A triggers page](roadmap/milestone-2.md#a-triggers-page) | Planned | One page showing every trigger and exactly which pipelines it starts. |
 | [Event sources from queues and buses](roadmap/milestone-2.md#event-sources-from-queues-and-buses) | Planned | Start pipelines from message queues and event buses, with filters, and replies back. |
 | [Steps as a graph of containers](roadmap/milestone-2.md#steps-as-a-graph-of-containers) | Planned | Lay steps out as a graph of containers with fan-out and join, for work that is not a straight line. |
 | [Runners that keep themselves updated](roadmap/milestone-2.md#runners-that-keep-themselves-updated) | Planned | Stations on VMs and on customers' machines update under your policy, so the fleet never drifts. |
 | [Pipeline history and flaky tests](roadmap/milestone-2.md#pipeline-history-and-flaky-tests) | In progress | Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page. |
-| [Step pages](roadmap/milestone-2.md#step-pages) | Planned | Each step has a page: where its code lives, its inputs and types, and which pipelines use it. |
+| [Step pages](roadmap/milestone-2.md#step-pages) | Available | Each step has a page: where its code lives, its inputs and types, and which pipelines use it. |
 | [An event log that explains every decision](roadmap/milestone-2.md#an-event-log-that-explains-every-decision) | Available | Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another Flight's result. |
 | [Standing orders for every repository](roadmap/milestone-2.md#standing-orders-for-every-repository) | Available | A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces. |
 

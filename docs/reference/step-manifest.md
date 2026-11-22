@@ -53,7 +53,7 @@ A step runs in a **sandbox** and the manifest asks for what it needs, nothing mo
 |---|---|---|
 | `network` | none | Podman and Docker: `--network none` unless hosts are listed. Kubernetes: the pod is labelled so that the chart's network policy gives it no egress at all (not even DNS), or, when hosts are listed, what `networkPolicy.steps.customHosts` allows. A list of hosts is **not** enforced by name on either: Podman cannot filter by name and a policy has addresses, so the list is recorded, shown and audited, and the operator's policy decides. The host executor enforces nothing and refuses the step |
 | `write` | none | Podman and Docker: the workspace is read-only except the listed paths and the step's own directory. Kubernetes: the list is recorded, and the workspace is one volume the pod may write (not enforced). A listed path that is a link is refused |
-| secrets | only inputs of type `secret` | The step's environment holds exactly those secrets |
+| secrets | only inputs of type `secret` | The step's variables hold exactly those secrets |
 | root filesystem | read-only | Podman, Docker and Kubernetes. A private `HOME` and `/tmp` are writable |
 | capabilities | none | All dropped, no new privileges (Podman, Docker, Kubernetes) |
 

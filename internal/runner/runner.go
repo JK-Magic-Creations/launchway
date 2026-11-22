@@ -596,14 +596,9 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
-	var cust *customRun
-	if job.Custom != nil {
-		var err error
-		if cust, err = r.customStart(job, ws, env, values); err != nil {
-			sys("Could not prepare the custom step: %v", err)
-			return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the custom step: " + err.Error()}, nil
-		}
-		cust.retarget(job)
+	cust, failed := r.startCustom(job, ws, env, values, sys)
+	if failed != nil {
+		return *failed, nil
 	}
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
@@ -684,12 +679,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return res, collect
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
-	var notes []engine.StepNote
-	customWhy := ""
-	if cust != nil {
-		d := cust.finish(ctx, r, spec, code, mask, sys)
-		outputs, notes, customWhy, code = d.outputs, d.notes, d.why, d.code
-	}
+	outputs, notes, customWhy, code := cust.settle(ctx, r, spec, code, mask, sys, outputs)
 	ec := code
 	if code != 0 {
 		why := fmt.Sprintf("exit code %d", code)
