@@ -61,7 +61,8 @@ func Additions() []forge.Addition {
 type Endpoints = restkit.Endpoints
 
 // EndpointsOf gives the API address of Bitbucket Cloud. Only the public
-// service is covered: an empty address or https://bitbucket.org.
+// service is covered: an empty address or https://bitbucket.org. Any other
+// address is refused with the kind to use for a self-managed install.
 func EndpointsOf(base string) (Endpoints, error) {
 	var e Endpoints
 	if testAPI != "" { // tests of the service run against a fake host
@@ -76,7 +77,7 @@ func EndpointsOf(base string) (Endpoints, error) {
 	switch strings.TrimSuffix(strings.TrimSpace(base), "/") {
 	case "", "https://bitbucket.org":
 	default:
-		return e, fmt.Errorf("only Bitbucket Cloud (https://bitbucket.org) is covered; Bitbucket Data Center has a different API and is not built yet")
+		return e, fmt.Errorf("only Bitbucket Cloud (https://bitbucket.org) is covered by this kind; a self-managed Bitbucket Data Center has a different API: use the kind bitbucket-datacenter for it")
 	}
 	e.API = &url.URL{Scheme: "https", Host: "api.bitbucket.org", Path: "/2.0"}
 	e.Hosts = map[string]bool{e.API.Host: true}

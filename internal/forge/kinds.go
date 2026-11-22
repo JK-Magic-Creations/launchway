@@ -16,9 +16,11 @@ const (
 	KindGitea       Kind = "gitea"
 	KindForgejo     Kind = "forgejo"
 	KindCodeCommit  Kind = "codecommit"
+	// KindBitbucketDataCenter is the self-managed Bitbucket product, a separate API from Bitbucket Cloud (KindBitbucket).
+	KindBitbucketDataCenter Kind = "bitbucket-datacenter"
 )
 
-var knownKinds = []Kind{KindPlain, KindLaunchway, KindGitHub, KindGitLab, KindBitbucket, KindAzureDevOps, KindGitea, KindForgejo, KindCodeCommit}
+var knownKinds = []Kind{KindPlain, KindLaunchway, KindGitHub, KindGitLab, KindBitbucket, KindAzureDevOps, KindGitea, KindForgejo, KindCodeCommit, KindBitbucketDataCenter}
 
 // KnownKinds lists every kind the model names, whether or not a provider for
 // it is registered.

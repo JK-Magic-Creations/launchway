@@ -354,8 +354,8 @@ func TestCredentialRedirectGuardAndEndpoints(t *testing.T) {
 			t.Errorf("%q: %v %v", base, ep.API, err)
 		}
 	}
-	if _, err := EndpointsOf("https://bitbucket.example.com"); err == nil || !strings.Contains(err.Error(), "Data Center") {
-		t.Errorf("the self-managed product is said not to be covered: %v", err)
+	if _, err := EndpointsOf("https://bitbucket.example.com"); err == nil || !strings.Contains(err.Error(), "Data Center") || !strings.Contains(err.Error(), "kind bitbucket-datacenter") {
+		t.Errorf("the self-managed product is pointed to its own kind: %v", err)
 	}
 }
 

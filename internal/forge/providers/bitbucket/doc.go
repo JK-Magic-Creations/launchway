@@ -11,8 +11,9 @@
 // call and never stored, logged or returned.
 //
 // Bitbucket Data Center (the self-managed product) has a different API (REST
-// 1.0 under /rest/api/) and different webhooks; it is NOT covered: a base
-// address other than https://bitbucket.org is refused with that message.
+// under /rest/api/) and different webhooks; it is the separate kind
+// "bitbucket-datacenter" (package bitbucketdc), and a base address other than
+// https://bitbucket.org is refused here with a message that names that kind.
 //
 // Bitbucket has no release object (it has tags and "downloads"), so the
 // capability "releases.publish" is declared none: the tag is made on the host,

@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `azuredevops` (the cloud service and the self-managed server product) and `codecommit` (AWS CodeCommit, signed requests and IAM). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Azure DevOps](#azure-devops) and [AWS CodeCommit](#aws-codecommit) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `bitbucket-datacenter` (the self-managed Bitbucket product: a separate API, base address required) `azuredevops` (the cloud service and the self-managed server product) and `codecommit` (AWS CodeCommit, signed requests and IAM). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Bitbucket Data Center](#bitbucket-data-center) [Azure DevOps](#azure-devops) and [AWS CodeCommit](#aws-codecommit) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -196,7 +196,7 @@ These providers are labelled experimental until they have passed the conformance
 
 ## Bitbucket Cloud
 
-The kind `bitbucket` is **Bitbucket Cloud** (`https://bitbucket.org`, API at `https://api.bitbucket.org/2.0`). **Bitbucket Data Center** (the self-managed product) is **not covered**: its API (`/rest/api/1.0`) and its webhooks are different, and a base address other than `https://bitbucket.org` is refused with that message. A repository is `workspace/name`; the **owners** list names workspaces, and with it Launchway lists those workspaces directly (without it, the account's own workspaces are asked, which needs the `account` scope).
+The kind `bitbucket` is **Bitbucket Cloud** (`https://bitbucket.org`, API at `https://api.bitbucket.org/2.0`). **Bitbucket Data Center** (the self-managed product) is a different product with a different API and webhooks: it is the separate kind [`bitbucket-datacenter`](#bitbucket-data-center), and a base address other than `https://bitbucket.org` is refused here with a message that names that kind. A repository is `workspace/name`; the **owners** list names workspaces, and with it Launchway lists those workspaces directly (without it, the account's own workspaces are asked, which needs the `account` scope).
 
 - The token is a **repository, project or workspace access token**, sent as `Authorization: Bearer`. Git over HTTPS uses it as the password with the literal user name `x-token-auth`, as the host documents. An access token has no account: Test names it "access-token" and cannot read its permissions, and says so.
 - The webhook is checked by its **signature**: the `X-Hub-Signature` header, `sha256=` and the hex HMAC of the raw body, compared in constant time. The events are `repo:push` (one event for each branch or tag the push changed; a tag is a push of a tag), `pullrequest:created`, `:updated`, `:fulfilled` (merged) and `:rejected` (declined). A replay is dropped by `X-Request-UUID`; the documentation does not say whether a retry reuses it, and if it does not, a retried delivery is only processed again, which makes the Flight poll once more.
@@ -236,6 +236,54 @@ launchway repos host test acme-bb
 ```
 
 This provider is labelled experimental until it has passed the conformance suite against the live service (`LAUNCHWAY_LIVE_BITBUCKET_TOKEN` and `LAUNCHWAY_LIVE_BITBUCKET_REPO` run that test).
+
+## Bitbucket Data Center
+
+The kind `bitbucket-datacenter` is the self-managed Bitbucket product (Data Center, formerly Server). It is **not** the kind `bitbucket`: the API is different (REST under `<base>/rest/api/latest`, `/rest/build-status/latest`, `/rest/branch-permissions/latest` and `/rest/git/latest`), the webhooks are different, and the address of Bitbucket Cloud is refused here with a message that names the kind `bitbucket`. The **base address is required** and keeps its context path if the install has one (`https://git.example.com` or `https://example.com/stash`). A repository is `PROJECTKEY/name`; a personal repository has the project key `~USER` (for example `~EVE/notes`). The **owners** list names project keys (case does not matter); with it Launchway searches those projects only (the search resource's `projectkey` filter, available since Bitbucket 8.0), without it the repositories the token can read.
+
+- The token is an **HTTP access token**, sent as `Authorization: Bearer` for the REST API. Git over HTTPS uses a **project or repository** token as the password with the literal user name `x-token-auth`, as the host documents; a personal token's Git login is its owner's own user name, which a connection does not know, so use a project or repository token for the connection. The host's page is inconsistent about Basic authentication with these tokens (its introduction warns against a user name, its usage section gives `x-token-auth`); that is a point to check on a real install.
+- The token's **permissions** are repository and project levels: read, write, admin. A repository token cannot hold project permissions; the repository level must be at least the project level. Test names the account "access-token": the host's reference has no call that names a token, its kind, its scopes or its expiry, so the connection test lists what the token can do (the repositories it holds read, write and admin permission on, through the search resource's `permission` filter) and cannot report anything else. It cannot see the webhook.
+- The webhook is checked by its **signature**: the `X-Hub-Signature` header, `sha256=` and the hex HMAC of the raw body (the host's default algorithm), compared in constant time. The events are `repo:refs_changed` (one event for each branch or tag the push changed; a tag is a push of a tag), `pr:opened`, `pr:from_ref_updated`, `pr:modified` (a changed title, description, draft state or target), `pr:merged`, `pr:declined` and `pr:deleted`. A replay is dropped by `X-Request-Id`; the documentation does not say whether a retry reuses it, and if it does not, a retried delivery is only processed again, which makes the Flight poll once more. A pull request is from **another repository (a fork)** when its `fromRef` repository is not its `toRef` repository.
+- A **build status** is the host's build status on the commit: one named for the Sortie, replaced by its key (states in progress, successful, failed and cancelled; an errored step is cancelled). The host requires an address on every status: the Sortie's, or the install's own when the result has none.
+- The summary is **one comment** on the pull request, edited in place (the edit reads the comment's current version first). A draft pull request can be made and changed. A declined pull request can be reopened.
+- **Write-back** commits with the host's file edit (multipart: the file, a message, the branch, and the branch to start a new one from; an existing file is edited against the commit that last changed it, and a file that changed since is refused by the host) and opens a pull request. A direct write to a branch with a pull-request-only or read-only branch permission is refused before anything is pushed, with a message that names the pull-request mode.
+- The host publishes no ref for a pull request's head in its reference, so a pull request from **another repository (a fork)** has its head commit named by the API but not fetched with the mirror, so a Sortie for it cannot check that commit out. A pull request from a branch of the same repository is fetched with the branches.
+
+**Auto-merge: the host has it, and Launchway can ask for it.** With `write_back.merge: auto` Launchway asks the host to merge the write-back pull request itself once every merge check passes (the merge call with `autoMerge`, with the merge strategy `no-ff` or `squash`), and can cancel the request. The repository's or project's settings must allow auto-merge; if they do not, the request is refused up front with a message that says where to turn it on. Only merge and squash are asked for: the reference's pages name no other strategy ids here. Merging at once, reviewing and changing merge checks stay on the host.
+
+**Releases: the host has none.** Bitbucket has tags but no release object with notes or files. The capability is declared **none**, with that reason, exactly as for Bitbucket Cloud. **Cut a release** makes the annotated tag on Bitbucket (the tag call, type annotated); the release page, its notes and its files stay in Launchway, which serves the files; the page says so, and the Logbook records the publish on the host as skipped, with the reason.
+
+What Bitbucket Data Center adds (shown "from Bitbucket Data Center" on the Flight's Code host page): its own **auto-merge** (above), **merge checks** (required approvals, successful builds and completed tasks; set on the repository; Launchway reads the approval and build counts and the branch permissions to refuse a direct write), **default reviewers**, and **builds on the pull request** (the statuses above).
+
+What a connection cannot do: create or delete repositories, merge at once, review, or change branch permissions and merge checks (do it on Bitbucket).
+
+Permissions per feature (project and repository levels of an HTTP access token; the permission each operation lists in the product's own OpenAPI file):
+
+| To | Permission |
+| --- | --- |
+| Choose a repository, run Sorties, checkout, refs, commits, pull requests (read) | project read and repository read |
+| Build statuses | repository read (the call needs only that) |
+| Post and edit the summary comment, open a pull request | repository read (a pull request is edited by its author, which is the token's user) |
+| Tags | repository write |
+| File changes (write-back) | repository write |
+| Update, decline or reopen a write-back pull request you did not open | repository write |
+| Auto-merge of a write-back pull request | repository write, and auto-merge enabled in settings |
+| Refuse a direct write to a protected branch (branch permissions) | repository admin (the host lists them only to repository administrators) |
+| Merge checks (approval and build counts) | repository read |
+| The webhook (set by you) | repository admin (or project admin for a project-level webhook), for whoever sets it up; the token Launchway holds does not need it |
+
+The host reports no token scopes or expiry through its API, so Test judges the features by the permissions it can read on the repositories, and says that a refusal (403) will show when a feature is used.
+
+```sh
+launchway repos host add acme-dc --kind bitbucket-datacenter \
+  --base-url https://git.example.com \
+  --credential-env ACME_DC_TOKEN \
+  --webhook-secret-env ACME_DC_HOOK \
+  --owner ACME
+launchway repos host test acme-dc
+```
+
+This provider is labelled experimental until it has passed the conformance suite against a live install (`LAUNCHWAY_LIVE_BITBUCKETDC_TOKEN`, `LAUNCHWAY_LIVE_BITBUCKETDC_BASE` and `LAUNCHWAY_LIVE_BITBUCKETDC_REPO` run that test). The calls are taken from the product's OpenAPI file for version 10.2 (the reference pages themselves are scripts and cannot be read as text); the behavior of older versions was not checked.
 
 ## Azure DevOps
 

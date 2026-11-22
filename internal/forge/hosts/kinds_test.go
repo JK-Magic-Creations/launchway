@@ -17,6 +17,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops/azuredevopsfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket/bitbucketfake"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucketdc/bitbucketdcfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit/codecommitfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitea/giteafake"
@@ -112,6 +113,29 @@ func bitbucketCase() hostCase {
 	}
 }
 
+// bitbucketDCCase: the self-managed Bitbucket product, below a context path, with project keys in upper case.
+func bitbucketDCCase() hostCase {
+	return hostCase{
+		kind: forge.KindBitbucketDataCenter,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			h := bitbucketdcfake.New()
+			t.Cleanup(h.Close)
+			return h.BaseURL(), bitbucketdcfake.Access, bitbucketdcfake.WebhookSecret, func() []string { return h.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			body := `{"actor":{"name":"bob"},"repository":{"slug":"app","project":{"key":"ACME"}},"changes":[{"ref":{"id":"refs/heads/main","type":"BRANCH"},"fromHash":"` +
+				strings.Repeat("0", 40) + `","toHash":"` + strings.Repeat("a", 40) + `","type":"ADD"}]}`
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(body))
+			r.Header = bitbucketdcfake.Delivery("repo:refs_changed", "del-1", []byte(body))
+			if secret != bitbucketdcfake.WebhookSecret {
+				r.Header.Set("X-Hub-Signature", bitbucketdcfake.Sign([]byte(secret), []byte(body)))
+			}
+			return r
+		},
+		lacks: forge.CapReleases, repo: "ACME/app", cloneEnd: "/scm/acme/app.git", owners: []string{"acme"},
+	}
+}
+
 func azureDevOpsCase() hostCase {
 	return hostCase{
 		kind: forge.KindAzureDevOps,
@@ -160,7 +184,7 @@ func codeCommitCase() hostCase {
 	}
 }
 
-var kindCases = []hostCase{bitbucketCase(), azureDevOpsCase(), codeCommitCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
+var kindCases = []hostCase{bitbucketCase(), bitbucketDCCase(), azureDevOpsCase(), codeCommitCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()
