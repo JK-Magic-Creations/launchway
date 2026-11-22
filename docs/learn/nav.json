@@ -115,6 +115,8 @@
         "guide/git-over-ssh",
         "guide/credentials-for-machines",
         "guide/browsing-code",
+        "guide/repository-trash",
+        "guide/renaming-repositories",
         "guide/searching-code",
         "guide/editing-in-the-browser",
         "guide/pull-requests",

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -63,4 +64,21 @@ func withMovedNotice(inner func(context.Context, []githttp.RefUpdate, []string) 
 		}
 		return line + "\n" + inner(ctx, ups, opts)
 	}
+}
+
+// gitFind finds the repository a Git address names: the repository there, or the one that used to be there (then
+// from is the address asked for and now is where it is). A repository that is not there is found == false; err is a
+// fault of the server.
+func (s *Server) gitFind(ctx context.Context, path string) (repo forge.Repository, found bool, now, from string, err error) {
+	repo, err = s.Forge.Provider.Repositories().Get(ctx, path)
+	if err == nil {
+		return repo, true, path, "", nil
+	}
+	if !errors.Is(err, forge.ErrNotFound) {
+		return repo, false, path, "", err
+	}
+	if m, ok := s.movedRepo(ctx, path); ok {
+		return m, true, m.Path, path, nil
+	}
+	return repo, false, path, "", nil
 }

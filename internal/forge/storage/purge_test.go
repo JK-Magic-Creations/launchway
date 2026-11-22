@@ -57,6 +57,9 @@ func blobsOf(t testing.TB, w *world, repo string) []string {
 		}
 		keys = append(keys, k)
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	return keys
 }
 

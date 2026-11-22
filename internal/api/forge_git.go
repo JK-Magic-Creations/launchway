@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -241,18 +240,12 @@ type gitDecision struct {
 // HTTP asks it for a request, SSH for a command. Everything that cannot be
 // told apart is answered alike.
 func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecision {
-	repo, err := s.Forge.Provider.Repositories().Get(ctx, q.path)
-	found := err == nil
-	if err != nil && !errors.Is(err, forge.ErrNotFound) {
+	repo, found, now, from, err := s.gitFind(ctx, q.path)
+	if err != nil {
 		return gitDecision{failed: err}
 	}
-	d := gitDecision{repo: repo}
-	if !found {
-		// The address a repository had before it was renamed or transferred: serve it where it is now, and say so.
-		if m, ok := s.movedRepo(ctx, q.path); ok {
-			d.movedFrom, d.repo, repo, found, q.path = q.path, m, m, true, m.Path
-		}
-	}
+	q.path = now
+	d := gitDecision{repo: repo, movedFrom: from}
 	deny := func(code int, msg string) gitDecision {
 		d.code, d.msg, d.audit = code, msg, true
 		return d
