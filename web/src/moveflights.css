@@ -1,6 +1,6 @@
 /* Moving Flights between Squadrons, and the Organize wizard. Tokens only, so light and dark both work. */
 .mv-bar { display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; }
-.mv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mv-tools { padding: 8px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .mv-all { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .mv-check { width: 18px; height: 18px; flex: none; margin: 0 6px 0 0; }
 .mv-done { margin: 0; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--signal-wash); color: var(--signal-ink); overflow-wrap: anywhere; }
@@ -30,7 +30,7 @@
 
 /* Organize into Squadrons */
 .og { display: flex; flex-direction: column; gap: 14px; }
-.og-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+.og-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 520px)); }
 .og-group { border: 1px solid var(--line); border-radius: var(--r2); padding: 12px; background: var(--sheet); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .og-group h2 { margin: 0; font-size: 15px; }
 .og-group label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }

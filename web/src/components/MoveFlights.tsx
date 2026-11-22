@@ -198,6 +198,8 @@ const SECRET: Record<MovePlan["secrets"][number]["result"], string> = {
   none: "would resolve to no store at all",
 };
 const place = (s: string) => s || "Unfiled";
+/** Where an object is defined, in the words people read (the API keeps "unit" and "organization"). */
+const definedAt = (s: string) => (s === "unit" ? say("{Unit}") : s === "organization" ? "Base" : s || "its place");
 
 function PlanView({ plan, toLabel, skipped, onSkip }: { plan: MovePlan; toLabel: string; skipped: boolean; onSkip: () => void }) {
   const id = `mv-${plan.flight.replace(/[^a-z0-9]/gi, "-")}`;
@@ -223,8 +225,8 @@ function PlanView({ plan, toLabel, skipped, onSkip }: { plan: MovePlan; toLabel:
       {!plan.unchanged && (
         <dl className="mv-effects">
           {plan.references_from === "assumed" && <><dt>Secrets</dt><dd>The pipeline file could not be read, so the secret references below are assumed.</dd></>}
-          {(plan.stops?.length ?? 0) > 0 && <><dt>Stop applying</dt><dd><ul>{plan.stops.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from {e.from || "its place"}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
-          {(plan.starts?.length ?? 0) > 0 && <><dt>Start applying</dt><dd><ul>{plan.starts.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from {e.from || "its place"}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
+          {(plan.stops?.length ?? 0) > 0 && <><dt>Stop applying</dt><dd><ul>{plan.stops.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
+          {(plan.starts?.length ?? 0) > 0 && <><dt>Start applying</dt><dd><ul>{plan.starts.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
           {(plan.variables?.length ?? 0) > 0 && <><dt>Variables that change value</dt><dd><ul>{plan.variables.map((v) => <li key={v.name}><code>{v.name}</code>: {v.before || "(not set)"} becomes {v.after || "(not set)"}</li>)}</ul></dd></>}
           {(plan.access?.length ?? 0) > 0 && <><dt>Who can start runs</dt><dd><ul>{plan.access.map((a, i) => <li key={i}>{a.who} {a.effect === "gains" ? "gains" : "loses"} the ability to start runs ({a.before || "no role"} becomes {a.after || "no role"})</li>)}</ul></dd></>}
           {(plan.secrets?.length ?? 0) > 0 && <><dt>Secret references</dt><dd><ul>{plan.secrets.map((s, i) => <li key={i}><b>{s.result}</b>: {s.store} {SECRET[s.result]}</li>)}</ul></dd></>}
