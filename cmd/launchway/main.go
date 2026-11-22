@@ -694,7 +694,13 @@ func cmdRun(args []string) error {
 	imagesConfig := fs.String("images-config", "", "a file with the Station's images: section (builders and registries), for image steps")
 	var given multi
 	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
+	var libs libraryFlag
+	fs.Var(&libs, "library", "run templates from a library directory: NAME=DIRECTORY, where NAME is what the pipeline's libraries section calls it (repeat for each library); the starters that ship with Launchway need none")
 	fs.Parse(args)
+	libDirs, err := pipeline.ParseLibraryFlags(libs)
+	if err != nil {
+		return err
+	}
 	secretStores, err := localSecrets(*secretsConfig)
 	if err != nil {
 		return err
@@ -716,12 +722,19 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	var libs []engine.LibrarySource
+	var runLibs []engine.LibrarySource
+	var libWork string
 	if !p.Expanded() {
-		// The starters that ship with Launchway need no server.
-		if p, libs, err = source.ExpandBound(p); err != nil {
+		// The starters that ship with Launchway need no server, and a library is read from the directory given for it.
+		if libWork, err = os.MkdirTemp("", "launchway-libs-"); err != nil {
+			return err
+		}
+		defer os.RemoveAll(libWork)
+		if p, runLibs, err = source.ExpandLocal(p, libDirs, libWork); err != nil {
 			return explainProblems(path, err)
 		}
+	} else if len(libDirs) > 0 {
+		return errors.New("--library: the pipeline uses no templates")
 	}
 	if images == nil {
 		for _, s := range p.Steps {
@@ -771,7 +784,7 @@ func cmdRun(args []string) error {
 
 	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
 	trig.Branch, trig.Ref, trig.SHA = currentGitHead()
-	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir, Libraries: libs}})
+	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir, Libraries: runLibs}})
 	if err != nil {
 		return err
 	}

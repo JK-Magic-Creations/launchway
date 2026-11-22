@@ -188,6 +188,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `--executor` | `auto` | `auto`, `container`, `podman`, `docker`, `host` or `kubernetes`. |
 | `-i` | none | An input value, `name=value`. Give it once for each input; the others take their defaults. |
 | `--secrets-config` | none | A YAML file of secret stores. An `env` store, which reads your own environment, is always added. |
+| `--library` | none | `NAME=DIRECTORY`: read the templates of the library the pipeline calls NAME from a directory (the root, which holds `templates/`), as `launchway validate --library` does; repeat for each library. The directory is committed to a repository of its own under a temporary directory, which is what the steps fetch the library's scripts from. The starters that ship with Launchway (`launchway/...`) need none. |
 | `--images-config` | none | A file with an `images:` section (builders and Depots (registries)), as in a Station's configuration. Required if a step builds an image. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 

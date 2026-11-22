@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -191,4 +192,122 @@ func writeStarters(dir string) error {
 		}
 		return os.WriteFile(dst, b, 0o600)
 	})
+}
+
+// ExpandLocal expands a bound pipeline for a run on one's own machine, reading the libraries it names that are
+// not the one that ships with Launchway from directories (--library NAME=DIRECTORY, as validate takes it). A
+// runner fetches a library from a Git repository at a commit, so each directory is copied into a repository of
+// its own under work and committed; the run records that commit and URL. Nothing is fetched from a server.
+func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pipeline.Pipeline, []engine.LibrarySource, error) {
+	var problems pipeline.Problems
+	loaders := map[string]string{} // library → its copy
+	for _, l := range p.Libraries {
+		at := "libraries." + l.Name
+		if _, given := dirs[l.Name]; !given && isBuiltin(l) {
+			l.Commit, l.RefKind = starters.Commit(), "builtin"
+			continue
+		}
+		dir, ok := dirs[l.Name]
+		switch {
+		case !ok:
+			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at, Message: fmt.Sprintf(
+				"the pipeline uses the library %s (%s, version %s); launchway run reads the starters that ship with Launchway and the libraries you give: add --library %s=DIRECTORY",
+				l.Name, l.Repo, l.Wanted(), l.Name)})
+			continue
+		}
+		if st, err := os.Stat(filepath.Join(dir, "templates")); err != nil || !st.IsDir() {
+			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at, Message: fmt.Sprintf(
+				"%s has no templates directory: --library %s=DIRECTORY takes the root of a library, the directory that holds templates/", dir, l.Name)})
+			continue
+		}
+		repo := filepath.Join(work, "libraries", l.Name)
+		sha, err := commitDirectory(dir, repo)
+		if err != nil {
+			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at, Message: fmt.Sprintf("reading the library %s from %s: %v", l.Name, dir, err)})
+			continue
+		}
+		l.Commit, l.RefKind = sha, "directory"
+		loaders[l.Name] = repo
+	}
+	for name := range dirs {
+		if p.Library(name) == nil {
+			problems = append(problems, pipeline.Problem{Message: fmt.Sprintf("--library %s: the pipeline has no library called %s", name, name)})
+		}
+	}
+	if len(problems) > 0 {
+		return nil, nil, problems
+	}
+	out, _, err := pipeline.ExpandWith(p, func(l *pipeline.Library, name string) ([]byte, error) {
+		repo, ok := loaders[l.Name]
+		if !ok {
+			return builtinTemplate(name)
+		}
+		b, err := os.ReadFile(filepath.Join(repo, pipeline.TemplatePath(name)))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, pipeline.ErrNoTemplate
+		}
+		return b, err
+	}, nil)
+	if err != nil {
+		return nil, nil, plainBuiltin(err)
+	}
+	var libs []engine.LibrarySource
+	for _, l := range out.Libraries {
+		if repo, ok := loaders[l.Name]; ok {
+			libs = append(libs, engine.LibrarySource{Name: l.Name, URL: repo, Commit: l.Commit})
+			continue
+		}
+		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: starters.URL, Commit: l.Commit})
+	}
+	return out, libs, nil
+}
+
+// commitDirectory copies a directory into a new Git repository and commits it, and returns the commit.
+func commitDirectory(dir, repo string) (string, error) {
+	if err := os.MkdirAll(repo, 0o750); err != nil {
+		return "", err
+	}
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, p)
+		if d.IsDir() && d.Name() == ".git" {
+			return fs.SkipDir
+		}
+		dst := filepath.Join(repo, rel)
+		switch {
+		case d.IsDir():
+			return os.MkdirAll(dst, 0o750)
+		case !d.Type().IsRegular():
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(dst, b, info.Mode().Perm())
+	})
+	if err != nil {
+		return "", err
+	}
+	run := func(args ...string) (string, error) {
+		cmd := exec.Command("git", append([]string{"-C", repo, "-c", "user.name=launchway", "-c", "user.email=run@localhost", "-c", "commit.gpgsign=false"}, args...)...)
+		out, err := cmd.CombinedOutput()
+		return strings.TrimSpace(string(out)), err
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, {"commit", "-q", "-m", "library"}} {
+		if out, err := run(args...); err != nil {
+			return "", fmt.Errorf("git %s: %s", args[0], out)
+		}
+	}
+	sha, err := run("rev-parse", "HEAD")
+	if err != nil || !pipeline.IsCommitID(sha) {
+		return "", fmt.Errorf("git rev-parse: %s", sha)
+	}
+	return sha, nil
 }
