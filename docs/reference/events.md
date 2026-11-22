@@ -513,7 +513,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `work.settings` | `PUT /api/v1/work/settings`: how work is set up at a level, including the agent rules and autonomy policy |
 | `work.inbox_read` | `POST /api/v1/work/inbox/read` |
 | `work.agent_create` | `POST /api/v1/work/agents`: an agent was registered (its token is never recorded) |
-| `work.agent_update` | `PATCH /api/v1/work/agents/{name}`: limits, owner, budgets, class, or the kill switch |
+| `work.agent_update` | `PATCH /api/v1/work/agents/{name}`: limits, owner, budgets, class, or the Master switch (kill switch) |
 | `work.agent_delete` | `DELETE /api/v1/work/agents/{name}` |
 | `work.agent_rotate` | `POST /api/v1/work/agents/{name}/rotate-token` |
 | `work.agent_claim` | `POST /api/v1/work/agent/claim`: an agent took an item on a lease |

@@ -42,3 +42,41 @@ func ChartNotice(getenv func(string) string, inKubernetes bool) (msg string, war
 	}
 	return fmt.Sprintf("rendered by chart revision %d, as this server expects", n), false
 }
+
+// EnvIgnoredValues is set by the chart (comma-separated dotted keys) when the values file held keys
+// this chart version does not know.
+const EnvIgnoredValues = "LAUNCHWAY_IGNORED_VALUES"
+
+// IgnoredValuesNotice says which values the chart ignored, as one plain sentence; empty when none.
+func IgnoredValuesNotice(getenv func(string) string) string {
+	var keys []string
+	for _, k := range strings.Split(getenv(EnvIgnoredValues), ",") {
+		if k = strings.TrimSpace(k); k != "" {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return ""
+	}
+	noun := "values were"
+	if len(keys) == 1 {
+		noun = "value was"
+	}
+	return fmt.Sprintf("%d %s ignored by this chart version: %s: a typo, or a setting for a newer chart. They change nothing here; fix the name or remove them (strictValues: true makes the chart refuse them)",
+		len(keys), noun, strings.Join(keys, ", "))
+}
+
+// EnvNetworkPolicy is set to "chart" by the chart when it renders its NetworkPolicies.
+const EnvNetworkPolicy = "LAUNCHWAY_NETWORK_POLICY"
+
+// NetworkPolicyNotice is what the server says at start when the chart's NetworkPolicies are on. A
+// server cannot list the cluster's policy objects (it has no cluster rights), so it cannot say
+// whether another system also holds policy; it names the check that can.
+func NetworkPolicyNotice(getenv func(string) string) string {
+	if getenv(EnvNetworkPolicy) != "chart" {
+		return ""
+	}
+	return "the chart's NetworkPolicies are on for this installation. If the cluster's network plugin has its own policy objects " +
+		"(CiliumNetworkPolicy, GlobalNetworkPolicy, ...) that add to Kubernetes ones, let ONE system be the authority: " +
+		"run `launchway doctor network --namespace <namespace>` where you installed from, and set networkPolicy.enabled: false if they overlap"
+}

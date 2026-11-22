@@ -8,7 +8,9 @@
 // every render and replaces the real one. A Job runs against the real cluster, so it can look first.
 //
 // The rules are few and absolute. A Secret is created only if it is absent. An existing Secret is
-// never modified, whatever it holds. No value is ever logged or returned.
+// never modified, whatever it holds: the one thing done to an existing Secret is to add the two
+// annotations that keep a Helm upgrade or a GitOps prune from deleting it (see protect). No value is
+// ever logged or returned.
 package bootstrap
 
 import (
@@ -26,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -34,6 +37,7 @@ import (
 // delete them; the annotation says that is on purpose.
 const (
 	AnnotationKeep      = "helm.sh/resource-policy"
+	AnnotationPrune     = "argocd.argoproj.io/sync-options"
 	AnnotationCreatedBy = "launchway.dev/created-by"
 	createdBy           = "bootstrap-secrets"
 )
@@ -132,6 +136,9 @@ func ensureOne(ctx context.Context, cs kubernetes.Interface, o Options, s Spec) 
 		return Result{}, fmt.Errorf("reading Secret %s: %w", s.Name, err)
 	}
 	if existing != nil {
+		if err := protect(ctx, cs, o, existing); err != nil {
+			return Result{}, err
+		}
 		return checkKey(existing, s)
 	}
 	val, err := s.Generate(o.Rand)
@@ -143,7 +150,7 @@ func ensureOne(ctx context.Context, cs kubernetes.Interface, o Options, s Spec) 
 			Name:        s.Name,
 			Namespace:   o.Namespace,
 			Labels:      o.Labels,
-			Annotations: map[string]string{AnnotationKeep: "keep", AnnotationCreatedBy: createdBy},
+			Annotations: map[string]string{AnnotationKeep: "keep", AnnotationPrune: "Prune=false", AnnotationCreatedBy: createdBy},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{s.Key: []byte(val)},
@@ -169,6 +176,26 @@ func ensureOne(ctx context.Context, cs kubernetes.Interface, o Options, s Spec) 
 		return Result{}, fmt.Errorf("reading Secret %s: %w", s.Name, err)
 	}
 	return checkKey(theirs, s)
+}
+
+// protect marks an existing Secret as one that no release owns. The previous chart rendered these
+// Secrets itself, so they belong to its Helm release: the new chart does not render them, and Helm
+// (or a GitOps prune) would delete them at the end of the upgrade, taking the database password and
+// the runner token with them. Helm skips a live object annotated helm.sh/resource-policy: keep, and
+// Argo CD one annotated Prune=false. Only metadata changes; the data is never touched.
+func protect(ctx context.Context, cs kubernetes.Interface, o Options, sec *corev1.Secret) error {
+	if sec.Annotations[AnnotationKeep] == "keep" && strings.Contains(sec.Annotations[AnnotationPrune], "Prune=false") {
+		return nil
+	}
+	patch := fmt.Sprintf(`{"metadata":{"annotations":{%q:"keep",%q:"Prune=false"}}}`, AnnotationKeep, AnnotationPrune)
+	_, err := retry(ctx, o, func() (*corev1.Secret, error) {
+		return cs.CoreV1().Secrets(o.Namespace).Patch(ctx, sec.Name, types.MergePatchType, []byte(patch), metav1.PatchOptions{})
+	})
+	if err != nil {
+		return fmt.Errorf("keeping Secret %s out of the release's deletions: %w", sec.Name, err)
+	}
+	o.Log.Info("secret kept out of the release's deletions", "name", sec.Name)
+	return nil
 }
 
 func checkKey(sec *corev1.Secret, s Spec) (Result, error) {

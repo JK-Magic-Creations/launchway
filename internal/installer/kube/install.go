@@ -146,6 +146,13 @@ func (in *Installer) report(e *installer.Env, f *Facts, ns string) {
 	} else {
 		e.Printf("  TLS: no cert-manager\n")
 	}
+	if len(f.PolicyAuthority) > 0 {
+		var parts []string
+		for _, p := range f.PolicyAuthority {
+			parts = append(parts, p.String())
+		}
+		e.Printf("  Network policy already in place: %s\n", strings.Join(parts, ", "))
+	}
 	switch f.NetpolEnforced {
 	case Yes:
 		e.Printf("  Network policies: enforced by %s\n", f.CNI)
@@ -225,6 +232,16 @@ func (in *Installer) askAll(ctx context.Context, e *installer.Env, a *installer.
 		return err
 	}
 	st.s.PullSecret = pull
+	if note := PolicyAuthorityNote(f.PolicyAuthority); note != "" {
+		e.Printf("\nNetwork policy: %s.\n", note)
+		v, err := a.Ask(installer.Question{Key: "kubernetes.network_policies", Prompt: "Install Launchway's own NetworkPolicies as well?", Default: "no", Choices: []installer.Choice{
+			{Value: "no", Label: "No, leave network policy to what is already here (recommended)"},
+			{Value: "yes", Label: "Yes, add Launchway's (they may add to, not replace, the existing ones)"}}})
+		if err != nil {
+			return err
+		}
+		st.s.NetworkPoliciesOff = v == "no"
+	}
 	if f.FreeCPUMilli < NeedCPUMilli || f.FreeMemBytes < NeedMemBytes {
 		e.Printf("\nNote: there may not be enough free room in this cluster (about %d m CPU and %s memory free; a small install asks for about %d m and %s). It can still work if the nodes are not busy. If pods stay Pending, add capacity or choose one server.\n",
 			f.FreeCPUMilli, quantity(f.FreeMemBytes), NeedCPUMilli, quantity(NeedMemBytes))
@@ -415,7 +432,7 @@ func (in *Installer) execute(ctx context.Context, e *installer.Env, a *installer
 		return res, err
 	}
 	st.values = valuesPath
-	rendered, err := Render(chart, s.Values(), s.Release, s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
+	rendered, err := Render(chart, s.RenderValues(), s.Release, s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
 	if err != nil {
 		return res, err
 	}
@@ -548,7 +565,7 @@ func (in *Installer) waitRetry(ctx context.Context, e *installer.Env, a *install
 			if cerr != nil {
 				return cerr
 			}
-			r, rerr := Render(chart, st.s.Values(), st.s.Release, st.s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
+			r, rerr := Render(chart, st.s.RenderValues(), st.s.Release, st.s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
 			if rerr != nil {
 				return rerr
 			}

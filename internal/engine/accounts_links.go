@@ -100,8 +100,7 @@ func (e *Engine) IssueSetupCode(hash string, now, expires int64, source string) 
 	err := e.db.QueryRow(`SELECT used_at FROM setup_state WHERE id = 1`).Scan(&used)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
-		_, err = e.db.Exec(`INSERT INTO setup_state(id, code_hash, issued_at, expires_at, source) VALUES(1,?,?,?,?)`, hash, now, expires, source)
-		return err
+		return e.insertSetupState(hash, now, expires, source)
 	case err != nil:
 		return err
 	case used != 0:
@@ -109,6 +108,24 @@ func (e *Engine) IssueSetupCode(hash string, now, expires int64, source string) 
 	}
 	_, err = e.db.Exec(`UPDATE setup_state SET code_hash = ?, issued_at = ?, expires_at = ?, source = ? WHERE id = 1`, hash, now, expires, source)
 	return err
+}
+
+// insertSetupState writes the first setup code. Servers of one installation that start together on a
+// shared database all get here (the lock above is per process): the insert must not fail for the one that
+// loses the race, or that server exits and restarts at every fresh high-availability install. A row made
+// meanwhile is replaced by this code while it is unused (the servers hold the same code when it comes
+// from the chart's Secret), and refused once setup was completed.
+func (e *Engine) insertSetupState(hash string, now, expires int64, source string) error {
+	res, err := e.db.Exec(`INSERT INTO setup_state(id, code_hash, issued_at, expires_at, source) VALUES(1,?,?,?,?)
+		ON CONFLICT(id) DO UPDATE SET code_hash = excluded.code_hash, issued_at = excluded.issued_at, expires_at = excluded.expires_at, source = excluded.source
+		WHERE setup_state.used_at = 0`, hash, now, expires, source)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("%w: setup was already completed", ErrConflict)
+	}
+	return nil
 }
 
 // ErrSetupCode is returned when the setup code is wrong, used or expired. One

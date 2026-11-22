@@ -23,7 +23,7 @@ type attentionOut struct {
 
 func addAttentionTool(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "attention", Annotations: readOnly("What needs attention"),
-		Description: "What needs a person now, by the same rule as the Home page: a failed Sortie only when nothing newer is running, queued or has succeeded on its branch or pull request and it is on a branch that matters; a failed deployment not followed by a success or a return; decisions that wait; Sorties that are stuck. Each entry says why and what to do. Use this before list_runs to find what to look at."},
+		Description: "What needs a person now, by the same rule as the Tower: a failed Sortie only when nothing newer is running, waiting to start or has succeeded on its branch or pull request and it is on a branch that matters; a failed deployment not followed by a success or a return; decisions that wait; Sorties that are stuck. Each entry says why and what to do. Use this before list_runs to find what to look at."},
 		mcpCallTimeout, attention)
 }
 

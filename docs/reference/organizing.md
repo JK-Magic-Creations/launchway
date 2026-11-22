@@ -1,6 +1,6 @@
 # Organizing, attention and search: reference
 
-The API behind the [explorer](../guide/organizing.md) and the [home page](../guide/home-page.md). The routes are in the [HTTP API](http-api.md) reference; this page has the shapes and rules.
+The API behind the [explorer](../guide/organizing.md) and the [Tower](../guide/home-page.md). The routes are in the [HTTP API](http-api.md) reference; this page has the shapes and rules.
 
 ## Scopes
 
@@ -12,11 +12,11 @@ A shared folder or layout lives at a scope: `base`, `organization`, `unit:<name>
 
 ## The attention rule
 
-`GET /api/v1/attention` answers `needs`, `dismissed`, `retrying`, `count` and `superseded`. An entry has a stable `key` (`failed:<run>`, `deployment:<id>`, `decision:<run>/<step>`, `stuck:<run>`), a `kind`, `why` and `do`. The rule is applied over the newest runs of the last 14 days, at most 30,000; the thresholds are a queue wait of 15 minutes and a running time over three times the pipeline's median (at least 30 minutes). `GET /api/v1/runs?attention=needs` or `running` lists the Sorties themselves.
+`GET /api/v1/attention` answers `needs`, `dismissed`, `retrying`, `count` and `superseded`. An entry has a stable `key` (`failed:<run>`, `deployment:<id>`, `decision:<run>/<step>`, `stuck:<run>`), a `kind`, `why` and `do`. The rule is applied over the newest runs of the last 14 days, at most 30,000; the thresholds are a Holding pattern (queue) wait of 15 minutes and a running time over three times the pipeline's median (at least 30 minutes). `GET /api/v1/runs?attention=needs` or `running` lists the Sorties themselves.
 
 ## Layout documents
 
-`GET /api/v1/layouts/{page}?scope=` returns each level's shared layout, `locked_at`, the caller's own (`personal`) and the result (`effective`). Keys of a lower level replace those of a higher one whole; a locked level cannot be overridden below it or by a person. The pages are `home`, `pipelines`, `projects`, `repositories` and `runs`. The Home page reads `view` (`mine` or `all`), `order` and `hidden` (section ids: `needs`, `running`, `favorites`, `categories`, `recent`) and `open` (a map of Squadron to open).
+`GET /api/v1/layouts/{page}?scope=` returns each level's shared layout, `locked_at`, the caller's own (`personal`) and the result (`effective`). Keys of a lower level replace those of a higher one whole; a locked level cannot be overridden below it or by a person. The pages are `home`, `pipelines`, `projects`, `repositories` and `runs`. The Tower reads `view` (`mine` or `all`), `order` and `hidden` (section ids: `needs`, `running`, `favorites`, `categories`, `recent`) and `open` (a map of Squadron to open).
 
 An export is
 

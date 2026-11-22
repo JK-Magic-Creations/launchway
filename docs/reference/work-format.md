@@ -141,11 +141,11 @@ as `work.settings`.
 | `types` | Per type: `key` (`issue`, `bug`, `story`, `task`, `epic`), `name`, a `template` the description starts from, `disabled` for no new items of the type |
 | `fields` | Custom fields: `key` (no space or dot), `name`, `type` (`text`, `number`, `date`, `select`, `boolean`), `options` for `select`, `required`, `types` it applies to (all if empty). Added to those of farther levels |
 | `close` | What merging a pull request does: `on` is `merge` (default), `review` or `never`; `state` is the state a merge moves to (default `done`); `verbs` are the closing words (default `fixes`, `closes`, `resolves`) |
-| `environments` | The environments the delivery status is meant to show, in order. Recorded; the delivery view does not use it to narrow the list yet |
+| `environments` | The Airfields (environments) the delivery status is meant to show, in order. Recorded; the delivery view does not use it to narrow the list yet |
 | `classes` | Which agent classes (`small`, `medium`, `large`) may take items of each difficulty |
 | `difficulty_rules` | Set the difficulty of a new item by a `label` it carries or by a `min_estimate` it reaches; the first rule that fits wins. Added to those of farther levels |
 | `agents` | The [agent rules](#agent-rules) |
-| `proposals` | How analyzers may file work: `max_items` (the most new items one source opens in one project in one run; 0 means 10), `auto_accept` (a list of `{source, min_severity}`: sources whose findings of at least that severity become items without a review; severity is 0 to 4) and `reason` (required with `auto_accept`). See [proposals](#proposals) |
+| `proposals` | How analyzers may file work: `max_items` (the most new items one source opens in one project in one Sortie (run); 0 means 10), `auto_accept` (a list of `{source, min_severity}`: sources whose findings of at least that severity become items without a review; severity is 0 to 4) and `reason` (required with `auto_accept`). See [proposals](#proposals) |
 
 ### Agent rules
 
@@ -182,7 +182,7 @@ as `work.settings`.
 
 | Key | Meaning |
 |---|---|
-| `enabled` | The kill switch of the level. `false` stops every agent there, and below. Absent means on |
+| `enabled` | The Master switch (kill switch) of the level. `false` stops every agent there, and below. Absent means on |
 | `human_approval` | Default `true`: an agent's work needs a person's approval. Setting it `false` needs a `reason` |
 | `allow_merge` | Default `false`: an agent may not merge its own work. Setting it `true` needs a `reason` |
 | `reason` | Why a safeguard was loosened. Recorded |
@@ -231,9 +231,9 @@ What an analyzer sends to `POST /api/v1/work/proposals` (the command `launchway 
 | Key | Meaning |
 |---|---|
 | `source` | The analyzer's name; required. It is the namespace of the dedupe keys and the group keys |
-| `run_id`, `report_url` | This run, and where the full report is; kept on the item's `proposed` event |
+| `run_id`, `report_url` | This Sortie, and where the full report is; kept on the item's `proposed` event |
 | `complete` | The batch holds every finding of the source: findings left out are fixed. Without it, nothing is ticked off |
-| `proposals[].dedupe_key` | The same finding has the same key in every run |
+| `proposals[].dedupe_key` | The same finding has the same key in every Sortie |
 | `proposals[].group_key` | Findings with the same key become one item with a checklist. Without one, a finding is its own group |
 | `proposals[].group_title` | The item's title; `{n}` stands for the open occurrences |
 | `proposals[].title`, `body` | This occurrence (a line of the checklist) and what is wrong |

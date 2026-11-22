@@ -196,7 +196,7 @@ Your inbox lists what happened that concerns you, newest first:
 | Agent returned | An agent gave an item back, or its lease ran out |
 
 You never get an entry for your own actions. Mark entries read one at a time or all at once. The count of
-unread entries shows on Home. Agents have no inbox: they hear through [their queue](working-with-agents.md#the-loop).
+unread entries shows on Home. Agents have no inbox: they hear through [their list of work](working-with-agents.md#the-loop).
 
 To tell something outside Launchway, subscribe a webhook to the `work_item` event of the repository
 (see [webhooks](webhooks.md)).

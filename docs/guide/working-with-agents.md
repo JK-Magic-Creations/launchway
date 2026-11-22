@@ -19,7 +19,7 @@ about work.
 
 ## Assigning work to an agent
 
-There are two ways, and both end in the agent's [queue](#the-loop):
+There are two ways, and both end in the agent's [list of work](#the-loop):
 
 - **Assign it.** Add the agent as an assignee, like a person. The server refuses an agent that is switched
   off, that is not registered for the item's Project, or that does not take the item's type.
@@ -28,7 +28,7 @@ There are two ways, and both end in the agent's [queue](#the-loop):
 
 An item is **not offered** to an agent when it is confidential, blocked by an open item, finished, held
 by another agent on a live lease, outside the agent's Projects or types, of a difficulty its
-[class](#class-routing) may not take, or in a level where agents are switched off. The queue keeps the
+[class](#class-routing) may not take, or in a level where agents are switched off. The Holding pattern (queue) keeps the
 backlog order, with urgent work first.
 
 ## Registering an agent
@@ -66,7 +66,7 @@ agent may use (see [the loop](#the-loop)), never the tools for people.
 
 An agent works the same way every time:
 
-In short: read the queue, claim an item on a lease, work on it (a branch, a pull request, comments),
+In short: read the Holding pattern, claim an item on a lease, work on it (a branch, a pull request, comments),
 heartbeat to keep the lease, then either request review or hand the item back with a reason. A person
 reviews and finishes it.
 
@@ -74,7 +74,7 @@ reviews and finishes it.
 | Step | HTTP route | MCP tool and command | What the server does |
 |---|---|---|---|
 | Who am I | `GET /api/v1/work/agent/me` | `get_agent_identity`, `launchway work agent me` | Says the agent's name, limits and what it holds |
-| Read the queue | `GET /api/v1/work/agent/queue` | `get_work_queue`, `launchway work agent queue` | Lists what is waiting for it, never more than it may take |
+| Read the Holding pattern | `GET /api/v1/work/agent/queue` | `get_work_queue`, `launchway work agent queue` | Lists what is waiting for it, never more than it may take |
 | Claim | `POST /api/v1/work/agent/claim` | `claim_next_work`, `launchway work agent claim` | Gives it one item (the one named, or the next) on a **lease** of 30 minutes by default, 4 hours at most; moves a to-do item to In progress; adds the agent as assignee |
 | Heartbeat | `POST /api/v1/work/agent/items/{ref}/heartbeat` | `heartbeat_work`, `launchway work agent heartbeat REF` | Extends the lease and keeps a note of progress |
 | Report usage | `POST /api/v1/work/agent/items/{ref}/usage` | `report_work_usage`, `launchway work agent usage REF` | Counts the tokens, cents and seconds the agent says it used |
@@ -119,11 +119,11 @@ each has a test that fails if the rule is lost.
 | **An agent's merge never finishes work.** The item waits in review for a person | `TestPullMergeMovesWorkAndNeverClosesAcrossProjects` |
 | **An agent never closes work in another Project**, and nobody does without the right to change work there | `TestPullMergeMovesWorkAndNeverClosesAcrossProjects` (for a person without the right); for agents in code (`mayCloseFor`) |
 | **An agent works only in the Projects it was registered for**, for work and for Git. A claim, an assignment or a push elsewhere is refused | `TestKillSwitchBudgetsAndScopeLimits` and `TestAgentLoopThroughTheAPI` (a push to another repository is refused) |
-| **An agent is never offered, and cannot claim, a confidential or blocked item** | in code (the queue and claim checks); no separate test yet. `TestConfidentialAndCrossProjectVisibility` proves confidential items are hidden from people who may not see them |
+| **An agent is never offered, and cannot claim, a confidential or blocked item** | in code (the Holding pattern and claim checks); no separate test yet. `TestConfidentialAndCrossProjectVisibility` proves confidential items are hidden from people who may not see them |
 | **An agent cannot exceed its limits**: items held, items per day, its daily budget | `TestAgentLoopAssignClaimReviewDone` (the second claim is refused) and `TestKillSwitchBudgetsAndScopeLimits` |
 | **Only a person who maintains the scope registers an agent**; an operator cannot | `TestAgentLoopThroughTheAPI` (403) and `TestKillSwitchBudgetsAndScopeLimits` |
 | **Switching an agent off takes back everything it holds at once**, and its token stops working on the next request | `TestKillSwitchBudgetsAndScopeLimits` and `TestAgentLoopThroughTheAPI` (401) |
-| **A level's kill switch stops every agent there**, and a level above that is off keeps it off below | `TestLevelKillSwitchAndTakeOver` |
+| **A level's Master switch (kill switch) stops every agent there**, and a level above that is off keeps it off below | `TestLevelKillSwitchAndTakeOver` |
 | **An agent comments on and attaches files to only the work it holds** | in code (`AddComment`, `AddAttachment`); the test proves it may on work it holds |
 | **Everything an agent does is marked as made by an agent** in the history | `TestAgentLoopAssignClaimReviewDone` and `TestAgentLoopThroughTheAPI` |
 | **Changes to pipeline files, `.launchway/`, owners files, quarantine files, and deleting or skipping tests never merge without a person**, at any autonomy level | `TestAutonomyGate` |
@@ -176,7 +176,7 @@ works at level 1: it needs a person. Only a person who maintains the Project cle
 pull request that reverts an agent's merged change); the rule also counts a failed delivery, but nothing
 writes that outcome yet.
 
-### The kill switches
+### The Master switches {#the-kill-switches}
 
 | Switch | Effect | Who |
 |---|---|---|
@@ -246,7 +246,7 @@ Not every agent should take every job. Each item can have a **difficulty** (`sma
 set by a person or by **rules** of the level (a label such as `trivial` gives `small`; an estimate of at
 least 8 gives `large`). Each agent declares a **class**. A level's `classes` setting says which classes
 may take each difficulty, for example `large: [large]` and `small: [small, medium, large]`. A claim by an
-agent whose class does not fit is refused and says why; such items are left out of its queue. A
+agent whose class does not fit is refused and says why; such items are left out of its Holding pattern. A
 difficulty with no entry is open to every class.
 
 ## Reading what agents did
@@ -258,7 +258,7 @@ person makes to an agent or to the policy is a Logbook entry (`work.agent_create
 
 ## What is not built
 
-- Autonomy levels 3 and 4 (launching to non-production environments and to production by agents) are
+- Autonomy levels 3 and 4 (launching to non-production Airfields (environments) and to production by agents) are
   stored but not acted on.
 - The model gateway: Launchway does not call models for agents or meter them; budgets are as reported.
 - A failed delivery does not yet count toward the pause rule.

@@ -6,6 +6,7 @@ import { announce } from "../kit/announce";
 import { Link } from "../components/ui";
 import { Blank, ErrorPanel, itemHref, Loading, scopeLabel, useLoad, WorkPage } from "./common";
 import { workApi, type ProposalGroup, type ProposeResult } from "./workApi";
+import { terms } from "../terms";
 
 // Proposals: findings that tools send in (the repository basics check, security findings, code quality). They arrive grouped, most severe
 // first, and wait for a person. Accepting a group makes one item; dismissing it is remembered, so the same finding is not proposed again.
@@ -70,7 +71,7 @@ export default function Proposals({ scope }: { scope: string }) {
       {list.data && groups.length === 0 && (
         <Blank title={state === "pending" || state === "" ? "Nothing is waiting for you" : "Nothing in this state"}
           action={isProject ? <Button onClick={health}>Check this repository's basics</Button> : state ? <Button onClick={() => setState("")}>Show all</Button> : undefined}>
-          A proposal is a problem a tool found, such as a missing README or a weak dependency, offered to you as work instead of filed on its own. Launchway points out issues from day one without flooding the board: each tool opens at most 10 new items in a run, and the rest wait together in one summary item.
+          {terms().say("A proposal is a problem a tool found, such as a missing README or a weak dependency, offered to you as work instead of filed on its own. Launchway points out issues from day one without flooding the board: each tool opens at most 10 new items in a {run}, and the rest wait together in one summary item.")}
         </Blank>
       )}
       <ul className="wk-props">

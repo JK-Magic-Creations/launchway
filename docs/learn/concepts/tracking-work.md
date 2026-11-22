@@ -13,7 +13,7 @@ fix is running now. People and agents work from the same list, under the same ru
    some of them for a period, and you see what it committed to and what it finished. A limit on a board
    column is a warning, not a lock.
 3. **Do it.** Name the item in a commit or a pull request ("fixes PAY-12"). The item shows the branch, the
-   pull request and the runs. Opening the pull request moves the item to In review.
+   pull request and the Sorties (runs). Opening the pull request moves the item to In review.
 4. **Finish it.** A person merges and the item moves to Done. A person always has the last word: an
    agent's merge never finishes anything.
 5. **Follow it.** After the merge the item says where the fix is running, from the real deployments:
@@ -24,14 +24,14 @@ fix is running now. People and agents work from the same list, under the same ru
 An agent is software with its own name and token. You register it for certain Projects and kinds of work,
 and then either assign it an item or give it a label to work from (a "pool"). The agent:
 
-1. reads its queue,
+1. reads its Holding pattern (queue),
 2. **claims** an item on a lease, which it keeps alive with heartbeats,
 3. works, with a branch and a pull request,
 4. **requests review**, or hands the item back with a reason.
 
 A person reviews. The agent cannot approve its own change, cannot finish an item, cannot change its own
 limits and cannot reach anything it was not registered for; the server checks all of it, whatever program is
-on the other end. If an agent stops, the lease runs out and the item returns to the queue. You can switch an agent off
+on the other end. If an agent stops, the lease runs out and the item returns to the Holding pattern. You can switch an agent off
 at any moment, and take its work over with the branch where it was left.
 
 ## How much an agent may do alone

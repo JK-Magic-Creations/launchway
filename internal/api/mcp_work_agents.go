@@ -115,7 +115,7 @@ type updateAgentIn struct {
 	Labels          *[]string `json:"labels,omitempty" jsonschema:"the pools it works from, such as agent:docs"`
 	Concurrency     *int      `json:"concurrency,omitempty" jsonschema:"how many items at once"`
 	PerDay          *int      `json:"per_day,omitempty" jsonschema:"how many claims a day"`
-	Disabled        *bool     `json:"disabled,omitempty" jsonschema:"true is the kill switch: the token stops working at once; false switches it on again"`
+	Disabled        *bool     `json:"disabled,omitempty" jsonschema:"true is the Master switch: the token stops working at once; false switches it on again"`
 	MayMerge        *bool     `json:"may_merge,omitempty" jsonschema:"whether it may merge what the level's rules allow"`
 	BudgetTokensDay *int64    `json:"budget_tokens_day,omitempty" jsonschema:"most tokens the agent may report spending in a day (0 is no limit)"`
 	BudgetCentsDay  *int64    `json:"budget_cents_day,omitempty" jsonschema:"most cents the agent may report spending in a day (0 is no limit)"`
@@ -152,7 +152,7 @@ func addWorkAgentManageTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Register an agent at a level, owned by you, limited to the projects and item types named. Returns its token ONCE: store it where the agent reads its secrets. The agent can then claim work and do only what its limits and the level's rules allow. Audited."},
 		mcpCallTimeout, createWorkAgent)
 	addTool(srv, c, &mcp.Tool{Name: "update_work_agent", Annotations: changes("Change a work agent", false, true),
-		Description: "Change an agent's limits, budgets, projects, types or owner; a field left out keeps its value. The kill switch is disabled=true: the agent's token stops working at once and its work is freed; disabled=false switches it on again. Audited."},
+		Description: "Change an agent's limits, budgets, projects, types or owner; a field left out keeps its value. The Master switch is disabled=true: the agent's token stops working at once and its work is freed; disabled=false switches it on again. Audited."},
 		mcpCallTimeout, workSend("update_work_agent", http.MethodPatch, func(in updateAgentIn) (string, error) { return agentPath("")(workAgentIn{Name: in.Name}) }, without[updateAgentIn]("name")))
 	addTool(srv, c, &mcp.Tool{Name: "delete_work_agent", Annotations: changes("Remove a work agent", true, true),
 		Description: "Remove an agent; its token stops working. What it did stays in the history. Audited."},
@@ -176,7 +176,7 @@ func addWorkAgentManageTools(srv *mcp.Server, c *mcpCall) {
 // ---- what an agent calls ----
 
 type claimIn struct {
-	Item         string `json:"item,omitempty" jsonschema:"a particular item's reference; leave out for the next in your queue"`
+	Item         string `json:"item,omitempty" jsonschema:"a particular item's reference; leave out for the next in your list"`
 	LeaseSeconds int    `json:"lease_seconds,omitempty" jsonschema:"how long you hold it without a heartbeat"`
 	Note         string `json:"note,omitempty"`
 }
@@ -257,7 +257,7 @@ func addWorkAgentTools(srv *mcp.Server, c *mcpCall) {
 			return g + "/queue", nil
 		}))
 	addTool(srv, c, &mcp.Tool{Name: "claim_next_work", Annotations: changes("Claim work", false, false),
-		Description: "Take the next item of your queue, or the one named, with a lease: keep it with heartbeat_work or it is freed for others. The server refuses what your limits, budgets or the level's rules do not allow. Audited."},
+		Description: "Take the next item of your list, or the one named, with a lease: keep it with heartbeat_work or it is freed for others. The server refuses what your limits, budgets or the level's rules do not allow. Audited."},
 		mcpCallTimeout, workSend("claim_next_work", http.MethodPost, fixed[claimIn](g+"/claim"), whole[claimIn]))
 	addTool(srv, c, &mcp.Tool{Name: "heartbeat_work", Annotations: changes("Keep a claim", false, true),
 		Description: "Say you are still working on a claimed item, and extend the lease. Audited."},

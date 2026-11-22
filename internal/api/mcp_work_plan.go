@@ -41,7 +41,7 @@ type settingsIn struct {
 
 type setSettingsIn struct {
 	scopeIn
-	Settings work.Settings `json:"settings" jsonschema:"the level's own settings, replacing what it had (workflow states and transitions, types, fields, close rule, agent rules, difficulty classes, environments)"`
+	Settings work.Settings `json:"settings" jsonschema:"the level's own settings, replacing what it had (workflow states and transitions, types, fields, close rule, agent rules, difficulty classes, Airfields)"`
 }
 
 type inboxIn struct {

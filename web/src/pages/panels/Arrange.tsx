@@ -57,7 +57,7 @@ export function Arrange({ docs, panelsOf, canShare, customized, onSave, onReset 
           <label><input type="radio" name="ar-mode" checked={mode === "me"} onChange={() => setMode("me")} /> Arrange for me</label>
           {canShare && <label><input type="radio" name="ar-mode" checked={mode === "everyone"} onChange={() => setMode("everyone")} /> Arrange for everyone</label>}
         </fieldset>
-        <p className="faint small">{mode === "me" ? "This changes only your Home page." : "This is the default for everyone who has not arranged their own. People who have keep their arrangement."}</p>
+        <p className="faint small">{mode === "me" ? "This changes only your Tower." : "This is the default for everyone who has not arranged their own. People who have keep their arrangement."}</p>
         <ul className="ar-list" aria-label="Sections and panels, in order">
           {items.map((it, i) => (
             <li key={it.id} draggable onDragStart={(e) => { setDragging(it.id); e.dataTransfer.setData("text/plain", it.id); }} onDragEnd={() => { setDragging(null); setOver(null); }}

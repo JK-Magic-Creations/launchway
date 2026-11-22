@@ -5,8 +5,8 @@
 #     --set externalURL=https://launchway.example.com
 #
 # Everything else has a safe default: sign-in required (built-in accounts, first administrator
-# made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on an 8Gi
-# volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
+# made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on a
+# 1Gi volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
 # Station token, the database password and the setup code ITSELF, once, and keeps them across
 # upgrades, `helm template` and GitOps syncs (a pre-install/pre-upgrade hook Job; see
 # docs/reference/helm-values.md). Nothing here needs Vault, an operator or an identity provider.
@@ -19,11 +19,23 @@
 #
 # Then, only if you need them (each is a block just below):
 #   database          your own PostgreSQL instead of the bundled one: database.url or existingSecret
-#   postgresql        the bundled database's volume size (8Gi) and storage class
+#   postgresql        the bundled database's volume size (1Gi default) and storage class
 #   ingress / httpRoute   publish the address through an Ingress or a Gateway API route. Either
 #                     one also tells the servers they sit behind a proxy (trust_proxy).
 #   server.replicas   2 by default (high availability); 1 for a trial
 # =============================================================================================
+
+# ---------------------------------------------------------------------------------------------
+# VALUES THIS CHART DOES NOT KNOW. A key that is not in this chart's values (a typo, or a setting
+# only a newer chart has) does NOT stop the render: it is ignored, listed in the NOTES, in the
+# Deployment's annotation launchway.io/ignored-values and in LAUNCHWAY_IGNORED_VALUES, and the
+# server and `launchway doctor` say so. That is what lets you prepare a value ahead of an upgrade
+# and roll the chart back without editing the values. Values it does know keep their types.
+#   strictValues: false   (default) unknown keys are reported, not fatal. Use it for GitOps.
+#   strictValues: true    unknown keys fail the render. Use it in `helm lint`, in CI of your own
+#                         values, and while you are typing them (`launchway install` does).
+# ---------------------------------------------------------------------------------------------
+strictValues: false
 
 # ---------------------------------------------------------------------------------------------
 # The shared PostgreSQL database. Every server must use the same one. Choose ONE:
@@ -61,9 +73,11 @@ postgresql:
   # (the default), the hook Job makes a random one once and keeps it across upgrades.
   password: ""
   persistence:
-    # -- The volume. With Cargo kept in the database (the default), the chart caps them well
-    # below this (half) and refuses a larger config.artifacts.database.maxTotalGiB.
-    size: 8Gi
+    # -- The volume. 1Gi is what the previous chart made, so an upgrade changes nothing (a claim
+    # cannot shrink, and cannot grow on a StorageClass that does not expand). For a new installation
+    # that keeps Cargo set 8Gi or more. With Cargo kept in the database (the default) the
+    # chart caps them at half of it and refuses a larger config.artifacts.database.maxTotalGiB.
+    size: 1Gi
     # -- The StorageClass for the volume (default: the cluster's default).
     storageClass: ""
   resources:
@@ -119,6 +133,10 @@ image:
   tag: ""
   # -- An image digest (sha256:...). When set it is used instead of the tag.
   digest: ""
+  # -- Does this image have `launchway bootstrap-secrets` and read the mounted root key (true), or
+  # predate them (false)? Empty: decided from the tag (a version below the chart's
+  # launchway.io/bootstrap-since is "false"; any other tag, such as a commit, is "true").
+  bootstrap: ""
   pullPolicy: IfNotPresent
 
 # -- Secrets for pulling the Launchway (and development PostgreSQL) image, by name.
@@ -810,12 +828,22 @@ securityContext:
 # NetworkPolicies: default deny, then exactly what each part needs. On by default (they take
 # effect only where the cluster's network plugin enforces them; if yours does not, they are
 # harmless). Each policy selects its pods by label, so nothing else in the namespace is affected.
+#
+# SECURITY MODEL. The chart's policies are never wider than "nothing else is there": they only ever
+# narrow what the pods could do, and every allowance beyond DNS, the database and Launchway's own
+# pods is a named value you set (ingressFrom / proxyNamespaces, extraEgress, steps.internet). On a
+# cluster whose network plugin has its own policy objects (CiliumNetworkPolicy, Calico's
+# GlobalNetworkPolicy, and the like) that ADD to Kubernetes NetworkPolicies, anything the plugin's
+# objects allow is allowed whatever these policies say, and objects it holds stay when these are
+# turned off. Let ONE system be the authority: where the plugin's policies (or any other
+# NetworkPolicy) already govern the namespace, set networkPolicy.enabled: false. `launchway
+# install` and `launchway doctor network` detect that case; the install NOTES say so too.
 #   server       in: Stations, step pods, launch Station, and (with an Ingress or HTTPRoute) the
-#                proxy (ingressFrom). out: DNS, the database, and what extraEgress adds
+#                proxy (ingressFrom, proxyNamespaces, the Gateway's namespace). out: DNS, the database, and what extraEgress adds
 #                (Git hosts, an identity provider, webhooks, an S3 endpoint). NOT the Kubernetes API.
 #   Stations      in: nothing. out: DNS, the server, the Kubernetes API (to start step pods), extraEgress.
-#   step pods    in: nothing. out: DNS, the Launchway server, and the internet over HTTP/HTTPS
-#                EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
+#   step pods    in: nothing. out: DNS and the Launchway server. The internet over HTTP/HTTPS is an
+#                explicit opt-in (steps.internet: true), and then EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
 #                cluster: never the database, the Kubernetes API or the metadata service.
 #   bundled database   in: the servers only. out: nothing.
 # The install hook Job has its own small policy (Kubernetes API, DNS).
@@ -832,9 +860,14 @@ networkPolicy:
   server:
     # -- Who may reach the server port: a list of NetworkPolicyPeer objects (the namespace of
     # your ingress controller or Gateway, for example). Empty: with an Ingress or HTTPRoute
-    # enabled, any source may reach the port (the proxy's namespace is not known to the chart);
-    # without one, only Stations, step pods and the launch Station can (port-forward still works).
+    # enabled, only this release's own namespace, the namespaces of httpRoute.parentRefs and
+    # proxyNamespaces below can; never "any source". Without an Ingress or route, only Stations,
+    # step pods and the launch Station can (port-forward still works).
     ingressFrom: []
+    # -- Namespaces whose pods may reach the server port (the namespace of your ingress controller),
+    # used when ingressFrom is empty and an Ingress is on. A Gateway's namespace is taken from
+    # httpRoute.parentRefs. Example: [ingress-nginx].
+    proxyNamespaces: []
     # -- HTTPS to PUBLIC addresses, which the servers need for the dependency updater's version
     # sources and vulnerability data (package registries, the Go proxy, an OSV service), for the
     # chat services and webhook receivers of notifications and repository webhooks, and for other
@@ -875,10 +908,10 @@ networkPolicy:
   steps:
     # -- Policy for step pods (the pods Stations start for each Sortie, in runner.kubernetes.namespace).
     enabled: true
-    # -- Allow step pods to reach the internet (package registries, Git hosts, container
-    # Depots) on `ports`, except the ranges below and `exceptCIDRs`. false: only DNS and the
-    # Launchway server, plus extraEgress.
-    internet: true
+    # -- OPT IN: let step pods reach the internet (package registries, Git hosts, container
+    # Depots) on `ports`, except the ranges below and `exceptCIDRs`. false (the default): only
+    # DNS and the Launchway server, plus extraEgress. Builds that download dependencies need true.
+    internet: false
     ports: [80, 443]
     # -- More ranges step pods may NOT reach, added to the private, link-local and carrier-grade
     # NAT ranges that are always excluded: your cluster's API server address if it is public, a
@@ -911,7 +944,7 @@ bootstrap:
   tolerations: []
 
 # ---------------------------------------------------------------------------------------------
-# Delivery: launch and Return to base steps (pipelines with kind: deploy). Off unless set. A launch
+# Delivery: deploy and Return to base steps (pipelines with kind: deploy). Off unless set. A deploy
 # step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
 # until the application (and its Argo Rollouts rollout) is healthy. The launch Station below
 # does that work with its own Kubernetes identity; the servers hold no cluster credentials.
@@ -922,7 +955,7 @@ delivery:
   # -- Airfields launch steps may target, written into the servers' configuration only
   # when set. Default: none, and deploy steps are refused. Example:
   #   - name: prod
-  #     target: cluster-a          # the cluster: deployRunner.target serves it
+  #     target: homelab          # the cluster: deployRunner.target serves it
   #     projects: [shop, "mcp-*"]
   #     queue: newest            # or all; default newest
   #     protected: true          # the person who started a run may not promote it here; default false
@@ -960,7 +993,7 @@ delivery:
   #       type: loki
   #       url: http://loki-gateway.monitoring.svc
   #       projects: [shop, "mcp-*"]
-  #       headers: { X-Scope-OrgID: cluster-a }
+  #       headers: { X-Scope-OrgID: homelab }
   #       limits: { maxLines: 2000 }
   #     - name: clickhouse
   #       type: clickhouse

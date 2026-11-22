@@ -410,8 +410,8 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 |---|---|---|---|
 | `GET /api/v1/environments` | `signed-in` | — | The configured Airfields that list a project the caller may see, with what is deployed in each. |
 | `GET /api/v1/deployments` | `signed-in` | — | Deployments, newest first: `?environment=`, `?project=`, `?service=`, `?limit=`. |
-| `GET /api/v1/home` | `signed-in` | — | The Home page in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron's, then the rest), the projects by Squadron with their health, favorites, and what finished lately. `?view=mine` or `all`. Only what the caller may see; counts never include anything else. |
-| `GET /api/v1/attention` | `signed-in` | — | What needs a person: `needs` (each with `why` and `do`), `dismissed` (set aside by the caller), `retrying` (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and `count`. The rule is in the guide page *What the home page shows*. |
+| `GET /api/v1/home` | `signed-in` | — | The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron's, then the rest), the projects by Squadron with their health, favorites, and what finished lately. `?view=mine` or `all`. Only what the caller may see; counts never include anything else. |
+| `GET /api/v1/attention` | `signed-in` | — | What needs a person: `needs` (each with `why` and `do`), `dismissed` (set aside by the caller), `retrying` (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and `count`. The rule is in the guide page *What the Tower shows*. |
 | `POST /api/v1/attention/dismiss` | `signed-in` | `prefs.attention.dismiss` | Sets one entry aside for the caller only: `{"key", "snooze_hours"}`; without snooze it returns when something newer replaces it. A personal preference, recorded in the Logbook as such. |
 | `POST /api/v1/attention/restore` | `signed-in` | `prefs.attention.restore` | Brings a set-aside entry back (`{"key"}`, or `*` for all). |
 | `GET /api/v1/organize/{area}` | `signed-in` | — | How a list is organized: its folders (only those with something the caller can see in them, or at a level they may arrange), each item's folder and labels, the caller's favorites and the layout in effect. `area` is `pipelines`, `repositories`, `projects` or `runs`. |
@@ -1011,7 +1011,7 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `DELETE /api/v1/work/links/{id}` | `signed-in` | `work.unlink` | Removes a link. |
 | `GET /api/v1/work/items/{ref}/code` | `signed-in` | — | The commits, branches, pull requests and runs tied to the item. |
 | `POST /api/v1/work/items/{ref}/code` | `signed-in` | `work.code_link` | Ties a `{kind, repo, ref, title, state}` to the item; the same kind, repository and reference updates it. |
-| `GET /api/v1/work/items/{ref}/delivery` | `signed-in` | — | Where the item's merged change is running, per environment, from real deployments, with a sentence. `null` before anything merged. |
+| `GET /api/v1/work/items/{ref}/delivery` | `signed-in` | — | Where the item's merged change is running, per Airfield (environment), from real deployments, with a sentence. `null` before anything merged. |
 | `GET /api/v1/work/items/{ref}/attachments` | `signed-in` | — | The files on the item (name, type, size, SHA-256, kind, who, when). |
 | `POST /api/v1/work/items/{ref}/attachments` | `signed-in` | `work.attach` | Adds a file (up to 10 MB; 50 an item). `kind` is `file`, `transcript` or `evidence`. |
 | `GET /api/v1/work/attachments/{id}` | `signed-in` | — | One file, as a download (PNG, JPEG, GIF, WebP and plain text may be shown in a page; `?download=1` forces a download). Sniffing is off. |

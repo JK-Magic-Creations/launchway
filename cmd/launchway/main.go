@@ -107,7 +107,7 @@ Usage:
   launchway work     items|board|sprints|milestones|agents ...   work tracking: items, boards, sprints, roadmap, agents
                                                 (launchway work, for more)
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
-  launchway attention [--json]                          what needs you: the Home page's rule, for a script or an agent
+  launchway attention [--json]                          what needs you: the Tower's rule, for a script or an agent
   launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
   launchway version
@@ -958,5 +958,11 @@ func logChartNotice(log *slog.Logger) {
 		log.Warn(msg, "binary_version", version)
 	default:
 		log.Info(msg, "binary_version", version)
+	}
+	if m := config.IgnoredValuesNotice(os.Getenv); m != "" {
+		log.Warn(m)
+	}
+	if m := config.NetworkPolicyNotice(os.Getenv); m != "" {
+		log.Info(m)
 	}
 }

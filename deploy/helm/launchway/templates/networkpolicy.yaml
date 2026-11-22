@@ -55,10 +55,22 @@ spec:
         {{- end }}
       ports:
         - { protocol: TCP, port: {{ $port }} }
+    {{- /* Behind an Ingress or HTTPRoute the proxy must reach the server port. The chart does not know the
+           proxy's namespace unless it is told (httpRoute.parentRefs[].namespace, networkPolicy.server.proxyNamespaces,
+           or ingressFrom): it admits those namespaces and its own, never "any source". */}}
     {{- if and (not $np.server.ingressFrom) (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
-    # An Ingress or HTTPRoute is on and networkPolicy.server.ingressFrom is empty: the proxy's
-    # namespace is not known, so any source may reach the server port. Set ingressFrom to narrow it.
-    - ports:
+    {{- $proxyNS := list $ns }}
+    {{- range $np.server.proxyNamespaces }}{{ $proxyNS = append $proxyNS . }}{{ end }}
+    {{- if .Values.httpRoute.enabled }}{{ range .Values.httpRoute.parentRefs }}{{ if .namespace }}{{ $proxyNS = append $proxyNS .namespace }}{{ end }}{{ end }}{{ end }}
+    # An Ingress or HTTPRoute is on and networkPolicy.server.ingressFrom is empty: the proxy may be in the
+    # release namespace, in the Gateway's namespace or in networkPolicy.server.proxyNamespaces. Nothing else.
+    - from:
+        {{- range $proxyNS | uniq }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+        {{- end }}
+      ports:
         - { protocol: TCP, port: {{ $port }} }
     {{- end }}
     {{- if .Values.ssh.enabled }}

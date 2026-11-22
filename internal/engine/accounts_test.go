@@ -217,3 +217,24 @@ func TestLocalAccountLifecycle(t *testing.T) {
 		t.Fatal("still there")
 	}
 }
+
+// Servers that start together on one shared database both try to write the first setup code (the
+// write lock is per process): the one that loses the race must not fail, or it exits and restarts at
+// every fresh high-availability install. Found by the upgrade matrix's fresh-install cell.
+func TestFirstSetupCodeInsertToleratesAServerThatWonTheRace(t *testing.T) {
+	e := accountsEngine(t)
+	now := time.Now().UnixMilli()
+	if err := e.insertSetupState("same", now, now+1000, "file"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.insertSetupState("same", now, now+1000, "file"); err != nil {
+		t.Fatalf("the second server's insert failed: %v", err)
+	}
+	acct := &LocalAccount{Username: "a", Role: "admin", PasswordHash: "x", CreatedAt: now}
+	if err := e.CompleteSetup("same", acct, nil, now+10); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.insertSetupState("late", now, now+1000, "file"); !errors.Is(err, ErrConflict) {
+		t.Fatalf("a code written after setup was completed: %v", err)
+	}
+}

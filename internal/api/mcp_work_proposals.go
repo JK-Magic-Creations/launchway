@@ -13,7 +13,7 @@ import (
 )
 
 type findingIn struct {
-	DedupeKey  string   `json:"dedupe_key" jsonschema:"a key that stays the same for the same finding in every run"`
+	DedupeKey  string   `json:"dedupe_key" jsonschema:"a key that stays the same for the same finding in every Sortie"`
 	GroupKey   string   `json:"group_key" jsonschema:"findings with the same group key become one item with a checklist; use one per kind of problem"`
 	GroupTitle string   `json:"group_title,omitempty" jsonschema:"the item's title; {n} stands for the open occurrences"`
 	Title      string   `json:"title" jsonschema:"this occurrence, one line of the checklist"`
@@ -78,7 +78,7 @@ func addWorkProposalReadTools(srv *mcp.Server, c *mcpCall) {
 
 func addWorkProposalChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "propose_work", Annotations: changes("Propose work from an analysis", false, true),
-		Description: "Send the findings of one analyzer run. They are grouped by group_key, at most the level's limit of new items are opened per run (the rest fold into one summary), and a person reviews the groups unless the level lets this source file without one. Running it again with the same dedupe keys updates the same items. Audited."},
+		Description: "Send the findings of one analyzer Sortie. They are grouped by group_key, at most the level's limit of new items are opened per Sortie (the rest fold into one summary), and a person reviews the groups unless the level lets this source file without one. Running it again with the same dedupe keys updates the same items. Audited."},
 		mcpCallTimeout, workSend("propose_work", http.MethodPost, fixed[proposeIn]("/api/v1/work/proposals"), whole[proposeIn]))
 	addTool(srv, c, &mcp.Tool{Name: "accept_work_proposals", Annotations: changes("Accept proposed work", false, true),
 		Description: "Open the items of proposed groups, each with a checklist of its occurrences. edits changes a group's title, body or priority first. Audited."},

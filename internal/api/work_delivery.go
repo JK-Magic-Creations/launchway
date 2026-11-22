@@ -58,7 +58,7 @@ func (s *Server) deliveryOf(r *http.Request, it *work.Item, code []work.CodeLink
 	out := &workDelivered{Merged: merged, Environments: []workEnvLine{}}
 	envs := s.Engine.Environments()
 	if len(envs) == 0 {
-		out.Sentence = "Merged. No environments are configured, so there is nothing to show about where it runs."
+		out.Sentence = "Merged. No Airfields are configured, so there is nothing to show about where it runs."
 		return out
 	}
 	deps, err := s.Engine.Deployments(engine.DeploymentFilter{Limit: 200})
@@ -89,7 +89,7 @@ func (s *Server) deliveryOf(r *http.Request, it *work.Item, code []work.CodeLink
 	}
 	switch {
 	case len(running) == 0:
-		out.Sentence = "Merged, not yet on any environment."
+		out.Sentence = "Merged, not yet on any Airfield."
 	case len(missing) == 0:
 		out.Sentence = "Merged, " + strings.Join(running, ", ") + "."
 	default:

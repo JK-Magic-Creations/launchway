@@ -82,7 +82,7 @@ export function RunPage({ id }: { id: string }) {
     window.addEventListener("popstate", on);
     return () => window.removeEventListener("popstate", on);
   }, []);
-  useViewTitle(tab === "graph" ? `Run ${id.slice(-6)}` : `${tab[0].toUpperCase()}${tab.slice(1)} · run ${id.slice(-6)}`);
+  useViewTitle(tab === "graph" ? terms().say(`{Run} ${id.slice(-6)}`) : `${tab[0].toUpperCase()}${tab.slice(1)} · run ${id.slice(-6)}`);
   const setTestStep = useCallback((s: string) => { setTestStepState(s); setQuery({ tests_step: s }, "replace"); }, []);
   const [density, setDensity] = useState<Density>(storedDensity);
   const changeDensity = useCallback((d: Density) => { setDensity(d); saveDensity(d); }, []);

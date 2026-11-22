@@ -23,6 +23,10 @@ Each target asks the same few questions. The installer is safe to run again and 
 
 A handful of values starts a secure, working installation. The chart creates the root key, the database password and the first administrator’s setup once and keeps them across upgrades, even when a GitOps controller renders it. It ships default-deny network policies and restricted pods, and nothing is exposed publicly by default.
 
+## Upgrades and Returns to base (rollbacks) {#upgrades-and-rollbacks}
+
+The aim is that an upgrade is "change the version, nothing else", by `helm upgrade`, a GitOps controller, the image first or the chart first, and that a Return to base works. `make test-upgrade` is the release gate: it upgrades the previous release to this one by each method on a throwaway cluster and returns to base, and a release is not cut unless it is green (see [Releasing](../development/releasing.md)). **What is true today:** the matrix runs against a simulated GitOps controller, not a real Argo CD, and against one network plugin (kind's default); the previous release's chart has a closed values schema, so a Return to base to it needs unknown values removed first; installations upgraded onto a cluster that enforces policy must list what the servers reach in `extraEgress`. The first install-time check of a cluster's network policy exists (`launchway doctor network`); the server itself cannot see the cluster's policy objects, so its start-up warning names the check rather than running it.
+
 ## The first-run wizard
 
 After the first sign-in, the browser walks through naming your organization, sign-in (keep the built-in accounts or connect a provider, tested before you switch), encryption status and a backup of the root key, a Station (runner), Git hosting, importing repositories and a first pipeline.

@@ -750,6 +750,36 @@
       "path": "web/src/kit/Status.tsx",
       "rule": "word:runner/2",
       "why": "The status words of the Status disc are shown beside the themed word, as the plain word the vocabulary always shows with it."
+    },
+    {
+      "path": "web/src/explorer/PipelinesExplorer.tsx",
+      "rule": "word:queue/3",
+      "contains": "queued: \"Queued\"",
+      "why": "The word of a step's status (waiting to start), not the Holding pattern."
+    },
+    {
+      "path": "web/src/explorer/RunsExplorer.tsx",
+      "rule": "word:queue/3",
+      "contains": "queued: \"Queued\"",
+      "why": "The word of a step's status (waiting to start), not the Holding pattern."
+    },
+    {
+      "path": "web/src/pages/HomeSections.tsx",
+      "rule": "word:queue/3",
+      "contains": "\"Queued\"",
+      "why": "The word of a Sortie's status (waiting to start), not the Holding pattern."
+    },
+    {
+      "path": "cmd/launchway/work.go",
+      "rule": "word:queue/3",
+      "contains": "queue",
+      "why": "The name of the command `launchway work agent queue` and its usage line; the command is part of the interface."
+    },
+    {
+      "path": "internal/api/mcp_work_agents.go",
+      "rule": "word:queue/3",
+      "contains": "get_work_queue",
+      "why": "The name of the MCP tool get_work_queue, part of the interface."
     }
   ]
 }

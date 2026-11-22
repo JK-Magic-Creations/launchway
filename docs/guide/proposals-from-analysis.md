@@ -12,7 +12,7 @@ line. The shape of the data is in the [work format reference](../reference/work-
 
 A **source** (a name such as `security-scan`) sends a **batch** of findings. Findings that share a
 **group key** become one item with a checklist, one line for each occurrence. At most ten new items are
-opened in one run; the rest fold into one summary item that says "and N more". Nothing becomes an item
+opened in one Sortie (run); the rest fold into one summary item that says "and N more". Nothing becomes an item
 until a person accepts the group, unless the level lets that source file without a review. A finding a
 person dismissed is remembered and never proposed again. Sending the same batch again changes nothing
 that is already in line.
@@ -31,7 +31,7 @@ group title may contain `{n}`, which stands for the occurrences still open.
 
 ## The cap and "and N more"
 
-One source opens at most **10 new items** in one project in one run (`proposals.max_items` in the
+One source opens at most **10 new items** in one project in one Sortie (`proposals.max_items` in the
 [settings](../reference/work-format.md#settings) changes it). The groups beyond the cap are not lost: they
 fold into one summary item that lists them, marked as folded in the review list, and you can accept any of
 them from there.
@@ -67,11 +67,11 @@ counted as dismissed and left out; no item is made. The reason and the person ar
 
 ## Re-running
 
-A source may send its full result on every run and say so with `complete: true`. Launchway then keeps the
+A source may send its full result on every Sortie and say so with `complete: true`. Launchway then keeps the
 items in line:
 
 - a new finding in an accepted group is **added** to the checklist;
-- a finding the run no longer reports is **ticked off** as fixed;
+- a finding the Sortie no longer reports is **ticked off** as fixed;
 - when every occurrence is fixed, the item **closes**, with a comment that says why;
 - when a finding comes back after that, the item **opens again**, with a comment.
 
@@ -81,7 +81,7 @@ looks at part of the code.
 ## How machine-proposed work is marked
 
 An item made from a proposal carries the labels `machine-proposed` and `source:NAME`, its reporter is
-`source:NAME`, and its history starts with a `proposed` event that names the source, the run and the
+`source:NAME`, and its history starts with a `proposed` event that names the source, the Sortie and the
 report link. Search finds them: `label:machine-proposed`, `label:source:security-scan`.
 
 ## The repository health check

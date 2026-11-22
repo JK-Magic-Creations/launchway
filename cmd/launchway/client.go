@@ -554,7 +554,7 @@ func (cl *client) list(args []string) error {
 	status := fs.String("status", "", "only runs with this status")
 	lane := fs.String("lane", "", "only runs in the lane of this name")
 	limit := fs.Int("limit", 20, "at most this many")
-	needs := fs.Bool("needs-attention", false, "only the Sorties that need a person (the Home page's rule)")
+	needs := fs.Bool("needs-attention", false, "only the Sorties that need a person (the Tower's rule)")
 	running := fs.Bool("running", false, "only Sorties in progress")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {

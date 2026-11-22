@@ -11,7 +11,7 @@ import (
 
 const attentionUsage = `usage: launchway attention [--dismissed] [--json]
 
-What needs a person, by the one rule the Home page uses: a failed Sortie is
+What needs a person, by the one rule the Tower uses: a failed Sortie is
 listed only when nothing newer has taken its place, and only on a branch that
 matters; a failed deployment that was not followed by a success or a return;
 a decision that waits; a Sortie stuck or far slower than usual. Each line says

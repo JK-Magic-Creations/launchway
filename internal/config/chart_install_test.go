@@ -58,8 +58,8 @@ func TestChartDefaultsAreSecure(t *testing.T) {
 		`"helm.sh/hook": pre-install,pre-upgrade`, // the secrets Job
 		"helm.sh/hook-delete-policy\": before-hook-creation,hook-succeeded",
 		"ephemeral-storage",
-		"max_total_gib: 4", // artifact cap below the 8Gi volume
-		"storage: 8Gi",
+		"max_total_gib: 1", // artifact cap below the 1Gi volume
+		"storage: 1Gi",
 	} {
 		if want == "LAUNCHWAY_REQUIRE" {
 			want = "LAUNCHWAY_ENCRYPTION_REQUIRE"
@@ -75,7 +75,25 @@ func TestChartDefaultsAreSecure(t *testing.T) {
 
 // Step pods may reach neither the database, the Kubernetes API nor the cloud metadata service.
 func TestChartStepPodPolicy(t *testing.T) {
+	// By default step pods may reach DNS and the Launchway server only: the internet is an explicit opt-in.
 	for _, d := range chartDocs(t, helmDefault(t)) {
+		if d["kind"] == "NetworkPolicy" && strings.HasSuffix(name(d), "-steps") {
+			for _, rule := range dig(d, "spec", "egress").([]any) {
+				if to, ok := dig(rule, "to").([]any); ok {
+					for _, peer := range to {
+						if _, isBlock := dig(peer, "ipBlock").(map[string]any); isBlock {
+							t.Error("by default step pods must not be given any address range: the internet is an opt-in")
+						}
+					}
+				}
+			}
+		}
+	}
+	optIn, err := helmRender(t, "--set", "networkPolicy.steps.internet=true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range chartDocs(t, optIn) {
 		if d["kind"] != "NetworkPolicy" || !strings.HasSuffix(name(d), "-steps") {
 			continue
 		}
@@ -111,7 +129,7 @@ func TestChartRefusesWhatCannotWork(t *testing.T) {
 	for _, c := range []struct{ set, say string }{
 		{"externalURL=https://x.example.com/path", "externalURL"},
 		{"postgresql.enabled=false", "needs a PostgreSQL database"},
-		{"postgresql.persistence.size=1Gi", "too small"},
+		{"postgresql.persistence.size=512Mi", "too small"},
 		{"config.artifacts.database.maxTotalGiB=50", "cap must stay under"},
 	} {
 		out, err := exec.Command("helm", "template", "t", chartDir, "--set", "externalURL=https://launchway.example.com", "--set", c.set).CombinedOutput()

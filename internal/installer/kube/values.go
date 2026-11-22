@@ -30,6 +30,9 @@ type Settings struct {
 	Gateway        *GatewayRef
 	GatewayHost    string
 	PullSecret     string
+	// NetworkPoliciesOff leaves the chart's NetworkPolicies off because another system already decides
+	// network policy in the namespace (DetectPolicyAuthority).
+	NetworkPoliciesOff bool
 }
 
 // GatewayRef is the Gateway an HTTPRoute attaches to.
@@ -88,6 +91,9 @@ func (s Settings) Values() map[string]any {
 		}
 		v["httpRoute"] = hr
 	}
+	if s.NetworkPoliciesOff {
+		v["networkPolicy"] = map[string]any{"enabled": false}
+	}
 	if s.PullSecret != "" {
 		v["imagePullSecrets"] = []any{map[string]any{"name": s.PullSecret}}
 	}
@@ -137,4 +143,13 @@ func SortedKeys(m map[string]string) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// RenderValues are the values the installer renders its own preview with: strict, so a key the
+// chart does not know fails here. The values FILE it writes (and the GitOps manifests) leave
+// strictValues out, so the same file still renders under an older chart after a rollback.
+func (s Settings) RenderValues() map[string]any {
+	v := s.Values()
+	v["strictValues"] = true
+	return v
 }

@@ -7,6 +7,7 @@ import { Markdown } from "../markdown";
 import { BodyField } from "./ItemList";
 import { Blank, csv, ErrorPanel, itemHref, Labels, Loading, money, Prio, Progress, scopeHref, scopeLabel, scopeOf, StateTag, useLoad, when, Who, WorkPage } from "./common";
 import { workApi, type Comment, type ItemDetail, type Link as ItemLink, type Page, type WorkEvent } from "./workApi";
+import { terms } from "../terms";
 
 // One item: its fields, description, acceptance checklist, links, code, delivery status, comments and history.
 
@@ -165,7 +166,7 @@ function Delivery({ it }: { it: ItemDetail }) {
                 <li key={e.environment} className={e.running ? "on" : ""}>
                   <strong>{e.environment}</strong>
                   <span>{e.running ? `Running${e.version ? " " + e.version : ""} since ${when(e.since)}` : "Not here yet"}</span>
-                  {e.run && <Link href={`/runs/${encodeURIComponent(e.run)}`}>Run</Link>}
+                  {e.run && <Link href={`/runs/${encodeURIComponent(e.run)}`}>{terms().say("{Run}")}</Link>}
                 </li>
               ))}
             </ul>
@@ -185,7 +186,7 @@ function Code({ it }: { it: ItemDetail }) {
           <thead><tr><th scope="col">Kind</th><th scope="col">Where</th><th scope="col">Title</th><th scope="col">State</th></tr></thead>
           <tbody>{it.code.map((c) => (
             <tr key={c.id}>
-              <td>{c.kind === "pull" ? "Pull request" : c.kind === "run" ? "Run" : c.kind[0]!.toUpperCase() + c.kind.slice(1)}</td>
+              <td>{c.kind === "pull" ? "Pull request" : c.kind === "run" ? terms().say("{Run}") : c.kind[0]!.toUpperCase() + c.kind.slice(1)}</td>
               <td className="mono">{c.kind === "pull" && c.repo ? <Link href={`/repositories/${c.repo}/pulls/${c.ref}`}>{c.repo}#{c.ref}</Link> : <>{c.repo ? c.repo + " " : ""}{c.kind === "commit" ? c.ref.slice(0, 8) : c.ref}</>}</td>
               <td>{c.title}{c.closes && <span className="faint"> (closes this item)</span>}</td>
               <td>{c.state ? <span className={`wk-code-state s-${c.state}`}>{c.state}</span> : ""}</td>

@@ -46,7 +46,7 @@ externalURL: https://launchway.example.com
 
 Left out of a new installation with built-in accounts (or with `ingress` or `httpRoute`), the install fails and says so; an installation that already has its own sign-in (`auth.mode: oidc`, or an explicit `none`) and publishes nothing through the chart needs none. The chart then starts with sign-in required
 (built-in accounts, the first administrator made with a one-time setup code), encryption at rest on, a bundled
-PostgreSQL on an 8Gi volume, default-deny network policies and restricted pods. Nothing else is assumed: no
+PostgreSQL on a 1Gi volume (set `postgresql.persistence.size` for more), default-deny network policies and restricted pods. Nothing else is assumed: no
 secrets manager, operator or identity provider. `values.yaml` leads with the same short list and keeps
 everything else below an "ADVANCED" divider.
 
@@ -91,7 +91,7 @@ externalURL: https://launchway.example.com
 database:
   existingSecret: launchway-database
 image:
-  tag: "1.0.0"
+  tag: "0.2.0"
 config:
   projects:
     - name: payments
@@ -132,11 +132,13 @@ runner:
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `externalURL` | string | none (required for built-in accounts, `ingress` and `httpRoute`) | The address people open: `https://` or `http://`, a host, optional port, no path. Names the ingress and route host, is passed to the servers as `LAUNCHWAY_EXTERNAL_URL` and is shown in the install notes |
+| `strictValues` | bool | `false` | `false`: a values key this chart version does not know is ignored and listed (in the install notes, the server's start-up warning, `launchway doctor` and the Deployment annotation `launchway.io/ignored-values`), so values prepared for a newer chart still render after a rollback. `true`: such a key fails the render, which catches typos. `make chart-lint` and `launchway install` use `true`; use `false` for GitOps |
 | `nameOverride` | string | `""` | Overrides the chart name in resource names |
 | `fullnameOverride` | string | `""` | Overrides the full resource name prefix; default `<release>-launchway` |
 | `commonLabels` | map | `{}` | Labels added to every resource the chart creates |
 | `image.repository` | string | `ghcr.io/jk-magic-creations/launchway` | The Launchway image; servers and runners use the same one |
 | `image.tag` | string | the chart's `appVersion` | The image tag |
+| `image.bootstrap` | string | `""` | `"true"`: the image has `launchway bootstrap-secrets` and reads the mounted root key; `"false"`: it predates them, so the chart renders no hook Job, no key mount and no encryption environment. Empty: decided from `image.tag` against the chart's `launchway.io/bootstrap-since` (a tag that is not a version, such as a commit, counts as current) |
 | `image.digest` | string | `""` | An image digest, `sha256:...`; used instead of the tag when set |
 | `image.pullPolicy` | string | `IfNotPresent` | `Always`, `IfNotPresent` or `Never` |
 | `imagePullSecrets` | list | `[]` | Secrets for pulling the Launchway (and development PostgreSQL) image, by name |
@@ -429,7 +431,7 @@ trial. It is not highly available. For production at scale use a managed or oper
 | `postgresql.database` | string | `launchway` | |
 | `postgresql.username` | string | `launchway` | |
 | `postgresql.password` | string | `""` | Letters, digits and `. _ ~ -` only. Empty (the default): the hook Job makes a random password once and keeps it |
-| `postgresql.persistence.size` | quantity | `8Gi` | The volume. With artifacts kept in the database (the default) the chart caps them at half of it, and refuses a larger `config.artifacts.database.maxTotalGiB` (more than three quarters of the volume) with a message saying so. Below `2Gi` it asks you to store artifacts elsewhere |
+| `postgresql.persistence.size` | quantity | `1Gi` | The volume. `1Gi` is what the previous chart made, so an upgrade changes nothing (a claim cannot shrink, and cannot grow on a StorageClass that does not expand). Set `8Gi` or more for a new installation that keeps artifacts. With artifacts kept in the database (the default) the chart caps them at half of it, and refuses a larger `config.artifacts.database.maxTotalGiB` (more than three quarters of the volume) with a message saying so. Below `1Gi` it asks you to store artifacts elsewhere |
 | `postgresql.persistence.storageClass` | string | `""` | Default: the cluster's default StorageClass |
 | `postgresql.resources` | object | requests `50m` CPU, `128Mi`, `64Mi` ephemeral storage; limits `512Mi`, `512Mi` ephemeral storage | |
 
@@ -473,7 +475,7 @@ namespace is affected.
 |---|---|---|
 | Servers | the servers themselves, runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the servers themselves (a project that watches a repository this installation hosts), the database, HTTPS to public addresses (`networkPolicy.server.publicHTTPS`), `networkPolicy.server.extraEgress`. Not the Kubernetes API, not private addresses |
 | Runners | nothing | DNS, the servers, the Kubernetes API (to start step pods), `networkPolicy.runner.extraEgress` |
-| Step pods | nothing | DNS, the Launchway server, and HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
+| Step pods | nothing | DNS and the Launchway server. With `networkPolicy.steps.internet: true` (an opt-in), also HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
 | Bundled database | the servers | nothing |
 
 Git hosts, an identity provider, webhook receivers and an S3 endpoint are not assumed: add them to
@@ -488,7 +490,8 @@ If your cluster's API server has a public address, add it to `networkPolicy.step
 | `networkPolicy.dns.enabled` | boolean | `true` | Allow DNS for every pod above |
 | `networkPolicy.dns.namespace` | string | `kube-system` | The namespace of the cluster DNS |
 | `networkPolicy.dns.podLabels.k8s-app` | string | `kube-dns` | The label of the DNS pods; add others with `--set` |
-| `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, any source; without one, only runners, step pods and the deploy runner (port-forward still works) |
+| `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, only the release namespace, the Gateway's namespace and `proxyNamespaces`; without one, only runners, step pods and the deploy runner (port-forward still works) |
+| `networkPolicy.server.proxyNamespaces` | list | `[]` | Namespaces whose pods may reach the server port (your ingress controller's), used when `ingressFrom` is empty and an Ingress is on; a Gateway's namespace comes from `httpRoute.parentRefs`. The release namespace is always admitted. Never "any source" |
 | `networkPolicy.server.publicHTTPS.enabled` | boolean | `true` | HTTPS from the servers to public addresses: the dependency updater's version sources and vulnerability data, chat services and webhook receivers of notifications, other Git servers. Private, link-local, carrier-grade NAT and loopback addresses are never included, and the installation's own egress allow-list narrows it further. `false`: only what `extraEgress` adds |
 | `networkPolicy.server.publicHTTPS.ports` | list | `[443]` | The ports of that rule |
 | `networkPolicy.server.publicHTTPS.exceptCIDRs` | list | `[]` | More ranges the servers may not reach over HTTPS |
@@ -501,7 +504,7 @@ If your cluster's API server has a public address, add it to `networkPolicy.step
 | `networkPolicy.runner.extraEgress` | list | `[]` | More egress rules for runner pods: Git hosts, secret stores, BuildKit, registries |
 | `networkPolicy.deployRunner.extraEgress` | list | `[]` | More egress rules for the deploy runner pods: Argo CD, GitOps repositories, metrics |
 | `networkPolicy.steps.enabled` | boolean | `true` | The step pod policy, in `runner.kubernetes.namespace` |
-| `networkPolicy.steps.internet` | boolean | `true` | Let step pods reach the internet on `ports`, except the ranges above. `false`: only DNS and the server, plus `extraEgress` |
+| `networkPolicy.steps.internet` | boolean | `false` | OPT IN: let step pods reach the internet on `ports`, except the ranges above. `false` (the default): only DNS and the server, plus `extraEgress`. Builds that download dependencies need `true` |
 | `networkPolicy.steps.ports` | list | `[80, 443]` | |
 | `networkPolicy.steps.exceptCIDRs` | list | `[]` | More ranges step pods may not reach |
 | `networkPolicy.steps.allowIPv6` | boolean | `false` | Allow IPv6 internet (except unique-local and link-local) |

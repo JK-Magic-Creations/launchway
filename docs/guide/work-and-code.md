@@ -48,27 +48,27 @@ Add a link yourself with `link_work_code` or `POST /api/v1/work/items/{ref}/code
 its reference). Linking again updates the title and state instead of adding a second link.
 
 and, once a pull request has merged, the **delivery status**: one sentence and a line for each
-environment. For example:
+Airfield (environment). For example:
 
 > Merged, on dev since 14:02, not yet on prod.
 
-or *Merged, not yet on any environment.* or *Merged, on dev since 14:02, on prod since 16:40.* Times are
+or *Merged, not yet on any Airfield.* or *Merged, on dev since 14:02, on prod since 16:40.* Times are
 in UTC.
 
 ### Where the fix is running
 
 This is read from real deployments, never from what the item says. The merge records the commit that
-carries the change. For each environment, Launchway looks at its successful deployments and asks whether
+carries the change. For each Airfield, Launchway looks at its successful deployments and asks whether
 the commit the deployment ran **is that commit or a descendant of it** in the repository's history. If it
 is, the fix is running there, since the earliest such deployment, and the line links the deployment, the
-run and the version. If no deployment holds the commit, the environment is listed as not yet running it.
-A deployment of an older commit does not count, and a revert or a rollback to an older commit stops it
+run and the version. If no deployment holds the commit, the Airfield is listed as not yet running it.
+A deployment of an older commit does not count, and a revert or a Return to base (rollback) to an older commit stops it
 counting.
 
-If no environment is configured the answer says so rather than guessing. The status reads the list of
-environments in the order they are set up; the `environments` setting in the [work
-settings](../reference/work-format.md#settings) records which environments a level means to show, but today the view lists every
-environment of the installation.
+If no Airfield is configured the answer says so rather than guessing. The status reads the list of
+Airfields in the order they are set up; the `environments` setting in the [work
+settings](../reference/work-format.md#settings) records which Airfields a level means to show, but today the view lists every
+Airfield of the installation.
 
 Items without a merged change show no delivery status: there is nothing to deliver yet.
 
@@ -125,6 +125,6 @@ The MCP tool is `release_notes`. The same function is called by each, so a relea
   binding that names the person works.
 - A failed delivery of an agent's change does not yet count toward
   [the pause rule](working-with-agents.md#pause); a revert does.
-- The delivery status reads every environment of the installation; the work setting `environments`
+- The delivery status reads every Airfield of the installation; the work setting `environments`
   does not narrow it yet.
 - Releases with tags, signed evidence and drafts are not part of work tracking; release notes are a list.

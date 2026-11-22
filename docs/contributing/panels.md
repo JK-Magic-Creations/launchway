@@ -1,6 +1,6 @@
 # Home panels: the contract
 
-Home is a grid of panels. A feature that wants a place on Home adds a panel type; it does not edit the Home page.
+Home is a grid of panels. A feature that wants a place on Home adds a panel type; it does not edit the Tower.
 
 A **panel type** is an entry of `PANEL_TYPES` in `web/src/pages/panels/registry.ts`:
 

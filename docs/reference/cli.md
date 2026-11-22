@@ -1133,6 +1133,14 @@ launchway doctor registry [--config launchway.yaml] [--json]
 
 Says whether the built-in Depot would work as configured: whether it is on, which Cargo store holds its blobs, whether sign-in is on (it answers every request with `503` while it is off, because there is no anonymous Depot), whether an address is set, and, plainly, **that Launchway does not encrypt the Depot's blobs itself in this release**, so the volume, database or bucket that holds the Cargo store must be encrypted. Exit status 1 when something stops it working.
 
+### launchway doctor network
+
+```text
+launchway doctor network [--namespace launchway] [--kubeconfig FILE] [--context NAME]
+```
+
+Says whether the cluster already has a system deciding network policy in the installation's namespace: Kubernetes NetworkPolicies that are not Launchway's own, or objects of any kind whose name contains `NetworkPolicy` from a non-core API group (a network plugin's own policy objects, found by listing the cluster's API). If so it says to let one system be the authority and leave the chart's policies off (`networkPolicy.enabled: false`); `launchway install` makes the same check and defaults to that. It reads the cluster with your kubeconfig, so it runs where the installer runs, not inside the server pod. See [Upgrading](../guide/upgrading.md#network-policies).
+
 ## launchway encryption
 
 ```text
@@ -1407,7 +1415,7 @@ reference, such as `PAY-12`.
 | `launchway work settings show`, `settings set FILE` | How work is set up at the scope, and replacing it with a [JSON file](work-format.md#settings) |
 | `launchway work views list\|save\|delete` | Saved queries |
 | `launchway work inbox [--unread] [--read]`, `home` | What happened to work you follow, and what needs you |
-| `launchway work agents list\|show\|create\|update\|disable\|enable\|delete\|rotate-token\|actions\|reviews` | Registering and managing agents (`create` prints the token once; `disable` is the kill switch) |
+| `launchway work agents list\|show\|create\|update\|disable\|enable\|delete\|rotate-token\|actions\|reviews` | Registering and managing agents (`create` prints the token once; `disable` is the Master switch (kill switch)) |
 | `launchway work spend`, `autonomy clear-pause --reason TEXT`, `samples list\|complete` | What agents reported spending; letting autonomy resume; merges flagged for a look |
 | `launchway work agent me\|queue\|claim\|heartbeat\|hand-back\|request-review\|usage\|pull-review` | The calls an agent makes with its own token |
 | `launchway work import --format stories-json FILE [--preview] [--update]`, `--format archive --repository OWNER/NAME [--preview]` | The [imports](work-format.md) |

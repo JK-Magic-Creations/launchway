@@ -45,7 +45,7 @@ An import adds and updates what the document names and never deletes anything it
 
 ## Pinning a view to Home
 
-**Pin to Home** on any explorer makes a panel on your own Home that links back to the view exactly as you filtered it. See [the home page](home-page.md) for panels.
+**Pin to Home** on any explorer makes a panel on your own Home that links back to the view exactly as you filtered it. See [the Tower](home-page.md) for panels.
 
 ## From a script or an agent
 

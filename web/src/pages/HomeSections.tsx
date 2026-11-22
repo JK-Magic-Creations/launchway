@@ -157,7 +157,7 @@ function RunCard({ r, now }: { r: HomeRunning; now: number }) {
       <div className="hm-card-h"><Status state={r.waiting ? "wait" : STATE[r.status] ?? "run"} label={r.waiting ? "Waiting for a decision" : r.status === "queued" ? "Queued" : "Running"} />
         <a href={`/runs/${r.id}`} onClick={onLink} className="hm-name">{r.project} #{r.number}</a></div>
       <div className="small">{where}{r.mine && <span className="vchip"> yours</span>}</div>
-      <div className="small faint">{r.waiting ? "Waiting for a decision" : r.step ? <>Step <b>{r.step}</b></> : r.status === "queued" ? "Waiting for a runner" : "Starting"} · {elapsed(r.started_at || r.created_at, 0, now) || "just now"}{r.actor ? ` · ${r.actor}` : ""}</div>
+      <div className="small faint">{r.waiting ? "Waiting for a decision" : r.step ? <>Step <b>{r.step}</b></> : r.status === "queued" ? terms().say("Waiting for a {runner}") : "Starting"} · {elapsed(r.started_at || r.created_at, 0, now) || "just now"}{r.actor ? ` · ${r.actor}` : ""}</div>
       {r.retry_of && <div className="small"><span className="vchip warn">Retrying #{r.retry_of}</span></div>}
     </li>
   );

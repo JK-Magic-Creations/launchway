@@ -113,11 +113,11 @@ func TestExistingSecretIsNeverTouched(t *testing.T) {
 	if _, err := Ensure(context.Background(), cs, opts(specs()[:1], nil)); err != nil {
 		t.Fatal(err)
 	}
-	if got := get(t, cs, "lw-root-key"); string(got.Data["root.key"]) != "mine" || len(got.Annotations) != 0 {
-		t.Errorf("an existing Secret was changed: %v %v", got.Data, got.Annotations)
+	if got := get(t, cs, "lw-root-key"); string(got.Data["root.key"]) != "mine" || len(got.Data) != 1 || got.Annotations[AnnotationKeep] != "keep" || got.Annotations[AnnotationPrune] != "Prune=false" || len(got.Annotations) != 2 {
+		t.Errorf("an existing Secret: the data must stay and only the two keep annotations be added: %v %v", got.Data, got.Annotations)
 	}
 	for _, a := range cs.Actions() {
-		if v := a.GetVerb(); v != "get" {
+		if v := a.GetVerb(); v != "get" && v != "patch" {
 			t.Errorf("verb %s used on an existing Secret", v)
 		}
 	}

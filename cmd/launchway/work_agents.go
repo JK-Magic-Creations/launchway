@@ -266,7 +266,7 @@ func (cl *client) workAgent(args []string) error {
 	return cl.workDo("agent "+verb, args[1:], func(w *wcmd) func([]string) (*workReq, error) {
 		const g = "/api/v1/work/agent"
 		limit := w.fs.String("limit", "", "how many")
-		item := w.fs.String("item", "", "a particular item (default: the next in your queue)")
+		item := w.fs.String("item", "", "a particular item (default: the next in your list)")
 		lease := w.fs.Int("lease", 0, "seconds the claim lasts without a heartbeat")
 		note := w.fs.String("note", "", "a note")
 		reason := w.fs.String("reason", "", "why")

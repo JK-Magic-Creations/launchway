@@ -47,10 +47,10 @@ See [accessibility](accessibility.md) for what the interface supports.
 
 Items in a scope have one **order**. New work goes to the bottom. Put an item at the top, at the bottom,
 or before or after another item of the same project (`rank_work_item`, `launchway work items rank PAY-12 top`, `POST /api/v1/work/items/{ref}/rank`). On the backlog page each row has a **Move…** menu with the same choices: to the top, the bottom, up, down or before another item, and a control to put the item in a sprint. Moving one item
-changes one number, not the whole list, so two people reordering at once queue up rather than overwrite
+changes one number, not the whole list, so two people reordering at once line up rather than overwrite
 each other. Agents do not reorder the backlog.
 
-The board, the backlog list and the queue an agent reads all use this order (the agent's queue puts urgent
+The board, the backlog list and the Holding pattern (queue) an agent reads all use this order (the agent's list of work puts urgent
 work first and keeps the order within a priority).
 
 ## Milestones

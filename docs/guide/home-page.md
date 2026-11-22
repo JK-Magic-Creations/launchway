@@ -1,4 +1,4 @@
-# What the home page shows, and why
+# What the Tower shows, and why
 
 Home answers one question: what should I look at? It shows what needs you, what is running now, your projects by category, and what finished lately. It does not show a list of everything that ever failed.
 
@@ -8,11 +8,11 @@ A failure is listed only when it still needs someone. The rule is the same on Ho
 
 1. Sorties of one pipeline are grouped by where they came from: the pull request, or else the branch.
 2. In each group the newest Sortie that was not canceled decides.
-3. If it is queued or running, an older failure there is **superseded**: it is not listed. It shows under **Running now** as "Retrying #412". Someone is already on it.
+3. If it is waiting to start or running, an older failure there is **superseded**: it is not listed. It shows under **Running now** as "Retrying #412". Someone is already on it.
 4. If it succeeded, the group is fine.
 5. If it failed, the failure is listed when the group matters to you: the project's default branch, a `release/` or `hotfix/` branch, your own pull request or a Sortie you started, or a pipeline you follow (a favorite). A failure on someone else's feature branch is not yours to chase.
 
-Besides failures, **Needs you** lists a deployment that failed and was not followed by a successful one or by a return to the last good version, a decision that waits for someone, a Sortie queued for more than 15 minutes, and a Sortie running for more than three times its pipeline's usual time (never less than 30 minutes) that is not paused for a decision. Each entry says **why it is here** and **what to do**.
+Besides failures, **Needs you** lists a deployment that failed and was not followed by a successful one or by a return to the last good version, a decision that waits for someone, a Sortie waiting to start for more than 15 minutes, and a Sortie running for more than three times its pipeline's usual time (never less than 30 minutes) that is not paused for a decision. Each entry says **why it is here** and **what to do**.
 
 You can **Set aside** an entry or **Snooze a day** for it. That is a personal preference: it changes nothing for anyone else, it returns by itself if something newer replaces it, and **Show set aside** brings it back. Setting an entry aside is written to the Logbook as a personal preference.
 

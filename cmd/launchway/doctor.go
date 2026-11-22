@@ -20,6 +20,7 @@ const doctorUsage = `Usage:
   launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
   launchway doctor security [--url ADDRESS] [--config launchway.yaml]
   launchway doctor registry [--config launchway.yaml] [--json]
+  launchway doctor network [--namespace launchway] [--kubeconfig FILE] [--context NAME]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -33,6 +34,9 @@ it runs both.
   security   the plain security checklist: sign-in, encryption in transit and at rest, exposure
   registry   whether the built-in registry would work as configured (it needs sign-in and an artifact store) and, plainly,
              that Launchway does not encrypt its blobs itself in this release. Exit 1 when something stops it working
+  network    whether the cluster already has network policy in the installation's namespace (Kubernetes
+             NetworkPolicies that are not Launchway's own, or a network plugin's own policy objects), and
+             so whether the chart's policies should be left off. Reads the cluster with your kubeconfig
 `
 
 // exitOn ends the program for an error from a command.
@@ -82,7 +86,7 @@ func (r gitReport) lines() []string {
 }
 
 // doctorSections are the doctor's sections that are commands of their own, by name.
-var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption, "registry": doctorRegistry}
+var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption, "registry": doctorRegistry, "network": doctorNetwork}
 
 func firstArg(args []string) string {
 	if len(args) == 0 {
@@ -159,6 +163,12 @@ func cmdDoctor(args []string) error {
 		}
 	}
 	if section == "" {
+		if m := config.IgnoredValuesNotice(os.Getenv); m != "" {
+			fmt.Println("Chart values: WARNING " + m)
+		}
+		if m, warn := config.ChartNotice(os.Getenv, os.Getenv("KUBERNETES_SERVICE_HOST") != ""); warn {
+			fmt.Println("Chart: WARNING " + m)
+		}
 		for _, l := range signInFinding(cfg) {
 			fmt.Println(l)
 		}

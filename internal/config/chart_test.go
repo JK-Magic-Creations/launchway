@@ -304,9 +304,9 @@ config:
 // nothing set, the store is chosen by the engine. Set, they load.
 func TestChartDatabaseStoreSettings(t *testing.T) {
 	// With the bundled database the chart writes ONE setting, the artifact cap derived from the
-	// volume (half of 8Gi); with a database of your own it writes none.
+	// volume (at least 1 under the 1Gi default); with a database of your own it writes none.
 	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
-		def := strings.ReplaceAll(renderChart(t, values)["server"], "artifacts:\n  database:\n    max_total_gib: 4\n", "")
+		def := strings.ReplaceAll(renderChart(t, values)["server"], "artifacts:\n  database:\n    max_blob_mib: 512\n    max_total_gib: 1\n", "")
 		if strings.Contains(values, "postgresql") && def == renderChart(t, values)["server"] {
 			t.Errorf("the bundled database's default configuration has no derived artifact cap:\n%s", def)
 		}
@@ -331,7 +331,7 @@ config:
 		t.Fatalf("rendered: %+v %v\n%s", o, err, srv)
 	}
 	// The limits alone, store unset: allowed (they apply when the database is chosen).
-	srv = renderChart(t, "postgresql: { enabled: true }\nconfig: { artifacts: { database: { maxTotalGiB: 5 } } }\n")["server"]
+	srv = renderChart(t, "postgresql: { enabled: true, persistence: { size: 8Gi } }\nconfig: { artifacts: { database: { maxTotalGiB: 5 } } }\n")["server"]
 	if c, err = Load(writeTemp(t, srv)); err != nil {
 		t.Fatalf("server: %v\n%s", err, srv)
 	}
@@ -452,8 +452,8 @@ func TestChartDefaultWritesNoNewKeys(t *testing.T) {
 			}
 			if a, ok := doc["artifacts"].(map[string]any); ok {
 				for _, key := range []string{"store", "database"} {
-					// The bundled database's derived cap is the one allowed setting.
-					if d, isMap := a[key].(map[string]any); key == "database" && isMap && len(d) == 1 && d["max_total_gib"] != nil && strings.Contains(values, "postgresql") {
+					// The bundled database's derived cap (and, on a small volume, the largest file that fits under it) are the allowed settings.
+					if d, isMap := a[key].(map[string]any); key == "database" && isMap && len(d) <= 2 && d["max_total_gib"] != nil && strings.Contains(values, "postgresql") {
 						continue
 					}
 					if _, ok := a[key]; ok {

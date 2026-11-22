@@ -39,6 +39,8 @@ type Facts struct {
 	// Policy enforcement: the network plugin, as best it can be told.
 	CNI            string // "cilium", "calico", ... or ""
 	NetpolEnforced Tri
+	// PolicyAuthority is network policy already in place in the target namespace (see DetectPolicyAuthority).
+	PolicyAuthority []PolicyObjects
 	// Capacity.
 	Nodes        int
 	FreeCPUMilli int64
@@ -116,6 +118,7 @@ func Detect(ctx context.Context, cs kubernetes.Interface, namespace string) (*Fa
 		f.Issuers = listNames(ctx, cs, "/apis/cert-manager.io/v1/clusterissuers")
 	}
 	f.CNI, f.NetpolEnforced = detectCNI(ctx, cs)
+	f.PolicyAuthority = DetectPolicyAuthority(ctx, cs, namespace)
 	nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err == nil {
 		f.Nodes = len(nodes.Items)

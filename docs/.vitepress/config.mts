@@ -375,6 +375,7 @@ export default defineConfig({
           { text: 'Every view has an address', link: '/contributing/views-have-addresses' },
           { text: 'Home panels', link: '/contributing/panels' },
           { text: 'Writing a migration', link: '/development/migrations' },
+          { text: 'Releasing', link: '/development/releasing' },
           { text: 'Quality bar for the API, MCP and CLI', link: '/development/interface-quality' },
         ],
       },
