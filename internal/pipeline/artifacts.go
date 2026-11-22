@@ -329,7 +329,7 @@ func CheckInto(dir string) (string, string) {
 	if d == "" || d == "." {
 		return "", ""
 	}
-	quoted := "\"" + clipText(dir, 60) + "\""
+	quoted := quoteText(dir)
 	switch {
 	case len(d) > MaxReportGlobLen:
 		return "", quoted + " is too long"
@@ -463,7 +463,10 @@ func upstreamOf(s *Step, ids map[string]*Step) map[string]bool {
 	return seen
 }
 
-func quoteText(s string) string { return "\"" + clipText(s, 60) + "\"" }
+// quoteText shows text a person typed inside a message: clipped, then quoted
+// and escaped (strconv.Quote), so a quote, backslash or control character in
+// it can neither end the quotes early nor reach a reader unescaped.
+func quoteText(s string) string { return strconv.Quote(clipText(s, 60)) }
 
 // fetchesOf gives a template's step's fetches the run's step IDs.
 func (x *expander) fetchesOf(sc *scope, s *Step) []*Fetch {

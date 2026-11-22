@@ -11,6 +11,12 @@ function safeHref(h: string): string | null {
   } catch { return null; }
 }
 
+/** An address the page's own code made for a relative link or picture must be on this site (a path, or a #fragment):
+ * whatever Context hands back is checked once more here, so no scheme (javascript:, data:) and no other site can get through it. */
+function onSite(a: string | null): string | null {
+  return a !== null && /^(\/(?![/\\])|#)/.test(a) ? a : null;
+}
+
 /** Where a document's relative links and pictures point: a repository's README names files of the repository.
  * link turns "docs/a.md" into an address of the product or null (dropped); image does the same for a picture, whose
  * address is the repository's raw file, shown inside an image element and never as a page. */
@@ -27,11 +33,11 @@ export function inline(text: string, ctx?: Context): ReactNode[] {
     else if (m[2] !== undefined) out.push(<strong key={k++}>{m[2]}</strong>);
     else if (m[3] !== undefined) out.push(<em key={k++}>{m[3]}</em>);
     else if (m[4] === "!") {
-      const src = ctx && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(m[6]) ? ctx.image(m[6]) : null;
+      const src = ctx && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(m[6]) ? onSite(ctx.image(m[6])) : null;
       out.push(src ? <img key={k++} src={src} alt={m[5]} loading="lazy" referrerPolicy="no-referrer" className="md-img" /> : m[5] ? `[picture: ${m[5]}]` : "");
     } else {
       const external = safeHref(m[6]);
-      const rel = ctx && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(m[6]) ? ctx.link(m[6]) : null;
+      const rel = ctx && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(m[6]) ? onSite(ctx.link(m[6])) : null;
       if (rel) out.push(<a key={k++} href={rel}>{m[5]}</a>);
       else out.push(external && /^(https?:|mailto:)/i.test(m[6]) ? <a key={k++} href={external} rel="noopener noreferrer nofollow" target="_blank">{m[5]}</a> : m[5]);
     }

@@ -7,6 +7,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same pull request makes the older run pointless: it is cancelled. Runs on main
+# are kept, one per commit, so every commit has its own result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # The whole suite exactly as the project's own pipeline runs it (.launchway/pipeline.yaml, step
   # `test`; `make test-like-ci`): no race detector, the same flags, the same per-package timeout. This

@@ -280,9 +280,9 @@ export function FindingsBacklog({ name }: { name: string }) {
           <label>Show <select value={status} onChange={(ev) => setStatus(ev.target.value)}><option value="open">open</option><option value="accepted">accepted</option><option value="fixed">fixed</option><option value="all">all</option></select></label>
           <label>Severity <select value={sev} onChange={(ev) => setSev(ev.target.value as Sev | "")}><option value="">any</option>{SEVERITIES.map((s) => <option key={s} value={s}>{severityLabel(s)}</option>)}</select></label>
           <label><input type="checkbox" checked={oldest} onChange={(ev) => setOldest(ev.target.checked)} /> Oldest first</label>
-          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=csv&status=${status}`}>CSV</a>
-          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=json&status=${status}`}>JSON</a>
-          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=sarif&status=${status}`}>SARIF</a>
+          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=csv&status=${encodeURIComponent(status)}`}>CSV</a>
+          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=json&status=${encodeURIComponent(status)}`}>JSON</a>
+          <a className="btn btn-sm" href={`/api/v1/projects/${enc}/findings/export?format=sarif&status=${encodeURIComponent(status)}`}>SARIF</a>
         </div>
         {list && list.findings.length === 0 && (
           <Empty title={status === "open" ? "Nothing open" : "Nothing here"}>

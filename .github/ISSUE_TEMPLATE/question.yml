@@ -1,0 +1,15 @@
+name: Question
+description: Ask how something works. This form sends you to Discussions.
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions are answered in **[Discussions](https://github.com/JK-Magic-Creations/launchway/discussions)**, where the answer can help the next person and be found by search. Please ask there; an issue opened here with only a question will be moved or closed.
+        Read [SUPPORT.md](https://github.com/JK-Magic-Creations/launchway/blob/main/SUPPORT.md) first for what is supported and how.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question (if you open it here anyway)
+    validations:
+      required: true

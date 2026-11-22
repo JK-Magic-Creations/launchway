@@ -35,6 +35,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
+	"github.com/jk-magic-creations/launchway/internal/logsafe"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -753,7 +754,7 @@ func cmdRun(args []string) error {
 		return err
 	}
 
-	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	quiet := slog.New(logsafe.Handler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})))
 	localStore, err := blobstore.NewFilesystem(filepath.Join(tmp, "artifacts"))
 	if err != nil {
 		return err

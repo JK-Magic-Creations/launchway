@@ -124,7 +124,7 @@ function renderPage(rel) {
   })
   html = html.replace(/<img [^>]*alt="([^"]*)"[^>]*>/g, '<em class="lx-img">[$1]</em>')
   html = html.replace(/<button title="Copy Code" class="copy"><\/button>/g, '<button type="button" class="copy" aria-label="Copy the code"></button>')
-  html = html.replace(/ v-pre=""/g, '').replace(/ tabindex="0"/g, ' tabindex="0"')
+  html = html.replace(/ v-pre=""/g, '')
   // <!-- try --> before a code block makes it a pipeline the reader can open in the playground.
   html = html.replace(/<!-- try -->\s*<div class="language-yaml /g, '<div class="lx-try language-yaml ')
   html = shareColours(html)

@@ -200,6 +200,11 @@ func untar(r io.Reader, dest string) error {
 			return fmt.Errorf("the library has a file outside its directory: %q", h.Name)
 		}
 		path := filepath.Join(dest, name)
+		// Nothing is created below a link an earlier entry made: a link
+		// to another place would carry the file out of the directory.
+		if err := noLinkAbove(dest, name); err != nil {
+			return fmt.Errorf("the library has %q below a link: %w", h.Name, err)
+		}
 		switch h.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path, 0o755); err != nil {
@@ -231,11 +236,40 @@ func untar(r io.Reader, dest string) error {
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				return err
 			}
+			// A link stays inside the directory: it is relative, and
+			// where it points, from the folder it is in, is local too.
+			if filepath.IsAbs(h.Linkname) || !filepath.IsLocal(filepath.Join(filepath.Dir(name), filepath.FromSlash(h.Linkname))) {
+				return fmt.Errorf("the library has a link that points outside its directory: %q", h.Name)
+			}
 			if err := os.Symlink(h.Linkname, path); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+// noLinkAbove reports an error if a folder above name (relative, local)
+// inside dest is a link rather than a real directory.
+func noLinkAbove(dest, name string) error {
+	dir := filepath.Dir(name)
+	if dir == "." {
+		return nil
+	}
+	cur := dest
+	for _, part := range strings.Split(dir, string(filepath.Separator)) {
+		cur = filepath.Join(cur, part)
+		fi, err := os.Lstat(cur)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil // nothing deeper exists yet
+		}
+		if err != nil {
+			return err
+		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			return errors.New("that folder is a link")
+		}
+	}
+	return nil
 }
 
 // addBuiltin writes the starters this runner carries, if they are the ones

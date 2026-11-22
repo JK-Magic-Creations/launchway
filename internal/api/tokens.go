@@ -166,9 +166,9 @@ func (s *Server) tokensOn(w http.ResponseWriter) bool {
 func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	num := func(k string) int64 { v, _ := strconv.ParseInt(q.Get(k), 10, 64); return v }
-	limit := int(num("limit"))
-	if limit <= 0 || limit > 500 {
-		limit = 100
+	limit := 100
+	if n := num("limit"); n > 0 && n <= 500 { // checked as an int64, before it is narrowed
+		limit = int(n)
 	}
 	list, err := s.Engine.AuditLog(engine.AuditFilter{User: q.Get("user"), Project: q.Get("project"), Action: q.Get("action"),
 		From: num("from"), To: num("to"), Before: num("before"), Limit: limit})

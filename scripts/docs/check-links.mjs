@@ -33,7 +33,8 @@ function idsOf(file) {
   return idsCache.get(file)
 }
 function decodeEntities(s) {
-  return s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  // &amp; last, so that "&amp;quot;" ends as the text &quot;, not as a quote
+  return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 }
 
 function resolveTarget(fromFile, href) {

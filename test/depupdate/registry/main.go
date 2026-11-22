@@ -118,6 +118,12 @@ func (s *server) goproxy(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if strings.HasSuffix(file, ".zip") {
+		w.Header().Set("Content-Type", "application/zip")
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	}
 	switch {
 	case file == "list":
 		fmt.Fprintln(w, strings.Join(vs, "\n"))
@@ -170,6 +176,8 @@ func (s *server) npm(w http.ResponseWriter, r *http.Request) {
 		file := p[strings.Index(p, "/-/")+3:]
 		v := strings.TrimSuffix(strings.TrimPrefix(file, name+"-"), ".tgz")
 		b, _, _ := tarball(name, v)
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		_, _ = w.Write(b)
 		return
 	}

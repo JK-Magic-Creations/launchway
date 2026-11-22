@@ -28,8 +28,8 @@ describe("who can reach a repository", () => {
     expect(screen.getByText(/can read and push it/)).toBeTruthy();
     expect(screen.getByText("ci box")).toBeTruthy();
     expect(screen.getByText(/through/).textContent).toContain("acme/*");
-    expect(screen.getByText(/only from 203.0.113.0\/24/)).toBeTruthy();
-    expect(screen.getByText(/backup.example.com/)).toBeTruthy();
+    expect(screen.getByText("only from 203.0.113.0/24", { exact: false })).toBeTruthy();
+    expect(screen.getByText("backup.example.com", { exact: false })).toBeTruthy();
   });
   it("makes a credential for this repository alone in one step and shows it once", async () => {
     render(<RepoReach repo={repo} />);

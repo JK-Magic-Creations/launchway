@@ -1,0 +1,10 @@
+# The maintainer reviews everything. Today that is one person; see GOVERNANCE.md.
+#
+# The owner is the repository's sole admin (a user, so the file is valid without any team).
+* @jkhunter1978
+
+# Files that decide what runs with the repository's credentials, or what users are told to trust.
+/.github/ @jkhunter1978
+/packaging/release/ @jkhunter1978
+/SECURITY.md @jkhunter1978
+/GOVERNANCE.md @jkhunter1978

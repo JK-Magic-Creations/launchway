@@ -29,6 +29,13 @@ export interface Options {
 
 export interface Detail<T> { value: T; reason: string; ruleId?: string }
 
+/** Drops the slashes at the end of an address, in a single pass (a pattern like /\/+$/ rescans from every slash of a long run). */
+export function trimTrailingSlashes(u: string): string {
+  let n = u.length;
+  while (n > 0 && u.charCodeAt(n - 1) === 47) n--;
+  return u.slice(0, n);
+}
+
 export class ToggleClient {
   private rs: Ruleset | undefined;
   private etag = "";
@@ -118,7 +125,7 @@ export class ToggleClient {
     }
   }
 
-  private url(path: string): string { return this.o.serverUrl!.replace(/\/+$/, "") + path; }
+  private url(path: string): string { return trimTrailingSlashes(this.o.serverUrl!) + path; }
   private headers(extra: Record<string, string> = {}): Record<string, string> {
     return { Authorization: `Bearer ${this.o.key}`, "User-Agent": "launchway-js-sdk", ...extra };
   }

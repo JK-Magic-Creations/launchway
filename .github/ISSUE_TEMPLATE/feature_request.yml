@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest something Launchway should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the problem you have, not the solution you imagine; there may be a way to do it already.
+        For an open-ended idea or "how do I", use [Discussions](https://github.com/JK-Magic-Creations/launchway/discussions).
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what stops you?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How it could work, in plain words. Say what a person would see or run.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Pipelines and runs
+        - Git hosting
+        - Deployments and releases
+        - Security and compliance
+        - Web interface
+        - API, command line or Terraform
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I would be willing to work on this (see CONTRIBUTING.md and the CLA).

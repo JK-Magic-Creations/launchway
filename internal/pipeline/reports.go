@@ -376,7 +376,7 @@ func CheckReportGlob(g string) (string, string) { return checkGlob(g, "report fi
 // checkGlob checks a glob naming files of the workspace; what names them in
 // messages, such as "report files".
 func checkGlob(g, what string) (string, string) {
-	quoted := "\"" + clipText(g, 60) + "\""
+	quoted := quoteText(g)
 	switch {
 	case strings.TrimSpace(g) == "":
 		return "", "a glob is empty; write a path such as reports/*.xml"

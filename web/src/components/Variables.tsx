@@ -185,7 +185,7 @@ export function VariablesPanel({ level, scope, environment, compact, names, onCh
 function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLevel; scope?: string; base?: VarEntry; onClose: () => void; onSaved: (name: string) => void }) {
   const [name, setName] = useState(base?.name ?? "");
   const [type, setType] = useState<VarType>(base?.type ?? "string");
-  const [text, setText] = useState(base && base.set_here && base.type !== "secret" ? valueText(base) : base?.type === "secret" ? base.display.replace("#", "#") : "");
+  const [text, setText] = useState(base && base.set_here && base.type !== "secret" ? valueText(base) : base?.type === "secret" ? base.display : "");
   const [of, setOf] = useState(base?.of ?? "");
   const [env, setEnv] = useState(base?.from.environment ?? "");
   const [desc, setDesc] = useState(base?.description ?? "");

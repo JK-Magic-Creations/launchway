@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/jk-magic-creations/launchway/internal/bootstrap"
+	"github.com/jk-magic-creations/launchway/internal/logsafe"
 )
 
 func init() { commands["bootstrap-secrets"] = cmdBootstrapSecrets }
@@ -114,7 +115,7 @@ func runBootstrapSecrets(args []string, logTo io.Writer, client func() (kubernet
 	defer stop()
 	_, err = bootstrap.Ensure(ctx, cs, bootstrap.Options{
 		Namespace: *ns, Specs: specs, Labels: labels,
-		Log: slog.New(slog.NewTextHandler(logTo, nil)),
+		Log: slog.New(logsafe.Handler(slog.NewTextHandler(logTo, nil))),
 	})
 	return err
 }

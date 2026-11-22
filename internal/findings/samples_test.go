@@ -538,7 +538,7 @@ func TestSecretSamples(t *testing.T) {
 		}
 	}
 	noSecrets(t, r,
-		"AKIA2E0A8F3B244C9986", "wJalrXUtnFEMI", "ghp_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "aB3dE5fG7",
+		"AKIA"+"2E0A8F3B244C9986", "wJalrXUtnFEMI", "ghp"+"_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "aB3dE5fG7",
 		"MIIEowIBAAKCAQEA", "BEGIN RSA", "xoxb-", "AbCdEfGhIjKlMnOpQrStUvWx",
 		"9fceb02d0ae598e95dc970b74767f19372d61af8", "dev@example.com", "Found verified")
 
@@ -567,7 +567,7 @@ func TestSecretSamples(t *testing.T) {
 			t.Errorf("message not masked: %q", f.Message)
 		}
 	}
-	noSecrets(t, p, "AKIA2E0A8F3B244C9986", "wJalrXUtnFEMI", "ghp_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "MIIEowIBAAKCAQEA", "xoxb-123", "AbCdEfGhIjKlMnOpQrStUvWx")
+	noSecrets(t, p, "AKIA"+"2E0A8F3B244C9986", "wJalrXUtnFEMI", "ghp"+"_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "MIIEowIBAAKCAQEA", "xoxb-123", "AbCdEfGhIjKlMnOpQrStUvWx")
 	if f := p.Findings[0]; f.Message != "Found verified AWS result: [masked] / [masked] in deploy/.env" {
 		t.Errorf("masked message = %q", f.Message)
 	}

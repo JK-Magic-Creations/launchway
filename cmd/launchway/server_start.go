@@ -18,6 +18,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/keyring"
+	"github.com/jk-magic-creations/launchway/internal/logsafe"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
@@ -88,7 +89,7 @@ func readServerSetup(args []string) (*serverSetup, error) {
 	if err := os.MkdirAll(cfg.Data, 0o750); err != nil {
 		return nil, err
 	}
-	su.log = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	su.log = slog.New(logsafe.Handler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	slog.SetDefault(su.log)
 	if su.reportLimits, err = cfg.Runner.Reports.Limits(); err != nil {
 		return nil, fmt.Errorf("%s: runner.%w", *cfgPath, err)
