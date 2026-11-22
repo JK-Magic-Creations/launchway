@@ -21,6 +21,18 @@ describe("releases", () => {
     expect(within(table).getByText("Withdrawn")).toBeTruthy();
     expect(within(table).getByText("Candidate")).toBeTruthy();
     expect(screen.getByRole("button", { name: /New release/ })).toBeTruthy();
+    expect(within(table).getAllByText("Latest").length).toBe(1); // only the newest published release that is not a pre-release
+    expect(within(table).getByText("Pre-release")).toBeTruthy();
+  }, 20000);
+
+  it("marks the latest release and counts the downloads of each file", async () => {
+    await open("/deployments/releases/shop-api/1.4.0");
+    await screen.findByText(/never change/, {}, { timeout: 8000 });
+    expect(screen.getByText("Latest")).toBeTruthy();
+    expect(screen.getByText(/This is the latest release/)).toBeTruthy();
+    const row = screen.getByRole("link", { name: "shop-api-linux-amd64" }).closest("tr") as HTMLElement;
+    expect(within(row).getByText("42")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Downloads" })).toBeTruthy();
   }, 20000);
 
   it("shows a published release as fixed: no editing, its Cargo with checksums and where each came from", async () => {

@@ -75,6 +75,12 @@ A published release's tag is checked again when it is promoted: if the tag no lo
 
 By default every download needs a signed-in person who can read the Flight. An installation can allow **public content**: an administrator of every Flight turns it on (`launchway release installation --public-downloads=true`, off by default), a Flight administrator asks for it in the Flight's settings (`--public`), and a release is made public when it is published (admin only). All three must agree; withdrawing a release stops its public download at once. Public files are at `/public/releases/PROJECT/VERSION/FILE`.
 
+### The latest release and download counts
+
+`latest` stands for the version wherever a version goes: `launchway release show web latest`, `GET /api/v1/projects/web/releases/latest` for the page, and `.../releases/latest/assets/app.apk` for a file by name, so a link in a README never needs a new number. It names the newest published release that is not a pre-release; a withdrawn release, a draft and a candidate are never it. Where public downloads are allowed (the three yeses above) the same words work without signing in, at `/public/releases/PROJECT/latest` for the page and `/public/releases/PROJECT/latest/FILE` for a file; if the latest release was not made public, they answer not found rather than showing an older one.
+
+The list marks the **Latest** release and each **Pre-release**. Each file counts its downloads, shown on the release page, in `launchway release show` and as `downloads` in the API. A download counts when it was sent to the end without a break: a whole file counts once, the rest of a broken download counts once (the part before it does not), and a `HEAD`, a part in the middle and a refused request count nothing.
+
 ## Release branches and urgent fixes
 
 To release from a maintenance branch, create the release from that branch and say the version is lower than the highest on purpose:

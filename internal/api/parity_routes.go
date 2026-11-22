@@ -5,5 +5,7 @@ package api
 // pull request templates, the repository trash, old repository addresses and
 // the pull request and overview extras.
 func (s *Server) parityRoutes() []route {
-	return s.tagRuleRoutes()
+	return append(s.tagRuleRoutes(), []route{
+		{"GET /public/releases/{name}/{version}", public, "", s.publicReleasePage},
+	}...)
 }

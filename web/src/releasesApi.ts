@@ -10,7 +10,7 @@ export interface ReleaseDigest { image: string; digest: string; step?: string }
 export interface ReleaseAsset {
   id: string; name: string; kind: "file" | "image" | "sbom" | "scan"; size: number; sha256?: string; image?: string; digest?: string;
   detail?: string; run_id?: string; run_number?: number; step_id?: string; artifact_id?: string; source_sha?: string; added_by: string;
-  added_at: number; uploaded?: boolean;
+  added_at: number; uploaded?: boolean; downloads?: number;
 }
 
 export interface Release {
@@ -18,7 +18,7 @@ export interface Release {
   branch?: string; sha: string; tag?: string; tag_object?: string; tag_created?: boolean; prerelease: boolean; public?: boolean;
   run_id?: string; run_number?: number; digests: ReleaseDigest[]; previous?: string; commit_time?: number; created_at: number;
   created_by?: string; candidate_at?: number; candidate_by?: string; published_at?: number; published_by?: string; yanked_at?: number;
-  yanked_by?: string; yank_reason?: string; assets?: ReleaseAsset[]; immutable: boolean;
+  yanked_by?: string; yank_reason?: string; assets?: ReleaseAsset[]; immutable: boolean; latest?: boolean;
 }
 
 export interface Promotion {

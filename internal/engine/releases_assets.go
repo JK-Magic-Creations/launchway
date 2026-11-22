@@ -49,6 +49,8 @@ type ReleaseAsset struct {
 	AddedAt   int64  `json:"added_at"`
 	// Uploaded is true for a file somebody uploaded rather than one a Sortie built.
 	Uploaded bool `json:"uploaded,omitempty"`
+	// Downloads counts the completed downloads of the file (see CountReleaseDownload).
+	Downloads int64 `json:"downloads"`
 }
 
 const assetCols = `id, release_id, name, kind, size, sha256, image, digest, detail, run_id, run_number, step_id, artifact_id, source_sha, added_by, added_at`
@@ -74,7 +76,15 @@ func (e *Engine) releaseAssets(releaseID string) ([]ReleaseAsset, error) {
 		}
 		out = append(out, a)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if counts, err := e.releaseDownloads(releaseID); err == nil {
+		for i := range out {
+			out[i].Downloads = counts[out[i].Name]
+		}
+	}
+	return out, nil
 }
 
 // Provenance says which Sortie built an asset.

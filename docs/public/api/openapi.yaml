@@ -5789,7 +5789,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: release.delete
         get:
-            description: One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. {version} is a version, a tag or the release's id.
+            description: 'One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. {version} is a version, a tag, the release''s id or latest: the newest published release that is not a pre-release (a withdrawn release, a draft and a candidate are never it; 404 when the Flight has none). release.latest is true for that release, release.prerelease for a pre-release, and each asset carries downloads, the number of completed downloads.'
             operationId: get_api_v1_projects_name_releases_version
             parameters:
                 - in: path
@@ -5942,7 +5942,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: release.asset.remove
         get:
-            description: 'Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256. Answers Range (a phone resumes a broken download). The type is the file''s own (application/vnd.android.package-archive for .apk, application/zip, application/gzip, and so on; anything else, and every page or script, is application/octet-stream), always with Content-Disposition: attachment.'
+            description: 'Downloads a file of the release, signed in, streamed, with its checksum in X-Launchway-SHA256. Answers Range (a phone resumes a broken download). latest may stand for the version. A download counts when the whole file, or the range that ends at its last byte, was sent without a break: the rest of a broken download counts once, a HEAD, a part in the middle and a refusal not at all. The type is the file''s own (application/vnd.android.package-archive for .apk, application/zip, application/gzip, and so on; anything else, and every page or script, is application/octet-stream), always with Content-Disposition: attachment.'
             operationId: get_api_v1_projects_name_releases_version_assets_asset
             parameters:
                 - in: path
@@ -18694,6 +18694,39 @@ paths:
             summary: The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless).
             tags:
                 - mcp
+            x-launchway-access: public
+    /public/releases/{name}/{version}:
+        get:
+            description: 'The page of a public release with no sign-in, for the same three yeses as the file: its version, title, notes, tag, whether it is a pre-release or the latest, and each file with its size, SHA-256, download count and address. {version} may be latest, and the file by name is /public/releases/{name}/latest/{asset}. Anything else is 404, including a latest release that was not made public.'
+            operationId: get_public_releases_name_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'The page of a public release with no sign-in, for the same three yeses as the file: its version, title, notes, tag, whether it is a pre-release or the latest, and each file with its size, SHA-256, download count and address.'
+            tags:
+                - public
             x-launchway-access: public
     /public/releases/{name}/{version}/{asset}:
         get:

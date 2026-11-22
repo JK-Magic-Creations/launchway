@@ -486,6 +486,7 @@ var rows = []Row{
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/yank", MCP: "withdraw_release", CLI: "release yank", Status: Equal},
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry", MCP: "retry_outside_release", CLI: "release outside retry", Status: Equal},
 	{Route: "POST /api/v1/projects/{name}/releases/{version}/changelog", MCP: "propose_release_changelog", CLI: "release changelog", Status: Equal},
+	{Route: "GET /public/releases/{name}/{version}", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the public page of a release, for installations that allow public content: unauthenticated by design and a subset of what get_release returns; everything else is a not found"},
 	{Route: "GET /public/releases/{name}/{version}/{asset}", MCP: "", CLI: "", Status: Exempt, Reason: "the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found"},
 	{Route: "GET /api/v1/releases", MCP: "list_releases", CLI: "release list", Status: Equal},
 	{Route: "GET /api/v1/release-matrix", MCP: "get_release_matrix", CLI: "release matrix", Status: Equal},

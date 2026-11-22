@@ -96,6 +96,8 @@ func (s *Server) releaseOf(w http.ResponseWriter, r *http.Request) (*engine.Rele
 		if rel, err = s.Engine.GetRelease(v); err == nil && rel.Project != project {
 			err = fmt.Errorf("%w: %s has no release %s", engine.ErrNotFound, project, v)
 		}
+	} else if v == "latest" && r.Method == http.MethodGet {
+		rel, err = s.Engine.LatestRelease(project) // the stable address of the newest published release that is not a pre-release
 	} else {
 		rel, err = s.Engine.FindRelease(project, v)
 	}
@@ -903,8 +905,8 @@ func (s *Server) publicDownload(w http.ResponseWriter, r *http.Request) {
 		notFound()
 		return
 	}
-	rel, err := s.Engine.FindRelease(project, r.PathValue("version"))
-	if err != nil || rel.State != engine.ReleasePublished || !rel.Public {
+	rel, ok2 := s.publicRelease(project, r.PathValue("version"))
+	if !ok2 {
 		notFound()
 		return
 	}
