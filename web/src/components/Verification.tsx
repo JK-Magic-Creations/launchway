@@ -6,6 +6,8 @@ import {
 import { clock, duration } from "../format";
 import { costText, usageText } from "./usageText";
 import { HealthCalls } from "./HealthCalls";
+import { prose } from "../prose";
+const P = await prose("components.Verification");
 
 export { costText, usageText };
 import { useNow } from "../live";
@@ -23,9 +25,9 @@ export function sensitivityK(s: string): number {
 }
 
 const SENSITIVITY_TEXT: Record<string, string> = {
-  high: "high: a reading 2 standard deviations from the reference fails",
-  medium: "medium: a reading 3 standard deviations from the reference fails",
-  low: "low: a reading 4.5 standard deviations from the reference fails",
+  high: P.t0,
+  medium: P.t1,
+  low: P.t2,
 };
 
 /** A step that is still being verified, or may be. */
@@ -54,7 +56,7 @@ export function verifyState(v: { status?: string; outcome?: VerifyOutcome; overr
     case "failed": return { label: "Failed", tone: "bad" };
     case "inconclusive": return { label: "Inconclusive", tone: "warn" };
   }
-  if (v.status === "queued") return { label: terms().say("Waiting for a {deploy:do} {runner}"), tone: "idle" };
+  if (v.status === "queued") return { label: terms().say(P.t3), tone: "idle" };
   if (v.status === "canceled") return { label: "Canceled", tone: "idle" };
   if (v.start && v.start > now) return { label: "Starts soon", tone: "run" };
   return { label: "Watching", tone: "run" };
@@ -124,9 +126,9 @@ function NoVerification({ run, step, loading }: { run: RunDetail; step: StepView
   else if (step.status === "pending") {
     body = <p className="sub">Watches {env} {g ? `for ${g.duration}, in intervals of ${g.interval},` : ""} once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>;
   } else if (step.status === "skipped") body = <p className="sub">{step.error || "Skipped"}. Nothing was watched.</p>;
-  else if (step.status === "canceled") body = <p className="sub">Canceled before the verification started.</p>;
-  else if (step.status === "failed") body = <p className="sub">It failed before the verification started{step.error ? `: ${step.error}` : "."}</p>;
-  else body = <p className="sub">This server has no verification recorded for this step.</p>;
+  else if (step.status === "canceled") body = <p className="sub">{P.t4}</p>;
+  else if (step.status === "failed") body = <p className="sub">{P.t5}{step.error ? `: ${step.error}` : "."}</p>;
+  else body = <p className="sub">{P.t6}</p>;
   return (
     <section className="card dep" aria-label="Verification">
       <div className="dep-head"><h3 className="h-sm">Verifying {env}</h3></div>
@@ -159,8 +161,7 @@ function Verification({ run, step, v, now, reload }: { run: RunDetail; step: Ste
       {v.status === "waiting" && !v.override && (
         <div className="callout callout-wait vwait" role="status">
           <span>
-            <strong>Waiting for a person.</strong> The verification was inconclusive, and this step is set to pause
-            {" "}(<Mono>on_inconclusive: pause</Mono>{terms().say("): someone must mark it passed or failed below. The {run} waits until then")}
+            <strong>Waiting for a person.</strong> {P.t7}{" "}(<Mono>on_inconclusive: pause</Mono>{terms().say(P.t8)}
             {v.deadline ? <>; if nobody decides by {clock(v.deadline)} ({v.deadline > now ? `in ${duration(v.deadline - now)}` : "now"}), it fails</> : null}.
           </span>
         </div>
@@ -236,11 +237,11 @@ function BaselineLine({ run, v, g }: { run: RunDetail; v: VerificationView; g?: 
       </p>
     );
   }
-  if (g && g.baseline === 0) return <p className="vbaseline faint">Not compared with earlier verifications (<Mono>baseline: 0</Mono>).</p>;
+  if (g && g.baseline === 0) return <p className="vbaseline faint">{P.t9}<Mono>baseline: 0</Mono>).</p>;
   return (
     <p className="vbaseline faint">
-      No earlier passed verification of {v.service} in {v.environment} to compare with{run.number > 1 ? " yet" : ""}: judged
-      {" "}{v.queries.some((q) => q.stable_query) ? "against the stable version and the fixed bounds" : "against the fixed bounds"} only.
+      {P.t10}{v.service} in {v.environment} to compare with{run.number > 1 ? " yet" : ""}: judged
+      {" "}{v.queries.some((q) => q.stable_query) ? P.t11 : "against the fixed bounds"} only.
     </p>
   );
 }
@@ -257,10 +258,10 @@ function VerdictBox({ v, st }: { v: VerificationView; st: { label: string; tone:
       <span className="vverdict-lead">{lead}{v.override ? ` (${vd.outcome})` : ""}</span>
       <p className="vverdict-text">{vd.summary || (vd.outcome === "running" ? "Nothing read yet." : "No summary.")}</p>
       {v.on_fail !== "fail" && vd.outcome === "failed" && !v.override && (
-        <p className="vverdict-note">With <Mono>on_fail: {v.on_fail}</Mono>, a failure also aborts the deployment's rollout.</p>
+        <p className="vverdict-note">With <Mono>on_fail: {v.on_fail}</Mono>{P.t12}</p>
       )}
       {vd.outcome === "inconclusive" && v.on_inconclusive !== "pause" && !v.override && (
-        <p className="vverdict-note">With <Mono>on_inconclusive: {v.on_inconclusive}</Mono>, an inconclusive verification {v.on_inconclusive === "pass" ? terms().say("lets the {run} go on") : "fails the step"}.</p>
+        <p className="vverdict-note">With <Mono>on_inconclusive: {v.on_inconclusive}</Mono>{P.t13}{v.on_inconclusive === "pass" ? terms().say("lets the {run} go on") : "fails the step"}.</p>
       )}
     </div>
   );
@@ -282,8 +283,7 @@ function ModelExplanation({ x }: { x: VerifyExplanation }) {
         <>
           {x.changed && (
             <p className="vexpl-changed">
-              <strong>The model changed the outcome</strong> to {x.outcome}: the statistics passed it, and this step lets the model turn a pass
-              into {x.outcome === "failed" ? "a failure" : "inconclusive"} (<Mono>decide: model-assisted</Mono>).
+              <strong>The model changed the outcome</strong> to {x.outcome}{P.t14}{x.outcome === "failed" ? "a failure" : "inconclusive"} (<Mono>decide: model-assisted</Mono>).
             </p>
           )}
           {x.summary && <p className="vexpl-text">{x.summary}</p>}
@@ -501,7 +501,7 @@ function MetricChart({ v, m, baseline, max, min }: { v: VerificationView; m: Met
   const labelEvery = Math.max(1, Math.ceil(v.total / Math.max(1, Math.floor((W - pad.l - pad.r) / 28))));
 
   const failedList = [...failed].sort((a, b) => a - b).map((i) => i + 1);
-  const desc = `${m.name} over ${v.total} intervals. ${canary.length ? `The new version read between ${num(dataMin)} and ${num(Math.max(...canary.map((p) => p.v)))}.` : "No readings of the new version."}`
+  const desc = `${m.name} over ${v.total} intervals. ${canary.length ? `The new version read between ${num(dataMin)} and ${num(Math.max(...canary.map((p) => p.v)))}.` : P.t15}`
     + (stable.length ? ` The stable version averaged ${num(m.stable.mean)}.` : "")
     + (band ? ` The baseline is ${num(band.mean)}, allowed ${num(Math.max(band.lo, 0))} to ${num(band.hi)}.` : "")
     + (max !== undefined ? ` Upper bound ${num(max)}.` : "") + (min !== undefined ? ` Lower bound ${num(min)}.` : "")
@@ -582,10 +582,10 @@ const CLASS_LABEL: Record<string, string> = {
   unknown: "New", unexpected_frequency: "More often", known: "Known", no_reference: "No reference",
 };
 const CLASS_TITLE: Record<string, string> = {
-  unknown: "Not seen in the reference (the baseline or the stable version): new with this version",
-  unexpected_frequency: "Seen in the reference, but much more often now",
-  known: "Seen in the reference at a similar rate",
-  no_reference: "There is no reference to compare with",
+  unknown: P.t16,
+  unexpected_frequency: P.t17,
+  known: P.t18,
+  no_reference: P.t19,
 };
 
 function LogBlock({ l, v }: { l: LogVerdict; v: VerificationView }) {
@@ -600,7 +600,7 @@ function LogBlock({ l, v }: { l: LogVerdict; v: VerificationView }) {
         <span className="faint small">{l.lines.toLocaleString()} lines read, {clusters.length} pattern{clusters.length === 1 ? "" : "s"}</span>
       </div>
       {l.reason && <p className="vmetric-reason">{l.reason}</p>}
-      {truncated && <p className="sub small">The source had more lines than the step reads in an interval (<Mono>max_lines</Mono>); the rest were not read.</p>}
+      {truncated && <p className="sub small">{P.t20}<Mono>max_lines</Mono>); the rest were not read.</p>}
       {errors.length > 0 && (
         <details className="vreadings">
           <summary className="tfile-warn">Could not be read in {errors.length} interval{errors.length === 1 ? "" : "s"}</summary>
@@ -693,14 +693,13 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
     <form className="dctl vctl" aria-label="Mark the verification" onSubmit={(e) => e.preventDefault()}>
       <h4 className="h-xs">Decide by hand</h4>
       <p className="sub small">
-        {v.status === "waiting" ? "The statistics could not decide. " : "You may decide before the window is over. "}
-        {terms().say("Marking it passed lets the {run} go on; marking it failed acts as a failed verification does")}
-        {aborts ? <> (<Mono>on_fail: {v.on_fail}</Mono>: the deployment's rollout is aborted)</> : null}.
-        {" "}A pass marked by a person does not teach later verifications.
-      </p>
+        {v.status === "waiting" ? P.t21 : P.t22}
+        {terms().say(P.t23)}
+        {aborts ? <> (<Mono>on_fail: {v.on_fail}</Mono>{P.t24}</> : null}.
+        {" "}{P.t25}</p>
       {(pass?.available || fail?.available) && (
         <label className="field">
-          <span>Reason <span className="faint">(required, kept with the decision)</span></span>
+          <span>Reason <span className="faint">{P.t26}</span></span>
           <textarea value={reason} maxLength={2000} rows={2} required aria-describedby={hintId} onChange={(e) => setReason(e.target.value)} />
         </label>
       )}
@@ -714,8 +713,8 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
         )}
       </div>
       {confirm && (
-        <div className="callout callout-bad dctl-confirm" role="alertdialog" aria-label="Confirm marking failed">
-          <span>Mark the verification failed? The rollout of {v.service} in {v.environment} is aborted: all traffic goes back to the stable version.</span>
+        <div className={P.t27} role="alertdialog" aria-label="Confirm marking failed">
+          <span>{P.t28}{v.service} in {v.environment} {P.t29}</span>
           <span className="dctl-confirm-actions">
             <button type="button" className="btn btn-danger" disabled={busy} onClick={() => mark("failed")}>Yes, mark failed</button>
             <button type="button" className="btn" disabled={busy} onClick={() => setConfirm(false)}>Keep watching</button>
@@ -724,7 +723,7 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
       )}
       <div id={hintId} className="dctl-why">
         {both ? <p>{cap(why[0].reason)}</p> : why.map((w) => <p key={w.action}>{w.action === "mark-passed" ? "Mark passed" : "Mark failed"}: {w.reason}{/[.!?)]$/.test(w.reason) ? "" : "."}</p>)}
-        {empty && (pass?.available || fail?.available) && <p>Write a reason first: it is kept with the decision and in the {terms().lower("logbook")}.</p>}
+        {empty && (pass?.available || fail?.available) && <p>{P.t30}{terms().lower("logbook")}.</p>}
       </div>
     </form>
   );
@@ -748,7 +747,7 @@ function WhatWasRead({ v }: { v: VerificationView }) {
             <div className="vq-head"><strong className="mono">{q.name}</strong> <span className="faint">from</span> <Mono>{q.source}</Mono>{q.index && <> <span className="faint">index</span> <Mono>{q.index}</Mono></>}</div>
             {q.query && <pre className="code vq-code" aria-label={`Query of ${q.name}`}>{q.query}</pre>}
             {q.stable_query && <><div className="faint small">the stable version's</div><pre className="code vq-code">{q.stable_query}</pre></>}
-            {q.statement && <div className="small">the statement <Mono>{q.statement}</Mono>, written by the source's operator</div>}
+            {q.statement && <div className="small">the statement <Mono>{q.statement}</Mono>{P.t31}</div>}
           </li>
         ))}
       </ul>
@@ -757,7 +756,7 @@ function WhatWasRead({ v }: { v: VerificationView }) {
           {params.map(([k, val]) => <Fragment key={k}><dt className="mono">{`{{${k}}}`}</dt><dd className="mono">{val}</dd></Fragment>)}
         </dl>
       )}
-      <p className="sub small">{terms().say("Read by a {deploy:do} {runner} serving target")} <Mono>{v.target}</Mono>, with the credentials its operator configured; queries run once each interval is over.</p>
+      <p className="sub small">{terms().say(P.t32)} <Mono>{v.target}</Mono>{P.t33}</p>
     </details>
   );
 }
@@ -793,7 +792,7 @@ export function VerificationsTab({ run, list, error, reload, onStep }: {
   return (
     <div className="imgs">
       <p className="sub imgs-intro">
-        {steps.length === 1 ? "1 verify step" : `${steps.length} verify steps`}{terms().say(": each watches an {environment} for a window and decides from metrics and logs whether the new version is healthy. The statistics decide; a model, if one is named, only explains.")}
+        {steps.length === 1 ? "1 verify step" : `${steps.length} verify steps`}{terms().say(P.t34)}
       </p>
       {steps.map((s) => (
         <div key={s.id} className="vtab-step">

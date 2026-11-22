@@ -14,6 +14,8 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { terms } from "../terms";
 import { releasesApi, type Cell, type Formation, type Measures, type Report } from "../releasesApi";
 import "../releases.css";
+import { prose } from "../prose";
+const P = await prose("pages.ReleasesManage");
 
 const relHref = (project: string, version: string) => `/deployments/releases/${encodeURIComponent(project)}/${encodeURIComponent(version)}`;
 const HEALTH: Record<string, { tone?: Tone; word: string }> = { healthy: { tone: "ok", word: "healthy" }, failed: { tone: "bad", word: "failed" }, returned: { tone: "warn", word: "returned to base" } };
@@ -30,16 +32,16 @@ export function ReleaseMatrixPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Where each release is"
-        sentence={terms().say("Each row is a {project}, each column an Airfield. What runs in an Airfield is what was last launched there; a release is what gets promoted from one to the next.")} />
+        sentence={terms().say(P.t0)} />
       <ReleasesNav path="/deployments/releases/matrix" />
       <ErrorBox error={data.error} />
       {data.loading && !m && <div className="loading">Loading…</div>}
-      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">{terms().say("Once a {project} has a release, or a pipeline has launched something into an Airfield, it appears here.")}</EmptyState></Sheet>}
+      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">{terms().say(P.t1)}</EmptyState></Sheet>}
       {m && m.rows.length > 0 && (
         <Sheet>
           <div className="rel-table-wrap">
             <table className="rel-table">
-              <caption className="visually-hidden">Which release runs in which Airfield</caption>
+              <caption className="visually-hidden">{P.t2}</caption>
               <thead><tr><th scope="col">{terms().say("{Project}")}</th>{m.airfields.map((a) => <th key={a} scope="col">{a}</th>)}</tr></thead>
               <tbody>
                 {m.rows.map((row) => (
@@ -73,7 +75,7 @@ function CellView({ c, project, now, latest, mayPromote, mayReturn, onPromote, o
     <div className="rel-cell">
       {c.version && <span className="v">{c.release_id ? <a href={relHref(project, c.version)} onClick={onLink}>{c.version}</a> : c.version}{" "}{h && <Chip tone={h.tone}>{h.word}</Chip>}</span>}
       {c.version && <span className="m">since {ago(c.since ?? 0, now)} <span className="faint">({clock(c.since ?? 0)})</span>{c.by ? ` by ${c.by}` : ""}{c.run && <> · <EntityLink kind="run" name={`Sortie #${c.run_number}`} id={c.run} /></>}</span>}
-      {!c.release_id && c.version && <span className="m">{terms().say("not a release of this {project}")}</span>}
+      {!c.release_id && c.version && <span className="m">{terms().say(P.t3)}</span>}
       {c.launching && <span className="m"><Chip tone="run">launching {c.launching.version}</Chip> since {ago(c.launching.since, now)}</span>}
       <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {mayPromote && latest && c.version !== latest && !c.launching && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<span className="visually-hidden"> to {c.airfield}</span></Button>}
@@ -109,12 +111,12 @@ export function ReleaseCalendarPage() {
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Release calendar"
         sentence={`What is planned, in progress and done, and the periods when nothing is promoted (a ${hold}). A plan is a reminder: promoting stays a person's action.`} />
-      <ReleasesNav path="/deployments/releases/calendar" />
+      <ReleasesNav path={P.t4} />
       <ErrorBox error={data.error} />
       {data.loading && !data.data && <div className="loading">Loading…</div>}
-      {data.data && entries.length === 0 && <Sheet><EmptyState title="Nothing on the calendar">Promotions and freezes from two weeks ago to a month ahead appear here.</EmptyState></Sheet>}
+      {data.data && entries.length === 0 && <Sheet><EmptyState title="Nothing on the calendar">{P.t5}</EmptyState></Sheet>}
       {entries.length > 0 && (
-        <Sheet title="Two weeks back to a month ahead">
+        <Sheet title={P.t6}>
           <ul className="rel-cal" aria-label="Calendar entries">
             {entries.map((e, i) => (
               <li key={i} className={e.kind === "freeze" ? "freeze" : ""}>
@@ -136,7 +138,7 @@ export function ReleaseCalendarPage() {
             <label>Why<input type="text" value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={500} /></label>
             <Button kind="pri" type="submit" disabled={!to || !reason.trim()}>Start the {hold}</Button>
           </form>
-          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} {terms().say("nothing is promoted unless an administrator of the {project} overrides, with a reason that is kept in the")} {terms().lower("logbook")}.</p>
+          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} {terms().say(P.t7)} {terms().lower("logbook")}.</p>
           <ErrorBox error={error} />
         </Sheet>
       )}
@@ -172,11 +174,11 @@ export function ReleaseFormationsPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Formations"
-        sentence={terms().say("A Formation groups releases of several {projects} that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started.")} />
-      <ReleasesNav path="/deployments/releases/formations" />
+        sentence={terms().say(P.t8)} />
+      <ReleasesNav path={P.t9} />
       <ErrorBox error={data.error} />
       {data.loading && !data.data && <div className="loading">Loading…</div>}
-      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">Write one below: the releases, in the order they should go out. The order is yours, or tick "Order by dependencies" and the software graph puts what the others depend on first.</EmptyState></Sheet>}
+      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">{P.t10}</EmptyState></Sheet>}
       {(data.data ?? []).map((f) => (
         <Sheet key={f.id} title={<>{f.name} <Chip tone={f.state === "done" ? "ok" : f.state === "partial" || f.state === "failed" ? "bad" : f.state === "promoting" ? "run" : undefined}>{f.state}</Chip></>}>
           <ol className="rowlist" style={{ listStyle: "decimal inside" }} aria-label={`Members of ${f.name}, in order`}>
@@ -184,7 +186,7 @@ export function ReleaseFormationsPage() {
               <li key={m.release_id}><div className="main rel-member"><a href={relHref(m.project, m.version)} onClick={onLink}>{m.project} {m.version}</a><Chip tone={MEMBER[m.state]?.tone}>{MEMBER[m.state]?.word ?? m.state}</Chip>{m.detail && <span className="faint">{m.detail}</span>}</div></li>
             ))}
           </ol>
-          {f.order_source === "dependencies" && <p className="faint small">Ordered by dependencies: the software graph put what the others depend on first.</p>}
+          {f.order_source === "dependencies" && <p className="faint small">{P.t11}</p>}
           {f.state === "planned" && any && (
             <div className="rel-inline">
               <label>Promote to<select value={airfield[f.id] ?? ""} onChange={(e) => setAirfield({ ...airfield, [f.id]: e.target.value })}><option value="">Choose an Airfield</option>{(mx.data?.airfields ?? []).map((a) => <option key={a}>{a}</option>)}</select></label>
@@ -197,8 +199,8 @@ export function ReleaseFormationsPage() {
         <Sheet title="Make a formation">
           <form className="rel-inline" onSubmit={(e) => { e.preventDefault(); if (name.trim() && members.trim()) make(); }}>
             <label>Name<input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={64} /></label>
-            <label>{terms().say("Releases, in order, as {project}@version")}<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
-            <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> Order by dependencies (the software graph puts what others depend on first)</label>
+            <label>{terms().say(P.t12)}<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
+            <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> {P.t13}</label>
             <Button kind="pri" type="submit" disabled={!name.trim() || !members.trim()}>Make the formation</Button>
           </form>
           <ErrorBox error={error} />
@@ -226,7 +228,7 @@ export function ReleaseReportPage() {
   const rep = data.data;
   return (
     <div className="page">
-      <PageHead eyebrow="Deployments · Releases" title="Release report" sentence="What shipped, when it reached each Airfield, and the four measures of delivery worked out from what Launchway already records." />
+      <PageHead eyebrow="Deployments · Releases" title="Release report" sentence={P.t14} />
       <ReleasesNav path="/deployments/releases/report" />
       <div className="toolbar2">
         <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span><select value={project} onChange={(e) => setProject(e.target.value)}><option value="">{terms().say("Every {project}")}</option>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
@@ -251,8 +253,8 @@ function ReportBody({ rep }: { rep: Report }) {
       <Sheet title="The four delivery measures">
         <div className="rel-measures">
           <div><div className="k">Frequency</div><div className="v">{m.frequency_per_week.toFixed(2)}</div><div className="f">successful launches a week; {m.launches} launches in all</div></div>
-          <div><div className="k">Lead time (median)</div><div className="v">{hours(m.lead_time_median_s)}</div><div className="f">from the commit to the Airfield, over {m.lead_time_count} launches</div></div>
-          <div><div className="k">Change failure rate</div><div className="v">{pct(m.change_failure_rate)}</div><div className="f">{m.failures} of {m.launches} launches failed or were returned to base</div></div>
+          <div><div className="k">Lead time (median)</div><div className="v">{hours(m.lead_time_median_s)}</div><div className="f">{P.t15}{m.lead_time_count} launches</div></div>
+          <div><div className="k">Change failure rate</div><div className="v">{pct(m.change_failure_rate)}</div><div className="f">{m.failures} of {m.launches} {P.t16}</div></div>
           <div><div className="k">Time to restore (median)</div><div className="v">{hours(m.time_to_restore_median_s)}</div><div className="f">{m.restore_count} restored, {m.unrestored} not yet</div></div>
         </div>
       </Sheet>
@@ -267,7 +269,7 @@ function ReportBody({ rep }: { rep: Report }) {
               })}
               <text x="10" y={h + 16}>{day(rep.from)}</text><text x={w - 10} y={h + 16} textAnchor="end">{day(rep.to)}</text>
             </svg>
-            <p className="rel-hint">Launches that succeeded in the accent color; launches that failed or were returned to base in red.</p>
+            <p className="rel-hint">{P.t17}</p>
           </div>
           <div className="rel-table-wrap"><table className="rel-table">
             <caption>The same numbers as a table</caption>
@@ -284,9 +286,9 @@ function ReportBody({ rep }: { rep: Report }) {
         </Sheet>
       )}
       <Sheet title="What shipped">
-        {rep.shipped.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No release was published in this period.</p> : (
+        {rep.shipped.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>{P.t18}</p> : (
           <div className="rel-table-wrap"><table className="rel-table">
-            <caption className="visually-hidden">Releases published in the period and when each reached each Airfield</caption>
+            <caption className="visually-hidden">{P.t19}</caption>
             <thead><tr><th scope="col">Release</th><th scope="col">Published</th><th scope="col">Reached</th><th scope="col" className="n">Failures</th><th scope="col" className="n">Returns</th></tr></thead>
             <tbody>{rep.shipped.map((s) => (
               <tr key={s.release.id}><td><a href={relHref(s.release.project, s.release.version)} onClick={onLink}>{s.release.project} {s.release.version}</a></td><td>{day(s.release.published_at ?? 0)} by {s.release.published_by}</td>

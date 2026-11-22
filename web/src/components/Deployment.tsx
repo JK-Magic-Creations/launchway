@@ -7,6 +7,8 @@ import { Link, Mono } from "./ui";
 import { DeploymentControls } from "./DeploymentControls";
 import { Runway } from "./Runway";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("components.Deployment");
 
 // What a deploy step did and what deploy runners last observed of it. This
 // is read-only: it shows the deployment, it never changes it.
@@ -17,10 +19,10 @@ export const STALE_MS = 30_000;
 
 const PHASE: Record<DeployPhase, string> = {
   unobserved: "not observed",
-  app_missing: "the application does not exist",
-  source_error: "the application does not deploy from the repository",
+  app_missing: P.t0,
+  source_error: P.t1,
   syncing: "waiting for Argo CD to sync",
-  sync_blocked: "a sync window does not allow syncing",
+  sync_blocked: P.t2,
   sync_failed: "the sync failed",
   progressing: "synced, waiting to be healthy",
   degraded: "degraded",
@@ -28,7 +30,7 @@ const PHASE: Record<DeployPhase, string> = {
   rollout_paused: "the rollout is paused",
   rollout_aborted: "the rollout was aborted",
   healthy: "healthy",
-  command_pending: "waiting for a deploy runner to apply a command",
+  command_pending: P.t3,
 };
 
 const SHORT: Partial<Record<DeployPhase, string>> = {
@@ -77,11 +79,11 @@ export function verdictTone(v: string): string {
 }
 
 const VERDICT_TEXT: Record<Verdict, string> = {
-  deployed: "The version was deployed and nothing rolled it back.",
-  failed: "The deploy step failed and nothing rolled it back: the environment may run something in between.",
-  rolled_back: "The rollback step reverted the commit, and the environment was healthy again afterwards.",
-  rollback_failed: "The rollback step failed. The environment needs a person to look at it.",
-  abandoned: "The run was canceled before the version was deployed.",
+  deployed: P.t4,
+  failed: P.t5,
+  rolled_back: P.t6,
+  rollback_failed: P.t7,
+  abandoned: P.t8,
 };
 
 /** How fresh what was observed is. */
@@ -176,7 +178,7 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
     return (
       <span className="dfresh dfresh-warn" data-case="unserved">
         {compact ? terms().say(`no {deploy:do} {runner} serves target ${d.target}`)
-          : <>{terms().say("No {deploy:do} {runner} serves target")} <Mono>{d.target}</Mono>: nothing is observed, and commands wait until one does.</>}
+          : <>{terms().say(P.t9)} <Mono>{d.target}</Mono>{P.t10}</>}
         {f.state === "stale" && <span className="faint"> (last observed {ago(d.observed_at!, now)}{by})</span>}
       </span>
     );
@@ -189,11 +191,11 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
     case "never":
       return <span className="dfresh dfresh-warn">{compact ? terms().say(`no {deploy:do} {runner} has observed this yet (target ${d.target})`)
         : d.observer ? <>Not observed yet; {d.observer} serves target <Mono>{d.target}</Mono>.</>
-        : <>{terms().say("No {deploy:do} {runner} has observed this yet: is one running for target")} <Mono>{d.target}</Mono>?</>}</span>;
+        : <>{terms().say(P.t11)} <Mono>{d.target}</Mono>?</>}</span>;
     case "error":
-      return <span className="dfresh dfresh-bad">{terms().say("The {runner} cannot see the application:")} {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
+      return <span className="dfresh dfresh-bad">{terms().say(P.t12)} {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
     case "stale":
-      return <span className="dfresh dfresh-warn">Last observed {ago(d.observed_at!, now)}{by}{compact ? "" : ": what is shown may be out of date"}</span>;
+      return <span className="dfresh dfresh-warn">Last observed {ago(d.observed_at!, now)}{by}{compact ? "" : P.t13}</span>;
     case "fresh":
       return <span className="dfresh">observed {secondsAgo(d.observed_at!, now)}{by}</span>;
   }
@@ -257,10 +259,10 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         </div>
       </div>
       {step.kind === "rollback" && step.status === "skipped" && (
-        <p className="sub">Not needed{step.error ? `: ${step.error}` : ""}. The deployment it guards is shown below.</p>
+        <p className="sub">Not needed{step.error ? `: ${step.error}` : ""}{P.t14}</p>
       )}
       {step.kind === "rollback" && step.status === "pending" && (
-        <p className="sub">Runs only if a step guarding this deployment fails: it then reverts the commit below.</p>
+        <p className="sub">{P.t15}</p>
       )}
       {d.verdict && d.mode !== "rollback" && (
         <div className={`callout dep-verdict callout-${d.verdict === "deployed" ? "ok" : d.verdict === "rolled_back" ? "draft" : d.verdict === "abandoned" ? "info" : "bad"}`}>
@@ -275,7 +277,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         <dt>Version</dt>
         <dd>
           <Mono>{d.version}</Mono>
-          {d.previous_version ? <span className="faint"> (it ran <Mono>{d.previous_version}</Mono> before)</span> : <span className="faint"> (what ran before is not known)</span>}
+          {d.previous_version ? <span className="faint"> (it ran <Mono>{d.previous_version}</Mono> before)</span> : <span className="faint"> {P.t16}</span>}
         </dd>
         {d.commit && (
           <>
@@ -284,7 +286,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
               <Mono><span title={d.commit}>{shortSha(d.commit)}</span></Mono>
               {d.repo && <> <span className="faint">to</span> <Mono>{d.repo}</Mono></>}
               {d.branch && <> <span className="faint">on</span> <Mono>{d.branch}</Mono></>}
-              {!d.changed && <span className="faint"> (Git already held this version; that is the branch's tip)</span>}
+              {!d.changed && <span className="faint"> {P.t17}</span>}
             </dd>
           </>
         )}
@@ -293,7 +295,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         <dd>{d.holding ? terms().say(`Holds ${d.environment}'s lock for ${d.service}: other {runs} wait until it is done.`) : `Does not hold ${d.environment}'s lock${d.verdict ? " (released when it ended)" : ""}.`}</dd>
         <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <span className="faint">, deployed {clock(d.deployed_at)}</span> : null}</dd>
       </dl>
-      <p className="dep-launch"><Link href={`/runs/${run.id}/launch/${d.id}`}>Open this Launch</Link> <span className="faint">to see every object it made, their logs and tests, and to steer it.</span></p>
+      <p className="dep-launch"><Link href={`/runs/${run.id}/launch/${d.id}`}>Open this Launch</Link> <span className="faint">{P.t18}</span></p>
       <Observed d={d} now={now} />
       <DeploymentControls run={run} d={d} now={now} />
       <DeploymentRollback d={d} />
@@ -316,8 +318,7 @@ function Observed({ d, now }: { d: DeploymentView; now: number }) {
       </div>
       {notReconciling(d, now) > 0 && (
         <div className="dep-msg dep-msg-warn" data-case="not-reconciling">
-          Argo CD has not compared the application for {duration(notReconciling(d, now))}: is its application controller running?
-        </div>
+          {P.t19}{duration(notReconciling(d, now))}{P.t20}</div>
       )}
       <div className={"dep-observed-body" + (muted ? " stale" : "")}>
         {(d.phase || d.detail) && (
@@ -342,7 +343,7 @@ function Snapshot({ snap, muted, now }: { snap: DeploySnapshot; muted: boolean; 
           <div className="dep-notes">
             {app.revision && (
               <span>at <Mono><span title={app.revision}>{shortSha(app.revision)}</span></Mono>
-                {app.contains === false && " (not yet the deployment's commit)"}{app.contains === true && " (includes the deployment's commit)"}</span>
+                {app.contains === false && P.t21}{app.contains === true && P.t22}</span>
             )}
             {app.automated ? <span>syncs by itself</span> : <span>syncs when asked</span>}
             {app.reconciled_at ? <span>compared {ago(app.reconciled_at, now)}</span> : null}
@@ -387,7 +388,7 @@ export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["
         <span className="dep-block-title">Rollout</span>
         <span className={`dpill dpill-${tone}`}>{r.aborted ? "Aborted" : r.phase || "Unknown"}</span>
         {r.strategy && <span className="faint">{r.strategy === "blueGreen" ? "blue-green" : r.strategy}</span>}
-        {r.canary_weight !== undefined && <span className="dep-weight">{r.canary_weight}% of traffic to the new version</span>}
+        {r.canary_weight !== undefined && <span className="dep-weight">{r.canary_weight}{P.t23}</span>}
       </div>
       {r.message && <div className="dep-msg">{r.message}</div>}
       {steps.length > 0 && (
@@ -413,7 +414,7 @@ export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["
         <span>{r.ready} of {r.replicas} ready</span>
         <span>{r.updated} updated</span>
         <span>{r.available} available</span>
-        {!r.observed && <span>the controller has not seen the newest change yet</span>}
+        {!r.observed && <span>{P.t24}</span>}
       </div>
     </div>
   );
@@ -471,7 +472,7 @@ export function Analyses({ list, muted }: { list: NonNullable<DeploySnapshot["an
 function Timeline({ d }: { d: DeploymentView }) {
   return (
     <details className="dep-timeline" open>
-      <summary>What was observed, step by step ({d.timeline!.length})</summary>
+      <summary>{P.t25}{d.timeline!.length})</summary>
       <ol className="events">
         {d.timeline!.map((t, i) => (
           <li key={i}>
@@ -494,13 +495,13 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
   let body;
   if (lockWait) {
     body = (
-      <div className="callout callout-wait dep-lockwait">
+      <div className={P.t26}>
         <span>
           <strong>Waiting for {env}'s lock</strong>{step.started_at ? <> since {ago(step.started_at, now)}</> : null}.{" "}
           {holder
             ? <>{terms().say("{Run}")} <Link href={`/runs/${holder.run}?step=${encodeURIComponent(holder.step ?? "")}`}>#{holder.number}</Link> holds it{holder.step ? <> with {holder.step}</> : null}{holder.version ? <>, deploying <Mono>{holder.version}</Mono></> : null}. </>
-            : <>{terms().say("Another run is {deploy:doing} to")} {env}. </>}
-          {terms().say("Only one {run} {deploy:does} a service to an {environment} at a time; this one goes ahead when that deployment is done.")}
+            : <>{terms().say(P.t27)} {env}. </>}
+          {terms().say(P.t28)}
           {" "}See <Link href="/deployments/environments">{terms().say("{Environments}")}</Link>.
         </span>
       </div>
@@ -508,20 +509,20 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
   } else if (step.status === "skipped") {
     body = (
       <p className="sub">
-        {step.skip_kind === "not_needed" ? <>Not needed: {step.error || terms().say("there was nothing to {rollback:do}")}.</>
-          : step.skip_kind === "superseded" ? <>Superseded by a newer run: a newer run of the same service started waiting for {env}{terms().say("'s lock, so this older one did not {deploy:do}.")}{step.error ? ` ${step.error}.` : ""}</>
+        {step.skip_kind === "not_needed" ? <>Not needed: {step.error || terms().say(P.t29)}.</>
+          : step.skip_kind === "superseded" ? <>{P.t30}{env}{terms().say(P.t31)}{step.error ? ` ${step.error}.` : ""}</>
           : <>{step.error || "Skipped"}{terms().say(". Nothing was {deploy:did}.")}</>}
       </p>
     );
   } else if (step.status === "pending" || step.status === "queued") {
     body = <p className="sub">{step.kind === "rollback"
-      ? "Runs only if a step guarding the deployment fails: it then reverts the deployment's commit."
+      ? P.t32
       : step.kind === "rollout" ? `Acts on the rollout of ${step.deployment || "its deployment"} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
       : terms().say(`{Deploy:does} to ${env || terms().say("its {environment}")} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`)}</p>;
   } else if (step.status === "canceled") {
-    body = <p className="sub">{terms().say("Canceled before it {deploy:did} anything.")}</p>;
+    body = <p className="sub">{terms().say(P.t33)}</p>;
   } else {
-    body = <p className="sub">This server has no deployment recorded for this step.</p>;
+    body = <p className="sub">{P.t34}</p>;
   }
   return (
     <section className="card dep" aria-label="Deployment">

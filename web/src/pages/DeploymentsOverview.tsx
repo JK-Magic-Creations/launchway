@@ -12,6 +12,8 @@ import { Status, type State } from "../kit/Status";
 import { Band, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useNow } from "../live";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.DeploymentsOverview");
 
 const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", quiet: "skip" };
 
@@ -29,16 +31,16 @@ export function DeploymentsOverviewPage() {
   const trouble = rows.filter((r) => r.dg.tone === "bad" || r.dg.tone === "wait").sort((a, b) => (a.dg.tone === "bad" ? 0 : 1) - (b.dg.tone === "bad" ? 0 : 1));
   const moving = rows.filter((r) => r.dg.tone === "run").length;
   const envs = inst.environments;
-  const sentence = envs.length === 0 ? terms().say("No {environment} exists yet, so nothing can be {deploy:did}.")
-    : rows.length === 0 ? terms().say("{Environments} are set up, but nothing has been {deploy:did} to them yet.")
-    : trouble.length === 0 ? terms().say("Everything Launchway {deploy:did} is running as expected.") : <><b>{trouble.length} {trouble.length === 1 ? "service needs" : "services need"} a look.</b> The rest is fine.</>;
+  const sentence = envs.length === 0 ? terms().say(P.t0)
+    : rows.length === 0 ? terms().say(P.t1)
+    : trouble.length === 0 ? terms().say(P.t2) : <><b>{trouble.length} {trouble.length === 1 ? "service needs" : "services need"} a look.</b> The rest is fine.</>;
   return (
     <div className="page">
       <PageHead eyebrow={terms().say("{Deploys}")} title="What is running, and where" sentence={sentence}
         actions={envs.length > 0 ? <WizardButton wizard="add-environment" label={terms().say("Add an {environment}")} /> : undefined} />
       {envs.length === 0 ? (
         <WizardEmpty title={terms().say("No {environments} yet")} wizard="add-environment" label={terms().say("Add an {environment}")}
-          text={terms().say("An {environment} is a named place your software goes, like staging or production. A pipeline says {deploy:do} to staging; the {environment} says where that is. It takes one minute and {deploy:does} nothing.")} />
+          text={terms().say(P.t3)} />
       ) : (
         <>
           <Band cells={[
@@ -82,7 +84,7 @@ export function DeploymentsOverviewPage() {
               ))}
             </ul>
           </Sheet>
-          {rows.length === 0 && <Sheet><EmptyState title={terms().say("Nothing has been {deploy:did} yet")}>{terms().say("A {run} {deploy:does} to an {environment} when it reaches a deploy step. The applications and their diagnoses will appear here once a {deploy:do} {runner} has looked at one.")}</EmptyState></Sheet>}
+          {rows.length === 0 && <Sheet><EmptyState title={terms().say(P.t4)}>{terms().say(P.t5)}</EmptyState></Sheet>}
         </>
       )}
     </div>

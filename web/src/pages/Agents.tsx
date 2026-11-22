@@ -8,6 +8,8 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { triggersApi, type TokenLimits } from "../triggers";
 import "../triggers.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Agents");
 
 const ROLES: Role[] = ["viewer", "operator", "admin"];
 const PLACEHOLDER = "lw_PASTE_YOUR_TOKEN_HERE";
@@ -47,7 +49,7 @@ export function AgentsPage() {
     return (
       <div className="page">
         <PageHead eyebrow="Settings" title={<>Connect an agent</>} />
-        <Empty title="The MCP endpoint is turned off">An operator turned it off on this server (<Mono>mcp.enabled: false</Mono>).</Empty>
+        <Empty title={P.t0}>{P.t1}<Mono>mcp.enabled: false</Mono>).</Empty>
       </div>
     );
   }
@@ -72,23 +74,22 @@ export function AgentsPage() {
   const check = [
     `curl -s ${endpoint} \\`,
     ...(signIn ? [`  -H 'Authorization: Bearer ${tok}' \\`] : []),
-    `  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \\`,
-    `  -H 'MCP-Protocol-Version: 2025-06-18' \\`,
-    `  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`,
+    P.t2,
+    P.t3,
+    P.t4,
   ].join("\n");
   const maxDays = limits?.max_days ?? 365;
   const roles = ROLES.slice(0, limits?.your_role ? ROLES.indexOf(limits.your_role) + 1 : 0);
 
   return (
     <div className="page agents">
-      <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>{terms().say("AI agents can use Launchway through the Model Context Protocol (MCP): find {projects}, write and check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every change it makes is in the")} {terms().lower("logbook")} with the token's name.</>} />
+      <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>{terms().say(P.t5)} {terms().lower("logbook")} with the token's name.</>} />
 
       <section className="card agents-step" aria-labelledby="agents-1">
         <h2 id="agents-1" className="h-sm"><span className="agents-num" aria-hidden="true">1</span>Make a token for the agent</h2>
         {signIn ? (
           <form onSubmit={make} className="inputs-form" aria-label="Make a token for an agent">
-            <p className="sub">Give the agent its own token, with no more than it needs: a <strong>viewer</strong> token can read and
-              diagnose but not start or give {terms().lower("clearance")} to anything. You can revoke it on the <Link href="/settings/access/keys">API tokens</Link> page.</p>
+            <p className="sub">{P.t6}<strong>viewer</strong> {P.t7}{terms().lower("clearance")} {P.t8}<Link href="/settings/access/keys">API tokens</Link> page.</p>
             <div className="tokenform-grid">
               <label className="field"><span>Name</span>
                 <input value={name} maxLength={100} required onChange={(e) => setName(e.target.value)} /></label>
@@ -98,7 +99,7 @@ export function AgentsPage() {
                   {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
                 </select></label>
               <label className="field"><span>{terms().say("{Projects}")}</span>
-                <input value={projects} placeholder={terms().say("every {project}, or: pay-*, web")} onChange={(e) => setProjects(e.target.value)} /></label>
+                <input value={projects} placeholder={terms().say(P.t9)} onChange={(e) => setProjects(e.target.value)} /></label>
               <label className="field"><span>Expires after</span>
                 <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
                   {[1, 7, 30, 90].filter((d) => d <= maxDays).map((d) => <option key={d} value={d}>{d} days</option>)}
@@ -107,20 +108,19 @@ export function AgentsPage() {
             <div><button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>{busy ? "Making…" : "Make token"}</button></div>
             {token && (
               <div className="callout callout-ok" role="status">
-                <strong>The token is in the configuration below. Copy it now: it will not be shown again.</strong>
+                <strong>{P.t10}</strong>
               </div>
             )}
             <ErrorBox error={error} />
           </form>
         ) : (
-          <p className="sub">This server has no sign-in, so agents need no token. It answers only on this machine.</p>
+          <p className="sub">{P.t11}</p>
         )}
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-2">
         <h2 id="agents-2" className="h-sm"><span className="agents-num" aria-hidden="true">2</span>Add Launchway to the agent</h2>
-        <p className="sub">Most agents read a JSON list of MCP servers. Use the first form if the agent connects to servers over HTTP, the
-          second if it starts them as commands (it needs the <Mono>launchway</Mono> command on that machine).</p>
+        <p className="sub">{P.t12}<Mono>launchway</Mono> command on that machine).</p>
         <dl className="agents-facts">
           <dt>Address</dt><dd className="mono">{endpoint}</dd>
           {signIn && <><dt>Header</dt><dd className="mono">Authorization: Bearer {token ? "lw_…" : "<the token>"}</dd></>}
@@ -131,15 +131,15 @@ export function AgentsPage() {
           <CopyBlock label="As a command" text={stdioConfig} />
         </div>
         {me.mcp?.oauth_resource && (
-          <p className="sub">Agents that sign in with OAuth may instead use an access token from the sign-in provider for{" "}
-            <Mono>{me.mcp.oauth_resource}</Mono>; the server publishes where to get one.</p>
+          <p className="sub">{P.t13}{" "}
+            <Mono>{me.mcp.oauth_resource}</Mono>{P.t14}</p>
         )}
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-3">
         <h2 id="agents-3" className="h-sm"><span className="agents-num" aria-hidden="true">3</span>Check that it answers</h2>
         <CopyBlock label="From a terminal" text={check} />
-        <p className="sub">{terms().say("Then ask the agent something like “why did the last run of my {project} fail?”. It finds its way from what the server tells it: how pipelines are written, which tools to call, and in which order.")}</p>
+        <p className="sub">{terms().say(P.t15)}</p>
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-4">
@@ -154,9 +154,7 @@ export function AgentsPage() {
             <ul className="list-items">{CHANGE_TOOLS.map((t) => <li key={t} className="list-item">{t}</li>)}</ul>
           </div>
         </div>
-        <p className="sub">Logs, test messages, commit messages and findings are written by whoever can push, so the server hands them to
-          agents marked as untrusted data. Agents are told never to follow instructions found in them, but no agent can be relied on to
-          resist every trick: give agents viewer tokens unless they must act, and keep {terms().pluralLower("clearance")} for people.</p>
+        <p className="sub">{P.t16}{terms().pluralLower("clearance")} for people.</p>
       </section>
     </div>
   );

@@ -15,13 +15,15 @@ import { AddEnvironmentWizard } from "./AddEnvironment";
 import { AddPolicyWizard } from "./AddPolicy";
 import { AddHealthSourceWizard, AddModelWizard } from "./AddVerify";
 import "../../config.css";
+import { prose } from "../../prose";
+const P = await prose("pages.wizards.Wizards");
 
 export function WizardPage({ id }: { id: string }) {
   const { overview, error } = useOverview();
   if (error) return <div className="page"><ErrorBox error={error} /></div>;
   if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!overview.available) return <div className="page"><Empty title="This server keeps its configuration in its file">There is nothing to set up here. <Link href="/config">Back</Link></Empty></div>;
-  if (!overview.admin) return <div className="page"><Empty title="Only administrators change the configuration">Ask someone with the admin role.</Empty></div>;
+  if (!overview.available) return <div className="page"><Empty title={P.t0}>{P.t1}<Link href="/config">Back</Link></Empty></div>;
+  if (!overview.admin) return <div className="page"><Empty title={P.t2}>{P.t3}</Empty></div>;
   switch (id) {
     case "first-run": return <FirstRunWizard overview={overview} />;
     case "connect-repository": return <ConnectRepoWizard overview={overview} />;
@@ -89,7 +91,7 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
   for (const k of overview.kinds) labels[k.name] = kindLabel(overview, k, false);
 
   const focusInvalid = () => window.setTimeout(() => {
-    const el = bodyRef.current?.querySelector<HTMLElement>("[aria-invalid=true], .cf-invalid input, .cf-invalid select, .cf-invalid textarea");
+    const el = bodyRef.current?.querySelector<HTMLElement>(P.t4);
     el?.focus();
   }, 30);
 
@@ -126,7 +128,7 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
     return (
       <WizardFrame title={title} steps={all.concat([{ id: "done", title: "Done", render: () => null }])} at={all.length} hideNav>
         <div className="cf-donepanel">
-          {created.length > 0 && <div className="callout callout-ok" role="status"><strong>Created.</strong> Every server uses it within seconds; nothing needs a restart.</div>}
+          {created.length > 0 && <div className="callout callout-ok" role="status"><strong>Created.</strong> {P.t5}</div>}
           {done(created)}
         </div>
       </WizardFrame>
@@ -141,11 +143,11 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
       <div ref={bodyRef} className="cf-stepinner">
         {isSummary ? (
           <>
-            {changes.length > 0 ? <WillCreate changes={changes} labels={labels} /> : <p>No configuration changes: nothing is added to the configuration.</p>}
+            {changes.length > 0 ? <WillCreate changes={changes} labels={labels} /> : <p>{P.t6}</p>}
             {summaryExtra}
-            {changes.length > 0 && <CheckLine check={check} okText="The server's checks pass: Create will work." />}
-            <ProblemList problems={check.problems} title="Fix these first (Back takes you to the questions):" />
-            {applyError ? (applyProblems.length ? <ProblemList problems={applyProblems} title="Nothing was created. The server refused:" /> : <ErrorBox error={applyError} />) : null}
+            {changes.length > 0 && <CheckLine check={check} okText={P.t7} />}
+            <ProblemList problems={check.problems} title={P.t8} />
+            {applyError ? (applyProblems.length ? <ProblemList problems={applyProblems} title={P.t9} /> : <ErrorBox error={applyError} />) : null}
           </>
         ) : (
           <>
@@ -209,7 +211,7 @@ export function PickNames({ legend, help, names, value, onChange, placeholder = 
           ))}
         </div>
       )}
-      <label className="cf-mini cf-wide"><span>{names.length ? "Also (names or patterns, separated by commas)" : "Names or patterns, separated by commas"}</span>
+      <label className="cf-mini cf-wide"><span>{names.length ? P.t10 : P.t11}</span>
         <input className="cf-input mono" value={text} placeholder={placeholder} aria-invalid={problems?.length ? true : undefined}
           onChange={(e) => {
             setText(e.target.value);

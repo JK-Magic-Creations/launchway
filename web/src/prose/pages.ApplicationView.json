@@ -1,0 +1,10 @@
+{
+ "t0": "Launchway has not seen this application",
+ "t1": "An application appears once a pipeline has {deploy:did} it and a {deploy:do} {runner} has looked at it. Applications that Argo CD runs without a pipeline are not listed, because no {runner} has been asked to watch them.",
+ "t2": "Launchway explains it here; the engine's own console has the live objects, its diff and its history.",
+ "t3": "What runs now is not known: nothing Launchway {deploy:did} is known to run here.",
+ "t4": "The {deploy:do} {runner} has not listed the parts of this application.",
+ "t5": "Nothing the {deploy:do} {runner} reported explains it.",
+ "t6": "Nothing needs doing. Launchway keeps watching.",
+ "t7": "Asked. A {deploy:do} {runner} carries it out and the page shows the result."
+}

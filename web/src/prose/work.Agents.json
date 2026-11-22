@@ -1,0 +1,12 @@
+{
+ "t0": "Agents work on items next to people. Each one has its own token, limits and budget, and you can switch any of them off at once.",
+ "t1": "Register an agent to let it pick up items, open pull requests and report what it spends. It gets a token that works for it alone.",
+ "t2": "Spend by agent, {project} and item",
+ "t3": "Could not copy. Select the token and copy it by hand.",
+ "t4": "This is the only time the token is shown.",
+ "t5": "Copy it now and store it where the agent reads its secrets. Launchway keeps only a hash, so it cannot show it again.",
+ "t6": " The old token no longer works.",
+ "t7": "It may merge its own pull requests (only where the {project}'s rules also allow it)",
+ "t8": "? The old one stops working at once, so the agent stops until it has the new one.",
+ "t9": "This agent has not done anything yet."
+}

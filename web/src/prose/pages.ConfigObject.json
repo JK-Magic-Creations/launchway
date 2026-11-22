@@ -1,0 +1,22 @@
+{
+ "t0": "Nothing changed, so nothing was saved.",
+ "t1": " Its {runs} and history are kept; it stops being watched.",
+ "t2": "nobody yet: the built-in defaults",
+ "t3": "It is read-only here: change it in Terraform. If you must change it here, saving asks you to take it over from Terraform, which is recorded.",
+ "t4": "This was imported from a configuration file. The file's copy is now ignored: changes made here are the ones that count.",
+ "t5": ": it does not apply. Restoring it brings it back as it was.",
+ "t6": "Someone else changed this since you opened it.",
+ "t7": "Your change was not saved, so theirs is not lost. Reload to see their version, then make your change again (copy it from the Raw tab first if it is long).",
+ "t8": "Why (kept in the history, optional)",
+ "t9": "for example: the team moved to the new cluster",
+ "t10": "The server's checks pass: you can save.",
+ "t11": "this page, the API or the command line",
+ "t12": "an import of a configuration file",
+ "t13": "Also set, without a field here: ",
+ "t14": ". They are kept as they are; edit them on the Raw tab.",
+ "t15": "The settings as JSON, with the configuration file's keys",
+ "t16": "cf-input cf-textarea cf-raw mono",
+ "t17": "the settings must be an object: { … }",
+ "t18": "Every key the configuration file has for this kind works here, including those without a field on the Settings tab. The server checks it as you type.",
+ "t19": "Settings it has itself, and what it gets from the levels above it. Change a value where it comes from."
+}

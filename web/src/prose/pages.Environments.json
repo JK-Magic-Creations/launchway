@@ -1,0 +1,22 @@
+{
+ "t0": "What each {environment} runs, by service, and what is being {deploy:did} there now. Checked every 5 seconds.",
+ "t1": ": no {deploy:do} {runner} observes target",
+ "t2": ", so deployments there cannot finish and nothing shown for it is current.",
+ "t3": "Nothing has been {deploy:did} yet",
+ "t4": ". A {run} {deploy:does} to one when it reaches a step with",
+ "t5": "Nothing {deploy:did} here yet.",
+ "t6": "dpill dpill-lock env-protected",
+ "t7": "The {runner} cannot see the application:",
+ "t8": ": what is shown may be out of date",
+ "t9": "OutOfSync: Argo CD reports that what runs differs from Git",
+ "t10": "Live differs from the last deployment",
+ "t11": "envgrid-observer envgrid-observer-none",
+ "t12": "no {deploy:do} {runner} observes target",
+ "t13": "Nothing Launchway {deploy:did} is known to run here.",
+ "t14": "Not observed while idle (needs a {deploy:do} {runner} of this release)",
+ "t15": "An {environment} is a place runs {deploy:do} to, such as staging or prod: add one to see what runs where and to {deploy:do} with a protected, queued, recorded step.",
+ "t16": "How a pipeline {deploy:does} to an {environment}",
+ "t17": "A {run} {deploy:does} when it reaches a step with",
+ "t18": ": the step commits the new version to your GitOps repository, asks Argo CD to sync, and waits until the application is healthy.",
+ "t19": "  deploy-prod:\n    kind: {deploy:do}\n    needs: build\n    {environment}: prod\n    version: { output: build.tag }\n    argocd:\n      application: shop\n      write_back:\n        repo: gitops\n        branch: main\n        changes:\n          - file: apps/shop.yaml\n            image: team/shop\n            tag: { output: build.tag }"
+}

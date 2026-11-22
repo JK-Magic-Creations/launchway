@@ -8,6 +8,8 @@ import { bytes } from "../components/Security";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../caches.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Caches");
 
 type Column = "name" | "scope" | "platform" | "bytes" | "last_used_at" | "hits" | "run_number";
 
@@ -46,32 +48,23 @@ function NothingCached({ use, project }: { use?: CacheUse; project: string }) {
   const layers = use?.layers ?? [];
   const where = layers.length > 0 ? (
     <p className="faint small">
-      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} {terms().say("build layers in the {registry} (")}{layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}{terms().say("), apart from this list: the {registry} holds them, and the Images pages show what it holds.")}{" "}
+      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} {terms().say(P.t0)}{layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}{terms().say(P.t1)}{" "}
       <Link href={`/projects/${encodeURIComponent(project)}/pipeline`}>See the pipeline</Link>.
     </p>
   ) : null;
   if (none) {
     return (
-      <Empty title="No step in this pipeline uses a cache">
-        {terms().say("Nothing is kept between runs, so every {run} downloads its dependencies again. To keep a directory, give a step a")} <Mono>cache</Mono>, with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:
-        <pre className="code">{`cache:
-  - name: go
-    paths: [.cache/go-mod, .cache/go-build]
-    key: { files: ["**/go.sum"], text: go-1.27 }
-    fallback: latest
-    max_age: 7d`}</pre>
+      <Empty title={P.t2}>
+        {terms().say(P.t3)} <Mono>cache</Mono>{P.t4}<pre className="code">{P.t5}</pre>
         {where}
       </Empty>
     );
   }
   return (
     <Empty title="Nothing is cached yet">
-      A step keeps a directory between runs with a <Mono>cache</Mono> {terms().say("key; the first {run} saves it and the next restores it.")}
+      {P.t6}<Mono>cache</Mono> {terms().say(P.t7)}
       {use && use.steps.length > 0 && <> Steps that ask for one: {use.steps.map((s) => <Mono key={s.step}>{s.step} ({s.caches.join(", ")})</Mono>)}.</>}
-      <pre className="code">{`cache:
-  - name: pip
-    paths: [.cache/pip]
-    key: { files: [requirements.txt] }`}</pre>
+      <pre className="code">{P.t8}</pre>
       {where}
     </Empty>
   );
@@ -134,16 +127,15 @@ export function ProjectCachesPage({ name }: { name: string }) {
   return (
     <div className="page">
       <ProjectHead name={name} on="caches" title={<>Caches of {name}</>}
-        sentence={<>What its steps keep between runs (the <Mono>cache</Mono> key of a step). A pull request restores the default branch's entries and saves into its own scope only.</>} />
+        sentence={<>{P.t9}<Mono>cache</Mono> {P.t10}</>} />
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}
 
       {list && !list.policy.enabled && (
         <div className="callout callout-draft" role="status">
-          <strong>{terms().say("Caching is turned off for this {project}.")}</strong> Every lookup misses and nothing is saved
-          ({list.policy.source === "project" ? terms().say("this {project}'s own cache policy") : `the ${terms().lower("installation")}'s cache policy`}); steps run as without
-          a <Mono>cache</Mono> key. An administrator changes this with <Mono>launchway caches policy</Mono> or the API.
-          {list.entries.length > 0 && " Entries kept before are not restored, and end after their idle days."}
+          <strong>{terms().say(P.t11)}</strong> {P.t12}{list.policy.source === "project" ? terms().say(P.t13) : `the ${terms().lower("installation")}'s cache policy`}); steps run as without
+          a <Mono>cache</Mono> {P.t14}<Mono>launchway caches policy</Mono> or the API.
+          {list.entries.length > 0 && P.t15}
         </div>
       )}
 
@@ -157,12 +149,10 @@ export function ProjectCachesPage({ name }: { name: string }) {
           </div>
           <div className="store-meter cc-meter" role="meter" aria-label="Cache quota used" aria-valuemin={0} aria-valuemax={t.quota_bytes} aria-valuenow={t.bytes}
             aria-valuetext={`${bytes(t.bytes)} of ${bytes(t.quota_bytes)}`}>
-            <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, t.bytes > 0 ? 1 : 0))}%` }} />
+            <span className={share >= 0.8 ? P.t16 : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, t.bytes > 0 ? 1 : 0))}%` }} />
           </div>
           <p className="faint small">
-            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? terms().say("for this {project}") : list.policy.source === "installation" ? `for the ${terms().lower("installation")}` : "by default"}.
-            When a save would pass it, the least recently used entries are ended to make room.
-          </p>
+            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? terms().say("for this {project}") : list.policy.source === "installation" ? `for the ${terms().lower("installation")}` : "by default"}{P.t17}</p>
         </section>
       )}
 
@@ -212,7 +202,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
                     <td>
                       <strong>{e.name}</strong>{e.status === "uploading" && <span className="faint"> (being saved)</span>}
                       <div className="cc-key" title={e.key}>{shortKey(e.key)}…{e.generation > 1 ? `, generation ${e.generation}` : ""}</div>
-                      <div className="faint small">{e.pipeline || "an older entry, no longer restored"}{e.sensitive ? ", sensitive" : ""}</div>
+                      <div className="faint small">{e.pipeline || P.t18}{e.sensitive ? ", sensitive" : ""}</div>
                     </td>
                     <td className="cc-scope">{e.scope}</td>
                     <td>{e.platform}</td>
@@ -231,7 +221,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
               </tbody>
             </table>
           </div>
-          {!mayDelete && <p className="faint small">{terms().say("Deleting entries needs the operator role on this {project}.")}</p>}
+          {!mayDelete && <p className="faint small">{terms().say(P.t19)}</p>}
         </>
       )}
     </div>

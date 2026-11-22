@@ -11,6 +11,8 @@ import { pinToHome } from "./pin";
 import { buildTree, highlight, isFlightSeg, itemScore, nodeKey, ROOT, visibleNodes, worst, type Seg, type Tone, type XItem, type XNode } from "./tree";
 import { FlightCheck, MoveFlightsBar, useFlightSelection, type FlightSelection } from "../components/MoveFlights";
 import "./explorer.css";
+import { prose } from "../prose";
+const P = await prose("explorer.Explorer");
 
 // The Explorer: one component for every long list (pipelines, repositories, projects, Sorties). A tree of
 // places on the left (levels, then folders), the selected place's items on the right as cards or a table, a
@@ -253,18 +255,18 @@ export function Explorer(p: ExplorerProps) {
             <span className="xp-grow" />
             <button type="button" className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText(location.href); announce("Link to this view copied."); }}>Copy link to this view</button>
             <button type="button" className="btn btn-sm" onClick={() => { const t = `${p.noun.plural[0].toUpperCase()}${p.noun.plural.slice(1)}${filtering ? ": " + (q.trim() || [status !== "all" && status, label, kind, favOnly && "favorites", mineOnly && "mine"].filter(Boolean).join(", ")) : ""}`; pinToHome(t, location.pathname + location.search).then(() => announce("Pinned to your Home."), () => announce("Could not pin this view.", "assertive")); }}>Pin to Home</button>
-            {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arrangeMode === "everyone"} onClick={() => { const on = arrangeMode !== "everyone"; setArrangeMode(on ? "everyone" : "off"); announce(on ? "Arranging for everyone is on: drag an item onto a folder, or use Move to." : "Arranging is off."); }}>{arrangeMode === "everyone" ? "Done arranging" : "Arrange for everyone"}</button>}
-            {p.onCollections && <button type="button" className="btn btn-sm" aria-pressed={meMode} onClick={() => { const on = !meMode; setArrangeMode(on ? "me" : "off"); announce(on ? "Arranging for you is on: drag an item onto a collection, or use Add to collection. Nothing changes for anyone else." : "Arranging is off."); }}>{meMode ? "Done arranging" : "Arrange for me"}</button>}
+            {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arrangeMode === "everyone"} onClick={() => { const on = arrangeMode !== "everyone"; setArrangeMode(on ? "everyone" : "off"); announce(on ? P.t0 : "Arranging is off."); }}>{arrangeMode === "everyone" ? "Done arranging" : "Arrange for everyone"}</button>}
+            {p.onCollections && <button type="button" className="btn btn-sm" aria-pressed={meMode} onClick={() => { const on = !meMode; setArrangeMode(on ? "me" : "off"); announce(on ? P.t1 : "Arranging is off."); }}>{meMode ? "Done arranging" : "Arrange for me"}</button>}
           </div>
-          {meMode && <p className="callout" role="note">Arranging for you: collections are yours alone. An item shows in a collection without moving for anyone else; drag it onto a collection, or use <b>Add to collection…</b> on it.</p>}
-          {arrangeMode === "everyone" && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
+          {meMode && <p className="callout" role="note">{P.t2}<b>Add to collection…</b> on it.</p>}
+          {arrangeMode === "everyone" && <p className="callout" role="note">{P.t3}{p.noun.plural}{P.t4}<b>Move to…</b> on it.</p>}
           {p.flights && <MoveFlightsBar selection={selection} onMoved={p.flights.onMoved} />}
           {last && <p role="status" className="xp-undo"><b>{last.item.name}</b> was moved. <button type="button" className="btn btn-sm" onClick={() => { void p.onMove?.(last.item, last.from); announce("Move undone."); setLast(null); }}>Undo</button></p>}
 
           {list.length === 0 ? (
             <div className="xp-empty" role="status">
               <b>No {p.noun.singular} matches.</b>
-              <p className="faint">{filtering ? "Nothing fits the filters. " : "Nothing is in this place yet. "}Try fewer words, or clear the filters.</p>
+              <p className="faint">{filtering ? "Nothing fits the filters. " : P.t5}{P.t6}</p>
               {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
@@ -491,7 +493,7 @@ function MoveForm({ item, folders, onMove, onClose }: { item: XItem; folders: { 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onMove(item, to); }} className="xp-dialog">
       <h2 className="h-sm">Move {item.name}</h2>
-      <p className="faint small">This changes the folders for everyone who can see it.</p>
+      <p className="faint small">{P.t7}</p>
       <label>Folder
         <select data-autofocus value={to} onChange={(e) => setTo(e.target.value)}>
           <option value="">Not in a folder</option>
@@ -522,7 +524,7 @@ function CollectForm({ item, collections, onAdd, onClose }: { item: XItem; colle
   return (
     <form onSubmit={(e) => { e.preventDefault(); onAdd(item, to, name); }} className="xp-dialog">
       <h2 className="h-sm">Add {item.name} to a collection</h2>
-      <p className="faint small">A collection is yours alone. {item.name} stays where it is for everyone else.</p>
+      <p className="faint small">A collection is yours alone. {item.name} {P.t8}</p>
       <label>Collection
         <select data-autofocus value={to} onChange={(e) => setTo(e.target.value)}>
           {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

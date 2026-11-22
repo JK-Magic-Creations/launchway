@@ -7,12 +7,14 @@ import { announce } from "../kit/announce";
 import { navigate } from "../router";
 import { terms } from "../terms";
 import { launchApi, type LAction, type TreeView } from "../launchApi";
+import { prose } from "../prose";
+const P = await prose("launch.Controls");
 
 const WORDS: Record<LAction["action"], { label: string; what: string }> = {
-  pause: { label: "Pause", what: "Holds the rollout where it is: no new step starts until it is resumed." },
-  resume: { label: "Resume", what: "Lets a rollout a person paused carry on." },
-  restart: { label: "Restart the pods", what: "Replaces the workload's pods one by one (a rolling restart): the service keeps answering." },
-  scale: { label: "Scale", what: "Changes the number of replicas, within what this Airfield allows." },
+  pause: { label: "Pause", what: P.t0 },
+  resume: { label: "Resume", what: P.t1 },
+  restart: { label: "Restart the pods", what: P.t2 },
+  scale: { label: "Scale", what: P.t3 },
 };
 
 /** The workload the delivery made: the rollout, or else the Deployment. */
@@ -63,7 +65,7 @@ function ControlDialog({ v, action, object, onClose, onDone }: { v: TreeView; ac
     <Dialog label={`${w.label}: ${object.split("/").pop()}`} onClose={onClose}>
       <form className="lw-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) void submit(); }}>
         <h2>{w.label} {object.split("/").pop()}?</h2>
-        <p>{w.what} {terms().say("Through the launch {runner} of")} {v.target}; kept in the {terms().lower("logbook")} with your reason.</p>
+        <p>{w.what} {terms().say(P.t4)} {v.target}; kept in the {terms().lower("logbook")} with your reason.</p>
         {action.action === "scale" && (
           <label className="field"><span>Replicas</span><input type="number" min={1} value={replicas} onChange={(e) => setReplicas(Number(e.target.value))} /></label>
         )}
@@ -92,8 +94,8 @@ export function EmergencyReturn({ v, d, reload }: { v: TreeView; d: DeploymentVi
   const target = plan.action.targets?.find((t) => t.previous) ?? plan.action.targets?.[0];
   return (
     <div className="lw-emergency">
-      <button type="button" className="btn btn-danger" onClick={() => setOpen(true)}>Abort and return to the last good release</button>
-      <span className="faint"> {target ? `Goes back to ${target.version}.` : ""}{plan.action.emergency ? terms().say(" Protected {environment}: no approval first, an approver reviews it afterwards.") : ""}</span>
+      <button type="button" className="btn btn-danger" onClick={() => setOpen(true)}>{P.t5}</button>
+      <span className="faint"> {target ? `Goes back to ${target.version}.` : ""}{plan.action.emergency ? terms().say(P.t6) : ""}</span>
       {open && <EmergencyDialog v={v} d={d} plan={plan} onClose={() => setOpen(false)} reload={reload} />}
     </div>
   );
@@ -119,11 +121,11 @@ function EmergencyDialog({ v, d, plan, onClose, reload }: { v: TreeView; d: Depl
   };
   const ok = typed.trim() === plan.service && reason.trim().length > 0;
   return (
-    <Dialog label="Abort and return to the last good release" onClose={onClose}>
+    <Dialog label={P.t5} onClose={onClose}>
       <form className="lw-form" onSubmit={(e) => { e.preventDefault(); if (ok) void go(); }}>
         <h2>Abort and return to {target?.version ?? "the last good release"}</h2>
-        <p>{rolling ? "The rollout is aborted first, so all traffic goes back to the stable version. " : ""}Then {plan.service} in {plan.environment} is returned to {target?.version ?? "the previous release"} through Git, as Return to base does. A database or configuration is never restored.</p>
-        <label className="field"><span>Why <span className="faint">(required, kept with the return)</span></span>
+        <p>{rolling ? P.t7 : ""}Then {plan.service} in {plan.environment} is returned to {target?.version ?? "the previous release"} {P.t8}</p>
+        <label className="field"><span>Why <span className="faint">{P.t9}</span></span>
           <textarea rows={2} value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
         </label>
         <label className="field"><span>Type <strong>{plan.service}</strong> to confirm</span>

@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
+  define: { __PROSE_FROM_DISK__: true },
   // The documentation tests read the Markdown in ../docs (src/learn/docs.test.ts).
   server: { fs: { allow: [".."] } },
   test: {

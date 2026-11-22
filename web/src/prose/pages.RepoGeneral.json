@@ -1,0 +1,16 @@
+{
+ "t0": "Only an administrator of this repository can rename it, change who may see it, change its default branch, archive it or delete it. You can read it",
+ "t1": "Renaming moves the repository to ",
+ "t2": ". Its history, pull requests and settings stay. The old address and the old clone address stop working: anyone with a clone must change its remote, and links to the old name do not redirect.",
+ "t3": "Private: only people given access",
+ "t4": "Internal: everyone who signs in",
+ "t5": "Public: anyone who can reach this server",
+ "t6": "Default branch of the repository",
+ "t7": "New pull requests, the code page and Inspections start from the default branch.",
+ "t8": "This repository is archived: it takes no pushes. ",
+ "t9": "Unarchived: it takes pushes again.",
+ "t10": "It stops taking pushes, branch changes, edits and new pull requests. Nothing is deleted; an administrator can unarchive it.",
+ "t11": "Archiving stops pushes and changes; everything stays readable. ",
+ "t12": "It stops being served and listed: clones, pushes, pull requests and webhooks of it stop working at once. Its data is kept in the server's trash, not erased, but there is no button here to bring it back.",
+ "t13": "Deleting takes the repository out of service. "
+}

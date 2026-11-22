@@ -9,12 +9,14 @@ import { navigate } from "../router";
 import { releasesApi, type NextAnswer } from "../releasesApi";
 import { terms } from "../terms";
 import { ErrorBox } from "./ui";
+import { prose } from "../prose";
+const P = await prose("components.CutRelease");
 
 const PATTERNS: Record<string, { re: RegExp; say: string }> = {
-  semver: { re: /^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/, say: "Write three numbers separated by dots, such as 1.4.0 (a pre-release may follow, as in 1.4.0-rc.1). Leave the v off: the tag gets it." },
-  calver: { re: /^\d{4}(\.\d+)+$/, say: "Write the year first and then numbers separated by dots, such as 2026.11.22." },
-  natural: { re: /^[A-Za-z0-9][A-Za-z0-9._+-]*$/, say: "Use letters, digits, dots, dashes and plus signs, starting with a letter or digit." },
-  created: { re: /^[A-Za-z0-9][A-Za-z0-9._+-]*$/, say: "Use letters, digits, dots, dashes and plus signs, starting with a letter or digit." },
+  semver: { re: /^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/, say: P.t0 },
+  calver: { re: /^\d{4}(\.\d+)+$/, say: P.t1 },
+  natural: { re: /^[A-Za-z0-9][A-Za-z0-9._+-]*$/, say: P.t2 },
+  created: { re: /^[A-Za-z0-9][A-Za-z0-9._+-]*$/, say: P.t2 },
 };
 
 /** The message that says why a version cannot be used, or "" when it can. */
@@ -88,12 +90,12 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
     <Dialog label={`Cut a release of ${project}`} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (!problem && version.trim() && next?.can_tag) cut(); }}>
         <h2>Cut a release of {project}</h2>
-        {loading && <p className="rel-hint" role="status">Reading what changed since the last release…</p>}
+        {loading && <p className="rel-hint" role="status">{P.t3}</p>}
         <label className="field"><span>Version</span>
           <input type="text" value={version} onChange={(e) => setVersion(e.target.value)} required placeholder="1.4.0" data-autofocus
             aria-invalid={problem ? true : undefined} aria-describedby="cut-version-help" autoComplete="off" autoCapitalize="none" spellCheck={false} /></label>
         <p id="cut-version-help" className={problem ? "" : "rel-hint"} role={problem ? "alert" : undefined}>
-          {problem || (next?.proposal.summary ?? "The next version is proposed from the changes since the last release. You choose.")}
+          {problem || (next?.proposal.summary ?? P.t4)}
           {!problem && next?.highest ? ` The highest so far is ${next.highest}.` : ""}
         </p>
         {(next?.proposal.warnings ?? []).map((w) => <p key={w} className="rel-hint">{w}</p>)}
@@ -101,13 +103,13 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
           <dl className="rel-cut-tag" aria-label="What will be tagged">
             <dt>Tag</dt><dd className="rel-sha">{version.trim() && !problem ? tag : "(set a valid version first)"}</dd>
             <dt>At</dt><dd><span className="rel-sha">{next.commit.slice(0, 8)}</span>{next.branch ? <> on {next.branch}</> : null}</dd>
-            <dt>Kept in</dt><dd>{next.hosted ? "the repository Launchway hosts; a push mirror copies the tag out like any other ref" : "the Flight's repository"}</dd>
+            <dt>Kept in</dt><dd>{next.hosted ? P.t5 : "the Flight's repository"}</dd>
           </dl>
         )}
-        {next && !next.can_tag && <p className="callout callout-wait" role="alert">Launchway cannot write the tag in this Flight's repository (it is not hosted here and its configuration has no push section). Make the annotated tag yourself and adopt it from New release.</p>}
+        {next && !next.can_tag && <p className="callout callout-wait" role="alert">{P.t6}</p>}
         <div><b>Notes</b>
           <div className="rel-cut-notes">
-            {notes && notes.markdown.trim() ? <Markdown text={notes.markdown} /> : <span className="rel-hint">No changes were found since the last release.</span>}
+            {notes && notes.markdown.trim() ? <Markdown text={notes.markdown} /> : <span className="rel-hint">{P.t7}</span>}
           </div>
         </div>
         <div>
@@ -116,9 +118,9 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
             {next?.build ? <>Attach the {files.length} {files.length === 1 ? "file" : "files"} built at this commit ({terms().say("{Run}")} #{next.build.run_number})</> : "No files to attach"}
           </label>
           {next?.build && files.length > 0 && <ul className="rel-hint" style={{ margin: "6px 0 0", paddingLeft: 22 }}>{files.map((f) => <li key={f.path}>{f.name} ({size(f.size)})</li>)}</ul>}
-          {next && !next.build && <p className="rel-hint">No {terms().say("{run}")} of this {terms().say("{project}")} succeeded at this commit, so there are no built files. The release is still made; add files from its page.</p>}
+          {next && !next.build && <p className="rel-hint">No {terms().say("{run}")} of this {terms().say("{project}")} {P.t8}</p>}
         </div>
-        <p className="rel-hint">Cutting makes the annotated tag and publishes the release. A published release never changes; if something is wrong, withdraw it and cut a new one.</p>
+        <p className="rel-hint">{P.t9}</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>

@@ -6,6 +6,8 @@ import { useInstallation } from "../guided/facts";
 import { PageLearn } from "../learn/LearnLink";
 import { useTerms, terms } from "../terms";
 import "../styles/starters.css";
+import { prose } from "../prose";
+const P = await prose("pages.Starters");
 
 const FLIGHT = "flight plan";
 
@@ -28,7 +30,7 @@ export function StartersPage() {
       <header className="page-head">
         <div>
           <h1>{words.say("{Hangar}")}</h1>
-          <p className="sub">Ready-made pipelines and building blocks that come with Launchway. Write <Mono>uses: launchway/go-service</Mono> and nothing else, or a repository with no pipeline file gets the one that fits it.</p>
+          <p className="sub">{P.t0}<Mono>uses: launchway/go-service</Mono> {P.t1}</p>
           <PageLearn />
         </div>
       </header>
@@ -46,9 +48,9 @@ export function StartersPage() {
               </select>
             </label>
           </div>
-          {shown.length === 0 && <Empty title="Nothing matches">Try another word, or show everything.</Empty>}
-          {flights.length > 0 && <Group title={words.say("{Flight_plans}")} blurb="A whole pipeline for a kind of repository. Most repositories need only this." items={flights} />}
-          {steps.length > 0 && <Group title={words.say("{Maneuvers}")} blurb="One building block, to put in a pipeline you write yourself." items={steps} />}
+          {shown.length === 0 && <Empty title="Nothing matches">{P.t2}</Empty>}
+          {flights.length > 0 && <Group title={words.say("{Flight_plans}")} blurb={P.t3} items={flights} />}
+          {steps.length > 0 && <Group title={words.say("{Maneuvers}")} blurb={P.t4} items={steps} />}
         </>
       )}
     </div>
@@ -142,8 +144,8 @@ function WhatItRuns({ steps }: { steps: TemplateStep[] }) {
   for (const s of steps) (cols[d(s.id)] ??= []).push(s);
   return (
     <>
-      <h4 className="h-xs">What it runs <span className="faint">(with every input at its default)</span></h4>
-      <ol className="starter-graph" aria-label="Steps, in the order they run; steps in one column run together">
+      <h4 className="h-xs">What it runs <span className="faint">{P.t5}</span></h4>
+      <ol className="starter-graph" aria-label={P.t6}>
         {cols.filter(Boolean).map((col, i) => (
           <li key={i} className="starter-col">
             <ul>{col.map((s) => <li key={s.id} title={s.description}><Mono>{s.id.replace(/^ci\//, "")}</Mono>{s.kind === "image" && <span className="faint"> image</span>}<span className="faint starter-step-d">{s.description}</span></li>)}</ul>
@@ -178,17 +180,17 @@ function UseThis({ t }: { t: TemplateInfo }) {
     <div className="starter-use">
       <h4 className="h-xs">Use this</h4>
       {projects.length === 0 ? (
-        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> {terms().say("in your repository. (Opening a pull request from here needs a {project} you may save to.)")}</p>
+        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> {terms().say(P.t7)}</p>
       ) : (
         <div className="starter-use-row">
           <label>Add it to <select value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">{terms().say("choose a {project}")}</option>
             {projects.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select></label>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!project || busy} onClick={go}>{busy ? "Adding…" : "Open a pull request adding this file"}</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!project || busy} onClick={go}>{busy ? "Adding…" : P.t8}</button>
         </div>
       )}
-      {done && <p role="status">Saved on the branch <Mono>{done.branch}</Mono>. {done.url ? <a href={done.url} target="_blank" rel="noreferrer">Open the pull request</a> : "Open a pull request from it in your Git host."}</p>}
+      {done && <p role="status">Saved on the branch <Mono>{done.branch}</Mono>. {done.url ? <a href={done.url} target="_blank" rel="noreferrer">Open the pull request</a> : P.t9}</p>}
       <ErrorBox error={err} />
     </div>
   );

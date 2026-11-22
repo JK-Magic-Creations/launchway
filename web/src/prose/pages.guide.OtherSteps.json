@@ -1,0 +1,22 @@
+{
+ "t0": "A {runner} is the machine that runs the steps of your pipelines.",
+ "t1": "One is already connected, which is all you need to start; add more for capacity or for other kinds of machine.",
+ "t2": "Until one is connected, no pipeline step can run.",
+ "t3": "With the Helm chart, {runners} come with the installation; on another machine,",
+ "t4": "launchway runner --server ADDRESS --join TOKEN",
+ "t5": "joins one with a short-lived join token made under {Runners}.",
+ "t6": "Launchway could not be reached. Try again shortly.",
+ "t7": "With Git hosting on, Launchway keeps your repositories itself: pushing, pull requests and mirrors. Git over HTTPS needs nothing more. Git over SSH needs a port for it (",
+ "t8": "Saved. A restart is needed: this server reads the setting only when it starts. ",
+ "t9": "In the Launchway namespace, roll the pods with ",
+ "t10": "kubectl rollout restart deploy -l app.kubernetes.io/component=server",
+ "t11": "Pick one repository (for example one you just imported; its address is on its page under Repositories) and a starter. Launchway shows the pipeline before anything is created, and offers it as a file to commit; it never changes your application behind your back.",
+ "t12": "Everything this check can see is in order.",
+ "t13": "This is the same plain checklist ",
+ "t14": "prints. It looks at sign-in, encryption in transit and at rest and who can reach you. It changes nothing.",
+ "t15": "Invite the people who will use it",
+ "t16": "Add an {environment} to {deploy:do} to",
+ "t17": "Choose the rules every pipeline is held to",
+ "t18": "/learn/howto/install-in-ten-minutes",
+ "t19": "Read what to do after the first sign-in"
+}

@@ -22,6 +22,8 @@ import { terms } from "../terms";
 import { releasesApi, type Release, type ReleaseAsset, type ReleaseView, type ReleaseState, type Proposal } from "../releasesApi";
 import { SignatureBadge, useSignatures } from "../components/Signature";
 import "../releases.css";
+import { prose } from "../prose";
+const P = await prose("pages.Releases");
 
 const TONE: Record<ReleaseState, Tone | undefined> = { draft: undefined, candidate: "warn", published: "ok", yanked: "bad" };
 const STATE_WORD: Record<ReleaseState, string> = { draft: "Draft", candidate: "Candidate", published: "Published", yanked: "Withdrawn" };
@@ -48,7 +50,7 @@ export function ReleasesPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Releases"
-        sentence="A release is the thing that is versioned, cleared, promoted from Airfield to Airfield and reported on: a commit, a tag, notes, Cargo and the image digests its Sortie built."
+        sentence={P.t0}
         actions={operable.length > 0 ? <>
           {(project && operable.includes(project)) ? <CutReleaseButton project={project} kind="pri" /> : operable.length === 1 ? <CutReleaseButton project={operable[0]} kind="pri" /> : null}
           <Button icon="plus" onClick={() => setMaking(true)}>New release</Button></> : undefined} />
@@ -69,8 +71,7 @@ export function ReleasesPage() {
       {list.loading && !list.data && <div className="loading">Loading…</div>}
       {list.data && list.data.length === 0 && (
         <Sheet><EmptyState title="No releases yet" action={operable.length > 0 ? <Button kind="pri" onClick={() => setMaking(true)}>Make the first one</Button> : undefined}>
-          A release starts as a draft of a commit, with notes written from the changes since the last one. Publishing it makes the tag and fixes it: from then on only withdrawing it is possible.
-        </EmptyState></Sheet>
+          {P.t1}</EmptyState></Sheet>
       )}
       {list.data && list.data.length > 0 && (
         <Sheet>
@@ -126,13 +127,13 @@ function NewReleaseDialog({ projects, initial, onClose }: { projects: string[]; 
         <h2>New release</h2>
         <label className="field"><span>{terms().say("{Project}")}</span>
           <select value={project} onChange={(e) => { setProject(e.target.value); setProp(null); }}>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
-        <label className="field"><span>Make it from (a branch, tag or commit; empty is the default branch)</span>
+        <label className="field"><span>{P.t2}</span>
           <input type="text" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="main" /></label>
         <label className="field"><span>Version</span>
           <input type="text" value={version} onChange={(e) => setVersion(e.target.value)} required placeholder="1.4.0" data-autofocus /></label>
         <div className="rel-actions" style={{ padding: 0 }}>
           <button type="button" className="btn btn-sm" onClick={propose} disabled={busy || !project}>Propose the next version</button>
-          <span className="rel-hint">Read from the changes since the last release. You choose.</span>
+          <span className="rel-hint">{P.t3}</span>
         </div>
         {prop && (
           <div className="callout" role="status">
@@ -141,7 +142,7 @@ function NewReleaseDialog({ projects, initial, onClose }: { projects: string[]; 
             {(prop.warnings ?? []).map((w) => <p key={w} className="rel-hint">{w}</p>)}
           </div>
         )}
-        <label className="rel-check"><input type="checkbox" checked={generate} onChange={(e) => setGenerate(e.target.checked)} /> Write the notes from the pull requests and commits since the last release</label>
+        <label className="rel-check"><input type="checkbox" checked={generate} onChange={(e) => setGenerate(e.target.checked)} /> {P.t4}</label>
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
@@ -180,8 +181,8 @@ export function ReleasePage({ project, version }: { project: string; version: st
   if (data.loading && !v) return <div className="page"><div className="loading">Loading…</div></div>;
   if (!v || !r) return <div className="page"><PageHead eyebrow="Deployments · Releases" title={`${project} ${version}`} /><ErrorBox error={data.error} /></div>;
   const airfields = matrix.data?.airfields ?? [];
-  const sentence = r.state === "draft" ? "A draft: nothing is tagged yet, and the notes and files can still change." : r.state === "candidate" ? "A candidate: it may go to Airfields that are not protected, for testing, but it is not released." :
-    r.state === "published" ? "Published: its version, commit, tag, Cargo and image digests never change. A correction is a new release." : `Withdrawn by ${r.yanked_by}: ${r.yank_reason}`;
+  const sentence = r.state === "draft" ? P.t5 : r.state === "candidate" ? P.t6 :
+    r.state === "published" ? P.t7 : `Withdrawn by ${r.yanked_by}: ${r.yank_reason}`;
   return (
     <div className="page">
       <PageHead eyebrow={<><a href="/deployments/releases" onClick={onLink}>Releases</a> · <EntityLink kind="project" name={r.project} /></>} title={`${r.project} ${r.version}`} badge={<> <StateChip state={r.state} />{r.latest && <> <Chip tone="ok">Latest</Chip></>}{r.prerelease && <> <Chip>Pre-release</Chip></>}</>} sentence={sentence}
@@ -200,7 +201,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
           <dt>Commit</dt><dd><span className="rel-sha">{r.sha}</span><ReleaseSignature repo={v.links?.hosted_repository} sha={r.sha} /></dd>
           <dt>Tag</dt><dd>{r.tag ? <><span className="rel-sha">{r.tag}</span> <span className="faint">({r.tag_created ? "made by Launchway, annotated" : "adopted, annotated"})</span><ReleaseSignature repo={v.links?.hosted_repository} sha={r.tag_object} /></> : "none yet; publishing makes it"}</dd>
           <dt>Built by</dt><dd>{r.run_id ? <EntityLink kind="run" name={`Sortie #${r.run_number}`} id={r.run_id} /> : "no Sortie recorded"}</dd>
-          <dt>Image digests</dt><dd>{r.digests.length === 0 ? "none: this release carries no image" : <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>{r.digests.map((d) => <li key={d.digest} className="rel-sha">{d.digest}</li>)}</ul>}</dd>
+          <dt>Image digests</dt><dd>{r.digests.length === 0 ? P.t8 : <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>{r.digests.map((d) => <li key={d.digest} className="rel-sha">{d.digest}</li>)}</ul>}</dd>
           <dt>Made</dt><dd>{r.created_by} {ago(r.created_at, now)} <span className="faint">({clock(r.created_at)})</span></dd>
           {r.published_at ? <><dt>Published</dt><dd>{r.published_by} {ago(r.published_at, now)} <span className="faint">({clock(r.published_at)})</span></dd></> : null}
           {r.previous ? <><dt>After</dt><dd><a href={href({ project: r.project, version: r.previous })} onClick={onLink}>{r.previous}</a></dd></> : null}
@@ -209,7 +210,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
       </Sheet>
       <Sheet title="Notes" actions={v.may.edit ? <>
         <Button sm onClick={() => setEditing((e) => !e)}>{editing ? "Stop editing" : "Edit the notes"}</Button>
-        <Button sm onClick={() => act(() => releasesApi.regenerate(r.project, r.version), "The notes were written again from the changes.")}>Write them again from the changes</Button></> : undefined}>
+        <Button sm onClick={() => act(() => releasesApi.regenerate(r.project, r.version), P.t9)}>{P.t10}</Button></> : undefined}>
         {editing && v.may.edit ? <NotesEditor release={r} onSaved={() => { setEditing(false); data.reload(); }} /> :
           r.notes.trim() ? <div className="rel-notes"><Markdown text={underNotes(r.notes)} /></div> : <p className="rel-hint" style={{ padding: "14px 16px" }}>No notes yet.</p>}
         {r.notes_source && <p className="rel-hint" style={{ padding: "0 16px 12px" }}>Source: {r.notes_source}.</p>}
@@ -219,7 +220,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
       <OutsideSheet v={v} onChanged={data.reload} />
       {v.may.promote && airfields.length > 0 && (
         <Sheet title="Promote">
-          <p className="rel-hint" style={{ padding: "12px 16px 0" }}>Build once, promote the same thing: a promotion starts the pipeline at this tag with this version and image digest. Each Airfield has its own checklist.</p>
+          <p className="rel-hint" style={{ padding: "12px 16px 0" }}>{P.t11}</p>
           <div className="rel-actions">{airfields.map((a) => <Button key={a} sm onClick={() => setPromote(a)}>Check and promote to {a}</Button>)}</div>
         </Sheet>
       )}
@@ -241,7 +242,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
       {dialog === "publish" && <PublishDialog release={r} may={v.may.administer} onClose={() => setDialog(null)} onDone={data.reload} />}
       {dialog === "yank" && <YankDialog release={r} onClose={() => setDialog(null)} onDone={data.reload} />}
       {dialog === "delete" && <Dialog label="Delete the draft" onClose={() => setDialog(null)}>
-        <div className="rel-form"><h2>Delete the draft {r.version}?</h2><p className="rel-hint">Its notes and files are removed. A candidate or published release is never deleted.</p>
+        <div className="rel-form"><h2>Delete the draft {r.version}?</h2><p className="rel-hint">{P.t12}</p>
           <div className="dialog-actions"><button className="btn" onClick={() => setDialog(null)}>Keep it</button>
             <button className="btn btn-danger-outline" onClick={() => act(async () => { await releasesApi.remove(r.project, r.version); navigate("/deployments/releases"); })}>Delete the draft</button></div></div>
       </Dialog>}
@@ -259,7 +260,7 @@ function ChangelogNote({ release, may }: { release: Release; may: boolean }) {
       <div className="rel-actions"><Button sm onClick={async () => {
         setError(null);
         try { const r = await releasesApi.changelog(release.project, release.version); setOut(r.pull_request ? `Opened pull request #${r.pull_request.number}.` : `Pushed the branch ${r.proposal.branch}; open a pull request into ${r.proposal.base}.`); } catch (e) { setError(e); }
-      }}>Propose the changelog as a pull request</Button></div>
+      }}>{P.t13}</Button></div>
       {out && <p className="rel-hint" style={{ padding: "0 16px 12px" }} role="status">{out}</p>}
       <ErrorBox error={error} />
     </Sheet>
@@ -294,10 +295,10 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
   };
   return (
     <Sheet title="Cargo and images">
-      {r.latest && <p className="rel-hint" style={{ padding: "14px 16px 0" }}>This is the latest release. Its address stays the same for the next one: use <span className="mono" style={{ overflowWrap: "anywhere" }}>{releasesApi.downloadUrl(r.project, "latest", "FILE")}</span> to get a file by name.</p>}
-      {assets.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No files or images are attached.</p> : (
+      {r.latest && <p className="rel-hint" style={{ padding: "14px 16px 0" }}>{P.t14}<span className="mono" style={{ overflowWrap: "anywhere" }}>{releasesApi.downloadUrl(r.project, "latest", "FILE")}</span> to get a file by name.</p>}
+      {assets.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>{P.t15}</p> : (
         <div className="rel-table-wrap"><table className="rel-table rel-assets">
-          <caption className="visually-hidden">Files and images of this release, with where each came from</caption>
+          <caption className="visually-hidden">{P.t16}</caption>
           <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size and downloads</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
           <tbody>{assets.map((a: ReleaseAsset) => (
             <tr key={a.id}>
@@ -315,12 +316,12 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
       {v.may.edit && (
         <div className="rel-inline">
           <label>Upload a file<input type="file" onChange={(e) => upload(e.target.files?.[0])} disabled={busy} /></label>
-          <label>{terms().say("Attach what a Sortie built (its {run} id)")}<input type="text" value={run} onChange={(e) => setRun(e.target.value)} placeholder="run_…" /></label>
+          <label>{terms().say(P.t17)}<input type="text" value={run} onChange={(e) => setRun(e.target.value)} placeholder="run_…" /></label>
           <Button sm disabled={!run.trim() || busy} onClick={async () => { setError(null); try { await releasesApi.attach(r.project, r.version, { run_id: run.trim(), images: true }); setRun(""); onChanged(); } catch (e) { setError(e); } }}>Attach its image digests</Button>
         </div>
       )}
       <ErrorBox error={error} />
-      {r.immutable && <p className="rel-hint" style={{ padding: "0 16px 12px" }}>Files and images are fixed once a release is published, each with the checksum it had.</p>}
+      {r.immutable && <p className="rel-hint" style={{ padding: "0 16px 12px" }}>{P.t18}</p>}
     </Sheet>
   );
 }
@@ -335,7 +336,7 @@ function Code({ text, label, size }: { text: string; label: string; size?: numbe
   const m = encodeQR(text);
   // Four pixels to a module at least, so a camera reads a long address's finer code as easily as a short one's.
   const px = Math.min(Math.max(size ?? 148, m ? (m.length + 8) * 4 : 0), 320);
-  if (!m) return <p className="rel-hint" role="status">This address is too long for a QR code. Copy it instead: <span className="addr">{text}</span></p>;
+  if (!m) return <p className="rel-hint" role="status">{P.t19}<span className="addr">{text}</span></p>;
   return <QrCode text={text} label={label} size={px} />;
 }
 
@@ -345,7 +346,7 @@ function AssetQr({ release, asset }: { release: Release; asset: ReleaseAsset }) 
     <details className="rel-asset-qr">
       <summary>Open on a phone<span className="visually-hidden"> ({asset.name})</span></summary>
       <Code text={addr} label={`QR code that downloads ${asset.name} on a phone`} size={132} />
-      <span className="rel-hint">Scan it with the camera. {release.public ? "Anyone may download it." : "A phone that is not signed in is asked to sign in first."}</span>
+      <span className="rel-hint">Scan it with the camera. {release.public ? "Anyone may download it." : P.t20}</span>
     </details>
   );
 }
@@ -363,8 +364,8 @@ function PhoneSheet({ v }: { v: ReleaseView }) {
       <div className="rel-phone">
         <Code text={addr} label={main ? `QR code that downloads ${main.name} on a phone` : `QR code that opens ${r.project} ${r.version} on a phone`} />
         <div>
-          <p>{main ? <>Point the phone's camera at the code to download <b>{main.name}</b>{apk ? ", the Android app" : ""}.</> : <>Point the phone's camera at the code to open this release, where each file has its own download.</>} {r.public ? "Anyone with the address may download it." : "A phone that is not signed in is sent to sign in and then back to the download."}</p>
-          {apk && <p className="rel-hint">Android asks once to allow installing from the browser it was downloaded with.</p>}
+          <p>{main ? <>{P.t21}<b>{main.name}</b>{apk ? ", the Android app" : ""}.</> : <>{P.t22}</>} {r.public ? P.t23 : P.t24}</p>
+          {apk && <p className="rel-hint">{P.t25}</p>}
           <p className="addr">{addr}</p>
           {main && <p><a href={page} onClick={onLink}>All files of this release</a></p>}
         </div>
@@ -382,8 +383,8 @@ function PublishDialog({ release, may, onClose, onDone }: { release: Release; ma
     <Dialog label={`Publish ${release.project} ${release.version}`} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); go(); }}>
         <h2>Publish {release.project} {release.version}?</h2>
-        <p className="rel-hint">Publishing makes the annotated tag {release.tag || "for this version"} at commit {release.sha.slice(0, 8)} (an existing tag at that commit is adopted) and fixes the release. Its notes, files, tag and image digests can never change; if something is wrong, withdraw it and make a new release.</p>
-        {may && <label className="rel-check"><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> {terms().say("Allow downloading its files without signing in (only where the installation and the {project} allow it)")}</label>}
+        <p className="rel-hint">{P.t26}{release.tag || "for this version"} at commit {release.sha.slice(0, 8)} {P.t27}</p>
+        {may && <label className="rel-check"><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> {terms().say(P.t28)}</label>}
         <ErrorBox error={error} />
         <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Not yet</button><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Publishing…" : "Publish"}</button></div>
       </form>
@@ -400,7 +401,7 @@ function YankDialog({ release, onClose, onDone }: { release: Release; onClose: (
     <Dialog label={`Withdraw ${release.project} ${release.version}`} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) go(); }}>
         <h2>Withdraw {release.project} {release.version}?</h2>
-        <p className="rel-hint">It stays in the record, marked as withdrawn with your reason, and is no longer promoted or offered for download. What already runs is not touched: return that Airfield to base if it should go back.</p>
+        <p className="rel-hint">{P.t29}</p>
         <label className="field"><span>Why? (required)</span><textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} required data-autofocus /></label>
         <ErrorBox error={error} />
         <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Keep it</button><button type="submit" className="btn btn-danger-outline" disabled={busy || !reason.trim()}>{busy ? "Working…" : "Withdraw"}</button></div>
@@ -429,7 +430,7 @@ function CompareSheet({ project, version }: { project: string; version: string }
         <div className="rel-notes">
           <p><b>{res.older}</b> to <b>{res.newer}</b>: {res.changes.length} {res.changes.length === 1 ? "change" : "changes"}{res.files.stat ? `; ${res.files.stat}` : ""}.</p>
           <ul>{res.changes.slice(0, 40).map((c, i) => <li key={i}>{c.title}{c.ref ? ` (#${c.ref})` : ""}{c.author ? ` by ${c.author}` : ""}</li>)}</ul>
-          {res.files.manifests.length > 0 && <><p><b>Deployment configuration changed:</b></p><ul>{res.files.manifests.map((m) => <li key={m} className="rel-sha">{m}</li>)}</ul></>}
+          {res.files.manifests.length > 0 && <><p><b>{P.t30}</b></p><ul>{res.files.manifests.map((m) => <li key={m} className="rel-sha">{m}</li>)}</ul></>}
           <p className="rel-hint">Image digests: {res.digests.older.length} before, {res.digests.newer.length} after.</p>
         </div>
       )}
@@ -458,13 +459,13 @@ export function ReleaseGetPage({ project, version, asset }: { project: string; v
       {a ? (
         <Sheet title="Your download">
           <div className="rel-actions" role="status">
-            <span>The download should start now. If it does not, use the button.</span>
+            <span>{P.t31}</span>
             <a className="btn btn-primary" href={url} download>Download {asset} ({size(a.size)})</a>
             <a className="btn" href={href({ project, version })} onClick={onLink}>Back to the release</a>
           </div>
           <p className="rel-hint" style={{ padding: "0 16px 12px", overflowWrap: "anywhere", wordBreak: "break-all" }}>SHA-256 <span className="rel-sha">{a.sha256}</span></p>
         </Sheet>
-      ) : !data.loading && !data.error ? <Sheet><EmptyState title="There is no such file in this release">Open <a href={href({ project, version })} onClick={onLink}>the release</a> to see its files.</EmptyState></Sheet> : <div className="loading">Loading…</div>}
+      ) : !data.loading && !data.error ? <Sheet><EmptyState title={P.t32}>Open <a href={href({ project, version })} onClick={onLink}>the release</a> to see its files.</EmptyState></Sheet> : <div className="loading">Loading…</div>}
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { navigate } from "../router";
 import { terms } from "../terms";
 import { ErrorBox } from "./ui";
 import "../releases.css";
+import { prose } from "../prose";
+const P = await prose("components.ReleasePromote");
 
 const MARK: Record<ChecklistItem["status"], string> = { pass: "✓", fail: "✗", waiting: "…", skipped: "–" };
 const WORD: Record<ChecklistItem["status"], string> = { pass: "met", fail: "not met", waiting: "waiting", skipped: "not asked" };
@@ -57,22 +59,22 @@ export function PromoteDialog({ project, version, airfield, onClose, onDone }: {
         {!ck && !error && <div className="loading">Checking the {terms().lower("checklist")}…</div>}
         {ck && (
           <>
-            <p className="rel-hint">Nothing is built again: the Sortie starts at this release's tag with its version and, where it has one, its image digest.</p>
+            <p className="rel-hint">{P.t0}</p>
             <ChecklistView items={ck.items} />
             {ck.already_there && <div className="callout callout-wait">This release already runs in {airfield} and is healthy.</div>}
             {ans?.environment_refusal && <div className="callout callout-wait">{ans.environment_refusal}.</div>}
             {needsClearance && ans?.may_promote && (
-              <label className="field"><span>Give your {terms().lower("clearance")} for {airfield} (a comment helps the next person)</span>
+              <label className="field"><span>Give your {terms().lower("clearance")} for {airfield} {P.t1}</span>
                 <input type="text" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} />
                 <span><button type="button" className="btn btn-sm" onClick={clear} disabled={busy}>Give {terms().lower("clearance")}</button></span>
               </label>
             )}
             {!ck.ready && !ck.already_there && ck.can_override && ans?.may_override && (
-              <label className="field"><span>Override what stops it, and say why (an administrator's decision, recorded in the {terms().lower("logbook")})</span>
-                <textarea value={override} onChange={(e) => setOverride(e.target.value)} maxLength={500} placeholder="For example: customer outage, fix approved by the on-call lead" /></label>
+              <label className="field"><span>{P.t2}{terms().lower("logbook")})</span>
+                <textarea value={override} onChange={(e) => setOverride(e.target.value)} maxLength={500} placeholder={P.t3} /></label>
             )}
             {!ck.ready && !ck.already_there && !(ck.can_override && ans?.may_override) && (
-              <p className="rel-hint">{ck.can_override ? terms().say("An administrator of the {project} may override what stops it, with a reason.") : "What stops it cannot be overridden: it has to be met."}</p>
+              <p className="rel-hint">{ck.can_override ? terms().say(P.t4) : P.t5}</p>
             )}
           </>
         )}
@@ -100,7 +102,7 @@ export function ReturnDialog({ project, airfield, version, onClose, onDone }: { 
     <Dialog label={label} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) go(); }}>
         <h2>{label}</h2>
-        <p className="rel-hint">{version ? `${airfield} runs ${version}. ` : ""}{terms().say("It goes back to the release it ran before, by a {rollback}: the same rules, the same lock, and the reason is kept with it. A {rollback} never restores a database or configuration.")}</p>
+        <p className="rel-hint">{version ? `${airfield} runs ${version}. ` : ""}{terms().say(P.t6)}</p>
         <label className="field"><span>Why? (required)</span><textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} required data-autofocus /></label>
         <ErrorBox error={error} />
         <div className="dialog-actions">

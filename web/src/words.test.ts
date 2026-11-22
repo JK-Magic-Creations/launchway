@@ -5,7 +5,7 @@ import { makeTerms } from "./terms";
 // rename reaches every place. This reads the source of every component and page (not the tests, the terms
 // module, the data in api types, or comments) and looks for the words of both sets in text a person reads.
 
-const sources = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx", "!./terms.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const sources = import.meta.glob(["./**/*.ts", "./**/*.tsx", "./prose/*.json", "!./**/*.test.ts", "!./**/*.test.tsx", "!./terms.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 const WORDS = [
   // levels: capitalized in text a person reads (lower-case ones are identifiers and kind names)

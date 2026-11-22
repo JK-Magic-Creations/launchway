@@ -4,6 +4,8 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import { forgeApi, type SshInfo, type SshKey } from "../forgeApi";
 import "../triggers.css";
+import { prose } from "../prose";
+const P = await prose("pages.SshKeys");
 
 /** Whether this server hosts repositories: the calls answer feature_off (404) when it does not. */
 export function useHosting(): "on" | "off" | null {
@@ -44,7 +46,7 @@ export function SshKeysPage() {
     return (
       <div className="page">
         <PageHead eyebrow="Settings" title="SSH keys" />
-        <Empty title="Git hosting is off on this server">SSH keys are for the repositories Launchway hosts. An administrator turns hosting on with the installation setting <Mono>forge.hosting</Mono>.</Empty>
+        <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>.</Empty>
       </div>
     );
   }
@@ -66,11 +68,11 @@ export function SshKeysPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Settings" title="SSH keys"
-        sentence={<>Keys that let you clone and push over SSH. A key can belong to one owner only: you, or one repository as a <Link href="/repositories">deploy key</Link>.</>} />
+        sentence={<>{P.t2}<Link href="/repositories">deploy key</Link>.</>} />
 
       {info && !info.enabled && (
         <div className="callout callout-allowed" role="status">
-          <strong>Git over SSH is not turned on yet.</strong> You can add keys now; they work once an administrator sets <Mono>forge.ssh.listen</Mono>. Until then, clone over HTTPS with an <Link href="/settings/access/keys">API token</Link>.
+          <strong>{P.t3}</strong> {P.t4}<Mono>forge.ssh.listen</Mono>{P.t5}<Link href="/settings/access/keys">API token</Link>.
         </div>
       )}
 
@@ -81,9 +83,9 @@ export function SshKeysPage() {
             <label className="field"><span>Expires (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
           </div>
           <label className="field"><span>Public key</span>
-            <textarea value={pub} required rows={3} className="mono" placeholder="ssh-ed25519 AAAA… (the line in your .pub file)" onChange={(e) => setPub(e.target.value)} />
+            <textarea value={pub} required rows={3} className="mono" placeholder={P.t6} onChange={(e) => setPub(e.target.value)} />
           </label>
-          <p className="sub">ed25519, ECDSA, or RSA of at least 3072 bits. Make one with <Mono>ssh-keygen -t ed25519</Mono>. Never paste a private key.</p>
+          <p className="sub">{P.t7}<Mono>ssh-keygen -t ed25519</Mono>. Never paste a private key.</p>
           <div><button type="submit" className="btn btn-primary" disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</button></div>
         </form>
       </Sheet>
@@ -110,11 +112,10 @@ export function SshKeysPage() {
       </Sheet>
 
       <Sheet title="Verify this server" id="host-keys">
-        {info && !info.enabled && <p className="sub pad">Git over SSH is off, so the server presents no host key yet.</p>}
+        {info && !info.enabled && <p className="sub pad">{P.t8}</p>}
         {info && info.enabled && (
           <>
-            <p className="sub pad">The first time you connect to <Mono>{sshAddress(info)}</Mono>, <Mono>ssh</Mono> shows a fingerprint and asks whether to trust it. It must be one of these.
-              {info.certificates && " This server also accepts certificates from its organization's authority."}</p>
+            <p className="sub pad">The first time you connect to <Mono>{sshAddress(info)}</Mono>, <Mono>ssh</Mono> {P.t9}{info.certificates && P.t10}</p>
             <table className="table">
               <thead><tr><th>Type</th><th>Fingerprint (SHA256)</th></tr></thead>
               <tbody>{info.host_keys.map((h) => <tr key={h.algorithm}><td>{h.type}</td><td className="mono small">{h.fingerprint}</td></tr>)}</tbody>

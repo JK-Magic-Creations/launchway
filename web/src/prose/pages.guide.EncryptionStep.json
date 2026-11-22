@@ -1,0 +1,14 @@
+{
+ "t0": "Launchway could not be reached. Try again shortly.",
+ "t1": "Learn more about keeping the installation safe",
+ "t2": "Stored secrets (tokens, passwords you gave Launchway) are locked with a root key that lives outside the database. A copy of the database alone shows none of them. The other side of that: lose the key and they cannot be read, by anyone. So keep a recovery copy somewhere apart from your backups.",
+ "t3": ": sealing waits until servers of the older release have stopped",
+ "t4": ". You can take another any time.",
+ "t5": "Download a recovery copy of the root key",
+ "t6": "Take a recovery copy of the root key",
+ "t7": "Launchway asks for your password and a code again, because this is the key to everything. The copy is locked with a passphrase you choose (type it twice); Launchway keeps no copy and no passphrase, only a note that one was taken.",
+ "t8": "The code from your authenticator app",
+ "t9": "A passphrase for the copy (at least 12 characters)",
+ "t10": "The two passphrases are not the same.",
+ "t11": "The copy was downloaded as launchway-root-key-copy.json. Keep it, and the passphrase, somewhere other than the database's backups."
+}

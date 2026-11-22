@@ -4,6 +4,8 @@ import { api, type HostedReport, type RunDetail, type RunReports } from "../api"
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { bytes } from "../components/Security";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.RunReports");
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 /** Links to reports work for four hours; ask for new ones well before. */
@@ -83,7 +85,7 @@ export function ReportsTab({ run, version }: { run: RunDetail; version: string }
       {current ? <ReportFrame key={current.artifact + ":" + tick} r={current} separate={data.origin === "separate"} /> : (
         <div className="empty">
           <div className="empty-title">No report was kept</div>
-          <div className="empty-body">The steps that declare HTML reports did not keep them. Each step's log says why, for example a directory that did not exist.</div>
+          <div className="empty-body">{P.t0}</div>
         </div>
       )}
     </div>
@@ -102,23 +104,21 @@ function ReportFrame({ r: latest, separate }: { r: HostedReport; separate: boole
         {r.url && (
           <a className="btn btn-sm" href={r.url} target="_blank" rel="noopener noreferrer">
             Open in a new tab
-            <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d="M9 2.5h4.5V7M13.5 2.5L7 9M11.5 9.5v4h-9v-9h4" /></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d={P.t1} /></svg>
           </a>
         )}
       </div>
       <p className="hframe-note">
-        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d="M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z" strokeLinejoin="round" /></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d={P.t2} strokeLinejoin="round" /></svg>
         <span>
-          The step wrote this report, so it is shown sandboxed{separate ? ", from a separate address," : ""}: its scripts run, but it cannot act as you,
-          read Launchway's pages or reach anything outside the report. Its link works for a few hours.
-        </span>
+          {P.t3}{separate ? ", from a separate address," : ""}{P.t4}</span>
       </p>
       {r.url ? (
         <iframe className="hframe-frame" src={r.url} title={`HTML report ${r.name} from ${r.step}`}
-          sandbox="allow-scripts allow-popups allow-modals allow-downloads" referrerPolicy="no-referrer" loading="lazy" />
+          sandbox={P.t5} referrerPolicy="no-referrer" loading="lazy" />
       ) : (
         <div className="empty empty-sm hframe-missing">
-          This report has no <span className="mono">{r.index}</span> page, so there is nothing to open. Set <span className="mono">index:</span> to the report's start page.
+          This report has no <span className="mono">{r.index}</span> {P.t6}<span className="mono">index:</span> to the report's start page.
         </div>
       )}
     </section>
@@ -128,7 +128,7 @@ function ReportFrame({ r: latest, separate }: { r: HostedReport; separate: boole
 function ReportIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" className="ic-line hitem-ic">
-      <rect x="2" y="1.5" width="12" height="13" rx="1.5" /><path d="M4.8 11.5V9M7.3 11.5V6.5M9.8 11.5V8M4.5 4.2h4" />
+      <rect x="2" y="1.5" width="12" height="13" rx="1.5" /><path d={P.t7} />
     </svg>
   );
 }
@@ -137,16 +137,9 @@ function ReportIcon() {
 export function HTMLHowTo() {
   return (
     <div className="howto">
-      <p>{terms().say("Name the directory a tool writes its HTML report to, and Launchway keeps it with the {run} and shows it here, sandboxed:")}</p>
-      <pre className="code">{`steps:
-  e2e:
-    image: mcr.microsoft.com/playwright:v1.56.0
-    run: npx playwright test
-    reports:
-      html:
-        name: playwright
-        path: playwright-report`}</pre>
-      <p className="sub">Any static site works: Playwright's and Karate's reports, an Allure site, coverage HTML. Add <span className="mono">index:</span> when the start page is not index.html.</p>
+      <p>{terms().say(P.t8)}</p>
+      <pre className="code">{P.t9}</pre>
+      <p className="sub">{P.t10}<span className="mono">index:</span> {P.t11}</p>
     </div>
   );
 }

@@ -1,0 +1,16 @@
+{
+ "t0": "A {project} is one repository and its pipelines. It will join the {unit} ",
+ "t1": "Repositories hosted here that have no {project} yet come first.",
+ "t2": "No repositories to choose from",
+ "t3": "Launchway hosts no repository you may read and no connection is set up. Create or import a repository, connect a Git service, or paste a plain Git address below.",
+ "t4": "/config/wizard/connect-repository",
+ "t5": "Nothing is read from a connection until you ask. Choose one to see which repositories it can reach.",
+ "t6": "https://git.example.com/acme/shop.git",
+ "t7": "A repository address Launchway can read.",
+ "t8": "Taken from the repository. It appears in addresses.",
+ "t9": "the repository's default branch",
+ "t10": "Leave empty to use the default branch.",
+ "t11": "The starter pipeline was copied.",
+ "t12": "It could not be copied. Select the text and copy it.",
+ "t13": "Open it to see its pipeline and results."
+}

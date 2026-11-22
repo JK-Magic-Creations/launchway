@@ -4,6 +4,8 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import { signingApi, type SigningKey } from "../signingApi";
 import { useHosting } from "./SshKeys";
+import { prose } from "../prose";
+const P = await prose("pages.SigningKeys");
 
 /** Signing keys: the SSH keys a person signs commits and tags with, so that what they sign shows as verified. */
 export function SigningKeysPage() {
@@ -25,7 +27,7 @@ export function SigningKeysPage() {
     return (
       <div className="page">
         <PageHead eyebrow="Settings" title="Signing keys" />
-        <Empty title="Git hosting is off on this server">Verified commits are for the repositories Launchway hosts. An administrator turns hosting on with the installation setting <Mono>forge.hosting</Mono>.</Empty>
+        <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>.</Empty>
       </div>
     );
   }
@@ -48,7 +50,7 @@ export function SigningKeysPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Settings" title="Signing keys"
-        sentence={<>Register the SSH key you sign commits and tags with, and what it signs shows as <strong>Verified</strong>. These are not the keys you push with: those are your <Link href="/settings/access/ssh-keys">SSH keys</Link>.</>} />
+        sentence={<>{P.t2}<strong>Verified</strong>{P.t3}<Link href="/settings/access/ssh-keys">SSH keys</Link>.</>} />
       <Sheet title="Add a signing key" pad>
         <form onSubmit={add} className="inputs-form" aria-label="Add a signing key">
           <div className="tokenform-grid">
@@ -56,8 +58,8 @@ export function SigningKeysPage() {
             <label className="field"><span>Stops counting on (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
           </div>
           <label className="field"><span>Public key</span>
-            <textarea value={pub} required rows={3} className="mono" placeholder="ssh-ed25519 AAAA… (the line in your .pub file), or an OpenPGP public key block" onChange={(e) => setPub(e.target.value)} /></label>
-          <p className="sub">Then tell Git to sign with it: <Mono>git config gpg.format ssh</Mono>, <Mono>git config user.signingkey ~/.ssh/id_ed25519.pub</Mono>, <Mono>git config commit.gpgsign true</Mono>. To sign with an OpenPGP key instead, paste its public key block (<Mono>gpg --armor --export &lt;id&gt;</Mono>) above.</p>
+            <textarea value={pub} required rows={3} className="mono" placeholder={P.t4} onChange={(e) => setPub(e.target.value)} /></label>
+          <p className="sub">{P.t5}<Mono>git config gpg.format ssh</Mono>, <Mono>{P.t6}</Mono>, <Mono>{P.t7}</Mono>{P.t8}<Mono>gpg --armor --export &lt;id&gt;</Mono>) above.</p>
           <div><button type="submit" className="btn btn-primary" disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</button></div>
         </form>
       </Sheet>
@@ -85,7 +87,7 @@ export function SigningKeysPage() {
       </Sheet>
       {inst && (
         <Sheet title="The installation's own key" pad>
-          <p className="sub">Launchway signs the merge and suggestion commits it makes with this key, so a rule that asks for verified commits does not stop its own work. It is published at <Mono>{inst.address}</Mono>.</p>
+          <p className="sub">{P.t9}<Mono>{inst.address}</Mono>.</p>
           <p className="mono small">{inst.fingerprint}</p>
         </Sheet>
       )}

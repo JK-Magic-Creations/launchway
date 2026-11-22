@@ -1,0 +1,7 @@
+{
+ "t0": "Which words should Launchway use?",
+ "t1": "Only the words on the screen change: addresses, commands, pipeline files and settings keep their plain names, so nothing you script depends on a word.",
+ "t2": "Leave a box empty to use the set's word. A status keeps its plain word beside the themed one, so it cannot be renamed. Pipeline, step, alert, branch, pull request, commit, secret and variable are never themed, so they are not listed.",
+ "t3": "A {run} on a {runner} will {deploy:do} to the {environment}, with a {canary} first and {rollback:do} if the {post_deploy_watch} sees a problem.",
+ "t4": "Say what you want to do, and the "
+}

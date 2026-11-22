@@ -1,0 +1,12 @@
+{
+ "t0": "Git hosting is off on this server",
+ "t1": "Verified commits are for the repositories Launchway hosts. An administrator turns hosting on with the installation setting ",
+ "t2": "Register the SSH key you sign commits and tags with, and what it signs shows as ",
+ "t3": ". These are not the keys you push with: those are your ",
+ "t4": "ssh-ed25519 AAAA… (the line in your .pub file), or an OpenPGP public key block",
+ "t5": "Then tell Git to sign with it: ",
+ "t6": "git config user.signingkey ~/.ssh/id_ed25519.pub",
+ "t7": "git config commit.gpgsign true",
+ "t8": ". To sign with an OpenPGP key instead, paste its public key block (",
+ "t9": "Launchway signs the merge and suggestion commits it makes with this key, so a rule that asks for verified commits does not stop its own work. It is published at "
+}

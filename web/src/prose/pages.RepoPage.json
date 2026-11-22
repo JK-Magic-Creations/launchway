@@ -1,0 +1,13 @@
+{
+ "t0": "Launchway cannot reach this repository.",
+ "t1": "A repository Launchway reads from Git, on the branch ",
+ "t2": "Proposed changes will be read, commented and merged here once built-in Git hosting is merged. Runs started by pull requests exist today and are listed under Activity.",
+ "t3": ", unless the repository has its own file.",
+ "t4": "A file in the repository, reviewed and versioned like code.",
+ "t5": "No pushes seen since the server started. Launchway notes where every branch is the first time it looks, and reacts to changes after that.",
+ "t6": "This repository is hosted here, so its files, commits, branches and search are in the code browser.",
+ "t7": "This repository is on another server",
+ "t8": "Launchway reads the pipeline file of a repository it does not host, not the rest of it. ",
+ "t9": "It is read from a local path, so use your own tools.",
+ "t10": "To read code here, move the repository to this server with an import or a mirror."
+}

@@ -1,0 +1,19 @@
+{
+ "t0": "Bring the pipeline files another system left in this {project}'s repository, or paste them. Nothing is changed until you commit the result.",
+ "t1": "Launchway can list files only in repositories it hosts.",
+ "t2": "No pipeline files of a known format were found on ",
+ "t3": "The importer tells the format from the name, so give the name the file had.",
+ "t4": "Run beside the old system: switch off the steps that push, release or deploy until ",
+ "t5": "The proposed Launchway pipeline",
+ "t6": "A name only. The value is never read or shown; create it in the Station's secret store.",
+ "t7": "(untick to write the commands out as steps)",
+ "t8": "Image for steps that named none",
+ "t9": "docker.io/library/ubuntu:24.04",
+ "t10": "The image the old machine's tools would be found in.",
+ "t11": "Nothing needs a person or differs.",
+ "t12": "Add a Launchway pipeline imported from ",
+ "t13": "The old files stay where they are. The new file is ",
+ "t14": "Saving to this repository is not available to you",
+ "t15": "Save on a new branch for a pull request",
+ "t16": "Committing is not available for this repository, so download the file and add it yourself."
+}

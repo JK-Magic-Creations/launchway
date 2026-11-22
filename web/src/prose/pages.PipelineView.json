@@ -1,0 +1,8 @@
+{
+ "t0": "The steps a run does, read from the file in the repository. Nothing here is a copy: the editor saves a change as a Git commit.",
+ "t1": "Drawing a pipeline is not built yet",
+ "t2": "The Live tab already draws the file as boxes you can open. To change the pipeline, use the editor: it checks the text as you type and saves the change to Git as a commit.",
+ "t3": "The repository has no pipeline file, so the pipeline configured on the server runs instead. Editing it saves a new file to the repository.",
+ "t4": "The repository has no pipeline yet. Open the editor to write the first one; it is saved to Git as a commit. Or ",
+ "t5": "Every run of this pipeline will be listed here, with its launch line."
+}

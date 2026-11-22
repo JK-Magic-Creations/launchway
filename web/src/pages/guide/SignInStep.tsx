@@ -4,6 +4,8 @@ import { configApi, type SignInCheck } from "../../configApi";
 import { actionOf, guideApi, type GuideStep, type SigninTestResult } from "../../guideApi";
 import { Button } from "../../kit/layout";
 import { Unavailable, Wingman } from "./Frame";
+import { prose } from "../../prose";
+const P = await prose("pages.guide.SignInStep");
 
 type Phase = "idle" | "starting" | "waiting" | "worked" | "failed";
 
@@ -49,21 +51,19 @@ export function SignInStep({ step, onChange }: { step: GuideStep; onChange: () =
     try {
       const b = await guideApi.testSignin({ issuer: issuer.trim(), client_id: clientId.trim(), client_secret_env: secretEnv.trim(), groups_claim: groups.trim() || undefined });
       const w = window.open(b.url, "launchway-signin-test");
-      if (!w) { setError("The browser blocked the second window. Allow pop-ups for this page, or open the address below yourself."); }
+      if (!w) { setError(P.t0); }
       setPhase("waiting");
       setUrl(b.url);
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.message}` : "Launchway could not be reached. Try again shortly.");
+      setError(e instanceof ApiError ? `${e.message}` : P.t1);
       setPhase("idle");
     }
   };
   return (
     <>
       <p>{step.summary}</p>
-      <Wingman learn={{ label: "Learn more about sign-in and access", slug: "guide/access" }}>
-        Built-in accounts (a password and an authenticator) are a complete, secure choice, and the way back in if a provider ever breaks. Connect an identity provider only
-        if your organization has one. I test it with a real sign-in in a second window first, and nothing about how people sign in changes until you decide.
-      </Wingman>
+      <Wingman learn={{ label: P.t2, slug: "guide/access" }}>
+        {P.t3}</Wingman>
       <div className="gd-choices">
         <Button kind="pri" disabled={!test?.available} onClick={() => setOpen(!open)} aria-expanded={open}>Connect an identity provider</Button>
         {keep?.available && <Button onClick={onChange}>Keep built-in accounts</Button>}
@@ -71,31 +71,30 @@ export function SignInStep({ step, onChange }: { step: GuideStep; onChange: () =
       <Unavailable action={test} />
       {open && test?.available && (
         <form className="gd-form" onSubmit={(e) => { e.preventDefault(); void begin(); }} aria-label="Test an identity provider">
-          <p className="faint">First make an application (an OpenID Connect client) for Launchway in your provider. Its redirect address for the test is <code>{location.origin}/auth/signin-test</code>; for real use it is <code>{location.origin}/auth/callback</code>.</p>
-          <label className="field"><span>The provider's address (issuer)</span><input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="https://sso.example.com/realms/acme" required /></label>
+          <p className="faint">{P.t4}<code>{location.origin}/auth/signin-test</code>; for real use it is <code>{location.origin}/auth/callback</code>.</p>
+          <label className="field"><span>{P.t5}</span><input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder={P.t6} required /></label>
           <label className="field"><span>Client id</span><input value={clientId} onChange={(e) => setClientId(e.target.value)} required /></label>
-          <label className="field"><span>Name of the environment variable that holds the client secret</span><input value={secretEnv} onChange={(e) => setSecretEnv(e.target.value)} aria-describedby="gd-secret-hint" />
-            <small id="gd-secret-hint">The secret is never typed here: put it in this variable on every server.</small></label>
-          <label className="field"><span>Groups claim (if your provider uses another name than groups)</span><input value={groups} onChange={(e) => setGroups(e.target.value)} /></label>
-          <div><button type="submit" className="btn btn-primary" disabled={phase === "starting" || phase === "waiting"}>{phase === "starting" ? "Starting…" : "Test the sign-in in a second window"}</button></div>
+          <label className="field"><span>{P.t7}</span><input value={secretEnv} onChange={(e) => setSecretEnv(e.target.value)} aria-describedby="gd-secret-hint" />
+            <small id="gd-secret-hint">{P.t8}</small></label>
+          <label className="field"><span>{P.t9}</span><input value={groups} onChange={(e) => setGroups(e.target.value)} /></label>
+          <div><button type="submit" className="btn btn-primary" disabled={phase === "starting" || phase === "waiting"}>{phase === "starting" ? "Starting…" : P.t10}</button></div>
         </form>
       )}
       <div aria-live="polite">
         {error && <div className="callout callout-bad" role="alert">{error}</div>}
-        {phase === "waiting" && <div className="callout callout-info">Waiting for you to sign in at the provider in the second window. {url && <>If it did not open, <a href={url} target="_blank" rel="noreferrer">open it here</a>.</>}</div>}
-        {phase === "failed" && <div className="callout callout-bad">The test did not work: {result?.detail}. Fix what it says and test again; nothing has changed.</div>}
+        {phase === "waiting" && <div className="callout callout-info">{P.t11}{url && <>If it did not open, <a href={url} target="_blank" rel="noreferrer">open it here</a>.</>}</div>}
+        {phase === "failed" && <div className="callout callout-bad">The test did not work: {result?.detail}{P.t12}</div>}
         {phase === "worked" && (
           <div className="callout callout-ok">
-            <strong>The test worked.</strong> {result?.detail}. Nothing about how people sign in has changed yet, and the built-in administrator stays as the way back in.
-          </div>
+            <strong>The test worked.</strong> {result?.detail}{P.t13}</div>
         )}
       </div>
       {phase === "worked" && (
         <div className="gd-next">
           <h3 className="h-sm">To switch it on</h3>
           <Unavailable action={sw} />
-          {snippet?.snippet && <><p>Add this to the server's settings file, or to the chart's <code>config.extraConfig</code>, and restart:</p><textarea className="gd-code" readOnly rows={Math.min(14, snippet.snippet.split("\n").length + 1)} aria-label="The setting to add" value={snippet.snippet} /></>}
-          <p className="faint">Built-in accounts can stay on beside the provider, so a mistake in the provider's settings cannot lock everyone out.</p>
+          {snippet?.snippet && <><p>{P.t14}<code>config.extraConfig</code>, and restart:</p><textarea className="gd-code" readOnly rows={Math.min(14, snippet.snippet.split("\n").length + 1)} aria-label="The setting to add" value={snippet.snippet} /></>}
+          <p className="faint">{P.t15}</p>
         </div>
       )}
     </>

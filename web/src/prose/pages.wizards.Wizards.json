@@ -1,0 +1,14 @@
+{
+ "t0": "This server keeps its configuration in its file",
+ "t1": "There is nothing to set up here. ",
+ "t2": "Only administrators change the configuration",
+ "t3": "Ask someone with the admin role.",
+ "t4": "[aria-invalid=true], .cf-invalid input, .cf-invalid select, .cf-invalid textarea",
+ "t5": "Every server uses it within seconds; nothing needs a restart.",
+ "t6": "No configuration changes: nothing is added to the configuration.",
+ "t7": "The server's checks pass: Create will work.",
+ "t8": "Fix these first (Back takes you to the questions):",
+ "t9": "Nothing was created. The server refused:",
+ "t10": "Also (names or patterns, separated by commas)",
+ "t11": "Names or patterns, separated by commas"
+}

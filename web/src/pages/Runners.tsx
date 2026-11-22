@@ -9,12 +9,14 @@ import { bytes } from "../components/Security";
 import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Runners");
 
 // Where Launchway's releases are published (see packaging/README.md): every release holds
 // install.sh, the binaries and packages, both Helm charts as .tgz files, and SHA256SUMS with its
 // Sigstore signature. Images are ghcr.io/jk-magic-creations/launchway and .../launchway-runner.
-export const RELEASES_URL = "https://github.com/JK-Magic-Creations/launchway/releases";
-export const RUNNER_IMAGE = "ghcr.io/jk-magic-creations/launchway-runner";
+export const RELEASES_URL = P.t0;
+export const RUNNER_IMAGE = P.t1;
 
 // releaseVersion is the server's version when it is a release (v1.4.0, v1.4.0-rc.1), so that a
 // new runner gets the same release as the server; development builds give "".
@@ -77,23 +79,23 @@ export function RunnersPage() {
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
     <div className="page">
-      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say("Machines that run steps. A {runner} only ever connects out to the server, so it can sit in any network. Each belongs to a pool, which decides which {projects}' work it may take.")}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
+      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say(P.t2)}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
       <ErrorBox error={error} />
 
       {legacy.length > 0 && (
         <div className="callout callout-draft" role="status">
-          <strong>{legacy.length === 1 ? terms().say("1 {runner} uses") : terms().say(`${legacy.length} {runners} use`)} a shared token, which gives no per-runner identity.</strong>{" "}
-          {terms().say("The server cannot tell {runners} with the same token apart, so it trusts what each says about itself, and a leaked token lets anyone take that pool's work. Enroll them with a join token instead")}{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
+          <strong>{legacy.length === 1 ? terms().say("1 {runner} uses") : terms().say(`${legacy.length} {runners} use`)} {P.t3}</strong>{" "}
+          {terms().say(P.t4)}{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
         </div>
       )}
 
       {pools && <PoolsCard pools={pools.pools} runners={runners ?? []} />}
 
       <h2 className="h-sm rn-h">{terms().say("{Runners}")}</h2>
-      {runners && runners.length === 0 && <WizardEmpty title={terms().say("No {runners} have connected yet")} wizard="add-runner" label={terms().say("Add a {runner}")}
-        text={terms().say("A {runner} is a machine, container or Kubernetes pod that does the steps of {runs}: without one, runs wait.")} />}
+      {runners && runners.length === 0 && <WizardEmpty title={terms().say(P.t5)} wizard="add-runner" label={terms().say("Add a {runner}")}
+        text={terms().say(P.t6)} />}
       {runners && runners.length > 0 && (
-        <div className="card card-flush table-scroll rn-scroll">
+        <div className={P.t7}>
           <table className="table rn-table">
             <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><span className="visually-hidden">Actions</span></th>}</tr></thead>
             <tbody>
@@ -127,7 +129,7 @@ export function RunnersPage() {
                         {r.identity && !revoked && (
                           <div className="rn-actions">
                             <button type="button" className="btn btn-sm" onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
-                              title={terms().say("Ask the {runner} to make a new key at its next request")}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
+                              title={terms().say(P.t8)}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
                             <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => revoke(r)}>Revoke</button>
                           </div>
                         )}
@@ -149,8 +151,8 @@ export function RunnersPage() {
       )}
       {pools && !manage && (
         <section className="card">
-          <h2 className="h-sm">{terms().say("Add a {runner} on another machine")}</h2>
-          <p className="sub">{terms().say("Someone who manages {runners} (the role")} <Mono>runner_admin</Mono> {terms().say("names, admin by default, on every {project}) makes a join token for a pool here. With it, on the machine:")}</p>
+          <h2 className="h-sm">{terms().say(P.t9)}</h2>
+          <p className="sub">{terms().say(P.t10)} <Mono>runner_admin</Mono> {terms().say(P.t11)}</p>
           <pre className="code">{`launchway runner --server ${location.origin} --join <join token>`}</pre>
         </section>
       )}
@@ -190,12 +192,12 @@ function StoreCard() {
       {!st.available && st.problem && <div className="callout callout-bad">{st.problem}</div>}
       {st.available && st.why && <p className="sub">{st.why}</p>}
       {st.available && st.store === "database" && !st.why && (
-        <p className="sub">{terms().say("{Artifacts}, SBOMs and provenance are kept in the database, shared by every server. Nothing else to run.")}</p>
+        <p className="sub">{terms().say(P.t12)}</p>
       )}
       {u && (
         <div className="store-usage">
           <div className="store-meter" role="meter" aria-label="Store used" aria-valuemin={0} aria-valuemax={u.limit_bytes} aria-valuenow={u.used_bytes}>
-            <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.max(share * 100, u.used_bytes > 0 ? 1 : 0)}%` }} />
+            <span className={share >= 0.8 ? P.t13 : "store-meter-fill"} style={{ width: `${Math.max(share * 100, u.used_bytes > 0 ? 1 : 0)}%` }} />
           </div>
           <div className="store-figures">
             <span><b>{bytes(u.used_bytes)}</b> of {bytes(u.limit_bytes)} used</span>
@@ -209,7 +211,7 @@ function StoreCard() {
       {!u && st.available && (
         <p className="sub">{st.kept.files} {st.kept.files === 1 ? "file" : "files"} kept, {bytes(st.kept.bytes)}.</p>
       )}
-      {st.advice.map((a) => <div key={a} className="callout callout-wait store-advice">{a}</div>)}
+      {st.advice.map((a) => <div key={a} className={P.t14}>{a}</div>)}
     </section>
   );
 }
@@ -228,7 +230,7 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>{id.ephemeral && <span className="faint small"> ephemeral</span>}
-        <div className="faint small mono" title={terms().say("The fingerprint of the {runner}'s public key")}>{id.key_fingerprint}</div>
+        <div className="faint small mono" title={terms().say(P.t15)}>{id.key_fingerprint}</div>
         <div className="faint small" title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</div>
       </div>
     );
@@ -238,7 +240,7 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>
-        <div className="faint small">{terms().say("its key and enrolment are shown to those who manage {runners}")}</div>
+        <div className="faint small">{terms().say(P.t16)}</div>
       </div>
     );
   }
@@ -271,7 +273,7 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
   return (
     <>
       <h2 className="h-sm rn-h">Pools</h2>
-      <div className="card card-flush table-scroll rn-scroll">
+      <div className={P.t7}>
         <table className="table">
           <thead><tr><th>Pool</th><th>Serves</th><th>{terms().say("{Runners} may use")}</th><th>Online</th></tr></thead>
           <tbody>
@@ -283,12 +285,12 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
                   <td>
                     {p.kind === "deploy" ? <>targets {p.targets.join(", ")}</>
                       : p.projects.length ? <>projects {p.projects.join(", ")}</>
-                      : <>{terms().say("every {project} no other pool serves")}</>}
+                      : <>{terms().say(P.t17)}</>}
                     {p.events.length > 0 && <div className="faint small">only runs started by {p.events.join(", ")}</div>}
                   </td>
                   <td>
                     {p.require_identity ? <span className="pill pill-ok">{terms().say("enrolled {runners} only")}</span>
-                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><div className="faint small">set require_identity to refuse the shared token</div></>
+                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><div className="faint small">{P.t18}</div></>
                       : terms().say("enrolled {runners}")}
                   </td>
                   <td>{online}</td>
@@ -336,7 +338,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
   return (
     <section className="card rn-add">
       <h2 className="h-sm">{terms().say("Add a {runner}")}</h2>
-      <p className="sub">{terms().say("Make a join token for a pool. A {runner} enrols with it once: it makes a key that never leaves it, and gets an identity of its own that can be revoked on its own. The token is shown once, and stored only as a hash.")}</p>
+      <p className="sub">{terms().say(P.t19)}</p>
       <form onSubmit={create} className="inputs-form" aria-label="Make a join token">
         <div className="rn-form">
           <label className="field">
@@ -364,14 +366,14 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
         </div>
         <label className="rn-check">
           <input type="checkbox" checked={ephemeral} onChange={(e) => setEphemeral(e.target.checked)} />
-          <span>{terms().say("Ephemeral: each {runner} is revoked when it leaves (for pods that enroll when they start)")}</span>
+          <span>{terms().say(P.t20)}</span>
         </label>
         <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make join token"}</button></div>
       </form>
 
       {made && commands && (
         <div className="callout callout-ok rn-made" role="status">
-          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}. Copy it now: it will not be shown again.</strong>
+          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}{P.t21}</strong>
           <div className="tokenvalue">
             <input readOnly value={made.token} aria-label="The join token" onFocus={(e) => e.currentTarget.select()} className="mono" />
             <button type="button" className="btn" onClick={() => copy("token", made.token)}>{copied === "token" ? "Copied" : "Copy"}</button>
@@ -400,7 +402,7 @@ type Cmd = { title: string; text: string };
 function installCommands(origin: string, token: string, t: JoinToken, version: string, p?: RunnerPool): Record<"vm" | "container" | "kubernetes", Cmd[]> {
   const labels = t.labels.length ? `\nlabels: [${t.labels.join(", ")}]` : "";
   const projects = p && p.kind === "build" && p.projects.length ? p.projects : [];
-  const acceptYaml = `accept:${projects.length ? `\n  projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}]` : "\n  # projects: [shop, \"web-*\"]"}
+  const acceptYaml = `accept:${projects.length ? `\n  projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}]` : P.t22}
   # images: ["registry.example.com/*"]
   pull_requests: false
   drafts: false
@@ -409,23 +411,23 @@ function installCommands(origin: string, token: string, t: JoinToken, version: s
   return {
     vm: [
       {
-        title: "Install and enroll (Linux with systemd; the installer verifies what it downloads)",
+        title: P.t23,
         text: `curl -fsSLO ${installerURL(version)}\nsudo sh install.sh ${version ? `--version ${version} ` : ""}--server ${origin} --join ${token}`,
       },
-      { title: "Or, with the launchway binary already on the machine", text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
-      { title: terms().say("/etc/launchway/runner.yaml: the {runner}'s own limits (optional)"), text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
+      { title: P.t24, text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
+      { title: terms().say(P.t25), text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
     ],
     container: [
-      { title: terms().say("Run the {runner} in a container"), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
+      { title: terms().say(P.t26), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
     ],
     kubernetes: [
       { title: "The join token, as a Secret", text: `kubectl create namespace launchway-runner\nkubectl -n launchway-runner create secret generic launchway-runner-join --from-literal=token=${token}` },
       {
-        title: "runner-values.yaml (the runner-only chart)",
+        title: P.t27,
         text: `server:\n  url: ${origin}\nrunner:\n  join: { existingSecret: launchway-runner-join }\n  kubernetes: { namespace: launchway-steps, createNamespace: true }${t.labels.length ? `\n  labels: [${t.labels.join(", ")}]` : ""}${projects.length ? `\n  accept: { projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}], pull_requests: false }` : ""}`,
       },
-      { title: version ? "Install" : "Install (from a source checkout; releases publish the chart as a .tgz)", text: `helm upgrade --install launchway-runners ${runnerChart(version)} -n launchway-runner -f runner-values.yaml` },
-      ...(t.ephemeral || t.max_uses > 1 ? [] : [{ title: "Note", text: "Each pod enrols when it starts: make the token ephemeral, with enough uses for every pod start." }]),
+      { title: version ? "Install" : P.t28, text: `helm upgrade --install launchway-runners ${runnerChart(version)} -n launchway-runner -f runner-values.yaml` },
+      ...(t.ephemeral || t.max_uses > 1 ? [] : [{ title: "Note", text: P.t29 }]),
     ],
   };
 }
@@ -435,7 +437,7 @@ function JoinTokens({ tokens, now, onRevoke }: { tokens: JoinToken[]; now: numbe
   return (
     <>
       <h2 className="h-sm rn-h">Join tokens</h2>
-      <div className="card card-flush table-scroll rn-scroll">
+      <div className={P.t7}>
         <table className="table">
           <thead><tr><th>Token</th><th>Pool</th><th>Used</th><th>State</th><th>Made</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
           <tbody>

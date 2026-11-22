@@ -1,0 +1,13 @@
+{
+ "t0": "A rollback restores the version only. It never restores a database or configuration.",
+ "t1": "{Rollback:do} (in plain words, {rollback:plain}) to an older version of your choice",
+ "t2": "Emergency action on a protected {environment}: no approval first; an approver reviews it afterwards.",
+ "t3": "Goes back to the previous successful deployment unless you choose another.",
+ "t4": "It takes the {environment}'s lock like any deployment, and is recorded in the",
+ "t5": "This is an emergency action on a protected {environment}: it needs no approval first, and an approver reviews it afterwards.",
+ "t6": "This {environment} asks for an approval first, even for an emergency: the {rollback} waits for one.",
+ "t7": "Also revert these toggle changes (recorded, never held for approval)",
+ "t8": "Another deployment holds the lock. The {rollback} waits for it and then goes first.",
+ "t9": "Why are you {rollback:doing}? (required, kept with the {rollback})",
+ "t10": "For example: checkout fails for customers since this version"
+}

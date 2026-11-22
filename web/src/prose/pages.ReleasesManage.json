@@ -1,0 +1,22 @@
+{
+ "t0": "Each row is a {project}, each column an Airfield. What runs in an Airfield is what was last launched there; a release is what gets promoted from one to the next.",
+ "t1": "Once a {project} has a release, or a pipeline has launched something into an Airfield, it appears here.",
+ "t2": "Which release runs in which Airfield",
+ "t3": "not a release of this {project}",
+ "t4": "/deployments/releases/calendar",
+ "t5": "Promotions and freezes from two weeks ago to a month ahead appear here.",
+ "t6": "Two weeks back to a month ahead",
+ "t7": "nothing is promoted unless an administrator of the {project} overrides, with a reason that is kept in the",
+ "t8": "A Formation groups releases of several {projects} that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started.",
+ "t9": "/deployments/releases/formations",
+ "t10": "Write one below: the releases, in the order they should go out. The order is yours, or tick \"Order by dependencies\" and the software graph puts what the others depend on first.",
+ "t11": "Ordered by dependencies: the software graph put what the others depend on first.",
+ "t12": "Releases, in order, as {project}@version",
+ "t13": "Order by dependencies (the software graph puts what others depend on first)",
+ "t14": "What shipped, when it reached each Airfield, and the four measures of delivery worked out from what Launchway already records.",
+ "t15": "from the commit to the Airfield, over ",
+ "t16": "launches failed or were returned to base",
+ "t17": "Launches that succeeded in the accent color; launches that failed or were returned to base in red.",
+ "t18": "No release was published in this period.",
+ "t19": "Releases published in the period and when each reached each Airfield"
+}

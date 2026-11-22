@@ -1,0 +1,23 @@
+{
+ "t0": "Learn more about the launch line",
+ "t1": "Learn more about {projects} and pipelines",
+ "t2": "Read about moving your pipelines over",
+ "t3": "Learn more about security findings",
+ "t4": "Learn more about configuration as code",
+ "t5": "concepts/configuration-as-code",
+ "t6": "Learn more about configuration reports",
+ "t7": "Learn more about {environments} and deployments",
+ "t8": "concepts/environments-and-deployments",
+ "t9": "Learn more about {environments}",
+ "t10": "Learn more about templates and libraries",
+ "t11": "concepts/templates-and-libraries",
+ "t12": "Learn more about container images",
+ "t13": "Learn more about security findings and software bills of materials",
+ "t14": "Learn more about sign-in and access",
+ "t15": "Learn more about connecting an agent",
+ "t16": "Learn more about configuration and levels",
+ "t17": "Learn more about configuration objects",
+ "t18": "Learn more about approvals and rules",
+ "t19": "Learn more about verifying a deployment",
+ "t20": "Why deployments wait for a lock"
+}

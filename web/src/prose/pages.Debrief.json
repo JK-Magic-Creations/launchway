@@ -1,0 +1,17 @@
+{
+ "t0": "Results appear when a step that declares {debriefs} ends.",
+ "t1": "skipped. The table below has the same numbers.",
+ "t2": "Expected against actual, line by line",
+ "t3": "Its history says this test is flaky, so the failure may not be caused by this change",
+ "t4": "Also failing on the default branch: ",
+ "t5": ", so this change did not break it",
+ "t6": "No test in this run has a flaky history.",
+ "t7": "A test that passed on a retry is listed here and never counted as a plain pass.",
+ "t8": "These tests are listed in the repository's quarantine file. A failure here does not fail the {run}, and is counted until the entry expires.",
+ "t9": "Each test across the browsers or versions it ran in.",
+ "t10": "No coverage report was collected for this {run}.",
+ "t11": "changed lines that hold code are covered.",
+ "t12": "A trend needs at least two runs with tests on this branch.",
+ "t13": "Pass rate per {run}; the vertical axis starts at",
+ "t14": "%. A circle is a {run} where everything that ran passed; a triangle is a run with failures."
+}

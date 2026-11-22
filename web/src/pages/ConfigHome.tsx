@@ -10,6 +10,8 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { levelWords } from "../configKinds";
 import "../config.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.ConfigHome");
 
 // ConfigHomePage is where an administrator starts: what is configured, the
 // guided set-ups, what things are called, and the latest changes.
@@ -35,34 +37,30 @@ export function ConfigHomePage() {
     return (
       <div className="page">
         <h1>Configuration</h1>
-        <Empty title="This server keeps its configuration in its file">
-          This server does not keep configuration in its database, so there is nothing to change here.
-          Upgrade Launchway to a version that does, and everything but the bootstrap settings is set up here instead, with its history.
-        </Empty>
+        <Empty title={P.t0}>
+          {P.t1}</Empty>
       </div>
     );
   }
   if (!overview.admin) {
-    return <div className="page"><h1>Configuration</h1><Empty title="Only administrators change the configuration">Ask someone with the admin role.</Empty></div>;
+    return <div className="page"><h1>Configuration</h1><Empty title={P.t2}>{P.t3}</Empty></div>;
   }
   return (
     <div className="page cf-page">
       <ConfigNav overview={overview} path={path} />
-      <PageHead eyebrow="Settings" title={<>Configuration</>} sentence={<>Everything an administrator sets up, kept in the database with the history of every change. Changes apply to every server within seconds, without a restart.</>} actions={<><a className="btn" href="/api/v1/config/export" download>Export as YAML</a></>} />
+      <PageHead eyebrow="Settings" title={<>Configuration</>} sentence={<>{P.t4}</>} actions={<><a className="btn" href="/api/v1/config/export" download>Export as YAML</a></>} />
       <ErrorBox error={loadError} />
       {overview.status?.safe_mode && (
         <div className="callout callout-bad" role="alert">
-          <strong>This server is in safe mode.</strong> The stored configuration could not be loaded ({overview.status.safe_mode.reason}), so it runs with {overview.status.safe_mode.using}. It tries the stored configuration again every few seconds; fix the problem named here and it leaves safe mode by itself.
-        </div>
+          <strong>This server is in safe mode.</strong> {P.t5}{overview.status.safe_mode.reason}), so it runs with {overview.status.safe_mode.using}{P.t6}</div>
       )}
       {overview.status?.problem && !overview.status.safe_mode && (
         <div className="callout callout-bad" role="alert">
-          <strong>The newest configuration is not in effect.</strong> {overview.status.problem} The servers keep using revision {overview.status.revision}; the change is stored and is tried again every few seconds.
-        </div>
+          <strong>{P.t7}</strong> {overview.status.problem} {P.t8}{overview.status.revision}{P.t9}</div>
       )}
       {overview.status?.servers && overview.status.servers.length > 0 && (
         <details className="cf-servers">
-          <summary>Which revision each server runs (stored revision {overview.status.stored_revision ?? overview.status.revision})</summary>
+          <summary>{P.t10}{overview.status.stored_revision ?? overview.status.revision})</summary>
           <table className="table">
             <thead><tr><th>Server</th><th>Applied revision</th><th>State</th></tr></thead>
             <tbody>
@@ -70,7 +68,7 @@ export function ConfigHomePage() {
                 <tr key={s.server}>
                   <td className="mono">{s.server}{s.server === overview.status?.server ? " (this one)" : ""}</td>
                   <td>{s.revision}</td>
-                  <td>{s.state === "applied" && s.revision === (overview.status?.stored_revision ?? s.revision) ? "up to date" : s.state === "failed" ? `could not apply: ${s.problem ?? ""}` : "behind: it applies the stored revision within seconds"}</td>
+                  <td>{s.state === "applied" && s.revision === (overview.status?.stored_revision ?? s.revision) ? "up to date" : s.state === "failed" ? `could not apply: ${s.problem ?? ""}` : P.t11}</td>
                 </tr>
               ))}
             </tbody>
@@ -82,7 +80,7 @@ export function ConfigHomePage() {
 
       <section aria-labelledby="cf-wiz-h">
         <h2 id="cf-wiz-h" className="cf-h">Guided set-ups</h2>
-        <p className="sub">Each asks plain questions, explains every choice, checks your answers with the server as you go, and shows exactly what it will create before it creates anything.</p>
+        <p className="sub">{P.t12}</p>
         <ul className="cf-wizgrid">
           {WIZARDS.map((w) => (
             <li key={w.id}>
@@ -95,7 +93,7 @@ export function ConfigHomePage() {
           {(
             <li><Link href="/config/wizard/first-run" className="cf-wizcard cf-wizcard-quiet">
               <span className="cf-wizcard-title">First-run setup</span>
-              <span className="cf-wizcard-text">Choose the words, choose sign-in, connect a repository: the questions a new {terms().lower("installation")} starts with.</span>
+              <span className="cf-wizcard-text">{P.t13}{terms().lower("installation")} starts with.</span>
             </Link></li>
           )}
         </ul>
@@ -154,11 +152,11 @@ function Checklist({ overview, counts }: { overview: ConfigOverview; counts: Rec
   }, [overview]);
   const lv = overview.levels;
   const items = [
-    { done: named, title: "Choose the words", text: `Aviation words or plain business ones, and what your ${terms().lower("organization")}, its groups and its ${terms().pluralLower("project")} are called, so the screens use your words.`, href: "/config/wizard/first-run?step=words" },
-    { done: me?.auth_mode === "oidc", title: "Choose how people sign in", text: "Your company's identity provider, so people use the accounts they have and groups decide what they may do.", href: "/config/wizard/first-run?step=signin" },
+    { done: named, title: "Choose the words", text: `Aviation words or plain business ones, and what your ${terms().lower("organization")}, its groups and its ${terms().pluralLower("project")} are called, so the screens use your words.`, href: P.t14 },
+    { done: me?.auth_mode === "oidc", title: "Choose how people sign in", text: P.t15, href: P.t16 },
     { done: counts.project === undefined ? null : counts.project > 0, title: terms().say("Add a {project}"), text: `Your first ${lv.project.singular.toLowerCase()}: its pushes start runs of its pipeline.`, href: "/projects/new" },
-    { done: runner, title: terms().say("Add a {runner}"), text: terms().say("A machine, container or Kubernetes pod of your own that does the steps of {runs} (the server's built-in {runner} is for trying things out)."), href: "/config/wizard/add-runner" },
-    { done: counts.environment === undefined ? null : counts.environment > 0, title: terms().say("Add an {environment}"), text: terms().say("A place runs {deploy:do} to, such as staging or prod."), href: "/config/wizard/add-environment" },
+    { done: runner, title: terms().say("Add a {runner}"), text: terms().say(P.t17), href: "/config/wizard/add-runner" },
+    { done: counts.environment === undefined ? null : counts.environment > 0, title: terms().say("Add an {environment}"), text: terms().say(P.t18), href: P.t19 },
   ];
   const left = items.filter((i) => i.done === false).length;
   const all = items.every((i) => i.done);
@@ -195,7 +193,7 @@ function Levels({ overview }: { overview: ConfigOverview }) {
         <dt>One repository</dt><dd>{lv.project.singular}</dd>
       </dl>
       <p className="cf-help">
-        {overview.units_in_use ? null : <>Groups of {lv.project.plural.toLowerCase()} with shared settings are off: nobody has made one. </>}
+        {overview.units_in_use ? null : <>Groups of {lv.project.plural.toLowerCase()} {P.t20}</>}
         <Link href="/settings/words">Choose the words</Link>
         {overview.units_in_use ? null : <> or <Link href="/config/units/new">make the first group</Link></>}.
       </p>

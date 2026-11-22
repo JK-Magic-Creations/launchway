@@ -4,6 +4,8 @@
 // exist in docs/, and that every pattern is a page of the product.
 
 import { learnHref } from "./content";
+import { prose } from "../prose";
+const P = await prose("learn.links");
 
 export interface LearnTarget { slug: string; anchor?: string; label: string }
 
@@ -11,71 +13,71 @@ const t = (label: string, slug: string, anchor?: string): LearnTarget => ({ labe
 
 /** Learn more, by the pattern of the page in the product (see nav/model.ts). */
 export const LEARN_FOR: Record<string, LearnTarget> = {
-  "/": t("Learn more about the launch line", "concepts/launch-line"),
-  "/projects": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/projects/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/units": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/units/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/units/:name": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/units/:name/projects/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/projects/:name": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/": t(P.t0, "concepts/launch-line"),
+  "/projects": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/projects/new": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/units": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/units/new": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/units/:name": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/units/:name/projects/new": t(P.t1, "concepts/pipelines-and-runs", "project"),
+  "/projects/:name": t(P.t1, "concepts/pipelines-and-runs", "project"),
   "/pipelines": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline/edit": t("Read about editing pipelines", "guide/editor"),
-  "/projects/:name/import": t("Read about moving your pipelines over", "guide/move-your-pipelines"),
+  "/projects/:name/import": t(P.t2, "guide/move-your-pipelines"),
   "/projects/:name/tests": t("Learn more about {debriefs}", "guide/test-reports"),
-  "/projects/:name/security": t("Learn more about security findings", "guide/security-findings"),
+  "/projects/:name/security": t(P.t3, "guide/security-findings"),
   "/projects/:name/caches": t("Learn more about build caches", "guide/build-caches"),
-  "/projects/:name/configuration": t("Learn more about configuration as code", "concepts/configuration-as-code"),
-  "/runs/:id/configuration/:step": t("Learn more about configuration reports", "guide/ansible"),
+  "/projects/:name/configuration": t(P.t4, P.t5),
+  "/runs/:id/configuration/:step": t(P.t6, "guide/ansible"),
   "/projects/:name/variables": t("Learn more about variables", "concepts/variables", "variables-set-at-a-level"),
   "/settings/variables": t("Learn more about variables", "concepts/variables", "variables-set-at-a-level"),
   "/playground": t("Read about writing pipelines", "guide/pipelines"),
   "/activity": t("Learn more about runs", "concepts/pipelines-and-runs", "run"),
   "/activity/approvals": t("Learn more about approvals", "concepts/approvals"),
   "/runs/:id": t("Learn why a {run} waits", "concepts/launch-line", "when-a-change-waits"),
-  "/deployments": t("Learn more about {environments} and deployments", "concepts/environments-and-deployments"),
-  "/deployments/environments": t("Learn more about {environments}", "concepts/environments-and-deployments", "what-an-environment-holds"),
-  "/deployments/environments/:name": t("Learn more about {environments}", "concepts/environments-and-deployments", "what-an-environment-holds"),
+  "/deployments": t(P.t7, P.t8),
+  "/deployments/environments": t(P.t9, P.t8, "what-an-environment-holds"),
+  "/deployments/environments/:name": t(P.t9, P.t8, "what-an-environment-holds"),
   "/deployments/applications": t("Learn more about deployments", "guide/deployments"),
   "/deployments/applications/:name": t("Learn more about deployments", "guide/deployments"),
-  "/library": t("Learn more about templates and libraries", "concepts/templates-and-libraries"),
+  "/library": t(P.t10, P.t11),
   "/library/starters": t("Learn more about the starters", "guide/starters"),
-  "/library/templates": t("Learn more about templates and libraries", "concepts/templates-and-libraries"),
-  "/library/templates/:library/:name": t("Learn more about templates", "concepts/templates-and-libraries", "what-exists-today"),
-  "/depot": t("Learn more about container images", "guide/images"),
-  "/depot/components": t("Learn more about security findings and software bills of materials", "guide/security-findings"),
-  "/depot/digest/:digest": t("Learn more about container images", "guide/images"),
+  "/library/templates": t(P.t10, P.t11),
+  "/library/templates/:library/:name": t("Learn more about templates", P.t11, "what-exists-today"),
+  "/depot": t(P.t12, "guide/images"),
+  "/depot/components": t(P.t13, "guide/security-findings"),
+  "/depot/digest/:digest": t(P.t12, "guide/images"),
   "/settings": t("Start with first-run setup", "howto/setup-first-run"),
   "/settings/runners": t("Learn more about {runners}", "guide/runner-identity"),
-  "/settings/access": t("Learn more about sign-in and access", "guide/access"),
-  "/settings/access/keys": t("Learn more about sign-in and access", "guide/access"),
-  "/settings/access/agents": t("Learn more about connecting an agent", "guide/agents"),
+  "/settings/access": t(P.t14, "guide/access"),
+  "/settings/access/keys": t(P.t14, "guide/access"),
+  "/settings/access/agents": t(P.t15, "guide/agents"),
   "/settings/approvals": t("Learn more about approvals", "concepts/approvals", "who-may-decide"),
   "/settings/rules": t("Learn more about policies", "guide/policies"),
   "/settings/audit": t("See every audit action", "reference/events"),
-  "/config": t("Learn more about configuration and levels", "guide/configuration", "levels"),
-  "/config/:kind": t("Learn more about configuration and levels", "guide/configuration", "levels"),
-  "/config/:kind/:name": t("Learn more about configuration objects", "reference/config-objects"),
-  "/config/:kind/new": t("Learn more about configuration objects", "reference/config-objects"),
+  "/config": t(P.t16, "guide/configuration", "levels"),
+  "/config/:kind": t(P.t16, "guide/configuration", "levels"),
+  "/config/:kind/:name": t(P.t17, "reference/config-objects"),
+  "/config/:kind/new": t(P.t17, "reference/config-objects"),
   "/config/wizard/:id": t("Learn more about setting up", "howto/setup-first-run"),
 };
 
 /** The concept page behind each wizard. */
 export const WIZARD_LEARN: Record<string, LearnTarget> = {
   "first-run": t("Learn more about setting up", "howto/setup-first-run"),
-  "connect-repository": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "connect-repository": t(P.t1, "concepts/pipelines-and-runs", "project"),
   "add-runner": t("Learn more about {runners}", "concepts/pipelines-and-runs", "runner"),
-  "add-environment": t("Learn more about {environments}", "concepts/environments-and-deployments"),
-  "add-policy": t("Learn more about approvals and rules", "concepts/approvals", "rules-not-only-people"),
-  "add-health-source": t("Learn more about verifying a deployment", "guide/verification"),
+  "add-environment": t(P.t9, P.t8),
+  "add-policy": t(P.t18, "concepts/approvals", "rules-not-only-people"),
+  "add-health-source": t(P.t19, "guide/verification"),
   "add-model": t("Learn more about AI models", "guide/ai"),
 };
 
 /** Pages that explain a message the product shows. */
 export const EXPLAIN: Record<string, LearnTarget> = {
   waits: t("Why a {run} waits", "concepts/launch-line", "when-a-change-waits"),
-  lock: t("Why deployments wait for a lock", "concepts/environments-and-deployments", "one-at-a-time"),
+  lock: t(P.t20, P.t8, "one-at-a-time"),
   stopped: t("What to do when a {run} stops", "howto/troubleshooting"),
   clearance: t("How approvals work", "concepts/approvals", "how-it-works"),
 };

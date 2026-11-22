@@ -1,0 +1,18 @@
+{
+ "t0": "What concerns you, in one place. ",
+ "t1": "Choose what you are told and how",
+ "t2": "Choose what you are told and how. Everything also lands in your ",
+ "t3": "This installation sends no e-mail.",
+ "t4": "Your choices still decide what lands in your inbox. An administrator turns mail on with the ",
+ "t5": "E-mail goes to the address in your profile as of your last sign-in; sign in once with one.",
+ "t6": "Each kind of notice and how it reaches you",
+ "t7": "Mail of a repository that is not public carries only its name and a link, never a title or a comment: mail leaves the installation, so what it holds is limited. Every message has a link that stops that kind without signing in.",
+ "t8": "Repositories and Flights you watch",
+ "t9": "Without a choice you are told of what you take part in. ",
+ "t10": "repo:acme/shop or flight:shop-api",
+ "t11": "Hold e-mail during quiet hours (it is sent when they end; the inbox is not held)",
+ "t12": "Send one e-mail a day instead of one for each notice",
+ "t13": "No mail server is set. Set the ",
+ "t14": "section of the installation settings (host, from, public_url, credentials as references).",
+ "t15": "is set, so messages carry no links."
+}

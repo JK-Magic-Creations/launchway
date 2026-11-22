@@ -5,6 +5,8 @@ import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
 import { RepositorySettings } from "./Repositories";
 import { terms } from "../terms";
 import { RepoTabs } from "../components/RepoTabs";
+import { prose } from "../prose";
+const P = await prose("pages.Repository");
 
 // The imported history is a chunk of its own: it loads when its tab is opened.
 const ImportedHistory = lazy(() => import("./ImportedHistory"));
@@ -29,7 +31,7 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "settings" | 
       <header className="page-head">
         <div>
           <h1>{path}</h1>
-          {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</p>}
+          {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? P.t0 : ""}{repo.archived ? ", archived" : ""}.</p>}
         </div>
       </header>
       <RepoTabs path={path} on={tab} />
@@ -61,14 +63,14 @@ function MirrorsTab({ repo, reload }: { repo: Repository; reload: () => void }) 
   const pull = list?.find((m) => m.direction === "pull");
   const stop = async () => {
     if (!window.confirm(`Stop mirroring ${repo.path}? It becomes the primary and takes pushes from now on; the link to ${pull?.url ?? "the other repository"} is removed. Run a final sync first to pick up the latest.`)) return;
-    await act("stop", "", () => mirrorsApi.stop(repo.path, window.confirm("Run one more sync first, so nothing the other repository gained is lost? (OK = yes, sync first)")));
+    await act("stop", "", () => mirrorsApi.stop(repo.path, window.confirm(P.t1)));
   };
 
   return (
     <>
       <ErrorBox error={error} />
       {list && list.length === 0 && (
-        <Empty title="No mirrors">A pull mirror keeps this repository an exact copy of one on another server; a push mirror copies every update to another server.</Empty>
+        <Empty title="No mirrors">{P.t2}</Empty>
       )}
       {list && list.map((m) => (
         <section key={m.id} className="card mirror" aria-label={`${m.direction} mirror`}>
@@ -86,7 +88,7 @@ function MirrorsTab({ repo, reload }: { repo: Repository; reload: () => void }) 
             <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "sync", () => mirrorsApi.sync(repo.path, m.id))}>{busy === m.id + "sync" ? "Syncing…" : "Sync now"}</button>
             <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "pause", () => mirrorsApi.pause(repo.path, m.id, !m.enabled))}>{m.enabled ? "Pause" : "Resume"}</button>
             {m.direction === "push" && <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "remove", () => mirrorsApi.remove(repo.path, m.id))}>Remove</button>}
-            {m.direction === "pull" && <button type="button" className="btn btn-primary" disabled={!!busy} onClick={stop}>Stop mirroring, make this the primary</button>}
+            {m.direction === "pull" && <button type="button" className="btn btn-primary" disabled={!!busy} onClick={stop}>{P.t3}</button>}
           </div>
         </section>
       ))}
@@ -119,30 +121,29 @@ function AddMirror({ repo, hasPull, onAdded }: { repo: Repository; hasPull: bool
       <form onSubmit={submit} className="inputs-form" aria-label="Add a mirror">
         <label className="field"><span>Direction</span>
           <select value={direction} onChange={(e) => setDirection(e.target.value as "pull" | "push")}>
-            <option value="pull" disabled={hasPull}>Pull: keep this repository a copy of another</option>
-            <option value="push">Push: copy every update to another</option>
+            <option value="pull" disabled={hasPull}>{P.t4}</option>
+            <option value="push">{P.t5}</option>
           </select></label>
         <label className="field"><span>Address</span>
-          <input value={url} required placeholder="https://git.example.com/team/app.git" onChange={(e) => setUrl(e.target.value)} /></label>
-        <label className="field"><span>User name (if the token needs one)</span>
+          <input value={url} required placeholder={P.t6} onChange={(e) => setUrl(e.target.value)} /></label>
+        <label className="field"><span>{P.t7}</span>
           <input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-        <label className="field"><span>Where the server reads the token from</span>
+        <label className="field"><span>{P.t8}</span>
           <select value={credKind} onChange={(e) => setCredKind(e.target.value as "env" | "file" | "")}>
-            <option value="">No credential (a public repository)</option>
-            <option value="env">An environment variable of the server</option>
+            <option value="">{P.t9}</option>
+            <option value="env">{P.t10}</option>
             <option value="file">A file on the server</option>
           </select></label>
         {credKind && (
           <label className="field"><span>{credKind === "env" ? "Variable name" : "File path"}</span>
             <input value={cred} placeholder={credKind === "env" ? "GITEA_TOKEN" : "/run/secrets/gitea-token"} onChange={(e) => setCred(e.target.value)} />
-            <small>This is a reference. The token itself is never typed here or kept by Launchway.</small></label>
+            <small>{P.t11}</small></label>
         )}
-        <p className="sub">Only https and http addresses. An address on a private network is refused unless an administrator has listed it
-          in <Mono>forge.mirror_allow</Mono>.{direction === "pull" && " A pull mirror needs a repository with no branches or tags of its own."}</p>
+        <p className="sub">{P.t12}<Mono>forge.mirror_allow</Mono>.{direction === "pull" && P.t13}</p>
         <ErrorBox error={error} />
         <div><button type="submit" className="btn btn-primary" disabled={busy || !url.trim()}>{busy ? "Adding…" : "Add mirror"}</button></div>
       </form>
-      <p className="sub"><Link href="/projects">{terms().say("{Projects}")}</Link> use repositories; a mirror keeps a copy current, it does not change who may push where.</p>
+      <p className="sub"><Link href="/projects">{terms().say("{Projects}")}</Link> {P.t14}</p>
     </section>
   );
 }

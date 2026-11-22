@@ -1,0 +1,20 @@
+{
+ "t0": "Waiting for the release to age",
+ "t1": "What this repository's default branch depends on, what is newer, and what is known to be vulnerable. Launchway reads the manifests and lock files and changes nothing here.",
+ "t2": "How Launchway keeps these dependencies current, and what it would open right now. Updates are proposed as pull requests; nothing is merged by itself.",
+ "t3": "Vulnerabilities could not be checked: ",
+ "t4": "Only what the repository asks for (hide what is pulled in by others)",
+ "t5": "Only those with a known vulnerability",
+ "t6": "Nothing matches these filters.",
+ "t7": "Working out what would be opened…",
+ "t8": "They come from the defaults, then the levels above this repository, then the file ",
+ "t9": "in the default branch. A level can lock a setting; the file cannot change it then. Change the file and merge it to change the settings; there is nothing to save here.",
+ "t10": ". Security fixes do not wait for it.",
+ "t11": "days (not applied to security fixes)",
+ "t12": "automatic for the kinds the settings allow, once required checks pass",
+ "t13": "The settings file has a problem and was not applied: ",
+ "t14": "Press the button to see which pull requests the updater would open, update or close now, and what waits behind the limits. Nothing is opened by looking.",
+ "t15": "Nothing to do: everything is up to date or held back by the settings.",
+ "t16": "The updater runs as a pipeline step on a {runner} (",
+ "t17": "); pull requests it opens are ordinary ones and the pipeline checks them like any other."
+}

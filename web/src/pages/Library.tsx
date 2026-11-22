@@ -5,6 +5,8 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { ago } from "../format";
 import { useInstallation } from "../guided/facts";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Library");
 
 /** The library's front page: the building blocks that have something to show. */
 export function LibraryPage() {
@@ -15,23 +17,23 @@ export function LibraryPage() {
       <header className="page-head">
         <div>
           <h1>Library</h1>
-          <p className="sub">The building blocks, to look things up. Every name opens its own page.</p>
+          <p className="sub">{P.t0}</p>
         </div>
       </header>
       <div className="guided-tiles">
         {t > 0 && (
           <Link href="/library/templates" className="guided-tile">
             <span className="guided-tile-n">{t}</span>
-            <span>{t === 1 ? "library of templates" : "libraries of templates"}<br /><span className="faint">Ready-made pipelines, each in Git and pinned by version.</span></span>
+            <span>{t === 1 ? "library of templates" : "libraries of templates"}<br /><span className="faint">{P.t1}</span></span>
           </Link>
         )}
         <Link href="/depot" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">▣</span>
-          <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or {project}.")}</span></span>
+          <span>Images<br /><span className="faint">{terms().say(P.t2)}</span></span>
         </Link>
         <Link href="/depot/components" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">◫</span>
-          <span>Components<br /><span className="faint">{terms().say("What is inside your software, found by name across every {run}.")}</span></span>
+          <span>Components<br /><span className="faint">{terms().say(P.t3)}</span></span>
         </Link>
       </div>
     </div>
@@ -47,11 +49,11 @@ export function TemplatesPage() {
       <header className="page-head">
         <div>
           <h1>Templates</h1>
-          <p className="sub">A template is a ready-made part of a pipeline, kept in a library repository in Git. A pipeline pins the version it uses, so a run can always be repeated exactly.</p>
+          <p className="sub">{P.t4}</p>
         </div>
       </header>
       {inst.loaded && libs.length === 0 && (
-        <Empty title="No libraries yet">A library is a Git repository of templates. Once the server reads one, its templates are listed here with their versions.</Empty>
+        <Empty title="No libraries yet">{P.t5}</Empty>
       )}
       {libs.map((l) => <LibraryCard key={l.name} lib={l} />)}
     </div>
@@ -70,7 +72,7 @@ function LibraryCard({ lib }: { lib: LibraryInfo }) {
       </div>
       <ErrorBox error={error} />
       {!data && !error && <p className="faint">Loading…</p>}
-      {data && data.templates.length === 0 && <p className="faint">This library has no templates at {data.version}.</p>}
+      {data && data.templates.length === 0 && <p className="faint">{P.t6}{data.version}.</p>}
       {data && data.templates.length > 0 && (
         <ul className="guided-rows guided-rows-flat">
           {data.templates.map((t) => (

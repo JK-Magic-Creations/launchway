@@ -1,0 +1,8 @@
+{
+ "t0": "What the Inspection finds in this repository: secrets, known vulnerabilities in dependencies, unsafe code patterns, licences and the rest that fit what it holds. ",
+ "t1": "Every {run} gets it; here you can ask for it now.",
+ "t2": "Starts a run of only the Inspection at ",
+ "t3": ", whatever the repository's pipeline says, or whether it has one. It reads the files and changes nothing.",
+ "t4": ". Findings appear below when it ends.",
+ "t5": "Findings are kept under a {project}, and no {project} watches this repository yet. Add a {project} that reads it (in the server's configuration); then an Inspection, here or on any {run}, records what it finds and this page lists it."
+}

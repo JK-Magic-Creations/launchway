@@ -9,6 +9,8 @@ import {
   CopyValue, FindingStatusBadge, FindingsHowTo, LockIcon, SEVERITIES, SeverityBadge, SeverityBar, SeverityLegend,
   artifactFileURL, bytes, safeURL, serious, severityLabel, where,
 } from "../components/Security";
+import { prose } from "../prose";
+const P = await prose("pages.RunSecurity");
 
 const PAGE = 100;
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
@@ -74,12 +76,12 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
         <Empty title={going.length ? "No findings yet" : "No security reports"}>
           {going.length
             ? <>Findings appear when {going.map((s) => s.id).join(", ")} {going.length > 1 ? "end" : "ends"}.</>
-            : <>{data.declared.join(", ")} {data.declared.length > 1 ? "declare" : "declares"} security reports, but none were read. The step's log says why, for example a glob that matched no files.</>}
+            : <>{data.declared.join(", ")} {data.declared.length > 1 ? "declare" : "declares"} {P.t0}</>}
         </Empty>
       );
     }
     return (
-      <Empty title="This run has no security findings">
+      <Empty title={P.t1}>
         <FindingsHowTo />
       </Empty>
     );
@@ -93,7 +95,7 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
     <div className="tests secview">
       {c && (
         <section className="card tsum" aria-label="Findings summary">
-          {!!decided.accepted && <p className="faint small" role="status">{decided.accepted} finding{decided.accepted === 1 ? " is" : "s are"} accepted as a risk or marked a false positive (with a reason and an end date, on the project's Security page) and {decided.accepted === 1 ? "is" : "are"} not counted here.</p>}
+          {!!decided.accepted && <p className="faint small" role="status">{decided.accepted} finding{decided.accepted === 1 ? " is" : "s are"} {P.t2}{decided.accepted === 1 ? "is" : "are"} not counted here.</p>}
           <div className="tsum-top">
             <div className={"tsum-rate " + (n > 0 ? "tsum-rate-bad" : c.total ? "" : "tsum-rate-ok")}>
               <span className="tsum-rate-num">{n > 0 ? n : c.total}</span>
@@ -115,11 +117,11 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
                 <button type="button" className="linkbtn" onClick={() => setStatus("new")}><strong className={data.statuses.new ? "sec-new" : undefined}>{data.statuses.new} new</strong></button>,{" "}
                 <button type="button" className="linkbtn" onClick={() => setStatus("existing")}>{data.statuses.existing} existing</button>,{" "}
                 <button type="button" className="linkbtn" onClick={() => setStatus("fixed")}><strong className={data.statuses.fixed ? "sec-fixed" : undefined}>{data.statuses.fixed} fixed</strong></button>
-                {" "}compared with the previous run of this branch (<Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link>)
+                {" "}{P.t3}<Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link>)
               </span>
-            ) : <span className="faint small">No earlier run of this branch has findings to compare with.</span>}
+            ) : <span className="faint small">{P.t4}</span>}
             {data.tools.length > 0 && <span className="faint small">Found by {data.tools.join(", ")}</span>}
-            {c.truncated && <span className="faint small">Not every finding was kept; see the notes under each step.</span>}
+            {c.truncated && <span className="faint small">{P.t5}</span>}
           </div>
           {data.steps.length > 0 && <StepReports steps={data.steps} active={step} onStep={setStep} />}
         </section>
@@ -175,7 +177,7 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
           </div>
           {status === "fixed" && data.previous && (
             <div className="tfilter-note">
-              Findings of <Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link> {terms().say("that this {run} no longer has.")}{" "}
+              Findings of <Link href={`/runs/${data.previous.id}?tab=security`}>#{data.previous.number}</Link> {terms().say(P.t6)}{" "}
               <button type="button" className="linkbtn" onClick={() => setStatus("")}>Show current findings</button>
             </div>
           )}
@@ -190,9 +192,9 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
           {data.findings.length === 0 ? (
             <div className="empty empty-sm">
               {query ? <>No findings match <strong>{query}</strong>.</>
-                : status === "fixed" ? "Nothing was fixed: every finding of the previous run is still here."
-                : status === "new" ? terms().say("Nothing new since the previous {run}.")
-                : c.total === 0 ? "The scanners ran and found nothing." : "No findings match these filters."}
+                : status === "fixed" ? P.t7
+                : status === "new" ? terms().say(P.t8)
+                : c.total === 0 ? P.t9 : P.t10}
             </div>
           ) : (
             <div className="tgroups">
@@ -260,7 +262,7 @@ function StepReports({ steps, active, onStep }: { steps: StepFindings[]; active:
                 </li>
               ))}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-              {s.pruned && <li className="tfile-note">{terms().say("The individual findings were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
+              {s.pruned && <li className="tfile-note">{terms().say(P.t11)}</li>}
             </ul>
           </li>
         ))}
@@ -282,7 +284,7 @@ export function FindingRow({ f, run, multiStep, open: openFirst, extra }: {
         <SeverityBadge s={f.severity} />
         <span className="tcase-main">
           <span className="tcase-name">
-            {f.secret && <span className="secret-mark" title="A secret: its value is never stored or shown"><LockIcon /><span className="visually-hidden">Secret.</span></span>}
+            {f.secret && <span className="secret-mark" title={P.t12}><LockIcon /><span className="visually-hidden">Secret.</span></span>}
             {f.rule?.short && f.rule.short !== f.rule_id ? <>{oneLine(f.rule.short)} <span className="finding-rule">{f.rule_id}</span></> : <span className="mono">{f.rule_id}</span>}
           </span>
           <span className="tcase-sub">
@@ -298,10 +300,10 @@ export function FindingRow({ f, run, multiStep, open: openFirst, extra }: {
       {open && (
         <div className="tcase-detail" id={detailId}>
           {f.secret && (
-            <div className="secret-note"><LockIcon size={15} /><span><strong>Secret</strong> — its value is never stored or shown. Remove it from the code, and change it wherever it is used: anyone who can read the repository may already know it.</span></div>
+            <div className="secret-note"><LockIcon size={15} /><span><strong>Secret</strong> {P.t13}</span></div>
           )}
           {f.status === "fixed" && (
-            <p className="sub">In the previous run of this branch (<Link href={`/runs/${f.run_id}?tab=security`}>#{f.run_number}</Link>), gone in this one.</p>
+            <p className="sub">{P.t14}<Link href={`/runs/${f.run_id}?tab=security`}>#{f.run_number}</Link>), gone in this one.</p>
           )}
           {f.message && <CopyBlock label="Message" text={f.message} />}
           {f.rule?.full && f.rule.full !== f.message && (
@@ -334,7 +336,7 @@ function ComponentFinder() {
     <form className="sbom-find" role="search" onSubmit={(e) => { e.preventDefault(); if (name.trim()) navigate(`/depot/components?name=${encodeURIComponent(name.trim())}`); }}>
       <label className="search">
         <span className="visually-hidden">Component name</span>
-        <input type="search" placeholder="Component name, such as requests" value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="search" placeholder={P.t15} value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <button type="submit" className="btn btn-sm" disabled={!name.trim()}>{terms().say("Find in every {project}")}</button>
     </form>
@@ -385,10 +387,10 @@ function SBOMSection({ run, sboms, version }: { run: RunDetail; sboms: StepSBOM[
                   )}
                 </li>
               ))}
-              {s.artifact && arts && (!art || art.status !== "kept") && <li className="tfile-note">The SBOM file is no longer kept{art ? ` (${art.status})` : ""}; the component list remains.</li>}
+              {s.artifact && arts && (!art || art.status !== "kept") && <li className="tfile-note">{P.t16}{art ? ` (${art.status})` : ""}; the component list remains.</li>}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-              {s.truncated && <li className="tfile-note">Only the first {s.stored.toLocaleString()} components were kept for search.</li>}
-              {s.pruned && <li className="tfile-note">{terms().say("The components were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
+              {s.truncated && <li className="tfile-note">Only the first {s.stored.toLocaleString()} {P.t17}</li>}
+              {s.pruned && <li className="tfile-note">{terms().say(P.t18)}</li>}
             </ul>
             {lic.length > 0 && (
               <div className="lics">

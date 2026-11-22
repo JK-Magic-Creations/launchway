@@ -7,6 +7,8 @@ import { Choices } from "./ConfigForm";
 import { Button, Decision } from "../kit/layout";
 import { Icon, type IconName } from "../kit/Icon";
 import { SETS, isSetId, makeTerms, termProblem, vocabulary, vocabularyGroups, type SetId, type Terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("components.WordsEditor");
 
 export interface WordsValue { set: SetId; overrides: Record<string, string> }
 
@@ -22,15 +24,15 @@ export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: 
   const renamed = Object.keys(value.overrides).length;
   return (
     <div className="words">
-      <Choices legend="Which words should Launchway use?" value={value.set} onChange={(v) => isSetId(v) && onChange({ ...value, set: v })}
-        help="Only the words on the screen change: addresses, commands, pipeline files and settings keep their plain names, so nothing you script depends on a word."
+      <Choices legend={P.t0} value={value.set} onChange={(v) => isSetId(v) && onChange({ ...value, set: v })}
+        help={P.t1}
         options={(Object.keys(SETS) as SetId[]).map((id) => ({ value: id, label: SETS[id].name + (id === "aviation" ? " (default)" : ""), help: SETS[id].blurb }))} />
 
       <WordsPreview t={t} />
 
       <fieldset className="cf-section words-list">
         <legend className="cf-section-title">Every word, one by one</legend>
-        <p className="cf-help">Leave a box empty to use the set's word. A status keeps its plain word beside the themed one, so it cannot be renamed. Pipeline, step, alert, branch, pull request, commit, secret and variable are never themed, so they are not listed.</p>
+        <p className="cf-help">{P.t2}</p>
         {vocabularyGroups().map((g) => (
           <section key={g.ID} className="words-group" aria-labelledby={"wg-" + g.ID}>
             <h3 id={"wg-" + g.ID}>{g.Title}</h3>
@@ -98,7 +100,7 @@ const NAV: { icon: IconName; label: (t: Terms) => string }[] = [
 
 /** One sentence that uses the words, so a change of set or a rename is seen at once. */
 export function sampleSentence(t: Terms): string {
-  return t.say("A {run} on a {runner} will {deploy:do} to the {environment}, with a {canary} first and {rollback:do} if the {post_deploy_watch} sees a problem.");
+  return t.say(P.t3);
 }
 
 /** The words in use: the navigation, a trail through the levels, and a sample decision, drawn with the chosen words. */
@@ -125,7 +127,7 @@ export function WordsPreview({ t }: { t: Terms }) {
               </div>
             </div>} />
         </div>
-        <aside className="wp-guide"><span className="tag">{t.label("guide")}</span><p>Say what you want to do, and the {t.lower("guide")} shows the way. Your {t.lower("flight_plan")} is the pipeline a new {t.lower("project")} starts from.</p></aside>
+        <aside className="wp-guide"><span className="tag">{t.label("guide")}</span><p>{P.t4}{t.lower("guide")} shows the way. Your {t.lower("flight_plan")} is the pipeline a new {t.lower("project")} starts from.</p></aside>
       </div>
     </section>
   );

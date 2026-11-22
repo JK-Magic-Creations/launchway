@@ -1,0 +1,12 @@
+{
+ "t0": "The machines that run your steps. Add one, see who is online, or take one away.",
+ "t1": "Keys for scripts, and how to connect an AI assistant.",
+ "t2": "Whether the person who starts a run may approve it themselves.",
+ "t3": "Rules every pipeline is held to before it deploys.",
+ "t4": "Whether the secrets this server stores are encrypted at rest, and where the key is held.",
+ "t5": "Who changed what, and when. Every sign-in and every change.",
+ "t6": "Named settings you set once at a level, which flow down to everything below. A lock keeps one from being overridden.",
+ "t7": "Everything an administrator sets up, with a guided set-up for each, kept with its history.",
+ "t8": "Nothing here is needed to run a pipeline day to day. Each row is a place you may change things.",
+ "t9": "The first-run walk-through: sign-in, the root key, a {runner}, Git hosting, importing repositories and a first pipeline. Skip any step and come back."
+}

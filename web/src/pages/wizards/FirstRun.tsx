@@ -16,14 +16,16 @@ import { withWords } from "../SettingsWords";
 import { makeTerms, terms } from "../../terms";
 import { PipelineToCommit, RunItNow, useRepoFlow } from "./ConnectRepo";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
+import { prose } from "../../prose";
+const P = await prose("pages.wizards.FirstRun");
 
 const PROVIDERS = [
-  { value: "authentik", label: "authentik", issuer: "https://auth.example.com/application/o/launchway/", groups: "groups" },
-  { value: "keycloak", label: "Keycloak", issuer: "https://sso.example.com/realms/acme", groups: "groups (add a group mapper to the client)" },
-  { value: "okta", label: "Okta", issuer: "https://acme.okta.com/oauth2/default", groups: "groups (add a groups claim to the authorization server)" },
-  { value: "entra", label: "Microsoft Entra ID", issuer: "https://login.microsoftonline.com/<tenant id>/v2.0", groups: "groups (group ids unless you configure names)" },
-  { value: "google", label: "Google", issuer: "https://accounts.google.com", groups: "Google sends no groups: name the first administrators by user" },
-  { value: "other", label: "Another OpenID Connect provider", issuer: "https://idp.example.com", groups: "groups, or whatever claim your provider puts groups in" },
+  { value: "authentik", label: "authentik", issuer: P.t0, groups: "groups" },
+  { value: "keycloak", label: "Keycloak", issuer: P.t1, groups: P.t2 },
+  { value: "okta", label: "Okta", issuer: P.t3, groups: P.t4 },
+  { value: "entra", label: "Microsoft Entra ID", issuer: P.t5, groups: P.t6 },
+  { value: "google", label: "Google", issuer: "https://accounts.google.com", groups: P.t7 },
+  { value: "other", label: P.t8, issuer: "https://idp.example.com", groups: P.t9 },
 ];
 
 export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
@@ -95,7 +97,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
     local: () => wordsProblems(words),
     render: () => (
       <>
-        <p className="cf-help">Launchway names its levels and parts. Choose the aviation words or plain business ones, see them in the preview, and rename any single word. You can change them any time in Settings.</p>
+        <p className="cf-help">{P.t10}</p>
         <WordsEditor value={words} onChange={setWords} />
       </>
     ),
@@ -109,7 +111,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
       <>
         <div className="cf-grid">
           <TextInput label={`Your ${wt.lower("organization")}'s name`} value={orgName} onChange={setOrgName} placeholder="Acme" focusOnMount problems={by.display_name}
-            help="Shown at the top of the configuration and where it helps people know where they are. Optional." />
+            help={P.t11} />
         </div>
         {!overview.units_in_use && (
           <div className="cf-grid">
@@ -124,55 +126,53 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
 
   const signinStep: StepDef = {
     id: "signin", title: "How people sign in",
-    local: () => signin === "oidc" && (!issuer.trim() || !clientId.trim()) ? "Give the provider's address and the client id, or choose no sign-in for now." : null,
+    local: () => signin === "oidc" && (!issuer.trim() || !clientId.trim()) ? P.t12 : null,
     render: () => (
       <>
-        {me?.auth_mode === "oidc" && <div className="callout callout-ok">People already sign in with your identity provider on this server. You can skip this step.</div>}
+        {me?.auth_mode === "oidc" && <div className="callout callout-ok">{P.t13}</div>}
         <Choices legend="How should people sign in?" value={signin} onChange={(v) => setSignin(v as "none" | "oidc")}
           options={[
-            { value: "none", label: "No sign-in, for trying Launchway out",
-              help: <><strong>Anyone who can reach this server has full access</strong>, as one shared user. Fine on your own laptop; never on a network others can reach.</> },
-            { value: "oidc", label: "Our company's identity provider (OpenID Connect)",
-              help: "People sign in with the accounts they already have; their groups decide what they may do. Needed for anything shared." },
+            { value: "none", label: P.t14,
+              help: <><strong>{P.t15}</strong>{P.t16}</> },
+            { value: "oidc", label: P.t17,
+              help: P.t18 },
           ]} />
         {signin === "oidc" && (
           <div className="cf-sub">
             <Choices legend="Which identity provider?" value={provider} onChange={(v) => { setProvider(v); }}
               options={PROVIDERS.map((p) => ({ value: p.value, label: p.label }))} />
-            <p className="cf-help">First make an application (an OpenID Connect client) for Launchway in the provider, with the redirect address below, and note its client id and secret.</p>
+            <p className="cf-help">{P.t19}</p>
             <div className="cf-grid">
-              <TextInput label="The provider's address (issuer)" value={issuer} onChange={setIssuer} mono wide placeholder={prov.issuer}
+              <TextInput label={P.t20} value={issuer} onChange={setIssuer} mono wide placeholder={prov.issuer}
                 help={`The issuer URL the provider shows for the application, such as ${prov.issuer}.`} />
-              <TextInput label="Client id" value={clientId} onChange={setClientId} mono help="The application's client id in the provider." />
+              <TextInput label="Client id" value={clientId} onChange={setClientId} mono help={P.t21} />
               <TextInput label="Redirect address" value={redirect} onChange={setRedirect} mono wide
-                help="Where the provider sends people back after they sign in. Register exactly this in the provider. It is this page's address plus /auth/callback." />
-              <TextInput label="Environment variable that will hold the client secret" value={secretEnv} onChange={setSecretEnv} mono
-                help="The secret is never typed here or stored by Launchway: you put it in this variable on every server." />
-              <ListInput label="Groups whose members are the first administrators" value={adminGroups} onChange={setAdminGroups} placeholder="launchway-admins"
+                help={P.t22} />
+              <TextInput label={P.t23} value={secretEnv} onChange={setSecretEnv} mono
+                help={P.t24} />
+              <ListInput label={P.t25} value={adminGroups} onChange={setAdminGroups} placeholder="launchway-admins"
                 help={`Group names as the provider sends them (${prov.groups}). They can then give others roles here.`} />
               <ListInput label="Or users" value={adminUsers} onChange={setAdminUsers} placeholder="alice"
-                help="User names of the first administrators, if you prefer to name people." />
+                help={P.t26} />
             </div>
             <div className="cf-row">
               <button type="button" className="btn" disabled={!issuer.trim() || signinCheck.state === "checking"} onClick={checkSignin}>
                 {signinCheck.state === "checking" ? "Checking…" : "Check with the provider"}</button>
             </div>
             <div aria-live="polite">
-              {signinCheck.state === "unavailable" && <p className="faint">This check is not available on this server, so the sign-in answers cannot be checked or saved here.</p>}
+              {signinCheck.state === "unavailable" && <p className="faint">{P.t27}</p>}
               {signinCheck.result?.blocked && signinCheck.result.blocked_host && <AllowHost host={signinCheck.result.blocked_host} />}
               {signinCheck.state === "error" && <p className="cf-problem">The check failed: {signinCheck.error}</p>}
               {signinCheck.result && (
                 <>
                   {signinCheck.result.problems.length > 0
-                    ? <div className="callout callout-bad"><strong>The provider's answers have problems:</strong><ul>{signinCheck.result.problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
-                    : <div className="callout callout-ok">The provider answers: sign-in at {signinCheck.result.endpoints.authorization ?? "its address"}. {signinCheck.result.endpoints.groups_claim_hint ?? ""}</div>}
+                    ? <div className="callout callout-bad"><strong>{P.t28}</strong><ul>{signinCheck.result.problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
+                    : <div className="callout callout-ok">{P.t29}{signinCheck.result.endpoints.authorization ?? "its address"}. {signinCheck.result.endpoints.groups_claim_hint ?? ""}</div>}
                 </>
               )}
             </div>
             <div className="callout callout-info" role="note">
-              <strong>What happens with these answers.</strong> They are saved as the sign-in settings and kept with the history of every change. Saving does not switch sign-in on:
-              that needs you to sign in successfully with them first, so that nobody is locked out, and this version cannot do that test sign-in yet. Until it can, this server keeps the
-              sign-in it started with{me?.auth_mode === "oidc" ? " (your identity provider)" : " (none: anyone who can reach it has full access)"}, and the saved answers wait.
+              <strong>{P.t30}</strong> {P.t31}{me?.auth_mode === "oidc" ? " (your identity provider)" : P.t32}, and the saved answers wait.
             </div>
           </div>
         )}
@@ -186,19 +186,19 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
       steps={[wordsStep, namesStep, signinStep, ...flow.steps]} changes={changes}
       summaryExtra={<>
         <PipelineToCommit flow={flow} />
-        {signin === "oidc" && <p className="cf-help">The sign-in answers are saved, not switched on: that waits for a test sign-in, which this version cannot do yet.</p>}
+        {signin === "oidc" && <p className="cf-help">{P.t33}</p>}
       </>}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
           <PipelineToCommit flow={flow} />
-          {signin === "oidc" && <div className="callout callout-info">Your sign-in answers are saved. They are not switched on: that needs a successful test sign-in with them, which this version cannot do yet, so this server keeps the sign-in it started with.</div>}
-          {signin === "none" && <div className="callout callout-draft">Sign-in is still off: anyone who can reach this server has full access. Run the first-run setup again, or follow the sign-in guide, before others can reach it.</div>}
+          {signin === "oidc" && <div className="callout callout-info">{P.t34}</div>}
+          {signin === "none" && <div className="callout callout-draft">{P.t35}</div>}
           <h3 className="h-sm">Next</h3>
           {flow.name && <RunItNow name={flow.name} branch={flow.branch} />}
           <ul className="cf-next">
             <li><Link href="/config/wizard/add-runner">{terms().say("Add a {runner}")}</Link> {terms().say("to take the steps of {runs}")}</li>
-            <li><Link href="/config/wizard/add-environment">{terms().say("Add an {environment}")}</Link> {terms().say("to {deploy:do} to")}</li>
+            <li><Link href={P.t36}>{terms().say("Add an {environment}")}</Link> {terms().say("to {deploy:do} to")}</li>
             <li><Link href="/config">Back to configuration</Link></li>
           </ul>
         </>

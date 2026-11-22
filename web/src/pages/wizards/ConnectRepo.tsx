@@ -11,6 +11,8 @@ import { AllowHost } from "../../components/AllowHost";
 import { Link } from "../../components/ui";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
+import { prose } from "../../prose";
+const P = await prose("pages.wizards.ConnectRepo");
 
 type Source = "template" | "file" | "sample";
 
@@ -25,10 +27,10 @@ export interface RepoFlow {
 }
 
 const POLLS = [
-  { value: "15s", label: "Every 15 seconds", help: "Runs start soonest. Each server asks the Git host four times a minute: fine for a few repositories." },
-  { value: "30s", label: "Every 30 seconds", help: "The usual choice: a run starts within half a minute of a push.", badge: "recommended" },
-  { value: "2m", label: "Every 2 minutes", help: "Less load on the Git host; runs start up to two minutes after a push." },
-  { value: "10m", label: "Every 10 minutes", help: "For repositories that change rarely, or a Git host that limits requests. A Git webhook can still make it look at once." },
+  { value: "15s", label: "Every 15 seconds", help: P.t0 },
+  { value: "30s", label: "Every 30 seconds", help: P.t1, badge: "recommended" },
+  { value: "2m", label: "Every 2 minutes", help: P.t2 },
+  { value: "10m", label: "Every 10 minutes", help: P.t3 },
 ];
 
 /** sentence ends a template parameter's description with a full stop, so "Default: …" can follow. */
@@ -143,7 +145,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     if (onPR) on.push("  pull_request: {}");
     if (schedule) on.push(`  schedule:\n    - { cron: "${cron}" }`);
     const head = `pipeline: ${name || "my-project"}\n` + (on.length ? `on:\n${on.join("\n")}\n` : "") + (supersede && (onPush || onPR) ? "supersede: true\n" : "");
-    return head + `\nsteps:\n  test:\n    image: docker.io/library/busybox:1.37.0\n    run: |\n      echo "Hello from Launchway: $LAUNCHWAY_PROJECT at $LAUNCHWAY_COMMIT"\n`;
+    return head + P.t4;
   }, [name, onPush, pushBranches, pushTags, onPR, schedule, cron, supersede]);
 
   const change: ChangeRequest = { kind: "project", name: name.trim(), unit: unit || undefined, spec, version: -1 };
@@ -151,33 +153,31 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
   const repoStep: StepDef = {
     id: "repo", title: "The repository",
     fields: [{ path: "repo", value: repo }, { path: "name", match: ["name", "names", "exists", "already"], value: name }],
-    local: () => !repo.trim() ? "Give the repository's address." : !name.trim() ? `Give the ${proj} a name.` : null,
+    local: () => !repo.trim() ? P.t5 : !name.trim() ? `Give the ${proj} a name.` : null,
     onNext: async () => {
       if (check.repo !== repo.trim()) await runCheck(branch || undefined);
       return true;
     },
     render: (by) => (
       <>
-        <p>Which Git repository should Launchway watch? It reads it to find the pipeline and to know when to start runs.</p>
+        <p>{P.t6}</p>
         <div className="cf-grid">
           <TextInput label="Repository address" required value={repo} onChange={setRepo} mono wide focusOnMount problems={by.repo}
-            placeholder="https://git.example.com/team/shop.git or git@git.example.com:team/shop.git"
-            help="The address you would clone it with: https:// or SSH." />
+            placeholder={P.t7}
+            help={P.t8} />
         </div>
         {hasPassword(repo) && (
-          <div className="callout callout-draft" role="alert">This address has a password or token in it. It would be stored in the configuration and shown to every administrator. Give the server access instead (below), and use the address without it.</div>
+          <div className="callout callout-draft" role="alert">{P.t9}</div>
         )}
         <details className="cf-explain" open={check.result?.ok === false}>
-          <summary>How Launchway gets access to the repository</summary>
-          <p>Launchway reads repositories with the <strong>server's own Git access</strong>, exactly as <span className="mono">git clone</span> {terms().say("would on the server: a public repository needs nothing; for a private one, give the servers an SSH key (mounted where Git looks for it, with the host in known_hosts), or Git settings in the servers' {environment}, such as")} <span className="mono">GIT_CONFIG_COUNT=1</span>,{" "}
-            <span className="mono">GIT_CONFIG_KEY_0=http.https://git.example.com/.extraHeader</span> and{" "}
-            <span className="mono">GIT_CONFIG_VALUE_0=Authorization: Bearer …</span>. No password or token is typed into Launchway, and none is stored with the {proj}.
-            That one Git access covers every repository the server may read: there is nothing to connect per repository.
-            Give it read rights only, unless you want the pipeline editor to save to repositories (as commits on new branches).</p>
+          <summary>{P.t10}</summary>
+          <p>{P.t11}<strong>server's own Git access</strong>, exactly as <span className="mono">git clone</span> {terms().say(P.t12)} <span className="mono">GIT_CONFIG_COUNT=1</span>,{" "}
+            <span className="mono">{P.t13}</span> and{" "}
+            <span className="mono">{P.t14}</span>{P.t15}{proj}{P.t16}</p>
         </details>
         <div className="cf-row">
           <button type="button" className="btn" disabled={!repo.trim() || check.state === "checking"} onClick={() => runCheck(branch || undefined)}>
-            {check.state === "checking" ? "Checking…" : "Check that the server can read it"}
+            {check.state === "checking" ? "Checking…" : P.t17}
           </button>
           <RepoCheckLine check={check} repo={repo.trim()} />
         </div>
@@ -200,17 +200,17 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     },
     render: (by) => (
       <>
-        <p>Which branch is the main one? Runs started by hand use it unless someone picks another, and pull requests are judged against its pipeline.</p>
+        <p>{P.t18}</p>
         {branches.length > 0 && branches.length <= 8 ? (
           <Choices legend="Default branch" value={branch} onChange={setBranch} problems={by.branch}
             options={branches.map((b) => ({ value: b, label: b, badge: b === check.result?.default_branch ? "the repository's default" : undefined }))} />
         ) : branches.length > 8 ? (
-          <SelectInput label="Default branch" value={branch} onChange={setBranch} problems={by.branch} help="The branches the server found in the repository."
+          <SelectInput label="Default branch" value={branch} onChange={setBranch} problems={by.branch} help={P.t19}
             options={[{ value: "", label: "Choose a branch" }, ...branches.map((b) => ({ value: b, label: b + (b === check.result?.default_branch ? " (the repository's default)" : "") }))]} />
         ) : (
           <div className="cf-grid">
             <TextInput label="Default branch" value={branch} onChange={setBranch} mono placeholder="main" problems={by.branch}
-              help={check.state === "unavailable" ? "This server cannot list the branches; type the branch's name." : "The server did not list the branches; type the branch's name. Empty: main."} />
+              help={check.state === "unavailable" ? P.t20 : P.t21} />
           </div>
         )}
       </>
@@ -221,17 +221,17 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     id: "pipeline", title: "The pipeline",
     fields: [{ path: "library", match: ["pipeline.library", "library"], value: library }, { path: "template", match: ["pipeline.template", "template"], value: template },
       { path: "version", match: ["pipeline.version", "version"], value: version }, { path: "with", match: ["pipeline.with", "with", "parameter"] }],
-    local: () => source === "template" && (!library || !template) ? "Choose a library and one of its templates, or another way to get a pipeline." : null,
+    local: () => source === "template" && (!library || !template) ? P.t22 : null,
     render: (by) => (
       <>
-        <Choices legend="Where does the pipeline come from?" value={source} onChange={(v) => setSource(v as Source)}
-          help={<>A pipeline says what a run does: its steps, in order. Whatever you choose, a <span className="mono">.launchway/pipeline.yaml</span> committed to the repository later takes its place.</>}
+        <Choices legend={P.t23} value={source} onChange={(v) => setSource(v as Source)}
+          help={<>{P.t24}<span className="mono">.launchway/pipeline.yaml</span> {P.t25}</>}
           options={[
-            { value: "template", label: "A template from a shared library", disabled: !libs?.length,
-              help: libs?.length ? terms().say("Your platform team's ready-made pipeline, kept in one place: when they improve it, every {project} using it gets the improvement at the version you choose. Nothing to commit to the repository.")
-                : <>No libraries are set up on this server yet. <Link href="/config/libraries/new">Add a library</Link> first to use one.</> },
-            { value: "file", label: "A pipeline file in the repository",
-              help: <>The pipeline lives in Git, the team owns it and reviews changes to it like any other code; Launchway stores only the repository's address.{" "}
+            { value: "template", label: P.t26, disabled: !libs?.length,
+              help: libs?.length ? terms().say(P.t27)
+                : <>{P.t28}<Link href="/config/libraries/new">Add a library</Link> first to use one.</> },
+            { value: "file", label: P.t29,
+              help: <>{P.t30}{" "}
                 {check.result?.ok ? <PipelineFileState check={check.result} branch={effBranch} /> : null}</> },
             { value: "sample", label: `Start from a ${terms().lower("flight_plan")}`,
               help: terms().say(`A ${terms().lower("flight_plan")} is the ready-made pipeline for a kind of {project}. You get a minimal working pipeline to copy and commit to the repository as .launchway/pipeline.yaml, with the triggers you choose next. Launchway does not keep pipeline text: Git stays the only source. The pipeline editor can also save it for you, as a commit on a new branch.`) },
@@ -240,18 +240,18 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
           <div className="cf-sub">
             <div className="cf-grid">
               <SelectInput label="Library" value={library} onChange={(v) => { setLibrary(v); setVersion(""); setTemplate(""); setWithVals({}); }} problems={by.library}
-                help={terms().say("The libraries this server may fetch. They are fetched with the same Git access as {projects}.")}
+                help={terms().say(P.t31)}
                 options={[{ value: "", label: "Choose a library" }, ...libs.map((l) => ({ value: l.name, label: l.name }))]} />
               {library && tmpls.data && (
                 <>
                   <TextInput label="Pinned to version" value={version} onChange={setVersion} mono problems={by.version} list="cf-lib-versions"
-                    help={<>A tag (such as {tmpls.data.versions[0] ?? "v1.0.0"}) keeps runs repeatable: the template changes only when you move the pin. A full commit id pins it exactly. A branch follows the library as it changes. The library's tags and branches are suggested.</>} />
+                    help={<>A tag (such as {tmpls.data.versions[0] ?? "v1.0.0"}{P.t32}</>} />
                   <datalist id="cf-lib-versions">{tmpls.data.versions.map((v) => <option key={v} value={v} />)}</datalist>
                 </>
               )}
             </div>
-            {tmpls.state === "loading" && <p className="faint">Reading the library's templates…</p>}
-            {tmpls.state === "error" && <p className="cf-problem">The library could not be read: {tmpls.error}</p>}
+            {tmpls.state === "loading" && <p className="faint">{P.t33}</p>}
+            {tmpls.state === "error" && <p className="cf-problem">{P.t34}{tmpls.error}</p>}
             {tmpls.data && (
               <Choices legend="Template" value={template} onChange={(v) => { setTemplate(v); setWithVals({}); }} problems={by.template}
                 options={tmpls.data.templates.map((t) => ({ value: t.name, label: t.name, help: t.description || (t.params.length ? `Takes ${t.params.map((p) => p.name).join(", ")}.` : "Takes no parameters.") }))} />
@@ -287,30 +287,30 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     fields: [{ path: "poll", value: poll }, { path: "push", match: ["on.push", "push", "branches", "tags"] }, { path: "pull_request", match: ["pull_request"] }, { path: "supersede" }],
     render: (by) => (
       <>
-        <p>Besides starting a run by hand, which events should start one?</p>
+        <p>{P.t35}</p>
         <div className="cf-grid">
           <CheckInput label="Pushes" checked={onPush} onChange={setOnPush} problems={by.push}
-            help={terms().say("A {run} starts for each new commit pushed. Without it, runs start only by hand (or on the schedule).")} />
+            help={terms().say(P.t36)} />
           {onPush && <ListInput label="Only these branches" value={pushBranches} onChange={setPushBranches} placeholder={`${effBranch}, release/*`}
-            help="Names or patterns. Empty: every branch. Most teams run pushes to their main branch and release branches." />}
+            help={P.t37} />}
           {onPush && <ListInput label="Tags" value={pushTags} onChange={setPushTags} placeholder="v*"
-            help="Tag names or patterns that start a run when pushed, such as v* for releases. Empty: no tags." />}
+            help={P.t38} />}
           <CheckInput label="Pull requests" checked={onPR} onChange={setOnPR} problems={by.pull_request}
-            help="A run for every pull request and every push to one. Their steps cannot read secrets unless you allow it, because anyone who can open one can change what runs." />
+            help={P.t39} />
           {source !== "template" && (
             <CheckInput label="On a schedule" checked={schedule} onChange={setSchedule}
-              help="Runs at fixed times, such as a nightly build. Written in the pipeline file, like the other triggers." />
+              help={P.t40} />
           )}
           {source !== "template" && schedule && (
-            <TextInput label="When (cron, UTC)" value={cron} onChange={setCron} mono help="Minute, hour, day of the month, month, day of the week. 0 3 * * * is every night at 03:00; @daily and @hourly work too." />
+            <TextInput label="When (cron, UTC)" value={cron} onChange={setCron} mono help={P.t41} />
           )}
-          {(onPush || onPR) && <CheckInput label="A newer run cancels older ones" checked={supersede} onChange={setSupersede} problems={by.supersede}
-            help={terms().say("When you push again while a run of the same branch or pull request is still going, the older run is canceled, so {runners} work on the latest commit only. A {run} that is {deploy:doing} is never cancelled.")} />}
+          {(onPush || onPR) && <CheckInput label={P.t42} checked={supersede} onChange={setSupersede} problems={by.supersede}
+            help={terms().say(P.t43)} />}
         </div>
-        {source === "template" && <p className="cf-help">A schedule needs a pipeline file in the repository; a {proj} that runs a library template can be started by pushes, pull requests or by hand.</p>}
-        {source !== "template" && <p className="cf-help">With a pipeline file, these triggers are written in the file's <span className="mono">on:</span> section: the summary shows the lines to put there.</p>}
-        <Choices legend="How often should Launchway look for pushes?" value={poll} onChange={setPoll} problems={by.poll} options={POLLS}
-          help="Launchway asks the Git host for new commits; it needs no webhook, so it works behind any firewall." />
+        {source === "template" && <p className="cf-help">{P.t44}{proj} {P.t45}</p>}
+        {source !== "template" && <p className="cf-help">{P.t46}<span className="mono">on:</span> {P.t47}</p>}
+        <Choices legend={P.t48} value={poll} onChange={setPoll} problems={by.poll} options={POLLS}
+          help={P.t49} />
       </>
     ),
   };
@@ -320,14 +320,13 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
 
 function RepoCheckLine({ check, repo }: { check: { state: string; result?: RepoCheck; error?: string; repo?: string; branch?: string }; repo: string }) {
   let body = null;
-  if (check.state === "unavailable") body = <span className="faint">This check is not available on this server. You can continue: the server's checks still run when you create the {""}project.</span>;
+  if (check.state === "unavailable") body = <span className="faint">{P.t50}{""}project.</span>;
   else if (check.state === "error") body = <span className="cf-problem">The check failed: {check.error}</span>;
   else if (check.result && check.repo === repo) {
     body = check.result.ok
       ? <span><span className="cf-ok">The server can read it: {check.result.branches.length} branch{check.result.branches.length === 1 ? "" : "es"}, default {check.result.default_branch || "unknown"}.</span>{" "}
           <PipelineFileState check={check.result} branch={check.branch || check.result.default_branch || "the default branch"} /></span>
-      : <span className="cf-problem">The server cannot read it: {check.result.problem ?? "no reason given"}. You can continue, but runs will fail until the server has access.
-          {check.result.blocked && check.result.blocked_host && <AllowHost host={check.result.blocked_host} />}</span>;
+      : <span className="cf-problem">The server cannot read it: {check.result.problem ?? "no reason given"}{P.t51}{check.result.blocked && check.result.blocked_host && <AllowHost host={check.result.blocked_host} />}</span>;
   }
   return <span className="cf-checkresult" aria-live="polite">{body}</span>;
 }
@@ -357,11 +356,11 @@ export function PipelineToCommit({ flow }: { flow: RepoFlow }) {
   if (flow.source === "template") return null;
   if (flow.source === "file") {
     const on = flow.pipelineText.split("\nsteps:")[0];
-    return <CopyBlock title="Triggers for your .launchway/pipeline.yaml" text={on.trim() + "\n"}
-      note={<>The file in the repository decides what starts runs: make sure its top has these lines (on the <span className="mono">{flow.branch}</span> branch).</>} />;
+    return <CopyBlock title={P.t52} text={on.trim() + "\n"}
+      note={<>{P.t53}<span className="mono">{flow.branch}</span> branch).</>} />;
   }
   return <CopyBlock title=".launchway/pipeline.yaml" text={flow.pipelineText}
-    note={<>Commit this file to the <span className="mono">{flow.branch}</span> {terms().say("branch. Until it is there, runs of this {project} have no pipeline and fail at once.")}</>} />;
+    note={<>Commit this file to the <span className="mono">{flow.branch}</span> {terms().say(P.t54)}</>} />;
 }
 
 export function RunItNow({ name, branch }: { name: string; branch: string }) {
@@ -410,8 +409,8 @@ export function ConnectRepoWizard({ overview }: { overview: ConfigOverview }) {
           <ul className="cf-next">
             <li><Link href={`/config/projects/${encodeURIComponent(flow.name)}`}>See and change the {proj}'s settings</Link></li>
             <li><Link href="/projects">See it with the other {overview.levels.project.plural.toLowerCase()}</Link></li>
-            <li><Link href="/config/wizard/add-runner">{terms().say("Add a {runner}")}</Link>{terms().say(", if no {runner} takes its steps yet")}</li>
-            <li><a href="/config/wizard/connect-repository" onClick={(e) => { e.preventDefault(); navigate("/config"); window.setTimeout(() => navigate("/config/wizard/connect-repository"), 0); }}>Connect another repository</a></li>
+            <li><Link href="/config/wizard/add-runner">{terms().say("Add a {runner}")}</Link>{terms().say(P.t55)}</li>
+            <li><a href={P.t56} onClick={(e) => { e.preventDefault(); navigate("/config"); window.setTimeout(() => navigate(P.t56), 0); }}>Connect another repository</a></li>
           </ul>
         </>
       )} />

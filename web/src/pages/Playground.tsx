@@ -5,41 +5,10 @@ import { Link } from "../components/ui";
 import { KeyHelp } from "../learn/LearnLink";
 import { useValidation } from "../validation";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Playground");
 
-const SAMPLE = `pipeline: my-service
-on:
-  push: { branches: [main, "release/*"] }
-
-# Toolboxes, named once and shared by steps. Services run
-# beside the steps and are reachable at localhost.
-containers:
-  go:    { image: golang:1.27, memory: 2Gi }
-  db:    { image: postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }
-
-steps:
-  lint:
-    description: Look for common mistakes
-    container: go
-    run: go vet ./...
-
-  test:
-    container: go
-    run: go test ./...
-    retry: 1
-
-  build:
-    image: alpine:3.22
-    needs: [lint, test]
-    run: |
-      echo "building $LAUNCHWAY_COMMIT"
-      echo digest=sha256:example >> "$LAUNCHWAY_OUTPUTS"
-
-  deploy:
-    image: alpine:3.22
-    needs: build
-    when: { branch: main }
-    run: echo "deploying $LAUNCHWAY_NEEDS_BUILD_DIGEST"
-`;
+const SAMPLE = P.t0;
 
 const KEY = "launchway.playground";
 const EXPAND_KEY = "launchway.playground.expand";
@@ -70,10 +39,10 @@ export function PlaygroundPage() {
       <header className="page-head">
         <div>
           <h1>Playground</h1>
-          <p className="sub">{terms().say("Write a pipeline and see the graph it becomes. Checked by the same code the server uses; nothing runs. To change a {project}'s pipeline, open it from")} <Link href="/projects">{terms().say("{Projects}")}</Link>.</p>
+          <p className="sub">{terms().say(P.t1)} <Link href="/projects">{terms().say("{Projects}")}</Link>.</p>
         </div>
         <div className="run-actions">
-          <label className="checkline" title="Steps that say uses: library/template are expanded from the libraries this server allows">
+          <label className="checkline" title={P.t2}>
             <input type="checkbox" checked={expand} onChange={(e) => setExpand(e.target.checked)} /> Expand templates
           </label>
           <KeyHelp line={cursorLine} />

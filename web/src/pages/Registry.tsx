@@ -13,6 +13,8 @@ import { Button, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { navigate, onLink } from "../router";
 import type { Me } from "../api";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.Registry");
 
 // The Images tab of the built-in registry: a project's repositories, each repository's images (tags, digest, size,
 // platforms, who pushed it from which run, whether it is signed, has a bill of materials, what the scan found) with a
@@ -38,26 +40,25 @@ export function RegistryPage({ project }: { project?: string }) {
   if (off || (status.error && !status.data)) {
     return (
       <div className="page">
-        <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence="Launchway's own place for container images and Helm charts." />
+        <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={P.t0} />
         {!off && <ErrorBox error={status.error} />}
-        <Sheet><EmptyState title={terms().say("The built-in {registry} is off")} action={<LinkButton href="/depot" icon="arrow">{terms().say("Find images your {runs} built")}</LinkButton>}>
-          {terms().say("The store is off on this server, and the rest of this area works without it: images your {runs} built, and components. Only an administrator can turn it on: it needs sign-in and an {artifact} store, and")} <Mono>registry.enabled</Mono> must not be false in the server's configuration. An administrator can run <Mono>launchway doctor registry</Mono> on the server to see what is missing. Pushing to any other registry keeps working.
-        </EmptyState></Sheet>
+        <Sheet><EmptyState title={terms().say(P.t1)} action={<LinkButton href="/depot" icon="arrow">{terms().say("Find images your {runs} built")}</LinkButton>}>
+          {terms().say(P.t2)} <Mono>registry.enabled</Mono> {P.t3}<Mono>launchway doctor registry</Mono> {P.t4}</EmptyState></Sheet>
       </div>
     );
   }
   const s = status.data!;
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>{terms().say("; people with a role on the {project} see it, and nobody else does.")}</>} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={<>{P.t5}<Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>{terms().say(P.t6)}</>} />
       <div className="grid g2">
         <Sheet title="Push and pull">
           <dl className="kvlist">
             <dt>Address</dt><dd><CopyValue value={s.host} label={terms().say("the {registry} address")} keep={40} /></dd>
-            <dt>Log in</dt><dd><CopyValue value={s.login.split("   ")[0]} label="the login command" keep={48} /> <span className="faint small">with an API token as the password (<a href="/settings/access/keys" onClick={onLink}>make one</a>)</span></dd>
+            <dt>Log in</dt><dd><CopyValue value={s.login.split("   ")[0]} label="the login command" keep={48} /> <span className="faint small">{P.t7}<a href="/settings/access/keys" onClick={onLink}>make one</a>)</span></dd>
             <dt>Push</dt><dd><Mono>docker push {s.host}/{project ?? "project"}/image:tag</Mono></dd>
-            {s.insecure && <><dt>Plain HTTP</dt><dd>{terms().say("This {registry} is not behind HTTPS: clients need")} <Mono>--tls-verify=false</Mono> (podman, skopeo) or <Mono>--plain-http</Mono> (helm).</dd></>}
-            <dt>In a pipeline</dt><dd>An image step with no <Mono>registry</Mono> {terms().say("pushes here, with a credential made for the {run}.")}</dd>
+            {s.insecure && <><dt>Plain HTTP</dt><dd>{terms().say(P.t8)} <Mono>--tls-verify=false</Mono> (podman, skopeo) or <Mono>--plain-http</Mono> (helm).</dd></>}
+            <dt>In a pipeline</dt><dd>An image step with no <Mono>registry</Mono> {terms().say(P.t9)}</dd>
           </dl>
         </Sheet>
         <Sheet title="How it is kept">
@@ -69,7 +70,7 @@ export function RegistryPage({ project }: { project?: string }) {
         </Sheet>
       </div>
       <h2 className="h-sm">{terms().say("{Project}")}</h2>
-      {mine.length === 0 && <p className="faint">{terms().say("You have no role on any {project}, so there is nothing here to see.")}</p>}
+      {mine.length === 0 && <p className="faint">{terms().say(P.t10)}</p>}
       <nav className="chips" aria-label={terms().say("{Projects}")}>
         {mine.map((p) => (
           <a key={p} className={"chip" + (p === project ? " chip-on" : "")} href={`/depot/store/${encodeURIComponent(p)}`} onClick={onLink} aria-current={p === project ? "page" : undefined}>{p}</a>
@@ -96,11 +97,11 @@ function ProjectRegistryView({ project }: { project: string }) {
         <Sheet title={<>Repositories of {project}</>} actions={<span className="faint small">{quotaText(r)}</span>}>
           {r.quota_bytes > 0 && (
             <div className="store-meter" role="meter" aria-label={terms().say("{Registry} quota used")} aria-valuemin={0} aria-valuemax={r.quota_bytes} aria-valuenow={r.used_bytes} aria-valuetext={quotaText(r)}>
-              <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, r.used_bytes > 0 ? 1 : 0))}%` }} />
+              <span className={share >= 0.8 ? P.t11 : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, r.used_bytes > 0 ? 1 : 0))}%` }} />
             </div>
           )}
           {r.repositories.length === 0 ? (
-            <EmptyState title="Nothing is pushed yet">Push an image or a chart to <Mono>{r.push_example}</Mono>, or let a pipeline's image step push it: with no <Mono>registry</Mono> named it comes here.</EmptyState>
+            <EmptyState title="Nothing is pushed yet">Push an image or a chart to <Mono>{r.push_example}</Mono>{P.t12}<Mono>registry</Mono> named it comes here.</EmptyState>
           ) : (
             <div className="table-scroll">
               <table className="table" aria-label={`Repositories of ${project}`}>
@@ -153,7 +154,7 @@ function ImagesView({ project, repository, admin }: { project: string; repositor
       <ErrorBox error={data.error ?? error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}
       {data.loading && <div className="loading">Loading…</div>}
-      {data.data && images.length === 0 && <EmptyState title="No images here">The repository has none left, or nobody has pushed to it.</EmptyState>}
+      {data.data && images.length === 0 && <EmptyState title="No images here">{P.t13}</EmptyState>}
       {images.length > 0 && (
         <div className="table-scroll">
           <table className="table" aria-label={`Images in ${repository}`}>
@@ -181,7 +182,7 @@ function ImagesView({ project, repository, admin }: { project: string; repositor
           </table>
         </div>
       )}
-      {!admin && images.length > 0 && <p className="faint small">Deleting an image needs the admin role on {project}.</p>}
+      {!admin && images.length > 0 && <p className="faint small">{P.t14}{project}.</p>}
     </Sheet>
   );
 }
@@ -207,39 +208,39 @@ function PolicyView({ project, registry, admin, onChanged }: { project: string; 
     <Sheet title="Rules" actions={admin && !editing ? <Button sm onClick={() => setEditing(true)}>Change the rules</Button> : undefined}>
       <ErrorBox error={error} />
       <dl className="kvlist">
-        <dt>Quota</dt><dd>{eff.quota_bytes < 0 ? "none" : bytes(eff.quota_bytes)} <span className="faint small">(set at {eff.quota_from} level; each distinct layer counts once)</span></dd>
-        <dt>Retention</dt><dd>{retention || <span className="faint">no rule: nothing is deleted automatically</span>}</dd>
-        <dt>Immutable tags</dt><dd>{eff.immutable_tags?.length ? eff.immutable_tags.map((t) => <Mono key={t}>{t} </Mono>) : <span className="faint">none: any tag may be pushed again</span>}</dd>
+        <dt>Quota</dt><dd>{eff.quota_bytes < 0 ? "none" : bytes(eff.quota_bytes)} <span className="faint small">(set at {eff.quota_from} {P.t15}</span></dd>
+        <dt>Retention</dt><dd>{retention || <span className="faint">{P.t16}</span>}</dd>
+        <dt>Immutable tags</dt><dd>{eff.immutable_tags?.length ? eff.immutable_tags.map((t) => <Mono key={t}>{t} </Mono>) : <span className="faint">{P.t17}</span>}</dd>
         <dt>Pulled by runs of</dt><dd>{eff.pull_from?.length ? eff.pull_from.join(", ") : <span className="faint">{terms().say("only this {project}")}</span>}</dd>
       </dl>
       {editing && (
         <form className="card compform" onSubmit={save}>
-          <label className="field">Quota in GiB (empty: leave as it is)<input value={form.quotaGiB} onChange={(e) => setForm({ ...form, quotaGiB: e.target.value })} inputMode="decimal" /></label>
-          <label className="field">Keep the newest N tagged images (0: no limit)<input value={form.keepLast} onChange={(e) => setForm({ ...form, keepLast: e.target.value })} inputMode="numeric" /></label>
-          <label className="field">Always keep tags matching (comma separated)<input value={form.keepTags} onChange={(e) => setForm({ ...form, keepTags: e.target.value })} placeholder="v*, release-*" className="mono" /></label>
-          <label className="field">Delete untagged images older than N days (0: never)<input value={form.untagged} onChange={(e) => setForm({ ...form, untagged: e.target.value })} inputMode="numeric" /></label>
-          <label className="field">Tags that cannot be overwritten or deleted once pushed<input value={form.immutable} onChange={(e) => setForm({ ...form, immutable: e.target.value })} placeholder="v*" className="mono" /></label>
+          <label className="field">{P.t18}<input value={form.quotaGiB} onChange={(e) => setForm({ ...form, quotaGiB: e.target.value })} inputMode="decimal" /></label>
+          <label className="field">{P.t19}<input value={form.keepLast} onChange={(e) => setForm({ ...form, keepLast: e.target.value })} inputMode="numeric" /></label>
+          <label className="field">{P.t20}<input value={form.keepTags} onChange={(e) => setForm({ ...form, keepTags: e.target.value })} placeholder="v*, release-*" className="mono" /></label>
+          <label className="field">{P.t21}<input value={form.untagged} onChange={(e) => setForm({ ...form, untagged: e.target.value })} inputMode="numeric" /></label>
+          <label className="field">{P.t22}<input value={form.immutable} onChange={(e) => setForm({ ...form, immutable: e.target.value })} placeholder="v*" className="mono" /></label>
           <div className="acts"><Button kind="pri" type="submit" disabled={busy}>Save the rules</Button><Button type="button" onClick={() => setEditing(false)}>Cancel</Button></div>
         </form>
       )}
       <div className="acts">
-        <Button disabled={busy || !eff.has_retention} onClick={() => run(async () => { setDeleted(null); setPreview((await registryApi.retentionPreview(project)).candidates); })}>Preview what retention would delete</Button>
+        <Button disabled={busy || !eff.has_retention} onClick={() => run(async () => { setDeleted(null); setPreview((await registryApi.retentionPreview(project)).candidates); })}>{P.t23}</Button>
         {!eff.has_retention && <span className="faint small">Set a retention rule first.</span>}
       </div>
       {preview && (
         <div role="status">
-          {preview.length === 0 ? <p>Nothing would be deleted: the rules keep every image.</p> : (
+          {preview.length === 0 ? <p>{P.t24}</p> : (
             <>
-              <p><strong>{preview.length}</strong> {preview.length === 1 ? "image" : "images"} would be deleted ({bytes(preview.reduce((n, c) => n + c.size, 0))}{terms().say("). Images an {environment} runs are never deleted.")}</p>
+              <p><strong>{preview.length}</strong> {preview.length === 1 ? "image" : "images"} would be deleted ({bytes(preview.reduce((n, c) => n + c.size, 0))}{terms().say(P.t25)}</p>
               <ul className="plain">{preview.map((c) => <li key={c.repository + c.digest}><Mono>{c.repository}</Mono> {c.tags.length ? c.tags.join(", ") : c.digest.slice(0, 19)} <span className="faint small">{c.reason}</span></li>)}</ul>
               {admin
                 ? <Button kind="bad" disabled={busy} onClick={() => { if (window.confirm(`Delete these ${preview.length} images? This cannot be undone.`)) run(async () => { const out = await registryApi.retentionRun(project); setDeleted(out.deleted.length); setPreview(null); onChanged(); }); }}>Delete these {preview.length}</Button>
-                : <p className="faint small">Running retention needs the admin role on {project}.</p>}
+                : <p className="faint small">{P.t26}{project}.</p>}
             </>
           )}
         </div>
       )}
-      {deleted !== null && <div className="callout callout-info" role="status">Deleted {deleted} {deleted === 1 ? "image" : "images"}. The bytes go at the next garbage collection.</div>}
+      {deleted !== null && <div className="callout callout-info" role="status">Deleted {deleted} {deleted === 1 ? "image" : "images"}{P.t27}</div>}
     </Sheet>
   );
 }

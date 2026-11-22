@@ -14,6 +14,8 @@ import { useCallback } from "react";
 import { flightNameFrom, flightNameProblem, SQUADRONS, squadronHref, WhyNot } from "./shared";
 import "../../squadrons.css";
 import "../../config.css";
+import { prose } from "../../prose";
+const P = await prose("pages.squadrons.AddFlight");
 
 // Add a Flight: find a repository (hosted ones without a Flight first), say what to call it, and see what pipeline it runs.
 // Every step is an address: ?q= the search, ?connection= a connection searched on request, ?pick= the chosen repository
@@ -41,7 +43,7 @@ export function AddFlightPage({ unit }: { unit: string }) {
   if (!data) return <div className="page"><div className="loading">Loading…</div></div>;
   const title = data.display_name || data.name;
   const head = <PageHead eyebrow={<a href={squadronHref(unit)} onClick={onLink}>{title}</a>} title={t.say("Add a {project}")}
-    sentence={t.say("A {project} is one repository and its pipelines. It will join the {unit} ") + title + "."} />;
+    sentence={t.say(P.t0) + title + "."} />;
   if (!data.may_manage) return <div className="page sq-page">{head}<Sheet><WhyNot why={data.why ?? ""} /></Sheet></div>;
   if (added) return <div className="page sq-page">{head}<Added unit={unit} name={added} result={result?.name === added ? result : null} /></div>;
   if (pick) return <div className="page sq-page">{head}<Confirm unit={unit} onAdded={(r) => { setResult(r); announce(t.say(`The {project} ${r.name} was added.`)); setUrl({ pick: null, from: null, added: r.name }, "push"); }} /></div>;
@@ -81,7 +83,7 @@ function Choose({ unit }: { unit: string }) {
       <Sheet title="Find the repository" pad>
         <form role="search" onSubmit={(e) => { e.preventDefault(); setUrl({ q: typed.trim() || null }, "replace"); }}>
           <TextInput label="Search repositories" focusOnMount value={typed} onChange={(v) => { setTyped(v); setUrl({ q: v.trim() || null }, "replace"); }} placeholder="payments"
-            help={t.say("Repositories hosted here that have no {project} yet come first.")} />
+            help={t.say(P.t1)} />
         </form>
         <p className="faint small" role="status" aria-live="polite">
           {state.loading && !d ? "Looking…" : d ? `${hosted.length} ${hosted.length === 1 ? "repository" : "repositories"} found${fresh.length ? `, ${d.hosted_without_flight} without a ${t.lower("project")}` : ""}.` : ""}
@@ -89,9 +91,9 @@ function Choose({ unit }: { unit: string }) {
       </Sheet>
       {state.error ? <ErrorBox error={state.error} /> : null}
       {nothing && (
-        <Sheet><EmptyState title="No repositories to choose from">
-          {t.say("Launchway hosts no repository you may read and no connection is set up. Create or import a repository, connect a Git service, or paste a plain Git address below.")}
-          <span className="sq-links"> <a href="/repositories" onClick={onLink}>Hosted repositories</a> · <a href="/config/wizard/connect-repository" onClick={onLink}>Connect a repository</a></span>
+        <Sheet><EmptyState title={P.t2}>
+          {t.say(P.t3)}
+          <span className="sq-links"> <a href="/repositories" onClick={onLink}>Hosted repositories</a> · <a href={P.t4} onClick={onLink}>Connect a repository</a></span>
         </EmptyState></Sheet>
       )}
       {fresh.length > 0 && <CandidateList title={t.say(`Without a {project} yet (${d?.hosted_without_flight ?? fresh.length})`)} items={fresh} href={pickHref} />}
@@ -99,7 +101,7 @@ function Choose({ unit }: { unit: string }) {
       {d && hosted.length === 0 && !nothing && <p className="faint" role="status">{`No hosted repository matches "${q}".`}</p>}
       {connections.length > 0 && (
         <Sheet title="Repositories on a connection">
-          <p className="sh-b faint">Nothing is read from a connection until you ask. Choose one to see which repositories it can reach.</p>
+          <p className="sh-b faint">{P.t5}</p>
           <div className="sq-conns">
             {connections.map((c) => (
               <a key={c} href={here(unit, { ...(q ? { q } : {}), ...(connection === c ? {} : { connection: c }) })} onClick={onLink} className="btn btn-sm">
@@ -114,7 +116,7 @@ function Choose({ unit }: { unit: string }) {
       {connection && (d?.connection_items.length ?? 0) > 0 && <CandidateList title={`Through ${connection}`} items={d!.connection_items} href={pickHref} />}
       <Sheet title="I have a plain Git address" pad>
         <form onSubmit={(e) => { e.preventDefault(); const a = address.trim(); if (a) setUrl({ pick: a, from: "address", q: null, connection: null }, "push"); }}>
-          <TextInput label="Git address" mono value={address} onChange={setAddress} placeholder="https://git.example.com/acme/shop.git" help="A repository address Launchway can read." />
+          <TextInput label="Git address" mono value={address} onChange={setAddress} placeholder={P.t6} help={P.t7} />
           <Button kind="pri" type="submit" disabled={address.trim() === ""}>Continue</Button>
         </form>
       </Sheet>
@@ -167,8 +169,8 @@ function Confirm({ unit, onAdded }: { unit: string; onAdded: (r: AddedFlight) =>
     <Sheet title="Check and add" pad>
       <form className="sq-form" onSubmit={submit} noValidate aria-label={t.say("Add a {project}")}>
         <p className="sq-pick"><span className="faint">Repository</span> <b className="mono">{pick}</b> <a href={here(unit, {})} onClick={onLink}>Choose another</a></p>
-        <TextInput label={t.say("Name of the {project}")} required focusOnMount mono value={name} onChange={setName} problems={problem ? [problem] : undefined} help="Taken from the repository. It appears in addresses." />
-        <TextInput label="Branch (optional)" mono value={branch} onChange={setBranch} placeholder="the repository's default branch" help="Leave empty to use the default branch." />
+        <TextInput label={t.say("Name of the {project}")} required focusOnMount mono value={name} onChange={setName} problems={problem ? [problem] : undefined} help={P.t8} />
+        <TextInput label="Branch (optional)" mono value={branch} onChange={setBranch} placeholder={P.t9} help={P.t10} />
         <ErrorBox error={error} />
         <div className="sq-actions">
           <Button kind="pri" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? "Adding…" : t.say("Add the {project}")}</Button>
@@ -185,14 +187,14 @@ function Added({ unit, name, result }: { unit: string; name: string; result: Add
   const t = terms();
   const p = result?.pipeline;
   const copy = async () => {
-    try { await navigator.clipboard.writeText(p?.starter ?? ""); setCopied(true); announce("The starter pipeline was copied."); }
-    catch { announce("It could not be copied. Select the text and copy it.", "assertive"); }
+    try { await navigator.clipboard.writeText(p?.starter ?? ""); setCopied(true); announce(P.t11); }
+    catch { announce(P.t12, "assertive"); }
   };
   return (
     <>
       <Sheet pad>
         <div role="status"><h2 className="h-sm">{t.say(`The {project} ${name} was added.`)}</h2></div>
-        {!p && <p>{t.say("Open it to see its pipeline and results.")}</p>}
+        {!p && <p>{t.say(P.t13)}</p>}
         {p?.state === "found" && <p>{p.note} {p.path && <>The pipeline file is <code>{p.path}</code>.</>}</p>}
         {p?.state === "starter" && (
           <>

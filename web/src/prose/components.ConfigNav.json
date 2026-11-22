@@ -1,0 +1,9 @@
+{
+ "t0": "Watch a Git repository: its branch, what starts runs, and where its pipeline comes from. Then run it.",
+ "t1": "Pick or make a pool, make a join token, and get the exact command for a machine, a container or Kubernetes.",
+ "t2": "Where deploy steps deploy: its target, who may deploy there, whether it is protected.",
+ "t3": "Rules runs must meet before they deploy or finish, enforced or only reported.",
+ "t4": "Metrics or logs that verify steps read to judge a deployment.",
+ "t5": "A model steps may ask, which {projects} may use it, and where its key is kept.",
+ "t6": "Sort the {projects} that sit in no {unit} into named {units}, as one audited change you can undo."
+}

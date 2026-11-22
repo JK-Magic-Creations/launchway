@@ -16,6 +16,8 @@ import { pullHref, stateChip } from "./PullRequests";
 import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("pages.PullRequest");
 
 // What agents said about the change: its own chunk, fetched only when this tab is open.
 const AgentReviews = lazy(() => import("../work/AgentReviews"));
@@ -105,7 +107,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
       {comment && r.neu === comment.line && r.kind !== "del" && (
         <tr className="thread-row"><td colSpan={4}>
           <form className="pr-note" onSubmit={submit} aria-label={`Comment on line ${comment.line}`}>
-            <label className="field"><span className="sr-only">Comment</span><textarea ref={(el) => el?.focus()} rows={3} aria-label="Comment" value={comment.text} onChange={(e) => setComment({ line: comment.line, text: e.target.value })} placeholder={"Write a comment. A ```suggestion block proposes a change."} /></label>
+            <label className="field"><span className="sr-only">Comment</span><textarea ref={(el) => el?.focus()} rows={3} aria-label="Comment" value={comment.text} onChange={(e) => setComment({ line: comment.line, text: e.target.value })} placeholder={P.t0} /></label>
             <div className="pr-actions"><button type="submit" className="btn btn-primary btn-sm" disabled={!comment.text.trim()}>Comment</button><button type="button" className="btn btn-sm" onClick={() => setComment(null)}>Cancel</button></div>
           </form>
         </td></tr>
@@ -136,8 +138,8 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
         <label className="check small"><input type="checkbox" checked={viewed} aria-label={`Viewed ${f.path}`} data-viewed onChange={(e) => { onViewed(e.target.checked); if (e.target.checked) setOpen(false); }} /> Viewed</label>
         <button type="button" className="btn btn-sm" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}</button>
       </header>
-      {open && f.binary && <p className="pr-note faint">A binary file: there is no text to show.</p>}
-      {open && patch?.held && <p className="pr-note">This file's patch is large and was not loaded. <button type="button" className="btn btn-sm" onClick={() => load(true)}>Load anyway</button></p>}
+      {open && f.binary && <p className="pr-note faint">{P.t1}</p>}
+      {open && patch?.held && <p className="pr-note">{P.t2}<button type="button" className="btn btn-sm" onClick={() => load(true)}>Load anyway</button></p>}
       {open && patch && !patch.held && (
         <>
           <table className={"diff" + (mode === "split" ? " diff-split" : "")} aria-label={`Changes to ${f.path}`}>
@@ -145,7 +147,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
             <colgroup>{mode === "split" ? <><col style={{ width: 48 }} /><col /><col style={{ width: 48 }} /><col /></> : <><col style={{ width: 48 }} /><col style={{ width: 48 }} /><col style={{ width: 20 }} /><col /></>}</colgroup>
             {mode === "split" ? split() : rows.map(lineRow)}
           </table>
-          {patch.truncated && <p className="pr-note faint">The patch was cut at the size limit.</p>}
+          {patch.truncated && <p className="pr-note faint">{P.t3}</p>}
         </>
       )}
       {open && outdated.map((t) => <ThreadView key={t.id} t={t} path={path} n={n} me={me} canApply={false} onChange={reload} onError={onError} />)}
@@ -161,11 +163,11 @@ function QueueBox({ pull }: { pull: Pull }) {
   return (
     <div className="pr-queue" role="group" aria-label="Merge queue">
       <h3>Merge queue</h3>
-      {live && <p role="status">Number {q.position} in the merge queue for {pull.target_branch}, {q.state === "testing" ? "being tested on the branch's latest commit" : "waiting its turn"}.{" "}
+      {live && <p role="status">Number {q.position} in the merge queue for {pull.target_branch}, {q.state === "testing" ? P.t4 : "waiting its turn"}.{" "}
         {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>{terms().say("the {run} testing it")}</Link>)}
         {q.position === 1 && why ? ` It merges when this is met: ${why}.` : ""}</p>}
-      {q?.state === "removed" && <p role="status">It was taken out of the merge queue: {q.reason}.</p>}
-      {!q && <p className="faint">{pull.target_branch} merges through a merge queue: pull requests are brought up to date, tested and merged one at a time.</p>}
+      {q?.state === "removed" && <p role="status">{P.t5}{q.reason}.</p>}
+      {!q && <p className="faint">{pull.target_branch} {P.t6}</p>}
     </div>
   );
 }
@@ -253,7 +255,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   const method = picked || rd?.default_method || "merge";
   const send = (e: React.FormEvent) => {
     e.preventDefault();
-    run("review", async () => { if (verdict === "comment" && !text.trim()) throw new Error("Write something to send a comment."); await pullsApi.review(path, number, { verdict, body: text }); setText(""); });
+    run("review", async () => { if (verdict === "comment" && !text.trim()) throw new Error(P.t7); await pullsApi.review(path, number, { verdict, body: text }); setText(""); });
   };
   return (
     <div className="page">
@@ -271,7 +273,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
         <div>
           <section className={"pr-mergebox " + (pull.state === "open" ? (rd?.can_merge ? "ready" : "blocked") : "")} aria-label="Merge">
             {pull.state === "merged" && <><h2>Merged</h2><p className="why">{pull.merged_by ? `${pull.merged_by} merged it` : "It was merged"} by {pull.merge_method} as <Mono>{pull.merge_commit?.slice(0, 10)}</Mono>, {pull.merged_at ? ago(Date.parse(pull.merged_at)) : ""}.</p></>}
-            {pull.state === "closed" && <><h2>Closed</h2><p className="why">It was closed without merging.</p></>}
+            {pull.state === "closed" && <><h2>Closed</h2><p className="why">{P.t8}</p></>}
             {pull.state === "open" && (
               <>
                 <h2>{rd?.can_merge ? "Ready to merge" : "Cannot merge yet"}</h2>
@@ -293,7 +295,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                         {rd.methods.map((m) => <option key={m} value={m}>{m === "merge" ? "Merge commit" : m === "squash" ? "Squash and merge" : "Rebase and merge"}</option>)}
                       </select></label>
                     <label className="check"><input type="checkbox" checked={del} onChange={(e) => setDel(e.target.checked)} /> Delete the branch after</label>
-                    {!rd.can_merge && <label className="field"><span className="sr-only">Why you may merge anyway</span><input value={bypass} aria-label="Why you may merge anyway" placeholder="Why the rules do not apply (recorded)" onChange={(e) => setBypass(e.target.value)} /></label>}
+                    {!rd.can_merge && <label className="field"><span className="sr-only">Why you may merge anyway</span><input value={bypass} aria-label="Why you may merge anyway" placeholder={P.t9} onChange={(e) => setBypass(e.target.value)} /></label>}
                     <button type="button" className={"btn " + (rd.can_merge ? "btn-primary" : "btn-danger-outline")} disabled={busy !== "" || (!rd.can_merge && !bypass.trim())}
                       onClick={() => run("merge", () => pullsApi.merge(path, number, { method, delete_branch: del, expect_head: pull.head_sha, bypass_reason: bypass || undefined }))}>
                       {busy === "merge" ? "Merging…" : rd.can_merge ? "Merge" : "Merge past the rules"}
@@ -377,13 +379,13 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                       </select></label>
                   )}
                 </div>
-                <p className="faint small">Keys: j and k move between files, n and p between comments, v marks the file viewed. Press ? to see them all.</p>
+                <p className="faint small">{P.t10}</p>
                 {keys && <div role="dialog" aria-label="Keyboard shortcuts" className="pr-note pr-keys"><h3>Keyboard shortcuts</h3>
-                  <dl><dt>j, k</dt><dd>next and previous file</dd><dt>n, p</dt><dd>next and previous comment thread</dd><dt>v</dt><dd>mark the focused file viewed or not</dd><dt>?</dt><dd>show or hide this list</dd><dt>Escape</dt><dd>close it</dd></dl>
+                  <dl><dt>j, k</dt><dd>next and previous file</dd><dt>n, p</dt><dd>{P.t11}</dd><dt>v</dt><dd>{P.t12}</dd><dt>?</dt><dd>show or hide this list</dd><dt>Escape</dt><dd>close it</dd></dl>
                   <button type="button" className="btn btn-sm" onClick={() => setKeys(false)}>Close</button></div>}
                 {ownerNote && <p className="pr-note" role="note">{ownerNote}</p>}
                 {files && files.length > 0 && <p className="faint small" aria-live="polite">{files.filter((f) => viewed.includes(f.path)).length} of {files.length} files viewed.</p>}
-                {files && files.length === 0 && <Empty title="No changes">{since ? "Nothing changed since that revision." : "The branches hold the same files."}</Empty>}
+                {files && files.length === 0 && <Empty title="No changes">{since ? P.t13 : P.t14}</Empty>}
                 {files && files.map((f, i) => <FileView key={f.path + (since ?? "")} f={f} path={path} n={number} conv={conv} mode={mode} since={since} me="" canApply={can("merge")} reload={load} onError={setError} startOpen={i < 5 && !f.too_large} owners={owners[f.path]} viewed={viewed.includes(f.path)} onViewed={(on) => markViewed(f.path, on)} />)}
               </>
             )}

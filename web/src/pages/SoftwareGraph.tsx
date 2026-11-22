@@ -12,6 +12,8 @@ import {
 } from "../softgraph/api";
 import { bool, oneOf, useUrlState } from "../urlState";
 import { requirementsYaml } from "../softgraph/needsYaml";
+import { prose } from "../prose";
+const P = await prose("pages.SoftwareGraph");
 
 const Canvas = lazy(() => import("../softgraph/Canvas"));
 
@@ -29,7 +31,7 @@ const EDGE_WORDS: Record<string, string> = {
 const word = (k: string) => EDGE_WORDS[k] ?? k;
 const label = (n: { kind: Kind; key: string; name?: string }) => n.name || n.key;
 const TRUNC: Record<string, string> = {
-  depth: "It stopped at the depth limit: there is more further out.", nodes: "It stopped at the size limit: there is more than is listed.", time: "It stopped at the time limit: the answer is partial.",
+  depth: P.t0, nodes: P.t1, time: P.t2,
 };
 
 function Truncated({ t }: { t?: Truncation }) {
@@ -47,11 +49,10 @@ function FocusError({ error, focus }: { error: unknown; focus: string }) {
   if (!(error instanceof ApiError) || error.status !== 404 || !repo) return <ErrorBox error={error} />;
   const read = () => { setBusy(true); setErr(null); graphApi.refresh(repo).then(() => setDone(true)).catch(setErr).finally(() => setBusy(false)); };
   return (
-    <Empty title="The graph has not read this repository yet">
-      It is added when the repository is pushed to or a scan runs. You can read it now: Launchway looks at its manifests, Dockerfiles and requirements and adds what it finds.
-      {" "}
+    <Empty title={P.t3}>
+      {P.t4}{" "}
       {done
-        ? <strong role="status">Read. Reload this page to see the result.</strong>
+        ? <strong role="status">{P.t5}</strong>
         : <Button kind="pri" disabled={busy} onClick={read}>{busy ? "Reading…" : "Read this repository now"}</Button>}
       <ErrorBox error={err} />
     </Empty>
@@ -80,7 +81,7 @@ export function RepositoryGraphPage({ path }: { path: string }) {
   return (
     <div className="page sg">
       <PageHead eyebrow={<Link href={`/repositories/${path}`}>{path}</Link>} title="Graph"
-        sentence="What this repository contains, what it depends on, what depends on it, what is built from it, what it needs and where it runs. Only what you may read is shown." />
+        sentence={P.t6} />
       <RepoTabs path={path} on="graph" />
       <Workspace repo={path} initial={`repository:${path}`} />
     </div>
@@ -95,11 +96,11 @@ export function GraphPage() {
   const total = summary ? Object.values(summary.nodes).reduce((a, b) => a + b, 0) : 0;
   return (
     <div className="page sg">
-      <PageHead title="Graph" sentence="One graph from code to what is built from it to what it needs and where it runs. Search for anything you may read, then follow what depends on it, what it affects and where it runs." />
+      <PageHead title="Graph" sentence={P.t7} />
       <ErrorBox error={error} />
       {summary && (
         <p className="sub" role="status">
-          {total === 0 ? "The graph is empty: it fills as repositories are pushed and pipelines run." : <>It holds {total} nodes and {summary.edges} relations you may read: {KINDS.filter((k) => summary.nodes[k]).map((k) => `${summary.nodes[k]} ${KIND_WORDS[k].toLowerCase()}${summary.nodes[k] === 1 ? "" : "s"}`).join(", ")}.</>}
+          {total === 0 ? P.t8 : <>It holds {total} nodes and {summary.edges} relations you may read: {KINDS.filter((k) => summary.nodes[k]).map((k) => `${summary.nodes[k]} ${KIND_WORDS[k].toLowerCase()}${summary.nodes[k] === 1 ? "" : "s"}`).join(", ")}.</>}
         </p>
       )}
       <Workspace />
@@ -130,7 +131,7 @@ function Workspace({ repo, initial }: { repo?: string; initial?: string }) {
           {view === "explore" && <Explore key={focus} focus={focus} onFocus={setFocus} />}
           {view === "impact" && <ImpactView key={focus} focus={focus} />}
           {view === "order" && <OrderView key={repoPath ?? "all"} repo={repoPath} />}
-          {view === "needs" && (repoPath || focusRef?.kind === "component" ? <NeedsView key={focus} focus={focus} repo={repoPath} /> : <p className="faint">What a thing needs is asked of a repository or a component: choose one as the focus.</p>)}
+          {view === "needs" && (repoPath || focusRef?.kind === "component" ? <NeedsView key={focus} focus={focus} repo={repoPath} /> : <p className="faint">{P.t9}</p>)}
           {view === "running" && <RunningView key={focus} focus={focus} />}
         </>
       )}
@@ -162,7 +163,7 @@ function Finder({ onPick }: { onPick: (ref: string) => void }) {
               <li key={refText(n)}><Mono>{n.kind}:{n.key}</Mono> <Button sm onClick={() => onPick(refText(n))} aria-label={`Show ${n.kind} ${n.key}`}>Show</Button></li>
             ))}
           </ul>
-          {found.more && <p className="sub" role="status">There are more matches: narrow the search.</p>}
+          {found.more && <p className="sub" role="status">{P.t10}</p>}
         </>
       ))}
     </Sheet>
@@ -243,7 +244,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
       <FocusError error={error} focus={focus} />
       <Sheet title="Filter" pad>
         <fieldset className="sg-kinds">
-          <legend>Show only these kinds (none ticked shows all)</legend>
+          <legend>{P.t11}</legend>
           {present.map((k) => (
             <label key={k} className="check"><input type="checkbox" checked={kinds.has(k)} onChange={() => setKinds((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; })} /> {KIND_WORDS[k]}</label>
           ))}
@@ -261,7 +262,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
         </Sheet>
       )}
       <Sheet title={`The same things as a table (${shown.length})`}>
-        <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table sg-table">
+        <div className="sg-scroll" tabIndex={0} role="region" aria-label={P.t12}><table className="table sg-table">
           <caption className="sr-only">Nodes around {focus}</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Next to it</th><th scope="col">Where it came from</th><th scope="col">Actions</th></tr></thead>
           <tbody>
@@ -288,8 +289,8 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
       {path && (
         <Sheet title="Path" pad>
           {path.found
-            ? <><p className="sub" role="status">{path.way === "affects" ? "A change to the focus reaches it:" : "A change to it reaches the focus:"}</p><WhyList steps={path.steps} /></>
-            : <p className="faint" role="status">There is no path between them that you may see.</p>}
+            ? <><p className="sub" role="status">{path.way === "affects" ? P.t13 : P.t14}</p><WhyList steps={path.steps} /></>
+            : <p className="faint" role="status">{P.t15}</p>}
         </Sheet>
       )}
     </>
@@ -305,7 +306,7 @@ function ImpactView({ focus }: { focus: string }) {
   return (
     <>
       <FocusError error={error} focus={focus} />
-      {!impact && !error && <p className="faint" role="status">Working out what a change reaches…</p>}
+      {!impact && !error && <p className="faint" role="status">{P.t16}</p>}
       {impact && (
         <>
           <p className="sub" role="status">
@@ -316,8 +317,8 @@ function ImpactView({ focus }: { focus: string }) {
           <Truncated t={impact} />
           {impact.deployments.length > 0 && (
             <Sheet title="Running now, affected">
-              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
-                <caption className="sr-only">Deployments that run affected digests</caption>
+              <div className="sg-scroll" tabIndex={0} role="region" aria-label={P.t12}><table className="table">
+                <caption className="sr-only">{P.t17}</caption>
                 <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">Why</th></tr></thead>
                 <tbody>{impact.deployments.map((d) => (
                   <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
@@ -336,10 +337,10 @@ function ImpactView({ focus }: { focus: string }) {
                   </li>
                 ))}
               </ul>
-              {g.items.length > 200 && <p className="sub">And {g.items.length - 200} more. The command line lists all of them: <Mono>launchway graph impact</Mono>.</p>}
+              {g.items.length > 200 && <p className="sub">And {g.items.length - 200} {P.t18}<Mono>launchway graph impact</Mono>.</p>}
             </Sheet>
           ))}
-          {impact.total === 0 && <p className="faint">Nothing you may read depends on it.</p>}
+          {impact.total === 0 && <p className="faint">{P.t19}</p>}
         </>
       )}
     </>
@@ -366,22 +367,22 @@ function OrderView({ repo }: { repo?: string }) {
       {!order && !error && <p className="faint" role="status">Working out the order…</p>}
       {order && (
         <>
-          <Sheet title={repo ? "Build order, with what it depends on" : "Build order of every repository with a dependency"}>
-            <p className="sub pad" role="status">Providers are built before the repositories that depend on them; the repositories on one line can be built together.</p>
-            {order.levels.length === 0 ? <p className="faint pad">No repository you may read depends on another hosted here.</p> : (
+          <Sheet title={repo ? P.t20 : P.t21}>
+            <p className="sub pad" role="status">{P.t22}</p>
+            {order.levels.length === 0 ? <p className="faint pad">{P.t23}</p> : (
               <ol className="sg-levels" aria-label="Build order">{order.levels.map((l, i) => <li key={i}><strong>Step {i + 1}:</strong> {l.map((r, j) => <span key={r}>{j > 0 && ", "}<Link href={`/repositories/${r}/graph`}>{r}</Link></span>)}</li>)}</ol>
             )}
             <Truncated t={order} />
           </Sheet>
           {(order.cycles ?? []).map((c) => (
             <div key={c.members.join(",")} className="errorbox" role="alert">
-              <strong>These repositories depend on each other:</strong> <Mono>{c.path.join(" → ")}</Mono>. {c.suggestion}
+              <strong>{P.t24}</strong> <Mono>{c.path.join(" → ")}</Mono>. {c.suggestion}
             </div>
           ))}
           {rebuild && (
             <Sheet title={`After a push to ${rebuild.repository}`}>
-              {rebuild.items.length === 0 ? <p className="faint pad">Nothing else must be built after a push to it.</p> : (
-                <ol className="sg-levels pad" aria-label="What must be built again, in order">{rebuild.items.map((it) => (
+              {rebuild.items.length === 0 ? <p className="faint pad">{P.t25}</p> : (
+                <ol className="sg-levels pad" aria-label={P.t26}>{rebuild.items.map((it) => (
                   <li key={it.repository}><Link href={`/repositories/${it.repository}/graph`}>{it.repository}</Link>
                     <small className="faint"> after {it.why.map((w) => `${w.provider} (${w.via.join(", ")})`).join(", then ")}</small></li>
                 ))}</ol>
@@ -392,8 +393,8 @@ function OrderView({ repo }: { repo?: string }) {
           )}
           <Sheet title={`Why the order is what it is (${order.edges.length})`}>
             {order.edges.length === 0 ? <p className="faint pad">No dependencies.</p> : (
-              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
-                <caption className="sr-only">Dependencies between repositories</caption>
+              <div className="sg-scroll" tabIndex={0} role="region" aria-label={P.t12}><table className="table">
+                <caption className="sr-only">{P.t27}</caption>
                 <thead><tr><th scope="col">Repository</th><th scope="col">Depends on</th><th scope="col">Through</th><th scope="col">Override</th></tr></thead>
                 <tbody>{order.edges.map((e) => (
                   <tr key={e.consumer + e.provider}><th scope="row">{e.consumer}</th><td>{e.provider}</td>
@@ -423,7 +424,7 @@ function OverridesPanel({ overrides, repos, onChange }: { overrides: Override[];
   );
   return (
     <Sheet title="Your corrections to the order" pad>
-      <p className="sub">Launchway works the order out from manifests and base images. You can correct it; every correction needs a reason, is shown wherever the order is shown, and can be taken away.</p>
+      <p className="sub">{P.t28}</p>
       {overrides.length === 0 ? <p className="faint">No corrections.</p> : (
         <ul className="plain sg-overrides" aria-label="Corrections">
           {overrides.map((o) => (
@@ -436,9 +437,9 @@ function OverridesPanel({ overrides, repos, onChange }: { overrides: Override[];
       <form className="sg-find" aria-label="Add a correction" onSubmit={(e) => { e.preventDefault(); graphApi.addOverride({ kind, from, to, value: value || undefined, reason }).then(() => { setReason(""); setError(null); onChange(); }).catch(setError); }}>
         <label className="field"><span>Kind</span>
           <select value={kind} onChange={(e) => setKind(e.target.value)}>
-            <option value="ignore">Ignore: it does not really depend on the other</option>
-            <option value="before">Before: build it before the other</option>
-            <option value="pin">Pin: keep it at a version, do not rebuild it on a push</option>
+            <option value="ignore">{P.t29}</option>
+            <option value="before">{P.t30}</option>
+            <option value="pin">{P.t31}</option>
           </select></label>
         {repoSelect(from, setFrom, kind === "before" ? "Built first" : "Repository")}
         {repoSelect(to, setTo, kind === "before" ? "Built after it" : "Depends on")}
@@ -455,9 +456,9 @@ function OverridesPanel({ overrides, repos, onChange }: { overrides: Override[];
 const SOURCE_WORDS: Record<string, string> = { declared: "Declared in the file", inferred: "Inferred by Launchway" };
 
 function FactsTable({ facts, name }: { facts: Fact[]; name: string }) {
-  if (facts.length === 0) return <p className="faint pad">Nothing declared or inferred yet.</p>;
+  if (facts.length === 0) return <p className="faint pad">{P.t32}</p>;
   return (
-    <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+    <div className="sg-scroll" tabIndex={0} role="region" aria-label={P.t12}><table className="table">
       <caption className="sr-only">What {name} needs</caption>
       <thead><tr><th scope="col">Needs</th><th scope="col">Value</th><th scope="col">Where from</th></tr></thead>
       <tbody>{facts.map((f) => (
@@ -487,7 +488,7 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
     <>
       <ErrorBox error={error} />
       {!needs && !error && <p className="faint" role="status">Reading what it needs…</p>}
-      {needs && needs.length === 0 && <p className="faint" role="status">Nothing is declared or inferred for this yet. Declare what it needs in <Mono>.launchway/requirements.yaml</Mono>.</p>}
+      {needs && needs.length === 0 && <p className="faint" role="status">{P.t33}<Mono>.launchway/requirements.yaml</Mono>.</p>}
       {(needs ?? []).map((n) => (
         <Sheet key={n.component.key} title={<>{n.component.name || n.component.key}</>}>
           <FactsTable facts={n.facts} name={n.component.key} />
@@ -495,13 +496,13 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
       ))}
       {advice.length > 0 && (
         <Sheet title="Advice, not applied" pad>
-          <p className="sub">What Launchway read differs from what the file declares. The declaration stands; change the file if the advice is right.</p>
+          <p className="sub">{P.t34}</p>
           <ul>{advice.map((a) => <li key={a.facet + a.inferred}>{a.message}</li>)}</ul>
         </Sheet>
       )}
       {repo && (
         <Sheet title="Edit the requirements file" pad>
-          <p className="sub">The file is <Mono>.launchway/requirements.yaml</Mono> in the repository. Launchway opens a pull request; nothing changes until someone merges it.</p>
+          <p className="sub">The file is <Mono>.launchway/requirements.yaml</Mono> {P.t35}</p>
           {!editing ? <Button kind="pri" onClick={() => setEditing(true)}>Edit the requirements file</Button> : (
             <form aria-label="Edit the requirements file" onSubmit={(e) => { e.preventDefault(); graphApi.proposeRequirements(repo, text).then((r) => { setPr(r); setError(null); }).catch(setError); }}>
               <label className="field"><span>Requirements file</span><textarea className="mono" rows={16} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
@@ -514,7 +515,7 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
       )}
       {(place ?? []).map((p) => (
         <Sheet key={p.component.key} title={`Where ${p.component.name || p.component.key} can run`} pad>
-          <p className="sub" role="status">{p.fits.length} of {p.hosts_considered} machines and platforms satisfy it.</p>
+          <p className="sub" role="status">{p.fits.length} of {p.hosts_considered} {P.t36}</p>
           {p.fits.length > 0 && <ul>{p.fits.map((c) => <li key={c.host.key}><strong>Fits:</strong> <Mono>{c.host.kind}:{c.host.key}</Mono></li>)}</ul>}
           {(p.near_misses ?? []).length > 0 && <ul>{p.near_misses!.map((c) => <li key={c.host.key}><strong>Nearly:</strong> <Mono>{c.host.key}</Mono>, but {(c.missing ?? []).map((m) => m.reason).join("; ")}</li>)}</ul>}
           {p.gaps.map((g) => <p key={g.message} className="errorbox" role="alert"><strong>Gap:</strong> {g.message}</p>)}
@@ -522,7 +523,7 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
       ))}
       {needs && needs.length > 0 && (
         <Sheet title="Machine specification" pad>
-          <p className="sub">A neutral description of a machine that can run these together: architecture, CPU, memory and storage with headroom, devices, operating-system features, ports and data services. It is an export; nothing is provisioned from it.</p>
+          <p className="sub">{P.t37}</p>
           <form className="sg-find" aria-label="Make a machine specification" onSubmit={(e) => { e.preventDefault(); graphApi.specification(needs.map((n) => refText(n.component)), Number(headroom) || undefined).then((s) => { setSpec(s); setError(null); }).catch(setError); }}>
             <label className="field"><span>Headroom, percent</span><input inputMode="numeric" value={headroom} onChange={(e) => setHeadroom(e.target.value.replace(/\D/g, ""))} /></label>
             <Button kind="pri" type="submit">Make the specification</Button>
@@ -551,14 +552,14 @@ function RunningView({ focus }: { focus: string }) {
     <>
       <ErrorBox error={error} />
       {!where && !error && <p className="faint" role="status">Looking for where it runs…</p>}
-      {where && (where.deployments.length === 0 ? <p className="faint" role="status"><Mono>{focus}</Mono> is not running anywhere you may see.</p> : (
+      {where && (where.deployments.length === 0 ? <p className="faint" role="status"><Mono>{focus}</Mono> {P.t38}</p> : (
         <Sheet title={`Running in ${where.airfields.length} ${where.airfields.length === 1 ? "Airfield" : "Airfields"}`}>
-          <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+          <div className="sg-scroll" tabIndex={0} role="region" aria-label={P.t12}><table className="table">
             <caption className="sr-only">Deployments that run {focus}</caption>
             <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">How we know</th></tr></thead>
             <tbody>{where.deployments.map((d) => (
               <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
-                <td>{d.exact ? "It is in the digest that runs." : "Through a dependency or a build: the digest may not contain it."}<details><summary>The way</summary><WhyList steps={d.why} /></details></td></tr>
+                <td>{d.exact ? P.t39 : P.t40}<details><summary>The way</summary><WhyList steps={d.why} /></details></td></tr>
             ))}</tbody>
           </table></div>
           <Truncated t={where} />

@@ -12,18 +12,20 @@ import { ProtectedTags } from "./ProtectedTags";
 import { PageTabs, useTab } from "../components/PageTabs";
 import { useHosting } from "./SshKeys";
 import "../styles/forge.css";
+import { prose } from "../prose";
+const P = await prose("pages.Repositories");
 
 function Off() {
   return (
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories" />
-      <Empty title="Git hosting is off on this server">Launchway can host Git repositories itself. An administrator turns it on with the installation setting <Mono>forge.hosting</Mono>; nothing is deleted when it is off.</Empty>
+      <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>{P.t2}</Empty>
     </div>
   );
 }
 
 // The grouped, searchable list loads after the first paint; the flat list is what shows meanwhile.
-const RepositoriesExplorer = lazy(() => import("../explorer/RepositoriesExplorer"));
+const RepositoriesExplorer = lazy(() => import(P.t3));
 
 /** The repositories Launchway hosts, which the person may read. */
 export function RepositoriesPage() {
@@ -50,7 +52,7 @@ export function RepositoriesPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
-        sentence={repos && repos.length === 0 ? "No repository is hosted here yet." : `${repos?.length ?? 0} hosted by Launchway.`}
+        sentence={repos && repos.length === 0 ? P.t4 : `${repos?.length ?? 0} hosted by Launchway.`}
         actions={<><Link href="/graph" className="btn btn-sm">Graph</Link> <Link href="/settings/access/ssh-keys" className="btn btn-sm">SSH keys</Link></>} />
       <ErrorBox error={error} />
       {repos && repos.length > 0 && (
@@ -58,7 +60,7 @@ export function RepositoriesPage() {
       )}
       {owners.length > 0 && (
         <Sheet title="By owner">
-          <ul className="rowlist">{owners.map((o) => <li key={o}><div className="main"><div className="nm"><Link href={`/owners/${encodeURIComponent(o)}`}>{o}</Link></div><div className="sb faint">Webhooks for every repository of this owner</div></div></li>)}</ul>
+          <ul className="rowlist">{owners.map((o) => <li key={o}><div className="main"><div className="nm"><Link href={`/owners/${encodeURIComponent(o)}`}>{o}</Link></div><div className="sb faint">{P.t5}</div></div></li>)}</ul>
         </Sheet>
       )}
     </div>
@@ -81,14 +83,14 @@ export function CloneBox({ repo }: { repo: HostedRepo }) {
         </div>
       )}
       {!addr
-        ? <p className="sub" role="status">This server has no public address set, so it cannot show a clone address. An administrator sets it with <Mono>forge.public_url</Mono> in the server's configuration.</p>
+        ? <p className="sub" role="status">{P.t6}<Mono>forge.public_url</Mono> {P.t7}</p>
         : <div className="tokenvalue">
           <input readOnly value={addr} aria-label="Clone address" onFocus={(e) => e.currentTarget.select()} className="mono" />
           <button type="button" className="btn" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
         </div>}
       {addr && how === "https"
         ? <p className="sub">Sign in with an <Link href="/settings/access/keys">API token</Link> as the password.</p>
-        : addr && <p className="sub">Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href="/settings/access/ssh-keys#host-keys">check the server's fingerprint</Link> the first time.</p>}
+        : addr && <p className="sub">Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href={P.t8}>{P.t9}</Link> the first time.</p>}
     </Sheet>
   );
 }
@@ -110,7 +112,7 @@ function DeployKeys({ repo }: { repo: HostedRepo }) {
   return (
     <>
       <Sheet title="Add a deploy key" pad>
-        <p className="sub">A deploy key opens this one repository over SSH, for a machine such as a build server. It can only read unless you let it write.</p>
+        <p className="sub">{P.t10}</p>
         <form onSubmit={add} className="inputs-form" aria-label="Add a deploy key">
           <label className="field"><span>Name</span><input value={name} maxLength={100} placeholder="for example: build server" onChange={(e) => setName(e.target.value)} /></label>
           <label className="field"><span>Public key</span><textarea value={pub} rows={3} required className="mono" placeholder="ssh-ed25519 AAAA…" onChange={(e) => setPub(e.target.value)} /></label>
@@ -150,7 +152,7 @@ function Protected({ repo }: { repo: HostedRepo }) {
   };
   return (
     <Sheet title="Protected branches" pad>
-      <p className="sub">A protected branch takes a direct push only from an administrator of this repository, and cannot be deleted. Names or patterns, separated by commas: <Mono>main, release/*</Mono>.</p>
+      <p className="sub">{P.t11}<Mono>main, release/*</Mono>.</p>
       <form onSubmit={save} className="inputs-form" aria-label="Protected branches">
         <label className="field"><span>Branches</span><input value={text} placeholder="main, release/*" onChange={(e) => { setText(e.target.value); setSaved(false); }} /></label>
         <ErrorBox error={error} />
@@ -173,7 +175,7 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
     forgeApi.deployKeys(owner, name).then(() => setAdmin(true), () => setAdmin(false));
   }, [owner, name]);
   if (error) return <ErrorBox error={error} />;
-  if (!repo) return <div className="loading" role="status">Loading the repository's settings…</div>;
+  if (!repo) return <div className="loading" role="status">{P.t12}</div>;
   return (
     <>
       <CloneBox repo={repo} />
@@ -200,7 +202,7 @@ export function OwnerPage({ owner }: { owner: string }) {
   if (hosting === "off") return <Off />;
   return (
     <div className="page">
-      <PageHead eyebrow={<Link href="/repositories">Repositories</Link>} title={owner} sentence="Settings for every repository this owner has. Webhooks here receive the events of all of them." />
+      <PageHead eyebrow={<Link href="/repositories">Repositories</Link>} title={owner} sentence={P.t13} />
       <HooksPanel scope={{ owner }} who={`events of every repository of ${owner}`} />
     </div>
   );

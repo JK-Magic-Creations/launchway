@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { HistoryResult, TestStatus, TestTotals } from "../api";
 import { Link } from "./ui";
+import { prose } from "../prose";
+const P = await prose("components.Tests");
 
 // Pieces shared by the run's Tests tab, the run list and a project's tests.
 
@@ -126,30 +128,22 @@ export function HistoryStrip({ results, current }: { results: HistoryResult[]; c
 export function ReportsHowTo({ compact }: { compact?: boolean }) {
   return (
     <div className="howto">
-      {!compact && <p>Tell a step which files its tests write, and Launchway reads them when the step ends, whether it passed or failed:</p>}
-      <pre className="code">{`steps:
-  test:
-    image: python:3.12
-    run: pytest --junitxml=reports/unit.xml
-    reports:
-      tests: reports/*.xml`}</pre>
-      <p className="sub">The format is worked out from each file. Launchway reads {READ_FORMATS}.</p>
+      {!compact && <p>{P.t0}</p>}
+      <pre className="code">{P.t1}</pre>
+      <p className="sub">{P.t2}{READ_FORMATS}.</p>
       {!compact && (
         <>
-          <p className="sub">Screenshots, videos and traces the tests attach are shown with each result when the step names the directory they are written to:</p>
-          <pre className="code">{`    reports:
-      tests:
-        paths: test-results/results.json
-        attachments: test-results`}</pre>
+          <p className="sub">{P.t3}</p>
+          <pre className="code">{P.t4}</pre>
         </>
       )}
     </div>
   );
 }
 
-const READ_FORMATS = "JUnit XML (pytest, Maven Surefire and Failsafe, Gradle, Jest, Vitest, PHPUnit, RSpec, Mocha, Playwright, Cypress), " +
-  "go test -json, Cucumber JSON (Karate, cucumber-js, Cucumber-JVM), Karate JSON, Playwright JSON, mochawesome (Cypress), CTRF, " +
-  "TestNG, NUnit 3, xUnit.net v2, .NET TRX, TAP and Robot Framework output.xml";
+const READ_FORMATS = P.t5 +
+  P.t6 +
+  P.t7;
 
 const FORMAT_LABEL: Record<string, string> = {
   "junit": "JUnit XML", "go-test-json": "go test -json", "cucumber-json": "Cucumber JSON", "karate-json": "Karate JSON",

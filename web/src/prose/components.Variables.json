@@ -1,0 +1,16 @@
+{
+ "t0": "A secret is only ever a reference; a {runner} looks it up when a step starts",
+ "t1": "Values this one overrides, nearest first",
+ "t2": "; kept, and counts again if unlocked",
+ "t3": "A variable is a named setting, such as a {registry} or a number of replicas. Set one at",
+ "t4": "and everything below it gets it; a nearer level can set the same name to override it, and a lock keeps it from being overridden. You need none of this to run a pipeline.",
+ "t5": "In code terms: the template's inputs are the interface, a variable at a wider level is the abstract class, a nearer one is the class that overrides it, and a lock is ",
+ "t6": "The value is not valid for this type: ",
+ "t7": ". Setting it here makes this level's value win below it.",
+ "t8": "Only the reference is kept. The secret itself stays in your secret store, and a {runner} looks it up when a step starts.",
+ "t9": "Only for an {environment} (optional)",
+ "t10": "Nobody below this level can change it, a pipeline file or a {run} included. Settings below it are kept but ignored, and count again if you unlock it.",
+ "t11": "Why (shown to everyone it stops)",
+ "t12": "What this {run} used, as recorded when it was created. Changing a variable later does not change it.",
+ "t13": "A re-run: it used the variables of the run it repeats, as recorded."
+}

@@ -1,0 +1,23 @@
+{
+ "t0": "This server keeps its configuration in its file",
+ "t1": "This server does not keep configuration in its database, so there is nothing to change here. Upgrade Launchway to a version that does, and everything but the bootstrap settings is set up here instead, with its history.",
+ "t2": "Only administrators change the configuration",
+ "t3": "Ask someone with the admin role.",
+ "t4": "Everything an administrator sets up, kept in the database with the history of every change. Changes apply to every server within seconds, without a restart.",
+ "t5": "The stored configuration could not be loaded (",
+ "t6": ". It tries the stored configuration again every few seconds; fix the problem named here and it leaves safe mode by itself.",
+ "t7": "The newest configuration is not in effect.",
+ "t8": "The servers keep using revision ",
+ "t9": "; the change is stored and is tried again every few seconds.",
+ "t10": "Which revision each server runs (stored revision ",
+ "t11": "behind: it applies the stored revision within seconds",
+ "t12": "Each asks plain questions, explains every choice, checks your answers with the server as you go, and shows exactly what it will create before it creates anything.",
+ "t13": "Choose the words, choose sign-in, connect a repository: the questions a new ",
+ "t14": "/config/wizard/first-run?step=words",
+ "t15": "Your company's identity provider, so people use the accounts they have and groups decide what they may do.",
+ "t16": "/config/wizard/first-run?step=signin",
+ "t17": "A machine, container or Kubernetes pod of your own that does the steps of {runs} (the server's built-in {runner} is for trying things out).",
+ "t18": "A place runs {deploy:do} to, such as staging or prod.",
+ "t19": "/config/wizard/add-environment",
+ "t20": "with shared settings are off: nobody has made one. "
+}

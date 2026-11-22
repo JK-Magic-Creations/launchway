@@ -1,0 +1,12 @@
+{
+ "t0": "Ask the dependency updater for the pull request",
+ "t1": "It stops counting on the date, is recorded with your name and your reason, and can be ended earlier.",
+ "t2": "Why is this safe to live with?",
+ "t3": "It is not a problem (a false positive)",
+ "t4": "The same for every open finding of this kind in ",
+ "t5": "(for example, test vectors that look like secrets)",
+ "t6": "Added by Standing orders: this repository’s pipeline did not ask for these steps; the server adds them to every {run}",
+ "t7": "Why each check runs, and how to change it",
+ "t8": "Blocks a change that introduces a serious finding",
+ "t9": "Not every finding was kept for this {run}; the counts include them all."
+}

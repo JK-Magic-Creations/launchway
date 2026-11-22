@@ -1,0 +1,20 @@
+{
+ "t0": "This server does not keep {artifacts}",
+ "t1": "{Artifacts} are not set up on this server.",
+ "t2": "With nothing configured, a server on PostgreSQL keeps {artifacts} in its database, shared by every server. The",
+ "t3": "page says where this one keeps them.",
+ "t4": "{artifacts}, but none were kept. The step's log says why, for example a step that did not succeed or a glob that matched no files.",
+ "t5": "This {run} kept no {artifacts}",
+ "t6": "Files are kept as the step wrote them: secrets are masked in logs, not in files.",
+ "t7": "declares {artifacts} but kept none. The step's log says why.",
+ "t8": "This server keeps {artifacts} for at most",
+ "t9": "The re-run reused this step and its files",
+ "t10": ". Its files are gone; the list shows what it held.",
+ "t11": ", so its files were removed; the list shows what it held.",
+ "t12": ", whose step this re-run reused.",
+ "t13": "Marked as a file someone may run",
+ "t14": "files are listed; the .zip has them all.",
+ "t15": ") are removed now and cannot be downloaded or fetched again.",
+ "t16": ", so it goes from that run too.",
+ "t17": "The {run} keeps a note of who deleted it."
+}

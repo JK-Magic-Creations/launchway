@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { importApi, type Connection, type ImportItem, type SourceRequest } from "../mirrors";
+import { prose } from "../prose";
+const P = await prose("pages.ImportRepositories");
 
 type Step = "source" | "preview" | "copy" | "done";
 const STEPS: { id: Step; label: string }[] = [
@@ -51,8 +53,7 @@ export function ImportRepositoriesPage() {
       <header className="page-head">
         <div>
           <h1>Import repositories</h1>
-          <p className="sub">Bring repositories from another Git server into Launchway: the same names and visibility, every branch, tag and note copied and checked.
-            Nothing on the other server changes. By default each stays a pull mirror, so the other server is still the primary until you stop mirroring each one.</p>
+          <p className="sub">{P.t0}</p>
         </div>
       </header>
       <ol className="steps" aria-label="Steps">
@@ -62,14 +63,14 @@ export function ImportRepositoriesPage() {
 
       {step === "source" && (
         <section className="card">
-          {conns && conns.length === 0 && <Empty title="No source servers yet">Add one below: its kind, its address and where the server reads its token from.</Empty>}
+          {conns && conns.length === 0 && <Empty title="No source servers yet">{P.t1}</Empty>}
           {conns && conns.length > 0 && (
             <form className="inputs-form" onSubmit={(e) => { e.preventDefault(); preview(); }} aria-label="Choose what to import">
               <label className="field"><span>Server</span>
                 <select value={conn} onChange={(e) => setConn(e.target.value)}>{conns.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.kind} {c.base_url})</option>)}</select></label>
-              <label className="field"><span>Only this user or organization (empty: everything the token can see)</span>
+              <label className="field"><span>{P.t2}</span>
                 <input value={owner} onChange={(e) => setOwner(e.target.value)} /></label>
-              <label className="check"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> Keep each as a pull mirror of its source (the staged move)</label>
+              <label className="check"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> {P.t3}</label>
               <div><button type="submit" className="btn btn-primary" disabled={!conn}>Show what would be made</button></div>
             </form>
           )}
@@ -80,7 +81,7 @@ export function ImportRepositoriesPage() {
       {step === "preview" && (
         <section className="card">
           <h2 className="h-sm">{plan.length} repositories</h2>
-          {plan.length === 0 && <Empty title="Nothing to import">The source lists no repositories this token can see.</Empty>}
+          {plan.length === 0 && <Empty title="Nothing to import">{P.t4}</Empty>}
           <table className="table"><thead><tr><th>From</th><th>Here</th><th>Visibility</th><th>What happens</th></tr></thead><tbody>
             {plan.map((p) => (
               <tr key={p.source}><td><Mono>{p.source}</Mono></td><td><Mono>{p.repository}</Mono></td><td>{p.visibility}</td>
@@ -91,7 +92,7 @@ export function ImportRepositoriesPage() {
             <button type="button" className="btn" onClick={() => setStep("source")}>Back</button>
             <button type="button" className="btn btn-primary" disabled={!plan.some((p) => p.action !== "skip")} onClick={copy}>Import {plan.filter((p) => p.action !== "skip").length} repositories</button>
           </div>
-          <p className="sub">Large repositories take a while. A repository that fails does not stop the others, and importing again resumes it.</p>
+          <p className="sub">{P.t5}</p>
         </section>
       )}
 
@@ -116,9 +117,8 @@ export function ImportRepositoriesPage() {
 
       {step === "done" && (
         <section className="card">
-          <h2 className="h-sm">{plan.every((p) => p.action === "skip" || done[p.source]?.state === "verified") ? "Every ref was checked against the source" : "Some repositories did not finish"}</h2>
-          <p className="sub">Each repository above was compared with its source ref by ref. A repository that failed can be imported again: it resumes.
-            Each one is under <Link href="/projects">Repositories</Link>; open one and use its Mirrors tab to stop mirroring and make it the primary.</p>
+          <h2 className="h-sm">{plan.every((p) => p.action === "skip" || done[p.source]?.state === "verified") ? P.t6 : P.t7}</h2>
+          <p className="sub">{P.t8}<Link href="/projects">Repositories</Link>{P.t9}</p>
           <div className="actions"><button type="button" className="btn" onClick={() => { setStep("source"); setPlan([]); }}>Import more</button></div>
         </section>
       )}
@@ -149,12 +149,12 @@ function AddConnection({ onAdded }: { onAdded: () => void }) {
         <label className="field"><span>Kind</span>
           <select value={kind} onChange={(e) => setKind(e.target.value)}><option value="gitea">Gitea-compatible</option><option value="forgejo">Forgejo</option></select></label>
         <label className="field"><span>Address</span><input value={base} required placeholder="https://git.example.com" onChange={(e) => setBase(e.target.value)} /></label>
-        <label className="field"><span>Where the server reads the token from</span>
-          <select value={credKind} onChange={(e) => setCredKind(e.target.value as "env" | "file")}><option value="env">An environment variable of the server</option><option value="file">A file on the server</option></select></label>
+        <label className="field"><span>{P.t10}</span>
+          <select value={credKind} onChange={(e) => setCredKind(e.target.value as "env" | "file")}><option value="env">{P.t11}</option><option value="file">A file on the server</option></select></label>
         <label className="field"><span>{credKind === "env" ? "Variable name" : "File path"}</span>
           <input value={cred} placeholder={credKind === "env" ? "OLDGIT_TOKEN" : "/run/secrets/oldgit-token"} onChange={(e) => setCred(e.target.value)} />
-          <small>A reference only: the token is never typed here or kept by Launchway.</small></label>
-        <p className="sub">An address on a private network is refused unless an administrator has listed it in <Mono>forge.mirror_allow</Mono>.</p>
+          <small>{P.t12}</small></label>
+        <p className="sub">{P.t13}<Mono>forge.mirror_allow</Mono>.</p>
         <ErrorBox error={error} />
         <div><button type="submit" className="btn" disabled={busy || !name.trim() || !base.trim()}>{busy ? "Adding…" : "Add server"}</button></div>
       </form>

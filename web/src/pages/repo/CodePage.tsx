@@ -11,6 +11,8 @@ import { NameIcon } from "./icons";
 import { FileView } from "./FileView";
 import { findReadme, Readme } from "./Readme";
 import { Uploader } from "./Uploader";
+import { prose } from "../../prose";
+const P = await prose("pages.repo.CodePage");
 
 const Editor = lazy(() => import("./Editor").then((m) => ({ default: m.Editor })));
 
@@ -22,7 +24,7 @@ function EmptyRepo({ path, https, branch }: { path: string; https?: string; bran
   const lines = [`git clone ${url}`, `cd ${path.split("/").pop()}`, `echo "# ${path.split("/").pop()}" > README.md`, "git add README.md", `git commit -m "First commit"`, `git push origin HEAD:${branch}`];
   return (
     <EmptyState title="This repository is empty" action={<CopyButton text={lines.join("\n")} what="the commands" label="Copy all the commands" />}>
-      Nothing has been pushed yet. Clone it, add a file, and push to the branch <span className="mono">{branch}</span>; the files appear here at once. To start from a repository you already have, <span className="mono">git remote add origin {url}</span> then <span className="mono">git push -u origin {branch}</span>.
+      {P.t0}<span className="mono">{branch}</span>{P.t1}<span className="mono">git remote add origin {url}</span> then <span className="mono">git push -u origin {branch}</span>.
       <pre className="code-plain">{lines.join("\n")}</pre>
     </EmptyState>
   );
@@ -52,7 +54,7 @@ function GoToFile({ repo, refName, onClose }: { repo: string; refName: string; o
   return (
     <Dialog label="Go to file" onClose={onClose}>
       <h2 className="h-sm">Go to file</h2>
-      <input role="combobox" aria-expanded="true" aria-controls="goto-list" aria-autocomplete="list" aria-activedescendant={paths[at] ? `goto-${at}` : undefined} aria-label="Part of a file's path" placeholder="Type part of a path, such as cmdmain" value={q}
+      <input role="combobox" aria-expanded="true" aria-controls="goto-list" aria-autocomplete="list" aria-activedescendant={paths[at] ? `goto-${at}` : undefined} aria-label="Part of a file's path" placeholder={P.t2} value={q}
         onChange={(e) => setQ(e.target.value)} data-autofocus
         onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(a + 1, paths.length - 1)); } else if (e.key === "ArrowUp") { e.preventDefault(); setAt((a) => Math.max(a - 1, 0)); } else if (e.key === "Enter" && paths[at]) { e.preventDefault(); go(paths[at]); } }} />
       <ErrorBox error={error} />
@@ -60,8 +62,8 @@ function GoToFile({ repo, refName, onClose }: { repo: string; refName: string; o
         {paths.map((p, i) => <li key={p} id={`goto-${i}`} role="option" aria-selected={i === at} className={i === at ? "on" : ""} onMouseDown={(e) => { e.preventDefault(); go(p); }}><span className="mono">{p}</span></li>)}
         {q.trim() && paths.length === 0 && <li role="presentation" className="faint small">No file matches.</li>}
       </ul>
-      {partial && <p className="faint small" role="status">The list is partial: type more of the path.</p>}
-      <p className="faint small">Arrows move, Enter opens, Escape closes. Files at <span className="mono">{refName.length === 40 ? refName.slice(0, 10) : refName}</span>.</p>
+      {partial && <p className="faint small" role="status">{P.t3}</p>}
+      <p className="faint small">{P.t4}<span className="mono">{refName.length === 40 ? refName.slice(0, 10) : refName}</span>.</p>
     </Dialog>
   );
 }
@@ -95,7 +97,7 @@ export function CodePage({ path }: { path: string }) {
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (el.closest("input, textarea, select, [contenteditable]") || e.metaKey || e.ctrlKey || e.altKey || document.querySelector("[role=dialog]")) return;
+      if (el.closest(P.t5) || e.metaKey || e.ctrlKey || e.altKey || document.querySelector("[role=dialog]")) return;
       if (e.key === "t") { e.preventDefault(); setFinder(true); }
       else if ((e.key === "j" || e.key === "k") && item?.type === "dir") {
         const all = [...document.querySelectorAll<HTMLElement>(".tree-name a")];
@@ -112,7 +114,7 @@ export function CodePage({ path }: { path: string }) {
   const entries = useMemo(() => [...(item?.entries ?? [])].sort(order), [item]);
   const readme = item?.type === "dir" ? findReadme(entries) : undefined;
   const parent = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
-  const sentence = repo ? <>{repo.visibility} repository{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}. Press <kbd>t</kbd> to find a file.</> : undefined;
+  const sentence = repo ? <>{repo.visibility} repository{repo.mirror ? P.t6 : ""}{repo.archived ? ", archived" : ""}. Press <kbd>t</kbd> to find a file.</> : undefined;
 
   if (mode === "upload" && item) {
     return (
@@ -123,7 +125,7 @@ export function CodePage({ path }: { path: string }) {
   }
   if (mode && mode !== "upload" && item) {
     return (
-      <RepoFrame path={path} tab="code" title={mode === "new" ? "New file" : `Edit ${item.path}`} sentence="The change becomes one commit." error={error}>
+      <RepoFrame path={path} tab="code" title={mode === "new" ? "New file" : `Edit ${item.path}`} sentence={P.t7} error={error}>
         <Suspense fallback={<div className="loading">Loading…</div>}>
           <Editor repo={path} item={item} mode={mode} refName={current} protectedNames={protectedNames} dir={mode === "new" ? p : ""} />
         </Suspense>
@@ -155,14 +157,14 @@ export function CodePage({ path }: { path: string }) {
             <>
               <section className="card tree" aria-label="Files">
                 <table className="tree-table">
-                  <caption className="sr-only">Files and folders in {p || "the top of the repository"}, with the last commit that changed each</caption>
+                  <caption className="sr-only">Files and folders in {p || "the top of the repository"}{P.t8}</caption>
                   <thead><tr><th scope="col" className="tree-name">Name</th><th scope="col" className="tree-msg">Last commit</th><th scope="col" className="tree-who">Author</th><th scope="col" className="tree-when">Changed</th></tr></thead>
                   <tbody>
                     {p && <tr><td className="tree-name" colSpan={4}><Link href={codeHref(path, current, parent || undefined)}><NameIcon name=".." type="dir" />..</Link> <span className="faint small">up one folder</span></td></tr>}
                     {entries.map((e) => (
                       <tr key={e.name}>
                         <td className="tree-name"><Link href={codeHref(path, current, e.path)}><NameIcon name={e.name} type={e.type} />{e.type === "dir" ? e.name + "/" : e.name}</Link>{e.type === "symlink" && <span className="faint small"> link</span>}{e.type === "submodule" && <span className="faint small"> submodule</span>}</td>
-                        <td className="tree-msg">{e.last ? <MsgLink href={commitHref(path, e.last.sha)} text={e.last.subject} /> : <span className="faint" title="Last changed further back than the search reaches">older</span>}</td>
+                        <td className="tree-msg">{e.last ? <MsgLink href={commitHref(path, e.last.sha)} text={e.last.subject} /> : <span className="faint" title={P.t9}>older</span>}</td>
                         <td className="tree-who faint small">{e.last?.author ?? ""}</td>
                         <td className="tree-when faint small">{e.last ? when(e.last.at) : ""}</td>
                       </tr>
@@ -170,10 +172,10 @@ export function CodePage({ path }: { path: string }) {
                     {entries.length === 0 && <tr><td colSpan={4} className="faint">This folder is empty.</td></tr>}
                   </tbody>
                 </table>
-                {item.last_bounded && <p className="faint small code-note" role="note">Entries marked “older” were last changed beyond the most recent 4000 commits of this folder; open History for the path to see them.</p>}
+                {item.last_bounded && <p className="faint small code-note" role="note">{P.t10}</p>}
               </section>
               {readme ? <Readme repo={path} commit={item.commit} entry={readme} dir={p} refName={current} />
-                : p === "" && entries.length > 0 && <p className="faint small code-note">This repository has no README. Add a <span className="mono">README.md</span> and it is shown here{canWrite ? <>: <Link href={codeHref(path, current, undefined, { new: "1" })}>add one now</Link></> : ""}.</p>}
+                : p === "" && entries.length > 0 && <p className="faint small code-note">{P.t11}<span className="mono">README.md</span> and it is shown here{canWrite ? <>: <Link href={codeHref(path, current, undefined, { new: "1" })}>add one now</Link></> : ""}.</p>}
             </>
           ) : (
             <FileView repo={path} item={item} canWrite={canWrite} hash={hash} onHash={setHashTo}

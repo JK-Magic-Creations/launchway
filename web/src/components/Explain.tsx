@@ -6,6 +6,8 @@ import { ErrorBox, Mono } from "./ui";
 import { WizardButton } from "./WizardButton";
 import { costText, usageText } from "./usageText";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("components.Explain");
 
 // Models: asking one to explain a failed step, what an ai step's model
 // said, and the models the server knows. A model's words are always shown
@@ -69,12 +71,12 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
   if (!models.server_can_explain || models.models.length === 0) {
     offer = (
       <div className="xform">
-        <p className="sub small">Launchway can read the log and suggest a cause. It is optional and off until you choose a model.</p>
-        {me?.admin ? <div><WizardButton wizard="add-model" label="Set up an AI model" primary={false} /></div> : <p className="sub small">An administrator can turn this on.</p>}
+        <p className="sub small">{P.t0}</p>
+        {me?.admin ? <div><WizardButton wizard="add-model" label="Set up an AI model" primary={false} /></div> : <p className="sub small">{P.t1}</p>}
       </div>
     );
   } else if (usable.length === 0) {
-    offer = <p className="sub small">No AI model is open to {run.project}{terms().say("; an administrator can choose which {projects} may use a model.")}</p>;
+    offer = <p className="sub small">No AI model is open to {run.project}{terms().say(P.t2)}</p>;
   } else {
     const why = !mayAsk ? `You need the operator role on ${run.project} to ask a model.` : "";
     offer = (
@@ -94,8 +96,8 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
         </div>
         {why && <p id={`xwhy-${step.id}`} className="dctl-why">{why}</p>}
         <p className="sub small">
-          Sends {usable.length === 1 ? <>model <strong>{model}</strong></> : "the model"} {terms().say("the step's error, the last 200 lines of its log (secrets already masked by the {runner}) and its failed tests.")}
-          {(() => { const m = usable.find((x) => x.name === model); return m ? <> {m.local ? "It runs on a server of the operator's own." : `It is a ${m.provider} model, reached over the network.`}</> : null; })()}
+          Sends {usable.length === 1 ? <>model <strong>{model}</strong></> : "the model"} {terms().say(P.t3)}
+          {(() => { const m = usable.find((x) => x.name === model); return m ? <> {m.local ? P.t4 : `It is a ${m.provider} model, reached over the network.`}</> : null; })()}
         </p>
       </div>
     );
@@ -129,7 +131,7 @@ function ModelAnswer({ x }: { x: ExplanationView }) {
     <aside className="vexpl" aria-label={`Model output from ${x.model}`}>
       <div className="vexpl-head">
         <span className="vexpl-badge">Model output</span>
-        <span>From <strong>{x.model}</strong>, which may be wrong · asked by {x.actor}, <span title={clock(x.created_at)}>{ago(x.created_at)}</span>{x.attempt > 1 ? ` · attempt ${x.attempt}` : ""}</span>
+        <span>From <strong>{x.model}</strong>{P.t5}{x.actor}, <span title={clock(x.created_at)}>{ago(x.created_at)}</span>{x.attempt > 1 ? ` · attempt ${x.attempt}` : ""}</span>
       </div>
       <p className="vexpl-text">{x.text}</p>
       <div className="vexpl-usage faint">{usageText(x.usage)}</div>
@@ -140,7 +142,7 @@ function ModelAnswer({ x }: { x: ExplanationView }) {
 function SparkIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
-      <path d="M8 1.5l1.5 4 4 1.5-4 1.5L8 12.5 6.5 8.5l-4-1.5 4-1.5zM13 11l.6 1.4 1.4.6-1.4.6L13 15l-.6-1.4L11 13l1.4-.6z" />
+      <path d={P.t6} />
     </svg>
   );
 }
@@ -176,7 +178,7 @@ export function AIStepResult({ run, step }: { run: RunDetail; step: StepView }) 
       </details>
       {o.text !== undefined && (
         <aside className="vexpl" aria-label={`Model output from ${def.model}`}>
-          <div className="vexpl-head"><span className="vexpl-badge">Model output</span><span>From <strong>{def.model}</strong>, which may be wrong. It runs nothing by itself.</span></div>
+          <div className="vexpl-head"><span className="vexpl-badge">Model output</span><span>From <strong>{def.model}</strong>{P.t7}</span></div>
           <p className="vexpl-text">{o.text}</p>
         </aside>
       )}
@@ -199,9 +201,7 @@ export function ModelsSection() {
     <section className="card">
       <h2 className="h-sm">AI models</h2>
       <p className="sub">
-        Models that ai steps and verify steps may ask, and that people may ask to explain a failed step.
-        With none, nothing is ever sent to a model and everything else works.
-      </p>
+        {P.t8}</p>
       <ErrorBox error={error} />
       {models && models.models.length === 0 && <p className="sub"><strong>No AI model is set up.</strong></p>}
       <div><WizardButton wizard="add-model" label="Add an AI model" primary={!models?.models.length} small /></div>
@@ -216,7 +216,7 @@ export function ModelsSection() {
         </div>
       )}
       {models && models.models.length > 0 && !models.server_can_explain && (
-        <p className="sub small">This server does not ask models to explain failed steps.</p>
+        <p className="sub small">{P.t9}</p>
       )}
     </section>
   );
@@ -262,7 +262,7 @@ export function HealthSourcesSection() {
   return (
     <section className="card">
       <h2 className="h-sm">Health sources</h2>
-      <p className="sub">{terms().say("Monitoring that verify steps may read, by name, to judge a deployment. Where each is and its credentials stay with the {deploy:do} {runners}.")}</p>
+      <p className="sub">{terms().say(P.t10)}</p>
       {list.length === 0 ? <p className="sub"><strong>None yet</strong>: verify steps are refused.</p> : (
         <ul className="hsources">
           {list.map((h) => (

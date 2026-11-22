@@ -1,0 +1,15 @@
+{
+ "t0": "Launchway could not be reached. Try again shortly.",
+ "t1": "/api/v1/auth/local/second-factor",
+ "t2": "Code from your authenticator app",
+ "t3": "Use my authenticator app instead",
+ "t4": "You are signed in. Save these recovery codes somewhere safe, such as a password manager. Each works once if you lose your authenticator app. They are not shown again.",
+ "t5": "Scan this with an authenticator app (any app that makes six-digit codes), or choose to enter a setup key and type it in.",
+ "t6": "QR code to scan with your authenticator app",
+ "t7": "On the device that has the app, you can also open ",
+ "t8": "The six-digit code it shows now",
+ "t9": "At least 12 characters. A few unrelated words work well.",
+ "t10": "Enter the one-time setup code from the installation notes (or run `launchway users setup-code` on the server), then create the first administrator.",
+ "t11": "It was already used or has expired.",
+ "t12": "Ask an administrator for a new link, or run "
+}

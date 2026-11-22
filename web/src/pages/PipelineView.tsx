@@ -18,6 +18,8 @@ import { CopyLink } from "../components/CopyLink";
 import { ProjectHead } from "./PipelineChrome";
 import { terms } from "../terms";
 import { onLink } from "../router";
+import { prose } from "../prose";
+const P = await prose("pages.PipelineView");
 
 type View = "live" | "text" | "draw" | "history";
 const VIEWS: View[] = ["live", "text", "draw", "history"];
@@ -57,7 +59,7 @@ export function PipelineViewPage({ name }: { name: string }) {
   useViewTitle(view === "live" ? name : `${view[0].toUpperCase()}${view.slice(1)} · ${name}`);
 
   const sentence = view === "history" ? `Every run of ${name}, newest first.`
-    : "The steps a run does, read from the file in the repository. Nothing here is a copy: the editor saves a change as a Git commit.";
+    : P.t0;
   return (
     <div className="page">
       <ProjectHead name={name} on={view === "history" ? "history" : "pipeline"} title={view === "history" ? <>Runs of {name}</> : <>Pipeline of {name}</>} sentence={sentence}
@@ -73,9 +75,8 @@ export function PipelineViewPage({ name }: { name: string }) {
             {file && view === "live" && <PipelinePreview res={res} error={checkError} />}
             {file && view === "text" && <TextView file={file} />}
             {view === "draw" && (
-              <Sheet><EmptyState title="Drawing a pipeline is not built yet" action={<LinkButton href={editHref} kind="pri" icon="edit">Open the editor</LinkButton>}>
-                The Live tab already draws the file as boxes you can open. To change the pipeline, use the editor: it checks the text as you type and saves the change to Git as a commit.
-              </EmptyState></Sheet>
+              <Sheet><EmptyState title={P.t1} action={<LinkButton href={editHref} kind="pri" icon="edit">Open the editor</LinkButton>}>
+                {P.t2}</EmptyState></Sheet>
             )}
           </div>
         </>
@@ -89,8 +90,8 @@ function FileFacts({ file, name }: { file: PipelineFile; name: string }) {
   return (
     <p className="faint small" style={{ margin: 0 }}>
       {file.exists ? <>Kept in the repository as <Mono>{file.path}</Mono> on <Mono>{file.ref}</Mono>, at commit <Mono>{shortSha(file.sha)}</Mono> ({ago(file.committed_at)}{file.author ? `, by ${file.author}` : ""}).</>
-        : file.configured ? <>The repository has no pipeline file, so the pipeline configured on the server runs instead. Editing it saves a new file to the repository.</>
-        : <>The repository has no pipeline yet. Open the editor to write the first one; it is saved to Git as a commit. Or <a href={`/projects/${encodeURIComponent(name)}/import`} onClick={onLink}>import an existing pipeline</a> from another system's files.</>}
+        : file.configured ? <>{P.t3}</>
+        : <>{P.t4}<a href={`/projects/${encodeURIComponent(name)}/import`} onClick={onLink}>import an existing pipeline</a> from another system's files.</>}
     </p>
   );
 }
@@ -118,7 +119,7 @@ function History({ name, now }: { name: string; now: number }) {
   return (
     <>
       <ErrorBox error={runs.error} />
-      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title={terms().say("No {runs} yet")} action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">{terms().say("Start one from the {project}")}</LinkButton>}>Every run of this pipeline will be listed here, with its launch line.</EmptyState></Sheet>}
+      {runs.data && runs.data.length === 0 && <Sheet><EmptyState title={terms().say("No {runs} yet")} action={<LinkButton href={`/projects/${encodeURIComponent(name)}`} icon="play">{terms().say("Start one from the {project}")}</LinkButton>}>{P.t5}</EmptyState></Sheet>}
       {runs.data && runs.data.length > 0 && (
         <>
           <Sheet title="How it has been going" actions={<RateText trend={t} />}>

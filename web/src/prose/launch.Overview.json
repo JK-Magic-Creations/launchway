@@ -1,0 +1,19 @@
+{
+ "t0": "This Launch is over. Nothing happens by itself; Return to base goes back to an earlier release.",
+ "t1": "The pipeline step has ended, but the rollout has not: ",
+ "t2": "The launch {runner} has not shown a rollout for this delivery yet.",
+ "t3": "The rollout was aborted: all traffic is on the stable version. Retry it, or {rollback:do}.",
+ "t4": "A person paused this rollout. It stays where it is until someone resumes it.",
+ "t5": "The new version is active. The old one is kept for an instant return, then scaled down.",
+ "t6": "The rollout is complete: the new version has all traffic.",
+ "t7": "Waiting at a pause that only a person ends: promote it to go on, or abort. Nothing continues by itself.",
+ "t8": "Waiting for the analysis to finish. It passes by itself or fails the rollout; an operator may also abort.",
+ "t9": "The rollout is progressing by itself.",
+ "t10": "Share of real traffic to the new version",
+ "t11": "This strategy has no traffic weights.",
+ "t12": "ReplicaSets: wanted and actual replicas",
+ "t13": "callout callout-ok lw-pre-banner",
+ "t14": "% of real traffic; testing through ",
+ "t15": "Real users are not sent to the new version until the tests pass.",
+ "t16": "This is a plain Deployment: Kubernetes replaces its pods a few at a time. There are no traffic weights or steps; pause, resume, restart and scale apply, and the ReplicaSets below show the update."
+}

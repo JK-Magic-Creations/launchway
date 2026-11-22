@@ -1,0 +1,8 @@
+{
+ "t0": "Check this repository's basics",
+ "t1": "A proposal is a problem a tool found, such as a missing README or a weak dependency, offered to you as work instead of filed on its own. Launchway points out issues from day one without flooding the board: each tool opens at most 10 new items in a {run}, and the rest wait together in one summary item.",
+ "t2": ", one for each waiting group. Continue?",
+ "t3": "items, one for each selected group.",
+ "t4": "This makes one item. You can change how it starts.",
+ "t5": "Dismissed findings are not proposed again, even when the tool reports them in a later run."
+}
