@@ -91,7 +91,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseBlocked, "%s; waiting until a window allows it", blocked)
 	}
 	if app.Contains == nil {
-		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s%s", short(spec.Commit), controllerWords(app))
+		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s%s%s", short(spec.Commit), refreshWords(app), controllerWords(app))
 	}
 	if !*app.Contains {
 		what := "waiting for Argo CD to sync commit " + short(spec.Commit)
@@ -101,7 +101,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		if op := app.Operation; op != nil && op.Phase == "Running" {
 			what += "; a sync is running"
 		}
-		return cont(PhaseSyncing, "%s%s", what, controllerWords(app))
+		return cont(PhaseSyncing, "%s%s%s", what, refreshWords(app), controllerWords(app))
 	}
 
 	// The revision is ours. A rollback that aborted the rollout first waits
@@ -444,6 +444,18 @@ func syncFailure(app *App) *Verdict {
 		return &v
 	}
 	return nil
+}
+
+// refreshWords says what the runner did about a commit the controller has not noticed: it asked for a refresh
+// (the controller then re-reads the repository; nothing is synced), or it may not and a person must.
+func refreshWords(app *App) string {
+	switch {
+	case app.RefreshNeeded != "":
+		return ". " + app.RefreshNeeded
+	case app.RefreshAsked != "":
+		return ". " + app.RefreshAsked
+	}
+	return ""
 }
 
 // controllerWords is what the controller reports, for a step that waits: a

@@ -331,6 +331,7 @@ func TestStaleOperationIsDetectedAndEnded(t *testing.T) {
 	dyn2, cl2 := fakeCluster(t, staleApp(bare))
 	a2 := agentFor(t, bare, cl2)
 	a2.KeepStaleOperations = true
+	it.Spec.Refresh = "never" // a refresh is a patch too, and this one is about the operation
 	if s := a2.Observe(context.Background(), it); !strings.Contains(s.App.Cleared, "not ended") || len(patches(dyn2)) != 0 {
 		t.Fatalf("%+v %v", s.App, patches(dyn2))
 	}

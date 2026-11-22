@@ -143,6 +143,11 @@ type Sync struct {
 	// "delivered, with a problem to fix"; warn only adds a note. Neither fails
 	// the step or rolls back. Others only ever warn. Nothing is deleted.
 	Leftovers string `json:"leftovers,omitempty"`
+	// Refresh is ask (the default) or never: whether the deploy runner may ask Argo CD to re-read an application's
+	// sources (a refresh, not a sync: it changes nothing in the cluster) while the step waits for a commit to be
+	// noticed. The controller caches what a branch points at for minutes, so without it a step can wait for a
+	// commit the controller has not looked for yet. sync.request: never does not forbid it.
+	Refresh string `json:"refresh,omitempty"`
 }
 
 // Resource names one resource of an application.
@@ -288,7 +293,7 @@ var (
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
 	changeKeys   = []string{"file", "image", "tag", "digest", "format", "set", "value"}
-	syncKeys     = []string{"request", "resources", "prune", "windows", "leftovers"}
+	syncKeys     = []string{"request", "resources", "prune", "windows", "leftovers", "refresh"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
 	rolloutKeys  = []string{"name", "namespace", "until", "pauses", "unverified"}
 	// Keys of deploy steps that the design has and a later release brings.
@@ -737,6 +742,13 @@ func (ps *parser) parseSync(n *yaml.Node, at string, s *Sync) {
 				s.Windows = w
 			default:
 				ps.add(v, where, "write wait or fail: what to do while a sync window does not allow syncing (windows are never overridden)")
+			}
+		case "refresh":
+			switch w := ps.scalar(v, where); w {
+			case "ask", "never":
+				s.Refresh = w
+			default:
+				ps.add(v, where, "write ask (the default: the deploy runner may ask Argo CD to re-read the repository while the step waits for a commit to be noticed; this is not a sync) or never")
 			}
 		case "leftovers":
 			switch w := ps.scalar(v, where); w {

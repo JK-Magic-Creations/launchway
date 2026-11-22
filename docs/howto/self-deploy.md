@@ -63,6 +63,10 @@ the database's minimum schema (the `schema_min` value). Do the first one, and th
 3. **Commit to the GitOps repository**: `image.tag` and `image.digest` in the instance's values file, and
    the chart's `targetRevision` in its Application, in **one** commit (they must match).
 4. **Let Argo CD sync** and watch the Rollout: `kubectl argo rollouts get rollout <name> -n <namespace> -w`.
+   While the step waits, Launchway asks Argo CD to re-read the repository (a refresh, which syncs nothing and is
+   allowed with `sync.request: never`), because Argo CD caches what a branch points at for minutes. If the launch
+   Station may not change the Applications, the step says which refresh to request (`argocd app get NAME
+   --hard-refresh`) and goes on by itself; its default wait for the parent Application is 8 minutes.
    No `helm upgrade`, no `kubectl apply`.
 5. Check `/readyz` and `/api/v1/info` (`schema.database` equals `schema.code`).
 

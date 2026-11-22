@@ -195,3 +195,27 @@ func TestNestedDeployOfOneServiceIsRefused(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+// sync.refresh is ask (the default, left empty) or never; a refresh is not a sync, so request: never does not change it.
+func TestSyncRefreshParses(t *testing.T) {
+	file := func(sync string) string {
+		return strings.Replace(deployFile, "        request: auto\n", sync, 1)
+	}
+	p, err := Parse([]byte(file("        request: never\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Step("deploy-prod").ArgoCD.Sync; got.Request != "never" || got.Refresh != "" {
+		t.Errorf("request never must leave refresh at its default (ask): %+v", got)
+	}
+	p, err = Parse([]byte(file("        request: never\n        refresh: never\n")))
+	if err != nil || p.Step("deploy-prod").ArgoCD.Sync.Refresh != "never" {
+		t.Fatalf("refresh: never: %v", err)
+	}
+	if p, err = Parse([]byte(file("        refresh: ask\n"))); err != nil || p.Step("deploy-prod").ArgoCD.Sync.Refresh != "ask" {
+		t.Fatalf("refresh: ask: %v", err)
+	}
+	if _, err = Parse([]byte(file("        refresh: always\n"))); err == nil || !strings.Contains(err.Error(), "ask") {
+		t.Fatalf("an unknown refresh was accepted: %v", err)
+	}
+}

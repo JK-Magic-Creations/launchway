@@ -42,7 +42,7 @@ export function SecurityPage({ path }: { path: string }) {
           {(st.runs ?? []).length > 0 && (
             <ul className="plain" aria-label="Latest Inspections">
               {(st.runs ?? []).map((r) => (
-                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>Run {r.number}</Link> <Chip>{r.status}</Chip> <span className="faint small">at {r.sha.slice(0, 8)}, {ago(r.created_at)}</span></li>
+                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>{terms().say("{Run}")} {r.number}</Link> <Chip>{r.status}</Chip> <span className="faint small">at {r.sha.slice(0, 8)}, {ago(r.created_at)}</span></li>
               ))}
             </ul>
           )}
@@ -50,7 +50,7 @@ export function SecurityPage({ path }: { path: string }) {
       )}
       {st && st.project && <FindingsBacklog name={st.project} />}
       {st && !st.project && (
-        <Sheet><EmptyState title="No findings yet">Findings are kept under a project, and no project watches this repository yet. Add a project that reads it (in the server's configuration); then an Inspection, here or on any run, records what it finds and this page lists it.</EmptyState></Sheet>
+        <Sheet><EmptyState title="No findings yet">{terms().say("Findings are kept under a project, and no project watches this repository yet. Add a project that reads it (in the server's configuration); then an Inspection, here or on any {run}, records what it finds and this page lists it.")}</EmptyState></Sheet>
       )}
     </RepoFrame>
   );

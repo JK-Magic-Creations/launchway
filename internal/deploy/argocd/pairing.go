@@ -218,7 +218,11 @@ func (a *Agent) pairTimeout() time.Duration {
 	if a.PairTimeout > 0 {
 		return a.PairTimeout
 	}
-	return 3 * time.Minute
+	return a.pairTimeoutDefault()
+}
+
+func (a *Agent) pairTimeoutDefault() time.Duration {
+	return 8 * time.Minute // longer than the controller's caches of a branch, for a runner that may not refresh
 }
 
 func (a *Agent) pairSettle() time.Duration {
@@ -327,16 +331,14 @@ func (a *Agent) waitForPin(ctx context.Context, job *engine.Job, pins []pinned, 
 	parent := parentOf(app, d.Application)
 	if parent != "" {
 		log("Mode: CONTROLLER-ORDERED. %s is managed by the parent application %s; waiting until the cluster shows the new chart pin in %s's own spec", d.Application, parent, d.Application)
-		if rerr := cl.RefreshHard(ctx, parent); rerr != nil {
-			log("Could not ask Argo CD to refresh the parent %s (%v); waiting for it to notice the commit", parent, rerr)
-		} else {
-			log("Asked Argo CD to refresh the parent application %s (hard) so it applies the manifest at %s", parent, short(commit))
+		if d.Sync.Refresh == "never" {
+			log("Not asking Argo CD to refresh the parent %s (sync.refresh: never): it notices the commit when it re-reads the repository, which can take minutes; to hurry it, %s", parent, howToRefresh(parent))
 		}
 	} else {
 		log("Mode: CONTROLLER-ORDERED. No parent application was found for %s (no tracking annotation); waiting until the cluster shows the new chart pin in its spec", d.Application)
 	}
 	deadline := time.Now().Add(a.pairTimeout())
-	syncedParent := false
+	syncedParent, deniedSaid, failedSaid, askedBefore := false, false, false, 0
 	for {
 		app, err = cl.Application(ctx, d.Application)
 		if err != nil {
@@ -350,14 +352,29 @@ func (a *Agent) waitForPin(ctx context.Context, job *engine.Job, pins []pinned, 
 			log("The cluster shows the new pin in %s's spec: %s", d.Application, pinWords(pins))
 			return nil
 		}
+		if parent != "" && d.Sync.Refresh != "never" {
+			// Not a sync: the controller re-reads the repository (it caches what a branch points at for minutes).
+			n, denied, rerr := a.refresh.try(ctx, cl, "parent:"+d.Deployment+":"+parent, parent, a.refreshFirst())
+			switch {
+			case denied && !deniedSaid:
+				deniedSaid = true
+				log("Launchway may not refresh the parent %s (%v). Keep waiting: the parent notices the commit by itself within minutes, or %s; this step picks up by itself", parent, rerr, howToRefresh(parent))
+			case !denied && n > askedBefore:
+				askedBefore = n
+				log("Asked Argo CD to refresh the parent application %s (hard, which syncs nothing) so it applies the manifest at %s (ask %d)", parent, short(commit), n)
+			case rerr != nil && !denied && !failedSaid:
+				failedSaid = true
+				log("Could not ask Argo CD to refresh the parent %s (%v); waiting for it to notice the commit", parent, rerr)
+			}
+		}
 		if !syncedParent && parent != "" && time.Until(deadline) < a.pairTimeout()/2 {
 			syncedParent = true
 			a.syncParent(ctx, cl, t, job, parent, log)
 		}
 		if time.Now().After(deadline) {
 			return fmt.Errorf("the parent application %s has not applied the new manifest of %s within %s (%s). The values were NOT written, so %s keeps rendering the old image with the old chart and nothing was mixed. "+
-				"The manifest commit %s is on %s: sync %s (or fix why it does not), then run the deploy step again; it picks up from here",
-				firstOf(parent, "that manages it"), d.Application, a.pairTimeout(), strings.Join(mm, "; "), d.Application, short(commit), d.Branch, firstOf(parent, "the application that manages it"))
+				"The manifest commit %s is on %s: %s, or sync %s (or fix why it does not), then run the deploy step again; it picks up from here",
+				firstOf(parent, "that manages it"), d.Application, a.pairTimeout(), strings.Join(mm, "; "), d.Application, short(commit), d.Branch, howToRefresh(firstOf(parent, "the application that manages it")), firstOf(parent, "the application that manages it"))
 		}
 		if err := sleepCtx(ctx, a.pairEvery()); err != nil {
 			return err

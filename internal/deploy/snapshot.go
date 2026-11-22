@@ -109,7 +109,11 @@ type App struct {
 	// step's log: sync and health, the operation's phase and message, the
 	// failing resource or hook with its message. ComparisonError is the
 	// text of a ComparisonError condition in full.
-	Controller      string `json:"controller,omitempty"`
+	Controller string `json:"controller,omitempty"`
+	// RefreshAsked says that the runner asked the controller to re-read the sources (a hard refresh) because it
+	// had not noticed the commit; RefreshNeeded says that the runner may not, and what a person should request.
+	RefreshAsked    string `json:"refresh_asked,omitempty"`
+	RefreshNeeded   string `json:"refresh_needed,omitempty"`
 	ComparisonError string `json:"comparison_error,omitempty"`
 	// ComparisonPersistent says the runner saw the same ComparisonError on
 	// two looks a while apart, so it is not a passing hiccup.
@@ -279,6 +283,9 @@ type Spec struct {
 	// asks for pruning.
 	Leftovers string `json:"leftovers,omitempty"`
 	Prune     bool   `json:"prune,omitempty"`
+	// Refresh is ask or never (see pipeline.Sync): whether the runner may ask the controller to re-read the
+	// application's sources while the commit is not noticed. Empty means ask.
+	Refresh string `json:"refresh,omitempty"`
 }
 
 // Leftover is an object from an earlier render that is still in the cluster.

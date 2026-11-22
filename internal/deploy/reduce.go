@@ -285,6 +285,7 @@ func SpecFor(kind string, step *pipeline.Step, commit string) Spec {
 	s.Health = step.ArgoCD.Health
 	s.Resources = step.ArgoCD.Sync.Resources
 	s.Windows = step.ArgoCD.Sync.Windows
+	s.Refresh = step.ArgoCD.Sync.Refresh
 	s.Rollout = step.Rollout
 	return s
 }

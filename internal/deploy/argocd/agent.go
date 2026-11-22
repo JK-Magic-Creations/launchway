@@ -39,10 +39,14 @@ type Agent struct {
 	PullEvery time.Duration
 	// PairTimeout is how long a deployment that changes an application's own
 	// manifest and its values waits for the cluster to show the new manifest
-	// before it writes the values (default 3m); PairSettle is the pause it
+	// before it writes the values (default 8m); PairSettle is the pause it
 	// makes instead when the cluster cannot be read (default 90s); PairEvery
 	// is how often it looks (default 2s). See pairing.go.
 	PairTimeout, PairSettle, PairEvery time.Duration
+	// RefreshEvery is the pause before an application is asked a second time to re-read its sources while a
+	// commit is not noticed (default 10s; it doubles up to three minutes). See refresh.go.
+	RefreshEvery time.Duration
+	refresh      refresher
 
 	// KeepStaleOperations stops the runner from ending a sync operation that
 	// was started with source revisions the application no longer points at
@@ -378,7 +382,7 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 	if app == nil {
 		return "", fmt.Errorf("there is no application %s in namespace %s", d.Application, cl.argoNS)
 	}
-	if t.Refresh() {
+	if t.Refresh() && d.Sync.Refresh != "never" {
 		if err := cl.Refresh(ctx, d.Application); err != nil {
 			log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll", d.Application, err)
 		}
@@ -538,6 +542,7 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	snap := deploy.Snapshot{App: deploy.ReduceApplication(app, it.Spec, rc.ArgoCDURL, contains)}
 	unlock()
+	a.noticeCommit(ctx, cl, t, it, snap.App)
 	a.afterReduce(ctx, cl, it, app, snap.App)
 	// An application that syncs by itself shows nothing in its status while
 	// a sync window holds it; say so from the windows themselves.
