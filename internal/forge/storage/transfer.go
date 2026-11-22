@@ -2,9 +2,14 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
 // PlanFunc decides, inside a transfer between two repositories, which refs of
@@ -75,4 +80,23 @@ func addAlternate(scratch, objects string) error {
 // Scratch runner for plans: git in a scratch repository that borrows objects.
 func (s *Store) ScratchGit(ctx context.Context, scratch, stdin string, args ...string) (string, error) {
 	return s.scratchGit(ctx, scratch, stdin, args...)
+}
+
+// ScratchGitEnv is ScratchGit with environment variables (the name and date of
+// a commit, the index file a plan builds a tree in); only names the runner
+// allows are accepted.
+func (s *Store) ScratchGitEnv(ctx context.Context, scratch, stdin string, env []string, args ...string) (string, error) {
+	spec := gitexec.Spec{GitDir: scratch, Args: args, Env: env, Timeout: 30 * time.Minute, Limits: s.o.Limits, AllowAlternates: true, Untrusted: true}
+	if stdin != "" {
+		spec.Stdin = strings.NewReader(stdin)
+	}
+	res, err := gitexec.Run(ctx, spec)
+	if err != nil {
+		var ee *gitexec.ExitError
+		if errors.As(err, &ee) {
+			return res.Stdout, fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(ee.Stderr+ee.Stdout))
+		}
+		return res.Stdout, fmt.Errorf("git %s: %w", args[0], err)
+	}
+	return res.Stdout, nil
 }

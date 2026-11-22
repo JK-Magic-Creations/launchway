@@ -76,6 +76,7 @@ var allowedImports = map[string][]string{
 	"internal/forge/egress":               {},
 	"internal/forge/files":                {"internal/forge", "internal/forge/storage", "internal/gitexec"},
 	"internal/forge/forgetest":            {"internal/forge"},
+	"internal/forge/forks":                {"internal/forge", "internal/forge/storage", "internal/gitexec", "internal/store"},
 	"internal/forge/githttp":              {"internal/forge", "internal/forge/storage"},
 	"internal/forge/gitssh":               {},
 	"internal/forge/refrules":             {"internal/ids"},
