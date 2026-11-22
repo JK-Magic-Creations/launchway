@@ -8,7 +8,12 @@ on:
   schedule:
     - cron: "23 6 * * 3"
 
-permissions: read-all
+permissions:
+  contents: read # the job below adds what it needs; nothing is write at the top
+
+concurrency:
+  group: scorecard
+  cancel-in-progress: false
 
 jobs:
   analysis:
