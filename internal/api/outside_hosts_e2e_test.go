@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -134,5 +136,69 @@ func TestOutsideHostReporterFollowsTheHub(t *testing.T) {
 		if !strings.Contains(c, "Sortie #4 failed") || !strings.Contains(c, "Failed: test") {
 			t.Errorf("summary %q", c)
 		}
+	}
+}
+
+func wbJob(mode, merge string) *engine.Job {
+	return &engine.Job{RunID: "run_9", Project: "pay-hooks", Deploy: &engine.DeployJob{Branch: "main", Deployment: "dep1",
+		WriteBack: &engine.WriteBackJob{WriteBack: engine.WriteBack{Repo: "gh:acme/app", Mode: mode, Merge: merge}, WorkBranch: "launchway/deploy/dep1"}}}
+}
+
+func TestOutsideWriteBackCredentialAndRefusals(t *testing.T) {
+	e, h := hostsEnv(t)
+	ctx := context.Background()
+	job := wbJob("direct", "")
+	e.api.mintWriteBack(ctx, job)
+	wb := job.Deploy.WriteBack
+	if wb.Error != "" || !wb.Outside || wb.Token != githubfake.Token || wb.Username != "x-access-token" || !strings.HasPrefix(wb.Handle, "outside.") {
+		t.Fatalf("%+v", wb)
+	}
+	if strings.Contains(wb.Handle, githubfake.Token) {
+		t.Fatal("the handle holds the credential")
+	}
+	// A protected branch refuses a direct write, naming the pull request mode.
+	h.Protect = true
+	job = wbJob("direct", "")
+	e.api.mintWriteBack(ctx, job)
+	if !strings.Contains(job.Deploy.WriteBack.Error, "pull_request") || job.Deploy.WriteBack.Token != "" {
+		t.Fatalf("%+v", job.Deploy.WriteBack)
+	}
+	// Launchway does not merge on this host: merge auto is refused in words.
+	job = wbJob("pull_request", "auto")
+	e.api.mintWriteBack(ctx, job)
+	if !strings.Contains(job.Deploy.WriteBack.Error, "person") {
+		t.Fatalf("%+v", job.Deploy.WriteBack)
+	}
+	// A tampered or expired handle opens nothing.
+	good := wbJob("pull_request", "person")
+	e.api.mintWriteBack(ctx, good)
+	pull := func(token, op string, n int) (int, map[string]any) {
+		rec := httptest.NewRecorder()
+		e.api.outsideDeployPull(rec, httptest.NewRequest("POST", "/x", nil), token, op, n, "Deploy dep1", "body")
+		var out map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out
+	}
+	if code, _ := pull(good.Deploy.WriteBack.Handle+"x", "open", 0); code != 403 {
+		t.Fatalf("a tampered handle: %d", code)
+	}
+	if code, _ := pull(wbJob("direct", "").Deploy.WriteBack.Handle, "open", 0); code != 403 {
+		t.Fatalf("an empty handle: %d", code)
+	}
+	code, out := pull(good.Deploy.WriteBack.Handle, "open", 0)
+	if code != 200 || out["state"] != "open" || out["number"] != float64(1) || out["waiting_for"] == "" {
+		t.Fatalf("open: %d %v", code, out)
+	}
+	if code, out = pull(good.Deploy.WriteBack.Handle, "open", 0); code != 200 || out["number"] != float64(1) || len(h.Pulls) != 1 {
+		t.Fatalf("opening again finds the same pull request: %d %v %d", code, out, len(h.Pulls))
+	}
+	h.Lock()
+	h.Pulls[0]["state"], h.Pulls[0]["merged_at"], h.Pulls[0]["merge_commit_sha"] = "closed", "2026-01-01T00:00:00Z", strings.Repeat("9", 40)
+	h.Unlock()
+	if code, out = pull(good.Deploy.WriteBack.Handle, "status", 1); code != 200 || out["state"] != "merged" || out["commit"] != strings.Repeat("9", 40) {
+		t.Fatalf("status after the merge: %d %v", code, out)
+	}
+	if len(h.Violations) > 0 {
+		t.Errorf("violations %v", h.Violations)
 	}
 }

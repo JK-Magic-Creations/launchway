@@ -4141,7 +4141,7 @@ paths:
             x-launchway-audit: outside_host.test
     /api/v1/outside-hosts/{name}/webhook:
         post:
-            description: The host's webhook. Verified with the connection's webhook secret (HMAC-SHA256 of the body, compared in constant time); a delivery ID seen before is answered 202 and ignored; an unknown connection, no secret and a wrong signature all answer 404. A push, tag push or pull request event makes the Flights attached to that repository poll at once; a pull request from a fork runs under the restricted pull-request rule. Failed calls count against the caller's address.
+            description: The host's webhook. Verified with the connection's webhook secret (HMAC-SHA256 of the body, compared in constant time); a delivery ID seen before is answered 202 and ignored; an unknown connection, no secret and a wrong signature all answer 404. A push, tag push or pull request event makes the Flights attached to that repository poll at once; a pull request from a fork runs under the restricted pull-request rule. Failed calls count against the caller's address, and each connection accepts at most 300 calls a minute (verified or not); the rest answer 429 with Retry-After.
             operationId: post_api_v1_outside_hosts_name_webhook
             parameters:
                 - in: path

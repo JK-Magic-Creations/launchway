@@ -49,7 +49,7 @@ func (a *Agent) landPull(ctx context.Context, job *engine.Job, log func(string, 
 	}
 	subject, _, _ := strings.Cut(strings.TrimSpace(d.Message), "\n")
 	body := strings.TrimSpace(d.Message) + "\n\nLaunchway-Deployment: " + d.Deployment + "\n\nOpened by the deploy step of run #" + fmt.Sprint(job.RunNumber) + " of " + job.Project + "."
-	st, err := a.Pulls.Pull(ctx, PullCall{Token: d.WriteBack.Token, Op: "open", Title: subject, Body: body})
+	st, err := a.Pulls.Pull(ctx, PullCall{Token: pullToken(d.WriteBack), Op: "open", Title: subject, Body: body})
 	if err != nil {
 		return "", fmt.Errorf("opening the pull request: %w", err)
 	}
@@ -76,7 +76,7 @@ func (a *Agent) landPull(ctx context.Context, job *engine.Job, log func(string, 
 		case <-ctx.Done():
 			return "", fmt.Errorf("pull request #%d (%s) was not merged in time; it waits for %s. The deploy step stops here; the pull request stays open", st.Number, st.URL, st.WaitingFor)
 		}
-		next, err := a.Pulls.Pull(ctx, PullCall{Token: d.WriteBack.Token, Op: "status", Number: st.Number})
+		next, err := a.Pulls.Pull(ctx, PullCall{Token: pullToken(d.WriteBack), Op: "status", Number: st.Number})
 		if err != nil {
 			if ctx.Err() == nil {
 				log("Could not ask the server about pull request #%d (%v); trying again", st.Number, err)
@@ -85,4 +85,13 @@ func (a *Agent) landPull(ctx context.Context, job *engine.Job, log func(string, 
 		}
 		st = next
 	}
+}
+
+// pullToken is what the step shows the server to open and follow its pull
+// request: the handle for an outside repository, the push credential for a hosted one.
+func pullToken(w *engine.WriteBackJob) string {
+	if w.Outside && w.Handle != "" {
+		return w.Handle
+	}
+	return w.Token
 }

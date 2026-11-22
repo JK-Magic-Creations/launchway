@@ -423,6 +423,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `project.outside_detach` | `DELETE /api/v1/projects/{name}/outside` |
 | `outside_host.status` | A commit status written to the outside host for a Sortie, by the Sortie (the detail names the status and its state) |
 | `outside_host.release` | A published release made on the outside host of a Flight that keeps its code there (the annotated tag is made there when the release is cut); the detail names the release page or says why it failed |
+| `outside_host.write_back` | The credential for a Launchway write-back to a repository on an outside host handed to a deploy step (the detail names the mode and branch, never the credential) |
+| `outside_host.pull_request` | A deploy step opened a pull request on an outside host for its write-back |
 | `outside_host.comment` | The summary comment of a pull request written or updated on the outside host, by the Sortie |
 | `webhook.outside` | An outside host's webhook: verified, its Flights polled at once (or a refusal, with the caller's address) |
 | `connection.create` | `POST /api/v1/connections` (also `launchway repos connection add`): a server to import from; the detail says its kind, address and where the credential is read from, never the credential |
