@@ -111,6 +111,13 @@ var (
 	DataTotalBytes = Default.New(Desc{Name: "launchway_data_total_bytes", Kind: Gauge,
 		Help: "Size in bytes of the volume holding the server's data directory."})
 
+	CustomStepRuns = Default.New(Desc{Name: "launchway_custom_step_runs_total", Kind: Counter, Labels: []string{"outcome"},
+		Help: "Steps that came from a custom step, finished, by outcome (succeeded, failed, canceled, skipped). Never the step's name."})
+	ForkOperations = Default.New(Desc{Name: "launchway_fork_operations_total", Kind: Counter, Labels: []string{"operation", "outcome"},
+		Help: "Fork operations; operation is fork, sync or template (a repository made from a template); outcome is ok or error."})
+	ConflictResolutions = Default.New(Desc{Name: "launchway_conflict_resolutions_total", Kind: Counter, Labels: []string{"outcome"},
+		Help: "Pull request conflicts answered through the API, the command line or the tools; outcome is ok or error."})
+
 	MailMessages = Default.New(Desc{Name: "launchway_mail_messages_total", Kind: Counter, Labels: []string{"outcome"},
 		Help: "Mail the outbox handled; outcome is sent, retried (a try failed, another is planned) or failed (given up). Never an address or a subject."})
 	MailQueued = Default.New(Desc{Name: "launchway_mail_outbox_messages", Kind: Gauge, Labels: []string{"state"},

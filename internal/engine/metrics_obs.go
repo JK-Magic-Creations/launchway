@@ -101,6 +101,11 @@ func observeSteps(before *runSnapshot, st *RunState, now int64) {
 		if s.Status.Terminal() && !b.status.Terminal() {
 			out := string(s.Status)
 			metrics.StepsFinished.Inc(out)
+			if st.Pipeline != nil {
+				if def := st.Pipeline.Step(id); def != nil && def.Custom != nil {
+					metrics.CustomStepRuns.Inc(out)
+				}
+			}
 			if s.StartedAt > 0 && s.FinishedAt >= s.StartedAt {
 				metrics.StepDuration.Observe(float64(s.FinishedAt-s.StartedAt)/1000, out)
 			}

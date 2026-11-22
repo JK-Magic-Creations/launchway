@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"strings"
 	"testing"
 )
@@ -80,5 +81,27 @@ func TestForkPullRequestIsNotStoppedByPushRulesAndBringsOnlyItsRefs(t *testing.T
 			continue
 		}
 		t.Errorf("the base has a ref the fork's pull request should not have brought: %s", ref)
+	}
+}
+
+// Fork operations and conflict resolutions are counted on the metrics endpoint, by outcome only.
+func TestForkOperationsAreCounted(t *testing.T) {
+	forkOK, syncOK, forkErr := metrics.ForkOperations.Value("fork", "ok"), metrics.ForkOperations.Value("sync", "ok"), metrics.ForkOperations.Value("fork", "error")
+	f := newForkEnv(t)
+	f.ada.do("PATCH", f.acme, `{"allow_forks":"on"}`)
+	if r := f.vic.do("POST", f.acme+"/forks", `{}`); r.status != 201 {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if r := f.vic.do("POST", f.e.srv.URL+"/api/v1/repositories/vic/shop/sync", `{}`); r.status != 200 {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if got := metrics.ForkOperations.Value("fork", "ok") - forkOK; got != 1 {
+		t.Errorf("forks counted %v", got)
+	}
+	if got := metrics.ForkOperations.Value("sync", "ok") - syncOK; got != 1 {
+		t.Errorf("syncs counted %v", got)
+	}
+	if got := metrics.ForkOperations.Value("fork", "error") - forkErr; got != 0 {
+		t.Errorf("a fork that worked counted as an error: %v", got)
 	}
 }

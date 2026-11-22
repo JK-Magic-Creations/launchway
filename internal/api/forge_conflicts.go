@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"net/http"
 	"strings"
 
@@ -55,6 +56,7 @@ func (s *Server) pullResolveConflicts(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := s.Forge.Pulls.ResolveConflicts(r.Context(), repo.ID, p, pulls.ResolveInput{ExpectHead: in.ExpectHead, ExpectTarget: in.ExpectTarget,
 		Files: in.Files, Method: in.Method, Message: in.Message, By: id.User})
+	metrics.ConflictResolutions.Inc(map[bool]string{true: "ok", false: "error"}[err == nil])
 	if err != nil {
 		s.failPull(w, err)
 		return
