@@ -53,7 +53,7 @@ func TestOnlyVerifiedCommitsMayBePushed(t *testing.T) {
 			Signed   bool `json:"require_signed_commits"`
 		} `json:"rules"`
 	}
-	ada.get(api + "/merge-rules").json(t, &rules)
+	ada.get(api+"/merge-rules").json(t, &rules)
 	if len(rules.Rules) != 1 || !rules.Rules[0].Verified || !rules.Rules[0].Signed {
 		t.Fatalf("the rule was not kept: %+v", rules)
 	}
@@ -94,7 +94,7 @@ func TestOnlyVerifiedCommitsMayBePushed(t *testing.T) {
 			SignerIsCommitter     bool `json:"signer_is_committer"`
 		} `json:"items"`
 	}
-	ada.get(api + "/signatures?shas=" + sha).json(t, &sigs)
+	ada.get(api+"/signatures?shas="+sha).json(t, &sigs)
 	if len(sigs.Items) != 1 || sigs.Items[0].State != "verified" || sigs.Items[0].Signer != "ada" {
 		t.Fatalf("signatures: %+v", sigs)
 	}

@@ -65,7 +65,9 @@ func TestRequireSignedMergesAreSignedByTheInstallation(t *testing.T) {
 		if err := w.svc.Store.SetRule(w.ctx, repoID, rule, "ada"); err != nil {
 			t.Fatal(err)
 		}
-		w.svc.Verify = func(context.Context, []storage.PushObject) []signing.Result { return []signing.Result{{Object: "abcdef0123456789", State: signing.Unsigned}} }
+		w.svc.Verify = func(context.Context, []storage.PushObject) []signing.Result {
+			return []signing.Result{{Object: "abcdef0123456789", State: signing.Unsigned}}
+		}
 		_, err := w.svc.Merge(w.ctx, repoID, p, MergeInput{Method: MethodSquash, Actor: "grace", ActorRole: RoleOperator, RepoPath: "ada/demo"})
 		if err == nil || !strings.Contains(err.Error(), "not verified") {
 			t.Fatalf("%v", err)
