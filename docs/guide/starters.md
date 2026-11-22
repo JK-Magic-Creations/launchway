@@ -122,9 +122,9 @@ dependency cache under a key made of the lock file and the tool version, check, 
 |---|---|---|
 | `go-service` | A Go program with a `Dockerfile` | `gofmt` and `go vet`; `go test -json` with a Tests report and a coverage profile; `go build`; `govulncheck`; secret scan; the image |
 | `go-library` | A Go module that is not launched | the same without the image, with the tests repeated for each Go version in `test_versions` |
-| `python-service` | A Python program with a `Dockerfile` | dependencies by `uv.lock` (uv), `poetry.lock` (Poetry) or `requirements*.txt` and `pyproject.toml` (pip); `ruff`; `pytest` with a JUnit report and a Cobertura coverage report; secret scan; the image |
+| `python-service` | A Python program with a `Dockerfile` | dependencies by `uv.lock` (uv), `poetry.lock` (Poetry) or `requirements*.txt` and `pyproject.toml` (pip); `ruff`; `pytest` with a JUnit report and a Cobertura coverage report (`pytest-cov` is installed for the step and the options reach pytest through `PYTEST_ADDOPTS`, so a `test_command` of your own gets them too); secret scan; the image |
 | `python-library` | A Python package | the same, tested on each version in `test_versions`, and a wheel built |
-| `node-app` | A Node or TypeScript program with a `Dockerfile` | install by `pnpm-lock.yaml`, `yarn.lock` or `package-lock.json`; the `lint`, `format:check` and `typecheck` scripts the package defines (and `tsc --noEmit` for TypeScript); tests with a report for vitest, jest (with `jest-junit`) and `node --test`; the `build` script; secret scan; the image |
+| `node-app` | A Node or TypeScript program with a `Dockerfile` | install by `pnpm-lock.yaml`, `yarn.lock` or `package-lock.json`; the `lint`, `format:check` and `typecheck` scripts the package defines (and `tsc --noEmit` for TypeScript); tests with a Tests and a Coverage report for jest, vitest, mocha and `node --test` (the reporter and the coverage tool are installed for the step, at pinned versions, and added to your `test_command` too; the repository lists nothing); the `build` script; secret scan; the image |
 | `node-library` | An npm package | the same, tested on each version in `test_versions` |
 | `java-maven` | A Maven project | `mvn verify` (or `./mvnw`) with the Surefire and Failsafe results in Tests and JaCoCo in Coverage; the jars kept; secret scan; the image when `image: true` |
 | `java-gradle` | A Gradle project | `gradle build` (or `./gradlew`) with the test results and JaCoCo; the jars kept; secret scan; the image when `image: true` |
@@ -208,6 +208,9 @@ from a step wait for the notification work.
 ## Changing a starter
 
 - **Any input** is overridden with `with:`; the gallery lists them all with their defaults.
+- **Test results and coverage** come with the test step, also when you set `test_command`. When the command is not one of the test tools the step knows (jest, vitest, mocha, `node --test` and pytest), it is carried out unchanged and the step's log shows a boxed notice that the tests ran but no report was produced, with the one line to add; the Tests page points to it. `coverage: false` turns coverage off.
+- **Static analysis** (`analysis`, Python) reads the project's own source, never the virtual environment, installed packages, build output or vendored code. It records every finding of medium severity or worse as a finding in the backlog, and fails only at `analysis_severity` and `analysis_confidence` (both `high` by default); `analysis_paths` and `analysis_exclude` choose where it reads.
+- **Timeouts.** The steps that test, audit and analyze have a timeout of their own (30 minutes for tests, 10 to 20 for the rest), not the default hour. When one is reached the log and the Sortie (run) say so, and add the usual cause: a step that lasted that long with little output is usually waiting (for a connection the network policy drops, for a lock, for input). The Sortie's page also says so when a running step has printed nothing for five minutes.
 - **A command** is replaced with `test_command`, `lint_command`, `install_command` or `build_command`.
 - **A starter of your own** replaces a built-in one by living in a library you list: write `uses: platform/go-service`. The name
   `launchway` is reserved for the built-in library, so a server's library cannot take it.

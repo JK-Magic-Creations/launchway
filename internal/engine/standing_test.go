@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -285,5 +286,47 @@ func TestChecksThatCouldNotRunNeverFailTheRun(t *testing.T) {
 	pr2, st2 := inspectedRunWith(t, e2, false, nil, true)
 	if g := st2.Steps["inspection"]; g.Status != StepSucceeded || st2.Status != RunSucceeded {
 		t.Fatalf("%+v run %s %q", g, st2.Status, gateReason(t, e2, pr2))
+	}
+}
+
+// "These are test vectors, not secrets": one decision for a path, recorded for each finding in it with who and why,
+// and the accepted findings stop counting on the project's backlog and on the run.
+func TestFindingsInAPathAreDecidedTogetherAndStopCounting(t *testing.T) {
+	e, clk := newEngine(t)
+	run, _ := inspectedRun(t, e, true, map[string]ReportFile{"secrets": leakSarif("docs/assertion_vectors.json"), "vuln-deps": osvSarif("CVE-OLD")})
+	before, err := e.RunFindings(run, FindingQuery{})
+	if err != nil || before.Counts == nil || before.Counts.High < 2 || before.Open != nil {
+		t.Fatalf("%+v %v", before, err)
+	}
+	expires := clk.Now().Add(48 * time.Hour)
+	if _, err := e.DecideFindingsInPath("demo", "../x", "", standards.StatusFalsePositive, "test vectors, not secrets", "ada", expires); !errors.Is(err, ErrInvalid) {
+		t.Errorf("a path outside the repository: %v", err)
+	}
+	if _, err := e.DecideFindingsInPath("demo", "src/**", "", standards.StatusFalsePositive, "test vectors, not secrets", "ada", expires); !errors.Is(err, ErrNotFound) {
+		t.Errorf("a path with no finding is not success: %v", err)
+	}
+	if _, err := e.DecideFindingsInPath("demo", "docs/**", "secrets", standards.StatusFalsePositive, "short", "ada", expires); err == nil {
+		t.Error("a decision without a real reason")
+	}
+	n, err := e.DecideFindingsInPath("demo", "docs/**", "secrets", standards.StatusFalsePositive, "these are test vectors, not secrets", "ada", expires)
+	if err != nil || n != 1 {
+		t.Fatalf("%d %v", n, err)
+	}
+	list, _ := e.StandingFindings("demo", StandingQuery{Status: "all"})
+	var decided, open int
+	for _, f := range list.Findings {
+		switch {
+		case f.Decision != nil && f.Decision.By == "ada" && f.Decision.Reason == "these are test vectors, not secrets" && f.Check == "secrets":
+			decided++
+		case f.Status == "open":
+			open++
+		}
+	}
+	if decided != 1 || open != 1 {
+		t.Errorf("decided %d, open %d: the other check's finding must stay open: %+v", decided, open, list.Findings)
+	}
+	after, err := e.RunFindings(run, FindingQuery{})
+	if err != nil || after.Accepted != 1 || after.Open == nil || after.Open.High != before.Counts.High-1 {
+		t.Fatalf("the run still counts the accepted finding as high: %+v %v", after, err)
 	}
 }

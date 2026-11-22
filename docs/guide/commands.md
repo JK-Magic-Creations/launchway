@@ -63,7 +63,7 @@ images: {}                    # builders and registries for image steps; see Con
 
 With the Kubernetes executor, every container of a step pod runs as `run_as_user` (default
 1000, never root) with no privileges, so the step namespace can enforce Pod Security
-`restricted`. `HOME` is a writable `/home/launchway`, and `/tmp` and the checkout are writable.
+`restricted`. `HOME` is `/home/launchway/user`, a directory only the step's user can read or write (mode 0700), and `/tmp` and the checkout are writable.
 Steps that need root, such as `apt-get install`, fail; use images that already have their tools.
 The step's user has an account (`launchway`, via `kubernetes.user_entry`), so tools that look their user up, such as `ssh`, work; see [the step's user](../reference/runner-config.md#the-steps-user).
 `restricted: false` (or `--k8s-unrestricted`) runs images as their own users, often root, and

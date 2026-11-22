@@ -630,8 +630,8 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	took := time.Since(start).Round(100 * time.Millisecond)
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
-		sys("Timed out after %s", job.Timeout.D())
-		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}, collect
+		sys("Timed out after %s. %s", job.Timeout.D(), timeoutHint)
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s. %s", job.Timeout.D(), timeoutHint), Excerpt: tail.excerpt()}, collect
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled"}, collect
 	case errors.Is(err, executor.ErrInfrastructure):
@@ -956,3 +956,6 @@ func short(sha string) string {
 	}
 	return sha
 }
+
+// timeoutHint is what a person is told when a step runs out of time: most steps that do are not slow, they are waiting.
+const timeoutHint = "A step that ran this long with little output and little CPU is usually waiting, not working: for a network connection that is dropped without an answer (on Kubernetes, look first at the namespace's network policy and its egress rules), for a lock, or for input that never comes. If the work is simply long, give the step a longer timeout."

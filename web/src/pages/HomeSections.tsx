@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Arrange, arranged, BUILTIN, type HomeDoc } from "./panels/Arrange";
 import { cleanPanels } from "./panels/registry";
 import { Linked } from "../components/EntityLink";
@@ -69,6 +70,7 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
       <div className="hm-grid">
         {items.filter((it) => !hidden.has(it.id)).map((it) => (
           <section key={it.id} className={`hm-sec hm-span-${it.size}`} aria-labelledby={it.custom ? undefined : `hm-${it.id}`}>
+            <ErrorBoundary name={`The ${(it.custom?.title ?? TITLES[it.id as keyof typeof TITLES] ?? it.id).toString().toLowerCase()} card`} resetKey={it.id}>
             {it.id === "needs" && <Needs data={data} now={now} reload={reload} extra={extra} />}
             {it.id === "running" && <Running data={data} now={now} />}
             {it.id === "favorites" && data.favorites.length > 0 && <Favorites list={data.favorites} now={now} />}
@@ -76,6 +78,7 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
             {it.id === "categories" && <Categories cats={data.categories} openCats={openCats} onToggle={toggleCat} now={now} />}
             {it.id === "recent" && <Recent data={data} now={now} />}
             {it.custom && <Suspense fallback={<div className="hm-skel" />}><PanelView def={it.custom} home={data} now={now} /></Suspense>}
+            </ErrorBoundary>
           </section>
         ))}
       </div>

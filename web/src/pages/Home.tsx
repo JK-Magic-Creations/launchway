@@ -4,6 +4,7 @@ import type { Approval, Me, Project, RunSummary, Runner } from "../api";
 import type { LaunchLineView } from "../api/launch";
 import { useMe } from "../auth";
 import { EntityLink, Linked } from "../components/EntityLink";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Link, StatusPill } from "../components/ui";
 import { ago } from "../format";
 import { checklist, nextStep, type CheckItem, type AppRow } from "../guided/derive";
@@ -75,21 +76,21 @@ export function Home({ me, projects, runs, runners, environments, applications, 
         sentence={fresh ? terms().say("Launchway builds, tests and {deploy:does} your software. Let us get you started.") : h.sentence}
         actions={me.admin && projects.length > 0 ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined} />
 
-      <HostedWithoutPipelines projects={projects.length} admin={!!me.admin} />
-      {next.item && <NextStepCard item={next.item} done={next.done} total={next.total} />}
+      <ErrorBoundary name="The repositories without a pipeline"><HostedWithoutPipelines projects={projects.length} admin={!!me.admin} /></ErrorBoundary>
+      {next.item && <ErrorBoundary name="The next step" resetKey={next.item.href}><NextStepCard item={next.item} done={next.done} total={next.total} /></ErrorBoundary>}
       {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("Projects, a {runner}, a first {run} and an {environment} are in place.")}</div>}
 
-      <Suspense fallback={<div aria-busy="true" style={{ minHeight: 420 }} />}><HomeSections onCount={setServerNeeds} extra={extra} /></Suspense>
-      <Suspense fallback={null}><HomeWork /></Suspense>
+      <ErrorBoundary name="The Tower cards"><Suspense fallback={<div aria-busy="true" style={{ minHeight: 420 }} />}><HomeSections onCount={setServerNeeds} extra={extra} /></Suspense></ErrorBoundary>
+      <ErrorBoundary name="The work in progress"><Suspense fallback={null}><HomeWork /></Suspense></ErrorBoundary>
 
-      <ChangesOnTheirWay lines={lines} runs={runs} now={now} />
+      <ErrorBoundary name="Changes on their way"><ChangesOnTheirWay lines={lines} runs={runs} now={now} /></ErrorBoundary>
 
-      {items.length > 0 && next.item && <Checklist items={items} done={next.done} />}
+      {items.length > 0 && next.item && <ErrorBoundary name="The checklist"><Checklist items={items} done={next.done} /></ErrorBoundary>}
       {!me.admin && projects.length === 0 && (
         <div className="card"><h2 className="h-sm">Nothing to show yet</h2><p className="sub">No project has been added. An administrator adds the first one.</p></div>
       )}
 
-      <Explore projects={projects} applications={applications} environments={environments} approvals={approvals} images={images} />
+      <ErrorBoundary name="The Explore strip"><Explore projects={projects} applications={applications} environments={environments} approvals={approvals} images={images} /></ErrorBoundary>
     </div>
   );
 }

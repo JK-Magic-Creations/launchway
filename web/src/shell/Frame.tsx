@@ -3,6 +3,7 @@ import { api, type Approval, type Me } from "../api";
 import { attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
 import { announce } from "../kit/announce";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Icon } from "../kit/Icon";
 import { CrumbLabelContext } from "../nav/crumbs";
 import { Breadcrumbs } from "../nav/Navigation";
@@ -170,7 +171,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <div className="frame-head"><Breadcrumbs path={path} label={crumb} /></div>
           <CrumbLabelContext.Provider value={setCrumb}>
             <Suspense fallback={<div className="page"><p className="sub">Loading…</p></div>}>
-              <PageFor path={path} approvals={approvals} />
+              <ErrorBoundary name="This page" resetKey={path}><PageFor path={path} approvals={approvals} /></ErrorBoundary>
             </Suspense>
           </CrumbLabelContext.Provider>
           {version && <footer className="foot faint small">Launchway {version}</footer>}

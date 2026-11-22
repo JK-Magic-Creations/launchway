@@ -32,6 +32,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Home sections", () => {
+  it("keeps the other cards when one card fails to draw, and says which", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    answer = { ...answer, running: [null] } as never;
+    render(<HomeSections />);
+    expect(await screen.findByRole("heading", { name: /Needs you/ })).toBeInTheDocument();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/could not be shown/);
+    expect(screen.getByRole("heading", { name: /Needs you/ })).toBeInTheDocument();
+  });
   it("lists what needs you with why it is there and what to do, and what runs now, retrying a failure", async () => {
     render(<HomeSections />);
     const needs = (await screen.findByRole("heading", { name: /Needs you/ })).closest(".sheet") as HTMLElement;

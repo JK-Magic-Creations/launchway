@@ -170,4 +170,4 @@ PARAM_COLOUR=green
 
 ### Other variables in a step
 
-With the host executor, a step gets only `PATH` and `HOME` from the Station's Airfield, plus `LANG=C.UTF-8`; nothing else of the Station's Airfield reaches it. In a container, the image's own environment applies. With the Kubernetes executor, `HOME` is `/home/launchway`. See [the Station configuration](runner-config.md).
+With the host executor, a step gets only `PATH` and `HOME` from the Station's Airfield, plus `LANG=C.UTF-8`; nothing else of the Station's Airfield reaches it. In a container, the image's own environment applies. With the Kubernetes executor, `HOME` is `/home/launchway/user`, private to the step's user (mode 0700), and `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and `XDG_DATA_HOME` are under it. See [the Station configuration](runner-config.md).

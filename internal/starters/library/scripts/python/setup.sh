@@ -32,7 +32,10 @@ else
       python3 -m venv "$(venv_dir)"
       . "$(venv_dir)/bin/activate"
       found=
-      for f in requirements.txt requirements-dev.txt requirements/*.txt; do
+      # A lock file written by pip-compile (requirements.lock) is what the project runs on: it is installed in place of
+      # requirements.txt, which it was made from.
+      for f in requirements.lock requirements.txt requirements-dev.txt requirements/*.txt; do
+        [ "$f" = requirements.txt ] && [ -f requirements.lock ] && continue
         [ -f "$f" ] && { run pip install --quiet -r "$f"; found=1; }
       done
       if [ -z "$found" ] && [ -f pyproject.toml ]; then
@@ -40,6 +43,7 @@ else
       fi ;;
   esac
 fi
-for pkg in pytest pytest-cov ruff; do
-  python -c "import $(echo $pkg | tr - _)" 2>/dev/null || run pip install --quiet "$pkg"
+for pkg in pytest==9.2.0 pytest-cov==7.1.0 ruff; do
+  mod=${pkg%%==*}
+  python -c "import $(echo $mod | tr - _)" 2>/dev/null || run pip install --quiet "$pkg"
 done

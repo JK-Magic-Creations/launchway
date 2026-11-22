@@ -544,6 +544,7 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/findings/history":               {"GET", "/api/v1/projects/pay-api/findings/history", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/projects/{name}/findings/export":                {"GET", "/api/v1/projects/pay-api/findings/export", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/projects/{name}/findings/{fingerprint}":         {"GET", "/api/v1/projects/pay-api/findings/abc", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/findings/accept-path":          {"POST", "/api/v1/projects/pay-api/findings/accept-path", `{"path":"docs/**","reason":"a good enough reason","expires":"2027-01-01"}`, [6]int{401, 404, 403, 404, 404, 404}},
 	"POST /api/v1/projects/{name}/findings/{fingerprint}/accept": {"POST", "/api/v1/projects/pay-api/findings/abc/accept", `{"reason":"a good enough reason","expires":"2027-01-01"}`, [6]int{401, 404, 403, 404, 404, 404}},
 	"POST /api/v1/projects/{name}/findings/{fingerprint}/reopen": {"POST", "/api/v1/projects/pay-api/findings/abc/reopen", "{}", [6]int{401, 404, 403, 404, 404, 404}},
 	"GET /api/v1/runs/{id}/inspection":                           {"GET", "/api/v1/runs/{pay}/inspection", "", [6]int{401, 404, 404, 404, 404, 404}},

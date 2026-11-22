@@ -183,6 +183,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/event-sources/{source}` | — | `event-sources change` | — | exempt: the signing secret is shown once and must not enter an agent's context; the console and the web interface make and rotate sources (launchway event-sources) |
 | `POST /api/v1/projects/{name}/event-sources/{source}/test` | `test_event_source` | `event-sources test` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/findings` | `list_findings` | `findings list` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/findings/accept-path` | `accept_finding` | `findings accept` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/findings/export` | `export_findings` | `findings export` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/findings/history` | `list_findings` | `findings list` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/findings/{fingerprint}` | `list_findings` | `findings show` | `not needed by terraform` | equal |

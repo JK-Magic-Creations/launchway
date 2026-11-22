@@ -39,6 +39,8 @@ Settings change in the interface or here; a repository may also keep .launchway/
                                                    the findings the default branch has had: open, fixed or accepted
   launchway findings show PROJECT FINGERPRINT [--json]   one finding: what, where, why it matters, how to fix it
   launchway findings accept PROJECT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]
+  launchway findings accept PROJECT --path GLOB [--check ID] --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]
+                                                    the same decision for every open finding in a path (docs/**)
                                                    accept a risk or mark a false positive; it ends on the date and is recorded
   launchway findings reopen PROJECT FINGERPRINT    end a decision, so the finding counts again
   launchway findings export PROJECT [--format json|csv|sarif] [--status S] [-o FILE]
@@ -609,10 +611,28 @@ func (cl *client) findingsAccept(args []string) error {
 	expires := fs.String("expires", "", "the date the decision ends, YYYY-MM-DD")
 	days := fs.Int("days", 0, "or: it ends in this many days")
 	fp := fs.Bool("false-positive", false, "mark it a false positive instead of an accepted risk")
+	pathGlob := fs.String("path", "", "instead of one finding: every open finding in this path of the repository (docs/**)")
+	checkID := fs.String("check", "", "with --path: only the findings of this check (secrets)")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
+	}
+	if *pathGlob != "" && len(pos) == 1 && *reason != "" && (*expires == "") != (*days == 0) {
+		if *days > 0 {
+			*expires = time.Now().UTC().AddDate(0, 0, *days).Format(standards.DateFormat)
+		}
+		status := standards.StatusAccepted
+		if *fp {
+			status = standards.StatusFalsePositive
+		}
+		var out struct{ Decided int }
+		if err := cl.call("POST", "/api/v1/projects/"+url.PathEscape(pos[0])+"/findings/accept-path", map[string]string{"path": *pathGlob, "check": *checkID, "status": status, "reason": *reason, "expires": *expires}, &out); err != nil {
+			return err
+		}
+		return cl.print(out, *asJSON, func() {
+			fmt.Fprintf(cl.out, "Recorded %s for %d findings in %s until %s.\n", status, out.Decided, *pathGlob, *expires)
+		})
 	}
 	if len(pos) != 2 || *reason == "" || (*expires == "") == (*days == 0) {
 		return usageErr("launchway findings accept PROJECT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]")

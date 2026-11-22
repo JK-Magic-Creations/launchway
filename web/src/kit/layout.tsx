@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { onLink } from "../router";
 import { Icon, type IconName } from "./Icon";
 
@@ -30,12 +31,12 @@ export function LinkButton({ href, kind, sm, icon, children }: { href: string; k
   return <a href={href} onClick={onLink} className={cls(kind, sm)}>{icon && <Icon name={icon} />}{children}</a>;
 }
 
-/** Sheet is a flat card with an optional header (title, and actions at the right). */
+/** Sheet is a flat card with an optional header (title, and actions at the right). A fault inside it shows in the card and leaves the page. */
 export function Sheet({ title, actions, children, pad, className, id }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; pad?: boolean; className?: string; id?: string }) {
   return (
     <section className={["sheet", pad && "pad", className].filter(Boolean).join(" ")} id={id}>
       {title && <div className="sh-h"><h2>{title}</h2>{actions && <div className="r">{actions}</div>}</div>}
-      {children}
+      <ErrorBoundary name={typeof title === "string" ? `The ${title.toLowerCase()} card` : "This card"}>{children}</ErrorBoundary>
     </section>
   );
 }

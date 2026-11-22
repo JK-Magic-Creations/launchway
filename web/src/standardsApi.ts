@@ -105,5 +105,8 @@ export const standardsApi = {
   },
   accept: (project: string, fp: string, status: string, reason: string, expires: string) =>
     call<Decision>("POST", `/api/v1/projects/${enc(project)}/findings/${enc(fp)}/accept`, { status, reason, expires }),
+  /** One decision for every open finding in a place: a glob of repository paths, optionally of one check. */
+  acceptPath: (project: string, path: string, check: string, status: string, reason: string, expires: string) =>
+    call<{ decided: number }>("POST", `/api/v1/projects/${enc(project)}/findings/accept-path`, { path, check, status, reason, expires }),
   reopen: (project: string, fp: string) => call<{ reopened: boolean }>("POST", `/api/v1/projects/${enc(project)}/findings/${enc(fp)}/reopen`, {}),
 };

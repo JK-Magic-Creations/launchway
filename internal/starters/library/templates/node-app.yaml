@@ -14,6 +14,8 @@ params:
   lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
   test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
   test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage: { type: boolean, default: true, description: "Collect test coverage (a Cobertura report for the Coverage tab) in addition to the test results; adds some time to the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
   build: { type: boolean, default: true, description: "Run the package's build script" }
   secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
   image: { type: boolean, default: true, description: "Build the image from the Dockerfile, scan it and make its software bill of materials" }
@@ -56,26 +58,31 @@ steps:
         paths: [.cache/npm, .cache/pnpm, .cache/yarn]
         key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
         fallback: latest
+    timeout: 20m
     run: "$LAUNCHWAY_LIB/scripts/node/setup.sh"
   check:
     description: Lint, format and type checks the package defines
     if: { param: lint }
     needs: [setup]
     container: node
+    timeout: 15m
     run: "$LAUNCHWAY_LIB/scripts/node/check.sh"
   test:
     description: Run the tests
     needs: [setup]
     container: node
+    timeout: 30m
     run: "$LAUNCHWAY_LIB/scripts/node/test.sh"
     reports:
-      tests: ["**/reports/**/junit.xml"]
+      tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
+      coverage: { paths: [{ param: working_directory, format: "%s/reports/**/coverage.xml" }], fail_under: { param: coverage_minimum } }
   build:
     description: Run the package's build script
     if: { param: build }
     needs: [setup, check, test]
     container: node
     env: { LW_SCRIPT: build }
+    timeout: 20m
     run: "$LAUNCHWAY_LIB/scripts/node/script.sh"
     artifacts:
       - { name: build, paths: ["**/dist", "**/build"] }
@@ -94,12 +101,14 @@ steps:
     if: { param: audit }
     needs: [setup]
     container: node
+    timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/node/audit.sh"
   licenses:
     description: List the licenses of the dependencies
     if: { param: license_scan }
     needs: [setup]
     container: node
+    timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/node/licenses.sh"
   image:
     description: Build the image, scan it, and push it when push is on

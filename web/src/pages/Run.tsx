@@ -41,6 +41,7 @@ import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
 import { FailurePanel } from "../components/FailurePanel";
 import { explainFailure } from "../guided/derive";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { useCrumbLabel } from "../nav/crumbs";
 import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
@@ -356,8 +357,8 @@ function RunBody({ id }: { id: string }) {
         </div>
       )}
 
-      <RunTrigger run={run} />
-      <RunVariables runId={run.id} />
+      <ErrorBoundary name="The record of how this run was started" resetKey={run.id}><RunTrigger run={run} /></ErrorBoundary>
+      <ErrorBoundary name="The variables in effect" resetKey={run.id}><RunVariables runId={run.id} /></ErrorBoundary>
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
@@ -435,6 +436,7 @@ function RunBody({ id }: { id: string }) {
         ))}
       </div>
 
+      <ErrorBoundary name={`The ${shownTab} tab`} resetKey={shownTab + run.id}>
       {shownTab === "graph" && (
         <>
           <section className="sheet runline-sheet" aria-label={terms().say("The pipeline of this {run}")}>
@@ -461,9 +463,13 @@ function RunBody({ id }: { id: string }) {
       {tab === "policy" && <PolicyTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
+      </ErrorBoundary>
     </div>
   );
 }
+
+/** How long a running step may print nothing before the page says it is probably waiting. */
+const QUIET_AFTER = 5 * 60 * 1000;
 
 function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPolicy, verifications }: {
   run: RunDetail; step: StepView; now: number;
@@ -506,8 +512,17 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
     : step.status === "canceled" && step.attempt === 0 ? "Canceled before it started."
     : "No output.";
 
+  // A step that is running and has printed nothing for minutes is usually waiting, not working.
+  const lastOutput = [...lines].reverse().find((l) => l.stream !== "system")?.at ?? since;
+  const quietFor = isLive && since > 0 ? now - lastOutput : 0;
   return (
     <section className="steppanel">
+      {quietFor >= QUIET_AFTER && (
+        <div className="callout callout-info" role="status">
+          <strong>{step.id} has printed nothing for {duration(quietFor)}.</strong> A step that is quiet this long is usually waiting rather than working: for a network connection that is dropped without an answer
+          {" "}(on Kubernetes, look first at the namespace's network policy and its egress rules), for a lock, or for input that never comes. If the work is simply long, there is nothing to do; otherwise cancel it and look at what it was doing last.
+        </div>
+      )}
       <div className="steppanel-head">
         <div>
           <h2>{step.id}</h2>

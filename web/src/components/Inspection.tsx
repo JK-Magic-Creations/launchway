@@ -48,10 +48,13 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
   const [error, setError] = useState<unknown>(null);
   const accepted = f.decision?.active;
 
+  const [whole, setWhole] = useState(false);
+  const place = f.file && f.file.includes("/") ? f.file.slice(0, f.file.lastIndexOf("/")) + "/**" : f.file ?? "";
   const accept = async () => {
     setBusy(true); setError(null);
     try {
-      await standardsApi.accept(project, f.fingerprint, falsePositive ? "false-positive" : "accepted-risk", reason, expires);
+      if (whole && place) await standardsApi.acceptPath(project, place, f.check ?? "", falsePositive ? "false-positive" : "accepted-risk", reason, expires);
+      else await standardsApi.accept(project, f.fingerprint, falsePositive ? "false-positive" : "accepted-risk", reason, expires);
       setReason("");
       onChanged();
     } catch (e) { setError(e); } finally { setBusy(false); }
@@ -109,6 +112,7 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
                 <label htmlFor={id + "-d"}>Until</label>
                 <input id={id + "-d"} type="date" value={expires} min={inDays(1)} max={inDays(365)} onChange={(e) => setExpires(e.target.value)} required />
                 <label className="sf-check"><input type="checkbox" checked={falsePositive} onChange={(e) => setFalsePositive(e.target.checked)} /> It is not a problem (a false positive)</label>
+                {place && <label className="sf-check"><input type="checkbox" checked={whole} onChange={(e) => setWhole(e.target.checked)} /> The same for every open finding of this kind in <span className="mono">{place}</span> (for example, test vectors that look like secrets)</label>}
                 <button type="submit" className="btn btn-sm" disabled={busy || reason.trim().length < 10}>Record the decision</button>
               </div>
             </form>

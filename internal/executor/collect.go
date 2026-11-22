@@ -117,7 +117,9 @@ func hasMeta(part string) bool { return strings.ContainsAny(part, `*?[\`) }
 // matchGlob reports whether a path, relative to the workspace, matches a
 // glob.
 func matchGlob(glob, name string) bool {
-	return matchParts(strings.Split(glob, "/"), strings.Split(name, "/"))
+	// "./reports/**" (a template writes the working directory in front, and it may be ".") is "reports/**".
+	parts := slices.DeleteFunc(strings.Split(glob, "/"), func(p string) bool { return p == "." })
+	return matchParts(parts, strings.Split(name, "/"))
 }
 
 func matchParts(glob, name []string) bool {

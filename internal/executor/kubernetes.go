@@ -75,16 +75,14 @@ type KubernetesOptions struct {
 // restricted reports whether step pods get the restricted security context.
 func (o KubernetesOptions) restricted() bool { return o.Restricted == nil || *o.Restricted }
 
-// stepHome is the writable home directory of every container of a
-// restricted step pod: an emptyDir, so that tools that keep files or caches
-// under $HOME work for a user the image does not know.
-const stepHome = "/home/launchway"
-
 // homeEnv is set in every container of a restricted step pod, unless the
 // container's own settings or the step set the variable. The caches point
 // into stepHome so that they stay writable when a step moves HOME.
 var homeEnv = []corev1.EnvVar{
 	{Name: "HOME", Value: stepHome},
+	{Name: "XDG_CACHE_HOME", Value: stepHome + "/.cache"},
+	{Name: "XDG_CONFIG_HOME", Value: stepHome + "/.config"},
+	{Name: "XDG_DATA_HOME", Value: stepHome + "/.local/share"},
 	{Name: "PIP_CACHE_DIR", Value: stepHome + "/.cache/pip"},
 	{Name: "npm_config_cache", Value: stepHome + "/.npm"},
 	{Name: "GOCACHE", Value: stepHome + "/.cache/go-build"},
@@ -489,7 +487,7 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 		{Name: "launchway", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}},
 	}
 	if restricted {
-		mounts = append(mounts, corev1.VolumeMount{Name: "home", MountPath: stepHome}, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
+		mounts = append(mounts, corev1.VolumeMount{Name: "home", MountPath: stepHomeVolume}, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
 		volumes = append(volumes,
 			corev1.Volume{Name: "home", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 			corev1.Volume{Name: "tmp", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
@@ -771,7 +769,7 @@ func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string) error {
 	// (it belongs to root and the pod's group), so Git is told it is safe.
 	cmd := "tar xf - -C /workspace && chmod -R a+rwX /workspace"
 	if k.o.restricted() {
-		cmd = fmt.Sprintf(`tar xf - -C /workspace && { [ -e %[1]s/.gitconfig ] || printf '[safe]\n\tdirectory = /workspace\n' > %[1]s/.gitconfig; }`, stepHome)
+		cmd = fmt.Sprintf(`%[2]s && tar xf - -C /workspace && { [ -e %[1]s/.gitconfig ] || printf '[safe]\n\tdirectory = /workspace\n' > %[1]s/.gitconfig; }`, stepHome, homeSetup(stepHome))
 	}
 	var stderr bytes.Buffer
 	err := k.exec(ctx, pod, helperName, []string{"sh", "-c", cmd}, pr, io.Discard, &stderr)

@@ -74,8 +74,8 @@ steps:
     env: { PHASES: "setup test" }
     run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
     reports:
-      tests: ["**/reports/**/junit.xml"]
-      coverage: { paths: ["**/reports/**/coverage.xml"], fail_under: { param: coverage_minimum } }
+      tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
+      coverage: { paths: [{ param: working_directory, format: "%s/reports/**/coverage.xml" }], fail_under: { param: coverage_minimum } }
   node-check:
     description: Install dependencies and run the checks
     if: { param: language, equals: node }
@@ -99,7 +99,7 @@ steps:
     env: { PHASES: "setup test" }
     run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
     reports:
-      tests: ["**/reports/**/junit.xml"]
+      tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
   maven-test:
     description: Compile and test with Maven
     if: { param: language, equals: maven }

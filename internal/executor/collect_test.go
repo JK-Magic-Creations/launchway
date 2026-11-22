@@ -32,6 +32,8 @@ func TestMatchGlob(t *testing.T) {
 		{"a/**/b/*.xml", "a/x/y/b/r.xml", true},
 		{"a/**/b/*.xml", "a/x/y/c/r.xml", false},
 		{"go.json", "go.json", true},
+		{"./reports/**/junit.xml", "reports/a/junit.xml", true}, // a template writes the working directory in front, and it may be "."
+		{"backend/reports/**/junit.xml", "app/reports/junit.xml", false},
 		{"report[12].xml", "report2.xml", true},
 	} {
 		if got := matchGlob(c.glob, c.name); got != c.want {

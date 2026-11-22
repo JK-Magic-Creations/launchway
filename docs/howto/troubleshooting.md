@@ -369,7 +369,7 @@ No connected Station has `images.builders` in its configuration. Configure one; 
 
 The OpenSSH client (and so `git` over ssh), and some other tools and language runtimes, look the current user up in
 `/etc/passwd` and stop when there is no entry. The Kubernetes executor runs steps as a numeric user (1000 by default) that
-most images do not list. Stations from this version on give that user an entry (`launchway`, home `/home/launchway`)
+most images do not list. Stations from this version on give that user an entry (`launchway`, home `/home/launchway/user`)
 through an init container in each step image, and say so at the start of each step: `Running as launchway (uid 1000,
 gid 1000)`. If your step shows `Running as uid 1000, gid 1000, with no account entry`, the operator set
 `kubernetes.user_entry: false`; if it shows nothing like that, the Station is older than this fix: upgrade it. If the step

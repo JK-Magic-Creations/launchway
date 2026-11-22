@@ -112,7 +112,7 @@ func TestKubeStepSaysWhoItRunsAs(t *testing.T) {
 		o    KubernetesOptions
 		want string
 	}{
-		{KubernetesOptions{}, "Running as launchway (uid 1000, gid 1000), HOME=/home/launchway"},
+		{KubernetesOptions{}, "Running as launchway (uid 1000, gid 1000), HOME=/home/launchway/user"},
 		{KubernetesOptions{RunAsUser: ptr(int64(2000)), RunAsGroup: ptr(int64(3000))}, "Running as launchway (uid 2000, gid 3000)"},
 		{KubernetesOptions{UserEntry: &off}, "no account entry (kubernetes.user_entry: false)"},
 		{KubernetesOptions{Restricted: &off}, "Running as the image's own user"},
@@ -205,7 +205,7 @@ func TestUserScriptMakesTheStepUserResolvable(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			pw, gr := runUserScript(t, c.passwd, c.group, "1000", "1000")
 			name, home, shell, ok := getpwuid(pw, "1000")
-			if !ok || name != "launchway" || home != "/home/launchway" || shell != "/sbin/nologin" {
+			if !ok || name != "launchway" || home != "/home/launchway/user" || shell != "/sbin/nologin" {
 				t.Fatalf("lookup of uid 1000: %q %q %q %v in:\n%s", name, home, shell, ok, pw)
 			}
 			if strings.Count(pw, "\n1000:")+strings.Count(pw, ":x:1000:") != 1 {

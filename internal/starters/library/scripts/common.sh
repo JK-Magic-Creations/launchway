@@ -48,3 +48,18 @@ run() {
   echo "+ $*"
   eval "$*"
 }
+
+# no_report prints the notice a step gives when it ran the tests but no report came out of them, so that an empty
+# Tests tab is explained where a person looks: the log of the step, which the Tests tab points to.
+#   no_report WHAT WHY ADD
+no_report() {
+  echo "launchway: ============================================================"
+  echo "launchway: TESTS RAN, BUT NO $1 WAS PRODUCED"
+  echo "launchway: $2"
+  echo "launchway: To get it, $3"
+  echo "launchway: ============================================================"
+}
+
+# lw_tools is a directory in the workspace's cache where the starter installs the small tools it needs for a step
+# (a test reporter, a coverage tool), at pinned versions, so that the repository need not list them.
+lw_tools() { echo "$LW_ROOT/.cache/lw-tools"; }

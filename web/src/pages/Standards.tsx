@@ -294,6 +294,7 @@ export function FindingsBacklog({ name }: { name: string }) {
         {list && list.findings.length > 0 && (
           <ul className="sf-list">{list.findings.map((f) => <FindingCard key={f.fingerprint} f={fromTracked(f)} project={name} profile={profile} onChanged={reload} />)}</ul>
         )}
+        <p className="faint small">This backlog is the Inspection's: what the checks of {terms().say("{Standards}")} found, recorded when the verdict step of a {terms().say("{run}")} on the default branch ends. A {terms().say("{run}")}'s own Security tab also lists what your pipeline's own steps reported (for example a template's secret scan or static analysis), so it can show more; and a {terms().say("{run}")} whose verdict step did not finish does not update this list.</p>
         {list && list.matched > list.findings.length && <p className="faint small">{list.findings.length} of {list.matched} shown; narrow it with the filters or export all.</p>}
         {!canOperate(me, name) && <p className="faint small">You can read these. Accepting a risk needs the operator role on this project.</p>}
         <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say("shows every {run}’s findings, including the tools you added yourself.")}</p>
