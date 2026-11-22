@@ -251,6 +251,22 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 	}
 }
 
+// Purge ends the storage of a repository that is in the trash: its branches go and
+// its stored packs are deleted, except the packs a fork of it still needs (forks
+// share their parent's packs, so purging a parent never takes anything a fork
+// uses). It returns how many stored packs it deleted. A repository that is not in
+// the trash is refused.
+func (h *Hosting) Purge(ctx context.Context, id string) (int, error) {
+	r, err := h.Forge.Repository(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	if !store.InTrash(r) {
+		return 0, fmt.Errorf("repository %s is not in the trash; delete it first", id)
+	}
+	return h.Store.Purge(ctx, id)
+}
+
 // Check lists what an operator should know: repositories whose owner is a
 // name Launchway keeps for its own paths, so that the address other Git hosts
 // use (/<owner>/<name>.git) cannot reach them. Names are checked when a

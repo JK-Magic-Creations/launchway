@@ -229,3 +229,24 @@ func TestRefusesToHostWithoutAStore(t *testing.T) {
 		t.Error("hosting started without a blob store")
 	}
 }
+
+func TestPurgeEndsOnlyAStorageInTheTrash(t *testing.T) {
+	h, _ := open(t, launchway.Options{})
+	ctx := context.Background()
+	r, err := h.Provider.Repositories().Create(ctx, forge.NewRepository{Home: "jkhunter", Name: "demo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Purge(ctx, r.ID); err == nil || !strings.Contains(err.Error(), "not in the trash") {
+		t.Fatalf("a live repository was purged: %v", err)
+	}
+	if err := h.Provider.Repositories().Delete(ctx, r.Path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Purge(ctx, r.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Purge(ctx, r.ID); err != nil { // twice is once
+		t.Fatal(err)
+	}
+}

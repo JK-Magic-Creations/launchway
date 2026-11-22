@@ -158,6 +158,7 @@ func (s *Server) listPulls(w http.ResponseWriter, r *http.Request) {
 	}
 	for i := range items {
 		items[i].Repository = repo.Path
+		items[i].SourceRepo = s.forkPath(r.Context(), items[i].SourceRepo)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
 }
