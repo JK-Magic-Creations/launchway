@@ -43,134 +43,184 @@ type gerr struct {
 
 func (e *gerr) Error() string { return fmt.Sprintf("line %d: %s", e.line, e.msg) }
 
+// glexer holds the state of one lexGroovy run.
+type glexer struct {
+	src  string
+	toks []token
+	line int
+	i    int
+}
+
+func (l *glexer) emit(t token) error {
+	if len(l.toks) >= maxTokens {
+		return &gerr{"the file has too many tokens", l.line}
+	}
+	l.toks = append(l.toks, t)
+	return nil
+}
+
+func (l *glexer) skipToEOL() {
+	for l.i < len(l.src) && l.src[l.i] != '\n' {
+		l.i++
+	}
+}
+
+func (l *glexer) blockComment() {
+	i, src := l.i, l.src
+	j := strings.Index(src[i+2:], "*/")
+	end := len(src)
+	if j >= 0 {
+		end = i + 2 + j + 2
+	}
+	l.line += strings.Count(src[i:end], "\n")
+	l.i = end
+}
+
+// quoted lexes a single or triple quoted string starting at l.i.
+func (l *glexer) quoted(c byte) error {
+	src := l.src
+	start := l.i
+	q := string(c)
+	triple := strings.HasPrefix(src[l.i:], q+q+q)
+	var body strings.Builder
+	if triple {
+		l.i += 3
+	} else {
+		l.i++
+	}
+	startLine := l.line
+	closed := false
+	for l.i < len(src) {
+		i := l.i
+		if triple && strings.HasPrefix(src[i:], q+q+q) {
+			l.i += 3
+			closed = true
+			break
+		}
+		if !triple && src[i] == c {
+			l.i++
+			closed = true
+			break
+		}
+		if !triple && src[i] == '\n' {
+			break
+		}
+		if src[i] == '\\' && i+1 < len(src) {
+			n := src[i+1]
+			switch n {
+			case 'n':
+				body.WriteByte('\n')
+			case 't':
+				body.WriteByte('\t')
+			case '\n':
+				l.line++
+			default:
+				body.WriteByte(n)
+			}
+			l.i += 2
+			continue
+		}
+		if src[i] == '\n' {
+			l.line++
+		}
+		body.WriteByte(src[i])
+		l.i++
+	}
+	if !closed {
+		return &gerr{"a string is not closed", startLine}
+	}
+	return l.emit(token{kind: tStr, text: body.String(), interp: c == '"', line: startLine, start: start, end: l.i})
+}
+
+func (l *glexer) number() error {
+	src, i := l.src, l.i
+	j := i
+	for j < len(src) && (src[j] >= '0' && src[j] <= '9' || src[j] == '.' || src[j] == '_' || src[j] >= 'a' && src[j] <= 'z' || src[j] >= 'A' && src[j] <= 'Z') {
+		j++
+	}
+	if err := l.emit(token{kind: tNum, text: src[i:j], line: l.line, start: i, end: j}); err != nil {
+		return err
+	}
+	l.i = j
+	return nil
+}
+
+func (l *glexer) ident() error {
+	src, i := l.src, l.i
+	j := i
+	for j < len(src) && (src[j] == '_' || src[j] == '$' || src[j] >= 'a' && src[j] <= 'z' || src[j] >= 'A' && src[j] <= 'Z' || src[j] >= '0' && src[j] <= '9') {
+		j++
+	}
+	if err := l.emit(token{kind: tIdent, text: src[i:j], line: l.line, start: i, end: j}); err != nil {
+		return err
+	}
+	l.i = j
+	return nil
+}
+
+func (l *glexer) punct() error {
+	src, i := l.src, l.i
+	n := 1
+	if i+1 < len(src) {
+		switch src[i : i+2] {
+		case "==", "!=", "<=", ">=", "&&", "||", "->", "?.", "+=", "-=", "=~", "..", "?:", "<<":
+			n = 2
+		}
+	}
+	if err := l.emit(token{kind: tPunct, text: src[i : i+n], line: l.line, start: i, end: i + n}); err != nil {
+		return err
+	}
+	l.i += n
+	return nil
+}
+
+// step lexes one token or skips one run of whitespace or comment.
+func (l *glexer) step() error {
+	src, i := l.src, l.i
+	c := src[i]
+	next := byte(0)
+	if i+1 < len(src) {
+		next = src[i+1]
+	}
+	switch {
+	case c == '\n':
+		if err := l.emit(token{kind: tNL, line: l.line, start: i, end: i + 1}); err != nil {
+			return err
+		}
+		l.line++
+		l.i++
+	case c == ' ' || c == '\t' || c == '\r':
+		l.i++
+	case c == '\\' && next == '\n':
+		l.i += 2
+		l.line++
+	case c == '/' && next == '/':
+		l.skipToEOL()
+	case c == '/' && next == '*':
+		l.blockComment()
+	case c == '#' && i == 0 && strings.HasPrefix(src, "#!"):
+		l.skipToEOL()
+	case c == '\'' || c == '"':
+		return l.quoted(c)
+	case c >= '0' && c <= '9':
+		return l.number()
+	case c == '_' || c == '$' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z':
+		return l.ident()
+	default:
+		return l.punct()
+	}
+	return nil
+}
+
 func lexGroovy(src string) ([]token, error) {
-	var toks []token
-	line := 1
-	i := 0
-	emit := func(t token) error {
-		if len(toks) >= maxTokens {
-			return &gerr{"the file has too many tokens", line}
-		}
-		toks = append(toks, t)
-		return nil
-	}
-	for i < len(src) {
-		c := src[i]
-		switch {
-		case c == '\n':
-			if err := emit(token{kind: tNL, line: line, start: i, end: i + 1}); err != nil {
-				return nil, err
-			}
-			line++
-			i++
-		case c == ' ' || c == '\t' || c == '\r':
-			i++
-		case c == '\\' && i+1 < len(src) && src[i+1] == '\n':
-			i += 2
-			line++
-		case c == '/' && i+1 < len(src) && src[i+1] == '/':
-			for i < len(src) && src[i] != '\n' {
-				i++
-			}
-		case c == '/' && i+1 < len(src) && src[i+1] == '*':
-			j := strings.Index(src[i+2:], "*/")
-			end := len(src)
-			if j >= 0 {
-				end = i + 2 + j + 2
-			}
-			line += strings.Count(src[i:end], "\n")
-			i = end
-		case c == '#' && i == 0 && strings.HasPrefix(src, "#!"):
-			for i < len(src) && src[i] != '\n' {
-				i++
-			}
-		case c == '\'' || c == '"':
-			start := i
-			q := string(c)
-			triple := strings.HasPrefix(src[i:], q+q+q)
-			var body strings.Builder
-			if triple {
-				i += 3
-			} else {
-				i++
-			}
-			startLine := line
-			closed := false
-			for i < len(src) {
-				if triple && strings.HasPrefix(src[i:], q+q+q) {
-					i += 3
-					closed = true
-					break
-				}
-				if !triple && src[i] == c {
-					i++
-					closed = true
-					break
-				}
-				if !triple && src[i] == '\n' {
-					break
-				}
-				if src[i] == '\\' && i+1 < len(src) {
-					n := src[i+1]
-					switch n {
-					case 'n':
-						body.WriteByte('\n')
-					case 't':
-						body.WriteByte('\t')
-					case '\n':
-						line++
-					default:
-						body.WriteByte(n)
-					}
-					i += 2
-					continue
-				}
-				if src[i] == '\n' {
-					line++
-				}
-				body.WriteByte(src[i])
-				i++
-			}
-			if !closed {
-				return nil, &gerr{"a string is not closed", startLine}
-			}
-			if err := emit(token{kind: tStr, text: body.String(), interp: c == '"', line: startLine, start: start, end: i}); err != nil {
-				return nil, err
-			}
-		case c >= '0' && c <= '9':
-			j := i
-			for j < len(src) && (src[j] >= '0' && src[j] <= '9' || src[j] == '.' || src[j] == '_' || src[j] >= 'a' && src[j] <= 'z' || src[j] >= 'A' && src[j] <= 'Z') {
-				j++
-			}
-			if err := emit(token{kind: tNum, text: src[i:j], line: line, start: i, end: j}); err != nil {
-				return nil, err
-			}
-			i = j
-		case c == '_' || c == '$' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z':
-			j := i
-			for j < len(src) && (src[j] == '_' || src[j] == '$' || src[j] >= 'a' && src[j] <= 'z' || src[j] >= 'A' && src[j] <= 'Z' || src[j] >= '0' && src[j] <= '9') {
-				j++
-			}
-			if err := emit(token{kind: tIdent, text: src[i:j], line: line, start: i, end: j}); err != nil {
-				return nil, err
-			}
-			i = j
-		default:
-			n := 1
-			if i+1 < len(src) {
-				switch src[i : i+2] {
-				case "==", "!=", "<=", ">=", "&&", "||", "->", "?.", "+=", "-=", "=~", "..", "?:", "<<":
-					n = 2
-				}
-			}
-			if err := emit(token{kind: tPunct, text: src[i : i+n], line: line, start: i, end: i + n}); err != nil {
-				return nil, err
-			}
-			i += n
+	l := &glexer{src: src, line: 1}
+	for l.i < len(src) {
+		if err := l.step(); err != nil {
+			return nil, err
 		}
 	}
-	toks = append(toks, token{kind: tEOF, line: line, start: len(src), end: len(src)})
-	return toks, nil
+	l.toks = append(l.toks, token{kind: tEOF, line: l.line, start: len(src), end: len(src)})
+	return l.toks, nil
 }
 
 // gx is an argument: a literal, a list, a map, a name, a call or raw text.

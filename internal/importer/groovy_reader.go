@@ -151,6 +151,43 @@ type stageCtx struct {
 	env, sec []KV
 }
 
+// stageParts are the directives of one stage block that later steps read.
+type stageParts struct {
+	steps, post, whenB, inputB, par, seq, matrix *gs
+}
+
+// collectStage sorts the stage's directives, applying agent, environment, options and tools as it goes.
+func (r *greader) collectStage(s *gs, ctx *stageCtx) stageParts {
+	var sp stageParts
+	for _, d := range s.block {
+		switch d.name {
+		case "agent":
+			r.agent(d, &ctx.image)
+		case "environment":
+			r.environment(d, &ctx.env, &ctx.sec)
+		case "steps":
+			sp.steps = d
+		case "post":
+			sp.post = d
+		case "when":
+			sp.whenB = d
+		case "input":
+			sp.inputB = d
+		case "parallel":
+			sp.par = d
+		case "stages":
+			sp.seq = d
+		case "matrix":
+			sp.matrix = d
+		case "options":
+			r.options(d)
+		case "tools":
+			r.rp.note("groovy.tools", d.line, "named in this stage")
+		}
+	}
+	return sp
+}
+
 func (r *greader) stage(s *gs, parent *stageCtx, prev []string) []string {
 	name := s.first().str()
 	if name == "" {
@@ -161,47 +198,21 @@ func (r *greader) stage(s *gs, parent *stageCtx, prev []string) []string {
 		ctx = &stageCtx{image: parent.image, env: parent.env, sec: parent.sec}
 	}
 	id := r.unique(stepName(name))
-	var steps, post, whenB, inputB, par, seq, matrix *gs
-	for _, d := range s.block {
-		switch d.name {
-		case "agent":
-			r.agent(d, &ctx.image)
-		case "environment":
-			r.environment(d, &ctx.env, &ctx.sec)
-		case "steps":
-			steps = d
-		case "post":
-			post = d
-		case "when":
-			whenB = d
-		case "input":
-			inputB = d
-		case "parallel":
-			par = d
-		case "stages":
-			seq = d
-		case "matrix":
-			matrix = d
-		case "options":
-			r.options(d)
-		case "tools":
-			r.rp.note("groovy.tools", d.line, "named in this stage")
-		}
-	}
+	sp := r.collectStage(s, ctx)
 	// nested structures
-	if par != nil {
+	if sp.par != nil {
 		var ids []string
-		for _, ps := range par.block {
+		for _, ps := range sp.par.block {
 			if ps.name == "stage" {
 				ids = append(ids, r.stage(ps, ctx, prev)...)
 			}
 		}
-		r.rp.note("groovy.parallel", par.line)
+		r.rp.note("groovy.parallel", sp.par.line)
 		return ids
 	}
-	if seq != nil {
-		r.rp.note("groovy.parallel", seq.line)
-		return r.stageList(seq.block, ctx, prev)
+	if sp.seq != nil {
+		r.rp.note("groovy.parallel", sp.seq.line)
+		return r.stageList(sp.seq.block, ctx, prev)
 	}
 	j := &Job{ID: id, Name: name, Line: s.line, Needs: append([]string{}, prev...), Image: ctx.image, Env: append([]KV{}, ctx.env...), SecretEnv: append([]KV{}, ctx.sec...)}
 	if len(ctx.sec) > 0 {
@@ -210,14 +221,27 @@ func (r *greader) stage(s *gs, parent *stageCtx, prev []string) []string {
 			j.SecretLine[kv.V] = s.line
 		}
 	}
-	if matrix != nil {
+	r.stageBody(j, s, name, sp)
+	r.rp.note("groovy.stage", s.line).Step = id
+	r.p.Jobs = append(r.p.Jobs, j)
+	detectTemplate(j)
+	ids := []string{id}
+	if sp.post != nil {
+		ids = r.post(sp.post, id, ids, j)
+	}
+	return ids
+}
+
+// stageBody fills a stage's job from its matrix, steps, input and when blocks.
+func (r *greader) stageBody(j *Job, s *gs, name string, sp stageParts) {
+	if sp.matrix != nil {
 		var inner *gs
-		for _, d := range matrix.block {
+		for _, d := range sp.matrix.block {
 			if d.name == "stages" {
 				inner = d
 			}
 		}
-		r.matrix(j, matrix)
+		r.matrix(j, sp.matrix)
 		if inner != nil {
 			for _, is := range inner.block {
 				if is.name == "stage" {
@@ -226,44 +250,29 @@ func (r *greader) stage(s *gs, parent *stageCtx, prev []string) []string {
 			}
 		}
 	}
-	if steps != nil {
+	if sp.steps != nil {
 		r.stageSteps(j, s)
 	}
-	if inputB != nil {
-		j.Approval = &Approval{Message: firstNonEmpty(inputB.named("message").str(), r.argOf(inputB, "message"), "Continue with "+name+"?")}
-		if sub := inputB.named("submitter").str(); sub != "" {
+	if sp.inputB != nil {
+		j.Approval = &Approval{Message: firstNonEmpty(sp.inputB.named("message").str(), r.argOf(sp.inputB, "message"), "Continue with "+name+"?")}
+		if sub := sp.inputB.named("submitter").str(); sub != "" {
 			j.Approval.Users = strings.Split(sub, ",")
 		}
-		r.rp.note("groovy.input", inputB.line)
+		r.rp.note("groovy.input", sp.inputB.line)
 	}
-	if whenB != nil {
-		r.when(j, whenB)
+	if sp.whenB != nil {
+		r.when(j, sp.whenB)
 	}
 	r.timeoutRetry(j)
 	var all strings.Builder
 	for _, st := range j.Steps {
 		all.WriteString(st.Run + "\n")
 	}
-	if j.Approval != nil {
-		j.Delivers, j.DeliverWhy = delivers(name, all.String(), false)
-	} else {
-		j.Delivers, j.DeliverWhy = delivers(name, all.String(), false)
-	}
+	j.Delivers, j.DeliverWhy = delivers(name, all.String(), false)
 	j.Image = betterJavaImage(j)
-	if len(j.Steps) == 0 && j.Matrix == nil {
-		j.Steps = []Step{{Run: "true"}}
-	}
 	if len(j.Steps) == 0 {
 		j.Steps = []Step{{Run: "true"}}
 	}
-	r.rp.note("groovy.stage", s.line).Step = id
-	r.p.Jobs = append(r.p.Jobs, j)
-	detectTemplate(j)
-	ids := []string{id}
-	if post != nil {
-		ids = r.post(post, id, ids, j)
-	}
-	return ids
 }
 
 func (r *greader) argOf(s *gs, key string) string {
@@ -706,6 +715,9 @@ func (r *greader) step(j *Job, st *gs, dir string, env []KV) {
 		}
 		j.Steps = append(j.Steps, Step{Run: run, Line: line, Dir: dir, Env: env})
 	}
+	if r.scopedStep(j, st, dir, env) || r.resultStep(j, st) {
+		return
+	}
 	switch st.name {
 	case "sh":
 		a := st.first()
@@ -730,6 +742,31 @@ func (r *greader) step(j *Job, st *gs, dir string, env []KV) {
 	case "bat", "powershell", "pwsh":
 		add("echo 'NEEDS A PERSON: a Windows command ran here'; exit 1", st.line)
 		r.rp.note("groovy.step.bat", st.line).Step = j.ID
+	case "script":
+		add("# NEEDS A PERSON: Groovy code was here:\n"+commentOut(st.raw)+"echo 'NEEDS A PERSON: a script block ran here'; exit 1", st.line)
+		r.rp.note("groovy.step.script", st.line).Step = j.ID
+	case "checkout":
+		r.rp.note("groovy.step.checkout", st.line)
+	case "stash", "unstash":
+		r.rp.note("groovy.step.stash", st.line).Step = j.ID
+		add("echo 'NEEDS A PERSON: files were passed between stages here'; exit 1", st.line)
+	case "input":
+		j.Approval = &Approval{Message: firstNonEmpty(st.named("message").str(), st.first().str(), "Continue?")}
+		r.rp.note("groovy.input", st.line)
+	case "deleteDir", "cleanWs":
+		// nothing to clean: every step starts from a fresh checkout
+	case "(raw)":
+		r.rp.note("groovy.step.other", st.line, oneLine(st.raw, 60)).Step = j.ID
+		add("echo 'NEEDS A PERSON: this line was not understood: "+strings.ReplaceAll(oneLine(st.raw, 80), "'", "")+"'; exit 1", st.line)
+	default:
+		r.rp.note("groovy.step.other", st.line, st.name).Step = j.ID
+		add("echo 'NEEDS A PERSON: the plug-in step "+strings.ReplaceAll(st.name, "'", "")+" ran here'; exit 1", st.line)
+	}
+}
+
+// scopedStep handles the steps that wrap a block of steps; it reports whether it took the step.
+func (r *greader) scopedStep(j *Job, st *gs, dir string, env []KV) bool {
+	switch st.name {
 	case "dir":
 		d := st.first().str()
 		for _, b := range st.block {
@@ -787,9 +824,15 @@ func (r *greader) step(j *Job, st *gs, dir string, env []KV) {
 		for _, b := range st.block {
 			r.step(j, b, dir, env)
 		}
-	case "script":
-		add("# NEEDS A PERSON: Groovy code was here:\n"+commentOut(st.raw)+"echo 'NEEDS A PERSON: a script block ran here'; exit 1", st.line)
-		r.rp.note("groovy.step.script", st.line).Step = j.ID
+	default:
+		return false
+	}
+	return true
+}
+
+// resultStep handles the steps that name build results; it reports whether it took the step.
+func (r *greader) resultStep(j *Job, st *gs) bool {
+	switch st.name {
 	case "archiveArtifacts":
 		p := firstNonEmpty(st.named("artifacts").str(), st.first().str())
 		if p != "" {
@@ -806,23 +849,10 @@ func (r *greader) step(j *Job, st *gs, dir string, env []KV) {
 			j.Tests = append(j.Tests, p)
 			r.rp.note("groovy.step.junit", st.line)
 		}
-	case "checkout":
-		r.rp.note("groovy.step.checkout", st.line)
-	case "stash", "unstash":
-		r.rp.note("groovy.step.stash", st.line).Step = j.ID
-		add("echo 'NEEDS A PERSON: files were passed between stages here'; exit 1", st.line)
-	case "input":
-		j.Approval = &Approval{Message: firstNonEmpty(st.named("message").str(), st.first().str(), "Continue?")}
-		r.rp.note("groovy.input", st.line)
-	case "deleteDir", "cleanWs":
-		// nothing to clean: every step starts from a fresh checkout
-	case "(raw)":
-		r.rp.note("groovy.step.other", st.line, oneLine(st.raw, 60)).Step = j.ID
-		add("echo 'NEEDS A PERSON: this line was not understood: "+strings.ReplaceAll(oneLine(st.raw, 80), "'", "")+"'; exit 1", st.line)
 	default:
-		r.rp.note("groovy.step.other", st.line, st.name).Step = j.ID
-		add("echo 'NEEDS A PERSON: the plug-in step "+strings.ReplaceAll(st.name, "'", "")+" ran here'; exit 1", st.line)
+		return false
 	}
+	return true
 }
 
 func (g *gx) itemsOrSelf() []*gx {
