@@ -18,6 +18,7 @@ export interface HostKind {
 export const HOST_KINDS: HostKind[] = [
   { value: "github", name: "GitHub", change: "pull request" },
   { value: "gitlab", name: "GitLab", change: "merge request", secretField: "Secret token", noType: true },
+  { value: "bitbucket", name: "Bitbucket", change: "pull request", noType: true },
   { value: "gitea", name: "Gitea", change: "pull request", addressRequired: true },
   { value: "forgejo", name: "Forgejo", change: "pull request", addressRequired: true },
 ];

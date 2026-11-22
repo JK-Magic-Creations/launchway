@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) and `gitea` and `forgejo` (self-managed installs: the base address is required). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) and [Gitea and Forgejo](#gitea-and-forgejo) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) and `bitbucket` (Bitbucket Cloud). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) and [Bitbucket Cloud](#bitbucket-cloud) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -193,6 +193,49 @@ launchway repos host test acme-gt
 ```
 
 These providers are labelled experimental until they have passed the conformance suite against a live installation (`LAUNCHWAY_LIVE_GITEA_TOKEN`, `LAUNCHWAY_LIVE_GITEA_BASE`, `LAUNCHWAY_LIVE_GITEA_REPO` and `LAUNCHWAY_LIVE_GITEA_KIND` run that test).
+
+## Bitbucket Cloud
+
+The kind `bitbucket` is **Bitbucket Cloud** (`https://bitbucket.org`, API at `https://api.bitbucket.org/2.0`). **Bitbucket Data Center** (the self-managed product) is **not covered**: its API (`/rest/api/1.0`) and its webhooks are different, and a base address other than `https://bitbucket.org` is refused with that message. A repository is `workspace/name`; the **owners** list names workspaces, and with it Launchway lists those workspaces directly (without it, the account's own workspaces are asked, which needs the `account` scope).
+
+- The token is a **repository, project or workspace access token**, sent as `Authorization: Bearer`. Git over HTTPS uses it as the password with the literal user name `x-token-auth`, as the host documents. An access token has no account: Test names it "access-token" and cannot read its permissions, and says so.
+- The webhook is checked by its **signature**: the `X-Hub-Signature` header, `sha256=` and the hex HMAC of the raw body, compared in constant time. The events are `repo:push` (one event for each branch or tag the push changed; a tag is a push of a tag), `pullrequest:created`, `:updated`, `:fulfilled` (merged) and `:rejected` (declined). A replay is dropped by `X-Request-UUID`; the documentation does not say whether a retry reuses it, and if it does not, a retried delivery is only processed again, which makes the Flight poll once more.
+- A **build status** is the host's commit status: a status named for the Sortie, updated in place (states in progress, successful, failed and stopped; an errored step is stopped).
+- The summary is **one comment** on the pull request, edited in place. A draft pull request can be made and changed. A declined pull request cannot be reopened (the host has no call): open a new one.
+- **Write-back** commits with the source API (multipart: the file, a message and the branch; a new branch is made by naming the commit to build on) and opens a pull request. A direct write to a branch with a "push" restriction is refused before anything is pushed, with a message that names the pull-request mode.
+- The host publishes no ref for a pull request's head, so a pull request from **another repository (a fork)** has its head commit named by the API but not fetched with the mirror, so a Sortie for it cannot check that commit out. A pull request from a branch of the same repository is fetched with the branches.
+
+**Releases: the host has none.** Bitbucket has tags and a list of downloadable files per repository, but no release object with notes. The capability is declared **none**, with that reason. **Cut a release** therefore does this: the annotated tag is made on Bitbucket; the release page, its notes and its files stay in Launchway, which serves the files; the Cut a release page says "this host has no release object, so the tag is made there and the release page and its files stay in Launchway, which serves the files"; and the Logbook records the publish on the host as skipped, with the reason. (The host's downloads list is not used: it is a different feature, with its own limits, and a download is not a release.)
+
+What Bitbucket adds (shown "from Bitbucket" on the Flight's Code host page): **merge checks** (require passing builds, approvals, resolved comments and no requested changes; set in the repository's branch restrictions; Launchway reads them to refuse a direct write), **default reviewers**, and **builds on the pull request** (the statuses above). Its auto-merge is a setting of the repository ("allow auto merge when builds pass" in the branch restrictions); the API has no call to switch it on for one pull request, so Launchway cannot drive it: with `write_back.merge: auto` the write-back is refused up front with a message that names `person`, and the merge happens on the host.
+
+What a connection cannot do: create or delete repositories, merge, review or change branch restrictions (do it on Bitbucket).
+
+Scopes per feature (the OAuth scope each operation lists in the host's own OpenAPI file; a repository access token needs the same permissions):
+
+| To | Scope |
+| --- | --- |
+| Choose a repository, run Sorties, checkout, refs and commits | `repository` |
+| List the account's workspaces and its permissions on repositories (Test) | `account` |
+| Read pull requests, and post or edit the summary comment | `pullrequest` |
+| Build statuses | `repository` |
+| Tags | `repository:write` |
+| File changes (write-back) | `repository:write` |
+| A write-back pull request, update or decline one | `pullrequest:write` |
+| Refuse a direct write to a protected branch (branch restrictions) | `repository:admin` |
+| The webhook (set by you) | `webhook`, for whoever sets it up; the token Launchway holds does not need it |
+
+The host reports no token scopes or expiry through its API, so Test judges the write features by the account's write permission where the token can read it, and otherwise says that a refusal (403) will show when the feature is used.
+
+```sh
+launchway repos host add acme-bb --kind bitbucket \
+  --credential-env ACME_BB_TOKEN \
+  --webhook-secret-env ACME_BB_HOOK \
+  --owner acme
+launchway repos host test acme-bb
+```
+
+This provider is labelled experimental until it has passed the conformance suite against the live service (`LAUNCHWAY_LIVE_BITBUCKET_TOKEN` and `LAUNCHWAY_LIVE_BITBUCKET_REPO` run that test).
 
 ## In the Logbook
 

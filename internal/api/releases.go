@@ -506,9 +506,18 @@ func (s *Server) nextVersion(w http.ResponseWriter, r *http.Request) {
 	if ref.Kind == "branch" {
 		branch = ref.Name
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "branch": branch, "highest": hi, "scheme": set.Scheme, "tag_prefix": set.TagPrefix,
+	out := map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "branch": branch, "highest": hi, "scheme": set.Scheme, "tag_prefix": set.TagPrefix,
 		"hosted": s.isHosted(r.Context(), project), "can_tag": s.canTag(r.Context(), project), "build": s.buildAt(project, ref.SHA),
-		"note": "a person confirms or overrides this: pass the version you choose to create a release"})
+		"note": "a person confirms or overrides this: pass the version you choose to create a release"}
+	if out["hosted"] == true {
+		out["kept_in"] = "the repository Launchway hosts; a push mirror copies the tag out like any other ref"
+	}
+	if s.Hosts != nil { // where the releases of a Flight on a host with no release object are kept
+		if n := s.Hosts.ReleaseNote(r.Context(), project); n != "" {
+			out["kept_in"] = n
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) compareReleases(w http.ResponseWriter, r *http.Request) {

@@ -13,6 +13,8 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket/bitbucketfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitea/giteafake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitlab/gitlabfake"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
@@ -55,7 +57,32 @@ func giteaCase(kind forge.Kind) hostCase {
 
 var hostFake *giteafake.Host
 
-var kindCases = []hostCase{giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
+var bbRestore func()
+
+func bitbucketCase() hostCase {
+	return hostCase{
+		kind: forge.KindBitbucket,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			h := bitbucketfake.New()
+			t.Cleanup(h.Close)
+			bbRestore = bitbucket.UseTestAPI(h.API())
+			t.Cleanup(bbRestore)
+			return "", bitbucketfake.Token, bitbucketfake.WebhookSecret, func() []string { return h.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			body := `{"actor":{"nickname":"bob"},"repository":{"full_name":"acme/app"},"push":{"changes":[{"new":{"type":"branch","name":"main","target":{"hash":"` + strings.Repeat("a", 40) + `"}},"old":null}]}}`
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(body))
+			r.Header = bitbucketfake.Delivery("repo:push", "del-1", []byte(body))
+			if secret != bitbucketfake.WebhookSecret {
+				r.Header.Set("X-Hub-Signature", bitbucketfake.Sign([]byte(secret), []byte(body)))
+			}
+			return r
+		},
+		lacks: forge.CapReleases,
+	}
+}
+
+var kindCases = []hostCase{bitbucketCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()
@@ -133,8 +160,9 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			if d, err = s.Webhook(ctx, "h", c.delivery(t, hook)); err != nil || d.Fresh {
 				t.Fatalf("a replay is dropped: %+v %v", d, err)
 			}
-			if l, ok := s.ProposalRefs(ctx, "shop"); !ok || l.IsZero() {
-				t.Errorf("layout %v %v", l, ok)
+			_, noRefs := fv.Unsupported[forge.CapProposalRef]
+			if l, ok := s.ProposalRefs(ctx, "shop"); !ok || l.IsZero() != noRefs {
+				t.Errorf("layout %v %v (a host that declares no head refs gives none, and only then)", l, ok)
 			}
 			if vs := violations(); len(vs) > 0 {
 				t.Errorf("the fake saw: %v", vs)

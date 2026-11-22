@@ -104,13 +104,32 @@ func (s *Service) CreateTag(ctx context.Context, project, tag, commit, message s
 	return ref.Commit, err
 }
 
+// ErrNoRelease is wrapped when the host has no release object (it has tags, and
+// perhaps downloads, but no release with notes): the tag is made on the host and
+// the release page and its files stay in Launchway.
+var ErrNoRelease = errors.New("the host has no release object")
+
 // PublishRelease creates or updates the release of an existing tag on the host with its notes and files.
+// On a host that has no release object it does nothing and says so (ErrNoRelease).
 func (s *Service) PublishRelease(ctx context.Context, project string, rel forge.ReleaseSpec) (string, error) {
 	p, _, repo, err := s.repoOf(ctx, project)
 	if err != nil {
 		return "", err
 	}
+	if !p.Capabilities().Has(forge.CapReleases) {
+		return "", fmt.Errorf("%w: %s", ErrNoRelease, p.Capabilities()[forge.CapReleases].Reason)
+	}
 	return p.Releases().PublishRelease(ctx, repo, rel)
+}
+
+// ReleaseNote says, for a Flight whose host has no release object, where its releases are kept: the sentence the
+// release page shows beside "Kept in". It is empty when the host has releases (or the project is not attached).
+func (s *Service) ReleaseNote(ctx context.Context, project string) string {
+	p, _, _, err := s.repoOf(ctx, project)
+	if err != nil || p.Capabilities().Has(forge.CapReleases) {
+		return ""
+	}
+	return "the Flight's repository; this host has no release object, so the tag is made there and the release page and its files stay in Launchway, which serves the files"
 }
 
 // CutRelease creates the annotated tag at a commit on the host and the
@@ -123,6 +142,9 @@ func (s *Service) CutRelease(ctx context.Context, project, commit string, rel fo
 	}
 	if _, err := p.Releases().CreateTag(ctx, repo, forge.TagSpec{Name: rel.Tag, Commit: commit, Message: tagMessage}); err != nil {
 		return "", err
+	}
+	if !p.Capabilities().Has(forge.CapReleases) {
+		return "", nil // the tag is on the host; the release stays in Launchway
 	}
 	return p.Releases().PublishRelease(ctx, repo, rel)
 }

@@ -55,7 +55,7 @@ export interface Reason { change: { title: string; kind: string; ref?: number };
 /** What a person needs to cut a release: the proposal, the commit and tag it would make, and what the pipeline built at that commit. */
 export interface NextAnswer {
   proposal: Proposal; source: string; commit: string; branch?: string; highest?: string; scheme: string; tag_prefix: string;
-  hosted: boolean; can_tag: boolean; build: null | { run_id: string; run_number: number; files: { name: string; path: string; size: number; sha256: string }[] };
+  hosted: boolean; kept_in?: string; can_tag: boolean; build: null | { run_id: string; run_number: number; files: { name: string; path: string; size: number; sha256: string }[] };
 }
 export interface Proposal { next: string; last?: string; bump: string; summary: string; reasons: Reason[]; warnings?: string[] }
 

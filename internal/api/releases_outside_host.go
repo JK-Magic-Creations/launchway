@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 )
 
 // publishOnOutsideHost makes the release, with its notes and files, on the
@@ -32,7 +34,9 @@ func (s *Server) publishOnOutsideHost(ctx context.Context, rel *engine.Release, 
 	defer cancel()
 	link, err := s.Hosts.PublishRelease(pctx, rel.Project, spec)
 	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: actor, Action: "outside_host.release", Project: rel.Project, Target: releaseTarget(rel)}
-	if err != nil {
+	if errors.Is(err, hosts.ErrNoRelease) {
+		e.Outcome, e.Detail = "skipped", "the tag is on the host; it has no release object, so the release page and its files stay in Launchway"
+	} else if err != nil {
 		e.Outcome, e.Detail = "failed", clip(errText(err), 300)
 	} else {
 		e.Outcome, e.Detail = "ok", "release made on the outside host: "+clip(link, 200)
