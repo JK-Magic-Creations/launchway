@@ -27,6 +27,11 @@ export interface SearchResult { commit: string; files: FileMatches[]; matches: n
 export interface SearchQuery { q: string; ref?: string; regex?: boolean; matchCase?: boolean; in?: string; dir?: string; ext?: string }
 export interface Written { branch: string; path: string; commit: string; sha: string; parent: string }
 
+export interface InspectionState {
+  available: boolean; reason?: string; project?: string; branch?: string;
+  runs: { id: string; number: number; status: string; sha: string; created_at: number }[];
+}
+
 const enc = encodeURIComponent;
 const base = (path: string) => `/api/v1/repositories/${path.split("/").map(enc).join("/")}`;
 const qs = (o: Record<string, string | number | boolean | undefined>) => {
@@ -64,6 +69,8 @@ export const browseApi = {
   deleteTag: (repo: string, name: string) => call<{ name: string; was: string; undo: string }>("DELETE", `${base(repo)}/tags${qs({ name })}`),
   upload: (repo: string, b: { branch: string; message: string; replace: boolean; files: { path: string; content: string; encoding: string }[] }) =>
     call<{ branch: string; paths: string[]; commit: string; parent: string }>("POST", `${base(repo)}/files`, b),
+  inspections: (repo: string) => call<InspectionState>("GET", `${base(repo)}/inspections`),
+  inspect: (repo: string, ref?: string) => call<{ run: { id: string; number: number }; project: string }>("POST", `${base(repo)}/inspections`, { ref: ref ?? "" }),
   blame: (repo: string, ref: string, p: string, from?: number, to?: number) => call<Blame>("GET", `${base(repo)}/blame${qs({ ref, path: p, from, to })}`),
   search: (repo: string, q: SearchQuery) => call<SearchResult>("GET", `${base(repo)}/search${qs({ q: q.q, ref: q.ref, regex: q.regex, case: q.matchCase, in: q.in, dir: q.dir, ext: q.ext })}`),
   compare: (repo: string, head: string, target?: string) => call<BranchComparison>("GET", `${base(repo)}/compare${qs({ head, base: target })}`),

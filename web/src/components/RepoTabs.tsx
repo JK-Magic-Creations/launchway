@@ -1,10 +1,10 @@
 import { navigate } from "../router";
 
-export type RepoTabId = "overview" | "code" | "commits" | "branches" | "tags" | "search" | "pulls" | "dependencies" | "graph" | "mirrors" | "history" | "settings";
+export type RepoTabId = "overview" | "code" | "commits" | "branches" | "tags" | "search" | "pulls" | "dependencies" | "security" | "graph" | "mirrors" | "history" | "settings";
 
 const TABS: [RepoTabId, string, string][] = [
   ["overview", "Overview", ""], ["code", "Code", "code"], ["commits", "Commits", "commits"], ["branches", "Branches", "branches"], ["tags", "Tags", "tags"],
-  ["search", "Search", "search"], ["pulls", "Pull requests", "pulls"], ["dependencies", "Dependencies", "dependencies"], ["graph", "Graph", "graph"],
+  ["search", "Search", "search"], ["pulls", "Pull requests", "pulls"], ["dependencies", "Dependencies", "dependencies"], ["security", "Security", "security"], ["graph", "Graph", "graph"],
   ["mirrors", "Mirrors", "mirrors"], ["history", "Imported history", "history"], ["settings", "Settings", "settings"],
 ];
 
