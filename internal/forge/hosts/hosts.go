@@ -54,6 +54,8 @@ type Service struct {
 	fl      FlightStore
 	guard   *egress.Guard
 	now     func() time.Time
+	// denied remembers repositories whose host refused a commit status (see fallback.go).
+	denied sync.Map
 }
 
 // New makes the service. The guard is the installation's egress allow-list
@@ -393,6 +395,9 @@ func (s *Service) View(ctx context.Context, project string) (FlightView, error) 
 				}
 			}
 			v.Additions = p.Additions()
+		}
+		if n, ok := resultsNote(s.StatusVia(ctx, project)); ok {
+			v.Unsupported[forge.CapResults] = n
 		}
 		v.Kind = string(c.Kind)
 		if at, ok, err := s.fl.OutsideLastDelivery(c.ID); err == nil && ok {

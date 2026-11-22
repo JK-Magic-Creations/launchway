@@ -50,8 +50,8 @@ func (s *Service) ReportRun(ctx context.Context, project string, r forge.Result)
 	if err != nil {
 		return false, err
 	}
-	if !f.ReportStatuses {
-		return false, nil
+	if !f.ReportStatuses || s.via(p, f.connID, repo.Path) != ViaStatus {
+		return false, nil // a result that goes to the comment is sent by ReportResult
 	}
 	return true, p.Results().Publish(ctx, repo, r)
 }
@@ -69,7 +69,12 @@ func (s *Service) ReportSummary(ctx context.Context, project string, number int,
 	if !f.ReportComment {
 		return false, nil
 	}
-	key, err := s.fl.OutsideSummaryComment(project, number)
+	return s.upsertSummary(ctx, p, f, repo, number, body)
+}
+
+// upsertSummary posts or edits the one summary comment of a pull request.
+func (s *Service) upsertSummary(ctx context.Context, p forge.Provider, f Flight, repo forge.Repository, number int, body string) (bool, error) {
+	key, err := s.fl.OutsideSummaryComment(f.Project, number)
 	if err != nil {
 		return false, err
 	}
@@ -77,7 +82,7 @@ func (s *Service) ReportSummary(ctx context.Context, project string, number int,
 	if err != nil {
 		return false, err
 	}
-	if err := s.fl.PutOutsideSummaryComment(project, number, got); err != nil {
+	if err := s.fl.PutOutsideSummaryComment(f.Project, number, got); err != nil {
 		return true, err
 	}
 	return true, nil

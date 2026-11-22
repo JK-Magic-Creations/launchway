@@ -13,6 +13,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 )
 
@@ -93,14 +94,29 @@ func (s *Server) reportRun(ctx context.Context, rep *reportedStates, sum *engine
 	if !rep.changed(sum.ID, string(res.State)) {
 		return
 	}
-	if ok, err := s.Hosts.ReportRun(ctx, sum.Project, res); err != nil {
-		s.Log.Warn("a commit status could not be written to the outside host", "project", sum.Project, "run", sum.Number, "error", err)
-		return
-	} else if !ok {
+	body := ""
+	if sum.PullRequest > 0 { // a host that takes no status gets the result in the summary comment
+		if sum.Status.Terminal() {
+			s.withTotals(sum)
+		}
+		body = summaryBody(sum, link)
+	}
+	via, err := s.Hosts.ReportResult(ctx, sum.Project, res, sum.PullRequest, body)
+	if err != nil {
+		s.Log.Warn("a result could not be written to the outside host", "project", sum.Project, "run", sum.Number, "error", err)
 		return
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "run:" + sum.ID, Action: "outside_host.status", Project: sum.Project,
-		Target: clip(sum.SHA, maxTarget), Outcome: "ok", Detail: res.Name + " " + string(res.State)})
+	switch via {
+	case hosts.ViaStatus:
+		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "run:" + sum.ID, Action: "outside_host.status", Project: sum.Project,
+			Target: clip(sum.SHA, maxTarget), Outcome: "ok", Detail: res.Name + " " + string(res.State)})
+	case hosts.ViaComment:
+		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "run:" + sum.ID, Action: "outside_host.comment", Project: sum.Project,
+			Target: fmt.Sprintf("pull request %d", sum.PullRequest), Outcome: "ok", Detail: res.Name + " " + string(res.State) + ", in the comment because the host takes no status"})
+		return // the comment is the whole report
+	default:
+		return
+	}
 	for _, st := range sum.Steps { // each step is its own context, on the finished run only
 		if !sum.Status.Terminal() || st.Status != engine.StepFailed || st.Allowed {
 			continue

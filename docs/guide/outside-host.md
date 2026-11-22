@@ -81,6 +81,14 @@ A pull request from a fork runs under the usual restricted pull-request rule: no
 
 A Flight whose connection has received no delivery for five minutes is polled through the host's API as well (every minute), so pull requests, their titles and their authors arrive even when the host cannot reach Launchway. The Sortie's page and `launchway runs show` say "Pull request #N: title, by author", with the host's link.
 
+## Hosts without statuses or webhooks
+
+A host that cannot call Launchway, or that has no commit status for a connection to write, is still followed in full:
+
+- **No webhook**: nothing to set up. A Flight whose connection has received no delivery for five minutes is polled through the host's API, as above; a host whose provider has no webhooks at all is only polled.
+- **No commit status** (the provider has none, or the host refused one with 403 or 404 because the token may not write it): Launchway posts the result in the pull request's one **summary comment** instead, updated at every change of state, and does not ask the host for a status again for that repository. A commit that is not on a pull request has nowhere to carry the result, so it is shown in Launchway only. The Flight's Code host page says "This host cannot show a status for a Sortie" with the reason and that the comment is used; give the token the permission to write commit statuses to switch back (it is tried again after a restart). The switch "A commit status for each Sortie" is the one that controls this.
+- **Neither statuses nor comments**: results are read in Launchway, and the page says so.
+
 ## In the web interface
 
 - **Settings > Git hosts** (`/settings/connections`): add a connection (the names of the environment variables that hold the token and the webhook secret, never the values), **test** it (it lists, for each feature, whether the token has or lacks the permission and what to grant), and remove it.
