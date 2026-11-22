@@ -429,3 +429,8 @@ func Sign(secret, body []byte) string {
 	m.Write(body)
 	return "sha256=" + hex.EncodeToString(m.Sum(nil))
 }
+
+// Lock and Unlock let a test read Statuses, Comments and the rest while the
+// server may still be serving.
+func (h *Host) Lock()   { h.mu.Lock() }
+func (h *Host) Unlock() { h.mu.Unlock() }

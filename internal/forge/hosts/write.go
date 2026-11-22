@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 )
@@ -204,6 +205,9 @@ var ErrNoSecret = errors.New("this connection has no webhook secret")
 // drops a replay by its delivery ID, and finds the Flights the events are
 // for. Nothing in the payload is trusted beyond what the signature covers.
 func (s *Service) Webhook(ctx context.Context, name string, r *http.Request) (Delivery, error) {
+	if !s.allowHook(name) {
+		return Delivery{}, fmt.Errorf("%w: too many webhook calls for this connection; the cap is %d a minute", forge.ErrRateLimited, s.hookCap())
+	}
 	p, c, err := s.Provider(ctx, name)
 	if err != nil {
 		return Delivery{}, err
@@ -254,4 +258,29 @@ func PullRequestURL(base, repo string, n int) string {
 		return "https://github.com/" + repo + "/pull/" + strconv.Itoa(n)
 	}
 	return strings.TrimSuffix(u.String(), "/") + "/" + repo + "/pull/" + strconv.Itoa(n)
+}
+
+// DefaultHookCap is how many webhook calls one connection accepts a minute,
+// verified or not, before the rest are answered 429. A host sends a few a
+// second at most; the cap stops a flood that would cost a signature check each.
+const DefaultHookCap = 300
+
+func (s *Service) hookCap() int {
+	if s.HookCap > 0 {
+		return s.HookCap
+	}
+	return DefaultHookCap
+}
+
+// allowHook counts a call in the connection's current minute.
+func (s *Service) allowHook(name string) bool {
+	s.hookMu.Lock()
+	defer s.hookMu.Unlock()
+	now := s.now()
+	win := now.Truncate(time.Minute)
+	if s.hookWin == nil || !s.hookWin.Equal(win) {
+		s.hookWin, s.hookN = &win, map[string]int{}
+	}
+	s.hookN[name]++
+	return s.hookN[name] <= s.hookCap()
 }

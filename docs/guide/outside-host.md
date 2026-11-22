@@ -46,7 +46,7 @@ Where the host cannot do something the page says so, in words, and offers nothin
    launchway repos host test acme-gh
    ```
 
-   For a self-managed install add `--base-url https://git.example.com`. An address that is internal is refused unless the server's `forge.mirror_allow` lists it; Launchway sends the token only to that address and the host's documented upload address, follows no redirects, and removes the token from every message.
+   For a self-managed install add `--base-url https://git.example.com`. An address that is internal is refused unless the server's `forge.mirror_allow` lists it (the one setting an operator edits: it is the same outbound allow-list that push mirrors, imports and the release publisher use, and every call of a connection goes through it); Launchway sends the token only to that address and the host's documented upload address, follows no redirects, and removes the token from every message.
 
    **Test** says who the token is, when it expires (when the host reports it), and, for each feature above, whether the token has the permission or lacks it and what to grant. The host does not list a token's fine-grained permissions, so a write feature shows as lacking when the token can push to none of the repositories it reaches.
 6. Attach a Flight: choose the repository in the wizard, or `launchway repos outside attach FLIGHT --connection acme-gh --repository acme/app`. The two report switches (`--statuses`, `--comment`) are per Flight.
@@ -60,7 +60,7 @@ Webhooks start a Sortie at once; polling is the fallback and also the check on t
 - the secret from step 4
 - the events: pushes, and pull requests (tag pushes arrive as pushes)
 
-Launchway checks the signature with the connection's secret in constant time, refuses a call it cannot verify (an unknown connection, no secret and a wrong signature all answer `404`, and the failed calls count against the caller's address), ignores a delivery ID it has seen, and records each accepted delivery in the Logbook. A verified event only makes the Flights on that repository poll at once, so a forged or replayed call can at worst cause a poll. If Launchway cannot be reached from the host, do nothing: the Flight is polled on its schedule, as any Git address is.
+Launchway checks the signature with the connection's secret in constant time, refuses a call it cannot verify (an unknown connection, no secret and a wrong signature all answer `404`, and the failed calls count against the caller's address; a connection also accepts at most 300 calls a minute, and the rest answer `429`), ignores a delivery ID it has seen, and records each accepted delivery in the Logbook. A verified event only makes the Flights on that repository poll at once, so a forged or replayed call can at worst cause a poll. If Launchway cannot be reached from the host, do nothing: the Flight is polled on its schedule, as any Git address is.
 
 A pull request from a fork runs under the usual restricted pull-request rule: no secrets, no deploy steps. The audit line says the Sortie came from a fork.
 

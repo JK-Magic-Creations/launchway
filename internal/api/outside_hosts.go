@@ -209,6 +209,11 @@ func (s *Server) outsideHostWebhook(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxGitHookBody)
 	name := r.PathValue("name")
 	d, err := s.Hosts.Webhook(r.Context(), name, r)
+	if errors.Is(err, forge.ErrRateLimited) {
+		w.Header().Set("Retry-After", "60")
+		writeErr(w, http.StatusTooManyRequests, "too many webhook calls for this connection; try again in a minute")
+		return
+	}
 	if err != nil {
 		if errors.As(err, new(*http.MaxBytesError)) {
 			writeErr(w, http.StatusRequestEntityTooLarge, "the body is larger than this server accepts")
