@@ -320,3 +320,51 @@ func TestForkWhileTheParentIsPushedTo(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+// A transfer brings the objects of one branch of a fork into the parent, as
+// the pull request ref, and only that branch's: the fork's other branches stay
+// where they are.
+func TestTransferCopiesOnlyWhatTheNamedRefNeeds(t *testing.T) {
+	ctx := context.Background()
+	w := newWorld(t, "fs", false)
+	a := inproc(t, w.st)
+	c := newClient(t)
+	var ack []ackedPush
+	pushOK(t, c, a, w.repo, &ack, 3000)
+	w.newRepo(t, "frk1")
+	if _, err := w.st.Fork(ctx, w.repo, "frk1"); err != nil {
+		t.Fatal(err)
+	}
+	fc := newClient(t)
+	fc.git("fetch", "-q", a.repoURL("frk1"), "main")
+	fc.git("reset", "-q", "--hard", "FETCH_HEAD")
+	fc.git("checkout", "-q", "-b", "topic")
+	topic := fc.commit(2000)
+	fc.git("checkout", "-q", "-b", "private-work", "main")
+	other := fc.commit(2000)
+	if r := fc.push(a, "frk1", testFault{}, "topic:refs/heads/topic", "private-work:refs/heads/private-work"); !r.Acked {
+		t.Fatalf("push to the fork: %s", r.Output)
+	}
+	res, err := w.st.Transfer(ctx, w.repo, "frk1", []string{"refs/heads/topic"}, func(ctx context.Context, scratch string, dst, tips map[string]string) ([]RefUpdate, error) {
+		return []RefUpdate{{Name: "refs/pull/1/head", Old: dst["refs/pull/1/head"], New: tips["refs/heads/topic"]}}, nil
+	})
+	if err != nil || res.Created != 1 || res.PackBytes == 0 {
+		t.Fatalf("transfer: %+v %v", res, err)
+	}
+	dest := cloneMirror(t, a, w.repo)
+	if got := refsOf(t, dest)["refs/pull/1/head"]; got != topic {
+		t.Fatalf("the pull request ref is %s, want %s", got, topic)
+	}
+	if hasObject(t, dest, other) {
+		t.Fatal("THE FORK'S OTHER BRANCH CAME ALONG WITH THE PULL REQUEST")
+	}
+	if err := w.st.Wipe(w.repo); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gitexec.Run(ctx, gitexec.Spec{GitDir: cloneMirror(t, a, w.repo), Args: []string{"fsck", "--full", "--strict", "--no-dangling"}, Timeout: time.Minute}); err != nil {
+		t.Fatalf("fsck of the parent after the transfer: %v", err)
+	}
+	if _, err := w.st.Transfer(ctx, w.repo, "frk1", []string{"refs/heads/nope"}, nil); !errors.Is(err, ErrNoSuchRef) {
+		t.Errorf("a missing source ref: %v", err)
+	}
+}
