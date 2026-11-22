@@ -44,6 +44,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"get_step_log":           {map[string]any{"run_id": "{pay}", "step": "after"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_test_results":       {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_debrief":            {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"get_insights":           {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_flaky_tests":       {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"split_tests":            {map[string]any{"project": "pay-api", "shards": 2}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_verification":       {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},

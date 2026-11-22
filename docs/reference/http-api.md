@@ -496,6 +496,7 @@ Releases and release management (see [Making a release](../guide/releases.md)). 
 | `GET /api/v1/releases` | `signed-in` | — | Releases of every Flight the caller may see: `?project=`, `?state=`. |
 | `GET /api/v1/release-matrix` | `signed-in` | — | Which release runs in which Airfield: for each Flight and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote. |
 | `GET /api/v1/release-calendar` | `signed-in` | — | Planned, in-progress and done promotions and the freezes between `?from=` and `?to=`. |
+| `GET /api/v1/insights` | `signed-in` | — | The Insights numbers over a period: `?flight=` or `?squadron=` (neither: every Flight the caller may read), `?from=`, `?to=` (default 30 days), `?branch=`, `?bucket=` (`hour`, `day`, `week` or `month`), `?format=csv` for the series as a spreadsheet file. Counts only Flights the caller may read; a Flight they may not read is `404`. |
 | `GET /api/v1/release-report` | `signed-in` | — | What shipped and the four delivery measures over a period: `?project=`, `?from=`, `?to=` (default 90 days), `?format=html` for a self-contained page. |
 | `GET /api/v1/release-installation` | `signed-in` | — | Whether this installation allows public downloads of releases. |
 | `PUT /api/v1/release-installation` | `admin` | `release.installation` | Allows or forbids them: `{"public_downloads"}`. Administrators of every Flight. |

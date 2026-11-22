@@ -137,6 +137,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /api/v1/insights` | `get_insights` | `insights` | — | equal |
 | `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
 | `GET /api/v1/layouts-export` | `organize` | `organize` | — | equal |
 | `POST /api/v1/layouts-import` | `organize` | `organize` | — | equal |

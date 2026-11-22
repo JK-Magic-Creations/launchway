@@ -589,6 +589,15 @@ launchway runs trust RUN_ID [--comment TEXT]
 
 The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
 
+## launchway insights
+
+The numbers of the Insights pages, for the Flights you may read.
+
+| Command | What it does |
+|---|---|
+| `launchway insights [--flight NAME \| --squadron NAME] [--from T] [--to T] [--branch B] [--bucket hour\|day\|week\|month] [--json]` | Run success rate and duration (median and 95th percentile), queue wait, the slowest and flakiest steps, test totals and the delivery measures. Without `--flight` and `--squadron`, every Flight you may read |
+| `launchway insights ... --csv FILE` | Write the series as a CSV file |
+
 ## launchway debrief and launchway tests
 
 The report of a Sortie's tests, and what the history of a Flight's tests says. See [The Debrief](../guide/debrief.md).
