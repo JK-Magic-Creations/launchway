@@ -190,7 +190,11 @@ verify_fresh() { # label: sign in as a person does, run a pipeline, encryption o
 	( cd "$ROOT" && go build -o "$WORK/bin/signin" ./deploy/test/upgrade/signin ) || { FAILS+=("$1: building the sign-in helper"); return 1; }
 	pf_start || return 1
 	local code; code=$(kc -n "$NS" get secret "$FULL-setup-code" -o jsonpath='{.data.code}' | base64 -d)
-	check_out "$1: first sign-in works and a pipeline runs" 'run: succeeded' "$WORK/bin/signin" "http://127.0.0.1:$PFPORT" "$code" demo
+	if [ "${2:-demo}" = - ]; then
+		check_out "$1: first sign-in works (an installer install has no project yet, so no pipeline runs here; the helm install cell runs one)" 'first sign-in: ok' "$WORK/bin/signin" "http://127.0.0.1:$PFPORT" "$code" -
+	else
+		check_out "$1: first sign-in works and a pipeline runs" 'run: succeeded' "$WORK/bin/signin" "http://127.0.0.1:$PFPORT" "$code" demo
+	fi
 	check_out "$1: encryption is on" 'encryption at rest is on' kc -n "$NS" logs -l app.kubernetes.io/component=server --tail=300
 	local out; out=$(lw_in doctor --config /etc/launchway/launchway.yaml 2>&1); echo "$out" >"$CELLDIR/doctor.out"
 	if printf '%s' "$out" | grep -qi 'warning'; then note "FAIL $1: doctor is not clean"; grep -i warning "$CELLDIR/doctor.out" | sed 's/^/       | /' >&2; FAILS+=("$1: doctor is not clean"); else note "ok   $1: doctor is clean"; fi
@@ -206,13 +210,12 @@ cell_install_installer() {
 	cell_env install-installer
 	local out
 	out=$(cd "$CELLDIR" && "$BIN" install --target kubernetes --namespace "$NS" --kubeconfig "$KUBECONFIG" --context "kind-$CLUSTER" --image localhost/launchway:$NEW_TAG \
-		--set kubernetes.release=lw --set kubernetes.ha=no --set kubernetes.url=http://launchway.test --non-interactive --yes --no-browser --transcript "$CELLDIR/transcript.log" 2>&1)
+		--set kubernetes.confirm="kind-$CLUSTER" --set kubernetes.release=lw --set kubernetes.ha=no --non-interactive --yes --no-browser --transcript "$CELLDIR/transcript.log" 2>&1)
 	echo "$out" >"$CELLDIR/installer.out"
 	check_out "the installer finishes" 'Launchway is (up|running|installed)|ready|installed' cat "$CELLDIR/installer.out"
 	wait_ready 300
 	check "no crash loop" pods_ok
-	skip_note="the installer's own image pull policy is IfNotPresent: the loaded image is used"
-	verify_fresh "fresh install by launchway install"
+	verify_fresh "fresh install by launchway install" -
 }
 cell_install_laptop() {
 	CELLDIR=$WORK/cells/install-laptop; mkdir -p "$CELLDIR"
@@ -300,7 +303,7 @@ YAML
 	check_out "doctor network finds the Kubernetes NetworkPolicy" '1 NetworkPolicy \(networking.k8s.io\)' cat "$CELLDIR/doctor-network.out"
 	check_out "doctor network finds a plugin's own kind by listing the API generically" '1 ExampleNetworkPolicy \(plugin.example.test\)' cat "$CELLDIR/doctor-network.out"
 	check_out "it says to let one system be the authority" 'one system be the authority' cat "$CELLDIR/doctor-network.out"
-	out=$(cd "$CELLDIR" && "$BIN" install --dry-run --target kubernetes --namespace "$NS" --kubeconfig "$KUBECONFIG" --context "kind-$CLUSTER" --image localhost/launchway:$NEW_TAG --set kubernetes.url=http://launchway.test --non-interactive --transcript "$CELLDIR/t.log" 2>&1); echo "$out" >"$CELLDIR/install-dry.out"
+	out=$(cd "$CELLDIR" && "$BIN" install --dry-run --target kubernetes --namespace "$NS" --kubeconfig "$KUBECONFIG" --context "kind-$CLUSTER" --image localhost/launchway:$NEW_TAG --set kubernetes.confirm="kind-$CLUSTER" --non-interactive --transcript "$CELLDIR/t.log" 2>&1); echo "$out" >"$CELLDIR/install-dry.out"
 	check_out "the installer names what is in place" 'Network policy already in place' cat "$CELLDIR/install-dry.out"
 	check_out "the installer leaves the chart's policies off by default (networkPolicy.enabled: false)" 'networkPolicy|NetworkPolicy.*(off|not)|leave network policy' cat "$CELLDIR/install-dry.out"
 	kc delete crd examplenetworkpolicies.plugin.example.test --wait=false >/dev/null 2>&1
