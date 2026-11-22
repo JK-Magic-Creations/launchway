@@ -304,10 +304,14 @@ type ExpiringCredential struct {
 	At                int64
 }
 
-// ExpiringCredentials lists the SSH keys and signing keys of people that end between two times (Unix ms).
+// ExpiringCredentials lists the SSH keys, signing keys and API tokens of people that end between two times (Unix ms).
 func ExpiringCredentials(ctx context.Context, db CtxDB, from, to int64) []ExpiringCredential {
 	out := expiring(ctx, db, "SSH key", `SELECT owner, name, expires_at FROM ssh_keys WHERE kind = 'user' AND expires_at > ? AND expires_at < ?`, from, to)
-	return append(out, expiring(ctx, db, "signing key", `SELECT owner, name, expires_at FROM signing_keys WHERE expires_at > ? AND expires_at < ? AND revoked_at = 0`, from, to)...)
+	out = append(out, expiring(ctx, db, "signing key", `SELECT owner, name, expires_at FROM signing_keys WHERE expires_at > ? AND expires_at < ? AND revoked_at = 0`, from, to)...)
+	// A token that never ends has expires_at 0 and is not listed. Only tokens of people are warned about: a service
+	// account's tokens have no one to tell here (they are listed with the account).
+	return append(out, expiring(ctx, db, "API token", `SELECT t.username, t.name, t.expires_at FROM api_tokens t WHERE t.expires_at > ? AND t.expires_at < ?
+		AND EXISTS (SELECT 1 FROM users u WHERE u.base_id = t.base_id AND u.username = t.username)`, from, to)...)
 }
 
 func expiring(ctx context.Context, db CtxDB, what, q string, from, to int64) []ExpiringCredential {

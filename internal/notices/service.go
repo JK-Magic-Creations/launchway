@@ -365,6 +365,17 @@ func (s *Service) ScanCredentials(ctx context.Context, within time.Duration) {
 	for _, c := range store.ExpiringCredentials(ctx, s.Store.DB, now.UnixMilli(), now.Add(within).UnixMilli()) {
 		day := time.UnixMilli(c.At).UTC().Format("2006-01-02")
 		_, _ = s.Notify(ctx, Event{Kind: CredentialExpiring, People: []string{c.Owner}, Name: "your account",
-			Title: fmt.Sprintf("your %s %q ends on %s", c.What, c.Name, day), Link: "/settings/access/keys", Dedupe: "cred:" + c.What + ":" + c.Name + ":" + day})
+			Title: fmt.Sprintf("your %s %q ends on %s", c.What, c.Name, day), Link: credentialLink(c.What), Dedupe: "cred:" + c.What + ":" + c.Name + ":" + day})
 	}
+}
+
+// credentialLink is the page where a credential of that kind is managed.
+func credentialLink(what string) string {
+	switch what {
+	case "signing key":
+		return "/settings/access/signing-keys"
+	case "SSH key":
+		return "/settings/access/ssh-keys"
+	}
+	return "/settings/access/keys"
 }

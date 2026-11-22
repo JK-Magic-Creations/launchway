@@ -302,3 +302,34 @@ func TestQuietUntilOverMidnightAndInAZone(t *testing.T) {
 		t.Fatal("a made-up zone was accepted")
 	}
 }
+
+// An API token that ends within the warning time is warned about once, like a key; one that never ends, one that ends
+// later, and one of someone who is not a person here are not.
+func TestAPITokensAreWarnedAboutBeforeTheyExpire(t *testing.T) {
+	w := newWorld(t)
+	db := w.svc.Store.DB
+	ms := func(d time.Duration) int64 { return w.now.Add(d).UnixMilli() }
+	exec := func(q string, a ...any) {
+		t.Helper()
+		if _, err := db.Exec(t0(), q, a...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec(`INSERT INTO users(username, group_list, last_login) VALUES('bob','[]',1)`)
+	tok := func(id, user, name string, exp int64) {
+		exec(`INSERT INTO api_tokens(id, hash, username, name, created_at, expires_at) VALUES(?,?,?,?,1,?)`, id, "h"+id, user, name, exp)
+	}
+	tok("t1", "bob", "ci", ms(3*24*time.Hour))
+	tok("t2", "bob", "forever", 0)
+	tok("t3", "bob", "later", ms(90*24*time.Hour))
+	tok("t4", "svc-robot", "robot", ms(2*24*time.Hour))
+	w.svc.ScanCredentials(t0(), 7*24*time.Hour)
+	w.svc.ScanCredentials(t0(), 7*24*time.Hour) // once, not twice
+	ns, _ := w.svc.Store.List(t0(), "bob", Filter{})
+	if len(ns) != 1 || !strings.Contains(ns[0].Title, `API token "ci"`) || ns[0].Link != "/settings/access/keys" {
+		t.Fatalf("%+v", ns)
+	}
+	if other, _ := w.svc.Store.List(t0(), "svc-robot", Filter{}); len(other) != 0 {
+		t.Fatalf("a service account's token was warned about as a person: %+v", other)
+	}
+}
