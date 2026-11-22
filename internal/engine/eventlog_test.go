@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 func decisionsOf(t *testing.T, e *Engine, runID string) []EventDecision {
@@ -76,7 +77,7 @@ func TestEventLogExplainsHeldAndSuperseded(t *testing.T) {
 // A push the trigger ignores is an event with the reason; a push that starts a
 // run is one event, not two.
 func TestEventLogRecordsFilteredPushes(t *testing.T) {
-	e, _ := newEngine(t)
+	e, clk := newEngine(t)
 	ch := RefChange{Ref: "refs/heads/main", New: "abcdef1234567", SeenAt: 1}
 	if _, err := e.RecordPush("demo", ch, PushDecision{Ref: ch.Ref, SHA: ch.New, Outcome: "ignored", Detail: "paths: only docs/** changed"}); err != nil {
 		t.Fatal(err)
@@ -86,7 +87,8 @@ func TestEventLogRecordsFilteredPushes(t *testing.T) {
 		evs[0].Decisions[0].Decision != DecFiltered || evs[0].Decisions[0].Reason != "paths: only docs/** changed" {
 		t.Fatalf("%+v", evs)
 	}
-	// A push that starts a run.
+	// A push that starts a run, a moment later (events are listed newest first, and two at one instant have no order).
+	clk.Add(time.Second)
 	p, _ := bound(t, lanePipeline("{when_busy: wait}"), nil)
 	if _, err := e.CreateRun(NewRun{Project: "demo", Pipeline: p, Trigger: mainPush("s9"), Source: Source{Kind: "dir", Path: "/tmp"},
 		Push: &RefChange{Ref: "refs/heads/main", Old: "abcdef1234567", New: "s9", SeenAt: 2}}); err != nil {

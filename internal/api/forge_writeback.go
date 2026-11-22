@@ -154,6 +154,12 @@ func (s *Server) openDeployPull(ctx context.Context, repo forge.Repository, clai
 		dup, _ := svc.Store.OpenFromSource(ctx, repo.ID, claim.WorkBranch())
 		i := slices.IndexFunc(dup, func(d pulls.PullRequest) bool { return d.TargetBranch == claim.Branch && d.SourceRepo == "" })
 		if i < 0 {
+			// Or it was opened, and has already merged itself (auto-merge needs no check here): that merged
+			// pull request is the answer too, or a retried open after the merge would fail.
+			merged, _, lerr := svc.Store.List(ctx, repo.ID, pulls.Filter{State: "merged", Source: claim.WorkBranch(), Target: claim.Branch, Limit: 1})
+			if lerr == nil && len(merged) > 0 {
+				return merged[0], nil
+			}
 			return pulls.PullRequest{}, err
 		}
 		p = dup[i]

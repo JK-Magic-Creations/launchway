@@ -148,7 +148,7 @@ func TestDeployWritesBackByPullRequest(t *testing.T) {
 	}
 	n := int(pr["number"].(float64))
 	// The same call again answers with the same pull request.
-	if _, again := call(tok, body("open", 0)); int(again["number"].(float64)) != n {
+	if _, again := call(tok, body("open", 0)); again["number"] != float64(n) {
 		t.Fatalf("a second open made another pull request: %v", again)
 	}
 	var state map[string]any
@@ -158,6 +158,10 @@ func TestDeployWritesBackByPullRequest(t *testing.T) {
 	})
 	if c, _ := state["commit"].(string); len(c) < 40 {
 		t.Fatalf("merged without a commit: %v", state)
+	}
+	// A retried open after the merge answers with the merged pull request, not an error.
+	if code, again := call(tok, body("open", 0)); code != 200 || again["number"] != float64(n) || again["state"] != "merged" {
+		t.Fatalf("an open after the merge: %d %v", code, again)
 	}
 	// A credential of another deployment learns nothing about this pull request.
 	other, _ := h.RunTokens.MintForDeploy(githttp.DeployClaim{Repo: repo.ID, Project: "mcp-weather", Deployment: "dep_other", Branch: "main", Mode: "pull_request"}, time.Hour, 2*time.Hour)
