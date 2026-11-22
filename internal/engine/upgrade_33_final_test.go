@@ -29,8 +29,8 @@ const schemaLast = schemaNarrow
 
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaLast || schemaLast != 54 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 54", schemaLast, len(migrations))
+	if len(migrations) != schemaLast || schemaLast != 55 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 55", schemaLast, len(migrations))
 	}
 	for i := schemaEncryption; i <= schemaLast; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {

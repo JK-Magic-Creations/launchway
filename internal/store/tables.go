@@ -66,6 +66,7 @@ var Tables = []Table{
 	{Name: "local_links", Class: Scoped},
 	{Name: "local_recovery_codes", Class: Scoped},
 	{Name: "memberships", Class: Scoped},
+	{Name: "service_accounts", Class: Scoped},
 
 	// Pending S2: the run engine.
 	{Name: "runs", Class: Pending, Stage: "S2", Why: "project name"},
