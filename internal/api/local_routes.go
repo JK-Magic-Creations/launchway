@@ -3,7 +3,7 @@ package api
 // routes is every route of the server, from each file that lists some.
 func (s *Server) routes() []route {
 	var all []route
-	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.squadronRoutes(), s.flowRoutes(), s.cacheRoutes(), s.launchRoutes(),
+	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.squadronRoutes(), s.flowRoutes(), s.cacheRoutes(), s.pipelineImportRoutes(), s.launchRoutes(),
 		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.encryptionRoutes(), s.localRoutes(), s.queueRoutes(), s.starterRoutes(), s.registryRoutes(), s.toggleRoutes(), s.toggleSDKRoutes(), s.eventRoutes(), s.eventSourceRoutes(), s.runTriggerRoutes(), s.standardsRoutes(), s.releaseRoutes(), s.releaseManageRoutes(), s.graphRoutes(), s.graphFollowRoutes(), s.cacRoutes(), s.workRoutes(), s.inspectRoutes(), s.homeRoutes(), s.organizeRoutes(), s.searchRoutes(), s.activityRoutes(), s.serviceAccountRoutes(), s.repoCredentialRoutes()} {
 		all = append(all, part...)
 	}

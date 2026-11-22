@@ -49,6 +49,11 @@ type ImportResponse struct {
 	Message  string              `json:"message,omitempty"`
 }
 
+// pipelineImportRoutes is the route of the pipeline importer.
+func (s *Server) pipelineImportRoutes() []route {
+	return []route{{"POST /api/v1/import/pipeline", readAny, "", s.importPipeline}}
+}
+
 func (s *Server) importPipeline(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, importBodyLimit))
 	if err != nil {

@@ -209,7 +209,6 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/v1/runs/{id}/deployments/{dep}/retry", runOperate, "deployment.retry", s.command("retry")},
 		{"POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw", runOperate, "deployment.withdraw", s.withdrawCommand},
 		{"POST /api/v1/validate", readAny, "", s.validate},
-		{"POST /api/v1/import/pipeline", readAny, "", s.importPipeline},
 		{"GET /api/v1/stream", signedIn, "", s.stream},
 		{"GET /api/v1/tokens", signedIn, "", s.listTokens},
 		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
