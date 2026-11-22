@@ -696,14 +696,14 @@ func (p *Pipeline) Container(name string) *Container {
 
 // RunContainers is every container a run needs: the named ones, then one
 // for each image that steps use directly, named image-1, image-2 and so on.
-// Approvals run nothing, so they need no container.
+// Approvals and the Inspection's verdict step run nothing, so they need no container.
 func (p *Pipeline) RunContainers() []Container {
 	var out []Container
 	for _, c := range p.Containers {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && !s.IsVerify() && !s.IsAI() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && !s.IsGate() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && !s.IsVerify() && !s.IsAI() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -714,7 +714,7 @@ func (p *Pipeline) RunContainers() []Container {
 // It is empty for an approval, an image step (the runner builds it, in no
 // container of the run), and a step not yet replaced by a template.
 func (p *Pipeline) ContainerFor(s *Step) string {
-	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
+	if s.IsApproval() || s.IsGate() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
 		return ""
 	}
 	if s.Container != "" {

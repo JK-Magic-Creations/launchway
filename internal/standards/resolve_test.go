@@ -433,3 +433,31 @@ func TestInspectionStepsAreInjectedInParallelWithAGate(t *testing.T) {
 		t.Errorf("a step of the team's own with the same name was replaced: %+v", inj3.Provided)
 	}
 }
+
+// The verdict step runs nothing, so it gets no container: a container with no image makes the API server refuse
+// the whole run's pod, and every step of the run with it. Every container a run with the Inspection needs has an
+// image, and every step that runs something is in one.
+func TestInspectionMakesNoContainerWithoutAnImage(t *testing.T) {
+	pl, err := pipeline.Parse([]byte("pipeline: app\non: { push: { branches: [main] } }\nsteps:\n  build:\n    image: docker.io/library/alpine:3.22\n    run: echo hi\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := Resolve(ResolveInput{Files: goRepo, Now: testNow})
+	q, _, err := Apply(pl, InjectInput{Effective: e, Policy: PolicyOf(e, testNow)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range q.RunContainers() {
+		if strings.TrimSpace(c.Image) == "" {
+			t.Errorf("the container %s has no image", c.Name)
+		}
+	}
+	if got := q.ContainerFor(q.Step(GateStepID)); got != "" {
+		t.Errorf("the verdict step runs in the container %q", got)
+	}
+	for _, s := range q.Steps {
+		if !s.IsGate() && q.ContainerFor(s) == "" {
+			t.Errorf("the step %s runs nowhere", s.ID)
+		}
+	}
+}

@@ -104,7 +104,7 @@ func TestQuotaWaitSaysWhatTheRunHoldsAndWhatItWaitsFor(t *testing.T) {
 	}
 	for _, name := range []string{"a", "b"} {
 		p := runPodObj(k, "run_q", name, time.Minute)
-		p.Spec.Containers = []corev1.Container{{Name: "node", Resources: mem("4Gi")}, {Name: "golang", Resources: mem("4Gi")}, {Name: "w", Resources: mem("256Mi")}}
+		p.Spec.Containers = []corev1.Container{{Name: "node", Image: "node", Resources: mem("4Gi")}, {Name: "golang", Image: "golang", Resources: mem("4Gi")}, {Name: "w", Image: "busybox", Resources: mem("256Mi")}}
 		p.Status.Phase = corev1.PodRunning
 		if _, err := k.client.CoreV1().Pods("launchway-steps").Create(context.Background(), p, metav1.CreateOptions{}); err != nil {
 			t.Fatal(err)

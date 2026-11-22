@@ -22,7 +22,7 @@ func runPodObj(k *Kubernetes, runID, owner string, age time.Duration) *corev1.Po
 		Name: podName(runID, owner), Namespace: "launchway-steps",
 		CreationTimestamp: metav1.NewTime(time.Now().Add(-age)),
 		Labels:            map[string]string{labelManaged: "launchway", labelRun: runID, labelOwner: owner},
-	}}
+	}, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "main", Image: "docker.io/library/alpine:3.22"}}}}
 }
 
 func has(t *testing.T, k *Kubernetes, runID, owner string) bool {

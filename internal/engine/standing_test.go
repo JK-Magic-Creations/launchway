@@ -68,6 +68,11 @@ func inspectedRunWith(t *testing.T, e *Engine, defaultBranch bool, found map[str
 		if j == nil {
 			break
 		}
+		for _, c := range j.Containers {
+			if strings.TrimSpace(c.Image) == "" {
+				t.Fatalf("the run's container %s has no image: the API server would refuse the whole run's pod", c.Name)
+			}
+		}
 		if _, err := e.Start(j.LeaseID); err != nil {
 			t.Fatal(err)
 		}
