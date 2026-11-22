@@ -141,8 +141,9 @@ other way round in one commit. Roll back in the reverse order.
 back, by any method. Nothing was changed that the previous release cannot read. No manual step.
 
 **After sealing**: the previous release cannot read sealed values (sign-in state, webhook secrets, SSH host keys). It
-starts, and says it cannot read them (for example "the key must be 32 bytes, hex encoded"); sign-in, webhook
-deliveries and Git run tokens fail. Nothing is corrupted. To go back for real, restore the dump taken before the
+refuses to start and says why (the gate saw "the SSH host keys: the ed25519 host key: cannot be opened with this
+server's key (was the sealing key changed?): not a sealed value"; an earlier build that did start failed sign-in,
+webhook deliveries and Git run tokens instead). Nothing is corrupted: it only reads. To go back for real, restore the dump taken before the
 upgrade, which the gate tests end to end:
 
 ```sh
@@ -169,7 +170,7 @@ cannot be read without it.
 | `YOUR INSTALLATION IS NOT ENCRYPTED AT REST YET: deploy the chart that belongs to this image ...` | the new image is running under the previous chart: deploy the chart, then restart the servers |
 | `this server was rendered by an older chart: encryption and network settings from the new chart are not applied yet` | the same cause |
 | `stored secrets are still in the clear and servers of an older release may be running: sealing them waits` | normal during a rollout; sealing starts 45 seconds after the last old server stops |
-| `the key must be 32 bytes, hex encoded` (in the previous release's log) | you rolled back after sealing: restore the dump, above |
+| `cannot be opened with this server's key (was the sealing key changed?): not a sealed value` (in the previous release's log) | you rolled back after sealing: restore the dump, above |
 | `this cluster already has network policy in place: ...` | let one system be the authority; the installer left the chart's off |
 | `Network policy: WARNING ...` from `launchway doctor network` | the same, for an installation that exists |
 | `the Secret X exists but has no "root.key" key` | a Secret you made under the name the chart uses has no such key: add it, or delete the Secret so a new one is made |
