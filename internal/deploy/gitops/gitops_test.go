@@ -727,3 +727,26 @@ func TestCanceledContext(t *testing.T) {
 		t.Fatal("the server moved")
 	}
 }
+
+// The commit of a deployment carries, besides the Launchway-Deployment trailer (unchanged), the Flight, the run and the
+// environment it was made for, so that something watching the repository can tie it to them; and a retry still finds it
+// by the deployment trailer alone.
+func TestTheCommitCarriesTheFlightRunAndEnvironmentTrailers(t *testing.T) {
+	ctx := context.Background()
+	s := newServer(t)
+	r, _ := s.repo(t)
+	cs := deploy("dep_abc", "2.0")
+	cs.Flight, cs.Run, cs.Environment = "shop", "run_42", "prod"
+	res, err := r.Apply(ctx, cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "Deploy webapp 2.0 to prod\n\nRequested by the release run.\n\nLaunchway-Deployment: dep_abc\nLaunchway-Flight: shop\nLaunchway-Run: run_42\nLaunchway-Environment: prod"
+	if got := s.message(res.Commit); got != want {
+		t.Fatalf("message = %q, want %q", got, want)
+	}
+	r2, _ := s.repo(t)
+	if found, err := r2.Find(ctx, "dep_abc"); err != nil || found != res.Commit {
+		t.Fatalf("the deployment's commit is not found by its trailer: %q %v", found, err)
+	}
+}

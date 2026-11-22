@@ -83,9 +83,13 @@ type FileEdit struct {
 
 // ChangeSet is one deployment's change: one commit touching every file.
 type ChangeSet struct {
-	Deployment string     // e.g. dep_abc; written as the trailer "Launchway-Deployment: dep_abc"
-	Message    string     // subject, blank line, body; the trailer is added
-	Files      []FileEdit // applied in order; the same path may appear twice
+	Deployment string // e.g. dep_abc; written as the trailer "Launchway-Deployment: dep_abc"
+	// Flight, Run and Environment are written as the trailers "Launchway-Flight:", "Launchway-Run:" and
+	// "Launchway-Environment:" (each only when set), so that something watching the repository can tie a commit
+	// to the Flight, the run and the environment that made it.
+	Flight, Run, Environment string
+	Message                  string     // subject, blank line, body; the trailer is added
+	Files                    []FileEdit // applied in order; the same path may appear twice
 }
 
 type ApplyResult struct {
@@ -122,6 +126,18 @@ func (e *ConflictError) Error() string {
 		return "the revert conflicts with later changes on the branch"
 	}
 	return "the revert conflicts with later changes to " + strings.Join(e.Files, ", ")
+}
+
+// extraTrailers is the lines after the Launchway-Deployment trailer that say which Flight, run and environment the
+// commit belongs to, each with its own line break in front; the deployment's own trailer is unchanged.
+func (cs ChangeSet) extraTrailers() string {
+	var b strings.Builder
+	for _, t := range [][2]string{{"Launchway-Flight: ", cs.Flight}, {"Launchway-Run: ", cs.Run}, {"Launchway-Environment: ", cs.Environment}} {
+		if v := strings.TrimSpace(strings.NewReplacer("\n", " ", "\r", " ").Replace(t[1])); v != "" {
+			b.WriteString("\n" + t[0] + v)
+		}
+	}
+	return b.String()
 }
 
 // Trailer keys.
@@ -195,7 +211,7 @@ func (r *Repo) Apply(ctx context.Context, cs ChangeSet) (ApplyResult, error) {
 			r.logf("The files in %s already hold these values; nothing to commit", r.Branch)
 			return ApplyResult{Commit: tip}, nil
 		}
-		msg := buildMessage(cs.Message, "", deploymentKey+cs.Deployment)
+		msg := buildMessage(cs.Message, "", deploymentKey+cs.Deployment+cs.extraTrailers())
 		commit, err := r.commit(ctx, msg, false)
 		if err != nil {
 			r.discard(ctx)

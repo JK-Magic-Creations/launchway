@@ -312,6 +312,7 @@ func (s *Service) makeMerge(ctx context.Context, g gitRunner, p PullRequest, met
 			msg = ExpandTemplate(set.MergeTemplate, p, in.RepoPath)
 		}
 		args := append([]string{"commit-tree", tree}, parents...)
+		msg = withLaunchwayTrailers(msg, p.Body)
 		return g.out(ctx, append(args, "-m", strings.TrimRight(msg, "\n")+"\n")...)
 	case MethodRebase:
 		return s.rebase(ctx, g, base, head, in.Actor)
@@ -671,4 +672,25 @@ func (s *Service) Sweep(ctx context.Context) {
 	for _, c := range rows {
 		s.autoMerge(ctx, c.RepoID, c.ID)
 	}
+}
+
+// launchwayTrailers are the trailers a write-back pull request carries in its body so that the commit that lands it
+// can be tied to the deployment, its Flight, run and environment.
+var launchwayTrailers = []string{"Launchway-Deployment: ", "Launchway-Flight: ", "Launchway-Run: ", "Launchway-Environment: "}
+
+// withLaunchwayTrailers adds to a merge message the Launchway trailers of the pull request's body that it does not
+// already hold, in a block after a blank line, so that the merge commit of a write-back pull request carries them.
+func withLaunchwayTrailers(msg, body string) string {
+	var add []string
+	for _, line := range strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n") {
+		for _, k := range launchwayTrailers {
+			if strings.HasPrefix(line, k) && !strings.Contains(msg, line) {
+				add = append(add, line)
+			}
+		}
+	}
+	if len(add) == 0 {
+		return msg
+	}
+	return strings.TrimRight(msg, "\n") + "\n\n" + strings.Join(add, "\n") + "\n"
 }

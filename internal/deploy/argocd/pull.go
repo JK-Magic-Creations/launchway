@@ -48,7 +48,7 @@ func (a *Agent) landPull(ctx context.Context, job *engine.Job, log func(string, 
 		return "", errors.New("this deploy runner cannot open pull requests: it has no way to reach the server")
 	}
 	subject, _, _ := strings.Cut(strings.TrimSpace(d.Message), "\n")
-	body := strings.TrimSpace(d.Message) + "\n\nLaunchway-Deployment: " + d.Deployment + "\n\nOpened by the deploy step of run #" + fmt.Sprint(job.RunNumber) + " of " + job.Project + "."
+	body := strings.TrimSpace(d.Message) + "\n\nLaunchway-Deployment: " + d.Deployment + "\nLaunchway-Flight: " + job.Project + "\nLaunchway-Run: " + job.RunID + "\nLaunchway-Environment: " + d.Environment + "\n\nOpened by the deploy step of run #" + fmt.Sprint(job.RunNumber) + " of " + job.Project + "."
 	st, err := a.Pulls.Pull(ctx, PullCall{Token: d.WriteBack.Token, Op: "open", Title: subject, Body: body})
 	if err != nil {
 		return "", fmt.Errorf("opening the pull request: %w", err)

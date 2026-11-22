@@ -202,15 +202,15 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		return nil, err
 	}
 	editFor := func(c engine.DeployChange) gitops.FileEdit { return fileEdit(d, c, log) }
-	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
+	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message, Flight: job.Project, Run: job.RunID, Environment: d.Environment}
 	for _, c := range d.Changes {
 		cs.Files = append(cs.Files, editFor(c))
 	}
 	var res gitops.ApplyResult
 	var pins []pinned
 	if len(pl.manifest) > 0 && len(pl.values) > 0 {
-		mcs := gitops.ChangeSet{Deployment: d.Deployment + "-pin", Message: d.Message + "\n\n(first of two commits: the application's own manifest; the values follow once the cluster shows it)"}
-		vcs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
+		mcs := gitops.ChangeSet{Flight: job.Project, Run: job.RunID, Environment: d.Environment, Deployment: d.Deployment + "-pin", Message: d.Message + "\n\n(first of two commits: the application's own manifest; the values follow once the cluster shows it)"}
+		vcs := gitops.ChangeSet{Flight: job.Project, Run: job.RunID, Environment: d.Environment, Deployment: d.Deployment, Message: d.Message}
 		for _, c := range pl.manifest {
 			mcs.Files = append(mcs.Files, editFor(c))
 		}
