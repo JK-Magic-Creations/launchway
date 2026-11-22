@@ -13,7 +13,6 @@ import type { Approvals } from "../live";
 import { navigate, onLink, replace, usePath } from "../router";
 import { DoBarButton } from "./DoBarButton";
 import { ExplainerContext, type Explainer } from "./explainer";
-import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
 import { SideNav } from "./SideNav";
 import { shortcutOn } from "./prefs";
@@ -26,7 +25,8 @@ import { currentViewTitle, onViewTitle } from "../urlState";
 // The table that says which page a path opens is a chunk of its own, with the pages it names: the first screen needs only the shell.
 const PageFor = lazy(() => import("../nav/pages").then((m) => ({ default: m.PageFor })));
 
-// The finder and the Do bar load when first opened.
+// The finder, the area launcher and the Do bar load when first opened.
+const Launcher = lazy(() => import("./Launcher").then((m) => ({ default: m.Launcher })));
 const Shortcuts = lazy(() => import("./Shortcuts"));
 const DoBar = lazy(() => import("./DoBar").then((m) => ({ default: m.DoBar })));
 const Guide = lazy(() => import("./Guide").then((m) => ({ default: m.Guide }))); // the first load does not carry the Guide's text
@@ -189,7 +189,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
       <TabBar ctx={ctx} on={area} needs={badN + warnN} onAreas={() => setLayer("areas")} />
       {layer === "do" && <Suspense fallback={null}><DoBar ctx={ctx} projects={inst.projects} onClose={() => setLayer(null)} /></Suspense>}
       {layer === "keys" && <Suspense fallback={null}><Shortcuts onClose={() => setLayer(null)} /></Suspense>}
-      {layer === "areas" && <Launcher ctx={ctx} onClose={() => setLayer(null)} />}
+      {layer === "areas" && <Suspense fallback={null}><Launcher ctx={ctx} onClose={() => setLayer(null)} /></Suspense>}
     </ExplainerContext.Provider>
   );
 }

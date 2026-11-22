@@ -71,7 +71,7 @@ func (c *cmd) endFinishedAttempt(leaseID string, l leaseRef, res Result) error {
 // keepUsage records what the attempt used, with the step's result. A step
 // that was never run (refused, waiting, lost) has none.
 func (c *cmd) keepUsage(l leaseRef, res Result) error {
-	if !c.e.knows(schemaUsage) {
+	if !c.e.knows(schemaSizing) {
 		return nil
 	}
 	if res.Usage == nil && memoryKilled(res) {
@@ -96,7 +96,7 @@ func (c *cmd) keepUsage(l leaseRef, res Result) error {
 // stepUsages returns, per step, the usage of its latest attempt that has one.
 func (e *Engine) stepUsages(runID string) (map[string]*StepUsage, error) {
 	out := map[string]*StepUsage{}
-	if !e.knows(schemaUsage) {
+	if !e.knows(schemaSizing) {
 		return out, nil
 	}
 	rows, err := store.StepUsages(e.db, runID)
@@ -120,7 +120,7 @@ func usageView(r store.UsageRow) *StepUsage {
 // keepSizing records, as a step attempt is handed out, where its numbers came
 // from, so that the run page can say it while the step runs and after.
 func (c *cmd) keepSizing(step string, attempt int, sz *Sizing) {
-	if sz == nil || !c.e.knows(schemaUsage) {
+	if sz == nil || !c.e.knows(schemaSizing) {
 		return
 	}
 	if err := store.SaveStepSizing(c.tx, c.st.ID, step, attempt, sz.Source, sz.Runs, c.now); err != nil {
@@ -185,7 +185,7 @@ func (e *Engine) RunUsage(runID, step string) ([]StepUsageRecord, error) {
 	if _, err := e.State(runID); err != nil {
 		return nil, err
 	}
-	if !e.knows(schemaUsage) {
+	if !e.knows(schemaSizing) {
 		return out, nil
 	}
 	rows, err := store.StepUsages(e.db, runID)

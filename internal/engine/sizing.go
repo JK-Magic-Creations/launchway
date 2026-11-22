@@ -141,6 +141,9 @@ func (c *cmd) autoSize(def *pipeline.Step, ct *pipeline.Container, orig *pipelin
 	if def.Resources != nil {
 		declared = *def.Resources
 	}
+	if !c.e.knows(schemaSizing) {
+		return Sizing{Source: SizingDefault} // a database from before the sizing columns: nothing is learned
+	}
 	if memoryDeclared(def, declared, orig) {
 		return Sizing{Source: SizingDeclared}
 	}
@@ -199,7 +202,7 @@ func (c *cmd) autoSize(def *pipeline.Step, ct *pipeline.Container, orig *pipelin
 // retry, and has then recorded the attempt as failed.
 func (c *cmd) memoryRetry(stepID string, s *StepState, p *Payload, res Result) bool {
 	def := c.st.Pipeline.Step(stepID)
-	if def == nil || c.st.CancelRequested || !memoryKilled(res) || def.ResourceKind() == "" || !c.e.knows(schemaResources) || !c.e.knows(schemaUsage) {
+	if def == nil || c.st.CancelRequested || !memoryKilled(res) || def.ResourceKind() == "" || !c.e.knows(schemaResources) || !c.e.knows(schemaSizing) {
 		return false
 	}
 	pol, err := c.e.loadPolicy(c.tx)
