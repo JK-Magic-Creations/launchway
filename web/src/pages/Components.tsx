@@ -6,10 +6,9 @@ import { navigate } from "../router";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo } from "../components/Security";
 import { terms } from "../terms";
+import { params, refName } from "../refs";
 
-function params() { return new URLSearchParams(location.search); }
 
-function refName(ref: string): string { return ref.replace(/^refs\/(heads|tags)\//, ""); }
 
 // ComponentsPage finds the runs whose SBOMs list a component: which
 // projects use a library, and at which version.

@@ -4,6 +4,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { bytes } from "../components/Security";
 import { CoverageHowTo, Delta, MEASURES, Meter, MiniBar, level, measureLabel, pct, ratio, type Measure } from "../components/Coverage";
 import { terms } from "../terms";
+import { refName } from "../refs";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 const PAGE = 50;
@@ -13,7 +14,6 @@ const FORMAT: Record<string, string> = {
   "clover": "Clover XML", "istanbul-json-summary": "Istanbul json-summary", "mixed": "several formats",
 };
 
-function refName(ref: string): string { return ref.replace(/^refs\/(heads|tags)\//, ""); }
 
 // CoverageTab shows how much of the code the run's tests ran: the totals
 // against the previous run and the default branch, each step against its

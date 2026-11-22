@@ -317,7 +317,7 @@ learn-check: docs/node_modules
 	node scripts/docs/render-diagrams.mjs --check
 	node scripts/docs/build-learn.mjs --check
 
-.PHONY: docs docs-serve docs-roadmap docs-diagrams docs-reference
+.PHONY: docs docs-serve docs-matrix docs-roadmap docs-diagrams docs-reference
 
 # Renders every Mermaid diagram of the built site in a headless browser, light
 # and dark (run make docs first). Needs a Chromium: `cd docs && npx
@@ -332,6 +332,10 @@ docs-reference: build
 	go test -count=1 -run 'Reference|DocsEvents' ./internal/pipeline/ ./internal/config/ ./internal/api/ ./internal/engine/ ./internal/policy/
 	scripts/docs/check-pipeline-examples.sh docs/reference/pipeline.md bin/launchway
 	for f in $$(grep -l '^<!-- try -->' docs/learn/*.md docs/learn/*/*.md); do scripts/docs/check-pipeline-examples.sh $$f bin/launchway || exit 1; done
+
+# Regenerates docs/guide/outside-host-matrix.md from the host providers' declarations.
+docs-matrix:
+	go test ./internal/forge/hosts -run TestMatrixPageMatchesDeclarations -update
 
 # Rebuilds docs/public/roadmap.html and docs/roadmap-list.md from docs/roadmap/.
 docs-roadmap:

@@ -420,6 +420,7 @@ var rows = []Row{
 	{Route: "GET /{owner}/{name}/info/refs", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication"},
 	{Route: "POST /{owner}/{name}/git-upload-pack", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication"},
 	{Route: "POST /{owner}/{name}/git-receive-pack", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication"},
+	{Route: "GET /api/v1/outside-host-matrix", MCP: "get_outside_host_matrix", CLI: "repos host matrix", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/outside-hosts", MCP: "list_outside_hosts", CLI: "repos host list", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/outside-hosts", MCP: "add_outside_host", CLI: "repos host add", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/outside-hosts/{name}", MCP: "remove_outside_host", CLI: "repos host remove", Terraform: "", Status: Equal, Reason: ""},

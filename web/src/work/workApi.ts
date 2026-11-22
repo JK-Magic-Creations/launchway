@@ -163,7 +163,6 @@ export const workApi = {
   sprints: (scope: string) => call<{ sprints: Sprint[] }>("GET", `${B}/sprints?${sc(scope)}`).then((r) => r.sprints),
   sprint: (id: string) => call<Sprint>("GET", `${B}/sprints/${enc(id)}`),
   createSprint: (scope: string, b: SprintIn) => call<Sprint>("POST", `${B}/sprints`, { ...b, scope }),
-  updateSprint: (id: string, b: SprintIn) => call<Sprint>("PATCH", `${B}/sprints/${enc(id)}`, b),
   startSprint: (id: string) => call<Sprint>("POST", `${B}/sprints/${enc(id)}/start`, {}),
   completeSprint: (id: string, carryTo: string) => call<Sprint>("POST", `${B}/sprints/${enc(id)}/complete`, { carry_to: carryTo }),
   burndown: (id: string) => call<Burndown>("GET", `${B}/sprints/${enc(id)}/burndown`),

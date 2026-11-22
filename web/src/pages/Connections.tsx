@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { PageHead } from "../kit/layout";
 import { Empty, ErrorBox } from "../components/ui";
 import { CheckInput, SelectInput, TextInput } from "../components/ConfigForm";
@@ -8,6 +8,8 @@ import { outsideApi, type Connection, type ConnectionTest } from "../outsideApi"
 
 // Connections to outside Git hosts: a narrow service-account credential, kept as a reference to a secret, through
 // which a Flight keeps its code on a host Launchway does not own. Add one, test what its token may do, remove it.
+
+const HostMatrix = lazy(() => import("./HostMatrix"));
 
 const KINDS = HOST_KINDS.map((k) => ({ value: k.value, label: k.name }));
 
@@ -27,7 +29,18 @@ export function ConnectionsPage() {
         </ul>
       )}
       <AddConnection onAdded={reload} />
+      <Capabilities />
     </div>
+  );
+}
+
+function Capabilities() {
+  const [open, setOpen] = useState(false);
+  return (
+    <section>
+      <button type="button" className="btn" aria-expanded={open} onClick={() => setOpen(!open)}>What each host can do</button>
+      {open && <Suspense fallback={null}><HostMatrix /></Suspense>}
+    </section>
   );
 }
 

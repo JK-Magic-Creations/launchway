@@ -158,6 +158,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
 | `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
+| `GET /api/v1/outside-host-matrix` | `get_outside_host_matrix` | `repos host matrix` | — | equal |
 | `GET /api/v1/outside-hosts` | `list_outside_hosts` | `repos host list` | — | equal |
 | `POST /api/v1/outside-hosts` | `add_outside_host` | `repos host add` | — | equal |
 | `DELETE /api/v1/outside-hosts/{name}` | `remove_outside_host` | `repos host remove` | — | equal |

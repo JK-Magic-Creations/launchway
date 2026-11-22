@@ -18,6 +18,8 @@ import (
 
 func (s *Server) outsideHostRoutes() []route {
 	return []route{
+		// The matrix is the product's own declarations: no connection, no secret, so any signed-in user may read it.
+		{"GET /api/v1/outside-host-matrix", signedIn, "", s.outsideHostMatrix},
 		{"GET /api/v1/outside-hosts", administer, "", s.listOutsideHosts},
 		{"POST /api/v1/outside-hosts", administer, "outside_host.create", s.createOutsideHost},
 		{"DELETE /api/v1/outside-hosts/{name}", administer, "outside_host.delete", s.deleteOutsideHost},
@@ -56,6 +58,12 @@ func (s *Server) failHosts(w http.ResponseWriter, err error) {
 		// A refusal from the host is shown in the host's words with the credential already removed.
 		writeErr(w, http.StatusBadGateway, err.Error())
 	}
+}
+
+// outsideHostMatrix answers what each host kind can do, generated from the
+// providers' declarations. It needs no hosts service.
+func (s *Server) outsideHostMatrix(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, hosts.Matrix())
 }
 
 func (s *Server) listOutsideHosts(w http.ResponseWriter, r *http.Request) {

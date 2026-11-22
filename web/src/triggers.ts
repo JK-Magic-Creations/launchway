@@ -109,7 +109,6 @@ export const triggersApi = {
   createServiceAccount: (a: { name: string; role: Role; description: string }) => call<ServiceAccount>("POST", "/api/v1/service-accounts", a),
   updateServiceAccount: (name: string, change: { role?: Role; disabled?: boolean }) => call<ServiceAccount>("PATCH", `/api/v1/service-accounts/${enc(name)}`, change),
   deleteServiceAccount: (name: string) => call<void>("DELETE", `/api/v1/service-accounts/${enc(name)}`),
-  serviceTokens: (name: string) => call<Token[]>("GET", `/api/v1/service-accounts/${enc(name)}/tokens`),
   createServiceToken: (name: string, t: NewToken) => call<Token & { token: string }>("POST", `/api/v1/service-accounts/${enc(name)}/tokens`, t),
   revokeToken: (id: string) => call<void>("DELETE", `/api/v1/tokens/${enc(id)}`),
   allTokens: () => call<Token[]>("GET", "/api/v1/admin/tokens"),

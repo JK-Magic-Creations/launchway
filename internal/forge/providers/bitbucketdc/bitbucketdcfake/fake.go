@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -305,7 +306,9 @@ func (h *Host) File(branch, path string) ([]byte, bool) {
 }
 
 func atoi(s string) int {
-	n := 0
-	fmt.Sscanf(s, "%d", &n)
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
 	return n
 }

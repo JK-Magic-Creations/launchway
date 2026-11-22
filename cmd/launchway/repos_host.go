@@ -14,6 +14,7 @@ const reposHostUsage = `Keeping code on another Git host (administrators; see th
                          [--base-url URL] [--owner O]...   install with --base-url); --owner limits which owners or
                          [--credential-env NAME | --credential-file PATH]   groups Flights may use
                          [--webhook-secret-env NAME | --webhook-secret-file PATH]
+  launchway repos host matrix                              what each host kind can do (any signed-in user): native, emulated or none, with reasons
   launchway repos host remove NAME                         forget a connection no Flight uses
   launchway repos host test NAME                           who the credential is, token expiry, which permissions it has and lacks
   launchway repos host repositories NAME [--query TEXT]    the repositories the credential reaches
@@ -34,7 +35,7 @@ type outsideHostView struct {
 
 func (cl *client) reposHost(args []string) error {
 	if len(args) == 0 {
-		return usageErr("launchway repos host list|add|remove|test|repositories")
+		return usageErr("launchway repos host list|matrix|add|remove|test|repositories")
 	}
 	switch args[0] {
 	case "list":
@@ -52,6 +53,8 @@ func (cl *client) reposHost(args []string) error {
 			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", c.Name, c.Kind, c.BaseURL, c.Credential, strings.Join(c.Owners, ","))
 		}
 		return tw.Flush()
+	case "matrix":
+		return cl.reposHostMatrix()
 	case "remove":
 		if len(args) != 2 {
 			return usageErr("launchway repos host remove NAME")
@@ -199,4 +202,27 @@ func (cl *client) reposOutside(args []string) error {
 		return nil
 	}
 	return usageErr("unknown command repos outside %s", args[0])
+}
+
+// reposHostMatrix prints, per host kind, the features that are not native, with the reason and what to do instead.
+func (cl *client) reposHostMatrix() error {
+	var m struct {
+		Features []struct{ Key, Title string } `json:"features"`
+		Kinds    []struct {
+			Kind, Label  string
+			Capabilities map[string]struct{ Support, Reason, Workaround string } `json:"capabilities"`
+		} `json:"kinds"`
+	}
+	if err := cl.call("GET", "/api/v1/outside-host-matrix", nil, &m); err != nil {
+		return err
+	}
+	for _, k := range m.Kinds {
+		fmt.Fprintf(cl.out, "%s (%s)\n", k.Label, k.Kind)
+		for _, f := range m.Features {
+			if d := k.Capabilities[f.Key]; d.Support != "native" {
+				fmt.Fprintf(cl.out, "  %-8s %s: %s Instead: %s\n", d.Support, f.Title, d.Reason, d.Workaround)
+			}
+		}
+	}
+	return nil
 }

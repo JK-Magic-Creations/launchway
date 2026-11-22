@@ -344,6 +344,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"stop_mirroring":                 {map[string]any{"repository": "acme/x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"change_mirror":                  {map[string]any{"repository": "acme/x", "mirror_id": "mir_x", "action": "pause"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"remove_connection":              {map[string]any{"name": "old"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"get_outside_host_matrix":        {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_outside_hosts":             {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"add_outside_host":               {map[string]any{"name": "gh", "kind": "github", "credential_env": "GH_TOKEN"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"remove_outside_host":            {map[string]any{"name": "gh"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},

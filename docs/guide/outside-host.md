@@ -4,6 +4,8 @@ Hosting repositories in Launchway is optional. A Flight (codebase) can keep its 
 
 This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `bitbucket-datacenter` (the self-managed Bitbucket product: a separate API, base address required) `azuredevops` (the cloud service and the self-managed server product) `codecommit` (AWS CodeCommit, signed requests and IAM) and `plain` (any Git server over HTTPS, with no host API). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Bitbucket Data Center](#bitbucket-data-center) [Azure DevOps](#azure-devops) [AWS CodeCommit](#aws-codecommit) and [Any Git server](#any-git-server) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
 
+The table of what each kind provides natively, by emulation or not at all, with the reasons and workarounds, is the generated page [What each outside host can do](outside-host-matrix.md).
+
 ## What works
 
 | You get | How | Needs |

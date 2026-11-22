@@ -3994,6 +3994,29 @@ paths:
                 - organize
             x-launchway-access: signed-in
             x-launchway-audit: folder.update
+    /api/v1/outside-host-matrix:
+        get:
+            description: 'What each outside Git host kind can do, generated from the providers'' own declarations (the page [What each outside host can do](/guide/outside-host-matrix) is generated from the same data): features (key and title, in a fixed order) and kinds (kind, label, capabilities by feature with support native, emulated or none plus reason and workaround, and additions). Open to any signed-in user because it holds no connection or secret.'
+            operationId: get_api_v1_outside_host_matrix
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What each outside Git host kind can do, generated from the providers'' own declarations (the page [What each outside host can do](/guide/outside-host-matrix) is generated from the same data): features (key and title, in a fixed order) and kinds (kind, label, capabilities by feature with support native, emulated or none plus reason and workaround, and additions).'
+            tags:
+                - outside-host-matrix
+            x-launchway-access: signed-in
     /api/v1/outside-hosts:
         get:
             description: 'The connections to outside Git hosts: name, kind, base_url, credential (where it is read from, never the token), webhook_secret (likewise), owners, enabled and capabilities (what the host can and cannot do, each with the reason and what to do instead). 404 feature_off when the server has none.'

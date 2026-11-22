@@ -925,6 +925,30 @@
       "rule": "level-organization",
       "contains": "allowed organizations",
       "why": "An outside host's own word for the accounts that own repositories."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "level-organization",
+      "contains": "owner of a personal access token",
+      "why": "Quoting the providers' declarations: an outside host's own word for the accounts that own repositories. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:deploy/4",
+      "contains": "write_back.merge: auto",
+      "why": "The write-back setting is a configuration key, quoted exactly in a provider's declaration. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:queue/3",
+      "contains": "can queue",
+      "why": "An outside host's own merge queue and merge train, quoted from its provider's declaration. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:project",
+      "contains": "project",
+      "why": "An outside host's own word for a repository or its settings, quoted from its provider's declaration (a Launchway project is a Flight everywhere else). The page is generated."
     }
   ]
 }

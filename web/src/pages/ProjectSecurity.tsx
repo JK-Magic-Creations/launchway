@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProjectHead } from "./PipelineChrome";
 import { api, ApiError, type FindingView, type ProjectSecurity, type SecurityRun, type Severity } from "../api";
 import { ago, shortSha } from "../format";
@@ -7,10 +7,10 @@ import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo, SEVERITIES, SeverityLegend, serious, seriousLabel, severityLabel, severityRank } from "../components/Security";
 import { FindingRow } from "./RunSecurity";
 import { terms } from "../terms";
+import { barX, layout, niceMax, seg, useWidth } from "../chartKit";
+import { params, refName } from "../refs";
 
-function params() { return new URLSearchParams(location.search); }
 
-function refName(ref: string): string { return ref.replace(/^refs\/(heads|tags)\//, ""); }
 
 // ProjectSecurityPage shows a project's findings over its last runs of a
 // branch, and the findings still open in the latest, oldest first within
@@ -181,51 +181,18 @@ function OpenSince({ f, at }: { f: FindingView; at?: number }) {
 
 const H = 170, PAD_L = 40, PAD_B = 22, PAD_T = 8;
 
-interface Layout { w: number; bar: number; step: number }
 
-function layout(n: number, width: number): Layout {
-  const step = Math.max(Math.min((width - PAD_L - 8) / Math.max(n, 1), 110), 10);
-  const bar = Math.max(Math.min(step * 0.62, 40), 6);
-  return { w: PAD_L + n * step + 8, bar, step };
-}
 
-function barX(l: Layout, i: number) { return PAD_L + i * l.step + (l.step - l.bar) / 2; }
 
-function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
-  const ref = useRef<HTMLDivElement>(null);
-  const [w, setW] = useState(800);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setW(el.clientWidth));
-    ro.observe(el);
-    setW(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w];
-}
 
-function niceMax(v: number): number {
-  if (v <= 4) return Math.max(Math.ceil(v / 2) * 2, 2);
-  const p = Math.pow(10, Math.floor(Math.log10(v)));
-  for (const m of [1, 1.2, 1.6, 2, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
-  return 10 * p;
-}
 
-/** A bar segment with a rounded end on top. */
-function seg(x: number, y: number, h: number, bar: number, cls: string, top: boolean) {
-  if (h <= 0) return null;
-  const r = top ? Math.min(4, h, bar / 2) : 0;
-  const d = `M${x},${y + h}V${y + r}${r ? `Q${x},${y} ${x + r},${y}` : ""}H${x + bar - r}${r ? `Q${x + bar},${y} ${x + bar},${y + r}` : ""}V${y + h}Z`;
-  return <path d={d} className={cls} />;
-}
 
 type Tip = { x: number; run: SecurityRun; text: string[] } | null;
 
 function SeverityChart({ runs }: { runs: SecurityRun[] }) {
   const [tip, setTip] = useState<Tip>(null);
   const [box, width] = useWidth();
-  const l = layout(runs.length, width);
+  const l = layout(runs.length, width, PAD_L);
   const max = niceMax(Math.max(...runs.map((r) => r.findings?.total ?? 0), 1));
   const plot = H - PAD_B - PAD_T;
   const w = l.w;

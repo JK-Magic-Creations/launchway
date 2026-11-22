@@ -103,6 +103,7 @@
         "guide/rollback-after-success",
         "guide/releases",
         "guide/outside-host",
+        "guide/outside-host-matrix",
         "guide/cut-a-release",
         "guide/promoting-releases",
         "guide/release-checklists",

@@ -16,6 +16,7 @@ func init() {
 		Register(Entry{
 			Kind:  kind,
 			Label: k.label,
+			Caps:  func() (forge.Capabilities, []forge.Addition) { return gitea.Capabilities(), gitea.Additions() },
 			New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 				p, err := gitea.New(c, g)
 				if err != nil {

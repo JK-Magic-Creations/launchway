@@ -10,6 +10,7 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindGitHub,
 		Label: "GitHub",
+		Caps:  func() (forge.Capabilities, []forge.Addition) { return github.Capabilities(), github.Additions() },
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := github.New(c, g)
 			if err != nil {

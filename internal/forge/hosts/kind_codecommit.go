@@ -10,6 +10,9 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindCodeCommit,
 		Label: "AWS CodeCommit",
+		Caps: func() (forge.Capabilities, []forge.Addition) {
+			return codecommit.Capabilities(), codecommit.Additions()
+		},
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := codecommit.New(c, g)
 			if err != nil {

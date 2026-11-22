@@ -5,6 +5,7 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { Badge, TestIcon, testDuration } from "../components/Tests";
 import "../debrief.css";
 import { terms } from "../terms";
+import { refName } from "../refs";
 
 // The Debrief of a run: what its tests say, in the order a person needs
 // them: the summary, what changed, the failures with what each expected and
@@ -14,7 +15,6 @@ import { terms } from "../terms";
 
 const pct = (n: number) => (Number.isInteger(n) ? `${n}%` : `${n.toFixed(1)}%`);
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
-const branchOf = (ref: string) => ref.replace(/^refs\/(heads|tags)\//, "");
 
 export function DebriefView({ runId, version, openCase }: { runId: string; version: string; openCase: (id: number) => void }) {
   const [d, setD] = useState<Debrief | null>(null);
@@ -51,7 +51,7 @@ function headline(d: Debrief): string {
   const s = d.summary, bad = s.failed + s.errored;
   if (bad === 0 && s.flaky === 0 && s.quarantined === 0) return `All ${s.passed} tests passed.`;
   if (bad === 0) return `${s.total} tests ran with no failures, with ${s.flaky > 0 ? `${s.flaky} flaky` : ""}${s.flaky > 0 && s.quarantined > 0 ? " and " : ""}${s.quarantined > 0 ? `${s.quarantined} quarantined` : ""}.`;
-  const base = d.change && d.change.newly_failing > 0 ? `; ${d.change.newly_failing} of them pass on ${branchOf(d.change.base.branch) || "the default branch"}` : "";
+  const base = d.change && d.change.newly_failing > 0 ? `; ${d.change.newly_failing} of them pass on ${refName(d.change.base.branch) || "the default branch"}` : "";
   return `${bad} of ${s.total} tests failed${base}.`;
 }
 
@@ -112,7 +112,7 @@ function Summary({ d }: { d: Debrief }) {
       <ResultBar d={d} />
       {c && (
         <div className="dchange">
-          <h3 className="h-xs">Against {branchOf(c.base.branch) || "the default branch"}, <Link href={`/runs/${c.base.id}?tab=tests`}>{terms().say("{run} #")}{c.base.number}</Link> ({shortSha(c.base.sha)})</h3>
+          <h3 className="h-xs">Against {refName(c.base.branch) || "the default branch"}, <Link href={`/runs/${c.base.id}?tab=tests`}>{terms().say("{run} #")}{c.base.number}</Link> ({shortSha(c.base.sha)})</h3>
           <ul>
             <li><strong className={c.newly_failing > 0 ? "t-bad" : ""}>{c.newly_failing}</strong> newly failing</li>
             <li><strong>{c.newly_passing}</strong> newly passing</li>

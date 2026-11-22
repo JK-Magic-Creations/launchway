@@ -23,6 +23,20 @@ afterEach(() => vi.unstubAllGlobals());
 const gh = { name: "acme-gh", kind: "github", credential: "env:ACME_GH_TOKEN", webhook_secret: "env:ACME_GH_HOOK", auth_kind: "token", owners: ["acme"], enabled: true };
 
 describe("the connections page", () => {
+  it("shows what each host can do from the server's matrix, only once asked", async () => {
+    const nat = { support: "native" }, none = { support: "none", reason: "The host has no such thing.", workaround: "Use the host's own page." };
+    serve((_m, u) => u.endsWith("/outside-host-matrix")
+      ? { body: { features: [{ key: "reviews", title: "Reviews" }], kinds: [{ kind: "acme", label: "Acme Git", capabilities: { reviews: none } }, { kind: "gh", label: "GitHub", capabilities: { reviews: nat } }] } }
+      : { body: { items: [] } });
+    const { container } = render(<ConnectionsPage />);
+    await screen.findByText("No connection yet");
+    expect(calls.some((c) => c.url.endsWith("/outside-host-matrix"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "What each host can do" }));
+    await screen.findByRole("columnheader", { name: "Acme Git" });
+    expect(screen.getByText("none")).toBeTruthy();
+    expect(screen.getByText(/Use the host's own page\./)).toBeTruthy();
+    await expectAccessible(container, { name: "host matrix" });
+  });
   it("tests a connection and lists what the token has and lacks, and never shows a token", async () => {
     serve((_m, u) => {
       if (u.endsWith("/test")) return { body: { connection: "acme-gh", report: { account: "svc-launchway", rate_remaining: 4000, repositories: 3, checks: [

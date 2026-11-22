@@ -521,6 +521,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/repositories/{owner}/{name}/stop-mirroring":    {"POST", "/api/v1/repositories/o/x/stop-mirroring", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	// Outside Git hosts: connections (admin), a Flight's outside repository (viewer reads, admin changes); with no hosts service all are 404 for an admin.
 	"POST /api/v1/outside-hosts/{name}/webhook":     {"POST", "/api/v1/outside-hosts/gh/webhook", `{}`, [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /api/v1/outside-host-matrix":               {"GET", "/api/v1/outside-host-matrix", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/outside-hosts":                     {"GET", "/api/v1/outside-hosts", "", [6]int{401, 403, 403, 403, 403, 404}},
 	"POST /api/v1/outside-hosts":                    {"POST", "/api/v1/outside-hosts", `{"name":"gh","kind":"github"}`, [6]int{401, 403, 403, 403, 403, 404}},
 	"DELETE /api/v1/outside-hosts/{name}":           {"DELETE", "/api/v1/outside-hosts/gh", "", [6]int{401, 403, 403, 403, 403, 404}},

@@ -11,6 +11,7 @@ import { EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useCrumbLabel } from "../nav/crumbs";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { refName } from "../refs";
 
 const LEVELS: { key: "critical" | "high" | "medium" | "low" | "unknown"; label: string }[] = [
   { key: "critical", label: "Critical" }, { key: "high", label: "High" }, { key: "medium", label: "Medium" }, { key: "low", label: "Low" }, { key: "unknown", label: "Unknown" },
@@ -49,7 +50,7 @@ export function ImageDetailPage({ digest }: { digest: string }) {
         <Sheet title="Where it came from">
           <dl className="kvlist">
             <dt>Digest</dt><dd><CopyValue value={digest} label="digest" keep={22} /></dd>
-            <dt>Built by</dt><dd><EntityLink kind="run" name={`${first.project} #${first.run_number}`} id={first.run_id} /> on {first.ref.replace(/^refs\/(heads|tags)\//, "")}</dd>
+            <dt>Built by</dt><dd><EntityLink kind="run" name={`${first.project} #${first.run_number}`} id={first.run_id} /> on {refName(first.ref)}</dd>
             <dt>Commit</dt><dd>{project?.last_run?.id === first.run_id && project.last_run.sha ? <Mono>{shortSha(project.last_run.sha)}</Mono> : <span className="faint">{terms().say("see the {run}")}</span>}</dd>
             <dt>When</dt><dd title={clock(first.created_at)}>{ago(first.created_at)}</dd>
             <dt>Tags</dt><dd>{tags.length ? tags.map((t) => <div key={t} className="mono">{t}</div>) : <span className="faint">none recorded</span>}</dd>

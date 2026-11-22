@@ -10,6 +10,7 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindGitLab,
 		Label: "GitLab",
+		Caps:  func() (forge.Capabilities, []forge.Addition) { return gitlab.Capabilities(), gitlab.Additions() },
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := gitlab.New(c, g)
 			if err != nil {

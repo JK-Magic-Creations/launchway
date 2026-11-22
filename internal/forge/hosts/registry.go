@@ -23,6 +23,10 @@ type Entry struct {
 	Kind forge.Kind
 	// Label is the host's name as a person says it.
 	Label string
+	// Caps is the provider's own declaration of what it can do and what it adds,
+	// read without a connection: the capability matrix is generated from it.
+	// Optional (a test double may omit it); every built-in kind sets it.
+	Caps func() (forge.Capabilities, []forge.Addition)
 	// New makes the provider of a connection (its value implements Prober).
 	New func(c forge.Connection, g *egress.Guard) (forge.Provider, error)
 	// Endpoints lists every address the connection will reach (API, upload,

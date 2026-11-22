@@ -10,6 +10,9 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindBitbucketDataCenter,
 		Label: "Bitbucket Data Center",
+		Caps: func() (forge.Capabilities, []forge.Addition) {
+			return bitbucketdc.Capabilities(), bitbucketdc.Additions()
+		},
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := bitbucketdc.New(c, g)
 			if err != nil {

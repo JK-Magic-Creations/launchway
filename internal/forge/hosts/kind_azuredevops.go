@@ -10,6 +10,9 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindAzureDevOps,
 		Label: "Azure DevOps",
+		Caps: func() (forge.Capabilities, []forge.Addition) {
+			return azuredevops.Capabilities(), azuredevops.Additions()
+		},
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := azuredevops.New(c, g)
 			if err != nil {

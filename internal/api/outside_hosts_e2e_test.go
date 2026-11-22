@@ -343,3 +343,33 @@ func TestOutsideFlightsWorkWithHostingOff(t *testing.T) {
 		t.Fatalf("hosting reported on: %v", me["hosting"])
 	}
 }
+
+// The matrix is read from the providers' declarations: every built-in kind with its reasons and workarounds, no secret,
+// and it needs no hosts service.
+func TestOutsideHostMatrixRoute(t *testing.T) {
+	rec := httptest.NewRecorder()
+	(&Server{}).outsideHostMatrix(rec, httptest.NewRequest("GET", "/api/v1/outside-host-matrix", nil))
+	if rec.Code != 200 {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var m hosts.MatrixView
+	if err := json.Unmarshal(rec.Body.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Features) != len(forge.AllCapabilities) {
+		t.Fatalf("features %d", len(m.Features))
+	}
+	seen := map[forge.Kind]hosts.MatrixKind{}
+	for _, k := range m.Kinds {
+		seen[k.Kind] = k
+	}
+	for _, k := range []forge.Kind{forge.KindGitHub, forge.KindGitLab, forge.KindGitea, forge.KindForgejo, forge.KindBitbucket, forge.KindBitbucketDataCenter, forge.KindAzureDevOps, forge.KindCodeCommit, forge.KindPlain} {
+		mk, ok := seen[k]
+		if !ok || mk.Label == "" {
+			t.Fatalf("kind %s missing or unlabeled", k)
+		}
+		if d := mk.Capabilities[forge.CapRepoCreate]; d.Support == forge.None && (d.Reason == "" || d.Workaround == "") {
+			t.Fatalf("kind %s: a none without reason and workaround", k)
+		}
+	}
+}

@@ -42,7 +42,14 @@ export interface FlightOutside {
 
 const enc = encodeURIComponent;
 
+/** What each host kind can do, from the server's own declarations. */
+export interface HostMatrix {
+  features: { key: string; title: string }[];
+  kinds: { kind: string; label: string; capabilities: Record<string, Declaration> }[];
+}
+
 export const outsideApi = {
+  matrix: () => call<HostMatrix>("GET", "/api/v1/outside-host-matrix"),
   connections: () => call<{ items: Connection[] }>("GET", "/api/v1/outside-hosts").then((p) => p.items ?? []),
   add: (c: NewConnection) => call<Connection>("POST", "/api/v1/outside-hosts", c),
   remove: (name: string) => call<Connection>("DELETE", `/api/v1/outside-hosts/${enc(name)}`),

@@ -17,6 +17,9 @@ import (
 )
 
 func addOutsideHostTools(srv *mcp.Server, c *mcpCall) {
+	addTool(srv, c, &mcp.Tool{Name: "get_outside_host_matrix", Annotations: readOnly("What each outside Git host kind can do"),
+		Description: "Any signed-in user. For each outside Git host kind (github, gitlab, gitea, forgejo, bitbucket, bitbucket-datacenter, azuredevops, codecommit, plain) and each feature: native, emulated or none, with the reason and what to do instead, and what the host adds. Generated from the providers' own declarations; reveals no credential."},
+		mcpCallTimeout, getOutsideHostMatrix)
 	if !c.mayAdminister {
 		return
 	}
@@ -44,6 +47,12 @@ func addOutsideHostTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "detach_project_outside", Annotations: changes("Detach a Flight from an outside repository", true, true),
 		Description: "Administrators only. Stop using the outside connection for a Flight; its Git address is kept. Audited."},
 		mcpCallTimeout, detachProjectOutside)
+}
+
+func getOutsideHostMatrix(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ getStepResourcesIn) (hosts.MatrixView, error) {
+	var out hosts.MatrixView
+	err := c.apiJSON(ctx, "get_outside_host_matrix", http.MethodGet, "/api/v1/outside-host-matrix", nil, &out)
+	return out, err
 }
 
 func listOutsideHosts(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ getStepResourcesIn) (forge.Page[hosts.View], error) {

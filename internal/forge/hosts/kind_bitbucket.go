@@ -10,6 +10,7 @@ func init() {
 	Register(Entry{
 		Kind:  forge.KindBitbucket,
 		Label: "Bitbucket Cloud",
+		Caps:  func() (forge.Capabilities, []forge.Addition) { return bitbucket.Capabilities(), bitbucket.Additions() },
 		New: func(c forge.Connection, g *egress.Guard) (forge.Provider, error) {
 			p, err := bitbucket.New(c, g)
 			if err != nil {
