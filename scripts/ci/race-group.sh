@@ -15,6 +15,9 @@
 #   storage  internal/forge/storage  (its tests, split by name like api)
 #   forge    the other packages under internal/forge/
 #   rest     every other package     (split by package: shard i takes every SHARDS-th package)
+#   source   internal/source        (only for MODE=plain)
+# MODE=race (default) runs `go test -race -short`; MODE=plain runs `go test` as the pipeline does (no race
+# detector, no -short), for the PostgreSQL job, where a package's tests are too many for one job.
 # DRY_RUN=1 prints what would run. TIMEOUT (default 20m) is go test's per-package timeout.
 set -eu
 spec=${1:?usage: race-group.sh GROUP[:SHARD/SHARDS] [go test flags]}
@@ -34,12 +37,19 @@ case $shard$shards in
 esac
 [ "$shard" -ge 1 ] && [ "$shard" -le "$shards" ] || { echo "race-group: shard $shard of $shards is out of range" >&2; exit 2; }
 timeout=${TIMEOUT:-20m}
+mode=${MODE:-race}
+case $mode in
+race) flags='-race -short' ;;
+plain) flags='' ;;
+*) echo "race-group: MODE is race or plain, not '$mode'" >&2; exit 2 ;;
+esac
 
 all=$(go list ./... | grep -v '/internal/forge/storagespike$')
 case $group in
 api) pkgs=$(printf '%s\n' "$all" | grep '/internal/api$') ;;
 engine) pkgs=$(printf '%s\n' "$all" | grep '/internal/engine$') ;;
 storage) pkgs=$(printf '%s\n' "$all" | grep '/internal/forge/storage$') ;;
+source) pkgs=$(printf '%s\n' "$all" | grep '/internal/source$') ;;
 forge) pkgs=$(printf '%s\n' "$all" | grep '/internal/forge/' | grep -v '/internal/forge/storage$') ;;
 rest) pkgs=$(printf '%s\n' "$all" | grep -v -e '/internal/api$' -e '/internal/engine$' -e '/internal/forge/') ;;
 *)
@@ -50,9 +60,10 @@ esac
 
 run=
 case $group in
-api | engine | storage)
+api | engine | storage | source)
 	# Split one package's tests by name. -list needs the package built, which the run needs anyway.
-	names=$(go test -race -short -list '.' "$pkgs" | grep -E '^(Test|Fuzz|Example)' | LC_ALL=C sort | awk -v s="$shard" -v n="$shards" '(NR - 1) % n == s - 1')
+	# shellcheck disable=SC2086 # flags is a few words
+	names=$(go test $flags -list '.' "$pkgs" | grep -E '^(Test|Fuzz|Example)' | LC_ALL=C sort | awk -v s="$shard" -v n="$shards" '(NR - 1) % n == s - 1')
 	[ -n "$names" ] || { echo "race-group: no test in shard $spec" >&2; exit 2; }
 	run="^($(printf '%s\n' "$names" | paste -sd'|' -))\$"
 	echo "race-group: $spec: $(printf '%s\n' "$names" | wc -l | tr -d ' ') tests of $pkgs"
@@ -63,11 +74,11 @@ api | engine | storage)
 	echo "race-group: $spec: $(printf '%s\n' "$pkgs" | wc -l | tr -d ' ') packages"
 	;;
 esac
-echo "race-group: go test -race -short -timeout $timeout"
+echo "race-group: go test $flags -timeout $timeout"
 [ -z "${DRY_RUN:-}" ] || { printf '%s\n' "$pkgs"; [ -z "$run" ] || printf 'run %s\n' "$run" | cut -c1-200; exit 0; }
 if [ -n "$run" ]; then
-	# shellcheck disable=SC2086 # one package path per line, no spaces: word splitting is wanted
-	exec go test -race -short -count=1 -timeout "$timeout" -run "$run" "$@" $pkgs
+	# shellcheck disable=SC2086 # flags is a few words; one package path per line, no spaces
+	exec go test $flags -count=1 -timeout "$timeout" -run "$run" "$@" $pkgs
 fi
 # shellcheck disable=SC2086
-exec go test -race -short -count=1 -timeout "$timeout" "$@" $pkgs
+exec go test $flags -count=1 -timeout "$timeout" "$@" $pkgs
