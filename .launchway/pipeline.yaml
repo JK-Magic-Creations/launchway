@@ -178,12 +178,29 @@ steps:
     resources: { cpu: 500m, memory: 512Mi }
 
   # ---- the image ---------------------------------------------------------------------------
+  # The image is built from the sources alone. The workspace by now also holds the steps' caches (Go
+  # modules and build cache, npm) and node_modules, several gigabytes that the builder would never read
+  # but that would be copied out of the Sortie's pod with the build context and can pass its size limit.
+  image-context:
+    description: Set the sources apart for the image build
+    image: docker.io/library/golang:1.27
+    needs: [test, gate-pipeline, security-go, security-web]
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
+    run: |
+      rm -rf build/context && mkdir -p build/context
+      tar -cf - --exclude=./.git --exclude=./.cache --exclude=./build --exclude=./bin --exclude=./reports \
+        --exclude=./web/node_modules --exclude=./web/dist --exclude=./docs/node_modules \
+        --exclude=./docs/.vitepress/dist --exclude=./docs/.vitepress/cache . | tar -xf - -C build/context
+      du -sh build/context
+    resources: { cpu: 500m, memory: 512Mi }
+    timeout: 10m
+
   image:
     description: Build, scan, sign and push the Launchway image by digest
     kind: image
-    needs: [test, gate-pipeline, security-go, security-web]
-    context: .
-    file: Dockerfile            # builds the UI and the binary itself
+    needs: image-context
+    context: build/context
+    file: build/context/Dockerfile   # builds the UI and the binary itself
     build_args:
       VERSION:  { run: short_sha }
       REVISION: { run: sha }    # org.opencontainers.image.revision = the commit, never "unknown"
