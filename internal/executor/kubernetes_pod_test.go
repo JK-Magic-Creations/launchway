@@ -1,7 +1,11 @@
 package executor
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +88,7 @@ func TestKubePodRestrictedByDefault(t *testing.T) {
 			t.Fatalf("container %s should take the user from the pod: %+v", c.Name, sc)
 		}
 		m := mountsOf(c)
-		if m["/workspace"] != "workspace" || m["/launchway"] != "launchway" || m[stepHome] != "home" || m["/tmp"] != "tmp" {
+		if m["/workspace"] != "workspace" || m["/launchway"] != "launchway" || m[stepHomeVolume] != "home" || m["/tmp"] != "tmp" {
 			t.Fatalf("container %s: mounts %v", c.Name, m)
 		}
 		env := envOf(c)
@@ -168,5 +172,47 @@ func TestKubeSecuritySettingsChecked(t *testing.T) {
 	o := KubernetesOptions{Restricted: ptr(true)}
 	if err := o.setDefaults(); err != nil || *o.RunAsUser != 1000 || *o.RunAsGroup != 1000 {
 		t.Fatalf("restricted: true: %+v %v", o, err)
+	}
+}
+
+// The step user's home is a directory of its own, private to it: the volume under it is writable by everyone, which
+// tools such as platformdirs refuse as a home ("writable by another user").
+func TestHomeSetupMakesAPrivateHomeOwnedByTheStepUser(t *testing.T) {
+	if stepHome == stepHomeVolume || !strings.HasPrefix(stepHome, stepHomeVolume+"/") {
+		t.Fatalf("HOME %s must be a directory inside the volume %s, not the volume itself", stepHome, stepHomeVolume)
+	}
+	vol := t.TempDir()
+	if err := os.Chmod(vol, 0o777); err != nil { // what Kubernetes gives an emptyDir
+		t.Fatal(err)
+	}
+	home := filepath.Join(vol, "user")
+	for i := 0; i < 2; i++ { // and a second pass changes nothing
+		if out, err := exec.Command("sh", "-c", homeSetup(home)).CombinedOutput(); err != nil {
+			t.Fatalf("%v\n%s", err, out)
+		}
+	}
+	for _, d := range []string{home, home + "/.cache", home + "/.config", home + "/.local/share"} {
+		fi, err := os.Stat(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fi.Mode().Perm() != 0o700 {
+			t.Errorf("%s has mode %o, want 0700", d, fi.Mode().Perm())
+		}
+		if st, ok := fi.Sys().(*syscall.Stat_t); !ok || int(st.Uid) != os.Getuid() {
+			t.Errorf("%s is owned by another user than the one that made it", d)
+		}
+	}
+}
+
+func TestStepPodEnvironmentHasSaneHomeAndXDGDirectories(t *testing.T) {
+	env := map[string]string{}
+	for _, e := range homeEnv {
+		env[e.Name] = e.Value
+	}
+	for k, want := range map[string]string{"HOME": stepHome, "XDG_CACHE_HOME": stepHome + "/.cache", "XDG_CONFIG_HOME": stepHome + "/.config", "XDG_DATA_HOME": stepHome + "/.local/share"} {
+		if env[k] != want {
+			t.Errorf("%s=%q, want %q", k, env[k], want)
+		}
 	}
 }
