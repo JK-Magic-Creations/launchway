@@ -29,13 +29,13 @@ export const COMING: Record<string, Coming> = {
     appears: "A change under review appears here when a pull request starts a run of a project. Runs of pull requests exist today, and are listed under Activity.",
     action: { label: "See runs", href: "/activity" },
   },
-  "/images/charts": {
+  "/depot/charts": {
     title: "Charts", area: "Images",
     does: "List the packaged deployment descriptions your pipelines build, with their settings and the applications that use each version.",
     appears: "A chart appears here when a pipeline step packages one and pushes it to a {registry} that Launchway can read.",
-    action: { label: "See images", href: "/images" },
+    action: { label: "See images", href: "/depot" },
   },
-  "/images/files": {
+  "/depot/files": {
     title: "Files", area: "Images",
     does: "List the plain files your pipelines produce, such as installers and archives, with their size, who made them and where they were used.",
     appears: "Files appear here when a step declares them as {artifacts}. {Artifacts} of a run can be read on the {run}'s own page today.",
@@ -51,7 +51,7 @@ export const COMING: Record<string, Coming> = {
     title: "Machine images", area: "Deployments",
     does: "List the operating system images your machines start from, each built and scanned by a pipeline like a container image, and which hosts run it.",
     appears: "An image appears here when a pipeline builds one. Container images are listed today under Images.",
-    action: { label: "See images", href: "/images" },
+    action: { label: "See images", href: "/depot" },
   },
   "/traffic": {
     title: "Traffic map", area: "Traffic",

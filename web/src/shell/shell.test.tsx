@@ -127,8 +127,8 @@ describe("the launcher", () => {
 
 describe("old addresses", () => {
   it("keep working: the registry moved to Images", () => {
-    expect(redirectFor("/library/images")).toBe("/images");
-    expect(redirectFor("/library/components", "?name=x")).toBe("/images/components?name=x");
+    expect(redirectFor("/library/images")).toBe("/depot");
+    expect(redirectFor("/library/components", "?name=x")).toBe("/depot/components?name=x");
   });
 });
 
@@ -137,7 +137,7 @@ describe("the Guide's text", () => {
     for (const g of Object.values(GUIDE)) expect(g.text).not.toMatch(/\.ya?ml|edit the file/i);
   });
   it("only has entries for pages that exist", () => {
-    const patterns = new Set(["/learn", "/learn/:a", "/learn/:a/:b", "/", "/projects", "/projects/:name", "/pipelines", "/images", "/images/components", "/deployments", "/deployments/environments", "/activity", "/activity/approvals", "/runs/:id", "/library", "/settings", "/settings/runners", "/settings/audit", "/settings/words", "/settings/variables", "/projects/:name/variables", "/kit", "/repositories/:owner/:name/pulls", "/repositories/:owner/:name/pulls/new", "/repositories/:owner/:name/pulls/:number", "/repositories/:owner/:name/code", "/repositories/:owner/:name/blame", "/repositories/:owner/:name/commits", "/repositories/:owner/:name/commit/:sha", "/repositories/:owner/:name/compare", "/repositories/:owner/:name/branches", "/repositories/:owner/:name/tags", "/repositories/:owner/:name/search"]);
+    const patterns = new Set(["/learn", "/learn/:a", "/learn/:a/:b", "/", "/projects", "/projects/:name", "/pipelines", "/depot", "/depot/components", "/deployments", "/deployments/environments", "/activity", "/activity/approvals", "/runs/:id", "/library", "/settings", "/settings/runners", "/settings/audit", "/settings/words", "/settings/variables", "/projects/:name/variables", "/kit", "/repositories/:owner/:name/pulls", "/repositories/:owner/:name/pulls/new", "/repositories/:owner/:name/pulls/:number", "/repositories/:owner/:name/code", "/repositories/:owner/:name/blame", "/repositories/:owner/:name/commits", "/repositories/:owner/:name/commit/:sha", "/repositories/:owner/:name/compare", "/repositories/:owner/:name/branches", "/repositories/:owner/:name/tags", "/repositories/:owner/:name/search"]);
     for (const k of Object.keys(GUIDE)) expect(patterns.has(k), k).toBe(true);
   });
 });

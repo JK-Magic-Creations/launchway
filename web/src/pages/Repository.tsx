@@ -4,6 +4,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
 import { RepositorySettings } from "./Repositories";
 import { terms } from "../terms";
+import { RepoTabs } from "../components/RepoTabs";
 
 // The imported history is a chunk of its own: it loads when its tab is opened.
 const ImportedHistory = lazy(() => import("./ImportedHistory"));
@@ -31,19 +32,9 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
           {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</p>}
         </div>
       </header>
-      <nav className="tabs" aria-label="Repository">
-        <a href={`/repositories/${path}/code`} className="tab">Code</a>
-        <a href={`/repositories/${path}/commits`} className="tab">Commits</a>
-        <a href={`/repositories/${path}/branches`} className="tab">Branches</a>
-        <a href={`/repositories/${path}`} className={"tab" + (tab === "overview" ? " tab-on" : "")} aria-current={tab === "overview" ? "page" : undefined}>Settings</a>
-        <a href={`/repositories/${path}/pulls`} className="tab">Pull requests</a>
-        <a href={`/repositories/${path}/dependencies`} className="tab">Dependencies</a>
-        <a href={`/repositories/${path}/graph`} className="tab">Graph</a>
-        <a href={`/repositories/${path}/mirrors`} className={"tab" + (tab === "mirrors" ? " tab-on" : "")} aria-current={tab === "mirrors" ? "page" : undefined}>Mirrors</a>
-        <a href={`/repositories/${path}/history`} className={"tab" + (tab === "history" ? " tab-on" : "")} aria-current={tab === "history" ? "page" : undefined}>Imported history</a>
-      </nav>
+      <RepoTabs path={path} on={tab === "overview" ? "settings" : tab} />
       <ErrorBox error={error} />
-      {repo && tab === "overview" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
+      {tab === "overview" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
       {repo && tab === "mirrors" && <MirrorsTab repo={repo} reload={load} />}
       {repo && tab === "history" && <Suspense fallback={<div className="loading">Loading…</div>}><ImportedHistory path={path} /></Suspense>}
     </div>

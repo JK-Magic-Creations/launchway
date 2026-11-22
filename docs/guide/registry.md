@@ -2,6 +2,8 @@
 
 Store container images and Helm charts in Launchway itself, so a team needs no Depot of its own.
 
+In the web UI the Depot is an area, at `/depot`, with three tabs: Images (what your pipelines built), Components (what is inside them) and the built-in store. The area is there even when the store is switched off; its tab then says so and that an administrator turns it on with `registry.enabled`. Addresses under the old name, `/images`, still lead here.
+
 The Depot speaks the OCI Distribution API under `/v2/` on the same address as the web UI and the API, so
 `docker`, `podman`, `skopeo`, `helm` and every other OCI client work with no special setup. It keeps its
 bytes in the [Cargo (artifact) store](../artifacts.md) (the database unless you chose a directory or S3) and

@@ -95,7 +95,7 @@ export function ImagesPage() {
     const q = new URLSearchParams();
     q.set(by, t.value);
     if (by === "repository" && t.tag) q.set("tag", t.tag);
-    navigate(`/images?${q.toString()}`);
+    navigate(`/depot?${q.toString()}`);
   };
 
   const choose = (b: By) => { setBy(b); setProblem(""); if (b !== by) { setValue(""); setTag(""); } };
@@ -103,7 +103,7 @@ export function ImagesPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow="Images" title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a project.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say("Find the container images your {runs} built: which run built a digest, the latest image of a repository, or every image of a project.")} />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
         <div className="imgform-by">
@@ -175,7 +175,7 @@ export function ImagesPage() {
                         <span className="mono imgref">{h.repository}{h.kind === "tag" && h.tag ? `:${h.tag}` : ""}</span>
                         {h.kind === "platform" && <span className="faint small"> platform {h.platform}</span>}
                       </td>
-                      <td><CopyValue value={h.digest} label={`digest of #${h.run_number} ${h.step}`} keep={DIGEST_KEEP} /> <Link href={`/images/digest/${encodeURIComponent(h.digest)}`}>Open</Link></td>
+                      <td><CopyValue value={h.digest} label={`digest of #${h.run_number} ${h.step}`} keep={DIGEST_KEEP} /> <Link href={`/depot/digest/${encodeURIComponent(h.digest)}`}>Open</Link></td>
                       <td>
                         <span className="imgbadges">
                           <StatusPill status={h.outcome} />

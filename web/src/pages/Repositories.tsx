@@ -77,13 +77,15 @@ export function CloneBox({ repo }: { repo: HostedRepo }) {
           <button type="button" role="tab" aria-selected={how === "ssh"} className={how === "ssh" ? "btn btn-sm btn-primary" : "btn btn-sm"} onClick={() => { setHow("ssh"); setCopied(false); }}>SSH</button>
         </div>
       )}
-      <div className="tokenvalue">
-        <input readOnly value={addr ?? ""} aria-label="Clone address" onFocus={(e) => e.currentTarget.select()} className="mono" />
-        <button type="button" className="btn" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
-      </div>
-      {how === "https"
+      {!addr
+        ? <p className="sub" role="status">This server has no public address set, so it cannot show a clone address. An administrator sets it with <Mono>forge.public_url</Mono> in the server's configuration.</p>
+        : <div className="tokenvalue">
+          <input readOnly value={addr} aria-label="Clone address" onFocus={(e) => e.currentTarget.select()} className="mono" />
+          <button type="button" className="btn" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
+        </div>}
+      {addr && how === "https"
         ? <p className="sub">Sign in with an <Link href="/settings/access/keys">API token</Link> as the password.</p>
-        : <p className="sub">Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href="/settings/access/ssh-keys#host-keys">check the server's fingerprint</Link> the first time.</p>}
+        : addr && <p className="sub">Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href="/settings/access/ssh-keys#host-keys">check the server's fingerprint</Link> the first time.</p>}
     </Sheet>
   );
 }
@@ -168,7 +170,7 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
     forgeApi.deployKeys(owner, name).then(() => setAdmin(true), () => setAdmin(false));
   }, [owner, name]);
   if (error) return <ErrorBox error={error} />;
-  if (!repo) return null;
+  if (!repo) return <div className="loading" role="status">Loading the repository's settings…</div>;
   return (
     <>
       <CloneBox repo={repo} />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useUrlState } from "../../urlState";
 import { canOperate, useMe } from "../../auth";
 import { browseApi, codeHref, commitHref, compareHref, type RefInfo } from "../../browseApi";
 import { ErrorBox, Link } from "../../components/ui";
@@ -13,7 +14,7 @@ import { CopyButton, MsgLink, RefSwitcher, RepoFrame, useRepo, when } from "./co
 export function BranchesPage({ path }: { path: string }) {
   const me = useMe();
   const { repo } = useRepo(path);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useUrlState("q", "");
   const [items, setItems] = useState<RefInfo[] | null>(null);
   const [total, setTotal] = useState(0);
   const [def, setDef] = useState("");
@@ -101,7 +102,7 @@ export function BranchesPage({ path }: { path: string }) {
 
 /** The tags of a repository, with an annotated tag's message. */
 export function TagsPage({ path }: { path: string }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useUrlState("q", "");
   const [items, setItems] = useState<RefInfo[] | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<unknown>(null);

@@ -12,7 +12,7 @@ describe("the top route", () => {
   it("shows the eleven areas, in order, with the current one marked", () => {
     render(<Route ctx={ctx()} on="projects" needs={0} />);
     expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(
-      ["Tower", "Code", "Work", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
+      ["Tower", "Code", "Work", "Pipelines", "Depot", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
     expect(screen.getByRole("link", { name: "Code" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Tower" })).not.toHaveAttribute("aria-current");
   });

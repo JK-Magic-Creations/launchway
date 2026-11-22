@@ -50,15 +50,15 @@ export const GUIDE: Record<string, GuideEntry> = {
     text: "A pipeline is a set of steps that runs when something happens, such as a push. Each row says which project it belongs to and how its last {run} went.",
     does: [{ icon: "play", label: "Try a pipeline without saving", href: "/playground" }],
   },
-  "/images": {
+  "/depot": {
     title: "Images",
     text: "Everything your pipelines build lives here. Find an image by its project, its repository or its digest, then see which run built it.",
-    does: [{ icon: "search", label: "Find a component in every {run}", href: "/images/components" }],
+    does: [{ icon: "search", label: "Find a component in every {run}", href: "/depot/components" }],
   },
-  "/images/components": {
+  "/depot/components": {
     title: "Components",
     text: "What is inside your software, found by name across every {run}. Each hit says which run and which project, so you know what a new problem touches.",
-    does: [{ icon: "package", label: "Find an image", href: "/images" }],
+    does: [{ icon: "package", label: "Find an image", href: "/depot" }],
   },
   "/deployments": {
     get title() { return terms().say("{Deploys}"); },

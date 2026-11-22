@@ -34,8 +34,8 @@ export function ImageDetailPage({ digest }: { digest: string }) {
 
   if (hits.loading) return <div className="page"><div className="loading">Loading…</div></div>;
   if (!first) {
-    return <div className="page"><PageHead eyebrow="Images" title="Image" /><ErrorBox error={hits.error} />
-      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/images" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or project.")}</EmptyState></Sheet></div>;
+    return <div className="page"><PageHead eyebrow={terms().say("{Registry}")} title="Image" /><ErrorBox error={hits.error} />
+      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or project.")}</EmptyState></Sheet></div>;
   }
   const scan = iv?.scan;
   const worst = scan ? Math.max(scan.critical + scan.high, 0) : 0;
@@ -61,7 +61,7 @@ export function ImageDetailPage({ digest }: { digest: string }) {
             <dt>Pushed</dt><dd>{first.pushed ? <StateChip state="ok">{terms().say("Pushed to the {registry}")}</StateChip> : <StateChip state="skip">Not pushed{iv?.not_pushed ? `: ${iv.not_pushed}` : ""}</StateChip>}</dd>
             <dt>Signature</dt><dd>{iv ? (iv.signed ? <StateChip state="ok">Signed{iv.key_source ? ` (${iv.key_source})` : ""}</StateChip> : <StateChip state="warn">Not signed</StateChip>) : <span className="faint">not known</span>}</dd>
             <dt>Provenance</dt><dd>{iv?.provenance === "attached" ? "Attached to the image" : iv?.provenance === "stored" ? terms().say("Kept as an {artifact}") : "None"}</dd>
-            <dt>SBOM</dt><dd>{iv?.sbom ? <>Yes{iv.sbom_artifact ? <>, kept as <Mono>{iv.sbom_artifact}</Mono></> : null}. <a href="/images/components" onClick={onLink}>Search components</a></> : "No bill of materials was made."}</dd>
+            <dt>SBOM</dt><dd>{iv?.sbom ? <>Yes{iv.sbom_artifact ? <>, kept as <Mono>{iv.sbom_artifact}</Mono></> : null}. <a href="/depot/components" onClick={onLink}>Search components</a></> : "No bill of materials was made."}</dd>
           </dl>
         </Sheet>
       </div>

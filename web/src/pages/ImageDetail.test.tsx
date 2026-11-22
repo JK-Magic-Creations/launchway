@@ -23,7 +23,7 @@ function show() {
   const m = me();
   render(<MeContext.Provider value={m}><InstallationProvider me={m} approvals={[]}><ImageDetailPage digest={D} /></InstallationProvider></MeContext.Provider>);
 }
-beforeEach(() => { history.pushState(null, "", "/images/digest/" + D); });
+beforeEach(() => { history.pushState(null, "", "/depot/digest/" + D); });
 
 describe("the image page", () => {
   it("says which run built it and shows findings by severity", async () => {
