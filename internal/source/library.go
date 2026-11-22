@@ -324,7 +324,6 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 		return pl, nil, nil, nil
 	}
 	var problems pipeline.Problems
-	mirrors := map[string]*project{}
 	for _, l := range pl.Libraries {
 		at := "libraries." + l.Name
 		if isBuiltin(l) {
@@ -358,7 +357,7 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 			continue
 		}
 		l.Commit, l.RefKind = sha, kind
-		mirrors[l.Name] = lib
+		problems = append(problems, m.resolveRequires(ctx, l, lib, fresh, 0, []string{l.Repo + "@" + sha})...)
 	}
 	if len(problems) > 0 {
 		return nil, nil, nil, problems
@@ -367,7 +366,7 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 		if isBuiltin(l) {
 			return builtinTemplate(name)
 		}
-		return mirrors[l.Name].templateAt(ctx, l.Commit, name)
+		return m.c().libraries[l.Repo].templateAt(ctx, l.Commit, name)
 	}, vars)
 	if err != nil {
 		return nil, nil, nil, plainBuiltin(err)
@@ -378,7 +377,7 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 			libs = append(libs, engine.LibrarySource{Name: l.Name, URL: starters.URL, Commit: l.Commit})
 			continue
 		}
-		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: mirrors[l.Name].URL, Commit: l.Commit})
+		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: m.c().libraries[l.Repo].URL, Commit: l.Commit})
 	}
 	return out, libs, used, nil
 }

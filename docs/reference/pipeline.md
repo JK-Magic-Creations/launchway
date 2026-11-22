@@ -358,6 +358,25 @@ secrets.
 
 See [Templates](#template-files) and [Reuse steps with library templates](../tutorials/library-templates.md).
 
+### Libraries that use libraries
+
+A template of a library may use the starters that ship with Launchway, written `uses: launchway/go-test`, with no entry anywhere. It may also use
+templates of other libraries, which the library names in a file at its root, `library.yaml`, each at a version it pins:
+
+```yaml
+# library.yaml, at the root of the library
+requires:
+  tools: { repo: shared-tools, version: v2.1.0 }
+```
+
+`tools` is what the library's templates call it (`uses: tools/lint`); `repo` is a library the server's configuration allows, as in a pipeline's `libraries`, and `version` is
+a **tag or a full commit id**, never a branch: what a library pins does not move by itself, and a version that resolves to a branch is refused. When a Sortie is created each
+requirement is resolved to a commit (and what it requires in turn, at most 4 levels down; libraries that require each other in a circle are refused), and the libraries it
+resolved are listed with the pipeline's own, with `required_by` naming the library that asked for each, in `launchway validate --resolved` and in the Sortie's record, so a
+resume and every Station use exactly those files. A step of a required library finds that library's scripts at `$LAUNCHWAY_LIB`. Offline, `--library tools=DIRECTORY` gives the
+directory of a required library, by the name the requiring library calls it. A template that uses a template of a library its own library does not require is refused,
+naming the ones it does.
+
 ## Containers
 
 `containers` names images once, so steps can use them by name, and declares services that run
@@ -573,7 +592,7 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 <!-- keys: kind-uses -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `uses` | `library/template` | required | The library, as named under `libraries`, and the template. In a template, a template of the same library is written by name alone |
+| `uses` | `library/template` | required | The library, as named under `libraries`, and the template. In a template, a template of the same library is written by name alone, a starter as `launchway/<name>`, and a template of a library the library [requires](#libraries-that-use-libraries) as `<name>/<template>` |
 | `with` | mapping | none | Values for the template's parameters, by name; at most 50, each at most 4096 bytes. A value is text, a YAML list (for a `list` parameter), or [`{ input: name }`](#value-forms) with an optional `format` |
 | `for_each` | mapping | none | Repeat the whole template once for each combination; see [For each](#for-each) |
 | `exclude` | list | none | With `for_each`: combinations to leave out |

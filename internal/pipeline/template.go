@@ -507,6 +507,7 @@ type expander struct {
 	used           map[string]bool // libraries some step used
 	containerNames map[string]bool
 	loopLimit      int
+	required       map[string]*Library // libraries templates required, by repository and commit (requires.go)
 }
 
 // scope is one file's steps: the pipeline's, or a template's for one use.
@@ -547,13 +548,12 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		if !s.IsUse() || (s.ifTest != nil && !s.ifTest.keep) {
 			continue
 		}
-		lib, name := sc.lib, s.Uses
-		if sc.lib == nil {
-			var alias string
-			alias, name, _ = strings.Cut(s.Uses, "/")
-			lib = root.Library(alias)
-		}
 		at := "steps." + s.ID
+		before0 := len(x.problems)
+		lib, name := x.libraryFor(sc, root, s, at)
+		if len(x.problems) > before0 {
+			continue
+		}
 		switch {
 		case lib == nil:
 			x.problem(sc, s.usesLine, 0, at+".uses", "no library called %q is listed under libraries:", s.Uses)
@@ -565,9 +565,13 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			x.problem(sc, s.usesLine, 0, at+".uses", "templates are used %d deep here; at most %d levels are allowed", depth+1, MaxNesting)
 			continue
 		}
+		qualified := lib.Name + "/" + name
 		for i, t := range sc.stack {
-			if t == name {
-				loop := append(append([]string{}, sc.stack[i:]...), name)
+			if t == qualified {
+				loop := append(append([]string{}, sc.stack[i:]...), qualified)
+				for j := range loop {
+					loop[j] = strings.TrimPrefix(loop[j], lib.Name+"/") // a template of the same library is written by name alone
+				}
 				x.problem(sc, s.usesLine, 0, at+".uses", "templates use each other in a loop: %s", strings.Join(loop, " → "))
 				name = ""
 				break
@@ -610,7 +614,7 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		x.used[lib.Name] = true
 		child := &scope{prefix: sc.prefix + s.ID + "/", lib: lib, file: TemplatePath(name), tmpl: t, steps: t.Steps,
 			byID: map[string]*Step{}, children: map[string]*scope{}, containers: map[string]string{}}
-		child.stack = append(append([]string{}, sc.stack...), name)
+		child.stack = append(append([]string{}, sc.stack...), lib.Name+"/"+name)
 		for _, ts := range t.Steps {
 			child.byID[ts.ID] = ts
 		}

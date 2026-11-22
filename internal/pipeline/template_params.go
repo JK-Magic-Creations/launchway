@@ -120,8 +120,10 @@ func (ps *parser) parseUseStep(at string, s *Step, keys map[string]*yaml.Node) {
 	lib, name, cross := strings.Cut(s.Uses, "/")
 	switch {
 	case ps.tmpl != nil && cross:
-		ps.add(keys["uses"], at+".uses", "a template can use templates of its own library only, written by name alone (uses: %s); "+
-			"using a template of another library from a template is not supported yet", clipText(name, 60))
+		if !libNameRe.MatchString(lib) || !templateNameRe.MatchString(name) {
+			ps.add(keys["uses"], at+".uses", "write uses: template for a template of this library, or uses: library/template for one of the library launchway (the starters) "+
+				"or of a library this one requires in library.yaml; %q is neither", clipText(s.Uses, 60))
+		}
 	case ps.tmpl != nil:
 		if !templateNameRe.MatchString(s.Uses) {
 			ps.add(keys["uses"], at+".uses", "%q is not a template name", clipText(s.Uses, 60))

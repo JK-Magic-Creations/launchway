@@ -383,6 +383,13 @@ type Library struct {
 	Commit  string `json:"commit,omitempty"`
 	RefKind string `json:"ref_kind,omitempty"`
 	Line    int    `json:"-"`
+	// RequiredBy names the library whose library.yaml requires this one, for a library the pipeline did not
+	// list itself (its templates use this one's: see requires.go). Requires are the libraries this one requires,
+	// resolved by whoever expands the pipeline (a server, or the command line); Dir is where an expansion with
+	// no server reads this one from.
+	RequiredBy string     `json:"required_by,omitempty"`
+	Requires   []*Library `json:"-"`
+	Dir        string     `json:"-"`
 }
 
 // Wanted is the version to resolve: the override if there is one.

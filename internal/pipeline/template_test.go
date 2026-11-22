@@ -479,7 +479,7 @@ steps:
 	// Nested templates must be of the same library.
 	tm["outer"] = strings.Replace(outer, "uses: inner\n    needs", "uses: other/inner\n    needs", 1)
 	_, err := expand(t, src, tm)
-	pr := findProblem(t, problemsOf(t, err), "a template can use templates of its own library only")
+	pr := findProblem(t, problemsOf(t, err), "has no requirement called")
 	if pr.File != "templates/outer.yaml" || pr.Line != 8 {
 		t.Fatalf("%+v", pr)
 	}
