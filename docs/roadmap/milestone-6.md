@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 6 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 18 planned · 20 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 2 in progress · 15 planned · 20 capabilities</p>
 
 AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.
 
@@ -46,7 +46,7 @@ flowchart TD
 |---|---|---|---|---|
 | [Today](#g-today) | 2 | 2 | 0 | 0 |
 | [A gateway of your own](#g-a-gateway-of-your-own) | 13 | 0 | 0 | 13 |
-| [Agents that deliver](#g-agents-that-deliver) | 5 | 0 | 0 | 5 |
+| [Agents that deliver](#g-agents-that-deliver) | 5 | 1 | 2 | 2 |
 
 ### Today {#g-today}
 
@@ -206,25 +206,25 @@ Documents become stories, stories become changes, and changes reach production w
 
 #### Assign a story to an agent {#assign-a-story-to-an-agent}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a Master switch from the start. The author never approves its own work.
+An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a Master switch from the start. Work can be assigned to a registered agent that claims it on a lease, works under the same rules as a person and hands it back for review. Missing: the sandboxed agent machine that Launchway itself provides.
 
 [Area page](ai.md)
 
 #### Autonomy levels set by policy {#autonomy-levels-set-by-policy}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Defaults are cautious.
+Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Levels 1 and 2 are enforced by the server. Levels 3 and 4, which launch, can be written down but are not acted on: they are held to level 2.
 
 [Area page](ai.md)
 
 #### An independent reviewing agent {#an-independent-reviewing-agent}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Where policy allows, a separate session with a different identity and no shared context may approve listed kinds of change, with a share of changes sampled by people. Starts with documentation and tests only.
+Where policy allows, a separate session with a different identity and no shared context may approve listed kinds of change, with a share of changes sampled by people. Where the policy allows, another agent's structured review counts for the kinds of change the policy lists, and a share is sampled by a person. It starts with documentation and tests only.
 
 [Area page](ai.md)
 

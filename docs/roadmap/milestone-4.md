@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 4 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 7 in progress · 9 planned · 17 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 7 available · 1 in progress · 9 planned · 17 capabilities</p>
 
 Images, Helm charts and other OCI Cargo stored beside the code, under the same permissions and policies.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [The registry](#g-the-registry) | 17 | 1 | 7 | 9 |
+| [The registry](#g-the-registry) | 17 | 7 | 1 | 9 |
 
 ### The registry {#g-the-registry}
 
@@ -54,9 +54,9 @@ Images, charts and other Cargo stored beside the code, under the same permission
 
 #### A built-in OCI registry {#a-built-in-oci-registry}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run. Built, tested on its own branch and in final integration; not yet on the main branch. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
+Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
 
 **Depends on:** Built-in Cargo storage.
 
@@ -64,9 +64,9 @@ Store container images, Helm charts and other OCI Cargo in Launchway, passing th
 
 #### Helm charts and other artifacts as first-class {#helm-charts-and-other-artifacts-as-first-class}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. Built, tested on its own branch and in final integration; not yet on the main branch. Charts and any OCI Cargo are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.
+Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. Charts and any OCI Cargo are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.
 
 **Depends on:** A built-in OCI registry.
 
@@ -74,9 +74,9 @@ Charts, signatures, bills of materials, attestations, operating-system images an
 
 #### An image page that tells the whole story {#an-image-page-that-tells-the-whole-story}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the Sortie and commit that built it. Built, tested on its own branch and in final integration; not yet on the main branch. The Depot tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.
+Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the Sortie and commit that built it. The Depot tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.
 
 **Depends on:** A built-in OCI registry.
 
@@ -94,9 +94,9 @@ Move an image from one Airfield to the next without copying or rebuilding it. Wh
 
 #### Retention that protects what runs {#retention-that-protects-what-runs}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Clean up old images without ever deleting one that is deployed. Built, tested on its own branch and in final integration; not yet on the main branch. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
+Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -144,9 +144,9 @@ Copy images to and from other registries on a rule. Useful for a disaster-recove
 
 #### Per-project packages and permissions {#per-project-packages-and-permissions}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A packages tab in each project that is a filtered view of the Depot, with per-package access. Built, tested on its own branch and in final integration; not yet on the main branch. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.
+A packages tab in each project that is a filtered view of the Depot, with per-package access. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -156,7 +156,7 @@ A packages tab in each project that is a filtered view of the Depot, with per-pa
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Sign images on build and verify signatures on pull and deploy. Built, tested on its own branch and in final integration; not yet on the main branch. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.
+Sign images on build and verify signatures on pull and deploy. On the main branch. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -206,9 +206,9 @@ A library page shows which projects fetched which version and which are behind. 
 
 #### The Depot: one area for everything stored {#the-depot-one-area-for-everything-stored}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. Built, tested on its own branch and in final integration; not yet on the main branch. The old Images tab becomes one section of it.
+Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. The old Images tab becomes one section of it.
 
 [Area page](registry.md)
 

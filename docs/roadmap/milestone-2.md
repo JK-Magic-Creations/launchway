@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 11 in progress · 56 planned · 69 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 11 available · 4 in progress · 54 planned · 69 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -46,14 +46,14 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Write pipelines your way](#g-write-pipelines-your-way) | 17 | 0 | 2 | 15 |
+| [Write pipelines your way](#g-write-pipelines-your-way) | 17 | 2 | 1 | 14 |
 | [Builds use every machine sensibly](#g-builds-use-every-machine-sensibly) | 6 | 0 | 0 | 6 |
-| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 1 | 0 |
+| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 1 | 0 | 0 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
 | [Share and reuse across projects](#g-share-and-reuse-across-projects) | 8 | 2 | 2 | 4 |
-| [Every popular build tool, with a cache that is never stale](#g-every-popular-build-tool-with-a-cache-that-is-never-stale) | 13 | 0 | 5 | 8 |
-| [The developer comes first](#g-the-developer-comes-first) | 16 | 0 | 1 | 15 |
+| [Every popular build tool, with a cache that is never stale](#g-every-popular-build-tool-with-a-cache-that-is-never-stale) | 13 | 5 | 0 | 8 |
+| [The developer comes first](#g-the-developer-comes-first) | 16 | 1 | 1 | 14 |
 
 ### Write pipelines your way {#g-write-pipelines-your-way}
 
@@ -187,9 +187,9 @@ Stations on VMs and on customers' machines update under your policy, so the flee
 
 #### Pipeline history and flaky tests {#pipeline-history-and-flaky-tests}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page. Flaky tests are marked on the Sortie and on the pull request, so they are quarantined instead of argued over.
+Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page. Flaky detection, test history and the Debrief are on the main branch. Missing: duration charts, pass rate and the slowest steps across Sorties.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -207,17 +207,17 @@ Each step has a page: where its code lives, its inputs and types, and which pipe
 
 #### An event log that explains every decision {#an-event-log-that-explains-every-decision}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result. Built, tested on its own branch and in final integration; not yet on the main branch. 
+Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result. A push that no trigger starts is listed with the reason, and a push that starts a Sortie is one entry, not two.
 
 [Area page](pipelines.md)
 
 #### Standing orders for every repository {#standing-orders-for-every-repository}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces. Built, tested on its own branch and in final integration; not yet on the main branch. 
+A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces. Every repository gets the Inspection with no change to it; a team can turn each check off, advise or block, and a level above can set a floor.
 
 [Area page](repository-standards.md)
 
@@ -291,9 +291,9 @@ Test results that are a pleasure to read and easy to hand to someone else.
 
 #### Polished test reports as HTML and PDF {#polished-test-reports-as-html-and-pdf}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Every run can produce a detailed, well-laid-out Debrief as a web page and as a PDF that can be sent to someone without an account. Built, tested on its own branch and in final integration; not yet on the main branch. Builds on the thirteen test formats and coverage already available.
+Every run can produce a detailed, well-laid-out Debrief as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -409,7 +409,7 @@ A template says what it needs and offers, can be built on another, and a project
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits. Built, tested on its own branch and in final integration; not yet on the main branch. Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.
+Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits. On the main branch. Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.
 
 **Depends on:** Templates that read like code.
 
@@ -447,7 +447,7 @@ For any template, library or connection, a list of every project that uses it an
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A library of starters per language and kind, proven through delivery, with detection, a gallery and `launchway init`. Built, tested on its own branch and in final integration; not yet on the main branch. 
+A library of starters per language and kind, proven through delivery, with detection, a gallery and `launchway init`. On the main branch.
 
 [Area page](pipelines.md)
 
@@ -457,41 +457,41 @@ A cache may only make a build faster, never change its result. Build tools becom
 
 #### The cache rule {#the-cache-rule}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces. Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the Sortie says so and names the path.
+A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces. A build never silently uses an older copy of something it asked for the latest of. Where Launchway cannot promise this for a path, the Sortie says so and names the path.
 
 [Area page](build-tools-caches.md)
 
 #### Fixed things reused, moving things looked up again {#fixed-things-reused-moving-things-looked-up-again}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build. Being built. A re-check is a cheap lookup, not a download.
+Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build. A re-check is a cheap lookup, not a download.
 
 [Area page](build-tools-caches.md)
 
 #### Every restore is a head start, never the answer {#every-restore-is-a-head-start-never-the-answer}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result. Being built, with generations and a maximum age.
+What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result. Entries have generations and a maximum age.
 
 [Area page](build-tools-caches.md)
 
 #### Warnings for unsafe cache patterns {#warnings-for-unsafe-cache-patterns}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix. Being built.
+Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix. The validator and the pipeline editor warn about the common cases; they are warnings, not refusals, except for a path that holds a credential.
 
 [Area page](build-tools-caches.md)
 
 #### Caches by trust scope {#caches-by-trust-scope}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes. Being built.
+What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes. A fork reads nothing from the project's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.
 
 [Area page](build-tools-caches.md)
 
@@ -613,9 +613,9 @@ Copy one command that reruns a failed step with the same image and inputs, or op
 
 #### Flaky tests quarantined, with an owner {#flaky-tests-quarantined-with-an-owner}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A flaky test still runs and reports but stops blocking, with an owner and an expiry, and a failure says whether it is new or known. Retry only the failed tests, using each tool’s own option.
+A flaky test still runs and reports but stops blocking, with an owner and an expiry, and a failure says whether it is new or known. A quarantined test has an owner and an expiry, and an expired quarantine excuses nothing.
 
 [Area page](developer-experience.md)
 
@@ -631,7 +631,7 @@ An Airfield that expires by itself and has a cost cap, with its link posted on t
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-One answer to why something is not moving: no Station with the capability, a Sortie ahead, a lock, an approval, a quota. Being built with waiting for room; the rest follows.
+One answer to why something is not moving: no Station with the capability, a Sortie ahead, a lock, an approval, a quota. The Sortie page says why a step waits for room and where it stands in the Holding pattern, and an approval says who must decide. Missing: one answer that covers every cause, such as a lock or a quota.
 
 [Area page](developer-experience.md)
 
