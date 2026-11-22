@@ -55,6 +55,8 @@ func cmdRepos(args []string) error {
 			return cl.reposFiles(args[1:])
 		case "put-file":
 			return cl.reposPutFile(args[1:])
+		case "upload":
+			return cl.reposUpload(args[1:])
 		case "delete-file":
 			return cl.reposDeleteFile(args[1:])
 		case "import-archive":

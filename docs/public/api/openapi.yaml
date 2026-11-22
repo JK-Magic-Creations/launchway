@@ -10096,6 +10096,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+        post:
+            description: 'One commit that adds several files, for an upload: {"branch", "message", "replace", "files": [{"path", "content", "encoding"}]}; encoding is base64 (the default) or utf8. At most 100 files, 1 MiB each and 8 MiB in all (400 otherwise). A file that exists is a 409 and nothing is written, unless replace is true. The branch must exist and the rules of protected branches apply as to a push, with the same refusal; a mirror or archived repository takes none. Answers 201 {"branch", "paths", "commit", "parent"}. Webhooks, push mirrors and pull requests are told as for a push.'
+            operationId: post_api_v1_repositories_owner_name_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One commit that adds several files, for an upload: {"branch", "message", "replace", "files": [{"path", "content", "encoding"}]}; encoding is base64 (the default) or utf8.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.files_upload
         put:
             description: 'One commit that adds or changes one file: {"branch", "path", "content", "encoding" (utf8 or base64), "message", "expected_sha"}. The branch must exist and the rules of protected branches apply as to a push; an empty expected_sha creates and refuses if the file exists, otherwise it must be the file''s current sha. A mirror or archived repository takes none. Answers {"branch", "path", "commit", "sha", "parent"}. Webhooks, push mirrors and pull requests are told as for a push.'
             operationId: put_api_v1_repositories_owner_name_files

@@ -106,6 +106,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"search_repository_code":   {map[string]any{"owner": "o", "name": "x", "query": "a"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"create_repository_branch": {map[string]any{"owner": "o", "name": "x", "branch": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"delete_repository_branch": {map[string]any{"owner": "o", "name": "x", "branch": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"upload_repository_files":  {map[string]any{"owner": "o", "name": "x", "message": "m", "files": []any{map[string]any{"path": "a", "content": "YQ=="}}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"rename_repository_branch": {map[string]any{"owner": "o", "name": "x", "branch": "b", "new_name": "c"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"create_repository_tag":    {map[string]any{"owner": "o", "name": "x", "tag": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"delete_repository_tag":    {map[string]any{"owner": "o", "name": "x", "tag": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},

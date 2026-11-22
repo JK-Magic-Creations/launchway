@@ -26,6 +26,7 @@ func (s *Server) filesRoutes() []route {
 		{"GET " + base + "/files", repoRead, "", s.readFile},
 		{"PUT " + base + "/files", repoWrite, "repository.file_write", s.writeFile},
 		{"DELETE " + base + "/files", repoWrite, "repository.file_delete", s.deleteFile},
+		{"POST " + base + "/files", repoWrite, "repository.files_upload", s.uploadFiles},
 	}...)
 }
 
@@ -54,8 +55,16 @@ func (s *Server) filesRepo(w http.ResponseWriter, r *http.Request) (forge.Reposi
 	return repo, true
 }
 
+// refusedByRules is a change the branch rules turned down, with the message a push of it would get.
+type refusedByRules struct{ error }
+
+func (e refusedByRules) Unwrap() error { return e.error }
+
 func (s *Server) failFiles(w http.ResponseWriter, err error) {
+	var refused refusedByRules
 	switch {
+	case errors.As(err, &refused):
+		writeErr(w, http.StatusForbidden, refused.Error())
 	case errors.Is(err, files.ErrConflict):
 		writeErr(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "conflict: "))
 	case errors.Is(err, forge.ErrNotFound):
@@ -171,7 +180,10 @@ func (s *Server) changeFile(w http.ResponseWriter, r *http.Request, remove bool)
 		if policy == nil {
 			return nil
 		}
-		return policy(ctx, []githttp.RefUpdate{{Name: ref, Old: old, New: next}})
+		if err := policy(ctx, []githttp.RefUpdate{{Name: ref, Old: old, New: next}}); err != nil {
+			return refusedByRules{err}
+		}
+		return nil
 	}
 	out, err := s.filesService().Put(r.Context(), repo.ID, files.Write{Branch: in.Branch, Path: in.Path, Content: content, Message: in.Message, ExpectedSHA: in.ExpectedSHA, Actor: id.User, Delete: remove}, check)
 	if err != nil {
@@ -190,4 +202,62 @@ func (s *Server) afterServerCommit(ctx context.Context, c gitCaller, repo forge.
 		s.Forge.Mirrors.Pushed(ctx, repo.ID)
 	}
 	s.afterPush(ctx, c, repo, []githttp.RefUpdate{{Name: ref, Old: old, New: next}})
+}
+
+type uploadIn struct {
+	Branch  string       `json:"branch"`
+	Message string       `json:"message"`
+	Replace bool         `json:"replace"`
+	Files   []uploadFile `json:"files"`
+}
+
+// uploadFile is one file of an upload; encoding is utf8 or base64 (the default: uploads are bytes).
+type uploadFile struct {
+	Path     string `json:"path" jsonschema:"the file's path in the repository"`
+	Content  string `json:"content" jsonschema:"the file's content, base64 unless encoding is utf8"`
+	Encoding string `json:"encoding,omitempty" jsonschema:"base64 (default) or utf8"`
+}
+
+// uploadFiles adds several files in one commit, on a branch the caller may push to: the rules of a push apply.
+func (s *Server) uploadFiles(w http.ResponseWriter, r *http.Request) {
+	repo, ok := s.writableRepo(w, r)
+	if !ok {
+		return
+	}
+	var in uploadIn
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Branch == "" {
+		in.Branch = defaultRef(r, repo)
+	}
+	up := files.Upload{Branch: in.Branch, Message: in.Message, Replace: in.Replace, Actor: identityFrom(r).User}
+	for _, f := range in.Files {
+		var b []byte
+		switch f.Encoding {
+		case "utf8":
+			b = []byte(f.Content)
+		case "", "base64":
+			d, err := base64.StdEncoding.DecodeString(f.Content)
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, f.Path+": content is not valid base64")
+				return
+			}
+			b = d
+		default:
+			writeErr(w, http.StatusBadRequest, "encoding is base64 (the default) or utf8")
+			return
+		}
+		up.Files = append(up.Files, files.UploadFile{Path: f.Path, Content: b})
+	}
+	setAudit(r, repo.Path, in.Branch+" "+strconv.Itoa(len(up.Files))+" files")
+	out, err := s.filesService().PutFiles(r.Context(), repo.ID, up, s.writePolicy(r.Context(), r, repo))
+	if err != nil {
+		s.failFiles(w, err)
+		return
+	}
+	setAudit(r, "", in.Branch+" "+strings.Join(out.Paths, ", ")+" "+short(out.Parent)+".."+short(out.Commit))
+	id := identityFrom(r)
+	s.afterServerCommit(r.Context(), gitCaller{id: id, user: id.User}, repo, "refs/heads/"+out.Branch, out.Parent, out.Commit)
+	writeJSON(w, http.StatusCreated, out)
 }

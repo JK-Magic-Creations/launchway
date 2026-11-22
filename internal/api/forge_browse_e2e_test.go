@@ -290,3 +290,59 @@ func TestTagsAndBranchRenameThroughTheAPI(t *testing.T) {
 		}
 	}
 }
+
+func TestUploadingFilesThroughTheAPI(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	ada, otto, vic := e.signIn(t, "ada"), e.signIn(t, "otto"), e.signIn(t, "vic")
+	hostedRepo(t, e, "acme/shop")
+	tok := e.tokenFor(t, "ada", "t")
+	url := withToken(e.srv.URL, "/git/acme/shop.git", tok)
+	api := e.srv.URL + "/api/v1/repositories/acme/shop"
+	src := t.TempDir()
+	gitAt(t, src, "2026-06-01T10:00:00Z", "init", "-q", "-b", "main")
+	if err := os.WriteFile(filepath.Join(src, "a"), []byte("a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitAt(t, src, "2026-06-01T10:00:00Z", "add", "-A")
+	gitAt(t, src, "2026-06-01T10:00:00Z", "commit", "-q", "-m", "first")
+	mustGit(t, src, "push", "-q", url, "HEAD:refs/heads/main")
+
+	body := `{"branch":"main","message":"Add two","files":[{"path":"docs/x.txt","content":"eA=="},{"path":"y.txt","content":"y","encoding":"utf8"}]}`
+	if r := vic.do("POST", api+"/files", body); r.status != 403 {
+		t.Errorf("a viewer uploaded: %d", r.status)
+	}
+	if r := ada.do("PUT", api+"/protected-branches", `{"patterns":["main"]}`); r.status != 200 {
+		t.Fatalf("protect: %d", r.status)
+	}
+	if r := otto.do("POST", api+"/files", body); r.status < 400 || r.status == 429 || !strings.Contains(string(r.body), "main") {
+		t.Errorf("an operator uploaded to a protected branch: %d %s", r.status, r.body)
+	}
+	if r := ada.do("POST", api+"/files", body); r.status != 201 {
+		t.Fatalf("upload: %d %s", r.status, r.body)
+	}
+	var it files.Item
+	vic.get(api+"/files?path=docs/x.txt").json(t, &it)
+	if it.Content != "x" {
+		t.Errorf("uploaded content: %+v", it)
+	}
+	if r := ada.do("POST", api+"/files", body); r.status != 409 || !strings.Contains(string(r.body), "nothing was uploaded") {
+		t.Errorf("an existing file was overwritten: %d %s", r.status, r.body)
+	}
+	if r := ada.do("POST", api+"/files", strings.Replace(body, `"files"`, `"replace":true,"files"`, 1)); r.status != 201 {
+		t.Errorf("replace: %d %s", r.status, r.body)
+	}
+	for _, bad := range []string{`{"message":"m","files":[]}`, `{"message":"","files":[{"path":"q","content":"eA=="}]}`, `{"message":"m","files":[{"path":"../q","content":"eA=="}]}`,
+		`{"message":"m","files":[{"path":"q","content":"eA=="},{"path":"q","content":"eA=="}]}`, `{"message":"m","files":[{"path":"q","content":"!!"}]}`} {
+		if r := ada.do("POST", api+"/files", bad); r.status != 400 {
+			t.Errorf("%s: %d %s", bad, r.status, r.body)
+		}
+	}
+	log, _ := e.eng.AuditLog(engine.AuditFilter{Limit: 100})
+	ok := false
+	for _, a := range log {
+		ok = ok || a.Action == "repository.files_upload" && a.Outcome == "ok" && strings.Contains(a.Detail, "docs/x.txt")
+	}
+	if !ok {
+		t.Error("no audit event for the upload")
+	}
+}

@@ -311,6 +311,7 @@ var rows = []Row{
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}", MCP: "delete_deploy_key", CLI: "repos deploy-keys delete", Terraform: "planned: launchway_deploy_key", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/commits", MCP: "list_repository_commits", CLI: "repos commits", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/files", MCP: "read_repository_file", CLI: "repos files", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/repositories/{owner}/{name}/files", MCP: "upload_repository_files", CLI: "repos upload", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "PUT /api/v1/repositories/{owner}/{name}/files", MCP: "write_repository_file", CLI: "repos put-file", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/files", MCP: "delete_repository_file", CLI: "repos delete-file", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/branches", MCP: "list_repository_branches", CLI: "repos branches", Terraform: "", Status: Equal, Reason: ""},

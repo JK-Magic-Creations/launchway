@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"text/tabwriter"
 )
@@ -21,6 +23,10 @@ const reposFilesUsage = `
   launchway repos put-file OWNER/NAME PATH [--file F | --text TEXT] --message M [--branch B] [--expect-sha SHA] [--json]
                                     one commit that adds a file (or, with --expect-sha, replaces it); the
                                     branch must exist (operators; protected branches: administrators)
+  launchway repos upload OWNER/NAME FILE... --message M [--dir D] [--branch B] [--replace] [--json]
+                                    one commit that adds several local files (at most 100, 1 MiB each, 8 MiB in all) under
+                                    the folder D; an existing file is a conflict unless --replace (operators; protected
+                                    branches: administrators)
   launchway repos delete-file OWNER/NAME PATH --message M --expect-sha SHA [--branch B] [--json]
                                     one commit that removes a file; --expect-sha is its current id
 `
@@ -202,4 +208,48 @@ func (cl *client) reposDeleteFile(args []string) error {
 		return err
 	}
 	return cl.print(out, *asJSON, func() { fmt.Fprintf(cl.out, "Removed %s from %s in %.10s.\n", out.Path, out.Branch, out.Commit) })
+}
+
+func (cl *client) reposUpload(args []string) error {
+	fs := flag.NewFlagSet("repos upload", flag.ContinueOnError)
+	msg := fs.String("message", "", "the commit message")
+	branch := fs.String("branch", "", "the branch (default: the default branch); it must exist")
+	dir := fs.String("dir", "", "the folder in the repository to put the files in")
+	replace := fs.Bool("replace", false, "overwrite files that exist")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) < 2 || *msg == "" {
+		return usageErr("launchway repos upload OWNER/NAME FILE... --message M [--dir D] [--branch B] [--replace]")
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	type file struct {
+		Path     string `json:"path"`
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
+	}
+	var fl []file
+	for _, f := range pos[1:] {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return err
+		}
+		fl = append(fl, file{Path: path.Join(*dir, filepath.Base(f)), Content: base64.StdEncoding.EncodeToString(b), Encoding: "base64"})
+	}
+	var out struct {
+		Branch string   `json:"branch"`
+		Paths  []string `json:"paths"`
+		Commit string   `json:"commit"`
+	}
+	if err := cl.call("POST", base+"/files", map[string]any{"branch": *branch, "message": *msg, "replace": *replace, "files": fl}, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		fmt.Fprintf(cl.out, "Committed %d file(s) to %s as %.10s.\n", len(out.Paths), out.Branch, out.Commit)
+	})
 }

@@ -340,6 +340,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/diff/patch` | `get_repository_diff` | `repos show` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/files` | `delete_repository_file` | `repos delete-file` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/files` | `read_repository_file` | `repos files` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/files` | `upload_repository_files` | `repos upload` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/files` | `write_repository_file` | `repos put-file` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/graph/refresh` | `refresh_graph` | `graph refresh` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |

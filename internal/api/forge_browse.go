@@ -187,7 +187,10 @@ func (s *Server) writePolicy(ctx context.Context, r *http.Request, repo forge.Re
 		if policy == nil {
 			return nil
 		}
-		return policy(ctx, []githttp.RefUpdate{{Name: ref, Old: old, New: next}})
+		if err := policy(ctx, []githttp.RefUpdate{{Name: ref, Old: old, New: next}}); err != nil {
+			return refusedByRules{err}
+		}
+		return nil
 	}
 }
 

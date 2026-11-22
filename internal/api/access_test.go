@@ -219,6 +219,7 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/repositories/{owner}/{name}/commits":                 {"GET", "/api/v1/repositories/o/x/commits", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/files":                   {"GET", "/api/v1/repositories/o/x/files", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/repositories/{owner}/{name}/files":                   {"PUT", "/api/v1/repositories/o/x/files", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/files":                  {"POST", "/api/v1/repositories/o/x/files", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"DELETE /api/v1/repositories/{owner}/{name}/files":                {"DELETE", "/api/v1/repositories/o/x/files", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/branches":                {"GET", "/api/v1/repositories/o/x/branches", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories/{owner}/{name}/branches":               {"POST", "/api/v1/repositories/o/x/branches", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
