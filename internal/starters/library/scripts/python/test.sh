@@ -6,6 +6,7 @@
 # it is said in the log. When pytest is not what runs, the log says in plain words that no report was produced.
 set -e
 . "$(dirname "$0")/../common.sh"
+. "$(dirname "$0")/lib.sh"
 enter
 . "$(venv_dir)/bin/activate"
 rd=$(report_dir)
@@ -15,8 +16,9 @@ if [ -n "${PARAM_TEST_ENV:-}" ]; then
   eval "$(printf '%s\n' "$PARAM_TEST_ENV" | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=\(.*\)$/export \1='"'"'\2'"'"'/p')"
 fi
 want_cov=${PARAM_COVERAGE:-true}
-python -c "import pytest" 2>/dev/null || run pip install --quiet pytest==9.2.0
-[ "$want_cov" = true ] && { python -c "import pytest_cov" 2>/dev/null || run pip install --quiet pytest-cov==7.1.0; }
+# The tools are in the project's environment (setup put them there); if this step runs without it, they are added to it here.
+py_need pytest pytest==9.2.0
+[ "$want_cov" = true ] && py_need pytest_cov pytest-cov==7.1.0
 # The tests import the project's own packages from where they stand, as "python -m pytest" does.
 export PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}"
 opts="--junitxml=$rd/junit.xml"

@@ -7,10 +7,11 @@
 # PARAM_ANALYSIS_PATHS limits it to some directories or files (comma separated).
 set -e
 . "$(dirname "$0")/../common.sh"
+. "$(dirname "$0")/lib.sh"
 enter
 . "$(venv_dir)/bin/activate"
-command -v bandit >/dev/null 2>&1 || run pip install --quiet "bandit[sarif]==1.9.4"
-python -c "import sarif_om" 2>/dev/null || run pip install --quiet "bandit[sarif]==1.9.4"
+command -v bandit >/dev/null 2>&1 || py_install "bandit[sarif]==1.9.4"
+python -c "import sarif_om" 2>/dev/null || py_install "bandit[sarif]==1.9.4"
 rd=$(report_dir)
 mkdir -p "$rd"
 excl=${PARAM_ANALYSIS_EXCLUDE:-tests,.venv,.cache}

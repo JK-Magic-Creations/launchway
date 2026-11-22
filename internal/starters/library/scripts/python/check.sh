@@ -8,9 +8,11 @@ if [ "${PARAM_LINT_MODE:-advise}" = advise ] && [ -z "${LW_ENFORCED:-}" ]; then
   exit 0
 fi
 . "$(dirname "$0")/../common.sh"
+. "$(dirname "$0")/lib.sh"
 enter
 . "$(venv_dir)/bin/activate"
 if [ -n "${PARAM_LINT_COMMAND:-}" ]; then run "$PARAM_LINT_COMMAND"; exit 0; fi
+command -v ruff >/dev/null 2>&1 || py_install ruff
 run ruff check .
 if [ -f ruff.toml ] || [ -f .ruff.toml ] || grep -q '^\[tool\.ruff' pyproject.toml 2>/dev/null; then
   run ruff format --check .

@@ -257,7 +257,7 @@ Proposes the pipeline file for the repository in the current directory, from wha
 launchway init [--write] [--force]
 ```
 
-It looks at the top level for `go.mod`, `pyproject.toml` (or `requirements.txt`, `uv.lock`, `poetry.lock`), `package.json`, `pom.xml`, `build.gradle`,
+It looks at the top level for `go.mod`, `pyproject.toml` (or `requirements.txt`, `uv.lock`, `poetry.lock`, `pdm.lock`), `package.json`, `pom.xml`, `build.gradle`,
 `Chart.yaml`, a `Dockerfile` and an `index.html`, chooses a [flight plan](../guide/starters.md), and reads the version the repository's own
 files name (`go.mod`, `.python-version`, `.nvmrc`, `pom.xml`). Without `--write` it only prints the file; with it, the file is saved as
 `.launchway/pipeline.yaml`. A repository that already has one is left alone unless `--force`. When nothing fits it says what it looked for

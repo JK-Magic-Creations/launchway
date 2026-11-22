@@ -2,7 +2,8 @@
 # A wheel and a source distribution in dist/, for a library.
 set -e
 . "$(dirname "$0")/../common.sh"
+. "$(dirname "$0")/lib.sh"
 enter
 . "$(venv_dir)/bin/activate"
-python -c "import build" 2>/dev/null || run pip install --quiet build
+py_need build build
 run python -m build --outdir dist
