@@ -3,8 +3,12 @@ package anygit
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
@@ -401,4 +405,86 @@ func TestLive(t *testing.T) {
 		t.Fatalf("%v %v", refs, err)
 	}
 	t.Logf("default branch %q, %d refs", repo.DefaultBranch, len(refs))
+}
+
+// A server that answers with a redirect to another host is refused, and the other host sees nothing.
+func TestARedirectToAnotherHostIsRefusedAndCarriesNoCredential(t *testing.T) {
+	target := anygitfake.New()
+	defer target.Close()
+	target.Accept = [2]string{"git", anygitfake.Token}
+	var hit atomic.Int32
+	red := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hit.Add(1)
+		http.Redirect(w, r, target.URL+r.URL.Path+"?"+r.URL.RawQuery, http.StatusFound)
+	}))
+	defer red.Close()
+	t.Setenv("LW_TEST_ANYGIT_CRED", anygitfake.Token)
+	g, _ := egress.New([]string{"127.0.0.1"})
+	p, err := New(forge.Connection{ID: "c", Name: "r", Kind: forge.KindPlain, BaseURL: red.URL + anygitfake.Prefix, Credential: forge.SecretRef{Env: "LW_TEST_ANYGIT_CRED"}}, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = p.Repositories().Get(t.Context(), anygitfake.Path)
+	if err == nil || hit.Load() == 0 {
+		t.Fatalf("hit %d, err %v", hit.Load(), err)
+	}
+	if n := len(target.Requests) + len(target.Violations); n != 0 {
+		t.Errorf("the redirect target was reached %d times: %v %v", n, target.Requests, target.Violations)
+	}
+	if strings.Contains(err.Error(), anygitfake.Token) {
+		t.Errorf("the error holds the credential: %v", err)
+	}
+}
+
+// With no guard given the default guard applies: a loopback server is refused, not reached unchecked.
+func TestNoGuardMeansTheDefaultGuardNotNoGuard(t *testing.T) {
+	h := anygitfake.New()
+	defer h.Close()
+	t.Setenv("LW_TEST_ANYGIT_CRED", anygitfake.Token)
+	p, err := New(forge.Connection{ID: "c", Name: "n", Kind: forge.KindPlain, BaseURL: h.Base(), Credential: forge.SecretRef{Env: "LW_TEST_ANYGIT_CRED"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Repositories().Get(t.Context(), anygitfake.Path); err == nil || !strings.Contains(err.Error(), "internal address") {
+		t.Errorf("%v", err)
+	}
+	if len(h.Requests) != 0 {
+		t.Errorf("the server was reached: %v", h.Requests)
+	}
+}
+
+// The user name and the password never appear in the arguments of the git process, only in its environment.
+func TestTheCredentialIsNotInGitsArguments(t *testing.T) {
+	f := newFixture(t, passwordDoc)
+	bin := t.TempDir()
+	log := bin + "/args"
+	real, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("no git")
+	}
+	wrap := "#!/bin/sh\nprintf '%s\\n' \"$@\" >> " + log + "\nexec " + real + " \"$@\"\n"
+	if err := os.WriteFile(bin+"/git", []byte(wrap), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
+	if _, err := f.p.Content().Refs(t.Context(), f.repo); err != nil {
+		t.Skipf("the wrapper did not run (%v)", err)
+	}
+	b, err := os.ReadFile(log)
+	if err != nil {
+		t.Skipf("git was not run through the wrapper: %v", err)
+	}
+	for _, leak := range []string{"fake-password-for-tests-only-0001", "mary", "Authorization", "Basic "} {
+		if strings.Contains(string(b), leak) {
+			t.Errorf("git's arguments hold %q:\n%s", leak, b)
+		}
+	}
+}
+
+// An address with a user name or a password in it is refused at connection creation, with a message that does not repeat it.
+func TestAnAddressWithEmbeddedCredentialsIsRefusedPlainly(t *testing.T) {
+	_, err := New(forge.Connection{Name: "x", Kind: forge.KindPlain, BaseURL: "https://deploy:hunter2-not-real@git.example.com/x"}, nil)
+	if !errors.Is(err, forge.ErrInvalid) || strings.Contains(err.Error(), "hunter2") || strings.Contains(err.Error(), "deploy") || !strings.Contains(err.Error(), "without a user name") {
+		t.Errorf("%v", err)
+	}
 }

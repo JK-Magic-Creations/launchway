@@ -25,8 +25,10 @@ const maxDelivery = 25 << 20
 
 // DeliveryHeader carries "a unique UUID for each webhook request"
 // (X-Request-Id, https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html).
-// The page does not say whether a retry reuses it; if it does not, a retried
-// delivery is only processed again, which makes the Flight poll once more.
+// It is NOT used to name a delivery: the signature covers the body and not the
+// headers, so a captured delivery could be replayed under a fresh id and be
+// processed again. A delivery is named by a digest of its signed body instead
+// (a retry of the same delivery is the same body and is dropped as seen).
 const DeliveryHeader = "X-Request-Id"
 
 // ErrBadSignature is returned for a delivery whose signature does not match.
@@ -69,11 +71,8 @@ func (e events) Verify(r *http.Request, secret []byte) ([]forge.Event, error) {
 	if !hmac.Equal(got, m.Sum(nil)) {
 		return nil, ErrBadSignature
 	}
-	delivery := r.Header.Get(DeliveryHeader)
-	if delivery == "" {
-		sum := sha256.Sum256(body)
-		delivery = "body-" + hex.EncodeToString(sum[:16])
-	}
+	sum := sha256.Sum256(append([]byte(r.Header.Get("X-Event-Key")+"\n"), body...))
+	delivery := "body-" + hex.EncodeToString(sum[:16])
 	now := e.p.c.Now().UTC()
 	switch key := r.Header.Get("X-Event-Key"); key {
 	case "repo:refs_changed":

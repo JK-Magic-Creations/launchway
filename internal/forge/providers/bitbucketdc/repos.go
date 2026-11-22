@@ -67,6 +67,9 @@ func (p *Provider) repository(a apiRepo) forge.Repository {
 			r.Clone.SSH = l.Href
 		}
 	}
+	if r.Clone.HTTPS != "" && p.cloneCheck(r.Clone.HTTPS) != nil {
+		r.Clone.HTTPS = "" // an address on another host: the token must not go there
+	}
 	if r.Clone.HTTPS == "" { // the layout the reference's own example shows: <base>/scm/<project key>/<slug>.git
 		r.Clone.HTTPS = p.root() + "/scm/" + strings.ToLower(a.Project.Key) + "/" + a.Slug + ".git"
 	}
@@ -108,7 +111,7 @@ func (r repos) List(ctx context.Context, cursor string) (forge.Page[forge.Reposi
 		out.Items = append(out.Items, r.p.repository(a))
 	}
 	switch {
-	case !in.IsLastPage:
+	case !in.IsLastPage && in.NextPageStart > start:
 		out.Next = strconv.Itoa(ki) + ":" + strconv.Itoa(in.NextPageStart)
 	case ki+1 < len(keys):
 		out.Next = strconv.Itoa(ki+1) + ":0"
@@ -176,7 +179,7 @@ func (c content) Refs(ctx context.Context, repo forge.Repository) ([]forge.Ref, 
 			for _, r := range in.Values {
 				out = append(out, forge.Ref{Name: r.ID, Commit: r.LatestCommit})
 			}
-			if in.IsLastPage {
+			if in.IsLastPage || in.NextPageStart <= start {
 				break
 			}
 			start = in.NextPageStart
@@ -227,7 +230,23 @@ func (c content) Compare(context.Context, forge.Repository, string, string) (for
 type access struct{ p *Provider }
 
 func (a access) CloneAddresses(_ context.Context, repo forge.Repository) (forge.CloneAddresses, error) {
+	if err := a.p.cloneCheck(repo.Clone.HTTPS); err != nil {
+		return forge.CloneAddresses{}, err
+	}
 	return repo.Clone, nil
+}
+
+// cloneCheck says the clone address is on the connection's own host: it comes
+// from an answer (or from a caller), and the token is sent to it.
+func (p *Provider) cloneCheck(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != p.c.EP.API.Scheme) {
+		return fmt.Errorf("%w: the repository has no usable https clone address", forge.ErrInvalid)
+	}
+	if !p.c.EP.Hosts[u.Host] {
+		return fmt.Errorf("%w: the clone address names %s, which is not this connection's host; the token is not sent there", forge.ErrInvalid, u.Host)
+	}
+	return nil
 }
 
 // Credential: for a project or repository HTTP access token, "set the username
@@ -237,6 +256,9 @@ func (a access) CloneAddresses(_ context.Context, repo forge.Repository) (forge.
 // name there, which a connection does not know: use a project or repository token.
 func (a access) Credential(_ context.Context, repo forge.Repository, _ bool) (forge.Credential, error) {
 	if _, _, err := a.p.split(repo.Path); err != nil {
+		return forge.Credential{}, err
+	}
+	if err := a.p.cloneCheck(repo.Clone.HTTPS); err != nil {
 		return forge.Credential{}, err
 	}
 	tok, err := a.p.c.Token()

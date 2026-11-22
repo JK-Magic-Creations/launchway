@@ -40,7 +40,8 @@ func fixtureOn(t *testing.T, h *azuredevopsfake.Host, owners ...string) *fixture
 	g, _ := egress.New([]string{"127.0.0.1"})
 	p := NewAt(forge.Connection{ID: "con_1", Name: "ado", Kind: forge.KindAzureDevOps, Credential: forge.SecretRef{Env: "LW_TEST_ADO_TOKEN"}, Owners: owners},
 		endpointsOf(t, h.API(), h.Collection()), g)
-	return &fixture{h, p, forge.Repository{ID: "rep_1", Connection: "con_1", Path: h.RepoPath(), DefaultBranch: "main", Visibility: forge.Private}}
+	return &fixture{h, p, forge.Repository{ID: "rep_1", Connection: "con_1", Path: h.RepoPath(), DefaultBranch: "main", Visibility: forge.Private,
+		Clone: forge.CloneAddresses{HTTPS: h.API() + "/" + h.RepoPath() + ".git"}}}
 }
 
 // newFixture is the cloud shape with the organization acme on the owners list.
@@ -177,7 +178,7 @@ func TestOwnerAllowListAndRepositories(t *testing.T) {
 	}
 	r := page.Items[0]
 	if r.Path != "acme/proj/app" || r.Home != "acme/proj" || r.DefaultBranch != "main" || r.Clone.SSH != "ssh://git@ssh.dev.azure.com/v3/acme/proj/app" || r.Ext["id"] == "" ||
-		r.Clone.HTTPS != "https://dev.azure.com/acme/proj/_git/app" {
+		r.Clone.HTTPS != g.h.API()+"/acme/proj/_git/app" { // the fake answers an address on another host: the connection's own layout is used instead
 		t.Fatalf("%+v", r)
 	}
 	r.Connection, r.ID = "con_1", "rep_1"
@@ -196,7 +197,7 @@ func TestOwnerAllowListAndRepositories(t *testing.T) {
 	// The server product: the base address carries the collection, which is the first element of a path.
 	s := fixtureOn(t, azuredevopsfake.NewServer())
 	if page, err := s.p.Repositories().List(t.Context(), ""); err != nil || len(page.Items) != 1 || page.Items[0].Path != "DefaultCollection/proj/app" ||
-		page.Items[0].Clone.HTTPS != "https://devops.example.com/tfs/DefaultCollection/proj/_git/app" {
+		page.Items[0].Clone.HTTPS != s.h.API()+"/proj/_git/app" {
 		t.Fatalf("%+v %v", page, err)
 	}
 	if _, err := s.p.Repositories().Get(t.Context(), "acme/proj/app"); !errors.Is(err, forge.ErrInvalid) || !strings.Contains(err.Error(), "collection") {
@@ -521,5 +522,31 @@ func TestLive(t *testing.T) {
 	}
 	if _, err := p.Rules().List(ctx, repo); err != nil {
 		t.Logf("branch policies read: %v", err)
+	}
+}
+
+// A clone address that an answer names on another host never receives the token.
+func TestTheTokenIsNotSentToAnotherHostsCloneAddress(t *testing.T) {
+	f := newFixture(t)
+	repo := f.repo
+	repo.Clone.HTTPS = "https://evil.example.org/acme/proj/_git/app"
+	if cred, err := f.p.Access().Credential(t.Context(), repo, false); !errors.Is(err, forge.ErrInvalid) || cred.Secret != "" || strings.Contains(err.Error(), azuredevopsfake.Token) {
+		t.Errorf("%+v %v", cred, err)
+	}
+	if _, err := f.p.Access().CloneAddresses(t.Context(), repo); !errors.Is(err, forge.ErrInvalid) {
+		t.Errorf("clone addresses: %v", err)
+	}
+	for _, bad := range []string{"", "ssh://git@ssh.dev.azure.com/v3/acme/proj/app", "https://org@" + strings.TrimPrefix(f.h.API(), "http://") + "/x"} {
+		repo.Clone.HTTPS = bad
+		if _, err := f.p.Access().Credential(t.Context(), repo, false); !errors.Is(err, forge.ErrInvalid) {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+	got := f.p.repository("acme", apiRepo{Name: "app", RemoteURL: "https://evil.example.org/acme/proj/_git/app", Project: struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}{Name: "proj"}})
+	if got.Clone.HTTPS != f.h.API()+"/acme/proj/_git/app" {
+		t.Errorf("the foreign address was kept: %s", got.Clone.HTTPS)
 	}
 }

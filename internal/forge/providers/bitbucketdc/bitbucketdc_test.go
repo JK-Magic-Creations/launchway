@@ -35,7 +35,8 @@ func newFixtureFor(t *testing.T, h *bitbucketdcfake.Host, owners ...string) *fix
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &fixture{h, p, forge.Repository{ID: "rep_1", Connection: "con_1", Path: h.Path(), DefaultBranch: "main", Visibility: forge.Private}}
+	return &fixture{h, p, forge.Repository{ID: "rep_1", Connection: "con_1", Path: h.Path(), DefaultBranch: "main", Visibility: forge.Private,
+		Clone: forge.CloneAddresses{HTTPS: h.BaseURL() + "/scm/" + strings.ToLower(h.Path()) + ".git"}}}
 }
 
 func (f *fixture) noViolations(t *testing.T) {
@@ -383,6 +384,25 @@ func TestWebhook(t *testing.T) {
 			t.Errorf("%s starts nothing: %v %v", other, evs, err)
 		}
 	}
+	// An empty signature, and an empty configured secret, are refused.
+	empty := signed("repo:refs_changed", "d1", push)
+	empty.Set("X-Hub-Signature", "sha256=")
+	if _, err := send(push, empty); !errors.Is(err, ErrBadSignature) {
+		t.Errorf("empty signature: %v", err)
+	}
+	if _, err := f.p.Events().Verify(func() *http.Request {
+		req, _ := http.NewRequest(http.MethodPost, "http://x/hook", bytes.NewBufferString(push))
+		req.Header = signed("repo:refs_changed", "d1", push)
+		return req
+	}(), nil); err == nil {
+		t.Error("an empty configured secret is accepted")
+	}
+	// The request id is not signed, so replaying a delivery under a fresh id names the same delivery.
+	first, _ := send(push, signed("repo:refs_changed", "id-one", push))
+	again, _ := send(push, signed("repo:refs_changed", "id-two", push))
+	if len(first) != 3 || len(again) != 3 || first[0].DeliveryID != again[0].DeliveryID {
+		t.Errorf("a replay under another id is another delivery: %v %v", first, again)
+	}
 	// No request id: a delivery is named by its body.
 	h := signed("repo:refs_changed", "", push)
 	h.Del("X-Request-Id")
@@ -523,5 +543,60 @@ func TestLive(t *testing.T) {
 	}
 	if _, err := p.Rules().List(ctx, repo); err != nil {
 		t.Logf("branch permissions read: %v", err)
+	}
+}
+
+// A clone address that an answer names on another host never receives the token: it is replaced by the
+// connection's own layout when a repository is read, and refused when a credential is asked for it.
+func TestTheTokenIsNotSentToAnotherHostsCloneAddress(t *testing.T) {
+	f := newFixture(t)
+	repo := f.repo
+	repo.Clone.HTTPS = "https://evil.example.org/scm/p/r.git"
+	if cred, err := f.p.Access().Credential(t.Context(), repo, false); !errors.Is(err, forge.ErrInvalid) || cred.Secret != "" || strings.Contains(err.Error(), bitbucketdcfake.Access) {
+		t.Errorf("%+v %v", cred, err)
+	}
+	if _, err := f.p.Access().CloneAddresses(t.Context(), repo); !errors.Is(err, forge.ErrInvalid) {
+		t.Errorf("clone addresses: %v", err)
+	}
+	for _, bad := range []string{"https://u:p@" + strings.TrimPrefix(f.h.BaseURL(), "http://") + "/x.git", "ssh://git@host/x.git", ""} {
+		repo.Clone.HTTPS = bad
+		if _, err := f.p.Access().Credential(t.Context(), repo, false); !errors.Is(err, forge.ErrInvalid) {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+	got := f.p.repository(apiRepo{Slug: "r", Project: struct {
+		Key string `json:"key"`
+	}{Key: "P"}, Links: struct {
+		Clone []struct {
+			Name string `json:"name"`
+			Href string `json:"href"`
+		} `json:"clone"`
+	}{Clone: []struct {
+		Name string `json:"name"`
+		Href string `json:"href"`
+	}{{Name: "http", Href: "https://evil.example.org/scm/p/r.git"}}}})
+	if !strings.HasPrefix(got.Clone.HTTPS, f.h.BaseURL()+"/scm/p/r") {
+		t.Errorf("the foreign address was kept: %s", got.Clone.HTTPS)
+	}
+}
+
+// A page whose next start does not move forward ends the listing instead of repeating it.
+func TestAPageThatDoesNotAdvanceEndsTheListing(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"values":[],"isLastPage":false,"nextPageStart":0}`))
+	}))
+	defer srv.Close()
+	t.Setenv("LW_TEST_BBDC_TOKEN", bitbucketdcfake.Access)
+	g, _ := egress.New([]string{"127.0.0.1"})
+	p, err := New(forge.Connection{ID: "c", Name: "b", Kind: forge.KindBitbucketDataCenter, BaseURL: srv.URL, Credential: forge.SecretRef{Env: "LW_TEST_BBDC_TOKEN"}}, g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, err := p.Repositories().List(t.Context(), "")
+	if err != nil || page.Next != "" {
+		t.Errorf("%+v %v", page, err)
+	}
+	if refs, err := p.Content().Refs(t.Context(), forge.Repository{Path: "P/r"}); err != nil || len(refs) != 0 {
+		t.Errorf("%v %v", refs, err)
 	}
 }

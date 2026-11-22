@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -72,6 +73,11 @@ func (p *Provider) repository(org string, a apiRepo) forge.Repository {
 		DefaultBranch: trimRef(a.DefaultBranch), Visibility: forge.Private, Archived: a.IsDisabled,
 		Ext: map[string]any{"id": a.ID, "web_url": a.WebURL, "fork": a.IsFork}}
 	r.Clone.HTTPS = noUser(a.RemoteURL)
+	if p.cloneCheck(r.Clone.HTTPS) != nil {
+		// The address came in an answer and names a host the token must not go
+		// to: use the layout the product documents on the connection's own host.
+		r.Clone.HTTPS = p.c.URL(p.projectPath(org, a.Project.Name) + "/_git/" + restkit.Esc(a.Name))
+	}
 	r.Clone.SSH = sshURL(a.SSHURL)
 	return r
 }
@@ -253,7 +259,23 @@ func (c content) Compare(context.Context, forge.Repository, string, string) (for
 type access struct{ p *Provider }
 
 func (a access) CloneAddresses(_ context.Context, repo forge.Repository) (forge.CloneAddresses, error) {
+	if err := a.p.cloneCheck(repo.Clone.HTTPS); err != nil {
+		return forge.CloneAddresses{}, err
+	}
 	return repo.Clone, nil
+}
+
+// cloneCheck says the clone address is on one of the connection's own hosts: it
+// comes from an answer (or from a caller), and the token is sent to it.
+func (p *Provider) cloneCheck(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != p.ep.API.Scheme) {
+		return fmt.Errorf("%w: the repository has no usable https clone address", forge.ErrInvalid)
+	}
+	if !p.ep.Hosts[u.Host] {
+		return fmt.Errorf("%w: the clone address names %s, which is not this connection's host; the token is not sent there", forge.ErrInvalid, u.Host)
+	}
+	return nil
 }
 
 // GitUser is the user name Git is given with the token: the token is the
@@ -267,6 +289,9 @@ const GitUser = "launchway"
 // authenticates" once a token expires, which says Git authenticates with it).
 func (a access) Credential(_ context.Context, repo forge.Repository, _ bool) (forge.Credential, error) {
 	if _, _, _, err := a.p.split(repo.Path); err != nil {
+		return forge.Credential{}, err
+	}
+	if err := a.p.cloneCheck(repo.Clone.HTTPS); err != nil {
 		return forge.Credential{}, err
 	}
 	tok, err := a.p.c.Token()

@@ -129,7 +129,7 @@ func (pr proposals) List(ctx context.Context, repo forge.Repository, state forge
 		}
 		out.Items = append(out.Items, p)
 	}
-	if !in.IsLastPage {
+	if !in.IsLastPage && in.NextPageStart > start {
 		out.Next = strconv.Itoa(in.NextPageStart)
 	}
 	return out, nil

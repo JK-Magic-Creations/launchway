@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
@@ -41,11 +42,13 @@ func (p *Provider) git(ctx context.Context, path, dir string, args ...string) (s
 	if err != nil {
 		return "", err
 	}
-	var pin []string
-	if p.g != nil {
-		if pin, err = p.g.Pin(ctx, u.String()); err != nil {
-			return "", err
-		}
+	g := p.g
+	if g == nil { // no guard given: the default guard (public addresses only), never none
+		g, _ = egress.New(nil)
+	}
+	pin, err := g.Pin(ctx, u.String())
+	if err != nil {
+		return "", err
 	}
 	c, err := p.credential()
 	if err != nil {

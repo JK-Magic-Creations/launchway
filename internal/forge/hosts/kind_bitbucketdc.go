@@ -28,7 +28,8 @@ func init() {
 			}
 			return []string{ep.API.String()}, nil
 		},
-		DeliveryHeader: bitbucketdc.DeliveryHeader,
+		// The id header is not covered by the signature, so a delivery is named by a digest of its signed body.
+		DeliveryHeader: "",
 		Probe:          "that the token is accepted, the repositories of the allowed projects it holds read, write and admin permission on, whether auto-merge is on for one writable repository, and whether branch permissions can be read (the host names no token kind, scopes or expiry)",
 	})
 }
