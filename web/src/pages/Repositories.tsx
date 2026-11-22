@@ -5,6 +5,7 @@ import { PageHead, Sheet } from "../kit/layout";
 import { Chip } from "../kit/Status";
 import { forgeApi, type HostedRepo, type SshKey } from "../forgeApi";
 import { RepoGeneral } from "./RepoGeneral";
+import { RepoReach } from "./RepoReach";
 import { HooksPanel } from "./HooksPanel";
 import { MergeRulesPanel } from "./MergeRules";
 import { PageTabs, useTab } from "../components/PageTabs";
@@ -165,7 +166,7 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
   const [repo, setRepo] = useState<HostedRepo | null>(null);
   const [admin, setAdmin] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [tab, setTab] = useTab(["keys", "hooks", "branches", "merge"], "keys");
+  const [tab, setTab] = useTab(["keys", "reach", "hooks", "branches", "merge"], "keys");
   useEffect(() => {
     forgeApi.repository(owner, name).then(setRepo).catch(setError);
     forgeApi.deployKeys(owner, name).then(() => setAdmin(true), () => setAdmin(false));
@@ -179,8 +180,9 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
       {admin && (
         <>
           <PageTabs current={tab} onChange={setTab}
-            tabs={[{ id: "keys", label: "Deploy keys" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }, { id: "merge", label: "Merge rules" }]} />
+            tabs={[{ id: "keys", label: "Deploy keys" }, { id: "reach", label: "Who can reach it" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }, { id: "merge", label: "Merge rules" }]} />
           {tab === "keys" && <DeployKeys repo={repo} />}
+          {tab === "reach" && <RepoReach repo={repo} />}
           {tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
           {tab === "branches" && <Protected repo={repo} />}
           {tab === "merge" && <MergeRulesPanel path={repo.path} />}

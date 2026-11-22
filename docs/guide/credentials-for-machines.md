@@ -74,7 +74,7 @@ for each deploy step, bound to that deployment ([GitOps write-back](gitops-write
 
 **A job that needs one repository over HTTPS, as a deploy key does over SSH.** A service account
 token limited to that one repository with `read` (or `write`): that is the HTTPS equivalent of a
-deploy key, so there is no second mechanism. Make it in one step:
+deploy key, so there is no second mechanism. On a repository's settings page, the tab **Who can reach it** lists the people, deploy keys, tokens (service-account tokens included) and mirrors that reach the repository, and **Make a credential for this repository** makes such a token in one step (read or write, optional address ranges, expiry), shown once. On the command line:
 
 ```bash
 launchway service-accounts create ci-shop --role viewer --description "build system for shop"

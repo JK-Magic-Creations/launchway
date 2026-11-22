@@ -337,6 +337,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts list` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
+| `POST /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts token` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
 | `GET /api/v1/repositories/{owner}/{name}/dependencies` | `list_dependencies` | `deps list` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |

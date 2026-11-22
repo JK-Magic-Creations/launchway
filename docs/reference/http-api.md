@@ -964,6 +964,8 @@ These routes need sign-in on: with sign-in off they answer `404` with `API token
 | `DELETE /api/v1/service-accounts/{name}` | `admin` | `service_account.delete` | Removes it and every token it owns. Answers `204`. |
 | `GET /api/v1/service-accounts/{name}/tokens` | `admin` | — | The account's tokens, without their values. |
 | `POST /api/v1/service-accounts/{name}/tokens` | `admin` | `token.create` | Makes a token for the account (the body is that of `POST /api/v1/tokens`; its role is at most the account's). From an administrator's signed-in session; from an administrator's API token only if `auth.tokens.service_accounts_from_tokens` is on (`403` otherwise); never from a service account's or an agent's token. |
+| `GET /api/v1/repositories/{owner}/{name}/credentials` | `repo-admin` | — | Who can reach the repository: `people` (the access bindings that cover its path, with their roles) and `tokens` (unexpired tokens, service-account tokens included, limited to repositories whose list includes it). Deploy keys and mirrors have their own calls. |
+| `POST /api/v1/repositories/{owner}/{name}/credentials` | `repo-admin` | `token.create` | One step: makes a token limited to this repository alone, `read` or `write` (`access`), with optional `source_ranges` and `expires_in_days`, for a service account made for the purpose (`repo-<owner>-<name>-<access>`). Shown once. From a signed-in session; from an administrator's API token only where `auth.tokens.service_accounts_from_tokens` is on. |
 | `GET /api/v1/admin/tokens` | `admin` | — | Everyone's tokens. |
 | `DELETE /api/v1/admin/tokens/{id}` | `admin` | `token.revoke` | Revokes anyone's token. Answers `204`. |
 

@@ -142,3 +142,44 @@ func TestServiceAccountsAndTheirTokens(t *testing.T) {
 	}
 	_ = http.StatusOK
 }
+
+// The repository page's one-step credential: a repository-limited token of a service account made for it,
+// listed under who can reach the repository.
+func TestRepositoryCredentialInOneStep(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/shop")
+	hostedRepo(t, e, "acme/other")
+	ada, base, cli := e.signIn(t, "ada"), e.srv.URL, newBrowser(t)
+	if r := cli.do("POST", base+"/api/v1/repositories/acme/shop/credentials", `{"name":"x","access":"read"}`, bearer(e.tokenFor(t, "ada", "k"))...); r.status != 403 {
+		t.Errorf("from a plain API token: %d", r.status)
+	}
+	if r := ada.do("POST", base+"/api/v1/repositories/acme/shop/credentials", `{"name":"x","access":"admin"}`); r.status != 400 {
+		t.Errorf("a bad access: %d", r.status)
+	}
+	var made svcToken
+	r := ada.do("POST", base+"/api/v1/repositories/acme/shop/credentials", `{"name":"mirror","access":"read","source_ranges":["127.0.0.1"],"expires_in_days":30}`)
+	if r.status != 201 {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	r.json(t, &made)
+	if gitStatus(e, made.Token, "/acme/shop", "git-upload-pack") != 200 || gitStatus(e, made.Token, "/acme/other", "git-upload-pack") != 404 ||
+		gitStatus(e, made.Token, "/acme/shop", "git-receive-pack") != 403 {
+		t.Error("the credential does not reach exactly its repository, read only")
+	}
+	var reach struct {
+		People []reachPerson `json:"people"`
+		Tokens []reachToken  `json:"tokens"`
+	}
+	ada.get(base+"/api/v1/repositories/acme/shop/credentials").json(t, &reach)
+	if len(reach.Tokens) != 1 || reach.Tokens[0].Name != "mirror" || reach.Tokens[0].Access != "read" || reach.Tokens[0].Owner != "service:repo-acme-shop-read" || len(reach.People) == 0 {
+		t.Errorf("who can reach: %+v", reach)
+	}
+	var other struct{ Tokens []reachToken }
+	ada.get(base+"/api/v1/repositories/acme/other/credentials").json(t, &other)
+	if len(other.Tokens) != 0 {
+		t.Errorf("another repository lists it: %+v", other)
+	}
+	if r := e.signIn(t, "otto").do("GET", base+"/api/v1/repositories/acme/shop/credentials", ""); r.status == 200 {
+		t.Errorf("a person without admin of the repository: %d", r.status)
+	}
+}

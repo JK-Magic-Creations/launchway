@@ -9930,6 +9930,79 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/credentials:
+        get:
+            description: 'Who can reach the repository: people (the access bindings that cover its path, with their roles) and tokens (unexpired tokens, service-account tokens included, limited to repositories whose list includes it). Deploy keys and mirrors have their own calls.'
+            operationId: get_api_v1_repositories_owner_name_credentials
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Who can reach the repository: people (the access bindings that cover its path, with their roles) and tokens (unexpired tokens, service-account tokens included, limited to repositories whose list includes it).'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+        post:
+            description: 'One step: makes a token limited to this repository alone, read or write (access), with optional source_ranges and expires_in_days, for a service account made for the purpose (repo-<owner>-<name>-<access>). Shown once. From a signed-in session; from an administrator''s API token only where auth.tokens.service_accounts_from_tokens is on.'
+            operationId: post_api_v1_repositories_owner_name_credentials
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One step: makes a token limited to this repository alone, read or write (access), with optional source_ranges and expires_in_days, for a service account made for the purpose (repo-<owner>-<name>-<access>).'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: token.create
     /api/v1/repositories/{owner}/{name}/dependencies:
         get:
             description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the Depots (registries) or the vulnerability data cannot be reached.'
