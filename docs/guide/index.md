@@ -34,6 +34,8 @@ key and setting see the [reference](../reference/index.md).
 | [Notifications](notifications.md) | Telling people an approval waits or something went wrong: channels, rules, the delivery log |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Credentials for machines](credentials-for-machines.md) | Which credential for a mirror, a GitOps controller, a build system or a deploy step: repository and address limits, service accounts |
+| [Notifications for people](notifications-for-people.md) | The inbox, e-mail, watch levels, quiet hours, the digest, what mail carries and how an administrator sets it up |
+| [Verified commits and tags](verified-commits.md) | Signing keys, what each state means, the merge and push rules, the installation's own signing key |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
 | [Browsing code](browsing-code.md) | Files, history, blame, comparing, branches and tags of a hosted repository, in the web interface, CLI and tools |
 | [Searching code](searching-code.md) | Literal and regular-expression search inside a repository, with its bounds |

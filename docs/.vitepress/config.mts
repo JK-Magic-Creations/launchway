@@ -240,6 +240,8 @@ export default defineConfig({
           { text: 'Policies', link: '/guide/policies' },
           { text: 'Verifying a deployment', link: '/guide/verification' },
           { text: 'Notifications', link: '/guide/notifications' },
+          { text: 'Notifications for people', link: '/guide/notifications-for-people' },
+          { text: 'Verified commits and tags', link: '/guide/verified-commits' },
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Git over SSH', link: '/guide/git-over-ssh' },
           { text: 'Browsing code', link: '/guide/browsing-code' },

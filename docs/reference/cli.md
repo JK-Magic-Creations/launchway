@@ -35,6 +35,9 @@ launchway encryption init|status|rotate|rewrap   the root key for encryption at 
 launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
 launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
 launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
+launchway signing  keys|verify|installation-key     your signing keys, and whether commits and tags are verified
+launchway inbox    list|count|read|done             your one inbox: notices, work entries, pull requests waiting on you
+launchway notices  prefs|set|watch|quiet|digest|mail how and when you are told, by e-mail or in the inbox
 launchway version
 ```
 
@@ -1385,6 +1388,51 @@ launchway keys host [--json]
 ```
 
 `add` takes ed25519, ECDSA and RSA keys of at least 3072 bits, and says why when it refuses one. `host` prints the address and the fingerprints to compare with what `ssh` shows the first time you connect. The same operations are the MCP tools `list_ssh_keys`, `add_ssh_key`, `delete_ssh_key` and `get_ssh_info`, and the routes `/api/v1/user/ssh-keys` and `/api/v1/ssh`.
+
+## launchway signing
+
+Your signing keys and the verdict on commits and tags ([Verified commits and tags](../guide/verified-commits.md)). Git hosting must be on.
+
+```text
+launchway signing keys list [--json]
+launchway signing keys add --file KEY.pub [--name N] [--expires 2027-06-30T00:00:00Z] [--json]
+launchway signing keys revoke ID
+launchway signing keys delete ID
+launchway signing verify OWNER/NAME OBJECT... [--json]
+launchway signing installation-key [--json]
+```
+
+`revoke` takes a key out of use from now on; `delete` makes what it signed show as signed by an unknown key. `verify` takes full object names. The same are the MCP tools `list_signing_keys`, `add_signing_key`, `revoke_signing_key`, `delete_signing_key`, `verify_signatures` and `get_signing_installation_key`, and the routes under `/api/v1/user/signing-keys`, `/api/v1/repositories/{owner}/{name}/signatures` and `/api/v1/signing/installation-key`.
+
+## launchway inbox
+
+Your one inbox ([Notifications for people](../guide/notifications-for-people.md)).
+
+```text
+launchway inbox list [--state unread|open|done|all] [--kind KIND] [--source notice|work|pull] [--json]
+launchway inbox count [--json]
+launchway inbox read ID... [--unread]
+launchway inbox done ID... [--reopen]
+```
+
+The same are the MCP tools `get_inbox` and `mark_inbox`, and the routes under `/api/v1/inbox`.
+
+## launchway notices
+
+What you are told of, and how.
+
+```text
+launchway notices prefs [--json]
+launchway notices set KIND in_app|email|off
+launchway notices watch SCOPE all|participating|none
+launchway notices quiet --from 22:00 --to 07:00 [--zone Europe/Berlin]
+launchway notices quiet --off
+launchway notices digest on|off [--hour 8]
+launchway notices mail [--json]
+launchway notices mail-test [--to ADDRESS]
+```
+
+`mail` and `mail-test` are for administrators: the mail settings and queue, and a test message. The same are the MCP tools `get_notice_preferences`, `set_notice_preferences`, `get_mail_status` and `send_test_mail`, and the routes `/api/v1/notices/preferences` and `/api/v1/mail`.
 
 ## launchway version
 

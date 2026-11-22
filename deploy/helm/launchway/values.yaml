@@ -401,6 +401,14 @@ config:
   notifications:
     channels: []
     rules: []
+  # -- E-mail to people (a review asked, a mention, an approval waiting, a credential about to expire). Unset: no
+  # mail is sent and people have their inbox. host and from turn it on; the connection is encrypted (STARTTLS) and a
+  # server that does not offer that is refused. username and password are references to a secret store
+  # (ai.serverSecretStores), never values. The mail server must be public or listed in the egress allow-list, and the
+  # servers need its port in networkPolicy.server.extraEgress (the chart's default allows HTTPS only).
+  # Example: { host: smtp.example.com, from: "Launchway <notify@example.com>", publicUrl: https://launchway.example.com,
+  #   username: { store: vault, key: mail/launchway, field: user }, password: { store: vault, key: mail/launchway, field: password } }
+  mail: {}
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin

@@ -198,6 +198,18 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.automation.accounts` | list or null | unset (the built-in list) | Accounts that are automation: their runs are counted apart in the queue and their pull requests run restricted. The built-in list is `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*` and `launchway-updater*`; `[]` names none |
 | `config.pullRequests.untrusted` | string | `""` (restrict) | `restrict` or `allow`: whether pull requests from automation accounts and forks run restricted (no secrets, deploys or cache writes) until a maintainer approves. See [Pull-request trust](../guide/pull-request-trust.md) |
 | `config.notifications.channels` | list | `[]` | Where messages go: `{ name, kind: webhook\|slack\|discord\|teams, url: { store, key, field }, secret: { store, key } }`. The address and signing key are secret references (read from `ai.serverSecretStores`), never values: a chat webhook's address is a credential, and a value there is refused |
+| `config.mail.host` | text | unset (no mail) | The mail server. Unset, no mail is sent and people have their inbox. It must be a public host or one in the egress allow-list; the servers also need its port in `networkPolicy.server.extraEgress` (the default policy allows HTTPS only) |
+| `config.mail.port` | number | `587` | The server's port (`465` with `security: tls`) |
+| `config.mail.security` | text | `starttls` | `starttls`, `tls` or `none`. An encrypted connection is required; `none` also needs `allowPlain` |
+| `config.mail.allowPlain` | boolean | `false` | Say that unencrypted mail is acceptable on this network |
+| `config.mail.username` | map | none | `{ store, key, field }`: a reference to a secret store in `ai.serverSecretStores` that holds the user name. Never the value |
+| `config.mail.password` | map | none | The same, for the password |
+| `config.mail.from` | text | none | The sender, such as `Launchway <notify@example.com>`. Required with `host` |
+| `config.mail.publicUrl` | text | none | The installation's public address: links in mail lead there. Without it messages carry no links |
+| `config.mail.ratePerMinute` | number | `30` | The most messages the installation sends in a minute; more wait |
+| `config.mail.ratePerHour` | number | `300` | The most in an hour |
+| `config.mail.maxAttempts` | number | `5` | Tries before a message is given up on |
+| `config.mail.includePrivateDetails` | boolean | `false` | Let titles and comments of repositories that are not public travel by mail |
 | `config.notifications.rules` | list | `[]` | Which events go to which channels: `{ "on": [approval.requested, ...], projects, environments, branches, to: [channel names] }`. Write `"on"` in quotes: unquoted, Helm reads it as the boolean true |
 | `config.mcp.enabled` | boolean or null | unset (on) | `false` turns the MCP endpoint off on every server |
 | `config.mcp.allowedOrigins` | list | `[]` | Origins of web pages, besides the servers' own, that may call `/mcp` from a browser, such as `https://tools.example.com`. Requests without an `Origin` header are not affected |

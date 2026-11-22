@@ -160,7 +160,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Search inside a repository](roadmap/milestone-1.md#search-inside-a-repository) | Available | Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. |
 | [Show every kind of file properly](roadmap/milestone-1.md#show-every-kind-of-file-properly) | Planned | Markdown, diagrams, math, tables of data, images with before and after, documents and notebooks render in the browser. |
 | [Edit in the browser, as a commit](roadmap/milestone-1.md#edit-in-the-browser-as-a-commit) | Available | Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. |
-| [Verified commits and tags](roadmap/milestone-1.md#verified-commits-and-tags) | Planned | Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. |
+| [Verified commits and tags](roadmap/milestone-1.md#verified-commits-and-tags) | Available | Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. ([docs](guide/verified-commits.md)) |
 | [Repository maintenance and health](roadmap/milestone-1.md#repository-maintenance-and-health) | Planned | Scheduled housekeeping, an integrity check, a size report and a health note on the Tower. |
 | [Repository trash](roadmap/milestone-1.md#repository-trash) | Planned | A deleted repository goes to a trash and can come back within a set time. |
 | [Mirrors in and out](roadmap/milestone-1.md#mirrors-in-and-out) | Available | Pull a repository from another host on a schedule, or push every change to another host as a safety copy. |
@@ -172,7 +172,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Repository quotas and size limits](roadmap/milestone-1.md#repository-quotas-and-size-limits) | Planned | Limits on repository size, large-file storage and per-organization usage, shared with Cargo and log quotas. |
 | [Activity, language and topic information](roadmap/milestone-1.md#activity-language-and-topic-information) | Planned | Contributor activity, commit graphs, languages, topics and a repository picture. |
 | [Webhooks to other tools](roadmap/milestone-1.md#webhooks-to-other-tools) | Available | Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries. ([docs](guide/webhooks.md)) |
-| [Notifications and email](roadmap/milestone-1.md#notifications-and-email) | Planned | An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. |
+| [Notifications and email](roadmap/milestone-1.md#notifications-and-email) | Available | An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. ([docs](guide/notifications-for-people.md)) |
 
 ### Review and merge changes
 

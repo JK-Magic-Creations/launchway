@@ -171,8 +171,8 @@ database's URL is never a stored value: the servers build it from the Secret tha
 {{- fail (printf "ai.models: %s: key must name a store and a key, such as {store: vault, key: ai/anthropic, field: key}" .name) -}}
 {{- end -}}
 {{- end -}}
-{{- if and $ai.serverSecretStores (not $models) (not (.Values.config.notifications | default dict).channels) -}}
-{{- fail "ai.serverSecretStores is set, but ai.models is empty (and no config.notifications.channels read their addresses from it)" -}}
+{{- if and $ai.serverSecretStores (not $models) (not (.Values.config.notifications | default dict).channels) (not (.Values.config.mail | default dict).host) -}}
+{{- fail "ai.serverSecretStores is set, but ai.models is empty (and neither config.notifications.channels nor config.mail read their secrets from it)" -}}
 {{- end -}}
 {{- if and (eq (toString .Values.runner.ai) "true") (not $models) -}}
 {{- fail "runner.ai is true, but ai.models is empty: list the models runners may call" -}}
@@ -320,6 +320,24 @@ owns may not appear in it.
 {{- end -}}
 {{- end -}}
 {{- $_ := set $config "notifications" (dict "channels" ($nt.channels | default list) "rules" ($nt.rules | default list)) -}}
+{{- end -}}
+{{- /* E-mail to people (the mail installation setting): only what is set, with the chart's camelCase names. */ -}}
+{{- $ml := .Values.config.mail | default dict -}}
+{{- if $ml -}}
+{{- $mail := dict -}}
+{{- range $key, $value := dict "host" $ml.host "security" $ml.security "from" $ml.from "public_url" $ml.publicUrl -}}
+{{- if $value }}{{ $_ := set $mail $key (toString $value) }}{{ end -}}
+{{- end -}}
+{{- range $key, $value := dict "port" $ml.port "rate_per_minute" $ml.ratePerMinute "rate_per_hour" $ml.ratePerHour "max_attempts" $ml.maxAttempts -}}
+{{- if $value }}{{ $_ := set $mail $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if kindIs "bool" $ml.allowPlain }}{{ $_ := set $mail "allow_plain" $ml.allowPlain }}{{ end -}}
+{{- if kindIs "bool" $ml.includePrivateDetails }}{{ $_ := set $mail "include_private_details" $ml.includePrivateDetails }}{{ end -}}
+{{- range $key, $ref := dict "username" $ml.username "password" $ml.password -}}
+{{- if $ref }}{{ $_ := set $mail $key $ref }}{{ end -}}
+{{- end -}}
+{{- if not $ml.host }}{{ fail "config.mail.host is the mail server; set it, or remove config.mail" }}{{ end -}}
+{{- $_ := set $config "mail" $mail -}}
 {{- end -}}
 {{- /* Behind an Ingress or a Gateway route the servers trust the proxy's forwarded headers (and set
        the cookie's Secure flag from them), unless extraConfig.server.trust_proxy says otherwise. */ -}}
