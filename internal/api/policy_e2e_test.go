@@ -154,8 +154,8 @@ func TestWaiverEnvironments(t *testing.T) {
 	}{
 		{waiverBody("max_timeout", ""), http.StatusCreated, ""},
 		{waiverBody("tests", `,"environment":"staging"`), http.StatusCreated, ""},
-		{waiverBody("tests", `,"environment":"prod"`), http.StatusForbidden, "in environment prod"},
-		{waiverBody("tests", ""), http.StatusForbidden, "name the environment"},
+		{waiverBody("tests", `,"environment":"prod"`), http.StatusForbidden, "in Airfield prod"},
+		{waiverBody("tests", ""), http.StatusForbidden, "name the Airfield"},
 	}
 	for _, c := range cases {
 		r := otto.do(http.MethodPost, base, c.body)

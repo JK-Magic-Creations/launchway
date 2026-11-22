@@ -223,9 +223,9 @@ func TestLaunchLineQueuedStepIsHoldingNotRunning(t *testing.T) {
 		step       engine.StepView
 		state, now string
 	}{
-		"queued":  {queued, stationHolding, "Tests: Holding: waiting for a runner to pick up unit-tests"},
+		"queued":  {queued, stationHolding, "Tests: Holding: waiting for a Station to pick up unit-tests"},
 		"room":    {room, stationHolding, "Tests: Holding: The cluster is full"},
-		"lost":    {lost, stationHolding, "Tests: Holding: retrying on another runner, attempt 3, after the last one stopped responding"},
+		"lost":    {lost, stationHolding, "Tests: Holding: retrying on another Station, attempt 3, after the last one stopped responding"},
 		"running": {running, stationRunning, "Tests: unit-tests is running"},
 	} {
 		d := &engine.RunDetail{StepList: []engine.StepView{stepOf("lint", "", engine.StepSucceeded, 0), c.step}}

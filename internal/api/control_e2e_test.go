@@ -103,7 +103,7 @@ func TestCommandsOverHTTP(t *testing.T) {
 	if r := vic.do(http.MethodPost, base+"promote", ""); r.status != http.StatusForbidden {
 		t.Fatalf("a viewer promoting: %d %s", r.status, r.body)
 	}
-	if r := dana.do(http.MethodPost, base+"promote", ""); r.status != http.StatusForbidden || !strings.Contains(string(r.body), "in environment prod") {
+	if r := dana.do(http.MethodPost, base+"promote", ""); r.status != http.StatusForbidden || !strings.Contains(string(r.body), "in Airfield prod") {
 		t.Fatalf("an operator of staging only: %d %s", r.status, r.body)
 	}
 	if r := otto.do(http.MethodPost, base+"promote", ""); r.status != http.StatusForbidden || !strings.Contains(string(r.body), "protected") {
@@ -118,7 +118,7 @@ func TestCommandsOverHTTP(t *testing.T) {
 		t.Fatalf("otto's controls: %+v", ctl)
 	}
 	dana.get(base+"controls").json(t, &ctl)
-	if ctl.Controls[2].Available || !strings.Contains(ctl.Controls[2].Reason, "environment prod") {
+	if ctl.Controls[2].Available || !strings.Contains(ctl.Controls[2].Reason, "Airfield prod") {
 		t.Fatalf("dana's controls: %+v", ctl)
 	}
 	r := ada.do(http.MethodPost, base+"promote", `{"comment":"canary looks fine"}`)
@@ -180,7 +180,7 @@ func TestCommandsWithLimitedTokens(t *testing.T) {
 	}{
 		{"ada's viewer token", adaView, "promote", http.StatusForbidden, ""},
 		{"ada's token for web only", adaWeb, "promote", http.StatusNotFound, ""},
-		{"dana's operator token (dana operates staging only)", danaOp, "abort", http.StatusForbidden, "in environment prod"},
+		{"dana's operator token (dana operates staging only)", danaOp, "abort", http.StatusForbidden, "in Airfield prod"},
 		{"otto's token (otto started the run)", ottoOp, "promote", http.StatusForbidden, "protected"},
 		{"ada's operator token for pay-shop", adaOp, "promote", http.StatusCreated, ""},
 		{"otto's token aborting", ottoOp, "abort", http.StatusCreated, ""},
@@ -196,7 +196,7 @@ func TestCommandsWithLimitedTokens(t *testing.T) {
 	}
 	cli.get(base+"controls", bearer(danaOp)...).json(t, &ctl)
 	for _, c := range ctl.Controls {
-		if c.Available || !strings.Contains(c.Reason, "environment prod") {
+		if c.Available || !strings.Contains(c.Reason, "Airfield prod") {
 			t.Errorf("dana's token's controls: %+v", ctl.Controls)
 		}
 	}

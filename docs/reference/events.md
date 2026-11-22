@@ -246,6 +246,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
 | `run_trigger.create` | `POST /api/v1/projects/{name}/run-triggers`: a project now starts a run when another project's run or launch ends |
 | `run_trigger.delete` | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}`: a trigger on another project's results was removed |
+| `run_trigger.from_graph` | `POST /api/v1/projects/{name}/run-triggers/graph`: result triggers made from what the software graph says the project depends on; the detail says how many |
 | `run_trigger.allow` | `POST /api/v1/projects/{name}/run-trigger-allows`: the upstream project allowed another to trigger on its results (the detail says whether it may read step outputs) |
 | `run_trigger.revoke` | `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}`: that permission was withdrawn |
 | `event_source.create` | `POST /api/v1/projects/{name}/event-sources`: an incoming event source was made; the signing secret was shown once and is never recorded |

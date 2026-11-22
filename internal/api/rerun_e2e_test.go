@@ -81,7 +81,7 @@ func TestRerunPermissionsAndAudit(t *testing.T) {
 		"dana pay-api " + orig + " denied: not found: run " + orig,
 		"otto pay-api " + orig + " failed: say which step to re-run from: {\"from\": \"<step>\"}",
 		"otto pay-api " + orig + " failed: cannot re-run from after: it needs gate (failed), which did not succeed in run #1, so there is nothing to reuse. Re-run from an earlier step, or resume the run",
-		"otto pay-api " + orig + " ok: re-run of #1 from step gate: new run #2 " + re.ID,
+		"otto pay-api " + orig + " ok: re-run of #1 from step gate: new Sortie #2 " + re.ID,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("audit:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))

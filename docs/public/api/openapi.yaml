@@ -464,7 +464,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/config/state-credential:
         post:
-            description: 'A runner, under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            description: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
             operationId: post_api_runner_v1_config_state_credential
             responses:
                 "200":
@@ -483,7 +483,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: 'A runner, under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            summary: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
             tags:
                 - runner
             x-launchway-access: runner
@@ -1055,7 +1055,7 @@ paths:
                 - v1
             x-launchway-access: public
         get:
-            description: 'The Terraform/OpenTofu http backend: the current state, 404 if none. HTTP basic credentials: the password is a run''s state credential (lwst_..., one workspace of one project, until the run ends) or an API token with the viewer role.'
+            description: 'The Terraform/OpenTofu http backend: the current state, 404 if none. HTTP basic credentials: the password is a Sortie''s state credential (lwst_..., one workspace of one project, until the Sortie ends) or an API token with the viewer role.'
             operationId: get_api_state_v1_project_workspace
             parameters:
                 - in: path
@@ -4810,7 +4810,7 @@ paths:
             x-launchway-audit: release.gate
     /api/v1/projects/{name}/release-returns:
         post:
-            description: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing rollback. Answers 201 with the rollback run.'
+            description: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing Return to base (rollback). Answers 201 with the Return to base run.'
             operationId: post_api_v1_projects_name_release_returns
             parameters:
                 - in: path
@@ -4836,7 +4836,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing rollback.'
+            summary: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing Return to base (rollback).'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -5468,7 +5468,7 @@ paths:
             x-launchway-audit: release.plan
     /api/v1/projects/{name}/releases/{version}/promote:
         post:
-            description: 'Promotes to an Airfield: {"airfield", "override"}. Starts the project''s pipeline at the release''s tag with the inputs release, version, airfield, sha and digest/digests it declares. override (a reason) is for administrators and only for lines that may be overridden. Answers 201 with the promotion and the run, or 409 with the checklist.'
+            description: 'Promotes to an Airfield: {"airfield", "override"}. Starts the project''s pipeline at the release''s tag with the inputs release, version, airfield, sha and digest/digests it declares. override (a reason) is for administrators and only for lines that may be overridden. Answers 201 with the promotion and the Sortie, or 409 with the checklist.'
             operationId: post_api_v1_projects_name_releases_version_promote
             parameters:
                 - in: path
@@ -6261,7 +6261,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/state/{workspace}/lock:
         delete:
-            description: Releases a lock whoever holds it; ?reason= is required. 409 while the run that holds it is still going.
+            description: Releases a lock whoever holds it; ?reason= is required. 409 while the Sortie that holds it is still going.
             operationId: delete_api_v1_projects_name_state_workspace_lock
             parameters:
                 - in: path
@@ -9111,7 +9111,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/dependencies:
         get:
-            description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the registries or the vulnerability data cannot be reached.'
+            description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the Depots (registries) or the vulnerability data cannot be reached.'
             operationId: get_api_v1_repositories_owner_name_dependencies
             parameters:
                 - in: path
@@ -10821,7 +10821,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/pulls/{number}/queue:
         delete:
-            description: Takes it out of the queue; the author or an operator (403 otherwise), 404 when it is not queued.
+            description: Takes it out of the merge queue; the author or an operator (403 otherwise), 404 when it is not queued.
             operationId: delete_api_v1_repositories_owner_name_pulls_number_queue
             parameters:
                 - in: path
@@ -10857,7 +10857,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Takes it out of the queue; the author or an operator (403 otherwise), 404 when it is not queued.
+            summary: Takes it out of the merge queue; the author or an operator (403 otherwise), 404 when it is not queued.
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -10903,7 +10903,7 @@ paths:
                 - repositories
             x-launchway-access: repo-viewer
         post:
-            description: 'Adds a ready pull request to the queue of its target branch: {"method", "priority"} (priority needs the repository admin role). 409 with the sentence of what is missing; 400 when the branch has no queue.'
+            description: 'Adds a ready pull request to the merge queue of its target branch: {"method", "priority"} (priority needs the repository admin role). 409 with the sentence of what is missing; 400 when the branch has no queue.'
             operationId: post_api_v1_repositories_owner_name_pulls_number_queue
             parameters:
                 - in: path
@@ -10939,7 +10939,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Adds a ready pull request to the queue of its target branch: {"method", "priority"} (priority needs the repository admin role).'
+            summary: 'Adds a ready pull request to the merge queue of its target branch: {"method", "priority"} (priority needs the repository admin role).'
             tags:
                 - repositories
             x-launchway-access: repo-operator
@@ -12051,7 +12051,7 @@ paths:
             x-launchway-audit: run.cancel
     /api/v1/runs/{id}/config-reports:
         get:
-            description: 'The run''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
+            description: 'The Sortie''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
             operationId: get_api_v1_runs_id_config_reports
             parameters:
                 - in: path
@@ -12076,7 +12076,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The run''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
+            summary: 'The Sortie''s reports: step, kind (ansible or plan), status, recap (for Ansible 12 hosts: 9 changed, 3 ok, 0 failed; in check mode would change), check, environment, commit.'
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -12156,7 +12156,7 @@ paths:
             x-launchway-audit: config.rerun_failed
     /api/v1/runs/{id}/coverage:
         get:
-            description: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            description: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             operationId: get_api_v1_runs_id_coverage
             parameters:
                 - in: path
@@ -12181,13 +12181,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            summary: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/coverage/files:
         get:
-            description: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            description: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
             operationId: get_api_v1_runs_id_coverage_files
             parameters:
                 - in: path
@@ -12212,13 +12212,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A run''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
+            summary: 'A Sortie''s per-file coverage: ?step=, ?q=, ?sort= (path, lines or missed), ?limit= and ?offset=.'
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/debrief:
         get:
-            description: 'The Debrief of a run: summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
+            description: 'The Debrief of a Sortie (run): summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
             operationId: get_api_v1_runs_id_debrief
             parameters:
                 - in: path
@@ -12243,7 +12243,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The Debrief of a run: summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
+            summary: 'The Debrief of a Sortie (run): summary, change against the default branch''s last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request''s change, trend.'
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -12635,7 +12635,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/inspection:
         get:
-            description: 'A run''s Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by standing, check, severity.'
+            description: 'A Sortie''s Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by standing, check, severity.'
             operationId: get_api_v1_runs_id_inspection
             parameters:
                 - in: path
@@ -12660,7 +12660,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A run''s Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by standing, check, severity.'
+            summary: 'A Sortie''s Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by standing, check, severity.'
             tags:
                 - runs
             x-launchway-access: run-viewer
