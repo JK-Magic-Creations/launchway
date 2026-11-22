@@ -12,7 +12,7 @@
 #   api      internal/api            (its tests, split by name into SHARDS shards: shard i takes
 #                                     every SHARDS-th test of the sorted list)
 #   engine   internal/engine         (same)
-#   storage  internal/forge/storage
+#   storage  internal/forge/storage  (its tests, split by name like api)
 #   forge    the other packages under internal/forge/
 #   rest     every other package     (split by package: shard i takes every SHARDS-th package)
 # DRY_RUN=1 prints what would run. TIMEOUT (default 20m) is go test's per-package timeout.
@@ -50,7 +50,7 @@ esac
 
 run=
 case $group in
-api | engine)
+api | engine | storage)
 	# Split one package's tests by name. -list needs the package built, which the run needs anyway.
 	names=$(go test -race -short -list '.' "$pkgs" | grep -E '^(Test|Fuzz|Example)' | LC_ALL=C sort | awk -v s="$shard" -v n="$shards" '(NR - 1) % n == s - 1')
 	[ -n "$names" ] || { echo "race-group: no test in shard $spec" >&2; exit 2; }
