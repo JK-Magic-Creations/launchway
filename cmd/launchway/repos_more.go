@@ -75,3 +75,45 @@ func (cl *client) reposSettings(args []string) error {
 		fmt.Fprintf(cl.out, "A snapshot of a ref may hold up to %d MiB of files.\nA deleted repository is kept %d days before it is removed for good.\n", s.ArchiveMaxMiB, s.TrashRetentionDays)
 	})
 }
+
+// releaseBadges shows, or switches on or off, a Flight's badges.
+func (cl *client) releaseBadges(args []string) error {
+	fs := flag.NewFlagSet("release badges", flag.ContinueOnError)
+	on := fs.Bool("on", false, "show the badges to anyone (an administrator of the Flight)")
+	off := fs.Bool("off", false, "hide them again")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 || (*on && *off) {
+		return usageErr("launchway release badges FLIGHT [--on|--off] [--json]")
+	}
+	path := "/api/v1/projects/" + url.PathEscape(pos[0]) + "/badges"
+	var v struct {
+		Enabled          bool              `json:"enabled"`
+		PublicRepository bool              `json:"public_repository"`
+		Shown            bool              `json:"shown"`
+		Markdown         map[string]string `json:"markdown"`
+	}
+	if *on || *off {
+		err = cl.call("PUT", path, map[string]any{"enabled": *on}, &v)
+	} else {
+		err = cl.call("GET", path, nil, &v)
+	}
+	if err != nil {
+		return err
+	}
+	return cl.print(v, *asJSON, func() {
+		switch {
+		case v.PublicRepository:
+			fmt.Fprintln(cl.out, "Badges are shown to anyone: the Flight's repository is public.")
+		case v.Enabled:
+			fmt.Fprintln(cl.out, "Badges are shown to anyone: switched on for this Flight.")
+		default:
+			fmt.Fprintln(cl.out, "Badges are off: they answer not found until an administrator of the Flight turns them on (launchway release badges FLIGHT --on).")
+		}
+		fmt.Fprintln(cl.out, "Status of the last Sortie on a branch: "+v.Markdown["status"])
+		fmt.Fprintln(cl.out, "Latest release:                        "+v.Markdown["release"])
+	})
+}

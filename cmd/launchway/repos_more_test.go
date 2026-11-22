@@ -98,3 +98,25 @@ func TestCLIProtectedTagsSnapshotAndSettings(t *testing.T) {
 		t.Fatal("0 days was accepted")
 	}
 }
+
+// The badges of a Flight: off by default and said so, with the Markdown to paste; an operator who is not an
+// administrator of the Flight cannot switch them on, and the refusal says why.
+func TestCLIReleaseBadges(t *testing.T) {
+	c, _ := cliServer(t)
+	var out bytes.Buffer
+	cl := newClient(c, &out)
+	if err := cl.releaseBadges([]string{"app"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Badges are off", "![app status](", "/public/badges/app/status.svg?branch=main", "/public/badges/app/release.svg"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %q in\n%s", want, out.String())
+		}
+	}
+	if err := cl.releaseBadges([]string{"app", "--on"}); err == nil || !strings.Contains(err.Error(), "administrator") {
+		t.Errorf("an operator switched badges on: %v", err)
+	}
+	if err := cl.releaseBadges([]string{"app", "--on", "--off"}); err == nil {
+		t.Error("on and off together")
+	}
+}

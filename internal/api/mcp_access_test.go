@@ -122,6 +122,8 @@ var mcpPermissionTable = map[string]mcpRow{
 	"set_protected_tags":         {map[string]any{"owner": "o", "name": "x", "rules": []any{}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"get_hosting_settings":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_hosting_settings":       {map[string]any{"archive_max_mib": 512}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"get_flight_badges":          {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"set_flight_badges":          {map[string]any{"project": "pay-api", "enabled": false}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
 	// Work tracking: the tools call the routes of the permission table.
 	"list_work_items":        {map[string]any{"scope": "project:pay-api"}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"create_work_item":       {map[string]any{"scope": "project:pay-api", "title": "x"}, false, [5]string{mUnlisted, mUnlisted, mOK, mRefused, mOK}},

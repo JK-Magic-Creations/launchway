@@ -171,6 +171,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/project-candidates` | `list_project_candidates` | `squadrons candidates` | — | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
+| `GET /api/v1/projects/{name}/badges` | `get_flight_badges` | `release badges` | — | equal |
+| `PUT /api/v1/projects/{name}/badges` | `set_flight_badges` | `release badges` | — | equal |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy clear` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `GET /api/v1/projects/{name}/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
 | `PUT /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
@@ -617,6 +619,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /public/badges/{name}/release.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same version is in list_releases |
+| `GET /public/badges/{name}/status.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same status is in list_runs |
 | `GET /public/releases/{name}/{version}` | — | — | — | exempt: the public page of a release, for installations that allow public content: unauthenticated by design and a subset of what get_release returns; everything else is a not found |
 | `GET /public/releases/{name}/{version}/{asset}` | — | — | — | exempt: the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found |
 | `GET /readyz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

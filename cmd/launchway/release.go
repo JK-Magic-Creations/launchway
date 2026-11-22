@@ -20,6 +20,7 @@ import (
 const releaseUsage = `Usage:
   launchway release list [--project P] [--state draft|candidate|published|yanked] [--json]
   launchway release show FLIGHT VERSION|latest [--json]   latest is the newest published release that is not a pre-release
+  launchway release badges FLIGHT [--on|--off] [--json]   the Flight's status and release badges: where they are, what to paste, switch them on or off
   launchway release next --project P [--from REF] [--pre rc] [--json]
         propose the next version from the changes since the last release, with the reasoning
   launchway release notes --project P [--to REF] [--version V]   preview generated release notes
@@ -101,6 +102,8 @@ func (cl *client) release(args []string) error {
 		return cl.releaseList(rest)
 	case "show":
 		return cl.releaseShow(rest)
+	case "badges":
+		return cl.releaseBadges(rest)
 	case "next":
 		return cl.releaseNext(rest)
 	case "notes":

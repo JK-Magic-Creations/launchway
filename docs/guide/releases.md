@@ -103,3 +103,14 @@ A promotion starts a pipeline too. See [Promoting a release](promoting-releases.
 ## Launchway's own release
 
 Launchway releases itself with the workflow in `.github/workflows/release.yml` (`packaging/release/release.sh`): binaries, packages, charts, SBOMs, `SHA256SUMS`, a signature and provenance, on a pushed `v*` tag. That workflow is unchanged. The same release run as a Launchway release pipeline is in `examples/release/launchway-itself.yaml`: the step runs `packaging/release/release.sh` and keeps its output as Cargo, and the next step drafts the release with notes from the merged pull requests, attaches `SHA256SUMS`, its signature and the packages, and publishes it. Moving over is a matter of running both for one release and comparing the checksums.
+
+## Badges for a README
+
+A Flight can show its state in a README with two small images: the status of its last Sortie on a branch, and the version of its latest release. Open the Flight's page, copy the Markdown from **Badges** (or `launchway release badges FLIGHT`), and paste it:
+
+```
+![shop status](https://launchway.example.com/public/badges/shop/status.svg?branch=main)
+![shop release](https://launchway.example.com/public/badges/shop/release.svg)
+```
+
+A badge is served without signing in only when the Flight's repository is public, or when the Flight's badges are switched on, which an administrator of the Flight does and which is off by default for a Flight of a private repository. In every other case, and for a Flight that does not exist, the answer is the same plain not found, so a badge never says that a private Flight is there. A badge holds only a status word (passing, failing, running, waiting, canceled, no Sorties) or a version, never a commit, a message, a person or a number of a Sortie. It is cached for a minute and carries an `ETag`. Switching badges on or off is in the Logbook as `flight.badges`.

@@ -4397,6 +4397,69 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/badges:
+        get:
+            description: 'Whether the Flight''s badges are shown to anyone (shown: switched on, or its repository is public), their addresses (links) and the Markdown to paste (markdown).'
+            operationId: get_api_v1_projects_name_badges
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Whether the Flight''s badges are shown to anyone (shown: switched on, or its repository is public), their addresses (links) and the Markdown to paste (markdown).'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: 'Switches the badges on or off: {"enabled": true}. Only an administrator of the Flight may; the answer is the same as the read.'
+            operationId: put_api_v1_projects_name_badges
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Switches the badges on or off: {"enabled": true}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: flight.badges
     /api/v1/projects/{name}/cache-policy:
         delete:
             description: 'Removes the override: the installation''s policy applies again.'
@@ -18779,6 +18842,62 @@ paths:
             summary: The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless).
             tags:
                 - mcp
+            x-launchway-access: public
+    /public/badges/{name}/release.svg:
+        get:
+            description: An SVG badge with the version of the Flight's latest release (the newest published one that is not a pre-release), or none. The same three rules as the status badge.
+            operationId: get_public_badges_name_release.svg
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: An SVG badge with the version of the Flight's latest release (the newest published one that is not a pre-release), or none.
+            tags:
+                - public
+            x-launchway-access: public
+    /public/badges/{name}/status.svg:
+        get:
+            description: 'An SVG badge for the last Sortie of the Flight on ?branch= (default main): passing, failing, running, waiting, canceled or no Sorties. Answers 404 (the same for a Flight that does not exist) unless the Flight''s repository is public or its badges are on. Holds only the status word. Cacheable for a minute, with an ETag.'
+            operationId: get_public_badges_name_status.svg
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'An SVG badge for the last Sortie of the Flight on ?branch= (default main): passing, failing, running, waiting, canceled or no Sorties.'
+            tags:
+                - public
             x-launchway-access: public
     /public/releases/{name}/{version}:
         get:

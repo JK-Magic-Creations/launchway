@@ -387,6 +387,8 @@ func (e *Engine) Summary(id string) (*RunSummary, error) { return e.runSummary(i
 type RunFilter struct {
 	Project string
 	Status  string
+	// Branch, if set, lists only the runs on this branch.
+	Branch string
 	// Lane, if set, lists only runs in the lane of this name (schema 24).
 	Lane  string
 	Limit int
@@ -418,6 +420,10 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	if f.Status != "" {
 		where = append(where, "status = ?")
 		args = append(args, f.Status)
+	}
+	if f.Branch != "" {
+		where = append(where, "branch = ?")
+		args = append(args, f.Branch)
 	}
 	if f.Lane != "" && e.knows(schemaFlow) {
 		where = append(where, "lane_name = ?")
