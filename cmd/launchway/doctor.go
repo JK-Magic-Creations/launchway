@@ -19,6 +19,7 @@ const doctorUsage = `Usage:
   launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
   launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
   launchway doctor security [--url ADDRESS] [--config launchway.yaml]
+  launchway doctor network [--namespace launchway] [--kubeconfig FILE] [--context NAME]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -30,6 +31,9 @@ it runs both.
              secrets are sealed, and whether a copy of the database alone could reveal one. Exit 1 when it could.
              --restore-drill opens every sealed secret to prove the key and the database belong together
   security   the plain security checklist: sign-in, encryption in transit and at rest, exposure
+  network    whether the cluster already has network policy in the installation's namespace (Kubernetes
+             NetworkPolicies that are not Launchway's own, or a network plugin's own policy objects), and
+             so whether the chart's policies should be left off. Reads the cluster with your kubeconfig
 `
 
 // exitOn ends the program for an error from a command.

@@ -864,6 +864,14 @@ launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
 
 Says whether the secrets this installation stores are encrypted at rest, reading only: which holder keeps the root key (never the key), the key versions and the age of the oldest, how many stored secrets are sealed and how many are still in the clear, the progress of sealing, any addresses that carry a password, and **whether a database dump alone could reveal a secret** (yes only when a root key is in use and nothing is left in the clear). It names what is not yet encrypted (artifacts, logs, caches, Git packs) and that disk or volume encryption cannot be seen from here. Exit status 1 when a dump alone could reveal a secret, so a script can gate on it. A database that is encrypted, with no key configured, or with a key that does not open it, is refused with the plain message the server gives. `--restore-drill` also opens every sealed secret with the configured key, reading only, and exits 1 if one does not open: run it against a restored copy to prove the dump and the key belong together. The plain `launchway doctor` prints the one-sentence state. See [Encryption at rest](../guide/encryption-at-rest.md).
 
+### launchway doctor network
+
+```text
+launchway doctor network [--namespace launchway] [--kubeconfig FILE] [--context NAME]
+```
+
+Says whether the cluster already has a system deciding network policy in the installation's namespace: Kubernetes NetworkPolicies that are not Launchway's own, or objects of any kind whose name contains `NetworkPolicy` from a non-core API group (a network plugin's own policy objects, found by listing the cluster's API). If so it says to let one system be the authority and leave the chart's policies off (`networkPolicy.enabled: false`); `launchway install` makes the same check and defaults to that. It reads the cluster with your kubeconfig, so it runs where the installer runs, not inside the server pod. See [Upgrading](../guide/upgrading.md#network-policies).
+
 ## launchway encryption
 
 ```text

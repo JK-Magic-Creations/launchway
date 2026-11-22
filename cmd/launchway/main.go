@@ -908,4 +908,7 @@ func logChartNotice(log *slog.Logger) {
 	if m := config.IgnoredValuesNotice(os.Getenv); m != "" {
 		log.Warn(m)
 	}
+	if m := config.NetworkPolicyNotice(os.Getenv); m != "" {
+		log.Info(m)
+	}
 }
