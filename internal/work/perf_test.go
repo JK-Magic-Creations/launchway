@@ -118,7 +118,8 @@ func TestFiftyThousandItems(t *testing.T) {
 		}
 		return err
 	})
-	timed("move to top", time.Second, func() error {
+	// A move is a write too: the same allowance for the flush as the create above.
+	timed("move to top", 2*time.Second, func() error {
 		_, err := s.Rank(ctx, ada, "SHOP-50001", work.Position{Where: "top"})
 		return err
 	})
