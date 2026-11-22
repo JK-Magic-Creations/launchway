@@ -322,8 +322,11 @@ function assetAddress(r: Release, a: ReleaseAsset): string {
 
 /** The code for an address, or, when the address is too long for a code, a plain statement and the address to copy: never a code that would not read. */
 function Code({ text, label, size }: { text: string; label: string; size?: number }) {
-  if (!encodeQR(text)) return <p className="rel-hint" role="status">This address is too long for a QR code. Copy it instead: <span className="addr">{text}</span></p>;
-  return <QrCode text={text} label={label} size={size} />;
+  const m = encodeQR(text);
+  // Four pixels to a module at least, so a camera reads a long address's finer code as easily as a short one's.
+  const px = Math.min(Math.max(size ?? 148, m ? (m.length + 8) * 4 : 0), 320);
+  if (!m) return <p className="rel-hint" role="status">This address is too long for a QR code. Copy it instead: <span className="addr">{text}</span></p>;
+  return <QrCode text={text} label={label} size={px} />;
 }
 
 function AssetQr({ release, asset }: { release: Release; asset: ReleaseAsset }) {
@@ -426,7 +429,6 @@ function CompareSheet({ project, version }: { project: string; version: string }
 
 /** The page a download's QR code opens: it needs a signed-in person (the sign-in page comes first and returns here), then starts the download. */
 export function ReleaseGetPage({ project, version, asset }: { project: string; version: string; asset: string }) {
-  useCrumbLabel(`${project} ${version}`);
   const fn = useCallback((b: boolean) => releasesApi.get(project, version, b), [project, version]);
   const data = useLoad<ReleaseView>(fn, 0);
   const url = releasesApi.downloadUrl(project, version, asset);
