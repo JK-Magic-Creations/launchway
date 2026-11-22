@@ -102,7 +102,7 @@ func Scaffold(root, name, language string) (string, error) {
 			if len(b) > 0 && !strings.HasSuffix(string(b), "\n") {
 				add = "\n" + add
 			}
-			_ = os.WriteFile(gi, append(b, add...), 0o644)
+			_ = os.WriteFile(gi, append(b, add...), 0o644) //nolint:gosec // G306,G703: the repository's own .gitignore, which is read by the team
 		}
 	}
 	return dir, nil

@@ -308,7 +308,7 @@ func snapshot(ws, skip string) map[string]string {
 			out[rel] = fmt.Sprint(info)
 			return nil
 		}
-		b, err := os.ReadFile(p)
+		b, err := os.ReadFile(p) //nolint:gosec // G122,G304: a snapshot for comparison, read only, in the developer's checkout
 		if err == nil {
 			out[rel] = hash(string(b))
 		}
