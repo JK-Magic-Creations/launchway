@@ -1,0 +1,241 @@
+=== Jenkinsfile (groovy-declarative)
+# Imported from Jenkinsfile by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: pipeline
+on:
+  push: {branches: ['*'], tags: ['*']}
+  schedule:
+    - {cron: 0 4 * * 1-5}
+inputs:
+  target: {description: Where to deploy, default: dev}
+  verbose: {type: boolean, default: false}
+  region: {type: choice, description: Region, options: [eu, us]}
+steps:
+  build:
+    image: golang:1.22
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      go build ./...
+      echo build ${LAUNCHWAY_RUN_NUMBER} on $LAUNCHWAY_BRANCH
+      echo ${LAUNCHWAY_INPUT_TARGET} ${someGroovy.call()}
+      (
+        cd web
+        npm ci
+      )
+      (
+        export CI=true
+        npm test
+      )
+      echo 'NEEDS A PERSON: a Windows command ran here'; exit 1
+      # NEEDS A PERSON: Groovy code was here:
+      # def x = 1
+      #           echo "x ${x}"
+      echo 'NEEDS A PERSON: a script block ran here'; exit 1
+      echo 'NEEDS A PERSON: files were passed between stages here'; exit 1
+      echo 'NEEDS A PERSON: the plug-in step slackSend ran here'; exit 1
+    reports:
+      tests: [reports/*.xml, reports/**/*.xml]
+    artifacts:
+      - {name: build, paths: [bin, web/dist], when: always}
+  build-post-failure:
+    image: golang:1.22
+    needs: build
+    when: {upstream: failed}
+    on_failure: continue
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo failed
+  lint:
+    image: docker.io/library/ubuntu:24.04
+    needs: build
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      golangci-lint run
+  unit:
+    image: docker.io/library/ubuntu:24.04
+    needs: build
+    when: {branch: [main, release-*]}
+    timeout: 5m
+    retry: 3
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      go test ./...
+      flaky.sh
+  matrix:
+    image: docker.io/library/ubuntu:24.04
+    needs: [lint, unit]
+    timeout: 30m
+    retry: 2
+    for_each:
+      platform: [linux, mac]
+      go: ["1.21", "1.22"]
+    exclude:
+      - {go: "1.21", platform: mac}
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+      PLATFORM: {each: platform}
+      GO: {each: go}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo $PLATFORM $GO
+  release-approval:
+    kind: approval
+    needs: matrix
+    message: Release now?
+  release:
+    image: docker.io/library/ubuntu:24.04
+    needs: [release-approval, matrix]
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+      TOKEN: {store: vault, key: deploy-token, field: value}
+    run: |
+      kubectl apply -f deploy.yaml
+  tagged:
+    image: docker.io/library/ubuntu:24.04
+    needs: release
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo tagged
+  inner-one:
+    image: docker.io/library/ubuntu:24.04
+    needs: tagged
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo 1
+  inner-two:
+    image: docker.io/library/ubuntu:24.04
+    needs: inner-one
+    timeout: 30m
+    retry: 2
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo 2
+  pipeline-post-always:
+    image: docker.io/library/ubuntu:24.04
+    needs: inner-two
+    when: {upstream: always}
+    on_failure: continue
+    env:
+      APP: shop
+      GREETING: hello ${LAUNCHWAY_INPUT_TARGET}
+    secrets:
+      REG: {store: vault, key: registry-login, field: value}
+    run: |
+      echo done
+
+--- findings
+manual    groovy.library               Jenkinsfile:1 The file uses a shared library (@Library('shared-steps') _), whose code is not in this file -> Copy what the library does into steps or a template (see libraries)
+exact     groovy.pipeline              Jenkinsfile:3 The stages became steps that run one after the other
+different groovy.agent.label           Jenkinsfile:4 The agent label linux && docker is not carried: Launchway chooses the Station by its own configuration -> Name the image the step needs, or use the runner key of the step to pick a Station
+different groovy.options.timeout       Jenkinsfile:6 The time limit applies to each step of the job, instead of to the whole pipeline or the block it wrapped -> Check the limit is long enough for one step
+different groovy.options.retry         Jenkinsfile:7 The step is retried as a whole, not just the block it wrapped -> Check that running the whole step again is safe
+manual    groovy.options.concurrent    Jenkinsfile:8 Runs that must not overlap are not carried -> Set supersede: true to cancel older runs, or add a lane to make runs take turns
+different groovy.options.ignored       Jenkinsfile:9 The option buildDiscarder is not carried: log retention is the server's policy and logs are timestamped by default -> Nothing
+manual    groovy.options.other         Jenkinsfile:10 The option skipDefaultCheckout is not carried -> Check what it did and write it by hand
+exact     groovy.parameters            Jenkinsfile:13 Parameters became run inputs; steps read them as $LAUNCHWAY_INPUT_<NAME>
+exact     groovy.parameters            Jenkinsfile:14 Parameters became run inputs; steps read them as $LAUNCHWAY_INPUT_<NAME>
+exact     groovy.parameters            Jenkinsfile:15 Parameters became run inputs; steps read them as $LAUNCHWAY_INPUT_<NAME>
+manual    groovy.parameters.other      Jenkinsfile:16 The parameter SECRET_PARAM holds a secret or a file and is not carried -> Create a secret and read it from the step's secrets
+different groovy.triggers.cron         Jenkinsfile:19 The cron time H 4 * * 1-5 was written as a schedule; an H (spread the time) became 0 because the schedule needs an exact minute -> Check the time, which is in UTC unless the file says otherwise
+manual    groovy.triggers.other        Jenkinsfile:20 The trigger pollSCM is not carried -> Pushes start runs on their own; use a result trigger or a webhook for the rest
+manual    groovy.tools                 Jenkinsfile:22 The tools maven M3 are installations named in the old server's settings -> Choose an image that has them (for example a maven or JDK image) and set it on the step
+exact     groovy.environment           Jenkinsfile:23 Variables carry over as the environment of the steps
+different groovy.credentials           Jenkinsfile:25 The credential registry-login is read by name from a secret store, as the variable REG; no value was copied. If it was a user name and password, the old system also set a _USR and a _PSW variable, which are not set here -> Create the secret (or one for the user name and one for the password) in the Station's store
+different groovy.interp                Jenkinsfile:26 The expression ${params.TARGET} was replaced by the shell variable ${LAUNCHWAY_INPUT_TARGET} -> Check the name: Launchway sets LAUNCHWAY_* variables instead of BUILD_NUMBER and BRANCH_NAME
+exact     groovy.stage                 Jenkinsfile:29 The stage became a step that needs the stage before it
+different write.secret                 Jenkinsfile:29 Secret registry-login is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+exact     groovy.agent.docker          Jenkinsfile:30 The docker image became the step's image
+exact     groovy.step.checkout         Jenkinsfile:32 Launchway checks the repository out before the first step
+exact     groovy.step.sh               Jenkinsfile:33 Commands carry over
+different groovy.interp                Jenkinsfile:34 The expression ${env.BUILD_NUMBER} was replaced by the shell variable ${LAUNCHWAY_RUN_NUMBER} -> Check the name: Launchway sets LAUNCHWAY_* variables instead of BUILD_NUMBER and BRANCH_NAME
+different groovy.interp                Jenkinsfile:34 The expression ${params.TARGET} was replaced by the shell variable ${LAUNCHWAY_INPUT_TARGET} -> Check the name: Launchway sets LAUNCHWAY_* variables instead of BUILD_NUMBER and BRANCH_NAME
+manual    groovy.interp.unknown        Jenkinsfile:34 The expression `someGroovy.call()` is Groovy code and was left as written, so the command will not run as it is -> Replace it with a shell expression or an input
+exact     groovy.step.sh               Jenkinsfile:34 Commands carry over
+exact     groovy.step.dir              Jenkinsfile:38 The directory and the variables wrap the commands inside
+exact     groovy.step.sh               Jenkinsfile:39 Commands carry over
+exact     groovy.step.dir              Jenkinsfile:41 The directory and the variables wrap the commands inside
+exact     groovy.step.sh               Jenkinsfile:42 Commands carry over
+exact     groovy.step.archive          Jenkinsfile:44 The files became cargo of the step
+exact     groovy.step.junit            Jenkinsfile:45 The test results became a tests report of the step
+manual    groovy.step.bat              Jenkinsfile:46 Windows commands cannot run in a Linux container image -> Rewrite the command for sh, or run it on a Station that runs Windows
+manual    groovy.step.script           Jenkinsfile:47 The block is Groovy code, which is not run here; its text is kept as a comment in the script -> Rewrite it as shell commands
+manual    groovy.step.stash            Jenkinsfile:51 Passing files between stages with stash is not carried -> Keep the files as cargo of the first step (artifacts) and fetch them in the next
+manual    groovy.step.other            Jenkinsfile:52 The step slackSend comes from a plug-in that Launchway does not know -> Replace it with the command it runs, or ask a person to decide
+different groovy.post                  Jenkinsfile:54 The post section became extra steps that run after the stage (upstream: always or failed); results of junit and archiveArtifacts there became reports of the stage's own step -> Check the order and what each extra step needs
+exact     groovy.step.junit            Jenkinsfile:55 The test results became a tests report of the step
+exact     groovy.step.sh               Jenkinsfile:56 Commands carry over
+manual    groovy.post.other            Jenkinsfile:57 The post condition changed compares with earlier runs or the unstable state, which has no equivalent -> Write the step by hand if it still matters
+exact     groovy.parallel              Jenkinsfile:61 Stages in a parallel block run side by side, and the stage after them waits for all
+exact     groovy.stage                 Jenkinsfile:62 The stage became a step that needs the stage before it
+different write.image.default          Jenkinsfile:62 The steps lint, unit, matrix, release, tagged, inner-one, inner-two, pipeline-post-always name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     groovy.step.sh               Jenkinsfile:63 Commands carry over
+exact     groovy.stage                 Jenkinsfile:65 The stage became a step that needs the stage before it
+exact     groovy.when                  Jenkinsfile:66 The condition became a when: filter
+different groovy.options.timeout       Jenkinsfile:68 The time limit applies to each step of the job, instead of to the whole pipeline or the block it wrapped -> Check the limit is long enough for one step
+exact     groovy.step.sh               Jenkinsfile:68 Commands carry over
+different groovy.options.retry         Jenkinsfile:69 The step is retried as a whole, not just the block it wrapped -> Check that running the whole step again is safe
+exact     groovy.step.sh               Jenkinsfile:69 Commands carry over
+exact     groovy.stage                 Jenkinsfile:74 The stage became a step that needs the stage before it
+exact     groovy.matrix                Jenkinsfile:75 The matrix became for_each; each axis is also an environment variable of the same name
+exact     groovy.step.sh               Jenkinsfile:87 Commands carry over
+exact     groovy.stage                 Jenkinsfile:91 The stage became a step that needs the stage before it
+manual    groovy.when.expr             Jenkinsfile:92 The condition `allOf` is program code or a negation, which Launchway does not run, so the step always runs -> Write the test as a when: filter, or inside the script
+different groovy.input                 Jenkinsfile:93 The question became an approval step; submitter and parameters are not carried -> Name the approvers (users or groups) on the approval
+different groovy.credentials           Jenkinsfile:95 The credential deploy-token is read by name from a secret store, as the variable TOKEN; no value was copied. If it was a user name and password, the old system also set a _USR and a _PSW variable, which are not set here -> Create the secret (or one for the user name and one for the password) in the Station's store
+different write.secret                 Jenkinsfile:95 Secret deploy-token is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+exact     groovy.step.sh               Jenkinsfile:96 Commands carry over
+exact     groovy.stage                 Jenkinsfile:100 The stage became a step that needs the stage before it
+manual    groovy.when.expr             Jenkinsfile:101 The condition `buildingTag expression` is program code or a negation, which Launchway does not run, so the step always runs -> Write the test as a when: filter, or inside the script
+exact     groovy.step.sh               Jenkinsfile:102 Commands carry over
+exact     groovy.parallel              Jenkinsfile:105 Stages in a parallel block run side by side, and the stage after them waits for all
+exact     groovy.step.sh               Jenkinsfile:106 Commands carry over
+exact     groovy.stage                 Jenkinsfile:106 The stage became a step that needs the stage before it
+exact     groovy.step.sh               Jenkinsfile:107 Commands carry over
+exact     groovy.stage                 Jenkinsfile:107 The stage became a step that needs the stage before it
+different groovy.post                  Jenkinsfile:111 The post section became extra steps that run after the stage (upstream: always or failed); results of junit and archiveArtifacts there became reports of the stage's own step -> Check the order and what each extra step needs
+exact     groovy.step.sh               Jenkinsfile:112 Commands carry over
+manual    groovy.post.other            Jenkinsfile:114 The post condition unstable compares with earlier runs or the unstable state, which has no equivalent -> Write the step by hand if it still matters
+secrets: deploy-token, registry-login

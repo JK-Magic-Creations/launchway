@@ -780,7 +780,7 @@ func (w *writer) script(j *Job) (string, []string) {
 		if bashisms.MatchString(s.Run) {
 			bash = true
 		}
-		body := strings.TrimRight(s.Run, "\n")
+		body := tidyScript(s.Run)
 		wrap := s.Dir != "" || len(s.Env) > 0
 		if s.Name != "" && (len(j.Steps) > 1) {
 			b.WriteString("# " + oneLine(s.Name, 120) + "\n")
@@ -945,10 +945,44 @@ func (w *writer) finishImage(m *yaml.Node, j *Job, needsPrev string, gate bool) 
 func trimSlashes(l []string) []string {
 	out := make([]string, len(l))
 	for i, s := range l {
-		out[i] = strings.TrimRight(s, "/")
+		out[i] = strings.TrimRight(strings.TrimSuffix(strings.TrimSuffix(s, "**"), "*"), "/")
+		if strings.HasSuffix(s, "*") && !strings.HasSuffix(s, "/**") && !strings.HasSuffix(s, "/*") {
+			out[i] = s // a pattern such as *.xml keeps its star
+		}
 		if out[i] == "" {
 			out[i] = "."
 		}
 	}
 	return out
+}
+
+// tidyScript removes the indentation every line shares and the spaces that end lines,
+// so the script is written as a readable block.
+func tidyScript(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	lines := strings.Split(strings.TrimRight(s, "\n \t"), "\n")
+	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
+		lines = lines[1:]
+	}
+	min := -1
+	for i, l := range lines {
+		l = strings.TrimRight(l, " \t")
+		lines[i] = l
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		n := len(l) - len(strings.TrimLeft(l, " "))
+		if min < 0 || n < min {
+			min = n
+		}
+	}
+	// The first line of a quoted block usually starts at the margin: dedent only when every line is indented.
+	if min > 0 {
+		for i, l := range lines {
+			if len(l) >= min {
+				lines[i] = l[min:]
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
 }
