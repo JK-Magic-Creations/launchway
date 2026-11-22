@@ -110,5 +110,19 @@
     "File": "internal/api/secrets_e2e_test.go",
     "StartLine": 26,
     "Commit": "6137dd3b0302d825f2e081e9596ed29eca4e41f1"
+  },
+  {
+    "Fingerprint": "79813d3ca9b7d206c55545a60b4d08d64917087e:deploy/test/upgrade/matrix.sh:generic-api-key:92",
+    "RuleID": "generic-api-key",
+    "File": "deploy/test/upgrade/matrix.sh",
+    "StartLine": 92,
+    "Commit": "79813d3ca9b7d206c55545a60b4d08d64917087e"
+  },
+  {
+    "Fingerprint": "79813d3ca9b7d206c55545a60b4d08d64917087e:deploy/test/upgrade/matrix.sh:generic-api-key:311",
+    "RuleID": "generic-api-key",
+    "File": "deploy/test/upgrade/matrix.sh",
+    "StartLine": 311,
+    "Commit": "79813d3ca9b7d206c55545a60b4d08d64917087e"
   }
 ]
