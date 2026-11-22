@@ -47,7 +47,7 @@ func TestSquadronsOverHTTP(t *testing.T) {
 		Unfiled   []flightRow       `json:"unfiled"`
 		May       bool              `json:"may_manage"`
 	}
-	otto.get(u + "/api/v1/units").json(t, &list)
+	otto.get(u+"/api/v1/units").json(t, &list)
 	if len(list.Squadrons) != 2 || list.May {
 		t.Fatalf("%+v", list)
 	}
@@ -55,7 +55,7 @@ func TestSquadronsOverHTTP(t *testing.T) {
 		Flights []flightRow `json:"flights"`
 		Display string      `json:"display_name"`
 	}
-	ada.get(u + "/api/v1/units/platform").json(t, &one)
+	ada.get(u+"/api/v1/units/platform").json(t, &one)
 	if one.Display != "Platform" || len(one.Flights) != 0 {
 		t.Fatalf("%+v", one)
 	}
@@ -95,13 +95,15 @@ func TestSquadronsOverHTTP(t *testing.T) {
 	if p.Blocked || len(p.Access) != 1 || p.Access[0].Who != "user otto" || p.Access[0].Effect != "loses" || len(p.Stops) != 2 {
 		t.Fatalf("%s", body)
 	}
-	ada.get(u + "/api/v1/units/payments").json(t, &one)
+	ada.get(u+"/api/v1/units/payments").json(t, &one)
 	if len(one.Flights) != 1 || one.Flights[0].Name != "pay-api" {
 		t.Fatalf("%+v", one.Flights)
 	}
 
 	// A pipeline that names the store the Squadron defines: moving it away would leave the reference nowhere.
-	text := func(string) (string, bool) { return "steps:\n  a:\n    image: x\n    secrets:\n      T: { store: vault, key: k }\n", true }
+	text := func(string) (string, bool) {
+		return "steps:\n  a:\n    image: x\n    secrets:\n      T: { store: vault, key: k }\n", true
+	}
 	plans, err := e.api.Settings.PlanMoves(t.Context(), []string{"pay-web"}, "platform", text)
 	if err != nil || !plans[0].Blocked || plans[0].Secrets[0].Result != "none" {
 		t.Fatalf("%v %+v", err, plans)
@@ -140,7 +142,7 @@ func TestSquadronsOverHTTP(t *testing.T) {
 	var prop struct {
 		Groups []organizeGroupView
 	}
-	ada.get(u + "/api/v1/unit-organize").json(t, &prop)
+	ada.get(u+"/api/v1/unit-organize").json(t, &prop)
 	if len(prop.Groups) != 1 || prop.Groups[0].Name != "ledger" || len(prop.Groups[0].Flights) != 2 || prop.Groups[0].Source != "prefix" {
 		t.Fatalf("%+v", prop)
 	}

@@ -98,8 +98,8 @@ Launchway has four levels, from the whole installation down to one repository. T
 |---|---|---|
 | **Base** | Everything on this installation: limits, retention, the words used | always, as settings |
 | **Wing** | The one that owns the Flights. There is one today | only where it helps |
-| **Squadron** | An optional group of Flights with shared settings: a team, a product line, a department. One level, never nested | only after the first squadron is created |
-| **Flight** | One repository and its pipeline | always |
+| **Squadron** | A named folder of Flights with its own people and shared settings: a team, a product line, a department. One level, never nested. Always shown; made with just a name ([Squadrons and Flights](squadrons-and-flights.md)) | always |
+| **Flight** | One repository and its pipelines. Today each Flight has one pipeline | always |
 
 Objects that can be defined at a level apply to the Flights below it. A **role binding**, a
 **library**, a **policy**, an **Airfield**, a **Ramp**, a **health source**, an **AI model**

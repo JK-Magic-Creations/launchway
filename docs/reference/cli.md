@@ -40,6 +40,20 @@ launchway version
 
 `launchway`, `launchway help`, `--help` and `-h` print this summary. Without a command it exits with `2`.
 
+## squadrons
+
+Friendly aliases over the same routes the web pages use. A Squadron's permanent name is `unit` and a Flight's is `project`: `launchway config ... units`, `--unit` and `--project` keep working as before. `launchway units` is an alias of `launchway squadrons`. See [Squadrons and Flights](../guide/squadrons-and-flights.md).
+
+```text
+launchway squadrons list [--json]
+launchway squadrons create NAME [--display-name TEXT] [--description TEXT]
+launchway squadrons show NAME [--json]
+launchway squadrons candidates [--query TEXT] [--connection NAME]
+launchway squadrons add-flight NAME (--repository PATH | --repo ADDRESS) [--name FLIGHT] [--branch B]
+launchway squadrons move FLIGHT... (--to SQUADRON | --unfile) [--preview] [--comment TEXT]
+launchway squadrons organize [--apply] [--group NAME=FLIGHT,FLIGHT ...] [--undo FILE]
+```
+
 ## Flags
 
 Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`; they mean the same. A boolean flag takes no value (`--wait`), or `--wait=false`. For `runs`, `policy` and `waivers`, flags may come before or after the positional arguments. `-h` or `--help` on any command prints its help and exits `0`, without a server and without signing in.

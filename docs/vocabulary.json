@@ -1678,7 +1678,7 @@
       "key": "project",
       "rules": [
         {
-          "pattern": "(?<!launchway )(?<!config (?:list|get|set|%s) )(?<!objects of a kind: )(?<!\\|)\\bprojects?\\b(?!\\||:(?:NAME|OWNER|<name>)|=<name>| or runs)",
+          "pattern": "(?<!launchway )(?<!config (?:list|get|set|%s) )(?<!objects of a kind: )(?<!kind is one of )(?<!the kind: )(?<!home, pipelines, )(?<!\\|)\\bprojects?\\b(?!\\||:(?:NAME|OWNER|<name>)|=<name>| or runs|, libraries)",
           "to": "number",
           "auto": true
         }

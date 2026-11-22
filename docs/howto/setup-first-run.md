@@ -11,10 +11,11 @@ none`, anyone).
    Preflight, Clearance, Logbook) or the plain business words (Installation, Organization, Team,
    Flight; Guide, Checks, Approval, Audit trail), watch the preview change, and rename any single word.
    They are labels only. See [the words Launchway uses](../guide/words.md).
-2. **Your wing and its Squadrons.** Say what your organization is called, and whether you want
-   squadrons (a group of Flights with shared settings, such as a team or a department). If you say
-   no, squadrons stay out of every screen; you can turn them on later. The questions use the words you
-   chose in the first step.
+2. **Your wing and its first Squadron.** Say what your organization is called and name the first
+   Squadron (`Main` is offered). A Squadron is a named folder of Flights with its own people and shared
+   settings, such as a team or a product line; it is always there, and you can make more at any time with
+   just a name. The questions use the words you chose in the first step. See
+   [Squadrons and Flights](../guide/squadrons-and-flights.md).
 3. **How do people sign in?**
    - *No sign-in* is for trying Launchway on your own machine: everyone is an administrator. The
      wizard says so plainly and warns against it on a server others can reach.

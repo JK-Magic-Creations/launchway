@@ -887,6 +887,17 @@
       "rule": "word:runner/2",
       "contains": "| Flight line |",
       "why": "The rename table names the old word on purpose."
+    },
+    {
+      "path": "docs/guide/squadrons-and-flights.md",
+      "rule": "word:project",
+      "why": "Explains the rename: names the old word and the permanent name on purpose."
+    },
+    {
+      "path": "cmd/launchway/squadrons.go",
+      "rule": "word:project",
+      "contains": "permanent name",
+      "why": "The usage says which permanent name a Flight keeps."
     }
   ]
 }

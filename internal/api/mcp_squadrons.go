@@ -35,7 +35,7 @@ type addFlightIn struct {
 }
 
 type moveFlightsIn struct {
-	Projects []string          `json:"projects" jsonschema:"the Flights to move (a Flight's permanent name is project)"`
+	Projects []string          `json:"projects" jsonschema:"the names of the Flights to move"`
 	To       string            `json:"to,omitempty" jsonschema:"the Squadron to move to; empty takes them out of any Squadron (Unfiled)"`
 	Homes    map[string]string `json:"homes,omitempty" jsonschema:"a Squadron for each Flight, to put each in its own (the undo of a move)"`
 	Comment  string            `json:"comment,omitempty" jsonschema:"the reason, a sentence kept with the change"`
