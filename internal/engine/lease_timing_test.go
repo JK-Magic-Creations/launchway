@@ -29,9 +29,14 @@ func TestDefaultLeaseOutlastsSlowHeartbeats(t *testing.T) {
 	if e.runnerTimeout != 90*time.Second {
 		t.Fatalf("runner timeout %v", e.runnerTimeout)
 	}
-	// Short leases (tests, small installations) keep a third of the lease as the beat.
-	e.ttl = 6 * time.Second
-	if e.beat() != 2*time.Second {
-		t.Fatalf("beat %v", e.beat())
+	// Short leases (tests, small installations) keep a third of the lease as the beat. A server of its
+	// own: the first one's reaper is reading its lease while it runs, so the field is not rewritten.
+	short, err := Open(Options{Database: testdb.New(t), LeaseTTL: 6 * time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer short.Close()
+	if short.beat() != 2*time.Second {
+		t.Fatalf("beat %v", short.beat())
 	}
 }
