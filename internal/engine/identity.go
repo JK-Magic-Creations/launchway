@@ -2,219 +2,95 @@ package engine
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // People, their sessions and API tokens, and the audit trail. The policy
 // (who may do what, and for how long a session lasts) is the API's; this
 // only stores. Times are Unix milliseconds chosen by the caller.
+//
+// The people, sessions and tokens are stored by internal/store, which keeps
+// each Base's apart (docs/development/the-wall.md). The methods here are the
+// ones that existed before Bases: they act for the default Base, which is the
+// only Base an installation without the multi_base switch has. A caller that
+// knows its Base uses Identity() with the scope the request resolved.
 
 // Session is a signed-in browser.
-type Session struct {
-	User      string
-	Groups    []string // from the person's latest sign-in
-	Profile   Profile  // likewise
-	CreatedAt int64
-	LastSeen  int64
-	ExpiresAt int64
-}
+type Session = store.Session
 
 // Profile is what the provider said about a person at their latest sign-in,
 // beyond their username: used to author the commits they save. Either may
 // be empty.
-type Profile struct {
-	Name  string // display name
-	Email string // only an address the provider has not said is unverified
-}
+type Profile = store.Profile
+
+// APIToken describes a token. The token itself is never stored.
+type APIToken = store.APIToken
 
 // SignIn records a person's groups and profile as their provider gave them
 // now, and a new session for them. Sessions that ended before staleBefore
 // (idle) or now (absolute) are forgotten in passing.
 func (e *Engine) SignIn(user string, groups []string, profile Profile, sessionHash string, now, expiresAt, staleBefore int64) error {
-	g, err := json.Marshal(groups)
-	if err != nil {
-		return err
-	}
-	unlock := e.writeLock()
-	defer unlock()
-	tx, err := e.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	if _, err := tx.Exec(`INSERT INTO users(username, group_list, last_login, display_name, email) VALUES(?,?,?,?,?)
-		ON CONFLICT(username) DO UPDATE SET group_list = excluded.group_list, last_login = excluded.last_login,
-			display_name = excluded.display_name, email = excluded.email`,
-		user, string(g), now, profile.Name, profile.Email); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`INSERT INTO sessions(id_hash, username, created_at, last_seen, expires_at) VALUES(?,?,?,?,?)`,
-		sessionHash, user, now, now, expiresAt); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`DELETE FROM sessions WHERE expires_at <= ? OR last_seen < ?`, now, staleBefore); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return e.ident().SignIn(e.scope0(), user, groups, profile, sessionHash, now, expiresAt, staleBefore)
 }
 
 // SessionByHash looks a session up. It returns ErrNotFound if there is none.
 func (e *Engine) SessionByHash(hash string) (*Session, error) {
-	s := &Session{}
-	var groups, name, email sql.NullString
-	err := e.db.QueryRow(`SELECT s.username, u.group_list, u.display_name, u.email, s.created_at, s.last_seen, s.expires_at
-		FROM sessions s LEFT JOIN users u ON u.username = s.username WHERE s.id_hash = ?`, hash).
-		Scan(&s.User, &groups, &name, &email, &s.CreatedAt, &s.LastSeen, &s.ExpiresAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: session", ErrNotFound)
-	}
-	if err != nil {
-		return nil, err
-	}
-	s.Groups = decodeGroups(groups)
-	s.Profile = Profile{Name: name.String, Email: email.String}
-	return s, nil
+	return e.ident().SessionByHash(e.scope0(), hash)
 }
 
 // TouchSession records that a session was used at now, unless that was
 // already recorded since notBefore. Every server does the same, so the
 // condition keeps writes to about one per session per interval.
 func (e *Engine) TouchSession(hash string, now, notBefore int64) error {
-	unlock := e.writeLock()
-	defer unlock()
-	_, err := e.db.Exec(`UPDATE sessions SET last_seen = ? WHERE id_hash = ? AND last_seen < ?`, now, hash, notBefore)
-	return err
+	return e.ident().TouchSession(e.scope0(), hash, now, notBefore)
 }
 
 // EndSession deletes a session and returns whose it was ("" if there was
 // none).
 func (e *Engine) EndSession(hash string) (string, error) {
-	unlock := e.writeLock()
-	defer unlock()
-	var user string
-	err := e.db.QueryRow(`DELETE FROM sessions WHERE id_hash = ? RETURNING username`, hash).Scan(&user)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
-	}
-	return user, err
-}
-
-func decodeGroups(s sql.NullString) []string {
-	out := []string{}
-	if s.Valid {
-		_ = json.Unmarshal([]byte(s.String), &out)
-	}
-	return out
-}
-
-// APIToken describes a token. The token itself is never stored.
-type APIToken struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	User      string  `json:"-"`
-	Owner     Profile `json:"-"` // the owner's profile as of their latest sign-in
-	CreatedAt int64   `json:"created_at"`
-	ExpiresAt int64   `json:"expires_at"`
-	LastUsed  int64   `json:"last_used"`
-	// Schema 13: the role the token is limited to ("" for its owner's),
-	// the project patterns it is limited to (none for every project), and
-	// the address it was last used from.
-	Role         string   `json:"role,omitempty"`
-	Projects     []string `json:"projects,omitempty"`
-	LastUsedFrom string   `json:"last_used_from,omitempty"`
-	// Owner names whose token it is, in lists only admins see.
-	OwnerName string `json:"user,omitempty"`
+	return e.ident().EndSession(e.scope0(), hash)
 }
 
 // CreateToken stores a token under the hash of its value. A person's
 // tokens have different names.
 func (e *Engine) CreateToken(t APIToken, hash string) error {
-	unlock := e.writeLock()
-	defer unlock()
-	_, err := e.db.Exec(`INSERT INTO api_tokens(id, hash, username, name, created_at, expires_at) VALUES(?,?,?,?,?,?)`,
-		t.ID, hash, t.User, t.Name, t.CreatedAt, t.ExpiresAt)
-	if isConflict(err) {
-		return fmt.Errorf("%w: you already have a token called %q", ErrConflict, t.Name)
-	}
-	return err
+	return e.ident().CreateToken(e.scope0(), t, hash)
 }
 
 // TokenByHash looks a token up by the hash of its value, with its owner's
 // groups as of their latest sign-in.
 func (e *Engine) TokenByHash(hash string) (*APIToken, []string, error) {
-	t := &APIToken{}
-	var groups, name, email sql.NullString
-	err := e.db.QueryRow(`SELECT t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, u.group_list, u.display_name, u.email
-		FROM api_tokens t LEFT JOIN users u ON u.username = t.username WHERE t.hash = ?`, hash).
-		Scan(&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &groups, &name, &email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, fmt.Errorf("%w: token", ErrNotFound)
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	t.Owner = Profile{Name: name.String, Email: email.String}
-	return t, decodeGroups(groups), nil
+	return e.ident().TokenByHash(e.scope0(), hash, hash)
 }
 
 // LastSignIn returns a person's groups and profile as of their latest
 // sign-in; ErrNotFound if they never signed in.
 func (e *Engine) LastSignIn(user string) ([]string, Profile, error) {
-	var groups, name, email sql.NullString
-	err := e.db.QueryRow(`SELECT group_list, display_name, email FROM users WHERE username = ?`, user).Scan(&groups, &name, &email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, Profile{}, fmt.Errorf("%w: user %s", ErrNotFound, user)
-	}
-	if err != nil {
-		return nil, Profile{}, err
-	}
-	return decodeGroups(groups), Profile{Name: name.String, Email: email.String}, nil
+	return e.ident().LastSignIn(e.scope0(), user)
 }
 
 // TouchToken records that a token was used at now, unless that was already
 // recorded since notBefore.
 func (e *Engine) TouchToken(id string, now, notBefore int64) error {
-	unlock := e.writeLock()
-	defer unlock()
-	_, err := e.db.Exec(`UPDATE api_tokens SET last_used = ? WHERE id = ? AND last_used < ?`, now, id, notBefore)
-	return err
+	return e.ident().TouchToken(e.scope0(), id, now, notBefore, "")
 }
 
 // Tokens lists a person's tokens, newest first.
 func (e *Engine) Tokens(user string) ([]APIToken, error) {
-	rows, err := e.db.Query(`SELECT id, name, username, created_at, expires_at, last_used FROM api_tokens
-		WHERE username = ? ORDER BY created_at DESC, id DESC`, user)
-	if err != nil {
-		return nil, err
+	if user == "" {
+		return nil, fmt.Errorf("%w: a person's tokens need a person", ErrInvalid)
 	}
-	defer rows.Close()
-	out := []APIToken{}
-	for rows.Next() {
-		var t APIToken
-		if err := rows.Scan(&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed); err != nil {
-			return nil, err
-		}
-		out = append(out, t)
-	}
-	return out, rows.Err()
+	return e.ident().Tokens(e.scope0(), user)
 }
 
 // RevokeToken deletes one of a person's tokens. Someone else's token is
 // reported as not found.
 func (e *Engine) RevokeToken(user, id string) (*APIToken, error) {
-	unlock := e.writeLock()
-	defer unlock()
-	t := &APIToken{}
-	err := e.db.QueryRow(`DELETE FROM api_tokens WHERE id = ? AND username = ?
-		RETURNING id, name, username, created_at, expires_at, last_used`, id, user).
-		Scan(&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: token %s", ErrNotFound, id)
-	}
-	return t, err
+	return e.ident().RevokeToken(e.scope0(), user, id)
 }
 
 // AuditEntry is one line of the audit trail.

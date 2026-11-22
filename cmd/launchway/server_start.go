@@ -59,6 +59,10 @@ func readServerSetup(args []string) (*serverSetup, error) {
 		return nil, err
 	}
 	cfg := su.cfg
+	if cfg.MultiBase {
+		return nil, fmt.Errorf("%s: multi_base is on, and this server does not yet know which Base a request is for (the wall's Stage 8): "+
+			"it would answer every request from the default Base. Use `launchway bases` for the maintenance commands, or turn multi_base off", *cfgPath)
+	}
 	if su.secretStores, err = secrets.Open(cfg.Runner.Secrets); err != nil {
 		return nil, fmt.Errorf("%s: runner.secrets: %w", *cfgPath, err)
 	}

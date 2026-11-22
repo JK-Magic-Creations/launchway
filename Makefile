@@ -347,7 +347,7 @@ GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
 QUALITY_DIR := $(CURDIR)/quality
 
-.PHONY: tracked-files test-sdks tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
+.PHONY: tracked-files test-sdks tools lint lint-baseline-update arch ratchet ratchet-update wall-update fmt-check vet \
 	web-lint web-test web-size web-a11y coverage coverage-check coverage-update check check-all
 
 tools: $(GOLANGCI_LINT)
@@ -369,7 +369,7 @@ lint-baseline-update: $(GOLANGCI_LINT)
 
 # Allowed imports between internal packages, and the size ratchet.
 arch:
-	go test -count=1 -run 'TestImportsAreInTheTable|TestTableHasNoStaleEdges|TestForbiddenEdges|TestKnownExceptionsAreStillNeeded' ./internal/archtest/
+	go test -count=1 -run 'TestImportsAreInTheTable|TestTableHasNoStaleEdges|TestForbiddenEdges|TestKnownExceptionsAreStillNeeded|TestNoNewSQLOutsideTheStore|TestScopeDoorsAreCalledOnlyFromTheirFiles' ./internal/archtest/
 
 originality:
 	go test -count=1 -run TestNoOtherProductsAreNamed ./internal/archtest/
@@ -392,6 +392,10 @@ ratchet:
 # Lowers quality/size-baseline.json after a file or function shrank; refuses growth.
 ratchet-update:
 	UPDATE_RATCHET=1 go test -count=1 -run TestSizeRatchet -v ./internal/archtest/
+
+# Lowers quality/wall-baseline.json after SQL moved into internal/store; refuses growth.
+wall-update:
+	UPDATE_RATCHET=1 go test -count=1 -run TestNoNewSQLOutsideTheStore -v ./internal/archtest/
 
 fmt-check:
 	@out=$$(gofmt -l cmd internal scripts web/*.go); if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi

@@ -82,7 +82,7 @@ var (
 	}
 	totpColumn = Column{
 		Table: "local_accounts", Column: "totp_secret", Key: "username", Purpose: keyring.PurposeSecrets,
-		Writers: []string{"internal/engine/accounts.go"},
+		Writers: []string{"internal/store/identity.go"},
 		Why:     "the authenticator (TOTP) secrets of built-in accounts: with one, a code can be made for that person",
 	}
 	eventSourcesColumn = Column{

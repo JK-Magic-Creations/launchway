@@ -68,7 +68,8 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 		schemaConfigAsCode,
 		schemaFleet,
 		schemaWork,
-		schemaOrganize}
+		schemaOrganize,
+		schemaWall}
 	for i := 1; i < len(order); i++ {
 		if order[i] != order[i-1]+1 {
 			t.Fatalf("schemas are not in a row: the %dth is %d after %d", i+1, order[i], order[i-1])

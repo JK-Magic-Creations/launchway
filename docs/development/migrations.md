@@ -608,3 +608,16 @@ schema 26 or older leaves the Sortie alone (`TestOlderServerLeavesFetchFromLoopR
 look for a step named after the loop. It follows the real schemas 25 (caches) and 26 (forges), and
 its file, `schema27.go`, is named so that its migration is appended after theirs. The startup check
 covers the new columns (`schemaMarkersParity2`).
+
+## Numbers held for other branches, and walling a table
+
+Migrations 40 to 52 are all real: the Depot (40), Switches (41), the event log (42), review depth (43), the
+Debrief (44), Standing orders (45), releases (46), the software graph (47), configuration as code (48), fleets (49),
+work tracking (50), organizing (51) and the wall between Bases (52). The numbers were held by empty stand-ins while
+the branches waited to merge; none remains. The next branch takes 53. A database that has recorded a number can never
+receive a held number later, because a migration is never slipped in behind a recorded version.
+
+A new table also needs a line in the Depot (registry) of tables and an owner: see
+[every table has an owner](the-wall.md). Changing a key from "the name alone" to "base_id first"
+is the one change that cannot be additive; the wall does it as a separate, deliberate step when
+several Bases are turned on, not in a migration.

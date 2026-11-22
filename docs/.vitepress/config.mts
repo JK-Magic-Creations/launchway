@@ -376,6 +376,7 @@ export default defineConfig({
           { text: 'Home panels', link: '/contributing/panels' },
           { text: 'Writing a migration', link: '/development/migrations' },
           { text: 'Releasing', link: '/development/releasing' },
+          { text: 'Every table has an owner', link: '/development/the-wall' },
           { text: 'Quality bar for the API, MCP and CLI', link: '/development/interface-quality' },
         ],
       },

@@ -224,17 +224,17 @@ func TestLocalAccountLifecycle(t *testing.T) {
 func TestFirstSetupCodeInsertToleratesAServerThatWonTheRace(t *testing.T) {
 	e := accountsEngine(t)
 	now := time.Now().UnixMilli()
-	if err := e.insertSetupState("same", now, now+1000, "file"); err != nil {
+	if err := e.IssueSetupCode("same", now, now+1000, "file"); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.insertSetupState("same", now, now+1000, "file"); err != nil {
+	if err := e.IssueSetupCode("same", now, now+1000, "file"); err != nil {
 		t.Fatalf("the second server's insert failed: %v", err)
 	}
 	acct := &LocalAccount{Username: "a", Role: "admin", PasswordHash: "x", CreatedAt: now}
 	if err := e.CompleteSetup("same", acct, nil, now+10); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.insertSetupState("late", now, now+1000, "file"); !errors.Is(err, ErrConflict) {
+	if err := e.IssueSetupCode("late", now, now+1000, "file"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("a code written after setup was completed: %v", err)
 	}
 }

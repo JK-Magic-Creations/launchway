@@ -38,9 +38,11 @@ type Config struct {
 	// default is launchway.db in the data directory.
 	Database string `yaml:"database"`
 	// DatabaseWait: how long a starting server tries an unanswering database; default 60s.
-	DatabaseWait string           `yaml:"database_wait"`
-	Resilience   ResilienceConfig `yaml:"resilience"` // riding through a brief database outage
-	Audit        AuditConfig      `yaml:"audit"`      // the audit stream on standard output
+	DatabaseWait string `yaml:"database_wait"`
+	// MultiBase turns on several Bases in one installation (the wall; docs/development/the-wall.md). Default off.
+	MultiBase  bool             `yaml:"multi_base"`
+	Resilience ResilienceConfig `yaml:"resilience"` // riding through a brief database outage
+	Audit      AuditConfig      `yaml:"audit"`      // the audit stream on standard output
 	// Encryption says where the root key for encryption at rest is held (bootstrap: see encryption.go).
 	Encryption EncryptionConfig `yaml:"encryption"`
 	// User is who every action is recorded as when sign-in is off
