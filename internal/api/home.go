@@ -396,7 +396,7 @@ func (in homeInputs) categories() ([]homeCategory, []homeProject) {
 				hp.Last, hp.LastID, hp.LastNo, hp.LastAt = string(a.last.Status), a.last.ID, a.last.Number, nz64(a.last.FinishedAt, a.last.CreatedAt)
 			}
 		}
-		cid, label, kind := "none", "Not in a Squadron", "none"
+		cid, label, kind := "none", "Unfiled", "none"
 		if u := in.unit[n]; u != "" {
 			cid, label, kind = "unit:"+u, nzs(in.display[u], u), "unit"
 		}

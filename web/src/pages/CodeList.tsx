@@ -4,14 +4,14 @@ import { hostedHref, useHostedRepos } from "./hostedRepos";
 import { api, type Project, type RunSummary } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
-import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { ago } from "../format";
 import { hostName } from "../guided/code";
 import { trendOf } from "../guided/decide";
 import { useInstallation } from "../guided/facts";
 import { useLoad } from "../guided/useLoad";
 import { Chip } from "../kit/Status";
-import { Band, LinkButton, PageHead, Sheet } from "../kit/layout";
+import { Band, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
+import { AddButtons } from "./squadrons/shared";
 import { Status, stateOf } from "../kit/Status";
 import { TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
@@ -42,7 +42,7 @@ export function CodeListPage() {
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
         sentence={rows.length === 0 && hosted.length > 0 ? terms().say(`${hosted.length} ${hosted.length === 1 ? "repository is" : "repositories are"} hosted by Launchway; none is connected as a {project} with a pipeline yet.`) : rows.length === 0 ? "Your code lives in Git repositories. None is connected yet." : unreachable > 0 ? <><b>{unreachable} {unreachable === 1 ? "repository cannot" : "repositories cannot"} be reached.</b> The others are read normally.</> : `${rows.length} ${rows.length === 1 ? "repository" : "repositories"} connected, all reachable.`}
-        actions={<><LinkButton href="/graph" sm>Graph</LinkButton>{hosting === "on" && <LinkButton href="/repositories" sm>Hosted by Launchway</LinkButton>}{rows.length > 0 && me?.admin ? <WizardButton wizard="connect-repository" label={terms().say("Add a {project}")} /> : null}</>} />
+        actions={<><LinkButton href="/graph" sm>Graph</LinkButton>{hosting === "on" && <LinkButton href="/repositories" sm>Hosted by Launchway</LinkButton>}{rows.length > 0 ? <AddButtons sm /> : null}</>} />
       {rows.length > 0 && (
         <Band cells={[
           { key: "n", label: "Repositories", value: rows.length, foot: "connected from Git" },
@@ -65,8 +65,9 @@ export function CodeListPage() {
         </Sheet>
       )}
       {rows.length === 0 ? (
-        <WizardEmpty title={hosted.length > 0 ? "No repository has a pipeline yet" : terms().say("No {projects} yet")} wizard="connect-repository" label={terms().say("Add a {project}")}
-          text={terms().say("A {project} is a Git repository. Pick one and Launchway reads its pipeline from Git and runs it each time you push.")} />
+        <Sheet><EmptyState title={hosted.length > 0 ? "No repository has a pipeline yet" : terms().say("No {projects} yet")} action={<AddButtons flightFirst />}>
+          {terms().say("A {project} is a Git repository. Pick one and Launchway reads its pipeline from Git and runs it each time you push.")}
+        </EmptyState></Sheet>
       ) : (
         <Suspense fallback={flat}><Explorer as="projects" projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
       )}

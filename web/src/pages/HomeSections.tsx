@@ -13,6 +13,7 @@ import { useNow } from "../live";
 import { onLink } from "../router";
 import { organizeApi, type AttentionItem, type HomeAnswer, type HomeCategory, type HomeProject, type HomeRunning } from "../organizeApi";
 import { terms } from "../terms";
+import { AddSquadronButton } from "./squadrons/shared";
 import "./home-sections.css";
 import "./panels/panels.css";
 
@@ -163,7 +164,7 @@ function RunCard({ r, now }: { r: HomeRunning; now: number }) {
   );
 }
 
-function ProjectCard({ p, now }: { p: HomeProject; now: number }) {
+export function ProjectCard({ p, now }: { p: HomeProject; now: number }) {
   const state: State = p.needs > 0 ? "bad" : p.last === "failed" ? "bad" : p.last === "succeeded" ? "ok" : p.running > 0 ? "run" : "idle";
   const word = p.needs > 0 ? `${p.needs} need${p.needs === 1 ? "s" : ""} a look` : p.last === "failed" ? "Latest on the default branch failed" : p.last === "succeeded" ? "Latest on the default branch passed" : p.last ? p.last : "No result yet";
   return (
@@ -181,16 +182,16 @@ function Favorites({ list, now }: { list: HomeProject[]; now: number }) {
 }
 
 function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; openCats: Record<string, boolean>; onToggle: (k: string, nowOpen: boolean) => void; now: number }) {
-  if (cats.length === 0) return <div className="sheet"><div className="sh-h"><h2 id="hm-categories">By category</h2></div><p className="sh-b faint">{terms().say("No {project} to show in this view.")}</p></div>;
+  if (cats.length === 0) return <div className="sheet"><div className="sh-h"><h2 id="hm-categories">By category</h2><div className="r"><AddSquadronButton sm /></div></div><p className="sh-b faint">{terms().say("No {project} to show in this view.")}</p></div>;
   return (
     <div>
-      <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div>
+      <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><div className="r"><AddSquadronButton sm /> <a href="/units" onClick={onLink} className="btn btn-sm">{terms().say("All {units}")}</a> <a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div></div>
       {cats.map((c) => {
         // Only the two Squadrons with the most that needs a look open by themselves; the others show one line of health; a person's own choice wins.
         const isOpen = openCats[c.id] ?? (c.needs > 0 && cats.filter((x) => x.needs > 0).indexOf(c) < 2);
         const shut = !isOpen;
         const sorted = [...c.projects].sort((a, b) => b.needs - a.needs || Number(b.last === "failed") - Number(a.last === "failed") || b.running - a.running || a.name.localeCompare(b.name));
-        const label = c.kind === "unit" ? `${terms().label("unit")} ${c.label}` : c.label;
+        const label = c.kind === "unit" ? `${terms().label("unit")} ${c.label}` : "Unfiled";
         return (
           <div key={c.id} className="hm-cat">
             <h3><button type="button" className="hm-cat-b" aria-expanded={!shut} aria-controls={`cat-${c.id}`} onClick={() => onToggle(c.id, isOpen)}>

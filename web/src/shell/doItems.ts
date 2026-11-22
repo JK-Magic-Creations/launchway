@@ -13,10 +13,10 @@ export interface DoItem { id: string; label: string; hint: string; href: string;
 export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
   const out: DoItem[] = [];
   if (ctx.me.admin) {
-    out.push({ id: "add-project", label: terms().say("Add a {project}"), hint: "Connect a repository", href: "/config/wizard/connect-repository", icon: "plus", group: "Do" });
+    out.push({ id: "add-project", label: terms().say("Add a {project}"), hint: "Choose a repository", href: "/projects/new", icon: "plus", group: "Do" });
     for (const w of WIZARDS) {
       if (w.id === "connect-repository") continue;
-      out.push({ id: "wizard-" + w.id, label: w.title, hint: "A short guided set-up", href: `/config/wizard/${w.id}`, icon: "plus", group: "Do" });
+      out.push({ id: "wizard-" + w.id, label: terms().say(w.title), hint: "A short guided set-up", href: w.href ?? `/config/wizard/${w.id}`, icon: "plus", group: "Do" });
     }
   }
   out.push({ id: "decide", label: "Decide what is waiting", hint: terms().say("{Clearances} that need a person (approvals)"), href: "/activity/approvals", icon: "gate", group: "Do" });

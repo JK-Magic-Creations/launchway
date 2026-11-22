@@ -99,7 +99,7 @@ describe("honest empty states", () => {
     vi.mocked(api.projects).mockResolvedValue([]);
     app(<ProjectsPage />);
     expect(await screen.findByText("No Codebases yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/projects/new");
   });
   it("deployments with no environment offers the wizard", async () => {
     vi.mocked(api.environments).mockResolvedValue([]);

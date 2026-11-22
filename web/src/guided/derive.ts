@@ -33,7 +33,7 @@ export function checklist(me: Me, s: Setup): CheckItem[] {
     {
       id: "project", title: terms().say("Add your first {project}"),
       why: "Pick a repository. Launchway reads its pipeline from Git and runs it when you push.",
-      done: s.projects.length > 0, href: "/config/wizard/connect-repository", button: terms().say("Add a {project}"),
+      done: s.projects.length > 0, href: "/projects/new", button: terms().say("Add a {project}"),
     },
   ];
   if (me.runners) {

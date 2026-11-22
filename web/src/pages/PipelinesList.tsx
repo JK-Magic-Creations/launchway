@@ -12,6 +12,7 @@ import { Status, stateOf } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
 import { terms } from "../terms";
+import { AddButtons } from "./squadrons/shared";
 
 // The grouped, searchable view loads after the first paint; the flat list below is what shows meanwhile (and keeps the page height).
 const PipelinesExplorer = lazy(() => import("../explorer/PipelinesExplorer"));
@@ -57,7 +58,7 @@ export function PipelinesPage() {
       <PageHead eyebrow="Pipelines" title="Pipelines"
         sentence={rows.length === 0 ? "A pipeline is a set of steps that runs when something happens. None exists yet." :
           failing > 0 ? <><b>{failing} {failing === 1 ? "pipeline stopped" : "pipelines stopped"}</b> {terms().say("on its last {run}. The others are fine.")}</> : "Every pipeline's last run is fine or still going."}
-        actions={me?.runners ? <LinkButton href="/playground" icon="play">Try a pipeline without saving</LinkButton> : undefined} />
+        actions={<>{rows.length > 0 && <AddButtons sm />}{me?.runners ? <LinkButton href="/playground" icon="play">Try a pipeline without saving</LinkButton> : null}</>} />
       {rows.length > 0 && (
         <Band cells={[
           { key: "n", label: "Pipelines", value: rows.length, foot: terms().say("one for each {project}") },
@@ -66,7 +67,7 @@ export function PipelinesPage() {
         ]} />
       )}
       {rows.length === 0 ? (
-        <Sheet><EmptyState title="No pipelines yet" action={me?.admin ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton> : undefined}>
+        <Sheet><EmptyState title="No pipelines yet" action={<AddButtons flightFirst />}>
           {terms().say("Each {project} has a pipeline: its steps are read from the {project}'s Git repository. Add a {project} and its pipeline appears here, with what starts it and every {run}'s result.")}
         </EmptyState></Sheet>
       ) : (

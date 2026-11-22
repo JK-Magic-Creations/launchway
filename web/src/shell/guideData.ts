@@ -17,7 +17,7 @@ export const GUIDE: Record<string, GuideEntry> = {
     title: "You are on Home",
     text: "Every change you make travels along a line, from the commit to running software. Home shows what needs you, then the changes on their way and where each one is.",
     does: [
-      { icon: "plus", label: "Add a {project}", href: "/config/wizard/connect-repository" },
+      { icon: "plus", label: "Add a {project}", href: "/projects/new" },
       { icon: "gate", label: "See what is waiting for you", href: "/activity/approvals" },
       { icon: "activity", label: "See every {run}", href: "/activity" },
     ],
@@ -25,7 +25,7 @@ export const GUIDE: Record<string, GuideEntry> = {
   "/projects": {
     title: "Your {projects}",
     text: "A {project} is one piece of software, kept in a Git repository. Open one to see its pipeline, its {runs} and where it is running.",
-    does: [{ icon: "plus", label: "Add a {project}", href: "/config/wizard/connect-repository" }],
+    does: [{ icon: "plus", label: "Add a {project}", href: "/projects/new" }],
   },
   "/repositories/:owner/:name/pulls": {
     title: "Pull requests",

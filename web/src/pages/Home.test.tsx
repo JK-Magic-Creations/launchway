@@ -30,7 +30,7 @@ describe("Home on a new installation", () => {
     render(<Home {...props()} />);
     expect(screen.getByRole("heading", { name: "Add your first Codebase" })).toBeInTheDocument();
     expect(screen.getByText("0 of 5 essentials done")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/projects/new");
     expect(await screen.findByText(/Nothing needs you\./)).toBeInTheDocument();
     expect(screen.queryByText("Latest runs")).not.toBeInTheDocument();
   });
@@ -172,6 +172,6 @@ describe("Home with hosted repositories and no project", () => {
     vi.stubGlobal("fetch", vi.fn(async (u: string) => new Response(JSON.stringify(String(u).endsWith("/api/v1/repositories") ? { items: [repo("a"), repo("b")] } : answer({ counts: { projects: 0, needs: 0 } })), { status: 200, headers: { "Content-Type": "application/json" } })));
     render(<Home {...props({ me: me({ admin: true }) })} />);
     expect(await screen.findByRole("heading", { name: "2 repositories, none has a pipeline yet" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a pipeline" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a pipeline" })).toHaveAttribute("href", "/projects/new");
   });
 });

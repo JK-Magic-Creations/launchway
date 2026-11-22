@@ -1,3 +1,4 @@
+import { OrganizeCallout } from "../components/OrganizeCallout";
 import { useHostedRepos } from "./hostedRepos";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import type { Approval, Me, Project, RunSummary, Runner } from "../api";
@@ -18,6 +19,7 @@ import { Status, StateChip, type State } from "../kit/Status";
 import { useNow } from "../live";
 import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
+import { AddButtons } from "./squadrons/shared";
 import { terms } from "../terms";
 
 // Loaded after the first paint: Home draws without it.
@@ -73,9 +75,10 @@ export function Home({ me, projects, runs, runners, environments, applications, 
     <div className="page home">
       <PageHead eyebrow={me.user ? `Hello, ${me.user}` : undefined} title={fresh ? "Welcome" : h.title}
         sentence={fresh ? terms().say("Launchway builds, tests and {deploy:does} your software. Let us get you started.") : h.sentence}
-        actions={me.admin && projects.length > 0 ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton> : undefined} />
+        actions={projects.length > 0 ? <AddButtons flightFirst /> : undefined} />
 
       <HostedWithoutPipelines projects={projects.length} admin={!!me.admin} />
+      <OrganizeCallout />
       {next.item && <NextStepCard item={next.item} done={next.done} total={next.total} />}
       {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("{Projects}, a {runner}, a first {run} and an {environment} are in place.")}</div>}
 
@@ -104,7 +107,7 @@ export function HostedWithoutPipelines({ projects, admin }: { projects: number; 
       <h2 id="hosted-h" className="h-sm">{n} {n === 1 ? "repository" : "repositories"}, none has a pipeline yet</h2>
       <p className="sub">Launchway hosts {n === 1 ? "this repository" : "these repositories"}, and you can browse {n === 1 ? "it" : "them"} {terms().say("now. Add a {project} to read a pipeline from one and run it on each push.")}</p>
       <div className="guided-next-actions">
-        {admin && <Link href="/config/wizard/connect-repository" className="btn btn-primary">Add a pipeline</Link>}
+        {admin && <Link href="/projects/new" className="btn btn-primary">Add a pipeline</Link>}
         <Link href="/projects" className="btn">Browse the code</Link>
       </div>
     </section>

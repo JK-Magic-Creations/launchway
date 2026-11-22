@@ -14,6 +14,7 @@ const PAGES = [
   "/deployments/applications", "/depot", "/depot/components", "/depot/store", "/depot/store/shop-api", "/depot/store/shop-api?repository=shop-api/web", "/library", "/library/starters", "/library/templates", "/playground", "/kit",
   "/settings", "/settings/runners", "/settings/access", "/settings/access/keys", "/settings/access/ssh-keys", "/settings/access/agents", "/repositories", "/repositories/acme/shop", "/repositories/acme/shop?tab=merge", "/repositories/acme/shop/mirrors", "/repositories/acme/shop/history", "/repositories/acme/shop/pulls", "/repositories/acme/shop/pulls/1", "/repositories/acme/shop/pulls/new?head=fix-rounding", "/owners/acme", "/settings/approvals",
   "/settings/rules", "/settings/audit", "/settings/variables", "/settings/words", "/settings/security", "/config", "/config/wizard/connect-repository", "/setup/guide", "/setup/guide?step=encryption", "/setup/guide?step=import", "/setup/guide?step=finish",
+  "/units", "/units/new", "/units/payments", "/units/payments?tab=people", "/units/payments?tab=operations", "/units/storefront", "/units/payments/projects/new", "/units/payments/projects/new?pick=acme%2Fshop&from=hosted", "/projects/new",
   "/traffic", "/changes", "/learn", "/learn/start-here", "/learn/concepts/launch-line", "/nothing-here",
 ];
 

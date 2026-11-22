@@ -13,6 +13,11 @@ const t = (label: string, slug: string, anchor?: string): LearnTarget => ({ labe
 export const LEARN_FOR: Record<string, LearnTarget> = {
   "/": t("Learn more about the launch line", "concepts/launch-line"),
   "/projects": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/projects/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/units": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/units/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/units/:name": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/units/:name/projects/new": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
   "/projects/:name": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
   "/pipelines": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),

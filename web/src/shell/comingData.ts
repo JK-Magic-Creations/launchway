@@ -21,7 +21,7 @@ export const COMING: Record<string, Coming> = {
     title: "Files, commits and branches", area: "Code",
     does: "Browse a {project}'s code here: its files, the history of each, who changed which line, and the branches with the rules that protect them.",
     appears: "Every {project} you add will show its files and commits here once Launchway reads the repository itself. Today it reads only the pipeline file.",
-    action: { label: "Add a {project}", href: "/config/wizard/connect-repository" },
+    action: { label: "Add a {project}", href: "/projects/new" },
   },
   "/code/reviews": {
     title: "Reviews", area: "Code",
