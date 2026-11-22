@@ -64,17 +64,20 @@ steps:
         paths: [.cache/pip, .cache/uv]
         key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
         fallback: latest
+    timeout: 20m
     run: "$LAUNCHWAY_LIB/scripts/python/setup.sh"
   check:
     description: Lint the code with ruff
     if: { param: lint }
     needs: [setup]
     container: python
+    timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/check.sh"
   test:
     description: Run pytest
     needs: [setup]
     container: python
+    timeout: 30m
     run: "$LAUNCHWAY_LIB/scripts/python/test.sh"
     reports:
       tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
@@ -94,12 +97,14 @@ steps:
     if: { param: audit }
     needs: [setup]
     container: python
+    timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/audit.sh"
   analysis:
     description: Static analysis for insecure code (bandit, high severity)
     if: { param: analysis }
     needs: [setup]
     container: python
+    timeout: 15m
     run: "$LAUNCHWAY_LIB/scripts/python/analysis.sh"
     reports: { findings: [{ param: working_directory, format: "%s/reports/**/bandit.sarif" }] }
   licenses:
@@ -107,6 +112,7 @@ steps:
     if: { param: license_scan }
     needs: [setup]
     container: python
+    timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/licenses.sh"
   image:
     description: Build the image, scan it, and push it when push is on

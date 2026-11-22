@@ -23,6 +23,7 @@ steps:
         key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
         fallback: latest
     env: { PHASES: "setup test" }
+    timeout: 30m
     run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
     reports:
       tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]

@@ -87,8 +87,8 @@ esac
 final=$cmd
 if [ -n "$flags" ]; then
   case "$cmd" in
-    "npm test"*|"npm t"|"npm run "*|"pnpm test"*|"pnpm run "*|"npm run-script "*) final="$cmd -- $flags" ;;
-    "yarn test"*|"yarn run "*) final="$cmd $flags" ;;
+    "npm test"*|"npm t"|"npm run "*|"npm run-script "*) final="$cmd -- $flags" ;;
+    "yarn test"*|"yarn run "*|"pnpm test"*|"pnpm run "*) final="$cmd $flags" ;; # these pass the arguments on as they are
     *)
       word=$kind; [ "$kind" = nodetest ] && word=--test
       final=$(printf '%s\n' "$cmd" | sed -E "s#(^|[[:space:]/])$word([[:space:]]|\$)#\1$word $flags\2#g") ;;

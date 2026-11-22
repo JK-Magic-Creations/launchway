@@ -23,6 +23,7 @@ steps:
         key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
         fallback: latest
     env: { PHASES: "setup test" }
+    timeout: 30m
     run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
     reports:
       tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]

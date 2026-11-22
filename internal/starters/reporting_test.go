@@ -189,3 +189,29 @@ func TestPythonTestsGetJUnitAndCoverageWhateverTheCommand(t *testing.T) {
 		t.Errorf("no loud notice:\n%s", out)
 	}
 }
+
+// A step that waits for something that never comes must not hold a run for the default hour: the steps that run
+// tests, audits and analysis have a timeout of their own, and a plain message when it is reached.
+func TestTestAndScanStepsHaveTheirOwnTimeouts(t *testing.T) {
+	p, err := expandStarter(t, "pipeline: hub\non: { push: { branches: [main] } }\nsteps:\n  backend:\n    uses: launchway/python-service\n    with: { working_directory: backend, image: false, deliver: [] }\n  app:\n    uses: launchway/node-app\n    with: { working_directory: app, image: false, deliver: [] }\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"backend/test", "backend/audit", "backend/analysis", "app/test", "app/audit"} {
+		s := p.Step(id)
+		if s == nil {
+			t.Fatalf("no step %s", id)
+		}
+		if s.Timeout.D() <= 0 || s.Timeout.D() > 30*60*1e9 {
+			t.Errorf("%s has timeout %v: it must be explicit and at most 30 minutes", id, s.Timeout.D())
+		}
+	}
+	// The reports are read from the working directory's own reports/, so two directories of one repository do not
+	// count each other's results.
+	if g := p.Step("backend/test").Reports.Tests; len(g) != 1 || g[0] != "backend/reports/**/junit.xml" {
+		t.Errorf("backend/test reads %v", g)
+	}
+	if g := p.Step("app/test").Reports.Coverage; len(g) != 1 || g[0] != "app/reports/**/coverage.xml" {
+		t.Errorf("app/test coverage: %+v", g)
+	}
+}

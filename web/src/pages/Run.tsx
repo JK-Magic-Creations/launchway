@@ -447,6 +447,9 @@ export function RunPage({ id }: { id: string }) {
   );
 }
 
+/** How long a running step may print nothing before the page says it is probably waiting. */
+const QUIET_AFTER = 5 * 60 * 1000;
+
 function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPolicy, verifications }: {
   run: RunDetail; step: StepView; now: number;
   verifications: ReturnType<typeof useRunVerifications>;
@@ -488,8 +491,17 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
     : step.status === "canceled" && step.attempt === 0 ? "Canceled before it started."
     : "No output.";
 
+  // A step that is running and has printed nothing for minutes is usually waiting, not working.
+  const lastOutput = [...lines].reverse().find((l) => l.stream !== "system")?.at ?? since;
+  const quietFor = isLive && since > 0 ? now - lastOutput : 0;
   return (
     <section className="steppanel">
+      {quietFor >= QUIET_AFTER && (
+        <div className="callout callout-info" role="status">
+          <strong>{step.id} has printed nothing for {duration(quietFor)}.</strong> A step that is quiet this long is usually waiting rather than working: for a network connection that is dropped without an answer
+          {" "}(on Kubernetes, look first at the namespace's network policy and its egress rules), for a lock, or for input that never comes. If the work is simply long, there is nothing to do; otherwise cancel it and look at what it was doing last.
+        </div>
+      )}
       <div className="steppanel-head">
         <div>
           <h2>{step.id}</h2>
