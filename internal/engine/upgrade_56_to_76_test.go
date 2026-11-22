@@ -53,7 +53,7 @@ func TestUpgradeFromSchema56KeepsEverythingAndAddsForks(t *testing.T) {
 	}
 	for q, want := range map[string]int{
 		`SELECT count(*) FROM forge_repositories WHERE id = 'rep_1' AND parent_id = '' AND root_id = '' AND fork_point = '' AND forked_at = 0 AND allow_forks = -1 AND is_template = 0`: 1,
-		`SELECT count(*) FROM pull_requests WHERE id = 'pul_1' AND allow_maintainer_edits = 0 AND run_approved_head = '' AND source_repo_id = ''`:                                        1,
+		`SELECT count(*) FROM pull_requests WHERE id = 'pul_1' AND allow_maintainer_edits = 0 AND run_approved_head = '' AND source_repo_id = ''`:                                       1,
 		`SELECT count(*) FROM owner_fork_settings`: 0,
 	} {
 		if got := count(q); got != want {
