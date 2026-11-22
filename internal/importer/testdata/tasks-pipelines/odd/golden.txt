@@ -1,0 +1,32 @@
+=== azure-pipelines.yml (tasks-pipelines)
+# Imported from azure-pipelines.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+steps:
+  solo:
+    image: docker.io/library/node:20
+    run: |
+      echo hi
+
+--- findings
+different tasks.pr                     azure-pipelines.yml:2 Pull requests run at their head commit, filtered by the branch they target; pr: none turns them off, and autoCancel and drafts are not carried -> Check the branch list
+exact     tasks.job                    azure-pipelines.yml:4 The job became a step; its scripts run in order in one script
+exact     tasks.step.script            azure-pipelines.yml:6 Commands carry over; workingDirectory and env wrap that step's commands
+exact     tasks.step.tool              azure-pipelines.yml:7 The version became the step's image (docker.io/library/node:20)
+manual    tasks.step.task              azure-pipelines.yml:10 The task Docker@2 login is a packaged tool that Launchway does not know -> Replace it with the commands it runs, or ask a person to decide
+=== other-pipelines.yml (tasks-pipelines)
+# Imported from other-pipelines.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: ['*']}
+steps:
+  build:
+    image: docker.io/library/ubuntu:24.04
+    run: |
+      echo top-level steps
+
+--- findings
+different tasks.trigger.implied        other-pipelines.yml:1 The old system runs on every branch when a file has no trigger section, so every branch push was written as a trigger -> Narrow the branches if you do not want that
+different write.image.default          other-pipelines.yml:1 The steps build name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     tasks.step.script            other-pipelines.yml:2 Commands carry over; workingDirectory and env wrap that step's commands

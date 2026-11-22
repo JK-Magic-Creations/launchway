@@ -1,0 +1,144 @@
+=== azure-pipelines.yml (tasks-pipelines)
+# Imported from azure-pipelines.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: [main, releases/*], tags: [v*], paths: [src/*]}
+  pull_request: {into: [main]}
+  schedule:
+    - {cron: 0 3 * * *}
+inputs:
+  target: {type: choice, options: [dev, prod], default: dev}
+  verbose: {type: boolean, default: false}
+defaults:
+  env: {buildConfig: Release}
+containers:
+  build-compile: {image: 'node:20'}
+  build-compile-db:
+    image: postgres:16
+    service: true
+    env: {POSTGRES_PASSWORD: test}
+steps:
+  build-compile:
+    container: build-compile
+    timeout: 30m
+    on_failure: continue
+    env:
+      GOMODCACHE: .cache/go-mod
+    secrets:
+      NPM_TOKEN: {store: vault, key: NPM_TOKEN, field: value}
+    run: |
+      # Build
+      (
+        cd web
+        export CI=true
+        npm ci
+        npm run build -- --config ${buildConfig} --rev $LAUNCHWAY_COMMIT --token ${NPM_TOKEN} --x ${LAUNCHWAY_INPUT_TARGET} ${{ variables.other }}
+      )
+      echo 'NEEDS A PERSON: a PowerShell step ran here'; exit 1
+      echo 'NEEDS A PERSON: the task SomeVendorTask@1 ran here'; exit 1
+      echo 'NEEDS A PERSON: a template of steps was included here'; exit 1
+      echo cond
+    cache:
+      - {name: cache-go-mod, paths: [.cache/go-mod], key: {files: [go.sum]}}
+    reports:
+      tests: ['**/junit.xml']
+      coverage: [coverage/cobertura.xml]
+    artifacts:
+      - {name: dist, paths: [web/dist]}
+  build-matrix:
+    image: docker.io/library/ubuntu:24.04
+    needs: build-compile
+    secrets:
+      image: {store: vault, key: image, field: value}
+    run: |
+      echo ${image}
+  test-unit:
+    image: docker.io/library/python:3.12
+    needs: [build-compile, build-matrix]
+    run: |
+      pytest
+    fetch:
+      - {from: build-compile, name: dist}
+  test-report:
+    image: docker.io/library/ubuntu:24.04
+    needs: test-unit
+    when: {upstream: always}
+    run: |
+      echo report
+  deploy-prod:
+    kind: image
+    push: true
+    tags:
+      - {repository: team/shop, tag: {run: sha}}
+      - {repository: team/shop, tag: latest}
+    needs: [test-unit, test-report]
+  deploy-gate:
+    image: docker.io/library/ubuntu:24.04
+    needs: [test-unit, test-report]
+    when: {branch: main}
+    run: |
+      echo ok
+
+--- findings
+exact     tasks.trigger                azure-pipelines.yml:2 The push trigger carries over with its branch, tag and path filters
+different tasks.trigger.exclude        azure-pipelines.yml:2 Launchway cannot exclude branches or tags by pattern, so batch was not carried; path exclusions use paths_ignore -> List the branches or tags that should run instead of the ones that should not
+different tasks.trigger.exclude        azure-pipelines.yml:5 Launchway cannot exclude branches or tags by pattern, so the branch exclude list was not carried; path exclusions use paths_ignore -> List the branches or tags that should run instead of the ones that should not
+different tasks.pr                     azure-pipelines.yml:9 Pull requests run at their head commit, filtered by the branch they target; pr: none turns them off, and autoCancel and drafts are not carried -> Check the branch list
+exact     tasks.schedules              azure-pipelines.yml:12 The cron times became schedule triggers; the branch list was not carried, so they run on the default branch
+exact     tasks.variables              azure-pipelines.yml:18 Variables carry over as environment variables; parameters became run inputs
+exact     tasks.variables              azure-pipelines.yml:22 Variables carry over as environment variables; parameters became run inputs
+exact     tasks.variables              azure-pipelines.yml:26 Variables carry over as environment variables; parameters became run inputs
+manual    tasks.variables.group        azure-pipelines.yml:27 The variable group or template group shared-secrets lives outside this file -> Create its variables in Launchway (names only; secrets as secrets) or copy the template's content here
+manual    tasks.variables.group        azure-pipelines.yml:30 The variable group or template template vars.yml lives outside this file -> Create its variables in Launchway (names only; secrets as secrets) or copy the template's content here
+manual    tasks.resources              azure-pipelines.yml:32 The resources repositories are other repositories or pipelines, which are not read -> Fetch other repositories in the script, or start the other pipeline with a webhook
+different tasks.pool                   azure-pipelines.yml:46 The pool ubuntu-latest is not carried: Launchway chooses the Station by its own configuration and runs steps in a container image -> Name the image the job needs
+exact     tasks.stages                 azure-pipelines.yml:49 Each stage waits for the stage before it, or the stages named in dependsOn
+exact     tasks.job                    azure-pipelines.yml:51 The job became a step; its scripts run in order in one script
+different tasks.container              azure-pipelines.yml:52 The container node:20 became the step's image or a service; services are reached at localhost, not by their resource name -> Change the host name your tests use to localhost
+exact     tasks.step.continue          azure-pipelines.yml:53 On a job, they carried over as on_failure: continue and a time limit; on a step they are not carried
+exact     tasks.step.continue          azure-pipelines.yml:54 On a job, they carried over as on_failure: continue and a time limit; on a step they are not carried
+different tasks.container              azure-pipelines.yml:56 The container db became the step's image or a service; services are reached at localhost, not by their resource name -> Change the host name your tests use to localhost
+exact     tasks.step.checkout          azure-pipelines.yml:58 Launchway checks the repository out before the first step
+manual    tasks.step.cache_path        azure-pipelines.yml:59 The cache path $(Pipeline.Workspace)/.npm is outside the workspace, and Launchway keeps only paths below it -> Make the tool use a directory below the workspace and cache that
+different tasks.step.cache             azure-pipelines.yml:63 The cache for .cache/go-mod is kept by Launchway between runs; the key's file names became a file list, and other parts of the key were dropped -> Check the key files and paths
+manual    tasks.expr                   azure-pipelines.yml:67 The expression `variables.other` is evaluated when the old file is read, and is left as written -> Write the value in place, or use a run input
+different tasks.macro                  azure-pipelines.yml:67 The variable $(Build.SourceVersion) was replaced by $LAUNCHWAY_COMMIT -> Check the value reads the same where you use it
+different tasks.macro.unset            azure-pipelines.yml:67 The script reads NPM_TOKEN, which is not set in the file; it was probably a secret variable set in the old system, so it was read by name from a secret store -> Create the secret in Launchway (names only), or set the variable if it is not a secret
+exact     tasks.step.script            azure-pipelines.yml:67 Commands carry over; workingDirectory and env wrap that step's commands
+different write.secret                 azure-pipelines.yml:67 Secret NPM_TOKEN is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+manual    tasks.step.pwsh              azure-pipelines.yml:74 The step runs PowerShell, which is not in a plain Linux image -> Use an image that has pwsh and run the script with it, or rewrite it for sh
+exact     tasks.step.tests             azure-pipelines.yml:75 Test and coverage results became reports of the step
+exact     tasks.step.tests             azure-pipelines.yml:78 Test and coverage results became reports of the step
+exact     tasks.step.publish           azure-pipelines.yml:81 The files became cargo of the step, and a download became a fetch
+manual    tasks.step.task              azure-pipelines.yml:83 The task SomeVendorTask@1 is a packaged tool that Launchway does not know -> Replace it with the commands it runs, or ask a person to decide
+manual    tasks.step.template          azure-pipelines.yml:86 The template steps/extra.yml is another file, which is not read here -> Import it as well and copy its steps here, or write a Launchway template
+exact     tasks.step.script            azure-pipelines.yml:87 Commands carry over; workingDirectory and env wrap that step's commands
+manual    tasks.job.condition          azure-pipelines.yml:88 The condition `eq(variables['Build.Reason'], 'Manual')` is an expression, which Launchway does not evaluate, so it always runs -> Express it as a when: filter (branch, tag, event), or in the script
+exact     tasks.job                    azure-pipelines.yml:89 The job became a step; its scripts run in order in one script
+different write.image.default          azure-pipelines.yml:89 The steps build-matrix, test-report, deploy-gate name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+exact     tasks.job.depends            azure-pipelines.yml:90 Dependencies between jobs carry over
+manual    tasks.strategy.matrix        azure-pipelines.yml:91 The matrix is a set of named variable sets, which a Launchway loop of lists cannot hold as it is written -> Write for_each with a list for each variable, or one step for each named set
+different tasks.macro.unset            azure-pipelines.yml:98 The script reads image, which is not set in the file; it was probably a secret variable set in the old system, so it was read by name from a secret store -> Create the secret in Launchway (names only), or set the variable if it is not a secret
+exact     tasks.step.script            azure-pipelines.yml:98 Commands carry over; workingDirectory and env wrap that step's commands
+different write.secret                 azure-pipelines.yml:98 Secret image is read from the Station's secret store "vault" by name, instead of from the old system's own storage; no value was copied -> Create the secret in the store under this name (names only here; the value is never in these files)
+exact     tasks.job                    azure-pipelines.yml:102 The job became a step; its scripts run in order in one script
+exact     tasks.step.tool              azure-pipelines.yml:104 The version became the step's image (docker.io/library/python:3.12)
+exact     tasks.step.publish           azure-pipelines.yml:107 The files became cargo of the step, and a download became a fetch
+exact     tasks.step.script            azure-pipelines.yml:109 Commands carry over; workingDirectory and env wrap that step's commands
+exact     tasks.job                    azure-pipelines.yml:110 The job became a step; its scripts run in order in one script
+exact     tasks.job.depends            azure-pipelines.yml:111 Dependencies between jobs carry over
+exact     tasks.job.condition_simple   azure-pipelines.yml:112 The condition became the upstream setting of when:
+exact     tasks.step.script            azure-pipelines.yml:114 Commands carry over; workingDirectory and env wrap that step's commands
+manual    tasks.job.condition          azure-pipelines.yml:117 The condition `and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))` is an expression, which Launchway does not evaluate, so it always runs -> Express it as a when: filter (branch, tag, event), or in the script
+manual    tasks.job.condition          azure-pipelines.yml:117 The condition `and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))` is an expression, which Launchway does not evaluate, so it always runs -> Express it as a when: filter (branch, tag, event), or in the script
+different tasks.deployment             azure-pipelines.yml:119 The deployment to environment production became an ordinary step marked as delivering; approvals and checks set on the environment in the old system were not read -> Add an approval step or protect the Airfield
+exact     tasks.job                    azure-pipelines.yml:119 The job became a step; its scripts run in order in one script
+different write.image.registry         azure-pipelines.yml:119 Step deploy-prod pushes the image to repository team/shop of Launchway's built-in registry instead of the registry the old file named -> To push elsewhere, name a registry your Stations list in the step's tags (registry:)
+manual    tasks.deployment.hooks       azure-pipelines.yml:123 The deployment strategy preDeploy is not carried; only the deploy steps are -> Use a rollout step for canary and rolling releases, or add the steps by hand
+different tasks.step.docker            azure-pipelines.yml:128 The image build became an image step; it pushes to Launchway's built-in registry, not the service connection the old file named -> Check the tags, and name another registry in the step if you push elsewhere
+exact     tasks.step.script            azure-pipelines.yml:136 Commands carry over; workingDirectory and env wrap that step's commands
+exact     tasks.job                    azure-pipelines.yml:137 The job became a step; its scripts run in order in one script
+exact     tasks.job.condition_simple   azure-pipelines.yml:138 The condition became the upstream setting of when:
+exact     tasks.step.script            azure-pipelines.yml:140 Commands carry over; workingDirectory and env wrap that step's commands
+secrets: NPM_TOKEN, image
