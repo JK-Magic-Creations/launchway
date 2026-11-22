@@ -228,7 +228,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
         </Sheet>
       )}
       <Sheet title={`The same things as a table (${shown.length})`}>
-        <div className="sg-scroll"><table className="table sg-table">
+        <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table sg-table">
           <caption className="sr-only">Nodes around {focus}</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Next to it</th><th scope="col">Where it came from</th><th scope="col">Actions</th></tr></thead>
           <tbody>
@@ -241,7 +241,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
                   <td>{r === focus ? "The focus" : relationOf(focus, n, edges)}</td>
                   <td><small>{n.confidence ?? ""}{n.origin ? `, read by ${n.origin}` : ""}</small></td>
                   <td className="sg-acts">
-                    <Button sm disabled={expanded.has(r) || busy} onClick={() => expand(r, n)} aria-label={`Expand ${n.kind} ${n.key}`}>{expanded.has(r) ? "Expanded" : "Expand"}</Button>
+                    <Button sm disabled={expanded.has(r) || busy} onClick={() => expand(r, n)} aria-label={`${expanded.has(r) ? "Expanded" : "Expand"} ${n.kind} ${n.key}`}>{expanded.has(r) ? "Expanded" : "Expand"}</Button>
                     {r !== focus && <Button sm onClick={() => onFocus(r)} aria-label={`Make ${n.kind} ${n.key} the focus`}>Focus</Button>}
                     {r !== focus && <Button sm onClick={() => showPath(r)} aria-label={`Show the path from the focus to ${n.kind} ${n.key}`}>Path</Button>}
                   </td>
@@ -283,7 +283,7 @@ function ImpactView({ focus }: { focus: string }) {
           <Truncated t={impact} />
           {impact.deployments.length > 0 && (
             <Sheet title="Running now, affected">
-              <div className="sg-scroll"><table className="table">
+              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
                 <caption className="sr-only">Deployments that run affected digests</caption>
                 <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">Why</th></tr></thead>
                 <tbody>{impact.deployments.map((d) => (
@@ -359,7 +359,7 @@ function OrderView({ repo }: { repo?: string }) {
           )}
           <Sheet title={`Why the order is what it is (${order.edges.length})`}>
             {order.edges.length === 0 ? <p className="faint pad">No dependencies.</p> : (
-              <div className="sg-scroll"><table className="table">
+              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
                 <caption className="sr-only">Dependencies between repositories</caption>
                 <thead><tr><th scope="col">Repository</th><th scope="col">Depends on</th><th scope="col">Through</th><th scope="col">Override</th></tr></thead>
                 <tbody>{order.edges.map((e) => (
@@ -424,7 +424,7 @@ const SOURCE_WORDS: Record<string, string> = { declared: "Declared in the file",
 function FactsTable({ facts, name }: { facts: Fact[]; name: string }) {
   if (facts.length === 0) return <p className="faint pad">Nothing declared or inferred yet.</p>;
   return (
-    <div className="sg-scroll"><table className="table">
+    <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
       <caption className="sr-only">What {name} needs</caption>
       <thead><tr><th scope="col">Needs</th><th scope="col">Value</th><th scope="col">Where from</th></tr></thead>
       <tbody>{facts.map((f) => (
@@ -520,7 +520,7 @@ function RunningView({ focus }: { focus: string }) {
       {!where && !error && <p className="faint" role="status">Looking for where it runs…</p>}
       {where && (where.deployments.length === 0 ? <p className="faint" role="status"><Mono>{focus}</Mono> is not running anywhere you may see.</p> : (
         <Sheet title={`Running in ${where.airfields.length} ${where.airfields.length === 1 ? "Airfield" : "Airfields"}`}>
-          <div className="sg-scroll"><table className="table">
+          <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
             <caption className="sr-only">Deployments that run {focus}</caption>
             <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">How we know</th></tr></thead>
             <tbody>{where.deployments.map((d) => (

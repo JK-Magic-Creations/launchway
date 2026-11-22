@@ -70,3 +70,4 @@
 .pr-file > header [data-owners] { margin-inline-start: auto; }
 /* Narrow screens: the filter buttons wrap instead of widening the page. */
 .seg { flex-wrap: wrap; max-width: 100%; }
+.pr-label-filter input { min-height: 28px; }

@@ -2,7 +2,7 @@
 .sg .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .sg .pad { padding: 0 16px 12px; }
 .sg-find { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; margin-bottom: 8px; }
-.sg-find .field { flex: 0 1 240px; margin: 0; }
+.sg-find .field { flex: 0 1 240px; margin: 0; min-width: 0; max-width: 100%; } .sg-find select, .sg-find input { max-width: 100%; }
 .sg-kinds { border: 0; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .sg-kinds legend { padding: 0; margin-bottom: 6px; color: var(--text-2); }
 .sg-kinds .check { display: inline-flex; align-items: center; gap: 6px; }

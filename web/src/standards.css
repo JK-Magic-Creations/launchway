@@ -48,7 +48,7 @@
 .st-ct { display: block; }
 .st-why { display: block; font-weight: 400; color: var(--text-2); font-size: 13.5px; max-width: 60ch; margin: 2px 0; }
 .st-hint { display: block; font-weight: 400; }
-.st-dim { opacity: 0.88; }
+.st-dim { }
 .st-eco-h { background: var(--surface-2); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); text-align: left; }
 .st-state { font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--idle-soft); color: var(--idle-ink); }
 .st-state-block { background: var(--bad-soft); color: var(--bad-ink); }
