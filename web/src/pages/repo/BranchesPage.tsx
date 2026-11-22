@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useUrlState } from "../../urlState";
-import { canOperate, useMe } from "../../auth";
+import { canChange, useMe } from "../../auth";
 import { browseApi, codeHref, commitHref, compareHref, type RefInfo } from "../../browseApi";
 import { ErrorBox, Link } from "../../components/ui";
 import { announce } from "../../kit/announce";
@@ -30,7 +30,7 @@ export function BranchesPage({ path }: { path: string }) {
     browseApi.branches(path, q, 100).then((r) => { setItems(r.items); setTotal(r.total); setDef(r.default_branch); setError(null); }).catch(setError);
   }, [path, q]);
   useEffect(() => { const t = setTimeout(load, q ? 150 : 0); return () => clearTimeout(t); }, [load, q]);
-  const canWrite = canOperate(me, path) && !repo?.mirror && !repo?.archived;
+  const canWrite = canChange(me, path) && !repo?.mirror && !repo?.archived;
   const base = from || def;
   const make = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null);
@@ -138,7 +138,7 @@ export function TagsPage({ path }: { path: string }) {
     return () => clearTimeout(t);
   }, [load, q]);
   useEffect(() => { browseApi.branches(path, "", 1).then((r) => setDef(r.default_branch)).catch(() => {}); }, [path]);
-  const canWrite = canOperate(me, path) && !repo?.mirror && !repo?.archived;
+  const canWrite = canChange(me, path) && !repo?.mirror && !repo?.archived;
   const base = from || def;
   const make = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null);

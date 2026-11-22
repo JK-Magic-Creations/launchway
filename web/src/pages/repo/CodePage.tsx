@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api";
-import { canOperate, useMe } from "../../auth";
+import { canChange, useMe } from "../../auth";
 import { ErrorBox, Link } from "../../components/ui";
 import { blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
 import { Dialog } from "../../kit/Dialog";
@@ -87,7 +87,7 @@ export function CodePage({ path }: { path: string }) {
     return () => window.removeEventListener("hashchange", on);
   }, []);
   const current = item?.ref ?? refName ?? repo?.default_branch ?? "main";
-  const canWrite = canOperate(me, path) && !repo?.mirror && !repo?.archived;
+  const canWrite = canChange(me, path) && !repo?.mirror && !repo?.archived;
   const goRef = useCallback((r: string) => navigate(codeHref(path, r, item?.type === "dir" || !item ? p || undefined : p)), [path, item, p]);
   const setHashTo = (h: string) => { history.replaceState(null, "", `${location.pathname}${location.search}${h}`); setHash(h); };
 
