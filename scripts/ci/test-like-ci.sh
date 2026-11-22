@@ -102,7 +102,7 @@ status=0
 # shellcheck disable=SC2086
 "$tool" run --rm --user 1000:1000 $pass --memory "$mem" --cpus "$cpus" --read-only --security-opt no-new-privileges --cap-drop ALL \
 	-e HOME=/home/launchway -e GOMODCACHE=/go/pkg/mod -e GOCACHE=/home/launchway/.cache/go-build -e PIP_CACHE_DIR=/home/launchway/.cache/pip -e npm_config_cache=/home/launchway/.npm \
-	-e GOMAXPROCS="$cpus" -e GIT_TERMINAL_PROMPT=0 \
+	-e GOMAXPROCS="$cpus" -e GIT_TERMINAL_PROMPT=0 ${TAIL_LINES:+-e TAIL_LINES="$TAIL_LINES"} ${MAX_FAILURES:+-e MAX_FAILURES="$MAX_FAILURES"} \
 	-v "$work/src":/work/src:z -v "$work/home":/home/launchway:z -v "$work/cmd.sh":/work/cmd.sh:ro,z \
 	$account -v "$mods":/go/pkg/mod:ro,z -w /work/src "$image" sh -e /work/cmd.sh || status=$?
 echo "test-like-ci: conditions applied: cpu cap $cpus, memory cap $mem, real Git checkout (VCS stamping on) owned by another user: $differs, account entry: $([ -n "$account" ] && echo yes || echo no), step HOME/GOCACHE as the executor sets them"
