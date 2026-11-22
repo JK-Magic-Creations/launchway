@@ -41,10 +41,21 @@ try { budget = JSON.parse(readFileSync(budgetPath, "utf8")); } catch { budget = 
 const keys = { initial_js_bytes: initial.js, initial_css_bytes: initial.css, total_js_bytes: total.js, total_css_bytes: total.css };
 
 if (flag === "--update") {
-  // Lowers each limit to today's size plus 1% headroom, never raises one.
-  const next = { comment: budget?.comment ?? "", ...Object.fromEntries(Object.entries(keys).map(([k, v]) => [k, Math.min(budget?.[k] ?? Infinity, Math.ceil(v * 1.01 / 1000) * 1000)])) };
+  // Lowers each limit to today's size plus 1% headroom (rounded up to 1,000); a limit is never raised, so when the
+  // build has grown nothing is written and the output says so for each limit.
+  const next = { comment: budget?.comment ?? "" };
+  let lowered = 0;
+  for (const [k, v] of Object.entries(keys)) {
+    const old = budget?.[k];
+    const want = Math.ceil(v * 1.01 / 1000) * 1000;
+    next[k] = Math.min(old ?? Infinity, want);
+    const note = old === undefined ? "set" : next[k] < old ? "lowered" : want > old ? "kept (today's size plus headroom would be above it; a limit is never raised here)" : "kept";
+    if (next[k] !== old) lowered++;
+    console.log(`${k}: measured ${v} B, limit ${old ?? "none"} -> ${next[k]} B, ${note}`);
+  }
+  if (lowered === 0) { console.log("bundle-budget.json is unchanged: no limit could be lowered."); process.exit(0); }
   writeFileSync(budgetPath, JSON.stringify(next, null, 2) + "\n");
-  console.log(`budget written: ${JSON.stringify(keys)}`);
+  console.log(`bundle-budget.json written (${lowered} limit${lowered === 1 ? "" : "s"} changed).`);
   process.exit(0);
 }
 if (!budget) { console.error("bundle-budget.json is missing; run npm run size:update"); process.exit(1); }
