@@ -380,12 +380,9 @@ type LogLine struct {
 // Open opens the database, recovers any steps that were in flight, and starts
 // watching leases.
 func Open(o Options) (*Engine, error) {
-	o.defaultLease()
+	o.leaseDefaults()
 	if o.MaxLost == 0 {
 		o.MaxLost = 3
-	}
-	if o.RunnerTimeout == 0 {
-		o.RunnerTimeout = 3 * o.LeaseTTL
 	}
 	clk := newDBClock()
 	o.Now = clk.wrap(o.Now)

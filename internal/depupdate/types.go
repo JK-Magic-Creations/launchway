@@ -74,7 +74,7 @@ type Limits struct {
 // DefaultLimits are used when Discover is given none.
 var DefaultLimits = Limits{MaxFiles: 2000, MaxFileSize: 8 << 20}
 
-var skipDirs = map[string]bool{".git": true, "node_modules": true, "vendor": true, "testdata": true, ".venv": true, "venv": true, "target": true}
+var skipDirs = map[string]bool{".git": true, ".cache": true, "node_modules": true, "vendor": true, "testdata": true, ".venv": true, "venv": true, "target": true}
 
 // Result is everything discovery found.
 type Result struct {

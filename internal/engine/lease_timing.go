@@ -16,12 +16,15 @@ const maxBeat = 15 * time.Second
 // more than maxBeat, so that a long lease means more tries, not fewer.
 func (e *Engine) beat() time.Duration { return min(e.ttl/3, maxBeat) }
 
-// defaultLease sets the lease and the runner timeout of options that name neither.
-func (o *Options) defaultLease() {
+// leaseDefaults fills in the lease and Station timings that were left unset.
+func (o *Options) leaseDefaults() {
 	if o.RunnerTimeout == 0 && o.LeaseTTL == 0 {
 		o.RunnerTimeout = 90 * time.Second // as before the lease got longer
 	}
 	if o.LeaseTTL == 0 {
 		o.LeaseTTL = DefaultLeaseTTL
+	}
+	if o.RunnerTimeout == 0 {
+		o.RunnerTimeout = 3 * o.LeaseTTL
 	}
 }

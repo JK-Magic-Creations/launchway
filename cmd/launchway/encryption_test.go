@@ -102,6 +102,9 @@ func mustRead(t *testing.T, p string) string {
 // An installation that already holds secrets and has no root key keeps
 // starting, says so loudly, and nothing is generated behind its back.
 func TestExistingInstallationStartsNotEncryptedWithAWarning(t *testing.T) {
+	// The advice differs inside a cluster (apply the chart) and outside (make a key); this test is
+	// about the second, wherever it runs. A pipeline step runs in a pod, where the variable is set.
+	t.Setenv("KUBERNETES_SERVICE_HOST", "")
 	addr := testdb.New(t)
 	e := engineAt(t, addr)
 	if err := seedLegacyShared(e, "runner_token", "tok-plain"); err != nil { // what an older release left
