@@ -325,6 +325,9 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/work/import/archive":                           {"POST", "/api/v1/work/import/archive", `{"repository":"o/x","preview":true}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/protected-branches": {"GET", "/api/v1/repositories/o/x/protected-branches", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/repositories/{owner}/{name}/protected-branches": {"PUT", "/api/v1/repositories/o/x/protected-branches", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/download":           {"GET", "/api/v1/repositories/o/x/download", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/hosting-settings":                               {"GET", "/api/v1/hosting-settings", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/hosting-settings":                               {"PUT", "/api/v1/hosting-settings", `{}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/repositories/{owner}/{name}/protected-tags":     {"GET", "/api/v1/repositories/o/x/protected-tags", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/repositories/{owner}/{name}/protected-tags":     {"PUT", "/api/v1/repositories/o/x/protected-tags", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	// Webhooks of a repository (its administrators) and of an owner (an administrator); with hosting off what passes the check is 404 feature_off.

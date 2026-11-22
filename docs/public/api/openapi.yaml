@@ -3297,6 +3297,54 @@ paths:
             tags:
                 - home
             x-launchway-access: signed-in
+    /api/v1/hosting-settings:
+        get:
+            description: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            operationId: get_api_v1_hosting_settings
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            tags:
+                - hosting-settings
+            x-launchway-access: signed-in
+        put:
+            description: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}. Answers with both.'
+            operationId: put_api_v1_hosting_settings
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}.'
+            tags:
+                - hosting-settings
+            x-launchway-access: admin
+            x-launchway-audit: hosting.settings
     /api/v1/images:
         get:
             description: 'Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a Flight''s images (?project=). {"hits": […]}'
@@ -10271,6 +10319,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/download:
+        get:
+            description: 'A snapshot of a ref as an archive: ?ref= (a branch, tag or commit; default the default branch) and ?format= tar.gz (the default) or zip. Streamed, under a folder named for the repository and the ref, with the commit in X-Launchway-Commit. Refused with 413 before the first byte when the files add up to more than the hosting setting archive_max_mib, with 404 for a ref that is not there and 400 for another format; limited to a few a minute per person.'
+            operationId: get_api_v1_repositories_owner_name_download
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A snapshot of a ref as an archive: ?ref= (a branch, tag or commit; default the default branch) and ?format= tar.gz (the default) or zip.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+            x-launchway-audit: repository.archive
     /api/v1/repositories/{owner}/{name}/files:
         delete:
             description: 'One commit that removes one file: {"branch", "path", "message", "expected_sha"}; expected_sha (the file''s current sha) is required, so a file changed in between is never removed by mistake. The same branch rules, follow-up and answer as PUT. The file stays in the history.'

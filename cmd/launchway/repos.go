@@ -19,7 +19,7 @@ const reposUsage = `Usage:
                          [--branch B] [--archived=false] [--rename-to OWNER/NAME]
   launchway repos delete OWNER/NAME                      move a repository to the trash
 
-` + reposKeysUsage + `
+` + reposKeysUsage + reposMoreUsage + `
 Git hosting must be turned on (the installation setting forge.hosting); otherwise every
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
 come from the same role bindings as a Flight's, matched on that path. Changes are
@@ -81,6 +81,10 @@ func cmdRepos(args []string) error {
 			return cl.protectedBranches(args[1:])
 		case "protected-tags":
 			return cl.protectedTags(args[1:])
+		case "download":
+			return cl.reposDownload(args[1:])
+		case "settings":
+			return cl.reposSettings(args[1:])
 		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags":
 			return cl.reposBrowse(args[0], args[1:])
 		}

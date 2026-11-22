@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { ApiError } from "../../api";
 import { canChange, useMe } from "../../auth";
 import { ErrorBox, Link } from "../../components/ui";
-import { blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
+import { archiveUrl, blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
 import { Dialog } from "../../kit/Dialog";
 import { EmptyState, LinkButton } from "../../kit/layout";
 import { navigate } from "../../router";
@@ -141,6 +141,8 @@ export function CodePage({ path }: { path: string }) {
             <Breadcrumb repo={path} refName={current} path={p} />
             <span className="grow" />
             <Link href={commitsHref(path, current, p || undefined)} className="btn btn-sm">History</Link>
+            <a href={archiveUrl(path, current, "tar.gz")} className="btn btn-sm" download>Download tar.gz<span className="visually-hidden"> of {current}</span></a>
+            <a href={archiveUrl(path, current, "zip")} className="btn btn-sm" download>Download zip<span className="visually-hidden"> of {current}</span></a>
             {current !== repo?.default_branch && repo?.default_branch && <Link href={compareHref(path, current, repo.default_branch)} className="btn btn-sm">Compare with {repo.default_branch}</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { new: "1" })} className="btn btn-sm">New file</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { upload: "1" })} className="btn btn-sm">Upload files</Link>}

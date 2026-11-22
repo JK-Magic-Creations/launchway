@@ -495,7 +495,11 @@ func (cl *client) download(path, dest string) error {
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		return apiErr("%v", err)
 	}
-	fmt.Fprintf(cl.out, "wrote %s (SHA-256 %s)\n", dest, resp.Header.Get("X-Launchway-SHA256"))
+	if sum := resp.Header.Get("X-Launchway-SHA256"); sum != "" {
+		fmt.Fprintf(cl.out, "wrote %s (SHA-256 %s)\n", dest, sum)
+	} else {
+		fmt.Fprintf(cl.out, "wrote %s\n", dest)
+	}
 	return nil
 }
 
