@@ -79,6 +79,31 @@ func (s *Service) ReportSummary(ctx context.Context, project string, number int,
 	return true, nil
 }
 
+// IsAttached says whether a project keeps its code on an outside host.
+func (s *Service) IsAttached(project string) bool {
+	_, ok, _ := s.fl.OutsideFlightOf(project)
+	return ok
+}
+
+// CreateTag makes the annotated tag of a release at a commit on the host.
+func (s *Service) CreateTag(ctx context.Context, project, tag, commit, message string) (string, error) {
+	p, _, repo, err := s.repoOf(ctx, project)
+	if err != nil {
+		return "", err
+	}
+	ref, err := p.Releases().CreateTag(ctx, repo, forge.TagSpec{Name: tag, Commit: commit, Message: message})
+	return ref.Commit, err
+}
+
+// PublishRelease creates or updates the release of an existing tag on the host with its notes and files.
+func (s *Service) PublishRelease(ctx context.Context, project string, rel forge.ReleaseSpec) (string, error) {
+	p, _, repo, err := s.repoOf(ctx, project)
+	if err != nil {
+		return "", err
+	}
+	return p.Releases().PublishRelease(ctx, repo, rel)
+}
+
 // CutRelease creates the annotated tag at a commit on the host and the
 // release for it, with its notes and files: "Cut a release" for a Flight whose
 // repository is outside. It returns the release's address on the host.

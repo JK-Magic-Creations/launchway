@@ -24,7 +24,7 @@ func addOutsideHostTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. The connections to outside Git hosts (a host that keeps the code while Launchway runs the pipelines): name, kind, base_url, where the credential is read from (never the credential), the owners allowed, and what the host can and cannot do."},
 		mcpCallTimeout, listOutsideHosts)
 	addTool(srv, c, &mcp.Tool{Name: "add_outside_host", Annotations: changes("Connect an outside Git host", false, false),
-		Description: "Administrators only. Connect a Git host Launchway does not host (kind github: the public service, or a self-managed install through base_url). The credential is a reference: credential_env (the NAME of an environment variable of the server) or credential_file (an absolute path), or sealed:NAME for a token kept sealed; never the token. webhook_secret_env or webhook_secret_file names the secret that signs the host's webhooks. owners limits which owners or organisations Flights may use. An internal address is refused unless the server allows it (forge.mirror_allow). Audited."},
+		Description: "Administrators only. Connect a Git host Launchway does not host (kind github: the public service, or a self-managed install through base_url). The credential is a reference: credential_env (the NAME of an environment variable of the server) or credential_file (an absolute path), or sealed:NAME for a token kept sealed; never the token. webhook_secret_env or webhook_secret_file names the secret that signs the host's webhooks. owners limits which owners or groups Flights may use. An internal address is refused unless the server allows it (forge.mirror_allow). Audited."},
 		mcpCallTimeout, addOutsideHost)
 	addTool(srv, c, &mcp.Tool{Name: "remove_outside_host", Annotations: changes("Remove an outside Git host connection", true, true),
 		Description: "Administrators only. Forget a connection to an outside Git host. Refused while a Flight still keeps its code on it. Audited."},
@@ -39,7 +39,7 @@ func addOutsideHostTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. The repository on an outside Git host a Flight is attached to, its two report switches, and what that host cannot do (with the reason and what to do instead)."},
 		mcpCallTimeout, getProjectOutside)
 	addTool(srv, c, &mcp.Tool{Name: "set_project_outside", Annotations: changes("Attach a Flight to an outside repository", false, true),
-		Description: "Administrators only. Attach a Flight (project) to a repository on an outside Git host through a connection, and set whether it writes a commit status for each run (report_statuses) and one updated summary comment on pull requests (report_comment). Audited."},
+		Description: "Administrators only. Attach a Flight (project) to a repository on an outside Git host through a connection, and set whether it writes a commit status for each Sortie (report_statuses) and one updated summary comment on pull requests (report_comment). Audited."},
 		mcpCallTimeout, setProjectOutside)
 	addTool(srv, c, &mcp.Tool{Name: "detach_project_outside", Annotations: changes("Detach a Flight from an outside repository", true, true),
 		Description: "Administrators only. Stop using the outside connection for a Flight; its Git address is kept. Audited."},
@@ -61,7 +61,7 @@ type addOutsideHostIn struct {
 	CredentialFile    string   `json:"credential_file,omitempty" jsonschema:"the absolute path of a file on the server that holds the token, or sealed:NAME"`
 	WebhookSecretEnv  string   `json:"webhook_secret_env,omitempty" jsonschema:"the NAME of an environment variable that holds the webhook secret"`
 	WebhookSecretFile string   `json:"webhook_secret_file,omitempty" jsonschema:"the absolute path of a file that holds the webhook secret"`
-	Owners            []string `json:"owners,omitempty" jsonschema:"owners or organisations Flights may use through this connection; empty is every owner the credential reaches"`
+	Owners            []string `json:"owners,omitempty" jsonschema:"owners or groups Flights may use through this connection; empty is every owner the credential reaches"`
 }
 
 func addOutsideHost(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in addOutsideHostIn) (hosts.View, error) {
@@ -130,7 +130,7 @@ type setProjectOutsideIn struct {
 	Project        string `json:"project" jsonschema:"the Flight (project) name"`
 	Connection     string `json:"connection,omitempty" jsonschema:"the connection (list_outside_hosts); with repository, attaches or moves the Flight"`
 	Repository     string `json:"repository,omitempty" jsonschema:"owner/name on the host"`
-	ReportStatuses *bool  `json:"report_statuses,omitempty" jsonschema:"write a commit status for each run"`
+	ReportStatuses *bool  `json:"report_statuses,omitempty" jsonschema:"write a commit status for each Sortie"`
 	ReportComment  *bool  `json:"report_comment,omitempty" jsonschema:"write one summary comment on pull requests, edited in place"`
 }
 

@@ -688,6 +688,12 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 		pi.TagObject, pi.TagCreated = ti.Object, false
 	case !s.canTag(r.Context(), rel.Project):
 		return nil, http.StatusConflict, "Launchway cannot write to " + rel.Project + "'s repository (it is not hosted here, and its configuration has no push section), so it cannot create the tag " + tag + ". Create the annotated tag yourself (git tag -a " + tag + " " + rel.SHA[:8] + " && git push origin " + tag + ") and publish again"
+	case s.Hosts != nil && s.Hosts.IsAttached(rel.Project):
+		obj, err := s.Hosts.CreateTag(r.Context(), rel.Project, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes))
+		if err != nil {
+			return nil, http.StatusBadGateway, "the tag could not be made on the outside host: " + errText(err)
+		}
+		pi.TagObject, pi.TagCreated = obj, true
 	case s.isHosted(r.Context(), rel.Project):
 		repo, _ := s.hostedRepoOfFlight(r.Context(), rel.Project)
 		obj, err := s.createHostedTag(r, repo, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes))
@@ -708,6 +714,7 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 		return s.refusal(err)
 	}
 	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
+	s.publishOnOutsideHost(context.WithoutCancel(r.Context()), got, id.User)
 	s.queueOutside(context.WithoutCancel(r.Context()), got)
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
 	return got, http.StatusOK, ""

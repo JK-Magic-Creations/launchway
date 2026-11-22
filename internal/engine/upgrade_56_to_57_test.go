@@ -53,8 +53,8 @@ func TestUpgradeFromSchema56KeepsEverythingAndAddsTheOutsideConnection(t *testin
 	for q, want := range map[string]int{
 		`SELECT count(*) FROM forge_connections WHERE id = 'con_1' AND cred_env = 'GIT_TOKEN' AND auth_kind = 'token' AND owners = '' AND webhook_env = '' AND upload_url = ''`: 1,
 		`SELECT count(*) FROM repo_mirrors WHERE id = 'mir_1'`: 1,
-		`SELECT count(*) FROM outside_flights`:                0,
-		`SELECT count(*) FROM outside_comments`:               0,
+		`SELECT count(*) FROM outside_flights`:                 0,
+		`SELECT count(*) FROM outside_comments`:                0,
 	} {
 		if got := count(q); got != want {
 			t.Errorf("%s: %d, want %d", q, got, want)

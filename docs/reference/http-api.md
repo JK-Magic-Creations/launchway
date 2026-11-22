@@ -544,7 +544,7 @@ or `version` in the body); `412` says someone changed the object meanwhile. `X-L
 terraform` (or `git`), sent with an API token, says a tool manages the object; only that
 manager may change it afterwards, unless the caller sends `take_ownership: true`, which is audited. `{kind}` is one of `projects`, `libraries`,
 `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`,
-`models`, `secret-stores`, `step-resources`, `units`, `installation` and `organisation` (the kind names are fixed, whatever the installation calls its levels; `organization` is accepted as an alias). `GET /api/v1/config` also returns the chosen `terms` (`set` and `overrides`) and the level names they give.
+`models`, `secret-stores`, `step-resources`, `units`, `installation` and `group` (the kind names are fixed, whatever the installation calls its levels; `organization` is accepted as an alias). `GET /api/v1/config` also returns the chosen `terms` (`set` and `overrides`) and the level names they give.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|

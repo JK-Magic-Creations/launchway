@@ -81,7 +81,7 @@ type Connection struct {
 	// another value later, with AppRef naming its secret; no migration needed.
 	AuthKind string `json:"auth_kind,omitempty"`
 	AppRef   string `json:"app_ref,omitempty"`
-	// Owners is the allow-list of owners or organisations a Flight may use
+	// Owners is the allow-list of owners or groups a Flight may use
 	// through this connection. Empty means every owner the credential reaches.
 	Owners []string `json:"owners,omitempty"`
 	// WebhookSecret is a reference to the secret that signs the host's
@@ -138,7 +138,7 @@ func (c Connection) Validate() error {
 	}
 	for _, o := range c.Owners {
 		if o == "" || strings.ContainsAny(o, "/ ,") {
-			return bad("owners lists owner or organisation names, one each, without '/' or spaces")
+			return bad("owners lists owner or group names, one each, without '/' or spaces")
 		}
 	}
 	if c.UploadURL != "" {

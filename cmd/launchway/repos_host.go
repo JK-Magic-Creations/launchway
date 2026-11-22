@@ -12,15 +12,15 @@ const reposHostUsage = `Keeping code on another Git host (administrators; see th
   launchway repos host list                                connections to outside Git hosts
   launchway repos host add NAME --kind github              connect a host (the public service, or a self-managed
                          [--base-url URL] [--owner O]...   install with --base-url); --owner limits which owners or
-                         [--credential-env NAME | --credential-file PATH]   organisations Flights may use
+                         [--credential-env NAME | --credential-file PATH]   groups Flights may use
                          [--webhook-secret-env NAME | --webhook-secret-file PATH]
   launchway repos host remove NAME                         forget a connection no Flight uses
   launchway repos host test NAME                           who the credential is, token expiry, which permissions it has and lacks
   launchway repos host repositories NAME [--query TEXT]    the repositories the credential reaches
-  launchway repos outside show PROJECT                     the outside repository of a Flight, and what its host cannot do
-  launchway repos outside attach PROJECT [--connection NAME --repository OWNER/NAME]
+  launchway repos outside show FLIGHT                     the outside repository of a Flight, and what its host cannot do
+  launchway repos outside attach FLIGHT [--connection NAME --repository OWNER/NAME]
                          [--statuses=false] [--comment=false]   attach a Flight, and switch its reports
-  launchway repos outside detach PROJECT                   stop using the connection for a Flight
+  launchway repos outside detach FLIGHT                   stop using the connection for a Flight
 `
 
 type outsideHostView struct {
@@ -128,7 +128,7 @@ func (cl *client) reposHostAdd(args []string) error {
 	wenv := fs.String("webhook-secret-env", "", "the NAME of an environment variable that holds the webhook secret")
 	wfile := fs.String("webhook-secret-file", "", "the path of a file that holds the webhook secret")
 	var owners stringList
-	fs.Var(&owners, "owner", "an owner or organisation Flights may use (repeat)")
+	fs.Var(&owners, "owner", "an owner or group Flights may use (repeat)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func (cl *client) reposHostAdd(args []string) error {
 
 func (cl *client) reposOutside(args []string) error {
 	if len(args) < 2 {
-		return usageErr("launchway repos outside show|attach|detach PROJECT")
+		return usageErr("launchway repos outside show|attach|detach FLIGHT")
 	}
 	path := "/api/v1/projects/" + url.PathEscape(args[1]) + "/outside"
 	switch args[0] {
@@ -186,7 +186,7 @@ func (cl *client) reposOutside(args []string) error {
 		fs := flag.NewFlagSet("repos outside attach", flag.ContinueOnError)
 		conn := fs.String("connection", "", "the connection")
 		repo := fs.String("repository", "", "OWNER/NAME on the host")
-		st := fs.Bool("statuses", true, "write a commit status for each run")
+		st := fs.Bool("statuses", true, "write a commit status for each Sortie")
 		cm := fs.Bool("comment", true, "write one summary comment on pull requests")
 		if _, err := parseArgs(fs, args[2:]); err != nil {
 			return err

@@ -233,6 +233,7 @@ export default defineConfig({
           { text: 'Deployments', link: '/guide/deployments' },
           { text: 'GitOps write-back', link: '/guide/gitops-write-back' },
           { text: 'Making a release', link: '/guide/releases' },
+          { text: 'Keep your code on another host', link: '/guide/outside-host' },
           { text: 'Cut a release', link: '/guide/cut-a-release' },
           { text: 'Promoting a release', link: '/guide/promoting-releases' },
           { text: 'Release checklists, windows and freezes', link: '/guide/release-checklists' },

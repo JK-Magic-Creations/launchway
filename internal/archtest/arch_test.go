@@ -250,7 +250,7 @@ var knownExceptions = map[string]string{
 	// ...), alias it from engine, switch the runner to it, then delete these.
 	"internal/runner -> internal/engine": "runner uses engine.Job/Result/CollectedReports (wire types live in engine)",
 	// TODO(audit step 5): argocd needs a callback interface instead of engine.
-	"internal/deploy/argocd -> internal/engine": "argocd deploy driver uses engine types; engine imports deploy (proxy cycle)",
+	"internal/deploy/argocd -> internal/engine":                   "argocd deploy driver uses engine types; engine imports deploy (proxy cycle)",
 	"internal/release/outside -> internal/forge/providers/github": "a push mirror's release is published with the same calls as a connection's (one code path); the address and credential are the mirror's",
 }
 

@@ -961,21 +961,21 @@
           "blurb": "Launchway works with the host you already use. Hosting is optional.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Every Git host, equally",
               "value": "First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards.",
-              "detail": "Each host passes the same conformance suite as the built-in one. A host that has not yet passed is labelled so until it does.",
+              "detail": "Each host passes the same conformance suite as the built-in one. A host that has not yet passed is labelled so until it does. The first host, GitHub (the public service and self-managed installs), is built as a connection: choose a repository, run Sorties on it, commit statuses and one updated pull request comment, tags and releases made on the host, file changes by commit or pull request, and a host that says plainly what it cannot do. It passes the suite against a strict fake of the host; the run against the live service is pending, so it is labelled experimental. The other hosts follow on the same contract.",
               "needs": "A common provider model."
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Self-managed variants of hosts",
               "value": "Hosts you run yourself, with their own addresses and certificates, are first-class.",
-              "detail": "Setup asks for the address and trust, nothing more. Each variant's differences are stated in the wizard.",
+              "detail": "Setup asks for the address and trust, nothing more. Each variant's differences are stated in the wizard. A self-managed GitHub install connects by its base address; the API and upload addresses follow from it.",
               "needs": "Every Git host, equally."
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Hosts without webhooks",
               "value": "Hosts that cannot call Launchway are watched through polling or a bridge from their event service.",
               "detail": "The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature.",

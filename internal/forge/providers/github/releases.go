@@ -19,6 +19,7 @@ type releases struct{ p *Provider }
 // and then POST /repos/{o}/{r}/git/refs with ref refs/tags/<tag> and the
 // object's sha (https://docs.github.com/en/rest/git/refs#create-a-reference).
 // A tag that exists is accepted when it already stands for the same commit.
+// The Ref returned names the tag and carries the tag object's id.
 func (r releases) CreateTag(ctx context.Context, repo forge.Repository, t forge.TagSpec) (forge.Ref, error) {
 	rp, err := r.p.repoPath(repo)
 	if err != nil {
@@ -52,7 +53,7 @@ func (r releases) CreateTag(ctx context.Context, repo forge.Repository, t forge.
 		if target != t.Commit {
 			return forge.Ref{}, fmt.Errorf("%w: the tag %s already exists on the host and stands for another commit", forge.ErrExists, t.Name)
 		}
-		return forge.Ref{Name: "refs/tags/" + t.Name, Commit: t.Commit}, nil
+		return forge.Ref{Name: "refs/tags/" + t.Name, Commit: have.Object.SHA}, nil
 	}
 	var tag struct {
 		SHA string `json:"sha"`
@@ -64,7 +65,7 @@ func (r releases) CreateTag(ctx context.Context, repo forge.Repository, t forge.
 	if _, err := r.p.c.Call(ctx, http.MethodPost, rp+"/git/refs", map[string]any{"ref": "refs/tags/" + t.Name, "sha": tag.SHA}, nil); err != nil {
 		return forge.Ref{}, err
 	}
-	return forge.Ref{Name: "refs/tags/" + t.Name, Commit: t.Commit}, nil
+	return forge.Ref{Name: "refs/tags/" + t.Name, Commit: tag.SHA}, nil
 }
 
 type apiRelease struct {

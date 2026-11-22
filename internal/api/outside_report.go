@@ -67,16 +67,16 @@ func (s *Server) StartOutsideReports(ctx context.Context) {
 
 // runResult is a run's state as a result of the host's kind.
 func runResult(sum *engine.RunSummary, link string) forge.Result {
-	state, text := forge.Pending, "Run #%d is running"
+	state, text := forge.Pending, "Sortie #%d is running"
 	switch sum.Status {
 	case engine.RunSucceeded:
-		state, text = forge.Passing, "Run #%d passed"
+		state, text = forge.Passing, "Sortie #%d passed"
 	case engine.RunFailed:
-		state, text = forge.Failing, "Run #%d failed"
+		state, text = forge.Failing, "Sortie #%d failed"
 	case engine.RunCanceled:
-		state, text = forge.Errored, "Run #%d was canceled"
+		state, text = forge.Errored, "Sortie #%d was canceled"
 	case engine.RunQueued:
-		text = "Run #%d is queued"
+		text = "Sortie #%d is in the holding pattern"
 	}
 	return forge.Result{Producer: "launchway", Name: "launchway/" + sum.Pipeline, SHA: sum.SHA, State: state, Summary: fmt.Sprintf(text, sum.Number), URL: link}
 }
@@ -132,13 +132,13 @@ func summaryBody(sum *engine.RunSummary, link string) string {
 		}
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "**Launchway: run #%d %s** on `%s`\n\n", sum.Number, sum.Status, clip(sum.SHA, 7))
+	fmt.Fprintf(&b, "**Launchway: Sortie #%d %s** on `%s`\n\n", sum.Number, sum.Status, clip(sum.SHA, 7))
 	fmt.Fprintf(&b, "Steps: %d passed, %d failed, %d skipped.\n", counts[engine.StepSucceeded], counts[engine.StepFailed], counts[engine.StepSkippedS])
 	if len(failed) > 0 {
 		fmt.Fprintf(&b, "\nFailed: %s\n", strings.Join(failed, ", "))
 	}
 	if link != "" {
-		fmt.Fprintf(&b, "\n[Open the run](%s)\n", link)
+		fmt.Fprintf(&b, "\n[Open the Sortie](%s)\n", link)
 	}
 	return b.String()
 }

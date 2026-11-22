@@ -34,6 +34,9 @@ func (s *Server) canTag(ctx context.Context, project string) bool {
 	if s.Projects.WritableForReleases(project) {
 		return true
 	}
+	if s.Hosts != nil && s.Hosts.IsAttached(project) {
+		return true // the tag is made on the outside host through the connection
+	}
 	_, ok := s.hostedRepoOfFlight(ctx, project)
 	return ok
 }

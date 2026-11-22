@@ -421,8 +421,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `outside_host.test` | `POST /api/v1/outside-hosts/{name}/test`: the account the credential is and how many permissions it lacks |
 | `project.outside_attach` | `PUT /api/v1/projects/{name}/outside`: a Flight attached to a repository on a connection, or its report switches changed |
 | `project.outside_detach` | `DELETE /api/v1/projects/{name}/outside` |
-| `outside_host.status` | A commit status written to the outside host for a run, by the run (the detail names the status and its state) |
-| `outside_host.comment` | The summary comment of a pull request written or updated on the outside host, by the run |
+| `outside_host.status` | A commit status written to the outside host for a Sortie, by the Sortie (the detail names the status and its state) |
+| `outside_host.release` | A published release made on the outside host of a Flight that keeps its code there (the annotated tag is made there when the release is cut); the detail names the release page or says why it failed |
+| `outside_host.comment` | The summary comment of a pull request written or updated on the outside host, by the Sortie |
 | `webhook.outside` | An outside host's webhook: verified, its Flights polled at once (or a refusal, with the caller's address) |
 | `connection.create` | `POST /api/v1/connections` (also `launchway repos connection add`): a server to import from; the detail says its kind, address and where the credential is read from, never the credential |
 | `signin.test_begin` | `POST /api/v1/signin/test` (the setup guide): an administrator started a test sign-in with an identity provider; the target is the provider's address. Nothing about how people sign in changes |
