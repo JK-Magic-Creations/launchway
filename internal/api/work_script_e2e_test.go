@@ -41,7 +41,7 @@ func TestReferenceAgentScript(t *testing.T) {
 	otto.do("POST", base+"/items?scope=project:acme/shop", `{"title":"Note the review","labels":["agent:docs"]}`).json(t, &it)
 
 	bin := filepath.Join(t.TempDir(), "launchway")
-	build := exec.Command("go", "build", "-o", bin, "github.com/jk-magic-creations/launchway/cmd/launchway")
+	build := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "github.com/jk-magic-creations/launchway/cmd/launchway")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("building the command: %v\n%s", err, out)
 	}
