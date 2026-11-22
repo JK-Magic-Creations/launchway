@@ -56,6 +56,27 @@ type DeployRunner struct {
 	// Accept is the runner's own limits (its accept: section): projects,
 	// environments, repositories and whether pull-request runs may deploy.
 	Accept *accept.Config
+	// ActionGrace is how long an action that was told to stop (its time ran out,
+	// the run was canceled, the server ended the step) may take to do so before
+	// the runner gives it up and frees its place; default 30s.
+	ActionGrace time.Duration
+	// StallAfter is how long a loop that takes work from the server may go
+	// without a poll before the runner is judged stuck: /livez then answers 503
+	// and the watchdog ends the process (Run returns ErrStalled); default 5m.
+	StallAfter time.Duration
+	// StatusEvery is how often the runner logs one line of what it has done
+	// (polls made, when work was last taken); default 10m, negative: never.
+	StatusEvery time.Duration
+
+	vitOnce sync.Once
+	vit     *vitals
+}
+
+// vitals is the runner's pulse, made on first use (the health listener may ask
+// before Run has started).
+func (d *DeployRunner) vitals() *vitals {
+	d.vitOnce.Do(func() { d.vit = newVitals(d.StallAfter) })
+	return d.vit
 }
 
 // Run takes actions and observes until ctx ends.
@@ -84,6 +105,13 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	if d.IdleEvery <= 0 {
 		d.IdleEvery = 30 * time.Second
 	}
+	if d.ActionGrace <= 0 {
+		d.ActionGrace = 30 * time.Second
+	}
+	if d.StatusEvery == 0 {
+		d.StatusEvery = 10 * time.Minute
+	}
+	d.vitals()
 	if d.Agent != nil && d.Agent.Pulls == nil {
 		d.Agent.Pulls = d.Client
 	}
@@ -101,7 +129,19 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	go func() { defer wg.Done(); d.observe(ctx) }()
 	go func() { defer wg.Done(); d.commands(ctx) }()
 	go func() { defer wg.Done(); d.inspections(ctx) }()
-	wg.Wait()
+	stalled := make(chan error, 1)
+	gctx, stopGuard := context.WithCancel(ctx)
+	defer stopGuard()
+	go d.vitals().guard(gctx, d.Log, stalled)
+	go d.vitals().report(gctx, d.Log, d.StatusEvery, "deploy runner")
+	allDone := make(chan struct{})
+	go func() { wg.Wait(); close(allDone) }()
+	select {
+	case <-allDone:
+	case err := <-stalled:
+		// Something holds a loop for good: waiting for it would wait for ever.
+		return err
+	}
 	lctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := d.Client.Leave(lctx, d.Info.ID); err != nil {
@@ -110,25 +150,36 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	return nil
 }
 
-// Health serves /healthz and /readyz like a runner's.
+// Health serves /healthz and /readyz like a runner's, and /livez, which answers
+// 200 while every loop that takes work polls the server.
 func (d *DeployRunner) Health() http.Handler {
-	return (&Runner{Client: d.Client}).Health()
+	base := (&Runner{Client: d.Client}).Health()
+	mux := http.NewServeMux()
+	// /livez is for a liveness probe: it fails when a loop that takes work has
+	// stopped polling, which /healthz (the process is up) cannot say.
+	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, r *http.Request) { d.vitals().liveHandler()(w, r) })
+	mux.Handle("/", base)
+	return mux
 }
 
 func (d *DeployRunner) actions(ctx context.Context) {
+	vl := d.vitals().loop("deploy lease")
 	slots := make(chan struct{}, d.Concurrency)
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	backoff := time.Second
 	wait := time.Duration(0)
 	for {
+		vl.slotWait(true)
 		select {
 		case slots <- struct{}{}:
 		case <-ctx.Done():
 			return
 		}
+		vl.slotWait(false)
 		job, err := d.Client.LeaseDeploy(ctx, d.Info, wait)
 		wait = 25 * time.Second
+		vl.polled()
 		if err != nil {
 			<-slots
 			if ctx.Err() != nil {
@@ -156,12 +207,68 @@ func (d *DeployRunner) actions(ctx context.Context) {
 	}
 }
 
-// act does one action. The action is not interrupted when the run is
-// canceled or the runner stops: it is short, and stopping it half-way
-// (between a push and a sync) helps nobody. Its retries are safe.
+// actionResult is what a deploy action returned.
+type actionResult struct {
+	facts *engine.DeployFacts
+	err   error
+}
+
+// doAction does one action on ctx and waits for it for as long as ctx lives and
+// then a grace, so that an action that does not look at its context (a call
+// that cannot be interrupted) cannot hold its place for ever: when the grace is
+// over the runner gives it up, says so, and reports the action as lost, which
+// the server tries again. What the action was doing may still be running; it
+// holds nothing the runner waits for without a deadline.
+func (d *DeployRunner) doAction(ctx context.Context, job *engine.Job, sys func(string, ...any)) actionResult {
+	dj := job.Deploy
+	done := make(chan actionResult, 1)
+	go func() {
+		var r actionResult
+		switch dj.Action {
+		case engine.ActionApply:
+			sys("Deploying %s %s to %s: committing to %s on %s", dj.Service, dj.Version, dj.Environment, dj.Repo, dj.Branch)
+			r.facts, r.err = d.Agent.Apply(ctx, job, sys)
+		case engine.ActionRevert:
+			sys("Rolling back %s in %s: reverting deployment %s on %s", dj.Service, dj.Environment, dj.Deployment, dj.Branch)
+			r.facts, r.err = d.Agent.Revert(ctx, job, sys)
+		default:
+			r.err = fmt.Errorf("this deploy runner does not know the action %q; it may be too old", dj.Action)
+		}
+		done <- r
+	}()
+	select {
+	case r := <-done:
+		return r
+	case <-ctx.Done():
+	}
+	t := time.NewTimer(d.ActionGrace)
+	defer t.Stop()
+	select {
+	case r := <-done:
+		return r
+	case <-t.C:
+		d.vitals().abandoned.Add(1)
+		d.Log.Error("a deploy action did not stop when its time ran out; giving it up", "run", job.RunID, "step", job.StepID, "grace", d.ActionGrace)
+		sys("The action did not stop %s after its time ran out; the deploy runner gave it up, and it will be tried again", d.ActionGrace)
+		return actionResult{err: fmt.Errorf("the action did not stop when its time ran out: %w", context.DeadlineExceeded)}
+	}
+}
+
+// act does one action. The server tells the runner when the step it holds was
+// ended (the lease is gone) or the run was canceled: the action then stops at
+// once, and its retries are safe.
 func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	log := d.Log.With("run", job.RunID, "step", job.StepID, "action", job.Deploy.Action, "deployment", job.Deploy.Deployment)
-	report, stop := context.WithTimeout(context.Background(), d.ActionTimeout+time.Minute)
+	// An action normally takes seconds; one held by a sync window may wait
+	// until the step's deadline.
+	dj := job.Deploy
+	until := time.Now().Add(d.ActionTimeout)
+	if dl := time.UnixMilli(dj.Deadline); dj.Deadline > 0 && dl.After(until) {
+		until = dl
+	}
+	// The calls to the server (heartbeats, logs, the result) go on for as long
+	// as the action may, and a little after.
+	report, stop := context.WithDeadline(context.Background(), until.Add(d.ActionGrace+time.Minute))
 	defer stop()
 	if why := refusal(d.Accept, job, "deploy", true); why != "" {
 		log.Warn("refusing a deploy action", "project", job.Project, "why", why)
@@ -170,14 +277,23 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 		}
 		return
 	}
+	defer d.vitals().begin(fmt.Sprintf("deploy %s %s", dj.Action, dj.Service), until.Add(d.ActionGrace))()
+	actx, cancelAct := context.WithDeadline(context.Background(), until)
+	defer cancelAct()
 	if _, err := d.Client.Start(report, job.LeaseID); err != nil {
 		log.Warn("could not start the action", "err", err)
 		return
 	}
 	logs := newLogBuffer()
 	sys := func(format string, args ...any) { logs.add("system", fmt.Sprintf(format, args...)) }
-	var lostMu sync.Mutex
-	lost := false
+	var stateMu sync.Mutex
+	lost, requested := false, false
+	end := func(canceled, gone bool) {
+		stateMu.Lock()
+		lost, requested = lost || gone, requested || canceled
+		stateMu.Unlock()
+		cancelAct()
+	}
 	flush := func() {
 		for {
 			batch := logs.take(engine.MaxLogBatch)
@@ -186,9 +302,7 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 			}
 			if err := d.Client.Logs(report, job.LeaseID, batch); err != nil {
 				if errors.Is(err, ErrLeaseLost) {
-					lostMu.Lock()
-					lost = true
-					lostMu.Unlock()
+					end(false, true)
 				}
 				return
 			}
@@ -197,9 +311,7 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	bgStop, bgDone := make(chan struct{}), make(chan struct{})
 	go func() {
 		defer close(bgDone)
-		hb := time.NewTicker(max(job.LeaseTTL.D()/3, time.Second))
 		fl := time.NewTicker(logFlushEvery)
-		defer hb.Stop()
 		defer fl.Stop()
 		for {
 			select {
@@ -207,27 +319,23 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 				return
 			case <-fl.C:
 				flush()
-			case <-hb.C:
-				if _, err := d.Client.Heartbeat(report, job.LeaseID); errors.Is(err, ErrLeaseLost) {
-					lostMu.Lock()
-					lost = true
-					lostMu.Unlock()
-				}
 			}
 		}
 	}()
-	dj := job.Deploy
+	beatStop, beatDone := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(beatDone)
+		keepLease(report, beatStop, d.Client, job, log, func(canceled, gone bool) {
+			if canceled {
+				sys("The run was canceled; stopping the action.")
+			}
+			end(canceled, gone)
+		})
+	}()
 	sys("Deploy runner %s, target %s, application %s", d.Info.Name, dj.Target, dj.Application)
 	if job.Attempt > 1 {
 		sys("Attempt %d", job.Attempt)
 	}
-	// An action normally takes seconds; one held by a sync window may wait
-	// until the step's deadline.
-	until := time.Now().Add(d.ActionTimeout)
-	if dl := time.UnixMilli(dj.Deadline); dj.Deadline > 0 && dl.After(until) {
-		until = dl
-	}
-	actx, cancel := context.WithDeadline(context.Background(), until)
 	var facts *engine.DeployFacts
 	var err error
 	// The action is safe to do again, so when something it needs cannot be
@@ -235,20 +343,12 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	// growing pauses, until the action's time runs out: a short outage does
 	// not use up the step's tries.
 	for pause := 2 * time.Second; ; pause = min(2*pause, 30*time.Second) {
-		switch dj.Action {
-		case engine.ActionApply:
-			sys("Deploying %s %s to %s: committing to %s on %s", dj.Service, dj.Version, dj.Environment, dj.Repo, dj.Branch)
-			facts, err = d.Agent.Apply(actx, job, sys)
-		case engine.ActionRevert:
-			sys("Rolling back %s in %s: reverting deployment %s on %s", dj.Service, dj.Environment, dj.Deployment, dj.Branch)
-			facts, err = d.Agent.Revert(actx, job, sys)
-		default:
-			err = fmt.Errorf("this deploy runner does not know the action %q; it may be too old", dj.Action)
-		}
-		lostMu.Lock()
-		gone := lost
-		lostMu.Unlock()
-		if !errors.Is(err, argocd.ErrUnavailable) || gone || parent.Err() != nil {
+		r := d.doAction(actx, job, sys)
+		facts, err = r.facts, r.err
+		stateMu.Lock()
+		over := lost || requested
+		stateMu.Unlock()
+		if !errors.Is(err, argocd.ErrUnavailable) || over || parent.Err() != nil {
 			break
 		}
 		if dl, _ := actx.Deadline(); time.Until(dl) < pause {
@@ -260,9 +360,15 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 		case <-actx.Done():
 		}
 	}
-	cancel()
+	cancelAct()
+	stateMu.Lock()
+	wasLost, wasRequested := lost, requested
+	stateMu.Unlock()
 	res := engine.Result{Outcome: "succeeded", Deploy: facts}
 	switch {
+	case wasRequested && !wasLost:
+		sys("The action was stopped because the run was canceled.")
+		res = engine.Result{Outcome: "canceled", Error: "canceled", Deploy: facts}
 	case err == nil:
 		if facts != nil && facts.Sync != "" {
 			sys("Sync: %s", facts.Sync)
@@ -275,14 +381,16 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 		sys("%v", err)
 		res = engine.Result{Outcome: "failed", Error: err.Error(), Deploy: facts}
 	}
+	close(beatStop)
+	<-beatDone
 	close(bgStop)
 	<-bgDone
 	flush()
-	lostMu.Lock()
-	wasLost := lost
-	lostMu.Unlock()
+	stateMu.Lock()
+	wasLost = lost
+	stateMu.Unlock()
 	if wasLost {
-		log.Warn("the server gave the action away while it ran; its retry is safe")
+		log.Warn("the server ended or gave away the step while the action ran; the action was stopped, and its retry is safe")
 		return
 	}
 	for i := 0; i < 5; i++ {
@@ -296,23 +404,42 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	}
 }
 
+// watchStopWithin is how long the loop waits for a watch it stopped to end.
+const watchStopWithin = 10 * time.Second
+
 // observe keeps one watcher per deployment the server says to watch.
 func (d *DeployRunner) observe(ctx context.Context) {
 	type watcher struct {
 		cancel context.CancelFunc
 		done   chan struct{}
 	}
+	vl := d.vitals().loop("observe")
 	watching := map[string]*watcher{}
+	// stopWatcher ends one watch and waits for it, but not for ever: a watch
+	// stuck in something that does not look at its context is given up (it holds
+	// nothing this loop waits for), so that the list of what to observe is still
+	// followed, and the steps that come after it are still seen.
+	stopWatcher := func(key string, w *watcher) {
+		w.cancel()
+		t := time.NewTimer(watchStopWithin)
+		defer t.Stop()
+		select {
+		case <-w.done:
+		case <-t.C:
+			d.Log.Error("an observation did not stop when the server stopped listing it; giving it up", "watch", key, "within", watchStopWithin)
+		}
+	}
 	defer func() {
-		for _, w := range watching {
-			w.cancel()
-			<-w.done
+		for key, w := range watching {
+			stopWatcher(key, w)
 		}
 	}()
 	known := ""
 	backoff := time.Second
 	for ctx.Err() == nil {
+		vl.beat()
 		list, err := d.Client.Watch(ctx, d.Info, known, 20*time.Second)
+		vl.polled()
 		if err != nil {
 			if ctx.Err() != nil {
 				return
@@ -346,8 +473,7 @@ func (d *DeployRunner) observe(ctx context.Context) {
 		}
 		for key, w := range watching {
 			if !keep[key] {
-				w.cancel()
-				<-w.done
+				stopWatcher(key, w)
 				delete(watching, key)
 			}
 		}
@@ -412,9 +538,12 @@ func (d *DeployRunner) watch(ctx context.Context, it engine.WatchItem) {
 // commands takes commands on rollouts (promote, abort and the like) and
 // applies them, one at a time: they are rare, and each takes a second.
 func (d *DeployRunner) commands(ctx context.Context) {
+	vl := d.vitals().loop("commands")
 	backoff := time.Second
 	for ctx.Err() == nil {
+		vl.beat()
 		job, err := d.Client.TakeCommand(ctx, d.Info, 25*time.Second)
+		vl.polled()
 		if err != nil {
 			if ctx.Err() != nil {
 				return

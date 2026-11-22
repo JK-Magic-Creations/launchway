@@ -65,15 +65,32 @@ type Runner struct {
 	// defaults (see spool.go).
 	SpoolMaxBytes int64
 	SpoolMaxAge   time.Duration
+	// StallAfter is how long the loop that takes steps may go without a poll
+	// before the runner is judged stuck: /livez then answers 503 and the
+	// watchdog ends the process (Run returns ErrStalled); default 5m. A loop
+	// waiting for a free slot is not stuck: steps may take hours, and their
+	// heartbeats say they are alive. StatusEvery is how often the runner logs
+	// one line of what it has done; default 10m, negative: never.
+	StallAfter, StatusEvery time.Duration
 
 	spoolActive activeSteps   // steps this process is running
 	spoolKick   chan struct{} // asks the spool delivery to look now
 	wsMu        sync.Mutex
-	wsLocks     map[string]*sync.Mutex
+	wsLocks     map[string]ctxLock
 	reapKick    chan struct{} // asks the reaper to look now (see reapSoon)
 	// One fetch at a time per library mirror; see libraryRepo.
 	libMu    sync.Mutex
-	libLocks map[string]*sync.Mutex
+	libLocks map[string]ctxLock
+
+	vitOnce sync.Once
+	vit     *vitals
+}
+
+// vitals is the runner's pulse, made on first use (the health listener may ask
+// before Run has started).
+func (r *Runner) vitals() *vitals {
+	r.vitOnce.Do(func() { r.vit = newVitals(r.StallAfter) })
+	return r.vit
 }
 
 // Run takes and executes steps until ctx ends. Steps still running when ctx
@@ -91,7 +108,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	if r.SecretWait <= 0 {
 		r.SecretWait = 30 * time.Second
 	}
-	r.wsLocks = map[string]*sync.Mutex{}
+	r.wsLocks = map[string]ctxLock{}
 	r.reapKick = make(chan struct{}, 1)
 	r.spoolKick = make(chan struct{}, 1)
 	if r.Info.Accept == nil && !r.Accept.Empty() {
@@ -124,26 +141,50 @@ func (r *Runner) Run(ctx context.Context) error {
 	go r.collectGarbage(ctx)
 	go r.deliverSpools(ctx)
 
-	slots := make(chan struct{}, r.Concurrency)
+	if r.StatusEvery == 0 {
+		r.StatusEvery = 10 * time.Minute
+	}
+	stalled := make(chan error, 1)
+	gctx, stopGuard := context.WithCancel(ctx)
+	defer stopGuard()
+	go r.vitals().guard(gctx, r.Log, stalled)
+	go r.vitals().report(gctx, r.Log, r.StatusEvery, "runner")
 	var wg sync.WaitGroup
+	loopDone := make(chan struct{})
+	go func() { defer close(loopDone); r.takeSteps(ctx, &wg) }()
+	select {
+	case <-loopDone:
+		r.leave(&wg)
+		return nil
+	case err := <-stalled:
+		// Something holds the loop for good: waiting for it would wait for ever.
+		return err
+	}
+}
+
+// takeSteps leases steps and starts them until ctx ends.
+func (r *Runner) takeSteps(ctx context.Context, wg *sync.WaitGroup) {
+	vl := r.vitals().loop("lease")
+	slots := make(chan struct{}, r.Concurrency)
 	backoff := time.Second
 	// The first request does not wait for work, so that whether the server
 	// can be reached is known at once (see Health).
 	wait := time.Duration(0)
 	for {
+		vl.slotWait(true)
 		select {
 		case slots <- struct{}{}:
 		case <-ctx.Done():
-			r.leave(&wg)
-			return nil
+			return
 		}
+		vl.slotWait(false)
 		job, err := r.Client.Lease(ctx, r.Info, wait)
 		wait = 25 * time.Second
+		vl.polled()
 		if err != nil {
 			<-slots
 			if ctx.Err() != nil {
-				r.leave(&wg)
-				return nil
+				return
 			}
 			r.Log.Warn("could not reach the server; retrying", "err", err, "in", backoff)
 			select {
@@ -159,9 +200,11 @@ func (r *Runner) Run(ctx context.Context) error {
 			continue
 		}
 		wg.Add(1)
+		end := r.vitals().begin("step "+job.StepID, time.Time{})
 		go func() {
 			defer wg.Done()
 			defer func() { <-slots }()
+			defer end()
 			r.execute(ctx, job)
 		}()
 	}
@@ -187,6 +230,8 @@ func (r *Runner) Health() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
+	// /livez fails when the loop that takes steps has stopped polling.
+	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, req *http.Request) { r.vitals().liveHandler()(w, req) })
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		last := r.Client.LastContact()
 		if last.IsZero() {
@@ -845,12 +890,14 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 	r.wsMu.Lock()
 	lock := r.wsLocks[job.RunID]
 	if lock == nil {
-		lock = &sync.Mutex{}
+		lock = newCtxLock()
 		r.wsLocks[job.RunID] = lock
 	}
 	r.wsMu.Unlock()
-	lock.Lock()
-	defer lock.Unlock()
+	if err := lock.lock(ctx); err != nil {
+		return "", fmt.Errorf("waiting for the run's workspace (another step of the run holds it): %w", err)
+	}
+	defer lock.unlock()
 
 	dir := filepath.Join(r.DataDir, "workspaces", job.RunID)
 	ready := filepath.Join(r.DataDir, "workspaces", job.RunID+".ready")

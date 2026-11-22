@@ -18,15 +18,19 @@ const maxInspections = 24
 // own, bounded by maxInspections; a request is a read of the cluster, or a
 // small change the server already checked a person may make.
 func (d *DeployRunner) inspections(ctx context.Context) {
+	vl := d.vitals().loop("inspect")
 	sem := make(chan struct{}, maxInspections)
 	backoff := time.Second
 	for ctx.Err() == nil {
+		vl.slotWait(true)
 		select {
 		case sem <- struct{}{}:
 		case <-ctx.Done():
 			return
 		}
+		vl.slotWait(false)
 		job, err := d.Client.TakeInspect(ctx, d.Info, 20*time.Second)
+		vl.polled()
 		if err != nil || job == nil {
 			<-sem
 			if err == nil {

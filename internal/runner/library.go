@@ -102,16 +102,18 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 	dir := filepath.Join(r.DataDir, "libraries", hex.EncodeToString(sum[:])[:16]+".git")
 	r.libMu.Lock()
 	if r.libLocks == nil {
-		r.libLocks = map[string]*sync.Mutex{}
+		r.libLocks = map[string]ctxLock{}
 	}
 	lock := r.libLocks[dir]
 	if lock == nil {
-		lock = &sync.Mutex{}
+		lock = newCtxLock()
 		r.libLocks[dir] = lock
 	}
 	r.libMu.Unlock()
-	lock.Lock()
-	defer lock.Unlock()
+	if err := lock.lock(ctx); err != nil {
+		return "", fmt.Errorf("waiting for the library's mirror (another step holds it): %w", err)
+	}
+	defer lock.unlock()
 
 	from, env := l.URL, []string(nil)
 	if l.Hosted != "" && l.Credential != "" {
