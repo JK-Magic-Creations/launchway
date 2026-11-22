@@ -1,6 +1,9 @@
 package engine
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // SchemaInfo compares the schema this build knows with the database's.
 type SchemaInfo struct {
@@ -22,4 +25,14 @@ func (s SchemaInfo) Refusal() string {
 	}
 	return fmt.Sprintf("the database is at schema %d, which needs a Launchway build that knows schema %d or newer; "+
 		"this build knows schema %d. Run a newer version", s.Database, s.Minimum, s.Code)
+}
+
+// ctxQuerier runs QueryRow with a context.
+type ctxQuerier struct {
+	d   *dbx
+	ctx context.Context
+}
+
+func (q ctxQuerier) QueryRow(s string, a ...any) *rowx {
+	return &rowx{row: q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)}
 }

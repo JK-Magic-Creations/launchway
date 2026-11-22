@@ -33,11 +33,12 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrConflict  = errors.New("conflict")
+	ErrNotFound  = store.ErrNotFound
+	ErrConflict  = store.ErrConflict
 	ErrLeaseLost = errors.New("the lease is no longer valid")
 	ErrForbidden = errors.New("not allowed")
 	ErrInvalid   = errors.New("invalid")
@@ -53,7 +54,8 @@ var (
 
 // Options configure an Engine.
 type Options struct {
-	Database string // a SQLite file, or a postgres:// URL that several servers share
+	Database  string // a SQLite file, or a postgres:// URL that several servers share
+	MultiBase bool   // several Bases in one installation; one-way (store.Env.ContractKeys, docs/development/the-wall.md)
 	// ArtifactsFromDatabase, if set, is called as the engine opens with the
 	// spec of the stored installation object (schema 23), if there is one;
 	// it returns the artifact options that spec says (where artifacts are
@@ -115,6 +117,7 @@ type Options struct {
 // Engine is safe for concurrent use.
 type Engine struct {
 	db            *dbx
+	wall          wallState // Bases and the identity store (wall.go)
 	hub           *hub.Hub
 	log           *slog.Logger
 	ttl           time.Duration
@@ -429,6 +432,10 @@ func Open(o Options) (*Engine, error) {
 		}
 		e.channel = channelFor(schema)
 	}
+	if err := e.openWall(o.MultiBase); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err := e.recoverLeases(); err != nil {
 		db.Close()
 		return nil, err
@@ -502,16 +509,6 @@ func (e *Engine) Schema(ctx context.Context) (SchemaInfo, error) {
 	info, err := readSchema(ctxQuerier{e.db, ctx})
 	info.Code = e.schema
 	return info, err
-}
-
-// ctxQuerier runs QueryRow with a context.
-type ctxQuerier struct {
-	d   *dbx
-	ctx context.Context
-}
-
-func (q ctxQuerier) QueryRow(s string, a ...any) *rowx {
-	return &rowx{row: q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)}
 }
 
 // knows reports whether this build knows schema v, and so its tables,

@@ -56,10 +56,10 @@ func checkMarkers(t *testing.T, e *Engine, n int) {
 // database of the schema before, each brings exactly its own tables and
 // columns, on SQLite and (with LAUNCHWAY_TEST_POSTGRES) PostgreSQL.
 func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
-	if len(migrations) != schemaArchive || schemaArchive != schemaDelivery+1 || schemaDelivery != schemaQueues+1 || schemaQueues != schemaAccounts+1 || schemaAccounts != schemaCacheTrust+1 || schemaCacheTrust != schemaEncryption+1 || schemaEncryption != schemaPulls+1 || schemaPulls != schemaRollback+1 || schemaRollback != schemaSSH+1 || schemaSSH != schemaMirror+1 || schemaMirror != schemaVariables+1 || schemaVariables != schemaStandIn28+1 || schemaStandIn28 != schemaParity2+1 || schemaParity2 != schemaForge+1 || schemaForge != schemaCache+1 || schemaCache != schemaFlow+1 || schemaFlow != schemaConfig+1 || schemaConfig != schemaResources+1 || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
+	if len(migrations) != schemaWall || schemaWall != schemaStandIn69+1 || schemaStandIn40 != schemaArchive+1 || schemaArchive != schemaDelivery+1 || schemaDelivery != schemaQueues+1 || schemaQueues != schemaAccounts+1 || schemaAccounts != schemaCacheTrust+1 || schemaCacheTrust != schemaEncryption+1 || schemaEncryption != schemaPulls+1 || schemaPulls != schemaRollback+1 || schemaRollback != schemaSSH+1 || schemaSSH != schemaMirror+1 || schemaMirror != schemaVariables+1 || schemaVariables != schemaStandIn28+1 || schemaStandIn28 != schemaParity2+1 || schemaParity2 != schemaForge+1 || schemaForge != schemaCache+1 || schemaCache != schemaFlow+1 || schemaFlow != schemaConfig+1 || schemaConfig != schemaResources+1 || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
 		schemaVerify != schemaReports+1 || schemaReports != schemaBlobs+1 || schemaBlobs != schemaPolicy+1 {
-		t.Fatalf("schemas are not 16 to 39 in a row: archive %d, delivery %d, queues %d, accounts %d, cache trust %d, encryption %d, pulls %d, rollback %d, ssh %d, mirror %d, variables %d, stand-in %d, parity2 %d, forge %d, policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, config %d, flow %d, cache %d, migrations %d",
-			schemaArchive, schemaDelivery, schemaQueues, schemaAccounts, schemaCacheTrust, schemaEncryption, schemaPulls, schemaRollback, schemaSSH, schemaMirror, schemaVariables, schemaStandIn28, schemaParity2, schemaForge, schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, len(migrations))
+		t.Fatalf("schemas are not 16 to 39 and 70 in a row: wall %d, archive %d, delivery %d, queues %d, accounts %d, cache trust %d, encryption %d, pulls %d, rollback %d, ssh %d, mirror %d, variables %d, stand-in %d, parity2 %d, forge %d, policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, config %d, flow %d, cache %d, migrations %d",
+			schemaWall, schemaArchive, schemaDelivery, schemaQueues, schemaAccounts, schemaCacheTrust, schemaEncryption, schemaPulls, schemaRollback, schemaSSH, schemaMirror, schemaVariables, schemaStandIn28, schemaParity2, schemaForge, schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, len(migrations))
 	}
 	create := regexp.MustCompile(`(?i)CREATE TABLE (?:IF NOT EXISTS )?(\w+)`)
 	alter := regexp.MustCompile(`(?i)ALTER TABLE (\w+) ADD COLUMN (\w+)`)
@@ -89,7 +89,7 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 	}
 	// No number after 16 is a placeholder, whatever it brings.
 	for i := schemaPolicy; i < len(migrations); i++ {
-		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 { // 28 is held for an unmerged branch (schema28.go)
+		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 && (i+1 < schemaStandIn40 || i+1 > schemaStandIn69) { // 28 and 40 to 69 are held for unmerged branches (schema28.go, schema40.go to schema69.go)
 			t.Errorf("migration %d is empty", i+1)
 		}
 	}
