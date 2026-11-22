@@ -26,6 +26,9 @@ type Pipeline struct {
 	// Origin says where the pipeline came from when it was not the
 	// repository's own file or a draft; nil otherwise.
 	Origin *Origin `json:"origin,omitempty"`
+	// Workspace says what a runner that carries the workspace from step to step through its own disk (the
+	// Kubernetes executor with a pod for each step) leaves out of it; nil: nothing.
+	Workspace *Workspace `json:"workspace,omitempty"`
 	// Supersede says that a new run started by a push or a pull request
 	// cancels the older runs of the same ref that are still going, if they
 	// too were started by a push or a pull request. Runs started by hand,

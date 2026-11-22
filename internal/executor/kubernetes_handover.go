@@ -27,8 +27,9 @@ type fileFP struct {
 // fingerprint is what an entry of a tar stream is. An entry modified within
 // the last two seconds before settled cannot be told from a change made in
 // the same second, so it is never equal to anything.
+// A tar stream keeps whole seconds, rounded, so the time is too.
 func fingerprint(h *tar.Header, settled time.Time) fileFP {
-	f := fileFP{dir: h.Typeflag == tar.TypeDir, size: h.Size, mtime: h.ModTime.Unix(), exec: h.FileInfo().Mode()&0o111 != 0, link: h.Linkname}
+	f := fileFP{dir: h.Typeflag == tar.TypeDir, size: h.Size, mtime: h.ModTime.Round(time.Second).Unix(), exec: h.FileInfo().Mode()&0o111 != 0, link: h.Linkname}
 	if f.dir {
 		f.size, f.mtime, f.exec = 0, 0, false // a directory's time changes with what is in it
 	}
@@ -232,4 +233,26 @@ func (x *extractor) hardlink(h *tar.Header, local string, have bool) error {
 		err = cerr
 	}
 	return err
+}
+
+// extractWorkspaceSize is extractWorkspace for a tree that is made new, and says how many bytes of files it wrote.
+func extractWorkspaceSize(r io.Reader, dst string, lim ExportLimits) (int64, error) {
+	root, err := os.OpenRoot(dst)
+	if err != nil {
+		return 0, err
+	}
+	defer root.Close()
+	x := &extractor{root: root, tr: tar.NewReader(r), lim: lim}
+	for {
+		h, err := x.tr.Next()
+		if errors.Is(err, io.EOF) {
+			return x.total, nil
+		}
+		if err != nil {
+			return x.total, fmt.Errorf("reading the workspace: %w", err)
+		}
+		if err := x.entry(h); err != nil {
+			return x.total, err
+		}
+	}
 }

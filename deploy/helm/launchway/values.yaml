@@ -684,6 +684,13 @@ runner:
     # exists for one release so that an installation can go back without a downgrade, and will be
     # removed. See the Station configuration reference, "One pod for each step".
     pod: ""
+    # -- With `pod: per-step`: the most one Sortie's workspace may hold on a Station's disk (a
+    # quantity such as 4Gi); a step that grows it past this fails with a message that says so.
+    # Default 4Gi. Caches and `workspace.exclude` paths are not counted: they do not travel with it.
+    maxWorkspace: ""
+    # -- With `pod: per-step`: the most all of a Station's workspaces and the caches it is carrying
+    # may hold together. Default 12Gi. Raise it, and runner.dataVolume.sizeLimit, together.
+    maxWorkspaces: ""
     # -- The longest any step pod lives, whatever the server says about its Sortie, unless a step
     # of it is executing on that Station: the reaper's bound for pods that a crashed Station or a
     # forgotten run left behind. Default 24h; 0 turns the bound off.

@@ -323,6 +323,8 @@
       "imagePullSecrets": true,
       "keepFailed": true,
       "pod": true,
+      "maxWorkspace": true,
+      "maxWorkspaces": true,
       "maxCpu": true,
       "maxMemory": true,
       "maxPodAge": true,

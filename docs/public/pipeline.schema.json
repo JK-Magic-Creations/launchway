@@ -295,6 +295,10 @@
     "with": {
       "description": "The values of the template's parameters.",
       "type": "object"
+    },
+    "workspace": {
+      "description": "Paths a runner that carries the workspace from step to step leaves out of it: workspace: { exclude: [node_modules] }.",
+      "type": "object"
     }
   },
   "required": [

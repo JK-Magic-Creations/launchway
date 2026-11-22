@@ -614,22 +614,44 @@ Podman, Docker and host executors are unchanged.
   default `kubernetes` under its data directory), first made from the checkout,
   which is never written to (for a run from a directory it is the person's own
   files).
-  - A step's pod is filled from the copy when it starts.
-  - When the step ends, before the pod is deleted, the pod's whole workspace is
-    read back. The Station remembers what it sent (size, time, mode, link target
-    of each entry) and applies only what the step changed: a changed or new
-    file is written, with its time kept (so a cache's files keep theirs), a file
-    that was sent and did not come back is removed, and an entry that came back
-    as it was sent is left alone. That makes steps of one stage that run at the
-    same time merge correctly: neither puts back what the other removed or
-    changed (tested).
-  - Reports, Cargo, caches and image build contexts are read from the copy
-    after the step (and caches and fetched Cargo are put into it before the
-    step), through the same local code the other executors use, so a failed
-    step's reports are still there after its pod is gone. The runner builds an
-    image's context from the copy.
+  - A step's pod is filled from the copy when it starts (a pod starts empty, so
+    what it lacks is the workspace), except for the paths its caches own and the
+    paths the pipeline lists in `workspace: { exclude: [...] }`.
+  - **Caches never travel with the workspace.** The runner tells the executor
+    which paths the step's caches own (`Spec.Cache`) and which of them are saved
+    after the step. A cache is restored (the runner's `Place`) into a directory of
+    the step's own on the Station, sent into the pod, and, if it is saved, what
+    the step changed in it is read back into that directory, from which the cache
+    feature stages and saves it. The directory is dropped when the cache is saved
+    (or an hour after the step). The run's workspace copy never holds them.
+  - **Only what changed comes back.** The Station remembers what it sent (size,
+    time, mode, link target, from the tar headers: no file is hashed or read
+    twice). The pod's clock is read when the pod is filled; when the step ends the
+    pod lists every file with its status-change time (ctime, which `touch -d`
+    and tools that restore times from an archive cannot set backwards) and its
+    size and modification time. A file whose ctime is after the clock reading is
+    changed; one in the same second is compared with what was sent (a whole second
+    is the clock's grain); new directories are noted, names that were sent and are
+    not listed are removed. Only the changed files are tarred, by name. Entries
+    that arrive as they were sent are not written, so a step that ran at the same
+    time cannot be undone by this one.
+  - Reports, Cargo and image build contexts are read from the copy after the
+    step (and fetched Cargo is put into it before the step), through the same
+    local code the other executors use, so a failed step's reports are still
+    there after its pod is gone. The runner builds an image's context from the
+    copy (a test holds that an earlier step's changes are in it, the ignore file
+    is applied, and the size limit is measured on what is kept).
   - Names are checked against escaping the copy (`os.Root`), links are kept as
     links and never followed, and devices, pipes and sockets are not copied.
+  - **The Station's disk is bounded and visible.** `kubernetes.max_workspace`
+    (4Gi) for one run's copy and `kubernetes.max_workspaces` (12Gi) for all copies
+    and caches in transit; past either, the step fails with a plain message that
+    names the setting; each step's log says what the Station holds. Copies are
+    removed when the run ends, caches when they are saved. There is no Stations
+    page figure for it yet.
+  - **`workspace: { exclude }`** is the only other thing that changes what
+    travels: trees that later steps re-create or get from a cache (a dependency
+    directory) are left out by the pipeline, never by name in the executor.
 - **Why through the Station.** It is what the first step's workspace always did
   (the checkout is copied into the pod), it needs nothing from the cluster
   (no storage class, no claim, no extra RBAC, no node affinity), and it makes
@@ -697,6 +719,58 @@ So for steps of a minute or more the cost is not noticeable; a run of many tiny
 steps is slower (the design accepted it: slower builds over an unstable platform),
 and workspaces of gigabytes pay on every step (use `per-run`, or the per-run
 volume, when that is built).
+
+### A workspace of gigabytes, measured
+
+The first version of the hand-over sent the whole workspace into every pod and
+read the whole workspace back, which is wrong for pipelines whose steps keep tool
+caches inside the workspace (this repository's pipeline does: `.cache/go-mod`,
+`.cache/go-build`, `.cache/npm`, and `node_modules` in two places). The
+measurement below is of a synthetic workspace made from nothing real: about 3 GB in
+about 150,000 files (Go module cache 1 GB in 40,000 files and build cache 1 GB in
+20,000 files declared as one cache, an npm cache of 300 MB in 10,000 files declared
+as another, two `node_modules` of 320 MB and 240 MB in 70,000 files, source of 32 MB in
+8,000 files). It runs the shape of this repository's own pipeline through the fake
+cluster: its nine script steps in order (`docs`, `check-code`, `test`,
+`security-go`, `security-web`, `build-ui`, `build-binary`, `gate-pipeline`,
+`image-context`; the other nine of its 18 steps are approvals, a deploy, verifies,
+rollbacks and the image build, which have no pod), each restoring the caches it
+declares, touching the directories it touches, and saving them. The fake pod's
+tar runs on the same machine and nothing crosses a network, so the figures are the
+work of the Station and of tar, and the bytes are exact; a real cluster adds the
+transfer through the API server. Test: `TestBigWorkspaceHandOver`
+(`LAUNCHWAY_BIG_DIR`, `LAUNCHWAY_BIG_NAME`, `LAUNCHWAY_BIG_EXCLUDE=1`).
+
+| | Before (whole workspace both ways) | After: caches kept out of the workspace, only changes come back | After, and the pipeline leaves the two `node_modules` out |
+|---|---|---|---|
+| Time in the executor, nine steps (pod fill, step, hand back) | 319 s | 147 s | 71 s |
+| Longest single step | 72 s (`build-ui`) | 32 s (`security-web`) | 21 s (`build-binary`) |
+| Bytes into pods, nine steps | 21.5 GiB | 11.9 GiB | 8.7 GiB |
+| Bytes back from pods, nine steps | 22.2 GiB | 0.66 GiB | 0.10 GiB |
+| Cache restore (store to the Station's directory), nine steps | 16.9 s | 12.9 s | 21.4 s |
+| Cache staging for the saves | 59.9 s | 63.3 s | 29.1 s |
+| Station's peak disk for workspace copies and caches | 2.79 GiB | 2.51 GiB | 1.99 GiB |
+| Station process: Go heap peak, peak resident memory | 115 MiB, 138 MiB | 147 MiB, 168 MiB | 83 MiB, 108 MiB |
+
+The restore and staging rows are the Station's local disk and vary by half between runs on this laptop; they are the cache feature's own work and are not changed by the hand-over (the right column's restore ran while the disk was busier). The memory row is the whole test process.
+
+Per step, in the middle column: a cache step sends its caches into the pod
+(2.2 GiB for the Go ones) because a cache is restored into the step's own pod, as
+the cache feature always did on a cold workspace; that is the restore, not the
+hand-over, and it is the part that remains. What comes back from a step is what it
+changed: 0 to 3 MiB for the steps that only touch caches, 95 MiB for the one that
+builds a 100 MB binary, 249 and 332 MiB for the two that install a `node_modules`.
+The steps that do nothing (`gate-pipeline`, `image-context`) move 0 bytes back and
+about 0.7 GiB (the workspace, `node_modules` and the binary) into their pods.
+
+What is left is the workspace itself going into each pod, since a pod starts empty,
+and the saved caches being staged. `workspace: { exclude }` removes a tree from
+that for pipelines that can say which trees later steps do not need (right
+column: the 560 MB of `node_modules` no longer goes into every pod that follows the step that made it). Nothing is left
+out by name: a pipeline that keeps its dependency directories in the workspace and
+does not exclude them pays for them in each step's pod, and that is its choice.
+The Station keeps a hash of nothing: it reads each file once when sending it, and
+the comparison of what came back is by size and time, from the headers.
 
 ### Acceptance cases and the tests that hold them
 

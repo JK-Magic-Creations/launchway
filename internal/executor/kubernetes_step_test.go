@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -39,11 +40,35 @@ type stepCluster struct {
 	cs  *fake.Clientset
 	dir string
 
-	mu      sync.Mutex
-	hard    int64 // the namespace's quota on requests.memory, in bytes; 0: none
-	created []corev1.Pod
-	execs   []execRecord
-	waiting map[string]string // image → why its pod does not start
+	mu       sync.Mutex
+	hard     int64 // the namespace's quota on requests.memory, in bytes; 0: none
+	created  []corev1.Pod
+	execs    []execRecord
+	waiting  map[string]string // image → why its pod does not start
+	clockLag time.Duration     // how long after the files were written the pod's clock is read (a big upload)
+	// What went through the exec streams that carry the workspace: into pods, and back out.
+	up, down atomic.Int64
+}
+
+type meterReader struct {
+	io.Reader
+	n *atomic.Int64
+}
+
+func (c meterReader) Read(b []byte) (int, error) {
+	n, err := c.Reader.Read(b)
+	c.n.Add(int64(n))
+	return n, err
+}
+
+type meterWriter struct {
+	io.Writer
+	n *atomic.Int64
+}
+
+func (c meterWriter) Write(b []byte) (int, error) {
+	c.n.Add(int64(len(b)))
+	return c.Writer.Write(b)
 }
 
 type execRecord struct{ pod, container string }
@@ -155,6 +180,16 @@ func (c *stepCluster) runIn(ctx context.Context, pod, container string, cmd []st
 		a = strings.ReplaceAll(a, "/home/launchway", filepath.Join(root, "home"))
 		a = strings.ReplaceAll(a, "/workspace", filepath.Join(root, "workspace"))
 		args[i] = strings.ReplaceAll(a, "/launchway/", filepath.Join(root, "launchway")+"/")
+	}
+	if cmd[0] == "date" && c.clockLag > 0 {
+		time.Sleep(c.clockLag)
+	}
+	joined := strings.Join(cmd, " ")
+	if stdin != nil && strings.Contains(joined, "tar xf -") {
+		stdin = meterReader{stdin, &c.up}
+	}
+	if stdout != nil && strings.Contains(joined, "tar -c") {
+		stdout = meterWriter{stdout, &c.down}
 	}
 	x := exec.CommandContext(ctx, args[0], args[1:]...)
 	x.Stdin, x.Stdout, x.Stderr = stdin, stdout, stderr
@@ -888,3 +923,144 @@ func memBytes(q string) int64 { r := resource.MustParse(q); return r.Value() }
 
 // mebi writes bytes as the API server does, in Mi.
 func mebi(n int64) string { return fmt.Sprintf("%dMi", n>>20) }
+
+// A step's caches do not travel with the workspace: they are restored into the step's pod from a directory of
+// the step's, saved from there, and never enter the run's workspace copy. What the pipeline leaves out does not
+// travel either; and the workspace that does travel comes back as only what the step changed.
+func TestCachesAndExcludedPathsNeverTravelWithTheWorkspace(t *testing.T) {
+	c := newStepCluster(t, KubernetesOptions{})
+	c.clockLag = 1100 * time.Millisecond
+	ws := checkout(t, map[string]string{"src/main.go": "package main\n", "go.sum": "x\n"})
+	// A big tree the pipeline leaves out, and one that is not left out.
+	big := make([]byte, 1<<20)
+	for _, f := range []string{"web/node_modules/a/index.js", "web/node_modules/b/index.js"} {
+		p := filepath.Join(ws, f)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, big, 0o644)
+		old := time.Now().Add(-time.Hour)
+		os.Chtimes(p, old, old)
+	}
+	scope := &CacheScope{Paths: []string{".cache/go-build", ".cache/go-mod"}}
+	scope.Back = scope.Paths
+	s := stepSpec(t, ws, "run_c", "test", "256Mi", `
+[ -f .cache/go-mod/dep/dep.go ] || { echo the cache was not restored; exit 1; }
+[ ! -e web/node_modules ] || { echo an excluded path was sent; exit 1; }
+mkdir -p .cache/go-build; echo built > .cache/go-build/new.o; echo more >> .cache/go-mod/dep/dep.go; rm .cache/go-mod/old.go
+echo changed > src/main.go`)
+	s.Cache, s.Exclude = scope, []string{"web/node_modules"}
+	// The runner restores the cache before the step.
+	src := filepath.Join(t.TempDir(), "dep.go")
+	os.WriteFile(src, []byte("package dep\n"), 0o644)
+	if err := c.k.PlaceFiles(context.Background(), s, []PlacedFile{
+		{Path: ".cache/go-mod/dep/dep.go", Local: src, Mode: 0o644}, {Path: ".cache/go-mod/old.go", Local: src, Mode: 0o644}}, func(string, string) {}); err != nil {
+		t.Fatal(err)
+	}
+	if code, text, err := c.run(s); err != nil || code != 0 {
+		t.Fatalf("%d %v\n%s", code, err, text)
+	}
+	dir := c.k.WorkspaceDir(s)
+	if exists(filepath.Join(dir, ".cache/go-mod")) || exists(filepath.Join(dir, ".cache/go-build")) {
+		t.Fatal("a cache is in the run's workspace copy")
+	}
+	if !exists(filepath.Join(dir, "web/node_modules/a/index.js")) {
+		t.Fatal("what was excluded was removed from the run's workspace copy: it is only not sent")
+	}
+	if readFile(t, filepath.Join(dir, "src/main.go")) != "changed\n" {
+		t.Fatal("the workspace change did not come back")
+	}
+	// The cache is staged as the step left it, from the step's own directory.
+	staged, err := c.k.StageFiles(context.Background(), s, scope.Paths, StageLimits{}.withDefaults(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, f := range staged.Files {
+		names = append(names, f.Path)
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, []string{".cache/go-build/new.o", ".cache/go-mod/dep/dep.go"}) {
+		t.Fatalf("the cache as the step left it: %v", names)
+	}
+	if got := readFile(t, filepath.Join(c.k.scratchDir(s), ".cache/go-mod/dep/dep.go")); got != "package dep\nmore\n" {
+		t.Fatalf("dep.go: %q", got)
+	}
+	// Bytes: the two excluded 1 MiB files never went into the pod, and almost nothing came back.
+	if up := c.up.Load(); up > 64<<10 {
+		t.Errorf("%d bytes went into the pod: the excluded tree went too", up)
+	}
+	if down := c.down.Load(); down > 64<<10 {
+		t.Errorf("%d bytes came back: more than what the step changed", down)
+	}
+	c.k.DropScratch(s)
+	if exists(c.k.scratchDir(s)) {
+		t.Fatal("the step's caches were not dropped")
+	}
+	// A later step does not see the cache unless it restores it.
+	later := stepSpec(t, ws, "run_c", "later", "64Mi", `[ ! -e .cache/go-mod ] && grep -q changed src/main.go`)
+	later.Cache = &CacheScope{Paths: scope.Paths}
+	if code, text, err := c.run(later); err != nil || code != 0 {
+		t.Fatalf("later: %d %v\n%s", code, err, text)
+	}
+}
+
+// What a step did not change does not come back, even with times that a tool restored from an archive: the
+// pod's status-change time says what changed.
+func TestOnlyWhatTheStepChangedComesBack(t *testing.T) {
+	c := newStepCluster(t, KubernetesOptions{})
+	c.clockLag = 1100 * time.Millisecond // a real upload takes seconds; the files it wrote are older than the clock read after it
+	files := map[string]string{}
+	for i := 0; i < 50; i++ {
+		files[fmt.Sprintf("d%d/f%d", i%5, i)] = strings.Repeat("x", 20000)
+	}
+	ws := checkout(t, files)
+	s := stepSpec(t, ws, "run_d", "touch", "64Mi", `
+echo new > d0/new.txt
+echo changed > d1/f1
+touch -d @1700000000 d1/f1          # a restored time must not hide the change
+mkdir empty-dir
+rm d2/f2`)
+	if code, text, err := c.run(s); err != nil || code != 0 {
+		t.Fatalf("%d %v\n%s", code, err, text)
+	}
+	dir := c.k.WorkspaceDir(s)
+	if readFile(t, filepath.Join(dir, "d0/new.txt")) != "new\n" || readFile(t, filepath.Join(dir, "d1/f1")) != "changed\n" ||
+		!exists(filepath.Join(dir, "empty-dir")) || exists(filepath.Join(dir, "d2/f2")) {
+		t.Fatal("a change did not come back")
+	}
+	if down := c.down.Load(); down > 32<<10 {
+		t.Fatalf("%d bytes came back for three changed files of a megabyte of workspace", down)
+	}
+	if up := c.up.Load(); up < 900<<10 {
+		t.Fatalf("only %d bytes went in: the workspace is what a fresh pod lacks", up)
+	}
+}
+
+// The Station bounds what it holds, and says plainly when a step goes past it.
+func TestTheWorkspaceOnTheStationIsBounded(t *testing.T) {
+	c := newStepCluster(t, KubernetesOptions{})
+	c.k.maxWorkspace = 600 << 10
+	c.k.maxWorkspaces = 2 << 20
+	ws := checkout(t, map[string]string{"f": "x"})
+	s := stepSpec(t, ws, "run_e", "grow", "64Mi", `head -c 700000 /dev/zero > big.bin`)
+	var l lines
+	code, err := c.k.Run(context.Background(), s, l.sink)
+	if err == nil || !strings.Contains(err.Error(), "over the 600 KiB a Station keeps for one Sortie (kubernetes.max_workspace)") || code != -1 {
+		t.Fatalf("code %d err %v\n%s", code, err, l.text())
+	}
+	if !strings.Contains(l.text(), "Workspace on this Station:") {
+		t.Fatalf("the log does not say what the Station holds:\n%s", l.text())
+	}
+	c.noPods()
+	// A checkout that is too large is refused when the copy is made.
+	c.k.maxWorkspace = 100
+	big := checkout(t, map[string]string{"f": strings.Repeat("x", 4096)})
+	if _, _, err := c.run(stepSpec(t, big, "run_f", "s", "64Mi", "true")); err == nil || !strings.Contains(err.Error(), "kubernetes.max_workspace") {
+		t.Fatalf("checkout: %v", err)
+	}
+	// And the Station's total.
+	c.k.maxWorkspace = 0
+	c.k.maxWorkspaces = 1
+	if _, _, err := c.run(stepSpec(t, ws, "run_g", "s", "64Mi", "true")); err == nil || !strings.Contains(err.Error(), "kubernetes.max_workspaces") {
+		t.Fatalf("total: %v", err)
+	}
+}

@@ -58,6 +58,7 @@ var keyHelp = map[string]obj{
 	"on":           prop("object", "What starts a run: push, pull_request, schedule, webhook."),
 	"inputs":       prop("object", "Values a run is started with."),
 	"runner":       prop("object", "Which runners may run the steps: a pool, labels or both."),
+	"workspace":    prop("object", "Paths a runner that carries the workspace from step to step leaves out of it: workspace: { exclude: [node_modules] }."),
 	"lane":         prop("object", "Which runs of the project may go at the same time."),
 }
 

@@ -357,6 +357,12 @@
             "pod": {
               "enum": ["", "per-step", "per-run"]
             },
+            "maxWorkspace": {
+              "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }]
+            },
+            "maxWorkspaces": {
+              "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }]
+            },
             "keepFailed": {
               "type": "string",
               "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$"

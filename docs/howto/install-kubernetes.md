@@ -272,7 +272,7 @@ Starting pod launchway-steps/launchway-show-a1-77ab12c4de for this step: image-1
 Copied the workspace into the pod in 140ms
 written by hello in pod launchway-hello-a1-3f9c01d2ab
 output and file received; running in pod launchway-show-a1-77ab12c4de
-Copied the workspace back in 70ms
+Copied what the step changed back in 70ms
 ```
 
 A step's pod is removed when the step ends, whether it succeeded, failed, was canceled or timed out, because

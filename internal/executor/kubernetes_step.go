@@ -40,7 +40,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -194,7 +193,7 @@ func (k *Kubernetes) runInStepPod(ctx context.Context, s Spec, out Sink) (int, e
 		return -1, err
 	}
 	took := time.Now()
-	base, err := k.uploadMirror(ctx, name, m)
+	fill, err := k.fillPod(ctx, name, m, s)
 	if err != nil {
 		if ctx.Err() != nil {
 			return -1, ctx.Err()
@@ -213,22 +212,34 @@ func (k *Kubernetes) runInStepPod(ctx context.Context, s Spec, out Sink) (int, e
 	if runErr != nil && !errors.Is(runErr, context.Canceled) && !errors.Is(runErr, context.DeadlineExceeded) && ctx.Err() == nil {
 		return code, runErr // the pod is gone or unreachable: nothing to read back
 	}
+	if herr := k.handBackStep(ctx, name, m, s, fill, sys); herr != nil && code == 0 && runErr == nil {
+		return -1, herr
+	}
+	return code, runErr
+}
+
+// handBackStep reads what a step left back from its pod. Its error is only for a step that otherwise succeeded: a
+// step that was going to fail anyway has the failure said, and the files that could not be read back as a note.
+func (k *Kubernetes) handBackStep(ctx context.Context, name string, m *mirror, s Spec, f *fill, sys func(string, ...any)) error {
 	within := handBackWithin
 	if ctx.Err() != nil {
 		within = handBackCanceled
 	}
 	hctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), within)
 	defer cancel()
-	took = time.Now()
-	if herr := k.handBack(hctx, name, m, base); herr != nil {
-		if code == 0 && runErr == nil {
-			return -1, infra("copying the workspace back from the pod: %v", herr)
+	took := time.Now()
+	herr := k.handBack(hctx, name, m, s, f, sys)
+	switch {
+	case herr == nil:
+		if ctx.Err() == nil {
+			sys("Copied what the step changed back in %s", time.Since(took).Round(10*time.Millisecond))
 		}
-		sys("The files this step left could not be copied back from its pod (%v); reports and artifacts of this step may be missing", herr)
-	} else if ctx.Err() == nil {
-		sys("Copied the workspace back in %s", time.Since(took).Round(10*time.Millisecond))
+		return nil
+	case errors.As(herr, new(limitError)):
+		return herr // a plain failure: the step made more than the Station keeps
 	}
-	return code, runErr
+	sys("The files this step left could not be copied back from its pod (%v); reports and artifacts of this step may be missing", herr)
+	return infra("copying the workspace back from the pod: %v", herr)
 }
 
 // deleteStepPod removes the pod of a step that ended, at once.
@@ -404,10 +415,19 @@ func (k *Kubernetes) mirrorFor(s Spec) (*mirror, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
-	if err := copyTree(s.Workspace, dir); err != nil {
+	lim := handOverLimits
+	if k.maxWorkspace > 0 {
+		lim.MaxBytes = k.maxWorkspace
+	}
+	n, err := copyTree(s.Workspace, dir, lim)
+	if err != nil {
 		_ = os.RemoveAll(dir)
+		if errors.Is(err, ErrTooLarge) {
+			return nil, fmt.Errorf("the checkout is more than the %s a Station keeps for one Sortie (kubernetes.max_workspace): raise the limit together with the Station's data volume", bytesText(k.maxWorkspace))
+		}
 		return nil, fmt.Errorf("copying the checkout: %w", err)
 	}
+	k.account(func(a *accounts) { a.mirror[s.RunID] = n })
 	if err := os.WriteFile(marker, []byte(s.WorkspaceID), 0o600); err != nil {
 		return nil, err
 	}
@@ -468,81 +488,12 @@ type PerStepSizer interface {
 
 // copyTree copies the files of src into the empty directory dst, as they
 // would be sent into a pod: directories, regular files and symbolic links.
-func copyTree(src, dst string) error {
+func copyTree(src, dst string, lim ExportLimits) (int64, error) {
 	pr, pw := io.Pipe()
 	go func() { pw.CloseWithError(writeTar(pw, src)) }()
-	err := extractWorkspace(pr, dst, handOverLimits, nil, nil)
+	n, err := extractWorkspaceSize(pr, dst, lim)
 	pr.CloseWithError(errors.New("stopped reading"))
-	return err
-}
-
-// uploadMirror fills the pod's workspace from the copy and returns the paths
-// it sent, so that what the step removes can be removed from the copy when
-// the files come back.
-func (k *Kubernetes) uploadMirror(ctx context.Context, pod string, m *mirror) (map[string]fileFP, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	base := map[string]fileFP{}
-	if err := k.uploadDir(ctx, pod, m.dir, base); err != nil {
-		return nil, err
-	}
-	return base, nil
-}
-
-// handBack reads the pod's whole workspace into the copy: what the step wrote
-// or changed replaces what the copy has, and what it removed (it was in the
-// copy when the pod was filled and is not in the pod now) is removed. Paths
-// that were not in the copy then, that another step of the run put there
-// meanwhile, are not touched.
-func (k *Kubernetes) handBack(ctx context.Context, pod string, m *mirror, base map[string]fileFP) error {
-	pr, pw := io.Pipe()
-	var stderr strings.Builder
-	done := make(chan error, 1)
-	go func() {
-		err := k.exec(ctx, pod, helperName, []string{"sh", "-c", "cd /workspace && exec tar -c -f - ."}, nil, pw, &lockedWriter{w: &stderr})
-		pw.CloseWithError(err)
-		done <- err
-	}()
-	m.mu.Lock()
-	seen := map[string]bool{}
-	rerr := extractWorkspace(pr, m.dir, handOverLimits, base, seen)
-	if rerr == nil {
-		_, _ = io.Copy(io.Discard, pr) // the end of the archive is padding; let tar finish writing it
-	}
-	pr.CloseWithError(errors.New("stopped reading"))
-	err := <-done
-	if rerr == nil && err == nil && len(seen) > 0 {
-		// Only a complete archive says what was removed.
-		var gone []string
-		for p := range base {
-			if !seen[p] {
-				gone = append(gone, p)
-			}
-		}
-		slices.Sort(gone)
-		if root, oerr := os.OpenRoot(m.dir); oerr == nil {
-			for _, p := range gone {
-				_ = root.RemoveAll(filepath.FromSlash(p))
-			}
-			root.Close()
-		}
-	}
-	m.mu.Unlock()
-	switch {
-	case rerr != nil:
-		return rerr
-	case err != nil:
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
-		}
-		return errors.New(oneLine(msg))
-	}
-	_ = os.Chtimes(m.dir, time.Now(), time.Now()) // so that the copy's age says when it was last used
-	return nil
+	return n, err
 }
 
 // lockedWriter lets two goroutines write to one builder.
@@ -567,10 +518,11 @@ func (k *Kubernetes) cleanMirrors(ctx context.Context, lookup RunLookup) error {
 	}
 	var ids []string
 	for _, e := range entries {
-		if e.IsDir() {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
 			ids = append(ids, e.Name())
 		}
 	}
+	k.sweepScratch()
 	if len(ids) == 0 {
 		return nil
 	}
@@ -599,6 +551,13 @@ func (k *Kubernetes) cleanMirrors(ctx context.Context, lookup RunLookup) error {
 		}
 		_ = os.Remove(filepath.Join(k.workRoot(), id+".id"))
 		_ = os.RemoveAll(dir)
+		k.account(func(a *accounts) {
+			for run := range a.mirror {
+				if safeName(run) == id {
+					delete(a.mirror, run)
+				}
+			}
+		})
 		k.mu.Lock()
 		for run := range k.mirrors {
 			if safeName(run) == id {
@@ -638,4 +597,67 @@ func (k *Kubernetes) readWorkspace(s Spec) (string, func()) {
 		return m.dir, m.mu.RUnlock
 	}
 	return s.Workspace, func() {}
+}
+
+// accounts is what the Station holds on its disk for step pods: the bytes of each run's workspace copy and of each
+// step's caches in transit, as of the last time they were looked at.
+type accounts struct {
+	mirror  map[string]int64 // run → workspace bytes
+	scratch map[string]int64 // scratch directory → cache bytes
+}
+
+func (k *Kubernetes) account(f func(a *accounts)) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if k.acct.mirror == nil {
+		k.acct.mirror, k.acct.scratch = map[string]int64{}, map[string]int64{}
+	}
+	f(&k.acct)
+}
+
+// held is the bytes the Station holds for the run and for everything.
+func (k *Kubernetes) held(run string) (own, all int64) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	for r, n := range k.acct.mirror {
+		all += n
+		if r == run {
+			own = n
+		}
+	}
+	for _, n := range k.acct.scratch {
+		all += n
+	}
+	return own, all
+}
+
+// checkSizes fails a step whose run's workspace, or the Station's workspaces in all, is over a limit, saying what
+// it holds, what the limit is and what to do.
+func (k *Kubernetes) checkSizes(s Spec, workspace, caches int64, sys func(string, ...any)) error {
+	_, all := k.held(s.RunID)
+	own, _ := k.held(s.RunID)
+	all += workspace - own + caches
+	sys("Workspace on this Station: %s for this Sortie (limit %s), %s for everything it holds (limit %s)",
+		bytesText(workspace), limitText(k.maxWorkspace), bytesText(all), limitText(k.maxWorkspaces))
+	switch {
+	case k.maxWorkspace > 0 && workspace > k.maxWorkspace:
+		return limitError(fmt.Sprintf("the Sortie's workspace is %s, over the %s a Station keeps for one Sortie (kubernetes.max_workspace). Leave what a step makes and no later step needs out of the workspace with workspace: { exclude: [...] }, declare it as a cache:, or raise the limit together with the Station's data volume",
+			bytesText(workspace), bytesText(k.maxWorkspace)))
+	case k.maxWorkspaces > 0 && all > k.maxWorkspaces:
+		return limitError(fmt.Sprintf("this Station holds %s of Sortie workspaces and caches, over the %s it may (kubernetes.max_workspaces). Finish or cancel other Sorties on it, leave large paths out with workspace: { exclude: [...] }, or raise the limit together with the Station's data volume",
+			bytesText(all), bytesText(k.maxWorkspaces)))
+	}
+	return nil
+}
+
+// limitError is a step that went past what the Station keeps for workspaces.
+type limitError string
+
+func (e limitError) Error() string { return string(e) }
+
+func limitText(n int64) string {
+	if n <= 0 {
+		return "none"
+	}
+	return bytesText(n)
 }

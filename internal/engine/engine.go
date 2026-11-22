@@ -251,6 +251,8 @@ type Job struct {
 	// StepContainer is Container sized for this step alone (Containers sizes it for the largest step
 	// that shares its image): what a runner that makes a pod for each step uses; nil: use Containers.
 	StepContainer *pipeline.Container `json:"step_container,omitempty"`
+	// WorkspaceExclude is the pipeline's workspace.exclude: paths a runner that carries the workspace leaves out.
+	WorkspaceExclude []string `json:"workspace_exclude,omitempty"`
 	// Workspace names the run's workspace on this runner: the same for every
 	// step the runner takes while it holds the run, and new when it takes
 	// the run over from another runner (see Lease).
@@ -1878,28 +1880,6 @@ func (c *cmd) advance() {
 		}
 	}
 	c.finishWhenDone()
-}
-
-// job builds what the runner needs, including the outputs of needed steps.
-func (c *cmd) job(stepID, leaseID string) *Job {
-	st := c.st
-	def := st.Pipeline.Step(stepID)
-	s := st.Steps[stepID]
-	env := map[string]string{}
-	for _, v := range c.stepEnv(stepID) {
-		env[v.Name] = v.Value
-	}
-	return &Job{
-		Container: st.Pipeline.ContainerFor(def), Containers: c.runContainers(), StepContainer: c.stepContainer(def), ResourcesAsked: def.Resources != nil,
-		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),
-		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
-		// advance fails a draft's step that asks for secrets it may not
-		// read before it is queued; stepSecrets is a second guard, so that
-		// a runner is never asked to look a secret up for one.
-		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
-		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Event: st.Trigger.Event, Workspace: st.Workspace, Library: def.Library,
-		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def), Cache: c.jobCache(def),
-	}
 }
 
 // localID is how a step refers to another: by the ID it has within the

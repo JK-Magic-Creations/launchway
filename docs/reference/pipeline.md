@@ -101,6 +101,7 @@ lists every variable a step receives.
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `defaults` | mapping | none | What every script step takes unless it says otherwise: image, Airfield (environment), timeout, retry, caches; see [Defaults](#defaults) |
 | `runner` | mapping | none | Which Stations (runners) may run the pipeline's steps; see [Station](#runner) |
+| `workspace` | mapping | none | Hints about the [workspace](#workspace): paths a Station that carries the workspace from step to step leaves out of it |
 | `lane` | mapping | none | Makes runs of the Flight (codebase) take turns, and says what a Sortie that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
 | `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A Sortie past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a Sortie's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display. Not with `uses` |
@@ -1317,6 +1318,26 @@ and `cpu.stat`, or the v1 equivalents), the same for every language. The Sortie 
 each step (`reserved 4.0Gi, used 1.1Gi peak`), `launchway runs show` and the API's `usage` field give
 it, and the step's log ends with it. Nothing is read from the cluster's metrics API, so no extra
 permission is needed on Kubernetes. A step that could not be measured says `use not measured` and why.
+
+## Workspace {#workspace}
+
+On Kubernetes a step runs in a pod of its own, and the Station carries the Sortie's workspace from one step's pod to the
+next's. A step's declared [caches](../guide/build-caches.md) are never carried that way: each is restored into the step's
+own pod from the cache store and saved from there, so a cache of gigabytes does not also travel with the workspace. A
+tree that is not a cache and that no later step needs from the earlier one (a dependency directory the step that needs it
+installs itself, a build output nothing downstream reads) can be left out with `workspace.exclude`: what a step makes
+there stays in that step's pod and is gone with it. Other executors ignore the hint, because their steps share one
+directory anyway. A path left out is never in a later step's workspace, so list only what later steps do not read.
+
+```yaml
+workspace:
+  exclude: [web/node_modules, docs/node_modules, backend/dist]
+```
+
+<!-- keys: workspace -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `exclude` | list of paths | none | Paths, globs as for [Cargo (artifacts)](../guide/artifacts.md) paths (a path names itself and everything under it), relative to the repository root, left out of the workspace that is carried between steps. At most 50, each at most 200 characters, no `..`, not absolute, not `!`, and not everything (`.`, `*`, `**`) |
 
 ## Lane
 

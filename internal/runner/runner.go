@@ -612,6 +612,13 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, Hold: mask.Hold, AsksResources: job.ResourcesAsked,
 		Usage: &executor.Usage{},
 	}
+	if job.Cache != nil && len(job.Cache.Caches) > 0 {
+		spec.Cache = &executor.CacheScope{}
+		for _, e := range job.Cache.Caches {
+			spec.Cache.Paths = append(spec.Cache.Paths, e.Paths...)
+		}
+	}
+	spec.Exclude = job.WorkspaceExclude
 	caches := r.newCacheRun(job, spec, sys)
 	collect := r.collector(job, spec, sys, caches)
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {

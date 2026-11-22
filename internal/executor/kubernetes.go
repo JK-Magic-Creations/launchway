@@ -58,6 +58,12 @@ type KubernetesOptions struct {
 	// per-run, the earlier behavior, one pod for the whole run with a container for each image. per-run is
 	// kept for one release, so that an installation can go back without a downgrade; it will be removed.
 	Pod string `yaml:"pod"`
+	// MaxWorkspace is the most one run's workspace copy may hold on the Station, and MaxWorkspaces what all the
+	// copies and the caches being carried together may hold (quantities such as 4Gi). A step whose workspace
+	// grows past one of them fails with a message that says so. Defaults 4Gi and 12Gi; set them with the
+	// Station's data volume in mind (the chart's runner.dataVolume.sizeLimit).
+	MaxWorkspace  string `yaml:"max_workspace"`
+	MaxWorkspaces string `yaml:"max_workspaces"`
 	// WorkDir is where a per-step Station keeps the copy of each run's workspace that the step pods start from
 	// and hand their files back to (see kubernetes_step.go). Default: a directory of the runner's data
 	// directory, or of the temporary directory when the executor is made without one.
@@ -128,6 +134,9 @@ type Kubernetes struct {
 	active  map[string]string // pod name → run
 	mirrors map[string]*mirror
 	notes   map[string]string
+	// What the Station holds for step pods, and what it may hold (zero: no limit).
+	acct                        accounts
+	maxWorkspace, maxWorkspaces int64
 }
 
 type runPod struct {
@@ -207,6 +216,19 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 				return nil, fmt.Errorf("kubernetes: %q is not a duration", v.s)
 			}
 			*v.d = d
+		}
+	}
+	k.maxWorkspace, k.maxWorkspaces = 4<<30, 12<<30
+	for _, v := range []struct {
+		s string
+		n *int64
+	}{{o.MaxWorkspace, &k.maxWorkspace}, {o.MaxWorkspaces, &k.maxWorkspaces}} {
+		if v.s != "" {
+			q, err := resource.ParseQuantity(v.s)
+			if err != nil {
+				return nil, fmt.Errorf("kubernetes: %q is not a valid quantity", v.s)
+			}
+			*v.n = q.Value()
 		}
 	}
 	for _, q := range []string{o.CPU, o.Memory, o.MemoryLimit, o.MaxCPU, o.MaxMemory} {
@@ -810,15 +832,23 @@ func (k *Kubernetes) upload(ctx context.Context, pod, dir string, files map[stri
 // uploadDir copies a local directory into the pod's workspace.
 // base, if not nil, collects what was sent (see fileFP).
 func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string, base map[string]fileFP) error {
+	return k.sendTree(ctx, pod, dir, base, nil, true)
+}
+
+// sendTree sends the files below dir into the pod's workspace, leaving out what skip says. first is the
+// workspace as the pod starts: it also makes the step's home directory.
+func (k *Kubernetes) sendTree(ctx context.Context, pod, dir string, base map[string]fileFP, skip func(string) bool, first bool) error {
 	pr, pw := io.Pipe()
-	go func() { pw.CloseWithError(writeTarNames(pw, dir, base)) }()
+	go func() { pw.CloseWithError(writeTarNames(pw, dir, base, skip)) }()
 	// Without a security context the containers may run as different users
 	// (root, or each image's own), so everything is made writable by all.
 	// In a restricted pod every container runs as the user that extracts the
 	// files, so they are its own; only /workspace itself, the volume, is not
 	// (it belongs to root and the pod's group), so Git is told it is safe.
 	cmd := "tar xf - -C /workspace && chmod -R a+rwX /workspace"
-	if k.o.restricted() {
+	if k.o.restricted() && !first {
+		cmd = "tar xf - -C /workspace"
+	} else if k.o.restricted() {
 		cmd = fmt.Sprintf(`%[2]s && tar xf - -C /workspace && { [ -e %[1]s/.gitconfig ] || printf '[safe]\n\tdirectory = /workspace\n' > %[1]s/.gitconfig; }`, stepHome, homeSetup(stepHome))
 	}
 	var stderr bytes.Buffer
@@ -830,20 +860,26 @@ func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string, base map[st
 	return nil
 }
 
-func writeTar(w io.Writer, root string) error { return writeTarNames(w, root, nil) }
+func writeTar(w io.Writer, root string) error { return writeTarNames(w, root, nil, nil) }
 
 // writeTarNames writes the tree below root as a tar stream, and notes in sent,
 // if it is not nil, what it wrote at each path.
-func writeTarNames(w io.Writer, root string, sent map[string]fileFP) error {
+func writeTarNames(w io.Writer, root string, sent map[string]fileFP, skip func(string) bool) error {
 	settled := time.Now().Add(-2 * time.Second)
 	tw := tar.NewWriter(w)
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // G703: root is the Station's own copy of a workspace, or the checkout it was told to use
 		if err != nil {
 			return err
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil || rel == "." {
 			return err
+		}
+		if skip != nil && skip(filepath.ToSlash(rel)) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		info, err := d.Info()
 		if err != nil {

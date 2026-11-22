@@ -284,6 +284,7 @@ func secondsText(d time.Duration) string {
 // Nothing here fails the step.
 func (cr *cacheRun) restore(parent context.Context, out executor.Sink) {
 	defer cr.clean()
+	defer cr.markBack()
 	ctx, cancel := context.WithTimeout(parent, cacheTimeout)
 	defer cancel()
 	if p := cr.job.Cache.Problem; p != "" {
@@ -496,6 +497,7 @@ var errCorrupted = errors.New("corrupted")
 // ended and that an exact hit did not already have.
 func (cr *cacheRun) save(outcome string) {
 	defer cr.clean()
+	defer cr.dropScratch()
 	ctx, cancel := context.WithTimeout(context.Background(), cacheTimeout)
 	defer cancel()
 	for _, t := range cr.tasks {
@@ -700,4 +702,25 @@ func (cr *cacheRun) send(ctx context.Context, begun *engine.BegunCache, a *execu
 		offset = got
 	}
 	return nil
+}
+
+// markBack tells an executor that carries the workspace through the Station which caches are saved after the
+// step, so that it hands back what the step leaves in those paths (and only those).
+func (cr *cacheRun) markBack() {
+	if cr.spec.Cache == nil {
+		return
+	}
+	cr.spec.Cache.Back = nil
+	for _, t := range cr.tasks {
+		if t.skip == "" && t.entry.Save != pipeline.CacheSaveNever {
+			cr.spec.Cache.Back = append(cr.spec.Cache.Back, t.entry.Paths...)
+		}
+	}
+}
+
+// dropScratch lets an executor drop the step's caches once they are saved.
+func (cr *cacheRun) dropScratch() {
+	if sc, ok := cr.r.Exec.(executor.StepScratcher); ok {
+		sc.DropScratch(cr.spec)
+	}
 }

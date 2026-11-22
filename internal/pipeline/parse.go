@@ -130,6 +130,8 @@ func Parse(data []byte) (*Pipeline, error) {
 			defaultsNode = v
 		case "lane":
 			laneNode = v
+		case "workspace":
+			ps.parseWorkspace(p, v)
 		case "timeout":
 			ps.parseRunTimeout(p, v)
 		case "runner":
@@ -355,7 +357,7 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 }
 
 // topKeys are the keys of a pipeline file.
-var topKeys = []string{"pipeline", "on", "supersede", "libraries", "containers", "defaults", "steps", "inputs", "runner", "timeout", "lane", "uses", "with", "skip", "extend", "replace"}
+var topKeys = []string{"pipeline", "on", "supersede", "libraries", "containers", "defaults", "steps", "inputs", "runner", "timeout", "lane", "workspace", "uses", "with", "skip", "extend", "replace"}
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
