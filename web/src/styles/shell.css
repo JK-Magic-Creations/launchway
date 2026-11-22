@@ -28,6 +28,12 @@
 .route-item:nth-last-child(-n+3) a:hover::before, .route-item:nth-last-child(-n+3) a:focus-visible::before { transform: none; }
 .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: var(--on-solid); font: 700 11px / 18px var(--font); text-align: center; }
 .top-r { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* The inbox link arrives after the first draw (its code and its count are fetched). Its place, as wide as the link is with a
+   count of up to two digits, is kept from the first paint, so the buttons beside it never move when it appears; where the
+   server has no notifications the place stays empty. */
+.top-inbox { display: inline-flex; min-inline-size: 6.5rem; }
+.top-inbox > .btn { flex: 1; justify-content: center; }
+@media (max-width: 1180px) { .top-inbox { min-inline-size: 3rem; } }
 .iconbtn { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--r1); background: none; color: var(--ink-2); cursor: pointer; }
 .iconbtn:hover { background: var(--sheet-3); }
 .btn.on { background: var(--signal-wash); border-color: var(--signal); color: var(--signal-ink); }

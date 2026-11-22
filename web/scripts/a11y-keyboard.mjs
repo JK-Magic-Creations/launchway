@@ -25,7 +25,7 @@ async function journey(name, fn) {
   }
 }
 
-const open = async (page, path) => { await page.goto(url + path); await page.getByRole("main").waitFor(); await page.waitForFunction(() => !document.querySelector(".loading")); };
+const open = async (page, path) => { await page.goto(url + path); await page.getByRole("main").waitFor(); await page.waitForFunction(() => !document.querySelector(".loading") && ![...document.querySelectorAll("main [role=status]")].some((e) => e.textContent.trim() === "Loading…")); };
 const active = (page) => page.evaluate(() => {
   const e = document.activeElement;
   return { tag: e?.tagName.toLowerCase(), id: e?.id ?? "", role: e?.getAttribute("role") ?? "", name: (e?.getAttribute("aria-label") || e?.textContent || e?.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 80), label: e?.labels?.[0]?.textContent?.trim() ?? "" };
@@ -185,12 +185,16 @@ await journey("overlays: Escape closes a dialog, the user menu and the Wingman p
   assert.match((await active(page)).name, /Signed in as/);
 });
 
-await journey("the help buttons are in the same place on every page", async (page) => {
+await journey("the help buttons are in the same place on every page, and do not move when the top bar's inbox link arrives", async (page) => {
+  const where = () => page.evaluate(() => ["learn", "guide"].map((a) => { const r = document.querySelector(`[data-act="${a}"]`)?.getBoundingClientRect(); return r ? Math.round(r.x / 4) + "," + Math.round(r.y) : "missing"; }).join(" "));
   const seen = [];
   for (const p of ["/", "/activity", "/projects", "/settings", "/learn", `/runs/${runs.RUN_FAILED}`]) {
     await open(page, p);
-    await page.waitForLoadState("networkidle"); // the top bar's inbox count arrives after the first draw; measure once it has
-    seen.push(await page.evaluate(() => ["learn", "guide"].map((a) => { const r = document.querySelector(`[data-act="${a}"]`)?.getBoundingClientRect(); return r ? Math.round(r.x / 4) + "," + Math.round(r.y) : "missing"; }).join(" ")));
+    const early = await where(); // as soon as the page is drawn: the inbox link's code and count may not have arrived
+    await page.waitForLoadState("networkidle");
+    const late = await where();
+    assert.equal(early, late, `the help buttons moved on ${p} when the rest of the top bar arrived: ${early} then ${late}`);
+    seen.push(late);
   }
   assert.equal(new Set(seen).size, 1, "positions differ between pages: " + seen.join(" | "));
 });
