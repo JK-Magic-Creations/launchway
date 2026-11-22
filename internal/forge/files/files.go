@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/forge/signing"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +33,33 @@ const (
 type Service struct {
 	Git   *storage.Store
 	Clock func() time.Time
+	// Sign, when set, signs the commits a web edit or upload makes with the installation's key, as merges are.
+	// When it cannot (there is no root key), the commit is made unsigned: an edit is never refused for that.
+	Sign func(ctx context.Context, payload []byte) ([]byte, error)
+}
+
+// signed returns the commit as the installation signs it, or the commit itself when signing is off or fails.
+func (s *Service) signed(ctx context.Context, g runner, sha string) string {
+	if s.Sign == nil {
+		return sha
+	}
+	raw, err := g.run(ctx, nil, "cat-file", "commit", sha)
+	if err != nil {
+		return sha
+	}
+	sig, err := s.Sign(ctx, []byte(raw))
+	if err != nil {
+		return sha
+	}
+	signed, err := signing.AddCommitSignature([]byte(raw), sig)
+	if err != nil {
+		return sha
+	}
+	out, err := g.run(ctx, signed, "hash-object", "-t", "commit", "-w", "--stdin")
+	if err != nil {
+		return sha
+	}
+	return strings.TrimSpace(out)
 }
 
 func (s *Service) now() time.Time {
@@ -460,7 +488,7 @@ func (s *Service) Put(ctx context.Context, repoID string, w Write, check func(re
 		if err != nil {
 			return nil, err
 		}
-		commit = strings.TrimSpace(commit)
+		commit = s.signed(ctx, g, strings.TrimSpace(commit))
 		if check != nil {
 			if err := check(ref, tip, commit); err != nil {
 				return nil, err

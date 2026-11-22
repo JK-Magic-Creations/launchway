@@ -36,7 +36,7 @@ func (s *Server) filesService() *files.Service {
 	if s.Forge == nil || s.Forge.Pulls == nil {
 		return nil
 	}
-	return &files.Service{Git: s.Forge.Pulls.Git}
+	return &files.Service{Git: s.Forge.Pulls.Git, Sign: s.Forge.Pulls.Sign}
 }
 
 func (s *Server) filesRepo(w http.ResponseWriter, r *http.Request) (forge.Repository, bool) {

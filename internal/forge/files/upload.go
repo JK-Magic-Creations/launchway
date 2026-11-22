@@ -97,7 +97,7 @@ func (s *Service) PutFiles(ctx context.Context, repoID string, u Upload, check f
 		if err != nil {
 			return nil, err
 		}
-		commit = strings.TrimSpace(commit)
+		commit = s.signed(ctx, g, strings.TrimSpace(commit))
 		if check != nil {
 			if err := check(ref, tip, commit); err != nil {
 				return nil, err
