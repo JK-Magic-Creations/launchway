@@ -46,6 +46,15 @@ func addBrowseTools(srv *mcp.Server, c *mcpCall) {
 		addTool(srv, c, &mcp.Tool{Name: "delete_repository_branch", Annotations: changes("Delete a branch", true, false),
 			Description: "Operators of the repository. Delete a branch (never the default branch); protected branches are for administrators. The answer says which commit it pointed at and how to bring it back. Audited."},
 			mcpCallTimeout, deleteBranchTool)
+		addTool(srv, c, &mcp.Tool{Name: "rename_repository_branch", Annotations: changes("Rename a branch", false, false),
+			Description: "Operators of the repository. Rename a branch (never the default branch: make another the default first). Protected names are for administrators. Pull requests and runs that name the old branch are not moved. Audited."},
+			mcpCallTimeout, renameBranchTool)
+		addTool(srv, c, &mcp.Tool{Name: "create_repository_tag", Annotations: changes("Make a tag", false, false),
+			Description: "Operators of the repository. Make a lightweight tag at a branch, tag or commit (default: the default branch). A tag that exists is never moved. Protected names are for administrators. Audited."},
+			mcpCallTimeout, createTagTool)
+		addTool(srv, c, &mcp.Tool{Name: "delete_repository_tag", Annotations: changes("Delete a tag", true, false),
+			Description: "Operators of the repository. Delete a tag. The answer says which object it pointed at and how to bring it back. Audited."},
+			mcpCallTimeout, deleteTagTool)
 	}
 }
 
@@ -266,5 +275,44 @@ func deleteBranchTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 		return out, errors.New("say which repository (owner and name) and the branch's name")
 	}
 	err := c.apiJSON(ctx, "delete_repository_branch", http.MethodDelete, apiPath("/api/v1/repositories/%s/%s/branches", in.Owner, in.Name)+"?name="+url.QueryEscape(in.Branch), nil, &out)
+	return out, err
+}
+
+type branchRenameIn struct {
+	repositoryIn
+	Branch  string `json:"branch" jsonschema:"the branch's present name"`
+	NewName string `json:"new_name" jsonschema:"the name it gets"`
+}
+
+func renameBranchTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in branchRenameIn) (branchWriteOut, error) {
+	var out branchWriteOut
+	if err := in.check(); err != nil || in.Branch == "" || in.NewName == "" {
+		return out, errors.New("say which repository (owner and name), the branch and its new name")
+	}
+	err := c.apiJSON(ctx, "rename_repository_branch", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/branches/rename", in.Owner, in.Name), renameIn{Name: in.Branch, NewName: in.NewName}, &out)
+	return out, err
+}
+
+type tagWriteIn struct {
+	repositoryIn
+	Tag  string `json:"tag" jsonschema:"the tag name"`
+	From string `json:"from,omitempty" jsonschema:"to make one: a branch, tag or commit to tag (default: the default branch)"`
+}
+
+func createTagTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tagWriteIn) (branchWriteOut, error) {
+	var out branchWriteOut
+	if err := in.check(); err != nil || in.Tag == "" {
+		return out, errors.New("say which repository (owner and name) and the tag's name")
+	}
+	err := c.apiJSON(ctx, "create_repository_tag", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/tags", in.Owner, in.Name), branchIn{Name: in.Tag, From: in.From}, &out)
+	return out, err
+}
+
+func deleteTagTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tagWriteIn) (branchWriteOut, error) {
+	var out branchWriteOut
+	if err := in.check(); err != nil || in.Tag == "" {
+		return out, errors.New("say which repository (owner and name) and the tag's name")
+	}
+	err := c.apiJSON(ctx, "delete_repository_tag", http.MethodDelete, apiPath("/api/v1/repositories/%s/%s/tags", in.Owner, in.Name)+"?name="+url.QueryEscape(in.Tag), nil, &out)
 	return out, err
 }

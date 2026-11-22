@@ -35,8 +35,14 @@ const reposBrowseUsage = `
                                     make a branch (operators; protected names: administrators)
   launchway repos branches delete OWNER/NAME NAME
                                     delete a branch and print how to bring it back
+  launchway repos branches rename OWNER/NAME OLD NEW
+                                    rename a branch (never the default branch)
   launchway repos tags OWNER/NAME [--q TEXT] [--json]
                                     the tags, with an annotated tag's message
+  launchway repos tags create OWNER/NAME NAME [--from REF]
+                                    make a lightweight tag (operators; protected names: administrators)
+  launchway repos tags delete OWNER/NAME NAME
+                                    delete a tag and print how to bring it back
 `
 
 func (cl *client) reposBrowse(cmd string, args []string) error {
@@ -344,6 +350,26 @@ func (cl *client) reposSearch(args []string) error {
 }
 
 func (cl *client) reposBranches(args []string) error {
+	if len(args) > 0 && args[0] == "rename" {
+		fs := flag.NewFlagSet("repos branches rename", flag.ContinueOnError)
+		pos, err := parseArgs(fs, args[1:])
+		if err != nil {
+			return err
+		}
+		if len(pos) != 3 {
+			return usageErr("launchway repos branches rename OWNER/NAME OLD NEW")
+		}
+		base, err := repoPath(pos[0])
+		if err != nil {
+			return err
+		}
+		var out struct{ Name, Was, Commit, Note string }
+		if err := cl.call("POST", base+"/branches/rename", map[string]string{"name": pos[1], "new_name": pos[2]}, &out); err != nil {
+			return err
+		}
+		fmt.Fprintf(cl.out, "Renamed %s to %s (at %.10s).\n%s\n", out.Was, out.Name, out.Commit, out.Note)
+		return nil
+	}
 	if len(args) > 0 && (args[0] == "create" || args[0] == "delete") {
 		verb := args[0]
 		fs := flag.NewFlagSet("repos branches "+verb, flag.ContinueOnError)
@@ -422,6 +448,36 @@ func (cl *client) reposBranches(args []string) error {
 }
 
 func (cl *client) reposTags(args []string) error {
+	if len(args) > 0 && (args[0] == "create" || args[0] == "delete") {
+		verb := args[0]
+		fs := flag.NewFlagSet("repos tags "+verb, flag.ContinueOnError)
+		from := fs.String("from", "", "a branch, tag or commit to tag (default: the default branch)")
+		pos, err := parseArgs(fs, args[1:])
+		if err != nil {
+			return err
+		}
+		if len(pos) != 2 {
+			return usageErr("launchway repos tags %s OWNER/NAME NAME", verb)
+		}
+		base, err := repoPath(pos[0])
+		if err != nil {
+			return err
+		}
+		if verb == "create" {
+			var out struct{ Name, Commit string }
+			if err := cl.call("POST", base+"/tags", map[string]string{"name": pos[1], "from": *from}, &out); err != nil {
+				return err
+			}
+			fmt.Fprintf(cl.out, "Made the tag %s at %.10s.\n", out.Name, out.Commit)
+			return nil
+		}
+		var out struct{ Name, Was, Undo string }
+		if err := cl.call("DELETE", base+"/tags?name="+url.QueryEscape(pos[1]), nil, &out); err != nil {
+			return err
+		}
+		fmt.Fprintf(cl.out, "Deleted the tag %s (it was at %s).\nTo bring it back: %s\n", out.Name, out.Was, out.Undo)
+		return nil
+	}
 	fs := flag.NewFlagSet("repos tags", flag.ContinueOnError)
 	q := fs.String("q", "", "only names containing this text")
 	asJSON := fs.Bool("json", false, "print as JSON")

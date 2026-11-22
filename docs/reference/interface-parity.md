@@ -328,6 +328,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/branches` | `delete_repository_branch` | `repos branches delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/branches` | `list_repository_branches` | `repos branches` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches` | `create_repository_branch` | `repos branches create` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/branches/rename` | `rename_repository_branch` | `repos branches rename` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
@@ -390,7 +391,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/tags` | `delete_repository_tag` | `repos tags delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/tags` | `create_repository_tag` | `repos tags create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
 | `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |

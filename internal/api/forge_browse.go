@@ -31,7 +31,10 @@ func (s *Server) browseRoutes() []route {
 		{"GET " + base + "/branches", repoRead, "", s.listBranches},
 		{"POST " + base + "/branches", repoWrite, "repository.branch_create", s.createBranch},
 		{"DELETE " + base + "/branches", repoWrite, "repository.branch_delete", s.deleteBranch},
+		{"POST " + base + "/branches/rename", repoWrite, "repository.branch_rename", s.renameBranch},
 		{"GET " + base + "/tags", repoRead, "", s.listTags},
+		{"POST " + base + "/tags", repoWrite, "repository.tag_create", s.createTag},
+		{"DELETE " + base + "/tags", repoWrite, "repository.tag_delete", s.deleteTag},
 		{"GET " + base + "/commits/{sha}", repoRead, "", s.getCommit},
 		{"GET " + base + "/diff", repoRead, "", s.repoDiff},
 		{"GET " + base + "/diff/patch", repoRead, "", s.repoPatch},
@@ -248,6 +251,81 @@ func (s *Server) deleteBranch(w http.ResponseWriter, r *http.Request) {
 	s.afterServerCommit(r.Context(), gitCaller{id: identityFrom(r), user: identityFrom(r).User}, repo, "refs/heads/"+name, was, zero)
 	writeJSON(w, http.StatusOK, map[string]any{"name": name, "was": was,
 		"undo": "git push origin " + was + ":refs/heads/" + name + "  (or POST /api/v1/repositories/" + repo.Path + "/branches with {\"name\": \"" + name + "\", \"from\": \"" + was + "\"})"})
+}
+
+// renameIn is a branch rename.
+type renameIn struct {
+	Name    string `json:"name"`
+	NewName string `json:"new_name"`
+}
+
+func (s *Server) renameBranch(w http.ResponseWriter, r *http.Request) {
+	repo, ok := s.writableRepo(w, r)
+	if !ok {
+		return
+	}
+	var in renameIn
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Name == repo.DefaultBranch {
+		writeErr(w, http.StatusConflict, in.Name+" is the default branch: make another branch the default first, then rename this one")
+		return
+	}
+	setAudit(r, repo.Path, in.Name+" to "+in.NewName)
+	sha, err := s.filesService().RenameBranch(r.Context(), repo.ID, in.Name, in.NewName, s.writePolicy(r.Context(), r, repo))
+	if err != nil {
+		s.failFiles(w, err)
+		return
+	}
+	setAudit(r, "", in.Name+" to "+in.NewName+" at "+short(sha))
+	caller := gitCaller{id: identityFrom(r), user: identityFrom(r).User}
+	zero := strings.Repeat("0", len(sha))
+	s.afterServerCommit(r.Context(), caller, repo, "refs/heads/"+in.NewName, zero, sha)
+	s.afterServerCommit(r.Context(), caller, repo, "refs/heads/"+in.Name, sha, zero)
+	writeJSON(w, http.StatusOK, map[string]any{"name": in.NewName, "was": in.Name, "commit": sha,
+		"note": "Pull requests and runs that name " + in.Name + " are not moved; people with a clone rename theirs with git branch -m."})
+}
+
+func (s *Server) createTag(w http.ResponseWriter, r *http.Request) {
+	repo, ok := s.writableRepo(w, r)
+	if !ok {
+		return
+	}
+	var in branchIn
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.From == "" {
+		in.From = defaultRef(r, repo)
+	}
+	setAudit(r, repo.Path, in.Name+" from "+in.From)
+	sha, err := s.filesService().CreateTag(r.Context(), repo.ID, in.Name, in.From, s.writePolicy(r.Context(), r, repo))
+	if err != nil {
+		s.failFiles(w, err)
+		return
+	}
+	setAudit(r, "", in.Name+" at "+short(sha))
+	s.afterServerCommit(r.Context(), gitCaller{id: identityFrom(r), user: identityFrom(r).User}, repo, "refs/tags/"+in.Name, strings.Repeat("0", len(sha)), sha)
+	writeJSON(w, http.StatusCreated, map[string]any{"name": in.Name, "commit": sha})
+}
+
+func (s *Server) deleteTag(w http.ResponseWriter, r *http.Request) {
+	repo, ok := s.writableRepo(w, r)
+	if !ok {
+		return
+	}
+	name := r.URL.Query().Get("name")
+	setAudit(r, repo.Path, name)
+	was, err := s.filesService().DeleteTag(r.Context(), repo.ID, name, s.writePolicy(r.Context(), r, repo))
+	if err != nil {
+		s.failFiles(w, err)
+		return
+	}
+	setAudit(r, "", name+" was "+was)
+	s.afterServerCommit(r.Context(), gitCaller{id: identityFrom(r), user: identityFrom(r).User}, repo, "refs/tags/"+name, was, strings.Repeat("0", len(was)))
+	writeJSON(w, http.StatusOK, map[string]any{"name": name, "was": was,
+		"undo": "git push origin " + was + ":refs/tags/" + name + "  (or POST /api/v1/repositories/" + repo.Path + "/tags with {\"name\": \"" + name + "\", \"from\": \"" + was + "\"})"})
 }
 
 // getCommit is one commit with its parents, and the runs that were started for it.

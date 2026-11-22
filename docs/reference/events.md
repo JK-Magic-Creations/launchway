@@ -408,6 +408,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.file_delete` | `DELETE /api/v1/repositories/{owner}/{name}/files` (also `launchway repos delete-file`): one commit made by the server that removes a file; the detail names the branch, the path and the commit range |
 | `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
 | `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
+| `repository.branch_rename` | `POST /api/v1/repositories/{owner}/{name}/branches/rename` (also `launchway repos branches rename`): a branch renamed; the detail names both names and the commit |
+| `repository.tag_create` | `POST /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags create`): a lightweight tag made by the server; the detail names the tag and the commit |
+| `repository.tag_delete` | `DELETE /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags delete`): a tag removed; the detail names the tag and the object it was at, which brings it back |
 | `archive.import` | `POST /api/v1/repositories/{owner}/{name}/archive/issues` (also `launchway repos import-archive`); the target is the repository, the detail the counts of issues and comments stored |
 | `ssh_key.add` | `POST /api/v1/user/ssh-keys`; the target is the person, the detail the key's name and fingerprint |
 | `ssh_key.delete` | `DELETE /api/v1/user/ssh-keys/{id}` |

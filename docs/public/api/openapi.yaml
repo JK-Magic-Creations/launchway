@@ -9648,6 +9648,44 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.branch_create
+    /api/v1/repositories/{owner}/{name}/branches/rename:
+        post:
+            description: 'Rename a branch: {"name", "new_name"}. Never the default branch (409: make another the default first) and never onto a name that exists (409). The rules of a push apply to both names, so a protected name is for administrators. Pull requests and runs that name the old branch are not moved. Answers {"name", "was", "commit", "note"}.'
+            operationId: post_api_v1_repositories_owner_name_branches_rename
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Rename a branch: {"name", "new_name"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_rename
     /api/v1/repositories/{owner}/{name}/commits:
         get:
             description: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200). {"ref", "items": [{"sha", "subject", "message", "author", "authored_at", "committer", "committed_at", "parents"}]}.'
@@ -12138,6 +12176,43 @@ paths:
             x-launchway-access: repo-admin
             x-launchway-audit: mirror.promote
     /api/v1/repositories/{owner}/{name}/tags:
+        delete:
+            description: 'Delete the tag named by ?name=. Answers {"name", "was", "undo"}: the object it pointed at and the command that brings it back.'
+            operationId: delete_api_v1_repositories_owner_name_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Delete the tag named by ?name=.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.tag_delete
         get:
             description: 'The tags, newest first: {"items": [{"name", "commit", "subject", "annotated", "message", "tagger", "committed_at"}], "total", "truncated"}; ?q= and ?limit= as for branches.'
             operationId: get_api_v1_repositories_owner_name_tags
@@ -12173,6 +12248,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+        post:
+            description: 'Make a lightweight tag: {"name", "from"} where from is a branch, tag or commit (default: the default branch). The rules of a push apply, so a protected name is for administrators; a mirror or archived repository takes none. A tag that exists is never moved (409). Answers 201 {"name", "commit"}.'
+            operationId: post_api_v1_repositories_owner_name_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Make a lightweight tag: {"name", "from"} where from is a branch, tag or commit (default: the default branch).'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.tag_create
     /api/v1/repositories/{owner}/{name}/updates/preview:
         get:
             description: 'What the dependency updater would do now, ignoring its schedule: decisions, each a pull request to open, update in place, close or keep, or one that is queued behind a limit with the reason; security fixes first. Opens nothing: the updater runs as a pipeline step (launchway updates run). Same answer shape as /dependencies.'

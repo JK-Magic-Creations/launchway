@@ -819,3 +819,112 @@ func (s *Service) DeleteBranch(ctx context.Context, repoID, name string, check f
 	})
 	return was, err
 }
+
+func validRefName(name, kind string) error {
+	if err := checkRef(name); err != nil || strings.HasPrefix(name, "refs/") || strings.HasSuffix(name, "/") || strings.HasSuffix(name, ".lock") || strings.Contains(name, "//") {
+		return invalid("%q is not a %s name", name, kind)
+	}
+	return nil
+}
+
+// CreateTag makes a lightweight tag at a commit, branch or tag. A tag that
+// exists is never moved.
+func (s *Service) CreateTag(ctx context.Context, repoID, name, from string, check func(ref, old, next string) error) (string, error) {
+	if err := validRefName(name, "tag"); err != nil {
+		return "", err
+	}
+	var created string
+	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+		ref := "refs/tags/" + name
+		if _, ok := refs[ref]; ok {
+			return nil, fmt.Errorf("%w: the tag %s exists already; a tag is never moved, delete it first", ErrConflict, name)
+		}
+		for r := range refs {
+			if strings.HasPrefix(r, ref+"/") || strings.HasPrefix(ref, r+"/") {
+				return nil, fmt.Errorf("%w: %s clashes with the tag %s", ErrConflict, name, strings.TrimPrefix(r, "refs/tags/"))
+			}
+		}
+		g := runner{dir: scratch, limits: s.Git.Limits(), scratch: true}
+		at := from
+		for _, pre := range []string{"refs/heads/", "refs/tags/"} {
+			if v, ok := refs[pre+from]; ok {
+				at = v
+				break
+			}
+		}
+		sha, err := g.resolve(ctx, at)
+		if err != nil {
+			return nil, err
+		}
+		if check != nil {
+			if err := check(ref, "", sha); err != nil {
+				return nil, err
+			}
+		}
+		created = sha
+		return []storage.RefUpdate{{Name: ref, Old: strings.Repeat("0", len(sha)), New: sha}}, nil
+	})
+	return created, err
+}
+
+// DeleteTag removes a tag and says which object it pointed at.
+func (s *Service) DeleteTag(ctx context.Context, repoID, name string, check func(ref, old, next string) error) (string, error) {
+	if err := validRefName(name, "tag"); err != nil {
+		return "", err
+	}
+	var was string
+	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+		ref := "refs/tags/" + name
+		tip, ok := refs[ref]
+		if !ok {
+			return nil, missing("no tag %s", name)
+		}
+		if check != nil {
+			if err := check(ref, tip, strings.Repeat("0", len(tip))); err != nil {
+				return nil, err
+			}
+		}
+		was = tip
+		return []storage.RefUpdate{{Name: ref, Old: tip, New: strings.Repeat("0", len(tip))}}, nil
+	})
+	return was, err
+}
+
+// RenameBranch moves a branch to a new name in one step: the new name is made
+// at the old tip and the old name removed. Both changes are checked as pushes.
+func (s *Service) RenameBranch(ctx context.Context, repoID, name, to string, check func(ref, old, next string) error) (string, error) {
+	if err := validRefName(to, "branch"); err != nil {
+		return "", err
+	}
+	if err := validRefName(name, "branch"); err != nil {
+		return "", err
+	}
+	var tip string
+	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+		from, dest := "refs/heads/"+name, "refs/heads/"+to
+		sha, ok := refs[from]
+		if !ok {
+			return nil, missing("no branch %s", name)
+		}
+		if _, ok := refs[dest]; ok {
+			return nil, fmt.Errorf("%w: the branch %s exists already", ErrConflict, to)
+		}
+		for r := range refs {
+			if r != from && (strings.HasPrefix(r, dest+"/") || strings.HasPrefix(dest, r+"/")) {
+				return nil, fmt.Errorf("%w: %s clashes with the branch %s", ErrConflict, to, strings.TrimPrefix(r, "refs/heads/"))
+			}
+		}
+		zero := strings.Repeat("0", len(sha))
+		if check != nil {
+			if err := check(dest, "", sha); err != nil {
+				return nil, err
+			}
+			if err := check(from, sha, zero); err != nil {
+				return nil, err
+			}
+		}
+		tip = sha
+		return []storage.RefUpdate{{Name: dest, Old: zero, New: sha}, {Name: from, Old: sha, New: zero}}, nil
+	})
+	return tip, err
+}
