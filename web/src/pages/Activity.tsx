@@ -20,7 +20,7 @@ import { organizeApi } from "../organizeApi";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
 const EventsPage = lazy(() => import("./Events").then((m) => ({ default: m.EventsPage })));
-// The same Sorties arranged by place (Wing, Squadron, pipeline), in the explorer: loaded when asked for.
+// The same Sorties arranged by place (Wing, Squadron, Flight, pipeline), in the explorer: loaded when asked for.
 const RunsExplorer = lazy(() => import("../explorer/RunsExplorer"));
 
 const FILTERS: { key: string; label: string }[] = [

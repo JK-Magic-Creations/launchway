@@ -339,7 +339,7 @@ export function SettingsStandardsPage() {
       <PageHead eyebrow="Settings" title={terms().say("{Standards}")} sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
       <div className="toolbar st-level" role="group" aria-label="Level">
         {LEVELS.map((l) => <button key={l} type="button" className={"chip" + (level === l ? " chip-on" : "")} aria-pressed={level === l} onClick={() => { setLevel(l); setScope(""); }}>{w[l] ?? l}</button>)}
-        {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? "squadron name" : terms().say("{project} name")} /></label>}
+        {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? terms().say("{unit} name") : terms().say("{project} name")} /></label>}
       </div>
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}

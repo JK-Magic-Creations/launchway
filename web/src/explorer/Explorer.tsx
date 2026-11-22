@@ -8,7 +8,8 @@ import { terms } from "../terms";
 import { bool, oneOf, setUrl, useUrlState } from "../urlState";
 import { ago } from "../format";
 import { pinToHome } from "./pin";
-import { buildTree, highlight, itemScore, nodeKey, ROOT, visibleNodes, worst, type Seg, type Tone, type XItem, type XNode } from "./tree";
+import { buildTree, highlight, isFlightSeg, itemScore, nodeKey, ROOT, visibleNodes, worst, type Seg, type Tone, type XItem, type XNode } from "./tree";
+import { FlightCheck, MoveFlightsBar, useFlightSelection, type FlightSelection } from "../components/MoveFlights";
 import "./explorer.css";
 
 // The Explorer: one component for every long list (pipelines, repositories, projects, Sorties). A tree of
@@ -47,6 +48,8 @@ export interface ExplorerProps {
   strip?: boolean;
   /** Extra controls in the toolbar. */
   toolbar?: ReactNode;
+  /** When the items are Flights (the id is the Flight's name): each gets a checkbox and a toolbar offers "Move to Squadron…". onMoved reloads the list. */
+  flights?: { onMoved?: () => void };
   /** Shown above the tree: an explanation of what the folders are. */
   emptyHint?: ReactNode;
   /** Shown when there are no items at all. */
@@ -134,6 +137,7 @@ export function Explorer(p: ExplorerProps) {
     return r.map((x) => x.it);
   }, [inNode, sort, q]);
 
+  const selection = useFlightSelection(list.map((i) => i.id));
   const toggle = useCallback((k: string, on?: boolean) => setOpen((o) => { const n = new Set(o); if (on === undefined ? !n.has(k) : on) n.add(k); else n.delete(k); return n; }), []);
   const openAll = (on: boolean) => setOpen(on ? new Set([...shownTree.keys()].filter((k) => k !== ROOT && shownTree.get(k)!.children.length > 0)) : new Set());
   // While filtering every branch with a match is open, so a match is never hidden.
@@ -150,7 +154,7 @@ export function Explorer(p: ExplorerProps) {
 
   const move = async (it: XItem, folderId: string) => {
     if (!p.onMove) return;
-    const from = it.path.at(-1)?.folderId ?? "";
+    const from = it.path.filter((x) => !isFlightSeg(x)).at(-1)?.folderId ?? "";
     try {
       await p.onMove(it, folderId);
       setLast({ item: it, from });
@@ -254,6 +258,7 @@ export function Explorer(p: ExplorerProps) {
           </div>
           {meMode && <p className="callout" role="note">Arranging for you: collections are yours alone. An item shows in a collection without moving for anyone else; drag it onto a collection, or use <b>Add to collection…</b> on it.</p>}
           {arrangeMode === "everyone" && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
+          {p.flights && <MoveFlightsBar selection={selection} onMoved={p.flights.onMoved} />}
           {last && <p role="status" className="xp-undo"><b>{last.item.name}</b> was moved. <button type="button" className="btn btn-sm" onClick={() => { void p.onMove?.(last.item, last.from); announce("Move undone."); setLast(null); }}>Undo</button></p>}
 
           {list.length === 0 ? (
@@ -263,7 +268,7 @@ export function Explorer(p: ExplorerProps) {
               {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
-            <Results strip={p.strip !== false} results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
+            <Results sel={p.flights ? selection : undefined} strip={p.strip !== false} results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
           )}
         </div>
       </div>
@@ -373,8 +378,8 @@ export function Hl({ text, q }: { text: string; q: string }) {
 
 interface Row { kind: "head" | "items"; title?: string; count?: number; items?: XItem[] }
 
-function Results({ strip, results, list, view, group, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: {
-  strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
+function Results({ sel, strip, results, list, view, group, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: {
+  sel?: FlightSelection; strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState({ w: 0, h: 0, top: 0 });
@@ -394,7 +399,7 @@ function Results({ strip, results, list, view, group, q, now, arranging, meMode,
     if (group === "none") return [{ title: "", items: list }];
     const m = new Map<string, XItem[]>();
     for (const it of list) {
-      const keys = group === "folder" ? [it.path.at(-1)?.label ?? "Not in a folder"] : group === "label" ? (it.labels.length ? it.labels : ["No label"]) : [TONE_WORD[it.tone]];
+      const keys = group === "folder" ? [it.path.filter((x) => !isFlightSeg(x)).at(-1)?.label ?? "Not in a folder"] : group === "label" ? (it.labels.length ? it.labels : ["No label"]) : [TONE_WORD[it.tone]];
       for (const k of keys) m.set(k, [...(m.get(k) ?? []), it]);
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([title, items]) => ({ title, items }));
@@ -421,7 +426,7 @@ function Results({ strip, results, list, view, group, q, now, arranging, meMode,
             <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <span className="faint">({r.count})</span></h2></li>
           ) : (
             <li key={"r" + first + i} className="xp-row" style={{ height: virtual ? rowH : undefined, gridTemplateColumns: view === "cards" ? `repeat(${cols}, 1fr)` : undefined }}>
-              {r.items!.map((it) => view === "cards" ? <Card key={it.id} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
+              {r.items!.map((it) => view === "cards" ? <Card key={it.id} sel={sel} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} sel={sel} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
             </li>
           ))}
         </ul>
@@ -430,7 +435,7 @@ function Results({ strip, results, list, view, group, q, now, arranging, meMode,
   );
 }
 
-interface ItemProps { strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
+interface ItemProps { sel?: FlightSelection; strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
 
 function Strip({ history, name }: { history: Tone[]; name: string }) {
   if (history.length === 0) return <span className="faint small">no results yet</span>;
@@ -439,12 +444,14 @@ function Strip({ history, name }: { history: Tone[]; name: string }) {
   return <span className="trend" role="img" aria-label={text} title={text}>{history.map((t, i) => <i key={i} className={t === "none" ? "skip" : t} />)}</span>;
 }
 
-function Place({ it }: { it: XItem }) { return <span className="faint small xp-place">{it.path.length ? it.path.map((p) => p.label).join(" / ") : "Top level"}</span>; }
+/** Where an item lives in words. The Flight a pipeline belongs to is left out: the card's own name says it. */
+function Place({ it }: { it: XItem }) { const segs = it.path.filter((x) => !isFlightSeg(x)); return <span className="faint small xp-place">{segs.length ? segs.map((p) => p.label).join(" / ") : "Top level"}</span>; }
 
-function Card({ strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
+function Card({ sel, strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <article className={"xp-card " + it.tone} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)} aria-label={it.name}>
       <header>
+        {sel && <FlightCheck selection={sel} name={it.id} />}
         {results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
         <a href={it.href} onClick={onLink} className="xp-name"><Hl text={it.name} q={q} /></a>
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}
@@ -463,10 +470,10 @@ function Card({ strip, results, it, q, now, arranging, meMode, inCollection, onR
   );
 }
 
-function TableRow({ strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
+function TableRow({ sel, strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <div className={"xp-trow " + it.tone} role="group" aria-label={it.name} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)}>
-      <span className="xp-tname">{results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
+      <span className="xp-tname">{sel && <FlightCheck selection={sel} name={it.id} />}{results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
         <a href={it.href} onClick={onLink}><Hl text={it.name} q={q} /></a>
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}</span>
       <Place it={it} />
@@ -480,7 +487,7 @@ function TableRow({ strip, results, it, q, now, arranging, meMode, inCollection,
 }
 
 function MoveForm({ item, folders, onMove, onClose }: { item: XItem; folders: { id: string; path: string }[]; onMove: (it: XItem, folder: string) => void; onClose: () => void }) {
-  const [to, setTo] = useState(item.path.at(-1)?.folderId ?? "");
+  const [to, setTo] = useState(item.path.filter((x) => !isFlightSeg(x)).at(-1)?.folderId ?? "");
   return (
     <form onSubmit={(e) => { e.preventDefault(); onMove(item, to); }} className="xp-dialog">
       <h2 className="h-sm">Move {item.name}</h2>
