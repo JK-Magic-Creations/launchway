@@ -140,6 +140,12 @@
       "rbac": {
         "controlRollouts": true,
         "create": true,
+        "inspect": {
+          "controlWorkloads": true,
+          "logs": true,
+          "read": true,
+          "secrets": true
+        },
         "patchApplications": true,
         "readDeployments": true,
         "readPods": true

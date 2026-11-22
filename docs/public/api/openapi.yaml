@@ -539,7 +539,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/deploy/inspect:
         post:
-            description: A deploy runner waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
+            description: A launch Station waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
             operationId: post_api_runner_v1_deploy_inspect
             responses:
                 "200":
@@ -558,13 +558,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
+            summary: A launch Station waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/inspect-chunk:
         post:
-            description: A deploy runner sends lines of a followed log; the answer says whether to stop (the viewer left).
+            description: A launch Station sends lines of a followed log; the answer says whether to stop (the viewer left).
             operationId: post_api_runner_v1_deploy_inspect_chunk
             responses:
                 "200":
@@ -583,13 +583,13 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner sends lines of a followed log; the answer says whether to stop (the viewer left).
+            summary: A launch Station sends lines of a followed log; the answer says whether to stop (the viewer left).
             tags:
                 - runner
             x-launchway-access: runner
     /api/runner/v1/deploy/inspect-done:
         post:
-            description: A deploy runner answers a request to look into a delivery, or says why it could not.
+            description: A launch Station answers a request to look into a delivery, or says why it could not.
             operationId: post_api_runner_v1_deploy_inspect_done
             responses:
                 "200":
@@ -608,7 +608,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: A deploy runner answers a request to look into a delivery, or says why it could not.
+            summary: A launch Station answers a request to look into a delivery, or says why it could not.
             tags:
                 - runner
             x-launchway-access: runner
@@ -13155,7 +13155,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/deployments/{dep}/inspect:
         get:
-            description: 'The live tree of what a deployment made, read by a deploy runner of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control). Answers 502 when the runner could not look, saying what to turn on, and 504 when none answered. Cached for 3 seconds. The view is recorded in the Logbook once every few minutes per person'
+            description: 'The live tree of what a deployment made, read by a launch Station (runner) of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control). Answers 502 when the Station could not look, saying what to turn on, and 504 when none answered. Cached for 3 seconds. The view is recorded in the Logbook once every few minutes per person'
             operationId: get_api_v1_runs_id_deployments_dep_inspect
             parameters:
                 - in: path
@@ -13185,13 +13185,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The live tree of what a deployment made, read by a deploy runner of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control).'
+            summary: 'The live tree of what a deployment made, read by a launch Station (runner) of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control).'
             tags:
                 - runs
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/deployments/{dep}/inspect/control:
         post:
-            description: 'Pause, resume, restart or scale the delivery''s workload: {action, object, replicas, reason}; the reason is required. Answers result (applied, already_applied), or 409 with why it was not applied. The runner''s outcome is recorded as deployment.control_outcome'
+            description: 'Pause, resume, restart or scale the delivery''s workload: {action, object, replicas, reason}; the reason is required. Answers result (applied, already_applied), or 409 with why it was not applied. The Station''s outcome is recorded as deployment.control_outcome'
             operationId: post_api_v1_runs_id_deployments_dep_inspect_control
             parameters:
                 - in: path
@@ -13229,7 +13229,7 @@ paths:
             x-launchway-audit: deployment.control
     /api/v1/runs/{id}/deployments/{dep}/inspect/logs:
         get:
-            description: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, canary, preview, active) or a Job (job), merged by time, each line tagged with its source and redacted. previous=true, tail (at most 5000). At most 20 pods are read'
+            description: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, Pathfinder (canary), preview, active) or a Job (job), merged by time, each line tagged with its source and redacted. previous=true, tail (at most 5000). At most 20 pods are read'
             operationId: get_api_v1_runs_id_deployments_dep_inspect_logs
             parameters:
                 - in: path
@@ -13259,14 +13259,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, canary, preview, active) or a Job (job), merged by time, each line tagged with its source and redacted.'
+            summary: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, Pathfinder (canary), preview, active) or a Job (job), merged by time, each line tagged with its source and redacted.'
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: deployment.logs
     /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream:
         get:
-            description: 'The same followed, as server-sent events: lines (a JSON list of {t, src, line}) and a last end event. At most 4 streams per person and 24 per Airfield, 8 MiB and 15 minutes each, and the runner stops when nobody reads'
+            description: 'The same followed, as server-sent events: lines (a JSON list of {t, src, line}) and a last end event. At most 4 streams per person and 24 per Airfield, 8 MiB and 15 minutes each, and the Station stops when nobody reads'
             operationId: get_api_v1_runs_id_deployments_dep_inspect_logs_stream
             parameters:
                 - in: path

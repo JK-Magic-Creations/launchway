@@ -263,6 +263,8 @@ var Tables = []Table{
 	{Name: "work_usage", Class: Pending, Stage: "S4", Why: "project name or scope"},
 	{Name: "work_views", Class: Pending, Stage: "S4", Why: "project name or scope"},
 	{Name: "work_watchers", Class: Pending, Stage: "S4", Why: "project name or scope"},
+	{Name: "inspect_requests", Class: Pending, Stage: "S2", Why: "run"},
+	{Name: "inspect_chunks", Class: Pending, Stage: "S2", Why: "request"},
 }
 
 // Lookup returns the registry line of a table.

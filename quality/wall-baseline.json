@@ -1,5 +1,5 @@
 {
-  "comment": "SQL outside internal/store that predates the wall between Bases. Counts may only fall and nothing may join (docs/development/the-wall.md). Lower with `make wall-update`. Regenerated once on 2026-11-21 when the work, organize, registry, toggles, events, releases, Standing orders, graph and fleet branches merged with the wall (797 statements in 97 files before): each brought SQL written before the wall existed. From here counts only fall.",
+  "comment": "SQL outside internal/store that predates the wall between Bases. Counts may only fall and nothing may join (docs/development/the-wall.md). Lower with `make wall-update`. Regenerated once on 2026-11-21 when the work, organize, registry, toggles, events, releases, Standing orders, graph and fleet branches merged with the wall (797 statements in 97 files before): each brought SQL written before the wall existed. From here counts only fall. The rollout page (inspect requests) added its SQL on 2026-11-22: regenerated once more.",
   "sql": {
     "cmd/launchway/registry_start.go": 1,
     "internal/api/forge_ssh.go": 1,
@@ -48,6 +48,7 @@
     "internal/engine/identity.go": 4,
     "internal/engine/images.go": 7,
     "internal/engine/inputs.go": 3,
+    "internal/engine/inspect.go": 24,
     "internal/engine/lanes.go": 20,
     "internal/engine/leasing.go": 1,
     "internal/engine/logappend.go": 4,
@@ -201,6 +202,7 @@
     "internal/engine/flow.go",
     "internal/engine/idempotent.go",
     "internal/engine/identity.go",
+    "internal/engine/inspect.go",
     "internal/engine/inspect_db.go",
     "internal/engine/lanes.go",
     "internal/engine/logappend.go",
