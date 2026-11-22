@@ -237,6 +237,10 @@ launchway repos host test acme-bb
 
 This provider is labelled experimental until it has passed the conformance suite against the live service (`LAUNCHWAY_LIVE_BITBUCKET_TOKEN` and `LAUNCHWAY_LIVE_BITBUCKET_REPO` run that test).
 
+## Not yet: `azuredevops` and `codecommit`
+
+The kinds `azuredevops` and `codecommit` are named in the model, but **no code path offers them**: they have no provider, no strict fake and no conformance run, so a connection of either kind is refused ("a connection to keep code on is of kind ...") and they are not in the kind picker, the command line or the tools. A host kind is either complete or absent in Launchway. Until they are built, keep such a repository as a plain Git address (polled, with a credential reference) or mirror it into Launchway.
+
 ## In the Logbook
 
 `outside_host.create`, `outside_host.delete`, `outside_host.test`, `project.outside_attach`, `project.outside_detach`, `outside_host.status`, `outside_host.comment`, `outside_host.release` and `webhook.outside` name the connection and the person or run. See [Events and the Logbook](../reference/events.md).
