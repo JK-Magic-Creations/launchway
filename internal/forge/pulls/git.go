@@ -18,6 +18,10 @@ type gitRunner struct {
 	limits  gitexec.Limits
 	scratch bool
 	env     []string
+	// sign, when set, signs every commit the runner makes with commit-tree
+	// (see signing.go); a failure leaves the commit unsigned and is noted.
+	sign func(ctx context.Context, payload []byte) ([]byte, error)
+	note func(err error)
 }
 
 func (g gitRunner) spec(args ...string) gitexec.Spec {
@@ -30,7 +34,11 @@ func (g gitRunner) out(ctx context.Context, args ...string) (string, error) {
 	if err != nil {
 		return "", gitErr(args, err)
 	}
-	return strings.TrimSpace(res.Stdout), nil
+	sha := strings.TrimSpace(res.Stdout)
+	if g.sign != nil && len(args) > 0 && args[0] == "commit-tree" {
+		return g.signCommit(ctx, sha), nil
+	}
+	return sha, nil
 }
 
 // raw runs git and returns its output as it is.

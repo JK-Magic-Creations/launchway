@@ -280,7 +280,7 @@ func TestRulesSaySWhatIsMissing(t *testing.T) {
 }
 
 func TestRuleValidationAndCombination(t *testing.T) {
-	for _, r := range []Rule{{Pattern: ""}, {Pattern: "refs/heads/main"}, {Pattern: "main", RequiredApprovals: 99}, {Pattern: "main", ApprovalRole: "viewer"}, {Pattern: "main", RequireSigned: true}} {
+	for _, r := range []Rule{{Pattern: ""}, {Pattern: "refs/heads/main"}, {Pattern: "main", RequiredApprovals: 99}, {Pattern: "main", ApprovalRole: "viewer"}} {
 		r := r
 		if err := r.Validate(); !errors.Is(err, ErrInvalid) {
 			t.Errorf("%+v accepted: %v", r, err)

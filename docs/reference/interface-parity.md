@@ -10,6 +10,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 
 | Operation | MCP tool | CLI command | Terraform | Status |
 |---|---|---|---|---|
+| `GET /.well-known/launchway/signing-key.pub` | `get_signing_installation_key` | `signing installation-key` | — | exempt: the same public key as a plain file at a fixed address, for allowed-signers files and anyone verifying without signing in |
 | `GET /.well-known/oauth-protected-resource/mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v1/artifacts/begin` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `PUT /api/runner/v1/artifacts/chunk` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -401,6 +402,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/signatures` | `verify_signatures` | `signing verify` | `not needed by terraform` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/tags` | `delete_repository_tag` | `repos tags delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
@@ -483,6 +485,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/setup/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `GET /api/v1/signin/test` | — | — | — | exempt: the result of a provider test a person is doing in the browser; the same record is in the audit trail, which every interface reads |
 | `POST /api/v1/signin/test` | — | — | — | exempt: testing an identity provider means a person completing the provider's own sign-in page in a second browser window; an API token or agent cannot and must not do that |
+| `GET /api/v1/signing/installation-key` | `get_signing_installation_key` | `signing installation-key` | `not needed by terraform` | equal |
 | `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
 | `GET /api/v1/standards/coverage` | `get_standards_coverage` | `standards coverage` | `not needed by terraform` | equal |
 | `GET /api/v1/standards/profile` | `get_standards_profile` | `standards profile` | `not needed by terraform` | equal |
@@ -509,6 +512,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/units/{name}/projects` | `create_project_in_unit` | `squadrons add-flight` | `launchway_project with unit (the same object; no change)` | equal |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/user/signing-keys` | `list_signing_keys` | `signing keys list` | `not needed by terraform` | equal |
+| `POST /api/v1/user/signing-keys` | `add_signing_key` | `signing keys add` | `not needed by terraform` | equal |
+| `DELETE /api/v1/user/signing-keys/{id}` | `delete_signing_key` | `signing keys delete` | `not needed by terraform` | equal |
+| `POST /api/v1/user/signing-keys/{id}/revoke` | `revoke_signing_key` | `signing keys revoke` | `not needed by terraform` | equal |
 | `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |
 | `POST /api/v1/user/ssh-keys` | `add_ssh_key` | `keys add` | — | equal |
 | `DELETE /api/v1/user/ssh-keys/{id}` | `delete_ssh_key` | `keys delete` | — | equal |

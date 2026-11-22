@@ -21,6 +21,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge/signing"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -76,6 +77,7 @@ type Server struct {
 	Variables   *settings.VariableService // variables set at levels (schema 29)
 	Releases    ReleaseOptions            // see releases.go
 	Toggles     *togglestore.Service      // feature toggles (schema 41); nil: off
+	Signing     *signing.Service          // verified commits and tags (schema 61, signing.go); nil: off
 	Secrets     *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
 	sealerMu    sync.Mutex
 	sealer      *auth.Sealer // seals the state of sign-ins in progress

@@ -131,7 +131,10 @@ func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Con
 		for i, u := range ups {
 			us[i] = refrules.Update{Name: u.Name, Old: u.Old, New: u.New}
 		}
-		return refrules.Check(pats, us, isAdmin)
+		if err := refrules.Check(pats, us, isAdmin); err != nil {
+			return err
+		}
+		return s.verifiedPush(ctx, c, repo, ups)
 	}
 }
 

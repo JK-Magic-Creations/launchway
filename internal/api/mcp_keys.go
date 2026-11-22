@@ -17,6 +17,7 @@ import (
 
 func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addUserTools(srv, c)
+	addSigningTools(srv, c)
 	addServiceAccountTools(srv, c)
 	addHookTools(srv, c)
 	addDebriefTools(srv, c)

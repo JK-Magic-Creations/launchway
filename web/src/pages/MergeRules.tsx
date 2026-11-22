@@ -8,8 +8,8 @@ const blank = (pattern = ""): MergeRule => ({ pattern, required_approvals: 1, ap
 const METHODS: [keyof PullSettings, string, string][] = [["allow_merge", "merge", "Merge commit"], ["allow_squash", "squash", "Squash and merge"], ["allow_rebase", "rebase", "Rebase and merge"]];
 
 /** Merge rules and pull request settings of one hosted repository. What the server's `actions` list as unavailable is
- * not offered: a person who may not edit sees the values and the reason, and signed commits, which are not checked
- * yet, are a note and not a switch. */
+ * not offered: a person who may not edit sees the values and the reason, and the two rules about verified commits
+ * are switches only where the server has them on. */
 export function MergeRulesPanel({ path }: { path: string }) {
   const [rules, setRules] = useState<MergeRule[] | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
@@ -27,6 +27,7 @@ export function MergeRulesPanel({ path }: { path: string }) {
   const editRules = action("edit_rules")?.available === true;
   const editSettings = action("edit_settings")?.available === true;
   const signed = action("require_signed_commits");
+  const verifiedPush = action("require_verified_push");
   const patch = (i: number, p: Partial<MergeRule>) => { setRules(rules.map((r, j) => (j === i ? { ...r, ...p } : r))); setSaved(""); };
   const saveRule = async (i: number) => {
     setError(null); setSaved("");
@@ -70,8 +71,10 @@ export function MergeRulesPanel({ path }: { path: string }) {
                   onChange={(e) => patch(i, { required_checks_by_path: e.target.value.split(";").map((part) => part.trim()).filter(Boolean).map((part) => { const [paths, check] = part.split("="); return { paths: (paths ?? "").split(",").map((x) => x.trim()).filter(Boolean), check: (check ?? "").trim() }; }) })} />
                 <small>Each entry is <Mono>paths=check</Mono>. A pipeline that its own path filter kept from running never blocks.</small></label>
               <label className="check"><input type="checkbox" checked={r.allow_admin_bypass} onChange={(e) => patch(i, { allow_admin_bypass: e.target.checked })} /> Administrators may merge past the rule, saying why (recorded)</label>
+              {signed?.available && <label className="check"><input type="checkbox" checked={r.require_signed_commits} onChange={(e) => patch(i, { require_signed_commits: e.target.checked })} /> Every commit a merge brings must be verified (signed by a registered key); Launchway signs the merge commit itself</label>}
+              {verifiedPush?.available && <label className="check"><input type="checkbox" checked={!!r.require_verified_push} onChange={(e) => patch(i, { require_verified_push: e.target.checked })} /> Only verified commits may be pushed to it (over HTTPS or SSH, administrators too)</label>}
             </fieldset>
-            {signed && !signed.available && <p className="faint small">Signed commits cannot be required yet. {signed.reason}</p>}
+            {signed && !signed.available && <p className="faint small">Verified commits cannot be required here. {signed.reason}</p>}
             {editRules && <div><button type="submit" className="btn btn-primary btn-sm">Save the rule for {r.pattern}</button>{saved === r.pattern && <span className="faint"> Saved.</span>}</div>}
           </form>
         ))}

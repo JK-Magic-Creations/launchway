@@ -110,6 +110,7 @@ Usage:
   launchway work     items|board|sprints|milestones|agents ...   work tracking: items, boards, sprints, roadmap, agents
                                                 (launchway work, for more)
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
+  launchway signing  keys|verify|installation-key     your signing keys, and whether commits and tags are verified
   launchway attention [--json]                          what needs you: the Tower's rule, for a script or an agent
   launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
@@ -204,6 +205,8 @@ func main() {
 		err = cmdKindAlias(os.Args[1])(args)
 	case "repos", "keys", "pr", "encryption":
 		err = cmdHosting(os.Args[1], args)
+	case "signing":
+		err = cmdSigning(args)
 	case "fleet":
 		err = cmdFleet(args)
 	case "deps":

@@ -404,10 +404,13 @@ func (s *Server) ruleActions(id *identity, repo forge.Repository) []engine.Actio
 	acts := []engine.Action{
 		{Name: "edit_rules", Available: admin, Who: "admin"},
 		{Name: "edit_settings", Available: admin, Who: "admin"},
-		{Name: "require_signed_commits", Available: false, Who: "admin", Reason: "signed commits are not checked yet, so a rule that asks for them is refused"},
+		{Name: "require_signed_commits", Available: admin && s.Signing != nil, Who: "admin"},
+		{Name: "require_verified_push", Available: admin && s.Signing != nil, Who: "admin"},
 	}
 	if !admin {
-		acts[0].Reason, acts[1].Reason = why, why
+		acts[0].Reason, acts[1].Reason, acts[2].Reason, acts[3].Reason = why, why, why, why
+	} else if s.Signing == nil {
+		acts[2].Reason, acts[3].Reason = "verified commits are off on this server", "verified commits are off on this server"
 	}
 	return acts
 }

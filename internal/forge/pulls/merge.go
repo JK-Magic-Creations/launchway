@@ -190,10 +190,21 @@ func (s *Service) land(ctx context.Context, repoID string, p PullRequest, in Mer
 			if s.beforeCommit != nil {
 				s.beforeCommit()
 			}
+			signedOnly := g.covered && g.rule.RequireSigned
+			if signedOnly {
+				if err := s.requireVerified(ctx, gr, base, head, "", g.method); err != nil {
+					return nil, err
+				}
+			}
 			var err error
 			merged, err = s.makeMerge(ctx, gr, p, g.method, base, head, in, g.set)
 			if err != nil {
 				return nil, err
+			}
+			if signedOnly {
+				if err := s.requireVerified(ctx, gr, base, head, merged, g.method); err != nil {
+					return nil, err
+				}
 			}
 			ups = []storage.RefUpdate{{Name: tgt, Old: base, New: merged}}
 			if g.deleteBranch && s.canDeleteSource(ctx, repoID, p) {
