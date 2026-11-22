@@ -472,7 +472,6 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 			w.noImageLine = j.Line
 		}
 	}
-	each := map[string]bool{}
 	var mx *Matrix
 	if j.Matrix != nil {
 		mx = j.Matrix
@@ -483,36 +482,7 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 			imgNode = f
 		}
 	}
-	_ = each
-	hasSvc := len(j.Services) > 0
-	if hasSvc {
-		c := ymap()
-		c.Style = yaml.FlowStyle
-		yadd(c, "image", imgNode)
-		cn := name
-		yadd(w.cont, cn, c)
-		for _, s := range j.Services {
-			sc := ymap()
-			yadd(sc, "image", ystr(s.Image))
-			yadd(sc, "service", ybool(true))
-			if len(s.Env) > 0 {
-				yadd(sc, "env", ykv(s.Env))
-			}
-			if len(s.Command) > 0 {
-				yadd(sc, "command", ystrs(s.Command))
-			}
-			if s.Port != "" {
-				r := ymap()
-				r.Style = yaml.FlowStyle
-				yadd(r, "tcp", yint(atoi(s.Port)))
-				yadd(sc, "ready", r)
-			}
-			yadd(w.cont, name+"-"+stepName(s.Name), sc)
-		}
-		yadd(m, "container", ystr(name))
-	} else {
-		yadd(m, "image", imgNode)
-	}
+	w.containerNode(m, j, name, imgNode)
 	if n := w.needs(j, needsPrev); n != nil {
 		yadd(m, "needs", n)
 	}
@@ -542,60 +512,10 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 		}
 		yadd(m, "env", env)
 	}
-	if len(j.SecretEnv) > 0 {
-		sm := ymap()
-		for _, kv := range j.SecretEnv {
-			key := kv.V
-			if k := w.o.SecretKeys[kv.V]; k != "" {
-				key = k
-			}
-			r := ymap()
-			r.Style = yaml.FlowStyle
-			yadd(r, "store", ystr(w.o.SecretStore))
-			yadd(r, "key", ystr(key))
-			yadd(r, "field", ystr("value"))
-			yadd(sm, kv.K, r)
-			if !w.secs[kv.V] {
-				w.secs[kv.V] = true
-				ln := j.SecretLine[kv.V]
-				if ln == 0 {
-					ln = j.Line
-				}
-				f := w.note("write.secret", ln, kv.V, w.o.SecretStore)
-				f.Fix, f.Name = "secret", kv.V
-			}
-		}
-		yadd(m, "secrets", sm)
-	}
-	script, pre := w.script(j)
-	for _, p := range pre {
-		_ = p
-	}
+	w.secretsNode(m, j)
+	script, _ := w.script(j)
 	yadd(m, "run", ystr(script))
-	if len(j.Caches) > 0 {
-		cl := yseq(false)
-		for _, c := range j.Caches {
-			cm := ymap()
-			cm.Style = yaml.FlowStyle
-			yadd(cm, "name", ystr(stepName(c.Name)))
-			yadd(cm, "paths", ystrs(trimSlashes(c.Paths)))
-			k := ymap()
-			k.Style = yaml.FlowStyle
-			if len(c.KeyFiles) > 0 {
-				yadd(k, "files", ystrs(c.KeyFiles))
-			}
-			if c.KeyText != "" || len(c.KeyFiles) == 0 {
-				t := c.KeyText
-				if t == "" {
-					t = stepName(c.Name)
-				}
-				yadd(k, "text", ystr(t))
-			}
-			yadd(cm, "key", k)
-			cl.Content = append(cl.Content, cm)
-		}
-		yadd(m, "cache", cl)
-	}
+	w.cachesNode(m, j)
 	if len(j.Tests)+len(j.Coverage)+len(j.Findings) > 0 {
 		r := ymap()
 		if len(j.Tests) > 0 {
@@ -609,45 +529,144 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 		}
 		yadd(m, "reports", r)
 	}
-	if len(j.Artifacts) > 0 {
-		al := yseq(false)
-		for _, a := range j.Artifacts {
-			am := ymap()
-			am.Style = yaml.FlowStyle
-			yadd(am, "name", ystr(a.Name))
-			yadd(am, "paths", ystrs(trimSlashes(a.Paths)))
-			if a.Retain != "" {
-				yadd(am, "retain", ystr(a.Retain))
-			}
-			if a.When != "" && a.When != "success" {
-				yadd(am, "when", ystr(a.When))
-			}
-			al.Content = append(al.Content, am)
-		}
-		yadd(m, "artifacts", al)
-	}
-	if len(j.Fetch) > 0 {
-		fl := yseq(false)
-		for _, f := range w.expandFetch(j) {
-			from := w.producer(j, f.Name)
-			if from == "" {
-				w.note("write.fetch.unknown", j.Line, f.Name)
-				continue
-			}
-			fm := ymap()
-			fm.Style = yaml.FlowStyle
-			yadd(fm, "from", ystr(from))
-			yadd(fm, "name", ystr(f.Name))
-			if f.Into != "" {
-				yadd(fm, "into", ystr(f.Into))
-			}
-			fl.Content = append(fl.Content, fm)
-		}
-		if len(fl.Content) > 0 {
-			yadd(m, "fetch", fl)
-		}
-	}
+	w.artifactsNode(m, j)
+	w.fetchNode(m, j)
 	w.addStep(steps, name, m, j.NoteLines)
+}
+
+// containerNode writes the job's image, or a container group when it has services.
+func (w *writer) containerNode(m *yaml.Node, j *Job, name string, imgNode *yaml.Node) {
+	if len(j.Services) > 0 {
+		c := ymap()
+		c.Style = yaml.FlowStyle
+		yadd(c, "image", imgNode)
+		cn := name
+		yadd(w.cont, cn, c)
+		for _, s := range j.Services {
+			sc := ymap()
+			yadd(sc, "image", ystr(s.Image))
+			yadd(sc, "service", ybool(true))
+			if len(s.Env) > 0 {
+				yadd(sc, "env", ykv(s.Env))
+			}
+			if len(s.Command) > 0 {
+				yadd(sc, "command", ystrs(s.Command))
+			}
+			if s.Port != "" {
+				r := ymap()
+				r.Style = yaml.FlowStyle
+				yadd(r, "tcp", yint(atoi(s.Port)))
+				yadd(sc, "ready", r)
+			}
+			yadd(w.cont, name+"-"+stepName(s.Name), sc)
+		}
+		yadd(m, "container", ystr(name))
+	} else {
+		yadd(m, "image", imgNode)
+	}
+}
+
+func (w *writer) secretsNode(m *yaml.Node, j *Job) {
+	if len(j.SecretEnv) == 0 {
+		return
+	}
+	sm := ymap()
+	for _, kv := range j.SecretEnv {
+		key := kv.V
+		if k := w.o.SecretKeys[kv.V]; k != "" {
+			key = k
+		}
+		r := ymap()
+		r.Style = yaml.FlowStyle
+		yadd(r, "store", ystr(w.o.SecretStore))
+		yadd(r, "key", ystr(key))
+		yadd(r, "field", ystr("value"))
+		yadd(sm, kv.K, r)
+		if !w.secs[kv.V] {
+			w.secs[kv.V] = true
+			ln := j.SecretLine[kv.V]
+			if ln == 0 {
+				ln = j.Line
+			}
+			f := w.note("write.secret", ln, kv.V, w.o.SecretStore)
+			f.Fix, f.Name = "secret", kv.V
+		}
+	}
+	yadd(m, "secrets", sm)
+}
+
+func (w *writer) cachesNode(m *yaml.Node, j *Job) {
+	if len(j.Caches) == 0 {
+		return
+	}
+	cl := yseq(false)
+	for _, c := range j.Caches {
+		cm := ymap()
+		cm.Style = yaml.FlowStyle
+		yadd(cm, "name", ystr(stepName(c.Name)))
+		yadd(cm, "paths", ystrs(trimSlashes(c.Paths)))
+		k := ymap()
+		k.Style = yaml.FlowStyle
+		if len(c.KeyFiles) > 0 {
+			yadd(k, "files", ystrs(c.KeyFiles))
+		}
+		if c.KeyText != "" || len(c.KeyFiles) == 0 {
+			t := c.KeyText
+			if t == "" {
+				t = stepName(c.Name)
+			}
+			yadd(k, "text", ystr(t))
+		}
+		yadd(cm, "key", k)
+		cl.Content = append(cl.Content, cm)
+	}
+	yadd(m, "cache", cl)
+}
+
+func (w *writer) artifactsNode(m *yaml.Node, j *Job) {
+	if len(j.Artifacts) == 0 {
+		return
+	}
+	al := yseq(false)
+	for _, a := range j.Artifacts {
+		am := ymap()
+		am.Style = yaml.FlowStyle
+		yadd(am, "name", ystr(a.Name))
+		yadd(am, "paths", ystrs(trimSlashes(a.Paths)))
+		if a.Retain != "" {
+			yadd(am, "retain", ystr(a.Retain))
+		}
+		if a.When != "" && a.When != "success" {
+			yadd(am, "when", ystr(a.When))
+		}
+		al.Content = append(al.Content, am)
+	}
+	yadd(m, "artifacts", al)
+}
+
+func (w *writer) fetchNode(m *yaml.Node, j *Job) {
+	if len(j.Fetch) == 0 {
+		return
+	}
+	fl := yseq(false)
+	for _, f := range w.expandFetch(j) {
+		from := w.producer(j, f.Name)
+		if from == "" {
+			w.note("write.fetch.unknown", j.Line, f.Name)
+			continue
+		}
+		fm := ymap()
+		fm.Style = yaml.FlowStyle
+		yadd(fm, "from", ystr(from))
+		yadd(fm, "name", ystr(f.Name))
+		if f.Into != "" {
+			yadd(fm, "into", ystr(f.Into))
+		}
+		fl.Content = append(fl.Content, fm)
+	}
+	if len(fl.Content) > 0 {
+		yadd(m, "fetch", fl)
+	}
 }
 
 func atoi(s string) int {

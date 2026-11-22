@@ -37,47 +37,55 @@ func detectTemplate(j *Job) {
 	key := strings.Join(cmds, " && ")
 	img := j.Image
 	ver := versionOf(img)
-	set := func(name, vkey string) {
+	if t := templateFor(img, key, ver); t != nil {
+		j.Template = t
+	}
+}
+
+// templateFor picks the template whose image and command line match, or nil.
+func templateFor(img, key, ver string) *TemplateUse {
+	set := func(name, vkey string) *TemplateUse {
 		t := &TemplateUse{Name: name}
 		if ver != "" && vkey != "" {
 			t.With = append(t.With, KV{vkey, ver})
 		}
-		j.Template = t
+		return t
 	}
 	switch {
 	case strings.Contains(img, "/golang:"):
 		switch key {
 		case "go test ./...":
-			set("go-test", "go_version")
+			return set("go-test", "go_version")
 		case "go test -race ./...":
-			set("go-test", "go_version")
-			j.Template.With = append(j.Template.With, KV{"race", "true"})
+			t := set("go-test", "go_version")
+			t.With = append(t.With, KV{"race", "true"})
+			return t
 		case "go build ./...":
-			set("go-build", "go_version")
+			return set("go-build", "go_version")
 		}
 	case strings.Contains(img, "/node:"):
 		switch key {
 		case "npm ci && npm test", "npm ci && npm run test", "npm install && npm test":
-			set("node-test", "node_version")
+			return set("node-test", "node_version")
 		case "npm ci && npm run build":
-			set("node-build", "node_version")
+			return set("node-build", "node_version")
 		}
 	case strings.Contains(img, "/python:"):
 		switch key {
 		case "pip install -r requirements.txt && pytest", "pytest", "pip install -r requirements.txt && python -m pytest":
-			set("python-test", "python_version")
+			return set("python-test", "python_version")
 		}
 	case strings.Contains(img, "/eclipse-temurin:"), strings.Contains(img, "/maven:"):
 		switch key {
 		case "mvn -B verify", "mvn verify":
 			if v := strings.TrimSuffix(strings.TrimPrefix(versionOf(img), ""), "-jdk"); v != "" {
-				t := &TemplateUse{Name: "maven-verify", With: []KV{{"java_version", v}}}
-				j.Template = t
+				return &TemplateUse{Name: "maven-verify", With: []KV{{"java_version", v}}}
 			}
 		case "./gradlew build", "gradle build":
-			set("gradle-build", "java_version")
+			return set("gradle-build", "java_version")
 		}
 	}
+	return nil
 }
 
 // betterJavaImage swaps a bare JDK image for one that has the build tool the

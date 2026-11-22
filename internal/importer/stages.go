@@ -411,59 +411,8 @@ func (s *stagesReader) job(id string, n *N, byStage map[string][]string, anyMR, 
 		}
 		own[k] = val
 	})
-	// needs
-	if nd := n.Get("needs"); nd != nil {
-		for _, it := range nd.List() {
-			name := it.Str()
-			if it.IsMap() {
-				name = it.Get("job").Str()
-				if it.Has("project") || it.Has("pipeline") {
-					s.rp.note("stages.needs.other", it.Line, name+" of another project")
-					continue
-				}
-				if b, _ := it.Get("optional").Bool(); b {
-					s.rp.note("stages.needs.other", it.Line, name+" (optional)")
-				}
-			}
-			if name != "" {
-				j.Needs = append(j.Needs, name)
-			}
-		}
-		if nd.IsScalar() {
-			j.Needs = append(j.Needs, nd.Val)
-		}
-		s.rp.note("stages.needs", n.LineOf("needs"))
-	}
-	// image
-	if im := def("image"); im != nil {
-		if im.IsMap() {
-			j.Image = im.Get("name").Str()
-			if im.Has("entrypoint") {
-				s.rp.note("stages.image.entrypoint", im.LineOf("entrypoint"), strings.Join(im.Get("entrypoint").Strings(), " "))
-			}
-		} else {
-			j.Image = im.Str()
-		}
-		if n.Has("image") {
-			s.rp.note("stages.image", im.Line)
-		}
-	}
-	for _, sv := range def("services").List() {
-		svc := Service{}
-		if sv.IsMap() {
-			svc.Image = sv.Get("name").Str()
-			svc.Name = sv.Get("alias").Str()
-			svc.Command = sv.Get("command").Strings()
-			sv.Get("variables").Pairs(func(k string, v *N, _ int) { svc.Env = append(svc.Env, KV{k, v.Str()}) })
-		} else {
-			svc.Image = sv.Str()
-		}
-		if svc.Name == "" {
-			svc.Name = lastSegment(svc.Image)
-		}
-		j.Services = append(j.Services, svc)
-		s.rp.note("stages.services", sv.Line, svc.Name)
-	}
+	s.jobNeeds(j, n)
+	s.jobImage(j, n, def)
 	n.Get("variables").Pairs(func(k string, v *N, line int) {
 		val := v.Str()
 		if v.IsMap() {
@@ -497,49 +446,7 @@ func (s *stagesReader) job(id string, n *N, byStage map[string][]string, anyMR, 
 	}
 	// conditions
 	s.conditions(j, n, anyMR, anySched)
-	// when
-	switch w := n.Get("when").Str(); w {
-	case "always":
-		j.When.Upstream = "always"
-		s.rp.note("stages.when", n.LineOf("when"))
-	case "on_failure":
-		j.When.Upstream = "failed"
-		s.rp.note("stages.when", n.LineOf("when"))
-	case "manual":
-		j.Approval = &Approval{Message: "Run " + id + "?"}
-		s.rp.note("stages.rules.manual", n.LineOf("when"))
-	case "delayed":
-		s.rp.note("stages.when.delayed", n.LineOf("when"))
-	}
-	if v := n.Get("allow_failure"); v != nil {
-		if v.IsMap() {
-			s.rp.note("stages.allow_failure.codes", n.LineOf("allow_failure"))
-		} else if b, _ := v.Bool(); b {
-			j.AllowFail = true
-			s.rp.note("stages.allow_failure", n.LineOf("allow_failure"))
-		}
-	}
-	if r := def("retry"); r != nil {
-		maxRetry := r.Str()
-		if r.IsMap() {
-			maxRetry = r.Get("max").Str()
-			s.rp.note("stages.retry.when", r.Line)
-		}
-		j.Retry, _ = strconv.Atoi(maxRetry)
-		if n.Has("retry") {
-			s.rp.note("stages.retry", r.Line)
-		}
-	}
-	if t := def("timeout"); t != nil {
-		if d, ok := naturalDuration(t.Str()); ok {
-			j.Timeout = d
-			if n.Has("timeout") {
-				s.rp.note("stages.timeout", t.Line)
-			}
-		} else {
-			s.rp.note("stages.timeout.text", t.Line, t.Str())
-		}
-	}
+	s.jobLimits(j, id, n, def)
 	if p := n.Get("parallel"); p != nil {
 		s.parallel(j, p)
 	}
@@ -584,6 +491,110 @@ func (s *stagesReader) job(id string, n *N, byStage map[string][]string, anyMR, 
 		detectTemplate(j)
 	}
 	return j
+}
+
+func (s *stagesReader) jobNeeds(j *Job, n *N) {
+	if nd := n.Get("needs"); nd != nil {
+		for _, it := range nd.List() {
+			name := it.Str()
+			if it.IsMap() {
+				name = it.Get("job").Str()
+				if it.Has("project") || it.Has("pipeline") {
+					s.rp.note("stages.needs.other", it.Line, name+" of another project")
+					continue
+				}
+				if b, _ := it.Get("optional").Bool(); b {
+					s.rp.note("stages.needs.other", it.Line, name+" (optional)")
+				}
+			}
+			if name != "" {
+				j.Needs = append(j.Needs, name)
+			}
+		}
+		if nd.IsScalar() {
+			j.Needs = append(j.Needs, nd.Val)
+		}
+		s.rp.note("stages.needs", n.LineOf("needs"))
+	}
+}
+
+// jobImage reads the job's image and service containers, falling back to the defaults.
+func (s *stagesReader) jobImage(j *Job, n *N, def func(string) *N) {
+	if im := def("image"); im != nil {
+		if im.IsMap() {
+			j.Image = im.Get("name").Str()
+			if im.Has("entrypoint") {
+				s.rp.note("stages.image.entrypoint", im.LineOf("entrypoint"), strings.Join(im.Get("entrypoint").Strings(), " "))
+			}
+		} else {
+			j.Image = im.Str()
+		}
+		if n.Has("image") {
+			s.rp.note("stages.image", im.Line)
+		}
+	}
+	for _, sv := range def("services").List() {
+		svc := Service{}
+		if sv.IsMap() {
+			svc.Image = sv.Get("name").Str()
+			svc.Name = sv.Get("alias").Str()
+			svc.Command = sv.Get("command").Strings()
+			sv.Get("variables").Pairs(func(k string, v *N, _ int) { svc.Env = append(svc.Env, KV{k, v.Str()}) })
+		} else {
+			svc.Image = sv.Str()
+		}
+		if svc.Name == "" {
+			svc.Name = lastSegment(svc.Image)
+		}
+		j.Services = append(j.Services, svc)
+		s.rp.note("stages.services", sv.Line, svc.Name)
+	}
+}
+
+// jobLimits reads when, allow_failure, retry and timeout.
+func (s *stagesReader) jobLimits(j *Job, id string, n *N, def func(string) *N) {
+	switch w := n.Get("when").Str(); w {
+	case "always":
+		j.When.Upstream = "always"
+		s.rp.note("stages.when", n.LineOf("when"))
+	case "on_failure":
+		j.When.Upstream = "failed"
+		s.rp.note("stages.when", n.LineOf("when"))
+	case "manual":
+		j.Approval = &Approval{Message: "Run " + id + "?"}
+		s.rp.note("stages.rules.manual", n.LineOf("when"))
+	case "delayed":
+		s.rp.note("stages.when.delayed", n.LineOf("when"))
+	}
+	if v := n.Get("allow_failure"); v != nil {
+		if v.IsMap() {
+			s.rp.note("stages.allow_failure.codes", n.LineOf("allow_failure"))
+		} else if b, _ := v.Bool(); b {
+			j.AllowFail = true
+			s.rp.note("stages.allow_failure", n.LineOf("allow_failure"))
+		}
+	}
+	if r := def("retry"); r != nil {
+		maxRetry := r.Str()
+		if r.IsMap() {
+			maxRetry = r.Get("max").Str()
+			s.rp.note("stages.retry.when", r.Line)
+		}
+		j.Retry, _ = strconv.Atoi(maxRetry)
+		if n.Has("retry") {
+			s.rp.note("stages.retry", r.Line)
+		}
+	}
+	if t := def("timeout"); t != nil {
+		if d, ok := naturalDuration(t.Str()); ok {
+			j.Timeout = d
+			if n.Has("timeout") {
+				s.rp.note("stages.timeout", t.Line)
+			}
+		} else {
+			s.rp.note("stages.timeout.text", t.Line, t.Str())
+		}
+	}
 }
 
 func lastSegment(img string) string {

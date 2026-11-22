@@ -293,24 +293,7 @@ func (r *jobsReader) steps(j *Job, steps *N, dir string, depth int) {
 		case "checkout":
 			r.rp.note("jobs.step.checkout", line)
 		case "run":
-			cmd, name := cfg.Str(), ""
-			var env []KV
-			d := dir
-			if cfg.IsMap() {
-				cmd, name = cfg.Get("command").Str(), cfg.Get("name").Str()
-				cfg.Get("environment").Pairs(func(k string, v *N, _ int) { env = append(env, KV{k, v.Str()}) })
-				if wd := cfg.Get("working_directory").Str(); wd != "" {
-					d = wd
-				}
-				for _, k := range []string{"when", "background", "no_output_timeout"} {
-					if cfg.Has(k) && (k != "when" || cfg.Get(k).Str() != "always") {
-						r.rp.note("jobs.step.run_when", cfg.LineOf(k), k)
-					}
-				}
-			}
-			cmd = r.params(cmd, cfg, line)
-			j.Steps = append(j.Steps, Step{Name: name, Run: cmd, Dir: d, Env: env, Line: line})
-			r.rp.note("jobs.step.run", line)
+			r.runStep(j, cfg, dir, line)
 		case "restore_cache", "save_cache":
 			r.cache(j, kind, cfg, line)
 		case "store_artifacts":
@@ -325,18 +308,7 @@ func (r *jobsReader) steps(j *Job, steps *N, dir string, depth int) {
 				r.rp.note("jobs.step.artifacts", line)
 			}
 		case "persist_to_workspace":
-			name := "workspace-" + j.ID
-			root := cfg.Get("root").Str()
-			var paths []string
-			for _, p := range cfg.Get("paths").Strings() {
-				if root != "" && root != "." {
-					p = strings.TrimSuffix(root, "/") + "/" + p
-				}
-				paths = append(paths, p)
-			}
-			j.Artifacts = append(j.Artifacts, Artifact{Name: sanitizeArtifact(name), Paths: paths, When: "success"})
-			r.arts[j.ID] = sanitizeArtifact(name)
-			r.rp.note("jobs.step.workspace", line, sanitizeArtifact(name))
+			r.persistStep(j, cfg, line)
 		case "attach_workspace":
 			j.Fetch = append(j.Fetch, Fetch{Name: "*", Into: strings.TrimPrefix(cfg.Get("at").Str(), "./")})
 			r.rp.note("jobs.step.workspace", line, "workspace-<job>")
@@ -408,4 +380,40 @@ func (r *jobsReader) cache(j *Job, kind string, cfg *N, line int) {
 	}
 	j.Caches = append(j.Caches, c)
 	r.rp.note("jobs.step.cache", line, strings.Join(shown, ", "))
+}
+
+func (r *jobsReader) runStep(j *Job, cfg *N, dir string, line int) {
+	cmd, name := cfg.Str(), ""
+	var env []KV
+	d := dir
+	if cfg.IsMap() {
+		cmd, name = cfg.Get("command").Str(), cfg.Get("name").Str()
+		cfg.Get("environment").Pairs(func(k string, v *N, _ int) { env = append(env, KV{k, v.Str()}) })
+		if wd := cfg.Get("working_directory").Str(); wd != "" {
+			d = wd
+		}
+		for _, k := range []string{"when", "background", "no_output_timeout"} {
+			if cfg.Has(k) && (k != "when" || cfg.Get(k).Str() != "always") {
+				r.rp.note("jobs.step.run_when", cfg.LineOf(k), k)
+			}
+		}
+	}
+	cmd = r.params(cmd, cfg, line)
+	j.Steps = append(j.Steps, Step{Name: name, Run: cmd, Dir: d, Env: env, Line: line})
+	r.rp.note("jobs.step.run", line)
+}
+
+func (r *jobsReader) persistStep(j *Job, cfg *N, line int) {
+	name := "workspace-" + j.ID
+	root := cfg.Get("root").Str()
+	var paths []string
+	for _, p := range cfg.Get("paths").Strings() {
+		if root != "" && root != "." {
+			p = strings.TrimSuffix(root, "/") + "/" + p
+		}
+		paths = append(paths, p)
+	}
+	j.Artifacts = append(j.Artifacts, Artifact{Name: sanitizeArtifact(name), Paths: paths, When: "success"})
+	r.arts[j.ID] = sanitizeArtifact(name)
+	r.rp.note("jobs.step.workspace", line, sanitizeArtifact(name))
 }

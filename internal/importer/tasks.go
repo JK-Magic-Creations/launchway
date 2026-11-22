@@ -530,46 +530,9 @@ func (r *tasksReader) task(j *Job, s *N, line int) {
 	in := s.Get("inputs")
 	switch base {
 	case "NodeTool", "UsePythonVersion", "GoTool", "JavaToolInstaller", "UseNode", "UseDotNet":
-		ver := firstNonEmpty(in.Get("versionSpec").Str(), in.Get("version").Str(), in.Get("versionSpec").Str())
-		ver = strings.TrimSuffix(strings.Trim(ver, "^~>= "), ".x")
-		fmtImg := map[string]string{"NodeTool": "docker.io/library/node:%s", "UseNode": "docker.io/library/node:%s", "UsePythonVersion": "docker.io/library/python:%s", "GoTool": "docker.io/library/golang:%s", "JavaToolInstaller": "docker.io/library/eclipse-temurin:%s-jdk", "UseDotNet": "mcr.microsoft.com/dotnet/sdk:%s"}[base]
-		if ver != "" && j.Image == "" {
-			j.Image = strings.Replace(fmtImg, "%s", ver, 1)
-			r.rp.note("tasks.step.tool", line, j.Image)
-			return
-		}
-		r.rp.note("tasks.step.task", line, task).Step = j.ID
+		r.toolTask(j, base, task, in, line)
 	case "Cache":
-		c := Cache{}
-		for _, part := range strings.Split(in.Get("key").Str(), "|") {
-			part = strings.TrimSpace(part)
-			if part != "" && part != "$(Agent.OS)" && !strings.HasPrefix(part, "$(") && (strings.Contains(part, "/") || strings.Contains(part, ".")) {
-				c.KeyFiles = append(c.KeyFiles, part)
-			}
-		}
-		var shown []string
-		p := in.Get("path").Str()
-		if p != "" {
-			if np, ok := HomeCachePath(p); ok {
-				k, v := splitExport(homeCacheExports[p])
-				j.Env = appendOnce(j.Env, KV{k, v})
-				p = np
-			}
-			if strings.HasPrefix(p, "~") || strings.HasPrefix(p, "/") || strings.HasPrefix(p, "..") || strings.HasPrefix(p, "$(") {
-				r.rp.note("tasks.step.cache_path", line, p)
-				return
-			}
-			c.Paths, shown = []string{p}, []string{p}
-		}
-		if len(c.Paths) == 0 {
-			return
-		}
-		c.Name = nameFromPath(p)
-		if len(c.KeyFiles) == 0 {
-			c.KeyText = c.Name
-		}
-		j.Caches = append(j.Caches, c)
-		r.rp.note("tasks.step.cache", line, strings.Join(shown, ", "))
+		r.cacheTask(j, in, line)
 	case "PublishBuildArtifacts", "PublishPipelineArtifact":
 		p := firstNonEmpty(in.Get("PathtoPublish").Str(), in.Get("targetPath").Str(), in.Get("path").Str())
 		p = strings.TrimPrefix(p, "$(Build.ArtifactStagingDirectory)")
@@ -597,39 +560,88 @@ func (r *tasksReader) task(j *Job, s *N, line int) {
 			r.rp.note("tasks.step.tests", line)
 		}
 	case "Docker":
-		cmd := firstNonEmpty(in.Get("command").Str(), "buildAndPush")
-		if cmd == "login" || cmd == "logout" {
-			r.rp.note("tasks.step.task", line, task+" "+cmd)
-			return
-		}
-		ib := &ImageBuild{Context: firstNonEmpty(in.Get("buildContext").Str(), "."), File: in.Get("Dockerfile").Str(), Repo: in.Get("repository").Str(), Push: cmd == "push" || cmd == "buildAndPush"}
-		ib.Context = strings.TrimPrefix(strings.ReplaceAll(ib.Context, "$(Build.SourcesDirectory)", "."), "./")
-		if ib.Context == "" {
-			ib.Context = "."
-		}
-		ib.File = strings.TrimPrefix(strings.ReplaceAll(ib.File, "$(Build.SourcesDirectory)/", ""), "./")
-		for _, t := range strings.Fields(strings.ReplaceAll(in.Get("tags").Str(), "\n", " ")) {
-			if t == "$(Build.SourceVersion)" {
-				t = "{sha}"
-			}
-			if strings.Contains(t, "$(") {
-				continue
-			}
-			ib.Tags = append(ib.Tags, t)
-		}
-		if ib.Repo == "" || strings.Contains(ib.Repo, "$(") {
-			ib.Repo = "app"
-		}
-		if ib.Push && len(ib.Tags) == 0 {
-			ib.Tags = []string{"latest"}
-		}
-		j.Image2 = ib
-		if ib.Push {
-			j.Delivers, j.DeliverWhy = true, "it pushes an image"
-		}
-		r.rp.note("tasks.step.docker", line)
+		r.dockerTask(j, task, in, line)
 	default:
 		r.rp.note("tasks.step.task", line, task).Step = j.ID
 		j.Steps = append(j.Steps, Step{Run: "echo 'NEEDS A PERSON: the task " + strings.ReplaceAll(task, "'", "") + " ran here'; exit 1", Line: line})
 	}
+}
+
+func (r *tasksReader) toolTask(j *Job, base, task string, in *N, line int) {
+	ver := firstNonEmpty(in.Get("versionSpec").Str(), in.Get("version").Str(), in.Get("versionSpec").Str())
+	ver = strings.TrimSuffix(strings.Trim(ver, "^~>= "), ".x")
+	fmtImg := map[string]string{"NodeTool": "docker.io/library/node:%s", "UseNode": "docker.io/library/node:%s", "UsePythonVersion": "docker.io/library/python:%s", "GoTool": "docker.io/library/golang:%s", "JavaToolInstaller": "docker.io/library/eclipse-temurin:%s-jdk", "UseDotNet": "mcr.microsoft.com/dotnet/sdk:%s"}[base]
+	if ver != "" && j.Image == "" {
+		j.Image = strings.Replace(fmtImg, "%s", ver, 1)
+		r.rp.note("tasks.step.tool", line, j.Image)
+		return
+	}
+	r.rp.note("tasks.step.task", line, task).Step = j.ID
+}
+
+func (r *tasksReader) cacheTask(j *Job, in *N, line int) {
+	c := Cache{}
+	for _, part := range strings.Split(in.Get("key").Str(), "|") {
+		part = strings.TrimSpace(part)
+		if part != "" && part != "$(Agent.OS)" && !strings.HasPrefix(part, "$(") && (strings.Contains(part, "/") || strings.Contains(part, ".")) {
+			c.KeyFiles = append(c.KeyFiles, part)
+		}
+	}
+	var shown []string
+	p := in.Get("path").Str()
+	if p != "" {
+		if np, ok := HomeCachePath(p); ok {
+			k, v := splitExport(homeCacheExports[p])
+			j.Env = appendOnce(j.Env, KV{k, v})
+			p = np
+		}
+		if strings.HasPrefix(p, "~") || strings.HasPrefix(p, "/") || strings.HasPrefix(p, "..") || strings.HasPrefix(p, "$(") {
+			r.rp.note("tasks.step.cache_path", line, p)
+			return
+		}
+		c.Paths, shown = []string{p}, []string{p}
+	}
+	if len(c.Paths) == 0 {
+		return
+	}
+	c.Name = nameFromPath(p)
+	if len(c.KeyFiles) == 0 {
+		c.KeyText = c.Name
+	}
+	j.Caches = append(j.Caches, c)
+	r.rp.note("tasks.step.cache", line, strings.Join(shown, ", "))
+}
+
+func (r *tasksReader) dockerTask(j *Job, task string, in *N, line int) {
+	cmd := firstNonEmpty(in.Get("command").Str(), "buildAndPush")
+	if cmd == "login" || cmd == "logout" {
+		r.rp.note("tasks.step.task", line, task+" "+cmd)
+		return
+	}
+	ib := &ImageBuild{Context: firstNonEmpty(in.Get("buildContext").Str(), "."), File: in.Get("Dockerfile").Str(), Repo: in.Get("repository").Str(), Push: cmd == "push" || cmd == "buildAndPush"}
+	ib.Context = strings.TrimPrefix(strings.ReplaceAll(ib.Context, "$(Build.SourcesDirectory)", "."), "./")
+	if ib.Context == "" {
+		ib.Context = "."
+	}
+	ib.File = strings.TrimPrefix(strings.ReplaceAll(ib.File, "$(Build.SourcesDirectory)/", ""), "./")
+	for _, t := range strings.Fields(strings.ReplaceAll(in.Get("tags").Str(), "\n", " ")) {
+		if t == "$(Build.SourceVersion)" {
+			t = "{sha}"
+		}
+		if strings.Contains(t, "$(") {
+			continue
+		}
+		ib.Tags = append(ib.Tags, t)
+	}
+	if ib.Repo == "" || strings.Contains(ib.Repo, "$(") {
+		ib.Repo = "app"
+	}
+	if ib.Push && len(ib.Tags) == 0 {
+		ib.Tags = []string{"latest"}
+	}
+	j.Image2 = ib
+	if ib.Push {
+		j.Delivers, j.DeliverWhy = true, "it pushes an image"
+	}
+	r.rp.note("tasks.step.docker", line)
 }
