@@ -467,6 +467,17 @@ func (r *reader) permissions(n *yaml.Node, m *Manifest) {
 // step may write, or "". It is a check of the text; the Station also refuses
 // a path that is a link (see SafeJoin).
 func CheckWorkspacePath(p string) string {
+	if msg := checkRel(p); msg != "" {
+		return msg
+	}
+	if p == ".git" || strings.HasPrefix(p, ".git/") || p == ".launchway" || strings.HasPrefix(p, ".launchway/") {
+		return fmt.Sprintf("%q is kept by Launchway and cannot be listed as writable", p)
+	}
+	return ""
+}
+
+// checkRel checks the shape of a relative path: no pattern, no .. part.
+func checkRel(p string) string {
 	switch {
 	case p == "":
 		return "a path is empty"
@@ -482,9 +493,6 @@ func CheckWorkspacePath(p string) string {
 		case "", ".", "..":
 			return fmt.Sprintf("%q has a %q part; write a plain relative path such as dist or build/output", clip(p, 60), part)
 		}
-	}
-	if p == ".git" || strings.HasPrefix(p, ".git/") || p == ".launchway" || strings.HasPrefix(p, ".launchway/") {
-		return fmt.Sprintf("%q is kept by Launchway and cannot be listed as writable", p)
 	}
 	return ""
 }

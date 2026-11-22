@@ -348,7 +348,7 @@ type Result struct {
 	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
 	// Notes are the summary and annotations a custom step wrote (schema 68).
 	Notes []StepNote `json:"notes,omitempty"`
-	Usage  *StepUsage    `json:"usage,omitempty"`  // what the attempt used (schema 54)
+	Usage *StepUsage `json:"usage,omitempty"` // what the attempt used (schema 54)
 }
 
 // CollectedReports are the report files a runner found after a step, and

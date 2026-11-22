@@ -17,7 +17,7 @@ import (
 // caller opening what it got with os.Root, or mounting it read-write only
 // after this check and with the workspace itself held read-only.
 func SafeJoin(root, rel string) (string, error) {
-	if msg := CheckWorkspacePath(rel); msg != "" {
+	if msg := checkRel(rel); msg != "" {
 		return "", errors.New(msg)
 	}
 	if rel == "." {

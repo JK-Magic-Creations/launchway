@@ -119,7 +119,7 @@ type Template struct {
 	Containers  []*Container
 	Steps       []*Step // uses steps included; steps whose if is false are marked
 	Outputs     []templateOutput
-	Loops       []*Loop // the template's loops, expanded; IDs without the use's prefix
+	Loops       []*Loop           // the template's loops, expanded; IDs without the use's prefix
 	Custom      *stepkit.Manifest // set when the template is a custom step's (see custom.go)
 }
 
@@ -509,7 +509,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	if out.UsesSchemaCustomSteps() {
 		out.Requires = max(out.Requires, SchemaCustomSteps)
 	}
-	out.requireFlow()                              // likewise for the flow control keys a template's step uses
+	out.requireFlow() // likewise for the flow control keys a template's step uses
 	if ps := checkFetchLoops(out, true); len(ps) > 0 {
 		return nil, ps
 	}

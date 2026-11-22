@@ -10,8 +10,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -41,7 +39,6 @@ type customDone struct {
 	notes   []engine.StepNote
 	sarif   []byte
 	junit   []byte
-	masks   []string
 }
 
 func ioDirFor(stepID string) string {
@@ -72,57 +69,20 @@ func (r *Runner) customStart(job *engine.Job, ws string, env map[string]string, 
 			return nil, fmt.Errorf("the step %s was given the secret %s, which its manifest does not name; refusing to run it", c.Name, name)
 		}
 	}
-	cr := &customRun{job: job, step: c, rel: ioDirFor(job.StepID), inside: r.Exec.WorkspacePath(ws)}
-	var err error
-	if cr.host, err = stepkit.SafeJoin(ws, cr.rel); err != nil {
-		return nil, fmt.Errorf("preparing the step's directory: %w", err)
-	}
-	if err := os.RemoveAll(cr.host); err != nil {
-		return nil, err
-	}
-	for _, d := range []string{"", stepkit.ArtifactsDir, stepkit.ReportsDir} {
-		p := filepath.Join(cr.host, d)
-		if err := os.MkdirAll(p, 0o777); err != nil {
-			return nil, err
-		}
-		_ = os.Chmod(p, 0o777)
-	}
 	secretEnv := map[string]string{}
 	for _, n := range c.Secrets {
 		if _, ok := secretValues[stepkit.EnvPart(n)]; ok {
 			secretEnv[n] = stepkit.EnvPart(n)
 		}
 	}
-	m := &stepkit.Manifest{Name: c.Name}
-	for _, k := range stepkit.SortedKeys(c.InputTypes) {
-		m.Inputs = append(m.Inputs, &stepkit.Input{Name: k, Type: c.InputTypes[k]})
-	}
-	doc, err := m.BuildInputs(c.Values, secretEnv)
+	cr := &customRun{job: job, step: c, rel: ioDirFor(job.StepID), inside: r.Exec.WorkspacePath(ws)}
+	io, err := stepkit.PrepareIO(ws, cr.rel, cr.inside, c.Name, c.InputTypes, c.Values, secretEnv)
 	if err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(cr.host, stepkit.InputsFile), doc, 0o644); err != nil {
-		return nil, err
-	}
-	for _, f := range []string{stepkit.OutputsFile, stepkit.ResultsFile} {
-		p := filepath.Join(cr.host, f)
-		if err := os.WriteFile(p, nil, 0o666); err != nil {
-			return nil, err
-		}
-		_ = os.Chmod(p, 0o666)
-	}
-	in := cr.inside + "/" + cr.rel
-	env[stepkit.EnvContract] = fmt.Sprint(stepkit.ContractVersion)
-	env[stepkit.EnvName] = c.Name
-	env[stepkit.EnvInputs] = in + "/" + stepkit.InputsFile
-	env[stepkit.EnvOutputs] = in + "/" + stepkit.OutputsFile
-	env[stepkit.EnvResults] = in + "/" + stepkit.ResultsFile
-	env[stepkit.EnvArtifacts] = in + "/" + stepkit.ArtifactsDir
-	env[stepkit.EnvReports] = in + "/" + stepkit.ReportsDir
-	for _, k := range stepkit.SortedKeys(c.Values) {
-		if t := c.InputTypes[k]; t == stepkit.TypeString || t == stepkit.TypeNumber || t == stepkit.TypeBoolean {
-			env[stepkit.EnvWithPrefix+stepkit.EnvPart(k)] = c.Values[k]
-		}
+	cr.host = io.Host
+	for k, v := range io.Env(c.Name, c.InputTypes, c.Values) {
+		env[k] = v
 	}
 	return cr, nil
 }
@@ -174,93 +134,18 @@ func (cr *customRun) finish(ctx context.Context, r *Runner, spec executor.Spec, 
 			}
 		}
 	}
-	results := stepkit.ParseResults(strings.NewReader(string(resData)))
-	for _, n := range results.Notes {
-		sys("Step results: %s", n)
+	in := stepkit.Interpret(cr.step.Name, cr.step.OutputTypes, code, outData, resData, mask.Mask)
+	for _, l := range in.Log {
+		sys("%s", l)
 	}
-	outcome := stepkit.OutcomeOf(code)
-	om := stepkit.OutputsManifest(cr.step.Name, cr.step.OutputTypes)
-	outs, problems := om.ReadOutputs(outData, outcome == stepkit.OutcomePassed || outcome == stepkit.OutcomeAllowed)
-	d.outputs = outs.Values
-	// Everything recorded from here on hides what the step asked to hide, and its secret outputs.
-	hide := append(results.Masks(), outs.Secrets...)
-	d.masks = hide
-	masker := mask
-	if len(hide) > 0 {
-		extra := map[string]string{}
-		for i, h := range hide {
-			extra[fmt.Sprint("mask", i)] = h
-		}
-		masker, _ = secrets.NewMasker(extra)
-		if mask != nil {
-			// both: the run's secrets, and the step's
-			masker = chain(mask, masker)
-		}
+	d.code, d.why, d.outputs, d.sarif, d.junit = in.Code, in.Why, in.Values, in.SARIF, in.JUnit
+	for _, n := range in.Notes {
+		d.notes = append(d.notes, engine.StepNote{Kind: n.Kind, Level: n.Level, File: n.File, Line: n.Line, Text: n.Text})
 	}
-	for k, v := range d.outputs {
-		d.outputs[k] = masker.Mask(v)
-	}
-	switch outcome {
-	case stepkit.OutcomePassed, stepkit.OutcomeAllowed:
-		if len(problems) > 0 {
-			d.code, d.why = 1, "the step broke the contract: "+problems[0]
-			for _, p := range problems {
-				sys("Step contract: %s", p)
-			}
-		}
-		if outcome == stepkit.OutcomeAllowed && d.code == stepkit.ExitFailedAllowed {
-			sys("The step reported a failure it allows (exit %d); the step passes with a warning", code)
-			d.code = 0
-			d.notes = append(d.notes, engine.StepNote{Kind: engine.NoteSummary, Text: "**Passed with a warning:** the step exited " + fmt.Sprint(code) + ", failed but allowed."})
-		}
-	case stepkit.OutcomeNeedsPerson:
-		why := masker.Mask(results.NeedsPerson())
-		if why == "" {
-			why = "the step did not say why"
-		}
-		d.code, d.why = code, "the step needs a person: "+why
-	case stepkit.OutcomeCrashed:
-		d.why = fmt.Sprintf("the step crashed (exit code %d)", code)
-	default:
-		for _, p := range problems {
-			sys("Step contract: %s", p)
-		}
-	}
-	// Summaries and annotations, as the server keeps them.
-	var summaryBytes int
-	for _, it := range results.Items {
-		if len(d.notes) >= engine.MaxStepNotes {
-			sys("Step results: more than %d summaries and annotations; the rest were not kept", engine.MaxStepNotes)
-			break
-		}
-		switch it.Kind {
-		case stepkit.KindSummary:
-			if summaryBytes += len(it.Markdown); summaryBytes <= engine.MaxStepNoteBytes {
-				d.notes = append(d.notes, engine.StepNote{Kind: engine.NoteSummary, Text: masker.Mask(it.Markdown)})
-			}
-		case stepkit.KindAnnotation:
-			d.notes = append(d.notes, engine.StepNote{Kind: engine.NoteAnnotation, Level: it.Level, File: it.File, Line: it.Line, Text: masker.Mask(it.Message)})
-		}
-	}
-	mk := func(rs []stepkit.Result) []stepkit.Result {
-		out := make([]stepkit.Result, len(rs))
-		for i, x := range rs {
-			x.Message = masker.Mask(x.Message)
-			out[i] = x
-		}
-		return out
-	}
-	d.sarif = stepkit.SARIF(cr.step.Name, mk(results.Of(stepkit.KindFinding)))
-	d.junit = stepkit.JUnit(cr.step.Name, mk(results.Of(stepkit.KindTest)))
-	if len(d.notes) > 0 || d.sarif != nil || d.junit != nil {
-		sys("Step results: %d summaries and annotations, %d findings, %d tests", len(d.notes), len(results.Of(stepkit.KindFinding)), len(results.Of(stepkit.KindTest)))
+	if len(d.notes) > 0 || in.Findings > 0 || in.Tests > 0 {
+		sys("Step results: %d summaries and annotations, %d findings, %d tests", len(d.notes), in.Findings, in.Tests)
 	}
 	return d
-}
-
-// chain masks with two maskers, one after the other.
-func chain(a, b *secrets.Masker) *secrets.Masker {
-	return secrets.Chain(a, b)
 }
 
 // withCustom wraps a step's report collector so that the findings and test
