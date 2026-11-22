@@ -867,7 +867,7 @@ func (c *cmd) deployJob(stepID, leaseID string) (*Job, error) {
 	deployDef := def
 	if def.IsRestore() {
 		trig := st.Trigger
-		return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
+		return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
 			Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source,
 			Deploy: c.restoreJob(def, s)}, nil
 	}
@@ -908,7 +908,7 @@ func (c *cmd) deployJob(stepID, leaseID string) (*Job, error) {
 			dj.AbortFirst, dj.Rollout, dj.PodHash = true, deployDef.Rollout, row.hash
 		}
 	}
-	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
+	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
 		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source, Deploy: dj}, nil
 }
 

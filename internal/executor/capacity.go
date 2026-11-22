@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -48,7 +49,11 @@ var quotaText = regexp.MustCompile(`requested: (.*?), used: (.*?), limited: (.*)
 
 // quotaWait turns the API server's "exceeded quota" refusal into a wait for
 // room, or into a failure when the pod asks for more than the whole quota.
-func quotaWait(pod string, err error) error {
+//
+// held is what the run's own pods in the namespace already hold, or nil when
+// it is not known; the sentence says it, so that a wait for room is never
+// mistaken for a step that ran out of memory.
+func quotaWait(pod string, err error, held *runHold) error {
 	msg := err.Error()
 	if i := strings.Index(msg, "exceeded quota"); i >= 0 {
 		msg = msg[i:]
@@ -73,13 +78,81 @@ func quotaWait(pod string, err error) error {
 		sum := u.DeepCopy()
 		sum.Add(r)
 		if sum.Cmp(l) > 0 {
-			short = append(short, fmt.Sprintf("%s of %s already requested, and this step needs %s more", describeAmount(name, u), describe(name, l), describeAmount(name, r)))
+			need := sum.DeepCopy()
+			need.Sub(l)
+			short = append(short, fmt.Sprintf("%s the namespace allows %s and %s is reserved in all; this pod needs %s more, so %s must be released first",
+				held.sentence(name), describe(name, l), describeAmount(name, u), describeAmount(name, r), describeAmount(name, need)))
 		}
 	}
 	if len(short) == 0 {
 		short = []string{msg}
 	}
-	return &CapacityError{Code: WaitQuotaFull, Reason: "waiting for room in the step namespace: " + strings.Join(short, "; ")}
+	return &CapacityError{Code: WaitQuotaFull, Reason: "waiting for room in the step namespace: " + strings.Join(short, "; ") +
+		". This is what is reserved by the pods, not what a step uses: nothing ran out of memory"}
+}
+
+// runHold is what one run's pods in the step namespace have reserved: per
+// quota resource name (such as requests.memory), the sum, and how many pods
+// hold any of it.
+type runHold struct {
+	total map[string]resource.Quantity
+	pods  map[string]int
+}
+
+// holdOf adds up what the pods ask of the quota. A pod that has ended holds
+// nothing. Each pod counts what its containers ask for, as the quota does.
+func holdOf(pods []corev1.Pod) *runHold {
+	h := &runHold{total: map[string]resource.Quantity{}, pods: map[string]int{}}
+	for _, p := range pods {
+		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		add := func(name string, q resource.Quantity) {
+			t := h.total[name]
+			t.Add(q)
+			h.total[name] = t
+			h.pods[name]++
+		}
+		add("pods", *resource.NewQuantity(1, resource.DecimalSI))
+		sums := map[string]resource.Quantity{}
+		for _, c := range p.Spec.Containers {
+			for r, q := range c.Resources.Requests {
+				t := sums["requests."+string(r)]
+				t.Add(q)
+				sums["requests."+string(r)] = t
+			}
+			for r, q := range c.Resources.Limits {
+				t := sums["limits."+string(r)]
+				t.Add(q)
+				sums["limits."+string(r)] = t
+			}
+		}
+		for name, q := range sums {
+			add(name, q)
+			if strings.HasPrefix(name, "requests.") { // a quota may name the request without the prefix
+				add(strings.TrimPrefix(name, "requests."), q)
+			}
+		}
+	}
+	return h
+}
+
+// sentence says what the run holds of a quota resource ("this run has
+// reserved 8448Mi memory across 2 pods;"), or that it is not known.
+func (h *runHold) sentence(name string) string {
+	if h == nil {
+		return "the run's own share is not known:"
+	}
+	q, ok := h.total[name]
+	if !ok || q.IsZero() {
+		return "this run holds none of it;"
+	}
+	n := h.pods[name]
+	pl := "pods"
+	if n == 1 {
+		pl = "pod"
+	}
+	return fmt.Sprintf("this run has reserved %s across %d %s;", describeAmount(name, q), n, pl)
 }
 
 // quantities reads "requests.cpu=500m,requests.memory=1Gi".

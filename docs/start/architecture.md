@@ -63,7 +63,7 @@ sequenceDiagram
 
 - A Sortie records everything it was started with: the commit, the pipeline text, the library
   commits, the inputs, and who or what started it.
-- A step whose Station stops sending heartbeats for the lease period (30 seconds by default) is
+- A step whose Station stops sending heartbeats for the lease period (90 seconds by default; a heartbeat goes every 15 seconds, so a slow server costs the step nothing) is
   marked lost and queued again; a step is never recorded as finished twice.
 - All of a Sortie's steps go to the Station that took its first step, because they share a workspace.
   If that Station disappears for three lease periods, another Station takes the Sortie over in a fresh

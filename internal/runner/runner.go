@@ -332,14 +332,14 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		stopWith(true, false)
 	}
 
-	// Heartbeats and log flushing run alongside the step.
+	// Heartbeats and log flushing run alongside the step, each in its own
+	// goroutine: a log upload that is slow (a server under load) must never
+	// delay a heartbeat, which is what keeps the step's lease.
 	bgDone := make(chan struct{})
 	bgStop := make(chan struct{})
 	go func() {
 		defer close(bgDone)
-		hb := time.NewTicker(max(job.LeaseTTL.D()/3, time.Second))
 		fl := time.NewTicker(logFlushEvery)
-		defer hb.Stop()
 		defer fl.Stop()
 		for {
 			select {
@@ -347,20 +347,21 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 				return
 			case <-fl.C:
 				flush()
-			case <-hb.C:
-				c, err := r.Client.Heartbeat(report, job.LeaseID)
-				switch {
-				case errors.Is(err, ErrLeaseLost):
-					log.Warn("lease lost; stopping the step")
-					stopWith(false, true)
-				case err != nil:
-					log.Warn("heartbeat failed", "err", err)
-				case c:
-					sys("The run was canceled; stopping.")
-					stopWith(true, false)
-				}
 			}
 		}
+	}()
+	beatDone := make(chan struct{})
+	go func() {
+		defer close(beatDone)
+		keepLease(report, bgStop, r.Client, job, log, func(c bool, lost bool) {
+			if lost {
+				log.Warn("lease lost; stopping the step")
+				stopWith(false, true)
+			} else if c {
+				sys("The run was canceled; stopping.")
+				stopWith(true, false)
+			}
+		})
 	}()
 
 	res, collect := r.runStep(ctx, job, sys, logs.add)
@@ -377,6 +378,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	close(bgStop)
 	<-bgDone
+	<-beatDone
 	mu.Lock()
 	wasRequested, wasLost = requested, lost
 	mu.Unlock()
@@ -391,6 +393,10 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	flush()
 	if wasLost {
+		// The server has given the step away, and the retry may go to another
+		// runner: give back what this attempt held, so that it cannot hold
+		// the run's room while the retry waits for it.
+		r.releaseRun(log, job.RunID)
 		return
 	}
 	if !sp.Done() {
@@ -412,6 +418,19 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		}
 		log.Warn("reporting the result failed; retrying", "err", err)
 		time.Sleep(time.Duration(i+1) * time.Second)
+	}
+}
+
+// releaseRun has the executor give back what it holds for the run, if it can.
+func (r *Runner) releaseRun(log *slog.Logger, runID string) {
+	rel, ok := r.Exec.(executor.Releaser)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := rel.ReleaseRun(ctx, runID); err != nil {
+		log.Warn("could not release what the lost step held; the reaper will", "err", err)
 	}
 }
 
