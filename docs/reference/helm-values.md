@@ -475,7 +475,7 @@ namespace is affected.
 |---|---|---|
 | Servers | the servers themselves, runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the servers themselves (a project that watches a repository this installation hosts), the database, HTTPS to public addresses (`networkPolicy.server.publicHTTPS`), `networkPolicy.server.extraEgress`. Not the Kubernetes API, not private addresses |
 | Runners | nothing | DNS, the servers, the Kubernetes API (to start step pods), `networkPolicy.runner.extraEgress` |
-| Step pods | nothing | DNS, the Launchway server, and HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
+| Step pods | nothing | DNS and the Launchway server. With `networkPolicy.steps.internet: true` (an opt-in), also HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
 | Bundled database | the servers | nothing |
 
 Git hosts, an identity provider, webhook receivers and an S3 endpoint are not assumed: add them to
@@ -490,7 +490,8 @@ If your cluster's API server has a public address, add it to `networkPolicy.step
 | `networkPolicy.dns.enabled` | boolean | `true` | Allow DNS for every pod above |
 | `networkPolicy.dns.namespace` | string | `kube-system` | The namespace of the cluster DNS |
 | `networkPolicy.dns.podLabels.k8s-app` | string | `kube-dns` | The label of the DNS pods; add others with `--set` |
-| `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, any source; without one, only runners, step pods and the deploy runner (port-forward still works) |
+| `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, only the release namespace, the Gateway's namespace and `proxyNamespaces`; without one, only runners, step pods and the deploy runner (port-forward still works) |
+| `networkPolicy.server.proxyNamespaces` | list | `[]` | Namespaces whose pods may reach the server port (your ingress controller's), used when `ingressFrom` is empty and an Ingress is on; a Gateway's namespace comes from `httpRoute.parentRefs`. The release namespace is always admitted. Never "any source" |
 | `networkPolicy.server.publicHTTPS.enabled` | boolean | `true` | HTTPS from the servers to public addresses: the dependency updater's version sources and vulnerability data, chat services and webhook receivers of notifications, other Git servers. Private, link-local, carrier-grade NAT and loopback addresses are never included, and the installation's own egress allow-list narrows it further. `false`: only what `extraEgress` adds |
 | `networkPolicy.server.publicHTTPS.ports` | list | `[443]` | The ports of that rule |
 | `networkPolicy.server.publicHTTPS.exceptCIDRs` | list | `[]` | More ranges the servers may not reach over HTTPS |
@@ -503,7 +504,7 @@ If your cluster's API server has a public address, add it to `networkPolicy.step
 | `networkPolicy.runner.extraEgress` | list | `[]` | More egress rules for runner pods: Git hosts, secret stores, BuildKit, registries |
 | `networkPolicy.deployRunner.extraEgress` | list | `[]` | More egress rules for the deploy runner pods: Argo CD, GitOps repositories, metrics |
 | `networkPolicy.steps.enabled` | boolean | `true` | The step pod policy, in `runner.kubernetes.namespace` |
-| `networkPolicy.steps.internet` | boolean | `true` | Let step pods reach the internet on `ports`, except the ranges above. `false`: only DNS and the server, plus `extraEgress` |
+| `networkPolicy.steps.internet` | boolean | `false` | OPT IN: let step pods reach the internet on `ports`, except the ranges above. `false` (the default): only DNS and the server, plus `extraEgress`. Builds that download dependencies need `true` |
 | `networkPolicy.steps.ports` | list | `[80, 443]` | |
 | `networkPolicy.steps.exceptCIDRs` | list | `[]` | More ranges step pods may not reach |
 | `networkPolicy.steps.allowIPv6` | boolean | `false` | Allow IPv6 internet (except unique-local and link-local) |

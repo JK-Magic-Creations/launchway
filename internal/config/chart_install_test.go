@@ -75,7 +75,25 @@ func TestChartDefaultsAreSecure(t *testing.T) {
 
 // Step pods may reach neither the database, the Kubernetes API nor the cloud metadata service.
 func TestChartStepPodPolicy(t *testing.T) {
+	// By default step pods may reach DNS and the Launchway server only: the internet is an explicit opt-in.
 	for _, d := range chartDocs(t, helmDefault(t)) {
+		if d["kind"] == "NetworkPolicy" && strings.HasSuffix(name(d), "-steps") {
+			for _, rule := range dig(d, "spec", "egress").([]any) {
+				if to, ok := dig(rule, "to").([]any); ok {
+					for _, peer := range to {
+						if _, isBlock := dig(peer, "ipBlock").(map[string]any); isBlock {
+							t.Error("by default step pods must not be given any address range: the internet is an opt-in")
+						}
+					}
+				}
+			}
+		}
+	}
+	optIn, err := helmRender(t, "--set", "networkPolicy.steps.internet=true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range chartDocs(t, optIn) {
 		if d["kind"] != "NetworkPolicy" || !strings.HasSuffix(name(d), "-steps") {
 			continue
 		}

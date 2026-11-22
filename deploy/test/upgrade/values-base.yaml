@@ -1,0 +1,30 @@
+# TEST ONLY. The values an installation of the previous release is made with, and the SAME file is used
+# for every upgrade: only the image tag changes (__TAG__).
+image:
+  repository: localhost/launchway
+  tag: "__TAG__"
+  pullPolicy: Never
+postgresql:
+  enabled: true
+config:
+  extraConfig:
+    auth:
+      mode: none
+      allow_anonymous: true
+    egress:
+      allow: [git-server]
+    forge:
+      hosting: true
+      ssh:
+        listen: ":2222"
+  projects:
+    - name: demo
+      repo: http://git-server:8080/demo.git
+      branch: main
+      poll: 10s
+runner:
+  kubernetes:
+    namespace: __STEPNS__
+    createNamespace: true
+ssh:
+  enabled: true

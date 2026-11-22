@@ -22,6 +22,10 @@
 {{- $e := .Values.encryption -}}
 - name: LAUNCHWAY_CHART_REVISION
   value: {{ index .Chart.Annotations "launchway.io/chart-revision" | quote }}
+{{- if .Values.networkPolicy.enabled }}
+- name: LAUNCHWAY_NETWORK_POLICY
+  value: chart
+{{- end }}
 {{- with include "launchway.ignoredValues" . }}
 - name: LAUNCHWAY_IGNORED_VALUES
   value: {{ . | quote }}

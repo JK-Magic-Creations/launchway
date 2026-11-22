@@ -16,3 +16,11 @@
 WARNING: {{ splitList "," . | len }} value(s) in your values file were ignored by this chart version ({{ $.Chart.Version }}, app {{ $.Chart.AppVersion }}): {{ replace "," ", " . }}.
 A typo, or a setting for a newer chart. Set strictValues: true to make this an error while you edit.
 {{- end }}
+
+{{- if .Values.networkPolicy.enabled }}
+
+NETWORK POLICY: this chart's NetworkPolicies are on (default deny; see the values comments for the model). If your network plugin has its own policy objects that add to Kubernetes ones (CiliumNetworkPolicy, Calico's GlobalNetworkPolicy), let ONE system be the authority: set networkPolicy.enabled: false, or run `launchway doctor network --namespace {{ .Release.Namespace }}`.
+{{- if and (or .Values.ingress.enabled .Values.httpRoute.enabled) (not .Values.networkPolicy.server.ingressFrom) (not .Values.networkPolicy.server.proxyNamespaces) (not (and .Values.httpRoute.enabled .Values.httpRoute.parentRefs (index .Values.httpRoute.parentRefs 0).namespace)) }}
+WARNING: an Ingress or HTTPRoute is on but the chart does not know the proxy's namespace, so only pods in {{ .Release.Namespace }} may reach the server: set networkPolicy.server.proxyNamespaces (for example [ingress-nginx]) or ingressFrom.
+{{- end }}
+{{- end }}

@@ -79,7 +79,7 @@ func (r gitReport) lines() []string {
 }
 
 // doctorSections are the doctor's sections that are commands of their own, by name.
-var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption}
+var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption, "network": doctorNetwork}
 
 func firstArg(args []string) string {
 	if len(args) == 0 {

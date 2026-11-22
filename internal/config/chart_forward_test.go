@@ -94,3 +94,29 @@ func TestChartToleratesAnOlderImage(t *testing.T) {
 		t.Fatalf("image.bootstrap=false must skip the hook: %v", err)
 	}
 }
+
+// The server's ingress is never "any source": behind an Ingress it admits its own namespace, the
+// Gateway's and proxyNamespaces, and nothing else.
+func TestChartServerIngressIsNeverAnySource(t *testing.T) {
+	out, err := helmRender(t, "--set", "ingress.enabled=true", "--set", "ingress.hosts[0]=launchway.example.com", "--set", "networkPolicy.server.proxyNamespaces={ingress-nginx}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range chartDocs(t, out) {
+		if d["kind"] != "NetworkPolicy" || !strings.HasSuffix(name(d), "-server") {
+			continue
+		}
+		for _, rule := range dig(d, "spec", "ingress").([]any) {
+			if _, ok := dig(rule, "from").([]any); !ok {
+				if dig(rule, "ports") != nil && !strings.Contains(out, "ssh") { // a rule with ports and no peers admits every source
+					t.Errorf("an ingress rule has no source: %v", rule)
+				}
+			}
+		}
+		if !strings.Contains(out, "kubernetes.io/metadata.name: ingress-nginx") {
+			t.Error("the proxy's namespace is not admitted")
+		}
+		return
+	}
+	t.Fatal("no server policy")
+}

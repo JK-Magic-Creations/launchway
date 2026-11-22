@@ -30,6 +30,9 @@ type Settings struct {
 	Gateway        *GatewayRef
 	GatewayHost    string
 	PullSecret     string
+	// NetworkPoliciesOff leaves the chart's NetworkPolicies off because another system already decides
+	// network policy in the namespace (DetectPolicyAuthority).
+	NetworkPoliciesOff bool
 }
 
 // GatewayRef is the Gateway an HTTPRoute attaches to.
@@ -87,6 +90,9 @@ func (s Settings) Values() map[string]any {
 			hr["hostnames"] = []any{s.GatewayHost}
 		}
 		v["httpRoute"] = hr
+	}
+	if s.NetworkPoliciesOff {
+		v["networkPolicy"] = map[string]any{"enabled": false}
 	}
 	if s.PullSecret != "" {
 		v["imagePullSecrets"] = []any{map[string]any{"name": s.PullSecret}}

@@ -105,6 +105,9 @@ func encryptionBrief(ctx context.Context, cfg *config.Config, wait time.Duration
 		return []string{"Encryption at rest: " + err.Error()}
 	}
 	out := []string{"Encryption at rest: " + rep.Summary}
+	if !svc.Encrypted() {
+		out = append(out, "  WARNING: "+encryptionNextStep())
+	}
 	for _, w := range rep.Warnings {
 		if w != rep.Summary {
 			out = append(out, "  WARNING: "+w)

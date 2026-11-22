@@ -635,6 +635,7 @@
           "type": "object",
           "properties": {
             "ingressFrom": { "$ref": "#/definitions/objectList" },
+            "proxyNamespaces": { "type": "array", "items": { "type": "string" } },
             "publicHTTPS": {
               "type": "object",
               "properties": {

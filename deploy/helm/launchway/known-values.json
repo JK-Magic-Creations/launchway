@@ -242,6 +242,7 @@
     "server": {
       "extraEgress": true,
       "ingressFrom": true,
+      "proxyNamespaces": true,
       "publicHTTPS": {
         "allowIPv6": true,
         "enabled": true,

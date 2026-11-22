@@ -342,6 +342,7 @@ export default defineConfig({
           { text: 'Docs style guide', link: '/contributing/style' },
           { text: 'Design principles for the interface', link: '/contributing/design-principles' },
           { text: 'Writing a migration', link: '/development/migrations' },
+          { text: 'Releasing', link: '/development/releasing' },
           { text: 'Quality bar for the API, MCP and CLI', link: '/development/interface-quality' },
         ],
       },

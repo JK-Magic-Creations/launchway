@@ -3,7 +3,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION)
 
 .PHONY: test-like-ci prepush all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality vocabulary vocabulary-update test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
-	charts-sync test-install test-runner-chart bundle test-bundle test-git-compat
+	charts-sync test-install test-runner-chart bundle test-bundle test-git-compat test-upgrade test-upgrade-fast
 
 all: web build
 
@@ -46,6 +46,16 @@ chart-lint: charts-sync
 	helm lint deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml -f deploy/helm/launchway-runner/examples/networkpolicy.yaml >/dev/null
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/deploy-runner.yaml >/dev/null
+
+# The release gate for installing, upgrading and rolling back (deploy/test/upgrade/matrix.sh): kind,
+# podman, helm, minutes. A release is not cut unless it is green (docs/development/releasing.md).
+test-upgrade:
+	deploy/test/upgrade/matrix.sh
+
+# The hermetic subset that runs in every `make check`: renders only, no cluster (compatibility of the
+# previous release's values and chart with this one, unknown values, the image and chart pairing).
+test-upgrade-fast:
+	scripts/upgrade-fast.sh
 
 test:
 	go vet ./...
@@ -415,7 +425,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: fmt-check vet lint arch originality vocabulary ratchet web-lint web-test learn-check
+check: test-upgrade-fast fmt-check vet lint arch originality vocabulary ratchet web-lint web-test learn-check
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.

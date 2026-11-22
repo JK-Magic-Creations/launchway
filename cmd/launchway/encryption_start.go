@@ -150,7 +150,7 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 	}
 	su.rootHolder = rk.primary
 	if !svc.Encrypted() {
-		log.Warn("NOT ENCRYPTED AT REST: no root key is configured, so the signing keys and the shared runner token are stored in the clear in the database, and a copy of the database reveals them. Git over SSH and webhook secrets stay off until a root key exists. " + keyring.HowToCreateARootKey)
+		log.Warn("NOT ENCRYPTED AT REST: no root key is configured, so the signing keys and the shared runner token are stored in the clear in the database, and a copy of the database reveals them. Git over SSH and webhook secrets stay off until a root key exists. " + encryptionNextStep())
 	} else if rk.kind != "" {
 		log.Info("encryption at rest is on", "root_key_holder", rk.primary.Kind())
 	}
@@ -196,7 +196,7 @@ func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine,
 			return none, nil
 		}
 		if eng.Database().Postgres() {
-			log.Warn("no root key is configured and the database is PostgreSQL, so none is generated: a key made on one server's disk could be lost with it and would lock every other server out. The server starts NOT encrypted at rest, as an installation before encryption did. " + keyring.HowToCreateARootKey)
+			log.Warn("no root key is configured and the database is PostgreSQL, so none is generated: a key made on one server's disk could be lost with it and would lock every other server out. The server starts NOT encrypted at rest, as an installation before encryption did. " + encryptionNextStep())
 			return none, nil
 		}
 		fresh, err := sealing.IsBrandNew(ctx, eng.Database())
@@ -204,14 +204,14 @@ func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine,
 			return nil, err
 		}
 		if !fresh && !config.FileExists(path) { // a server starting at the same moment may have made the key and the first keys since the check above
-			log.Warn("no root key is configured and this database already holds data from an earlier release, so none is generated. The server starts NOT encrypted at rest. " + keyring.HowToCreateARootKey)
+			log.Warn("no root key is configured and this database already holds data from an earlier release, so none is generated. The server starts NOT encrypted at rest. " + encryptionNextStep())
 			return none, nil
 		}
 		if err := keyring.WriteKeyFile(path); errors.Is(err, os.ErrExist) {
 			// Another server starting at the same moment made it first: use its key.
 			log.Info("another server made the root key file first; using it", "key_file", path)
 		} else if err != nil {
-			log.Warn("no root key is configured and the data directory cannot hold one, so none is generated. The server starts NOT encrypted at rest. "+keyring.HowToCreateARootKey, "data", cfg.Data, "err", err)
+			log.Warn("no root key is configured and the data directory cannot hold one, so none is generated. The server starts NOT encrypted at rest. "+encryptionNextStep(), "data", cfg.Data, "err", err)
 			return none, nil
 		} else {
 			log.Warn("a root key was generated for this new installation, because none was configured. Keep a copy of it somewhere other than the database's backups: without it a restore cannot read any secret. For production, move it off this volume and set encryption.key_file", "key_file", path)
@@ -273,4 +273,18 @@ func (g guideRootKey) Key() ([]byte, error) {
 		return e.ExportKey()
 	}
 	return nil, errors.New("the root key is held by a service outside this server and cannot be copied from here; keep the recovery copy where that service keeps it")
+}
+
+// encryptionNextStep is the ONE thing to do about an installation that is not encrypted at rest yet,
+// said for where this server runs. In a pod rendered by the chart the answer is not "make a key by
+// hand": it is the chart that belongs to this image, whose install hook makes the root key (once,
+// kept across upgrades), and then a restart of the servers.
+func encryptionNextStep() string {
+	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
+		return keyring.HowToCreateARootKey
+	}
+	if _, warn := config.ChartNotice(os.Getenv, true); warn {
+		return "YOUR INSTALLATION IS NOT ENCRYPTED AT REST YET: deploy the chart that belongs to this image (its install hook makes the root key and mounts it), then restart the servers. Nothing else needs setting. See the guide \"Upgrading\""
+	}
+	return "YOUR INSTALLATION IS NOT ENCRYPTED AT REST YET: the chart is current but passes no root key (encryption.holder is none, or the Secret it names is missing). Set encryption.holder to keyFile and let the chart's install hook make the key, then restart the servers. See the guide \"Encryption at rest\""
 }

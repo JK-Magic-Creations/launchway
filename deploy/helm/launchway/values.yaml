@@ -828,12 +828,22 @@ securityContext:
 # NetworkPolicies: default deny, then exactly what each part needs. On by default (they take
 # effect only where the cluster's network plugin enforces them; if yours does not, they are
 # harmless). Each policy selects its pods by label, so nothing else in the namespace is affected.
+#
+# SECURITY MODEL. The chart's policies are never wider than "nothing else is there": they only ever
+# narrow what the pods could do, and every allowance beyond DNS, the database and Launchway's own
+# pods is a named value you set (ingressFrom / proxyNamespaces, extraEgress, steps.internet). On a
+# cluster whose network plugin has its own policy objects (CiliumNetworkPolicy, Calico's
+# GlobalNetworkPolicy, and the like) that ADD to Kubernetes NetworkPolicies, anything the plugin's
+# objects allow is allowed whatever these policies say, and objects it holds stay when these are
+# turned off. Let ONE system be the authority: where the plugin's policies (or any other
+# NetworkPolicy) already govern the namespace, set networkPolicy.enabled: false. `launchway
+# install` and `launchway doctor network` detect that case; the install NOTES say so too.
 #   server       in: runners, step pods, deploy runner, and (with an Ingress or HTTPRoute) the
-#                proxy (ingressFrom). out: DNS, the database, and what extraEgress adds
+#                proxy (ingressFrom, proxyNamespaces, the Gateway's namespace). out: DNS, the database, and what extraEgress adds
 #                (Git hosts, an identity provider, webhooks, an S3 endpoint). NOT the Kubernetes API.
 #   runners      in: nothing. out: DNS, the server, the Kubernetes API (to start step pods), extraEgress.
-#   step pods    in: nothing. out: DNS, the Launchway server, and the internet over HTTP/HTTPS
-#                EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
+#   step pods    in: nothing. out: DNS and the Launchway server. The internet over HTTP/HTTPS is an
+#                explicit opt-in (steps.internet: true), and then EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
 #                cluster: never the database, the Kubernetes API or the metadata service.
 #   bundled database   in: the servers only. out: nothing.
 # The install hook Job has its own small policy (Kubernetes API, DNS).
@@ -850,9 +860,14 @@ networkPolicy:
   server:
     # -- Who may reach the server port: a list of NetworkPolicyPeer objects (the namespace of
     # your ingress controller or Gateway, for example). Empty: with an Ingress or HTTPRoute
-    # enabled, any source may reach the port (the proxy's namespace is not known to the chart);
-    # without one, only runners, step pods and the deploy runner can (port-forward still works).
+    # enabled, only this release's own namespace, the namespaces of httpRoute.parentRefs and
+    # proxyNamespaces below can; never "any source". Without an Ingress or route, only runners,
+    # step pods and the deploy runner can (port-forward still works).
     ingressFrom: []
+    # -- Namespaces whose pods may reach the server port (the namespace of your ingress controller),
+    # used when ingressFrom is empty and an Ingress is on. A Gateway's namespace is taken from
+    # httpRoute.parentRefs. Example: [ingress-nginx].
+    proxyNamespaces: []
     # -- HTTPS to PUBLIC addresses, which the servers need for the dependency updater's version
     # sources and vulnerability data (package registries, the Go proxy, an OSV service), for the
     # chat services and webhook receivers of notifications and repository webhooks, and for other
@@ -893,10 +908,10 @@ networkPolicy:
   steps:
     # -- Policy for step pods (the pods runners start for each run, in runner.kubernetes.namespace).
     enabled: true
-    # -- Allow step pods to reach the internet (package registries, Git hosts, container
-    # registries) on `ports`, except the ranges below and `exceptCIDRs`. false: only DNS and the
-    # Launchway server, plus extraEgress.
-    internet: true
+    # -- OPT IN: let step pods reach the internet (package registries, Git hosts, container
+    # registries) on `ports`, except the ranges below and `exceptCIDRs`. false (the default): only
+    # DNS and the Launchway server, plus extraEgress. Builds that download dependencies need true.
+    internet: false
     ports: [80, 443]
     # -- More ranges step pods may NOT reach, added to the private, link-local and carrier-grade
     # NAT ranges that are always excluded: your cluster's API server address if it is public, a
