@@ -19,6 +19,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	c.keepSizing(stepID, s.Attempt, sizing)
 	return &Job{
 		Sizing:         sizing,
+		ScopedServices: def.ServicesSet, Services: def.Services,
 		WorkspaceExclude: exclude,
 		Container:        st.Pipeline.ContainerFor(def), Containers: c.runContainers(), StepContainer: stepContainer, ResourcesAsked: def.Resources != nil,
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),

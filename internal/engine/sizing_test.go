@@ -147,3 +147,21 @@ func TestMemoryKillRaisesOnceAndSaysSo(t *testing.T) {
 		t.Fatalf("declared memory is the file's to change: %s", d.Status)
 	}
 }
+
+// The services a step lists reach the Station with its job, and a step that says nothing leaves the Station to start every one.
+func TestJobCarriesTheServicesAStepLists(t *testing.T) {
+	e, _ := newEngine(t)
+	create(t, e, "pipeline: demo\ncontainers:\n  db: {image: postgres, service: true}\n  go: {image: golang}\nsteps:\n  a: {container: go, run: y, services: []}\n  b: {container: go, run: y, services: [db], needs: a}\n  c: {container: go, run: y, needs: b}\n", Trigger{Event: "manual"})
+	for _, want := range []struct {
+		scoped bool
+		list   []string
+	}{{true, nil}, {true, []string{"db"}}, {false, nil}} {
+		j := take(t, e)
+		if j.ScopedServices != want.scoped || len(j.Services) != len(want.list) {
+			t.Fatalf("%s: scoped %v services %v", j.StepID, j.ScopedServices, j.Services)
+		}
+		if err := e.Finish(j.LeaseID, Result{Outcome: "succeeded"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

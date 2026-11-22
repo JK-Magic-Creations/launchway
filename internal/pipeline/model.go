@@ -211,6 +211,11 @@ type Step struct {
 	// when it asks for none, and the installation's default for its kind
 	// applies. See resources.go.
 	Resources *Resources `json:"resources,omitempty"`
+	// Services are the service containers (containers: with service: true) the step needs, when it lists
+	// them (services: [db]); ServicesSet says it did, so that an empty list means none. A step that does
+	// not say gets every service of the pipeline, as it always did.
+	Services    []string `json:"services,omitempty"`
+	ServicesSet bool     `json:"services_set,omitempty"`
 
 	// ImageBuild, for an image step (kind image), is what it builds; see
 	// image.go.

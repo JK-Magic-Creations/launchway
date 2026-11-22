@@ -26,6 +26,7 @@ steps:
   setup:
     description: Install dependencies from the lock file (npm, pnpm or yarn)
     container: node
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: node
         paths: [.cache/npm, .cache/pnpm, .cache/yarn]
@@ -37,6 +38,7 @@ steps:
     if: { param: lint }
     needs: [setup]
     container: node
+    services: []   # a database declared under containers: starts only for the test stage
     run: "$LAUNCHWAY_LIB/scripts/node/check.sh"
   test:
     description: Run the tests, once for each Node version in test_versions
@@ -53,6 +55,7 @@ steps:
     if: { param: build }
     needs: [setup, check, test]
     container: node
+    services: []   # a database declared under containers: starts only for the test stage
     env: { LW_SCRIPT: build }
     run: "$LAUNCHWAY_LIB/scripts/node/script.sh"
     artifacts:

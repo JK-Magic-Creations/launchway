@@ -89,7 +89,8 @@ steps:
 | `with` | Values for the template's parameters |
 | `for_each` | Repeat the step over lists; with `exclude`, `add` (extra whole combinations), `continue_for` (members that may fail without failing the run), `max_parallel`, `fail_fast` and `serial` (each member waits for the one before it) |
 | `skip`, `extend`, `replace` | On a step that uses a template: leave stages out, add steps before or after a stage (`extend: [{ after: test, steps: { … } }]`), or take a stage over |
-| `stages`, `resources` | On a step that uses a template: `resources` is the CPU and memory of every stage that runs a script and sets none of its own; `stages: { test: { resources: { memory: 6Gi } } }` sets one stage's |
+| `stages`, `resources` | On a step that uses a template: `resources` is the CPU and memory of every stage that runs a script and sets none of its own; `stages: { test: { resources: { memory: 6Gi }, services: [db] } }` sets one stage's |
+| `services` | `[db]`: the service containers that run beside the step (`[]` none, `all` every one, the default) |
 | `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 

@@ -12,6 +12,7 @@ steps:
   run:
     description: Build every package
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]

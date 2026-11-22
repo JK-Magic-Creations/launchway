@@ -367,8 +367,13 @@ and start with each step's pod (a service's state does not carry on to the next 
 
 **A service for more than one step.** Where each step has a pod of its own, a service is started afresh with every
 step, so a database that one step migrated is empty for the next. `launchway validate` warns (code `service-per-step`)
-about a pipeline that has a service and more than one step that runs in a container, and names the steps. What to do:
-make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
+about a pipeline whose service is started for more than one step, and names the steps. **Say which steps need it:** a step that
+writes `services: [db]` starts only those services, `services: []` starts none, and a step that writes nothing (or `services: all`)
+starts every service, as before; the warning names the steps that still start it. A Flight plan stage takes the same key under
+[`stages`](#changing-what-a-template-runs), and the built-in language plans (Go, Node, Python) start the services of the pipeline for
+their `test` stage only. A name that is not a service of the pipeline is refused, with the services it has. The Docker executor
+and a Kubernetes Station set to `kubernetes.pod: per-run` make the services once for the Sortie, so there every step still sees
+them. Other ways: make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
 carry what the later steps need as [Cargo](../guide/artifacts.md) or [outputs](#outputs). Other executors, and a Station set to
 `kubernetes.pod: per-run`, keep one service for the whole Sortie, so the warning is about where the pipeline may run, not a mistake in it.
 
@@ -482,6 +487,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `secrets` | mapping | none | Environment variables whose values a Station looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
+| `services` | list of container names, or `all` | `all` | The service containers (`service: true` under [`containers`](#containers)) that run beside this step; `[]` for none. Where each step has a pod of its own, only these are started with it |
 | `runner` | mapping | the Sortie's Station | A Station and a workspace of this step's own; see [A Station for one step](#a-runner-for-one-step) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Cargo (artifacts)](#artifacts) |
 | `fetch` | list | none | Cargo of earlier steps to put in the workspace first; see [Fetch](#fetch) |
@@ -579,7 +585,7 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `skip` | list of stage names | none | Stages of the template to leave out; what needed one then needs what it needed. A name the template does not have is refused, with the stages it has |
 | `extend` | list | none | Steps to add next to a stage; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
-| `stages` | mapping | none | Settings of single stages, by stage name: `resources` (the stage's CPU and memory, as a step's [`resources`](#resources); what it names wins over the stage's own, key by key). A name the template does not have is refused, with the stages it has; so is a stage that runs no script |
+| `stages` | mapping | none | Settings of single stages, by stage name: `resources` (the stage's CPU and memory, as a step's [`resources`](#resources); what it names wins over the stage's own, key by key) and `services` (the service containers the stage starts, as a step's [`services`](#containers); `all` takes back what the plan switched off). A name the template does not have is refused, with the stages it has; so is a stage that runs no script |
 | `resources` | mapping | none | The [resources](#resources) of every stage of the template that runs a script and sets none of its own (a stage's own keys, and `stages`, win key by key). Reaches stages of templates the template uses as well |
 
 `launchway validate` checks such a step without reading the template; the server's editor and

@@ -14,6 +14,7 @@ steps:
   run:
     description: Install dependencies and check the code
     container: node
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: node
         paths: [.cache/npm, .cache/pnpm, .cache/yarn]

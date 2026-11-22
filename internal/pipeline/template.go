@@ -463,6 +463,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 		x.problems = append(x.problems, Problem{Message: fmt.Sprintf("expanded, the pipeline has %d steps; at most %d are allowed", len(out.Steps), MaxExpandedSteps)})
 	}
 	x.checkDeployments(out)
+	x.checkServices(out)
 	if len(x.problems) == 0 && len(out.Steps) == 0 {
 		x.problems = append(x.problems, Problem{Message: "expanded, the pipeline has no steps left: every template step's if was false"})
 	}
@@ -814,6 +815,18 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
+		if len(c.Services) > 0 {
+			// A template's own service containers are renamed for the run; a name it does not have is the
+			// pipeline's.
+			svc := make([]string, len(c.Services))
+			for i, n := range c.Services {
+				svc[i] = n
+				if to, ok := sc.containers[n]; ok {
+					svc[i] = to
+				}
+			}
+			c.Services = svc
+		}
 		c.When, c.AI = sc.whenFor(c.When), c.AI.inScope(sc.prefix)
 		if sc.continueFail {
 			c.tolerate()
@@ -961,4 +974,16 @@ func stepNames(sc *scope) string {
 		ids = append(ids, s.ID)
 	}
 	return strings.Join(ids, ", ")
+}
+
+// checkServices checks, once the pipeline is expanded, that every service a step lists is a service container
+// of the run: the pipeline's own, or one of a template's.
+func (x *expander) checkServices(out *Pipeline) {
+	for _, s := range out.Steps {
+		for _, name := range s.Services {
+			if msg := serviceProblem(out, name); msg != "" {
+				x.problems = append(x.problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".services", Message: fmt.Sprintf("step %s: %s", s.ID, msg)})
+			}
+		}
+	}
 }

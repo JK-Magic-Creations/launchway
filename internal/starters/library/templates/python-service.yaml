@@ -59,6 +59,7 @@ steps:
   setup:
     description: Install dependencies (uv, Poetry or pip, as the lock file says)
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: python
         paths: [.cache/pip, .cache/uv]
@@ -71,6 +72,7 @@ steps:
     if: { param: lint }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/check.sh"
   test:
@@ -97,6 +99,7 @@ steps:
     if: { param: audit }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/audit.sh"
   analysis:
@@ -104,6 +107,7 @@ steps:
     if: { param: analysis }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 15m
     run: "$LAUNCHWAY_LIB/scripts/python/analysis.sh"
     reports: { findings: [{ param: working_directory, format: "%s/reports/**/bandit.sarif" }] }
@@ -112,6 +116,7 @@ steps:
     if: { param: license_scan }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/licenses.sh"
   image:

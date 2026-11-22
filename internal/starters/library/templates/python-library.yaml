@@ -26,6 +26,7 @@ steps:
     description: Install dependencies and lint the code with ruff
     if: { param: lint }
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: python
         paths: [.cache/pip, .cache/uv]
@@ -52,6 +53,7 @@ steps:
     description: Build the wheel and the source distribution
     needs: [check, test]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: python
         paths: [.cache/pip, .cache/uv]

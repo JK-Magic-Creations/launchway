@@ -54,6 +54,7 @@ steps:
     description: Format and vet the Go code
     if: { param: lint }
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]
@@ -77,6 +78,7 @@ steps:
     if: { param: build }
     needs: [check, test]
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]
@@ -91,6 +93,7 @@ steps:
     description: Look for reachable vulnerabilities in the dependencies
     if: { param: vuln_scan }
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     on_failure: continue
     timeout: 15m
     cache:
@@ -114,6 +117,7 @@ steps:
     description: Static analysis with staticcheck
     if: { param: analysis }
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]
@@ -124,6 +128,7 @@ steps:
     description: List the licenses of the dependencies
     if: { param: license_scan }
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]

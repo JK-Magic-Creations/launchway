@@ -44,7 +44,11 @@ type Adaptation struct {
 // containers it starts.
 type StageSettings struct {
 	Resources *Resources
-	Line      int
+	// Services are the service containers the stage starts, if the use says (ServicesSet; [] for none).
+	Services    []string
+	ServicesSet bool
+	ServicesAll bool // services: all, which takes a stage back to every service of the pipeline
+	Line        int
 }
 
 // Extension is steps added next to a stage: after it (they need it, and what
@@ -112,7 +116,7 @@ func (ps *parser) parseAdapt(s *Step, key string, n *yaml.Node, at string) {
 	}
 }
 
-var stageKeys = []string{"resources"}
+var stageKeys = []string{"resources", "services"}
 
 // parseStages reads stages: a mapping of stage names to the settings of that
 // stage.
@@ -140,6 +144,9 @@ func (ps *parser) parseStages(a *Adaptation, n *yaml.Node, at string) {
 			switch k2.Value {
 			case "resources":
 				st.Resources = ps.parseResources(v2, where+".resources")
+			case "services":
+				st.Services, st.ServicesSet = ps.parseServices(v2, where+".services")
+				st.ServicesAll = v2.Kind == yaml.ScalarNode && v2.Value == "all"
 			}
 		})
 		a.Stages[k.Value] = st
@@ -231,12 +238,17 @@ func (x *expander) adapt(sc *scope, use *Step, t *Template, at string) {
 		switch {
 		case s == nil:
 			unknown(set.Line, "stages", id)
-		case set.Resources != nil && s.ResourceKind() == "":
-			x.problem(sc, set.Line, 0, at+".stages."+id+".resources", "the stage %s of %s runs no script, so it takes no resources", id, t.Name)
-		case set.Resources != nil:
+		case (set.Resources != nil || set.ServicesSet || set.ServicesAll) && s.ResourceKind() == "":
+			x.problem(sc, set.Line, 0, at+".stages."+id, "the stage %s of %s runs no script, so it takes no resources or services", id, t.Name)
+		case set.Resources != nil || set.ServicesSet || set.ServicesAll:
 			c := *s
-			c.Resources = overlayResources(set.Resources, s.Resources)
-			c.resourcesLine = set.Line
+			if set.Resources != nil {
+				c.Resources = overlayResources(set.Resources, s.Resources)
+				c.resourcesLine = set.Line
+			}
+			if set.ServicesSet || set.ServicesAll {
+				c.Services, c.ServicesSet = set.Services, set.ServicesSet
+			}
 			for i, o := range t.Steps {
 				if o == s {
 					t.Steps[i] = &c

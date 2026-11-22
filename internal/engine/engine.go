@@ -251,6 +251,10 @@ type Job struct {
 	// StepContainer is Container sized for this step alone (Containers sizes it for the largest step
 	// that shares its image): what a runner that makes a pod for each step uses; nil: use Containers.
 	StepContainer *pipeline.Container `json:"step_container,omitempty"`
+	// ScopedServices says the step named the services it needs (Services; none if empty); the Station then
+	// starts only those. Without it every service of Containers is started, as it always was.
+	ScopedServices bool     `json:"scoped_services,omitempty"`
+	Services       []string `json:"services,omitempty"`
 	// Sizing says where the step's memory came from (declared, learned, default, raised); the Station
 	// writes it to the step's log. nil: the server does not size this step.
 	Sizing *Sizing `json:"sizing,omitempty"`

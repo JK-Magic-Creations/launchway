@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"slices"
+
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -12,7 +14,7 @@ import (
 // and a job from a server that does not say, keeps the run's container,
 // which is sized for the largest step that shares its image.
 func (r *Runner) containerSpecs(job *engine.Job) []executor.ContainerSpec {
-	specs := containerSpecs(job)
+	specs := r.scopeServices(job, containerSpecs(job))
 	if ps, ok := r.Exec.(executor.PerStepSizer); !ok || !ps.PerStep() || job.StepContainer == nil {
 		return specs
 	}
@@ -33,6 +35,26 @@ func containerSpecs(job *engine.Job) []executor.ContainerSpec {
 			Service: c.Service, Command: c.Command,
 			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads,
 			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory, Ready: readySpec(c.Ready)}
+	}
+	return out
+}
+
+// scopeServices leaves out the services a step did not list under services, where the step has its own
+// place to run: a pod for each step, a container beside the step, or the host. A Kubernetes pod for the whole
+// run is made once, from the first step's containers, so it keeps every service for the steps that come after.
+func (r *Runner) scopeServices(job *engine.Job, specs []executor.ContainerSpec) []executor.ContainerSpec {
+	if !job.ScopedServices {
+		return specs
+	}
+	if k, ok := r.Exec.(*executor.Kubernetes); ok && !k.PerStep() {
+		return specs
+	}
+	out := specs[:0:0]
+	for _, c := range specs {
+		if c.Service && !slices.Contains(job.Services, c.Name) {
+			continue
+		}
+		out = append(out, c)
 	}
 	return out
 }
