@@ -255,6 +255,7 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: p.toggle }]),
   page("/projects/:name/toggle-settings", "pipelines", undefined, (p) => `Keys and safeguards of ${p.name}`, (p) => [projectCrumb(p), togglesCrumb(p), { label: "Keys and safeguards" }]),
   page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
+  page("/repositories/trash", "projects", undefined, () => "Deleted repositories", () => [reposCrumb, { label: "Deleted repositories" }]),
   page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [reposCrumb, { label: p.owner + "/" + p.name }]),
   repoSub("settings", "Settings of", "Settings"),
   repoSub("mirrors", "Mirrors of", "Mirrors"),

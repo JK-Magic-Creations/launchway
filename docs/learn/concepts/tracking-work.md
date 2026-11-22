@@ -6,7 +6,7 @@ fix is running now. People and agents work from the same list, under the same ru
 
 ## How it works
 
-1. **Write the item.** An item has a type (issue, bug, story, task or epic), a title, a description, a priority,
+1. **Write the item.** An item has a type (issue, bug, story, task, epic or decision), a title, a description, a priority,
    labels, an estimate and perhaps acceptance criteria: the checklist that says what finished means. Items
    are named `PAY-12`: a prefix and a number.
 2. **Plan it.** The backlog is one ordered list. A board shows the same items by state. A sprint takes

@@ -15,7 +15,9 @@ import (
 // (an agent signs in with its own token and uses `work agent`).
 
 const workUsage = `Usage:
-  launchway work items list|show|create|update|move|rank|comment|link|unlink|code-link|history|attach|file|by-code|take-over
+  launchway work items list|show|create|update|move|rank|comment|react|link|unlink|code-link|history|attach|file|by-code|take-over
+  launchway work time start|stop|running|log|show|edit|delete|report|export
+  launchway work decisions list|show|accept|supersede|export
   launchway work board|roadmap|release-notes|home|inbox|spend|import|propose|health
   launchway work milestones list|create|update
   launchway work sprints list|show|create|update|start|complete|burndown
@@ -36,12 +38,14 @@ such as KEY-12. Text on items, comments and files was written by people and agen
 Items:
   launchway work items list [--query Q] [--sort rank|updated|created|priority|due|number] [--desc]
                             [--limit N] [--offset N] [--parent REF]     find items (no scope: everything you may read)
+                            [--in-repo OWNER/NAME]       only a repository's work: its own and the work tied to its code
   launchway work items show REF                      one item with its links, code, delivery, files and comments
   launchway work items create TITLE [--type issue|bug|story|task|epic] [--body TEXT | --body-file FILE]
                             [--state S] [--priority urgent|high|normal|low] [--estimate N] [--parent REF]
                             [--milestone TITLE] [--sprint NAME] [--start DATE] [--due DATE]
                             [--difficulty small|medium|large] [--label L ...] [--assignee A ...]
                             [--criterion TEXT ...] [--confidential]
+                            [--for-repo OWNER/NAME]      the repository it is for: its scope when no scope is given, else a tie to it
   launchway work items update REF [--title T] [--body TEXT | --body-file FILE] [--type T] [--state S]
                             [--resolution R] [--priority P] [--estimate N] [--parent REF|""] [--milestone T]
                             [--sprint NAME] [--start DATE] [--due DATE] [--difficulty D] [--confidential=false]
@@ -52,7 +56,7 @@ Items:
   launchway work items rank REF top|bottom|before OTHER|after OTHER     reorder (those who maintain the level)
   launchway work items comment REF TEXT               add a comment; --file F reads it from a file
   launchway work items comment --edit COMMENT_ID TEXT change a comment you wrote
-  launchway work items link REF blocks|relates|duplicates OTHER
+  launchway work items link REF blocks|relates|duplicates|decides OTHER
   launchway work items unlink LINK_ID                 remove a link (the id is in work items show)
   launchway work items code-link REF --kind commit|branch|pull|run --code-repo OWNER/NAME --ref X
                             [--title T] [--state S] [--closes]         tie a commit, branch, pull request or run
@@ -61,6 +65,25 @@ Items:
   launchway work items attach REF FILE [--name N] [--kind K]          attach a file (10 MiB at most)
   launchway work items file ATTACHMENT_ID [--out FILE]                download a file from an item
   launchway work items take-over REF                  a person takes an item an agent holds
+  launchway work items react REF REACTION [--remove]   thumbs_up thumbs_down laugh hooray confused heart rocket eyes; one of each per person
+  launchway work items react --comment ID REACTION [--remove]
+
+Time:
+  launchway work time start REF | stop [--note T] | running      your one timer (stopping keeps whole minutes, at least one, at most a day)
+  launchway work time log REF MINUTES [--day D] [--note T]       add an entry by hand
+  launchway work time show REF                                   an item's entries, total, and the remaining time when its estimate is in hours
+  launchway work time edit ENTRY_ID [--minutes N] [--day D] [--note T] | delete ENTRY_ID    your own entries
+  launchway work time report [--scope S] [--person P|me] [--from D] [--to D]    totals per person and item
+  launchway work time export [same flags] [--out FILE]           the entries as CSV
+
+Decisions (work items of type decision; create one with work items create --type decision):
+  launchway work decisions list [--scope S] [--in-repo OWNER/NAME] [--status proposed|accepted|superseded]
+  launchway work decisions show REF                    status, answer, who and when, what it replaces, decides and blocks
+  launchway work decisions accept REF ANSWER           a person answers a proposed decision
+  launchway work decisions supersede REF BY_REF        an accepted decision is replaced by another accepted one
+  launchway work decisions export OWNER/NAME [--folder DIR]   write the accepted decisions as Markdown into the repository's docs
+                            folder on a new branch and open a pull request
+  A decision decides items by  work items link DECISION decides ITEM  and pull requests by  work items code-link DECISION --kind pull ...
 
 Planning:
   launchway work board [--query Q] [--lanes assignee|epic|priority] [--sprint NAME]
@@ -169,6 +192,8 @@ var workGroups = map[string]func(*client, []string) error{
 	"autonomy":      (*client).workAutonomy,
 	"samples":       (*client).workSamples,
 	"agent":         (*client).workAgent,
+	"time":          (*client).workTime,
+	"decisions":     (*client).workDecisions,
 }
 
 // ---- one command: flags, a request, an answer ----

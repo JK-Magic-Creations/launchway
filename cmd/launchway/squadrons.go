@@ -16,6 +16,7 @@ const squadronsUsage = `Usage:
   launchway squadrons list [--json]                       the Squadrons, and the Flights that sit in none (Unfiled)
   launchway squadrons create NAME [--display-name TEXT] [--description TEXT]   make a Squadron with a name
   launchway squadrons show NAME [--json]                  its Flights and what needs attention, its people, shared settings and Operations
+  launchway squadrons team NAME [--json]                  its members by role, the repositories behind its Flights and its Flights
   launchway squadrons candidates [--query TEXT] [--connection NAME]   repositories a Flight could be made from (hosted ones with no Flight first)
   launchway squadrons add-flight NAME (--repository PATH | --repo ADDRESS) [--name FLIGHT] [--branch B]   make a Flight in the Squadron
   launchway squadrons move FLIGHT... (--to SQUADRON | --unfile) [--preview] [--comment TEXT]   move Flights; --preview changes nothing
@@ -53,6 +54,8 @@ func cmdSquadrons(args []string) error {
 			return cl.squadronsMove(args[1:])
 		case "organize":
 			return cl.squadronsOrganize(args[1:])
+		case "team":
+			return cl.squadronsTeam(args[1:])
 		}
 		return usageErr("unknown command squadrons %s\n\n%s", args[0], squadronsUsage)
 	})

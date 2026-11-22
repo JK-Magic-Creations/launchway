@@ -61,7 +61,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor/confirm` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `GET /api/v1/account/sessions` | `list_my_sessions` | `account sessions` | — | equal |
+| `POST /api/v1/account/sessions/end-others` | `end_my_session` | `account revoke` | — | equal |
+| `DELETE /api/v1/account/sessions/{id}` | `end_my_session` | `account revoke` | — | equal |
 | `POST /api/v1/account/sign-out-everywhere` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `GET /api/v1/account/summary` | `get_account_summary` | `account show` | — | equal |
 | `DELETE /api/v1/activity` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail |
 | `GET /api/v1/activity` | `recent` | `recent` | — | equal |
 | `PUT /api/v1/activity` | — | — | — | exempt: the pages note what a person opened, in the background; a token or agent has no pages |
@@ -173,6 +177,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
 | `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
+| `GET /api/v1/owners/{owner}/activity` | `get_owner_activity` | `repos activity` | — | equal |
 | `GET /api/v1/owners/{owner}/fork-settings` | `fork_settings` | `repos fork-settings` | — | equal |
 | `PUT /api/v1/owners/{owner}/fork-settings` | `fork_settings` | `repos fork-settings` | — | equal |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
@@ -182,6 +187,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/owners/{owner}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/people/{name}` | `get_person_profile` | `account profile` | — | equal |
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
 | `GET /api/v1/project-candidates` | `list_project_candidates` | `squadrons candidates` | — | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
@@ -346,6 +352,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/activity` | `get_repository_activity` | `repos activity` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues` | `list_archived_issues` | `repos archive list` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/archive/issues` | `import_archive` | `repos import-archive` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues/{number}` | `get_archived_issue` | `repos archive show` | — | equal |
@@ -353,12 +360,17 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/branches` | `delete_repository_branch` | `repos branches delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/branches` | `list_repository_branches` | `repos branches` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches` | `create_repository_branch` | `repos branches create` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/branches/delete-stale` | `delete_stale_branches` | `repos branches stale` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/branches/from-item` | `start_branch_for_item` | `repos branches start` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches/rename` | `rename_repository_branch` | `repos branches rename` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/branches/suggest` | `suggest_branch_name` | `repos branches start` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/contributors` | `get_repository_contributors` | `repos contributors` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts list` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
 | `POST /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts token` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
+| `POST /api/v1/repositories/{owner}/{name}/decisions/export` | `export_decisions` | `work decisions export` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/dependencies` | `list_dependencies` | `deps list` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
@@ -384,6 +396,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/inspections` | `get_repository_inspections` | `repos inspections` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/inspections` | `inspect_repository` | `repos inspect` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/languages` | `get_repository_languages` | `repos languages` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/merge-rules` | `get_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/merge-rules` | `set_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
@@ -405,6 +418,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}` | `update_pull_request` | `pr edit` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/approve-run` | `approve_pull_run` | `pr approve-run` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/checks` | `get_pull_checks` | `pr checks` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments` | `comment_on_pull_request` | `pr comment` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
@@ -441,6 +455,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/tags` | `create_repository_tag` | `repos tags create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/template` | `get_template` | `repos template` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
+| `GET /api/v1/repository-trash` | `list_repository_trash` | `repos trash` | — | equal |
+| `DELETE /api/v1/repository-trash/{id}` | `purge_repository` | `repos purge` | — | equal |
+| `POST /api/v1/repository-trash/{id}/restore` | `restore_repository` | `repos restore` | — | equal |
 | `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
@@ -544,6 +561,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/units` | `create_unit` | `squadrons create` | `launchway_unit (the same object; no change)` | equal |
 | `GET /api/v1/units/{name}` | `get_unit` | `squadrons show` | — | equal |
 | `POST /api/v1/units/{name}/projects` | `create_project_in_unit` | `squadrons add-flight` | `launchway_project with unit (the same object; no change)` | equal |
+| `GET /api/v1/units/{name}/team` | `get_squadron_team` | `squadrons team` | — | equal |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/user/signing-keys` | `list_signing_keys` | `signing keys list` | `not needed by terraform` | equal |
@@ -591,6 +609,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/charts/velocity` | `get_work_chart` | `work charts velocity` | — | equal |
 | `PATCH /api/v1/work/comments/{id}` | `edit_work_comment` | `work items comment` | — | equal |
 | `GET /api/v1/work/comments/{id}/edits` | `get_work_comment_edits` | `work items history` | — | equal |
+| `DELETE /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `PUT /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `GET /api/v1/work/decisions` | `list_decisions` | `work decisions list` | — | equal |
 | `POST /api/v1/work/health` | `run_repository_health` | `work health` | — | equal |
 | `GET /api/v1/work/home` | `get_work_home` | `work home` | — | equal |
 | `POST /api/v1/work/import/archive` | `promote_archive` | `work import --format archive` | — | equal |
@@ -607,13 +628,21 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/work/items/{ref}/code` | `link_work_code` | `work items code-link` | — | equal |
 | `GET /api/v1/work/items/{ref}/comments` | `get_work_item` | `work items show` | — | equal |
 | `POST /api/v1/work/items/{ref}/comments` | `comment_on_work_item` | `work items comment` | — | equal |
+| `GET /api/v1/work/items/{ref}/decision` | `get_decision` | `work decisions show` | — | equal |
+| `POST /api/v1/work/items/{ref}/decision/accept` | `accept_decision` | `work decisions accept` | — | equal |
+| `POST /api/v1/work/items/{ref}/decision/supersede` | `supersede_decision` | `work decisions supersede` | — | equal |
 | `GET /api/v1/work/items/{ref}/delivery` | `get_work_item` | `work items show` | — | equal |
 | `GET /api/v1/work/items/{ref}/history` | `get_work_history` | `work items history` | — | equal |
 | `GET /api/v1/work/items/{ref}/links` | `get_work_item` | `work items show` | — | equal |
 | `POST /api/v1/work/items/{ref}/links` | `link_work_items` | `work items link` | — | equal |
 | `POST /api/v1/work/items/{ref}/move` | `move_work_item` | `work items move` | — | equal |
 | `POST /api/v1/work/items/{ref}/rank` | `rank_work_item` | `work items rank` | — | equal |
+| `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `PUT /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `POST /api/v1/work/items/{ref}/take-over` | `take_over_work_item` | `work items take-over` | — | equal |
+| `GET /api/v1/work/items/{ref}/time` | `get_work_time` | `work time show` | — | equal |
+| `POST /api/v1/work/items/{ref}/time` | `log_work_time` | `work time log` | — | equal |
+| `POST /api/v1/work/items/{ref}/timer` | `start_work_timer` | `work time start` | — | equal |
 | `DELETE /api/v1/work/links/{id}` | `unlink_work_items` | `work items unlink` | — | equal |
 | `GET /api/v1/work/milestones` | `list_work_milestones` | `work milestones list` | — | equal |
 | `POST /api/v1/work/milestones` | `create_work_milestone` | `work milestones create` | — | equal |
@@ -638,6 +667,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/sprints/{id}/burndown` | `get_work_burndown` | `work sprints burndown` | — | equal |
 | `POST /api/v1/work/sprints/{id}/complete` | `complete_work_sprint` | `work sprints complete` | — | equal |
 | `POST /api/v1/work/sprints/{id}/start` | `start_work_sprint` | `work sprints start` | — | equal |
+| `GET /api/v1/work/time` | `get_work_time_report` | `work time report` | — | equal |
+| `GET /api/v1/work/time/export` | `export_work_time` | `work time export` | — | equal |
+| `DELETE /api/v1/work/time/{id}` | `delete_work_time` | `work time delete` | — | equal |
+| `PATCH /api/v1/work/time/{id}` | `edit_work_time` | `work time edit` | — | equal |
+| `GET /api/v1/work/timer` | `get_work_timer` | `work time running` | — | equal |
+| `POST /api/v1/work/timer/stop` | `stop_work_timer` | `work time stop` | — | equal |
 | `GET /api/v1/work/views` | `list_work_views` | `work views list` | — | equal |
 | `POST /api/v1/work/views` | `save_work_view` | `work views save` | — | equal |
 | `DELETE /api/v1/work/views/{id}` | `delete_work_view` | `work views delete` | — | equal |

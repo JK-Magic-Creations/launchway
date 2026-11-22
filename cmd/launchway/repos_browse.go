@@ -31,6 +31,12 @@ const reposBrowseUsage = `
                                     literal or regular-expression search over a repository's files at a ref
   launchway repos branches OWNER/NAME [--q TEXT] [--json]
                                     the branches with ahead and behind the default branch, protection and open pull request
+  launchway repos branches start OWNER/NAME ITEM [--name NAME] [--from REF] [--dry-run]
+                                    make a branch for a work item, named from its key and title, and tie the two together
+                                    (--dry-run only prints the name it would use)
+  launchway repos branches stale OWNER/NAME [--delete --yes] [--json]
+                                    the merged branches with no commit for the hosting setting's days (default 90); --delete --yes
+                                    removes exactly the ones listed (protected branches and open pull requests are never touched)
   launchway repos branches create OWNER/NAME NAME [--from REF]
                                     make a branch (operators; protected names: administrators)
   launchway repos branches delete OWNER/NAME NAME
@@ -69,6 +75,12 @@ func (cl *client) reposBrowse(cmd string, args []string) error {
 		return cl.reposBranches(args)
 	case "tags":
 		return cl.reposTags(args)
+	case "activity":
+		return cl.reposActivity(args)
+	case "languages":
+		return cl.reposLanguages(args)
+	case "contributors":
+		return cl.reposContributors(args)
 	case "inspections":
 		return cl.reposInspections(args)
 	case "inspect":
@@ -381,6 +393,12 @@ func (cl *client) reposBranches(args []string) error {
 	if len(args) > 0 && (args[0] == "create" || args[0] == "delete") {
 		return cl.reposRefWrite("branches", "branch", args)
 	}
+	if len(args) > 0 && args[0] == "start" {
+		return cl.reposStartBranch(args[1:])
+	}
+	if len(args) > 0 && args[0] == "stale" {
+		return cl.reposStaleBranches(args[1:])
+	}
 	fs := flag.NewFlagSet("repos branches", flag.ContinueOnError)
 	q := fs.String("q", "", "only names containing this text")
 	asJSON := fs.Bool("json", false, "print as JSON")
@@ -404,6 +422,11 @@ func (cl *client) reposBranches(args []string) error {
 			Ahead, Behind int
 			OpenPull      int `json:"open_pull"`
 			Subject       string
+			Stale, Merged bool
+			LastRun       *struct {
+				Number           int
+				Pipeline, Status string
+			} `json:"last_run"`
 		}
 	}
 	if err := cl.call("GET", base+"/branches?"+url.Values{"q": {*q}}.Encode(), nil, &out); err != nil {
@@ -421,6 +444,12 @@ func (cl *client) reposBranches(args []string) error {
 			}
 			if b.OpenPull > 0 {
 				flags += fmt.Sprintf(" pull #%d", b.OpenPull)
+			}
+			if b.Stale {
+				flags += " stale"
+			}
+			if b.LastRun != nil {
+				flags += fmt.Sprintf(" run #%d %s", b.LastRun.Number, b.LastRun.Status)
 			}
 			fmt.Fprintf(tw, "%s\t+%d -%d\t%s\t%s\n", b.Name, b.Ahead, b.Behind, strings.TrimSpace(flags), b.Subject)
 		}
@@ -651,4 +680,98 @@ func (cl *client) reposRefWrite(plural, one string, args []string) error {
 	}
 	fmt.Fprintf(cl.out, "Deleted the %s %s (it was at %s).\nTo bring it back: %s\n", one, out.Name, out.Was, out.Undo)
 	return nil
+}
+
+// reposStaleBranches lists the merged stale branches and, with --delete --yes, removes exactly those listed.
+func (cl *client) reposStaleBranches(args []string) error {
+	fs := flag.NewFlagSet("repos branches stale", flag.ContinueOnError)
+	del := fs.Bool("delete", false, "delete the branches listed")
+	yes := fs.Bool("yes", false, "with --delete: yes, delete these")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("launchway repos branches stale OWNER/NAME [--delete --yes]")
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Days       int `json:"stale_days"`
+		Candidates []string
+		Deleted    []string
+		Skipped    map[string]string
+	}
+	if err := cl.call("POST", base+"/branches/delete-stale", map[string]any{"confirm": false}, &out); err != nil {
+		return err
+	}
+	if *del && *yes && len(out.Candidates) > 0 {
+		if err := cl.call("POST", base+"/branches/delete-stale", map[string]any{"confirm": true, "names": out.Candidates}, &out); err != nil {
+			return err
+		}
+	}
+	return cl.print(out, *asJSON, func() {
+		if len(out.Deleted) > 0 || len(out.Skipped) > 0 {
+			for _, n := range out.Deleted {
+				fmt.Fprintln(cl.out, "deleted", n)
+			}
+			for n, why := range out.Skipped {
+				fmt.Fprintf(cl.out, "left %s: %s\n", n, why)
+			}
+			return
+		}
+		if len(out.Candidates) == 0 {
+			fmt.Fprintf(cl.out, "No merged branch has been quiet for %d days.\n", out.Days)
+			return
+		}
+		fmt.Fprintf(cl.out, "Merged branches with no commit for %d days:\n", out.Days)
+		for _, n := range out.Candidates {
+			fmt.Fprintln(cl.out, "  "+n)
+		}
+		if *del {
+			fmt.Fprintln(cl.out, "Add --yes to delete exactly these.")
+		}
+	})
+}
+
+// reposStartBranch makes a branch for a work item, or says what it would be called.
+func (cl *client) reposStartBranch(args []string) error {
+	fs := flag.NewFlagSet("repos branches start", flag.ContinueOnError)
+	name := fs.String("name", "", "the branch name (default: made from the item's key and title)")
+	from := fs.String("from", "", "a branch, tag or commit to start from (default: the default branch)")
+	dry := fs.Bool("dry-run", false, "only print the name")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 2 {
+		return usageErr("launchway repos branches start OWNER/NAME ITEM [--name NAME] [--from REF] [--dry-run]")
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Name, Commit, Item, From, LinkError string
+		Linked                              bool
+	}
+	if *dry {
+		if err := cl.call("GET", base+"/branches/suggest?item="+url.QueryEscape(pos[1]), nil, &out); err != nil {
+			return err
+		}
+		return cl.print(out, *asJSON, func() { fmt.Fprintf(cl.out, "%s (from %s)\n", out.Name, out.From) })
+	}
+	if err := cl.call("POST", base+"/branches/from-item", map[string]string{"item": pos[1], "name": *name, "from": *from}, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		fmt.Fprintf(cl.out, "Made the branch %s at %.10s for %s.\n", out.Name, out.Commit, out.Item)
+		if !out.Linked {
+			fmt.Fprintf(cl.out, "The link on the item was not made: %s\n", out.LinkError)
+		}
+	})
 }

@@ -228,13 +228,16 @@ type Step struct {
 	AI     *AIStep `json:"ai,omitempty"`
 
 	// Deploy steps (kind deploy) only; see deploy.go.
-	Environment string      `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
-	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name
-	Version     *Value      `json:"version,omitempty"`     // what "current version" shows
-	ArgoCD      *ArgoCD     `json:"argocd,omitempty"`
-	Fleet       *FleetSpec  `json:"fleet,omitempty"` // a fleet of hosts instead of Argo CD; see fleet.go
-	Rollout     *RolloutRef `json:"rollout,omitempty"`
-	OnCancel    string      `json:"on_cancel,omitempty"` // leave
+	Environment string `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
+	Service     string `json:"service,omitempty"`     // what is deployed there; empty means the project's name
+	Version     *Value `json:"version,omitempty"`     // what "current version" shows
+	// Address is where this deployment can be seen (a preview, a staging page): written in place, or an output of a
+	// step it needs. It must be an http or https address (ValidAddress).
+	Address  *Value      `json:"address,omitempty"`
+	ArgoCD   *ArgoCD     `json:"argocd,omitempty"`
+	Fleet    *FleetSpec  `json:"fleet,omitempty"` // a fleet of hosts instead of Argo CD; see fleet.go
+	Rollout  *RolloutRef `json:"rollout,omitempty"`
+	OnCancel string      `json:"on_cancel,omitempty"` // leave
 	// Deployment, for a rollback step, is the deploy step it rolls back;
 	// for a rollout step, the deploy step whose rollout it acts on; for an
 	// approval, the deploy step whose deployment it shows and guards.
@@ -253,7 +256,7 @@ type Step struct {
 	// loop member it is part of (template steps): see tolerate.
 	continueFail bool
 
-	environmentLine, deploymentLine, versionLine, resourcesLine int
+	environmentLine, deploymentLine, versionLine, resourcesLine, addressLine int
 	// environmentInput is the run input a deploy step's environment comes
 	// from (environment: { input: name }); Bind puts its value in place.
 	environmentInput string

@@ -396,4 +396,16 @@ func TestPullRequestRunsAreChecks(t *testing.T) {
 	if ok, why := pr.action("merge"); ok || why != "`app` has not passed" {
 		t.Fatalf("merge: %v %q", ok, why)
 	}
+	// The results in place: the pipeline's run for the head commit, in the words of the run page.
+	var checks pullChecksView
+	ada.get(prURL+"/checks").json(t, &checks)
+	if checks.Head != pr.HeadSHA || checks.Target != "main" || len(checks.Checks) != 1 {
+		t.Fatalf("checks: %+v", checks)
+	}
+	if c := checks.Checks[0]; c.Run != pr.LinkedRuns[0] || c.Pipeline != "app" || c.Sentence == "" || !c.Detail || c.Tests != nil || c.Findings != nil {
+		t.Fatalf("the check: %+v", c)
+	}
+	if checks.Notes == nil || checks.Deployments == nil {
+		t.Fatal("annotations and deployments are lists, empty when there are none")
+	}
 }

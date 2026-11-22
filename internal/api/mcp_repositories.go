@@ -26,7 +26,7 @@ func addRepositoryTools(srv *mcp.Server, c *mcpCall) {
 		mcpCallTimeout, getRepository)
 	if c.mayOperate {
 		addTool(srv, c, &mcp.Tool{Name: "update_repository", Annotations: changes("Change a hosted repository", true, true),
-			Description: "Repository administrators only. Change a repository's visibility (private, internal or public), default branch or archived flag, or rename it with new_owner and new_name; the old address stops working. A field left out keeps its value. Audited."},
+			Description: "Repository administrators only. Change a repository's visibility (private, internal or public), default branch or archived flag, or rename it with new_owner and new_name; the old address keeps working (Git is mapped and told, the API redirects) until another repository takes it; moving it to another owner needs the admin role there too. A field left out keeps its value. Audited."},
 			mcpCallTimeout, updateRepository)
 		addTool(srv, c, &mcp.Tool{Name: "delete_repository", Annotations: changes("Delete a hosted repository", true, true),
 			Description: "Repository administrators only. Move a repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. Audited."},
@@ -41,6 +41,7 @@ func addRepositoryTools(srv *mcp.Server, c *mcpCall) {
 	addArchiveTools(srv, c)
 	addFilesTools(srv, c)
 	addBrowseTools(srv, c)
+	addOverviewTools(srv, c)
 }
 
 type repositoryOut struct {

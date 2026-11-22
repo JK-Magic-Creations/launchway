@@ -232,6 +232,10 @@ func (s *Server) guardAccess(rt route) http.Handler {
 			id.stamp(entry)
 		}
 		deny := func(code int, msg string) {
+			if code == http.StatusPermanentRedirect { // an old repository address: msg is where the repository is now
+				http.Redirect(w, r, msg, code)
+				return
+			}
 			writeErr(w, code, msg)
 			if entry != nil {
 				entry.Outcome, entry.Detail = "denied", msg

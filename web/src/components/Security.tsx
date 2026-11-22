@@ -222,3 +222,7 @@ export function ArtifactsHowTo({ compact }: { compact?: boolean }) {
     </div>
   );
 }
+
+/** The magnifier of the search boxes and the caret of the folding rows, shared by the run and project pages. */
+export const SearchIcon = () => <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>;
+export const CaretIcon = () => <svg className="tcase-caret" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 6l3 3 3-3" fill="none" /></svg>;

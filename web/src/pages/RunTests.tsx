@@ -4,6 +4,7 @@ import { api, ApiError, type CasePage, type CaseSort, type CompareCase, type Fac
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing, formatLabel, isBrowser, passRate, testDuration, testStatusLabel, BrowserIcon } from "../components/Tests";
 import { CaseDetail } from "../components/TestCase";
+import { SearchIcon, CaretIcon } from "../components/Security";
 import { terms } from "../terms";
 
 type Filter = "" | "failed" | "passed" | "skipped" | "flaky";
@@ -210,7 +211,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
         <div className="ttools-right">
           <label className="search">
             <span className="visually-hidden">Search tests</span>
-            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
+            <SearchIcon />
             <input type="search" placeholder="Search names, suites, messages" value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
         </div>
@@ -537,7 +538,7 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
           <span className="visually-hidden">{testStatusLabel(c.status)}</span>
         </span>
         <span className="tcase-time">{testDuration(c.duration_ms)}</span>
-        <svg className="tcase-caret" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 6l3 3 3-3" fill="none" /></svg>
+        <CaretIcon />
       </button>
       {open && (
         <div className="tcase-detail" id={detailId}>

@@ -55,8 +55,15 @@ type ForgeHosting struct {
 	// Pulls is pull requests and code review (nil: not available); RepoByID
 	// finds a repository from its ID, which the pull request service names
 	// repositories by.
-	Pulls    *pulls.Service
+	Pulls *pulls.Service
+	// Trash is the trash of deleted repositories (nil: not available). Aliases
+	// finds the repository that used to be at an old address (nil: old
+	// addresses do not work).
+	Trash    TrashService
+	Aliases  AliasService
 	RepoByID func(ctx context.Context, id string) (forge.Repository, error)
+	// overview is the contributors jobs running in this process (forge_overview.go).
+	overview overviewJobs
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
 	Updates UpdatesService
@@ -90,7 +97,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(append(append(append(append(append(append(s.updateRoutes(), s.archiveRoutes()...), s.filesRoutes()...), s.hookRoutes()...), s.parityRoutes()...), s.forkRoutes()...), s.conflictRoutes()...), []route{
+	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(append(append(append(append(append(append(s.updateRoutes(), s.archiveRoutes()...), append(s.filesRoutes(), s.overviewRoutes()...)...), s.hookRoutes()...), s.parityRoutes()...), s.forkRoutes()...), s.conflictRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},
@@ -242,6 +249,10 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		if in.Name != nil {
 			name = *in.Name
 		}
+		if dest := repoSubject(owner, name); dest != path && !s.authorize(identityFrom(r), auth.AdministerProject, dest) {
+			writeErr(w, http.StatusForbidden, "you need the admin role on "+dest+" to move a repository there")
+			return
+		}
 		if _, err := p.Rename(ctx, path, owner, name); err != nil {
 			s.failForge(w, err)
 			return
@@ -272,6 +283,9 @@ func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if gone.ID != "" {
+		if s.Forge.Trash != nil {
+			_ = s.Forge.Trash.NoteDeleted(r.Context(), gone.ID, identityFrom(r).User)
+		}
 		s.tokensForgetRepo(gone)
 		s.emitRepository(r.Context(), identityFrom(r).User, gone, "deleted", nil)
 	}
@@ -284,7 +298,15 @@ func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int,
 	if s.Forge == nil {
 		return http.StatusNotFound, featureOff
 	}
-	return s.checkRepo(r.Context(), id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
+	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
+	if m, ok := s.movedRepo(r.Context(), path); ok {
+		if isGitRequest(r) {
+			path = m.Path // Git over HTTP under an old address: the decision is made for the repository where it is now
+		} else if code, msg, ok := s.redirectToMoved(id, r, m); ok {
+			return code, msg
+		}
+	}
+	return s.checkRepo(r.Context(), id, a, path)
 }
 
 // checkRepo applies a repository access class. A repository someone may not

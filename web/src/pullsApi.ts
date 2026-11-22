@@ -1,6 +1,6 @@
 // Calls for pull requests. They mirror internal/api/forge_pulls*.go.
 
-import { call } from "./api";
+import { call, type FindingCounts, type PolicyVerdict } from "./api";
 
 export interface Action { name: string; available: boolean; reason?: string; risk?: string; suggestion?: string }
 export interface Check { name: string; status: string; required: boolean; run_id?: string; project?: string; run_number?: number }
@@ -20,6 +20,14 @@ export interface Pull {
   // Present in the full view only.
   readiness?: Readiness; actions?: Action[]; fetch_ref?: string; your_role?: string; queue?: QueueEntry;
 }
+export interface PullNote { kind: "finding" | "test"; file: string; line?: number; severity?: string; tool?: string; message: string; run_id: string; new?: boolean }
+export interface PullCheck {
+  run_id: string; number: number; project: string; pipeline: string; sentence: string; detail: boolean; policy_verdict?: PolicyVerdict;
+  tests?: { totals: { total: number; passed: number; failed: number; errored: number; skipped: number }; new_failures: string[]; new_failure_count: number; compared: boolean };
+  coverage?: { lines_percent: number; change?: number };
+  findings?: { counts: FindingCounts; new: FindingCounts; new_total: number };
+}
+export interface PullChecks { head: string; target_branch: string; checks: PullCheck[]; policy_verdict?: PolicyVerdict; deployments: { environment: string; version: string; phase: string; address?: string }[]; annotations: PullNote[] }
 export interface FileChange { path: string; old_path?: string; status: string; additions: number; deletions: number; binary: boolean; similarity?: number; too_large?: boolean }
 export interface Patch { path?: string; diff: string; truncated?: boolean; held?: boolean; binary?: boolean; bytes: number }
 export interface Commit { sha: string; author: string; authored_at: string; subject: string; body?: string }
@@ -84,6 +92,7 @@ export const pullsApi = {
   owners: (path: string, n: number) => call<{ file: string; branch: string; owners: OwnersView }>("GET", `${base(path)}/pulls/${n}/owners`),
   viewed: (path: string, n: number) => call<{ viewed: string[] }>("GET", `${base(path)}/pulls/${n}/viewed`).then((r) => r.viewed),
   setViewed: (path: string, n: number, paths: string[], viewed: boolean) => call<{ viewed: string[] }>("PUT", `${base(path)}/pulls/${n}/viewed`, { paths, viewed }).then((r) => r.viewed),
+  checks: (path: string, n: number) => call<PullChecks>("GET", `${base(path)}/pulls/${n}/checks`),
   enqueue: (path: string, n: number, method?: string) => call<QueueEntry>("POST", `${base(path)}/pulls/${n}/queue`, { method }),
   dequeue: (path: string, n: number) => call<void>("DELETE", `${base(path)}/pulls/${n}/queue`),
   updateBranch: (path: string, n: number) => call<{ head: string }>("POST", `${base(path)}/pulls/${n}/update-branch`, {}),

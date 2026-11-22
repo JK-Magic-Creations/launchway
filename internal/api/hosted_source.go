@@ -65,14 +65,25 @@ func (s *Server) hostedRepoOf(ctx context.Context, addr string) (forge.Repositor
 		return forge.Repository{}, false
 	}
 	repo, err := s.Forge.Provider.Repositories().Get(ctx, cand)
+	old := ""
 	if err != nil {
-		return forge.Repository{}, false
+		// A Flight's address from before the repository was renamed or transferred still names it.
+		moved, ok := s.movedRepo(ctx, cand)
+		if !ok {
+			return forge.Repository{}, false
+		}
+		repo, old = moved, cand
 	}
 	ca := repo.Clone
 	want := normalizeAddr(addr)
 	forms := []string{ca.HTTPS, ca.SSH}
 	if i := strings.LastIndex(ca.HTTPS, "/git/"+repo.Path); i >= 0 {
 		forms = append(forms, ca.HTTPS[:i]+"/"+repo.Path+".git")
+	}
+	if old != "" {
+		for i, f := range forms {
+			forms[i] = strings.Replace(f, repo.Path, old, 1)
+		}
 	}
 	for _, f := range forms {
 		if f != "" && normalizeAddr(f) == want {

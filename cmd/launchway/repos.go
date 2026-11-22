@@ -19,7 +19,7 @@ const reposUsage = `Usage:
                          [--branch B] [--archived=false] [--rename-to OWNER/NAME]
   launchway repos delete OWNER/NAME                      move a repository to the trash
 
-` + reposKeysUsage + reposMoreUsage + `
+` + reposKeysUsage + reposMoreUsage + reposTrashUsage + reposOverviewUsage + `
 Git hosting must be turned on (the installation setting forge.hosting); otherwise every
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
 come from the same role bindings as a Flight's, matched on that path. Changes are
@@ -97,7 +97,13 @@ func cmdRepos(args []string) error {
 			return cl.reposDownload(args[1:])
 		case "settings":
 			return cl.reposSettings(args[1:])
-		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags":
+		case "trash":
+			return cl.reposTrash(args[1:])
+		case "restore":
+			return cl.reposRestore(args[1:])
+		case "purge":
+			return cl.reposPurge(args[1:])
+		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags", "activity", "languages", "contributors":
 			return cl.reposBrowse(args[0], args[1:])
 		}
 		return usageErr("unknown command repos %s\n\n%s", args[0], reposUsage)
@@ -197,7 +203,7 @@ func (cl *client) reposUpdate(args []string) error {
 	vis := fs.String("visibility", "", "private, internal or public")
 	branch := fs.String("branch", "", "the default branch")
 	archived := fs.Bool("archived", false, "archive the repository (no pushes); --archived=false brings it back")
-	rename := fs.String("rename-to", "", "OWNER/NAME to rename or move it to; the old address stops working")
+	rename := fs.String("rename-to", "", "OWNER/NAME to rename or move it to; the old address keeps working until another repository takes it")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {

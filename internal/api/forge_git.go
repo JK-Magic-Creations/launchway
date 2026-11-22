@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -132,10 +131,14 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	notice := s.pushNotice(c, repo, r)
+	if old := repoSubject(r.PathValue("owner"), strings.TrimSuffix(r.PathValue("name"), ".git")); old != repo.Path {
+		notice = withMovedNotice(notice, movedNotice(old, repo))
+	}
 	start := time.Now()
 	cw, cr := &countingWriter{ResponseWriter: w}, &countingBody{ReadCloser: r.Body}
 	r.Body = cr
-	res := s.Forge.Git.Serve(cw, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: s.pushNotice(c, repo, r)})
+	res := s.Forge.Git.Serve(cw, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: notice})
 	if !q.advertise {
 		op := "fetch"
 		if q.svc == githttp.ReceivePack {
@@ -247,6 +250,9 @@ type gitDecision struct {
 	unauth, audit bool
 	// failed is a fault of the server, not a decision.
 	failed error
+	// movedFrom is the old address the request used, when the repository is
+	// at another now (the client is told).
+	movedFrom string
 }
 
 // gitDecide finds the repository and decides whether this caller may do this
@@ -254,12 +260,12 @@ type gitDecision struct {
 // HTTP asks it for a request, SSH for a command. Everything that cannot be
 // told apart is answered alike.
 func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecision {
-	repo, err := s.Forge.Provider.Repositories().Get(ctx, q.path)
-	found := err == nil
-	if err != nil && !errors.Is(err, forge.ErrNotFound) {
+	repo, found, now, from, err := s.gitFind(ctx, q.path)
+	if err != nil {
 		return gitDecision{failed: err}
 	}
-	d := gitDecision{repo: repo}
+	q.path = now
+	d := gitDecision{repo: repo, movedFrom: from}
 	deny := func(code int, msg string) gitDecision {
 		d.code, d.msg, d.audit = code, msg, true
 		return d

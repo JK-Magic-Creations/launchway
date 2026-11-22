@@ -39,6 +39,7 @@ const prUsage = `Usage:
   launchway pr edit N [-R OWNER/NAME] [--title T] [--body B] [--ready] [--draft] [--label L,L] [--assignee U,U] [--base BRANCH]
   launchway pr revert N [-R OWNER/NAME]                   open a new pull request that undoes a merged one
   launchway pr apply N COMMENT-ID... [-R OWNER/NAME]      apply one suggestion, or several as one commit (needs push access)
+  launchway pr checks N [-R OWNER/NAME] [--json]          what each pipeline said for the head commit: tests, coverage, findings, policy, deployments
   launchway pr queue N [-R OWNER/NAME] [--method M] [--priority P] [--cancel]
                                                           add it to the branch's merge queue, show its place, or take it out (--cancel)
   launchway pr update-branch N [-R OWNER/NAME] [--rebase]   bring the source branch up to date with the target
@@ -234,6 +235,8 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prRules(args)
 	case "owners":
 		return cl.prOwners(args)
+	case "checks":
+		return cl.prChecks(args)
 	case "queue":
 		return cl.prQueue(args)
 	case "update-branch":

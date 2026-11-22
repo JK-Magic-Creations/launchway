@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../api";
 import { configApi, kindLabel, loadOverview, useOverview, type ChangeRequest, type ConfigObject, type ConfigOverview } from "../../configApi";
-import { assignProblems, ProblemList, useServerCheck, WillCreate, WizardFrame, CheckLine } from "../../components/ConfigForm";
+import { Problems, assignProblems, ProblemList, useServerCheck, WillCreate, WizardFrame, CheckLine } from "../../components/ConfigForm";
 import { Empty, ErrorBox, Link } from "../../components/ui";
 import { ConnectRepoWizard } from "./ConnectRepo";
 import { FirstRunWizard } from "./FirstRun";
@@ -217,7 +217,7 @@ export function PickNames({ legend, help, names, value, onChange, placeholder = 
             onChange([...value.filter((v) => names.includes(v)), ...typed]);
           }} />
       </label>
-      <div className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>
+      <Problems problems={problems} />
     </fieldset>
   );
 }

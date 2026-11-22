@@ -48,9 +48,29 @@ Flight. See [Roles and permissions](../reference/roles.md#work-tracking).
 | `story` | A change a user would notice | tasks |
 | `task` | A piece of work | nothing |
 | `epic` | A body of work made of stories, issues and bugs | stories, issues, bugs |
+| `decision` | A [decision record](#decision-records): a question, the options, a recommendation, then the answer | tasks |
 
 An epic has no parent. An item cannot be its own ancestor. A level may switch types off for new items;
 existing items keep theirs.
+
+## Decision records {#decision-records}
+
+An approval says yes or no to one action. A **decision record** keeps why something was done: a work item of type
+`decision` whose description holds the question, the options and a recommendation (a new decision starts from that
+outline), whose links say what it blocks (`blocks`) and what it decides (`decides` to an item, a pull code link to a
+pull request), and which a person answers.
+
+A decision is **proposed** until a person who may change work at its level answers it with `launchway work decisions
+accept KEY-12 "PostgreSQL, one per Airfield."`: the answer, who gave it and when are kept, and the item is
+finished. An agent does not answer. An accepted decision can be **superseded** by another accepted decision
+(`work decisions supersede KEY-12 KEY-30`), which is named on both; a decision is never replaced by itself, by a
+proposal, or in a loop. `decision:accepted` in a query, `work decisions list` and the `list_decisions` tool find them.
+
+`launchway work decisions export OWNER/NAME` writes the repository's accepted and superseded decisions (its own work
+and work tied to its code, as far as you may see them) as Markdown files, `docs/decisions/key-title.md`, on a new
+branch and opens a pull request, so that the records live with the code once it is merged. A file already in the
+default branch with the same text is left alone, and when nothing differs nothing is made. Neither the commit nor the
+pull request names a decision, so merging it does not tie it to the decisions it records.
 
 ## Workflow
 
@@ -154,6 +174,29 @@ You may edit your own comment. **The earlier text is kept**: a comment that has 
 its earlier versions are listed oldest first, with when each was written. Nobody edits another person's
 comment. An agent comments only on the work it holds.
 
+## Reactions
+
+You may react to an item and to a comment with one of eight: `thumbs_up`, `thumbs_down`, `laugh`, `hooray`,
+`confused`, `heart`, `rocket` and `eyes`. Anyone who can see the item may react, one of each kind per person
+(reacting again changes nothing), and an agent does not. Every item and comment the API returns carries the
+count of each reaction and whether it is yours (`launchway work items react REF heart`, the `react_to_work`
+tool). Taking a reaction back removes only yours.
+
+## Time
+
+Log time on an item with a **timer** or by hand. `launchway work time start PAY-12` starts your timer, `work time
+stop --note "found it"` stops it. A person has one running timer, so a second start is refused and names the
+first. A stopped timer counts whole minutes, at least one and at most a day; a timer left running for longer
+counts for a day and the entry says so, for you to correct with `work time edit`. `work time log PAY-12 90
+--day 2026-03-01 --note "review"` adds an entry by hand (1 to 1440 minutes, not for a day to come).
+
+You change or delete only your own entries. Anyone who can see an item sees its time; logging needs the right to
+change work in its scope, and an agent does not log. An item shows its total, each person's share and the timers
+running on it. **Remaining time** is the estimate less the logged time, and is worked out only where the level's
+estimate unit is hours; with points the item says so rather than turning points into hours. `work time report`
+adds the time up per person and item over the items you may see for a period, and `work time export` writes the
+entries as CSV (cells that a spreadsheet could read as formulas start with an apostrophe).
+
 ## Attachments
 
 A file may be attached to an item. Each file is up to 10 MB and an item holds at most 50. Files are kept in
@@ -179,6 +222,12 @@ updated:<7d`. The language is in the [query reference](../reference/work-queries
 A query can be saved as a **view**. A view is private to you, or **shared** with everyone who reads the
 scope (sharing needs the right to change work there). Views are listed on the work page, and are a name
 and a query, nothing more: opening one runs the query again with what you may see now.
+
+**Work of a repository.** `repo:acme/shop` in a query, `?repository=acme/shop` on the list route,
+`--in-repo acme/shop` on the command line and `repository` on the tool find the repository's own work and the
+work tied to its code (a branch, pull request, commit, run, or the repository itself). An item made with
+`repository` and no scope lives in the repository's own scope (`launchway work items create --for-repo
+acme/shop`); with another scope it is tied to the repository so that the repository's list finds it.
 
 Lists are paged, sorted by backlog order unless you sort by update time, creation time, priority, due date
 or number, and show only what you may see.

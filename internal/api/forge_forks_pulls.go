@@ -115,7 +115,20 @@ func (s *Server) parseHead(ctx context.Context, head string, base forge.Reposito
 	}
 	path := spec
 	if !strings.Contains(spec, "/") {
-		path = spec + "/" + base.Name
+		// A bare owner names the owner's fork of the target. It is found among the target's forks, so that a
+		// base that was renamed (or a fork that was) still receives it; only when the owner has none there does
+		// it name the owner's repository of the target's name (which the pull request then checks is in the network).
+		if list, err := s.Forge.Forks.Forks(ctx, base.ID, 500); err == nil {
+			for _, f := range list {
+				if f.Home == spec {
+					path = f.Path
+					break
+				}
+			}
+		}
+		if path == spec {
+			path = spec + "/" + base.Name
+		}
 	}
 	fork, err := s.Forge.Provider.Repositories().Get(ctx, path)
 	if err != nil {

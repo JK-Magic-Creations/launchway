@@ -83,6 +83,12 @@ func createShop(t *testing.T, e *Engine, src string, number int) string {
 // steps leased on the way are handed back.
 func build(t *testing.T, e *Engine, runID, tag string) {
 	t.Helper()
+	buildOutputs(t, e, runID, map[string]string{"tag": tag})
+}
+
+// buildOutputs is build, writing the outputs given.
+func buildOutputs(t *testing.T, e *Engine, runID string, outputs map[string]string) {
+	t.Helper()
 	var back []*Job
 	defer func() {
 		for _, j := range back {
@@ -103,7 +109,7 @@ func build(t *testing.T, e *Engine, runID, tag string) {
 		if _, err := e.Start(j.LeaseID); err != nil {
 			t.Fatal(err)
 		}
-		ok(t, e, j, map[string]string{"tag": tag})
+		ok(t, e, j, outputs)
 		return
 	}
 	t.Fatalf("could not find the build step of %s", runID)
@@ -895,5 +901,33 @@ func TestCrashLoopingPodsFailTheStepWithTheirOwnReason(t *testing.T) {
 	}
 	if all := strings.Join(text, "\n"); !strings.Contains(all, "[FAILED] crash_looping") || !strings.Contains(all, "encryption keys") {
 		t.Fatalf("the step log lacks the failure:\n%s", all)
+	}
+}
+
+// A deploy step says where its deployment can be seen: written in place or taken from a step's output. The address is
+// kept with the deployment and comes back in its view; one that is not a web address is left out and the deployment goes on.
+func TestDeploymentKeepsTheAddressItsStepGave(t *testing.T) {
+	for name, tc := range map[string]struct {
+		address string
+		outputs map[string]string
+		want    string
+	}{
+		"from an output":                      {"{ output: build.url }", map[string]string{"tag": "1.4.2", "url": "https://preview.example.com/pr-12"}, "https://preview.example.com/pr-12"},
+		"written in place":                    {"https://staging.example.com/shop", map[string]string{"tag": "1.4.2"}, "https://staging.example.com/shop"},
+		"an output that is not a web address": {"{ output: build.url }", map[string]string{"tag": "1.4.2", "url": "javascript:alert(1)"}, ""},
+		"an output with a user name":          {"{ output: build.url }", map[string]string{"tag": "1.4.2", "url": "https://ada:pw@example.com/"}, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e, _ := newDeployEngine(t, prodEnv)
+			src := strings.Replace(shopPipeline, "    timeout: 10m\n", "    address: "+tc.address+"\n    timeout: 10m\n", 1)
+			id := createShop(t, e, src, 1)
+			buildOutputs(t, e, id, tc.outputs)
+			j := leaseDeploy(t, e, deployer)
+			applied(t, e, j, "c0ffee")
+			ds := runDeployments(t, e, id)
+			if len(ds) != 1 || ds[0].Address != tc.want {
+				t.Fatalf("the deployment's address: %+v", ds)
+			}
+		})
 	}
 }

@@ -72,6 +72,7 @@ const NewPullRequestPage = lz(() => import("../pages/PullRequests"), "NewPullReq
 const RepoCodeRoute = lz(() => import("../pages/repo/Route"), "RepoCodeRoute");
 const PullRequestPage = lz(() => import("../pages/PullRequest"), "PullRequestPage");
 const ImportRepositoriesPage = lz(() => import("../pages/ImportRepositories"), "ImportRepositoriesPage");
+const RepositoryTrashPage = lz(() => import("../pages/RepositoryTrash"), "RepositoryTrashPage");
 const DependenciesPage = lz(() => import("../pages/Dependencies"), "DependenciesPage");
 const UpdatesPage = lz(() => import("../pages/Dependencies"), "UpdatesPage");
 const RepositoryGraphPage = lz(() => import("../pages/SoftwareGraph"), "RepositoryGraphPage");
@@ -127,6 +128,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/toggles/:toggle": return <ToggleDetailPage key={p.name + "/" + p.toggle} project={p.name} toggle={p.toggle} />;
     case "/projects/:name/toggle-settings": return <ToggleSettingsPage key={p.name} name={p.name} />;
     case "/repositories/import": return <ImportRepositoriesPage />;
+    case "/repositories/trash": return <RepositoryTrashPage />;
     case "/repositories/:owner/:name": return <RepoCodeRoute key={p.owner + "/" + p.name + "@"} view="overview" path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/:view": case "/repositories/:owner/:name/commit/:sha":
       return <RepoCodeRoute key={p.owner + "/" + p.name + "@" + (p.sha ?? "")} view={p.view ?? "commit"} path={p.owner + "/" + p.name} sha={p.sha} />;

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,8 @@ func (cl *client) workItems(args []string) error {
 		return cl.workDo("items history", rest, itemsHistory)
 	case "take-over":
 		return cl.workDo("items take-over", rest, itemsTakeOver)
+	case "react":
+		return cl.workDo("items react", rest, itemsReact)
 	case "attach":
 		return cl.workAttach(rest)
 	case "file":
@@ -65,13 +68,14 @@ func itemsList(w *wcmd) func([]string) (*workReq, error) {
 	limit := w.fs.String("limit", "", "how many (at most 200)")
 	offset := w.fs.String("offset", "", "how many to skip")
 	parent := w.fs.String("parent", "", "only the children of this item")
+	inRepo := w.fs.String("in-repo", "", "only the work of this repository (OWNER/NAME): its own and the work tied to its code")
 	return func([]string) (*workReq, error) {
 		d := ""
 		if *desc {
 			d = "true"
 		}
 		sc := w.scopeValue()
-		return &workReq{method: "GET", path: "/api/v1/work/items" + q("scope", sc, "q", *query, "sort", *sort, "desc", d, "limit", *limit, "offset", *offset, "parent", *parent),
+		return &workReq{method: "GET", path: "/api/v1/work/items" + q("scope", sc, "q", *query, "sort", *sort, "desc", d, "limit", *limit, "offset", *offset, "parent", *parent, "repository", *inRepo),
 			show: func(out any) {
 				w.cl.itemRows(wlist(out, "items"))
 				fmt.Fprintf(w.cl.out, "\n%s of %s items.\n", fmt.Sprint(len(wlist(out, "items"))), wstr(out, "total"))
@@ -163,6 +167,7 @@ func itemsCreate(w *wcmd) func([]string) (*workReq, error) {
 	due := w.fs.String("due", "", "due date")
 	diff := w.fs.String("difficulty", "", "small, medium or large")
 	conf := w.fs.Bool("confidential", false, "only those who may change work here see it")
+	forRepo := w.fs.String("for-repo", "", "the repository (OWNER/NAME) the item is for: its scope when none is given, otherwise a tie to it")
 	var labels, assignees, criteria multi
 	w.fs.Var(&labels, "label", "a label (repeat for more)")
 	w.fs.Var(&assignees, "assignee", "a person, or agent:NAME (repeat for more)")
@@ -175,11 +180,14 @@ func itemsCreate(w *wcmd) func([]string) (*workReq, error) {
 		if err != nil {
 			return nil, err
 		}
-		path, err := w.withScope("/api/v1/work/items")
-		if err != nil {
-			return nil, err
+		path := "/api/v1/work/items"
+		if w.scopeValue() != "" || *forRepo == "" {
+			if path, err = w.withScope(path); err != nil {
+				return nil, err
+			}
 		}
 		b := map[string]any{"title": pos[0]}
+		setIf(b, "repository", *forRepo)
 		setIf(b, "type", *typ)
 		setIf(b, "body", text)
 		setIf(b, "state", *state)
@@ -344,7 +352,7 @@ func itemsComment(w *wcmd) func([]string) (*workReq, error) {
 func itemsLink(w *wcmd) func([]string) (*workReq, error) {
 	return func(pos []string) (*workReq, error) {
 		if len(pos) != 3 {
-			return nil, usageErr("launchway work items link REF blocks|relates|duplicates OTHER")
+			return nil, usageErr("launchway work items link REF blocks|relates|duplicates|decides OTHER")
 		}
 		return &workReq{method: "POST", path: apiItem(pos[0]) + "/links", body: map[string]any{"kind": pos[1], "to": pos[2]},
 			show: func(out any) {
@@ -467,4 +475,35 @@ func (cl *client) workFile(args []string) error {
 			return &workReq{}, os.WriteFile(*out, data, 0o600)
 		}
 	})
+}
+
+func itemsReact(w *wcmd) func([]string) (*workReq, error) {
+	comment := w.fs.String("comment", "", "react to this comment (its id) instead of the item")
+	remove := w.fs.Bool("remove", false, "take your reaction back")
+	return func(pos []string) (*workReq, error) {
+		reaction, p := "", ""
+		switch {
+		case *comment != "" && len(pos) == 1:
+			reaction, p = pos[0], "/api/v1/work/comments/"+url.PathEscape(*comment)
+		case *comment == "" && len(pos) == 2:
+			reaction, p = pos[1], apiItem(pos[0])
+		default:
+			return nil, usageErr("launchway work items react REF REACTION [--remove]   or   work items react --comment ID REACTION [--remove]\nreactions: thumbs_up thumbs_down laugh hooray confused heart rocket eyes")
+		}
+		method := "PUT"
+		if *remove {
+			method = "DELETE"
+		}
+		return &workReq{method: method, path: p + "/reactions/" + url.PathEscape(reaction), show: func(out any) {
+			var parts []string
+			for _, r := range wlist(out, "reactions") {
+				mark := ""
+				if b, _ := r.(map[string]any)["mine"].(bool); b {
+					mark = "*"
+				}
+				parts = append(parts, fmt.Sprintf("%s %s%s", wstr(r, "reaction"), wstr(r, "count"), mark))
+			}
+			fmt.Fprintln(w.cl.out, strings.Join(parts, ", "))
+		}}, nil
+	}
 }

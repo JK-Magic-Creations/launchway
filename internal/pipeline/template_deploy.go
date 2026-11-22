@@ -50,6 +50,7 @@ func (x *expander) deployOf(sc *scope, c *Step) {
 		return &cv
 	}
 	c.Version = local(c.Version)
+	c.Address = local(c.Address)
 	if c.ArgoCD != nil && c.ArgoCD.WriteBack != nil {
 		a := *c.ArgoCD
 		w := *a.WriteBack

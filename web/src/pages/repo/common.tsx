@@ -1,3 +1,4 @@
+import { followMove } from "../../movedRepo";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { announce } from "../../kit/announce";
@@ -46,7 +47,7 @@ export function useRepo(path: string): { repo: HostedRepo | null; error: unknown
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
     const [o, ...n] = path.split("/");
-    forgeApi.repository(o, n.join("/")).then(setRepo).catch(setError);
+    forgeApi.repository(o, n.join("/")).then((r) => { followMove(path, r.path); setRepo(r); }).catch(setError);
   }, [path]);
   return { repo, error };
 }

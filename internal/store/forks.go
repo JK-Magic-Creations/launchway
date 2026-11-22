@@ -138,44 +138,6 @@ func BlobInUse(ctx context.Context, db CtxDB, key, repo, pack string, retiredAft
 	return n > 0, err
 }
 
-// PurgeLedger ends a repository's storage: its refs are deleted, every live or
-// pending pack is retired (its blob is deleted by the next collection that
-// finds no other repository needing it), the repository is flagged so that
-// nothing repacks or serves it, and its generation moves. Purging twice is the
-// same as once.
-func PurgeLedger(ctx context.Context, begin BeginFunc, postgres bool, repo string, now int64, hit func(point string) error) (packs int, err error) {
-	if hit == nil {
-		hit = func(string) error { return nil }
-	}
-	tx, err := begin(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	var gen int64
-	if err := tx.QueryRow(ctx, `SELECT gen FROM repo_generation WHERE repo_id = ?`+lockOf(postgres), repo).Scan(&gen); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM repo_refs WHERE repo_id = ?`, repo); err != nil {
-		return 0, err
-	}
-	res, err := tx.Exec(ctx, `UPDATE repo_packs SET state = 'retired', died_gen = ?, retired_at = ? WHERE repo_id = ? AND state IN ('live', 'pending')`, gen+1, now, repo)
-	if err != nil {
-		return 0, err
-	}
-	n, _ := res.RowsAffected()
-	if err := hit("purge:after-packs"); err != nil {
-		return 0, err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE repo_generation SET gen = ?, flagged = 'purged' WHERE repo_id = ?`, gen+1, repo); err != nil {
-		return 0, err
-	}
-	return int(n), tx.Commit()
-}
-
 // ForkInfo is what a repository's row says about forks, templates and the
 // switch. Visibility is the repository's own, for the rules that compare it
 // with another's.

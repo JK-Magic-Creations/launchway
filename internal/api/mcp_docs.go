@@ -65,6 +65,7 @@ func addDocs(srv *mcp.Server, c *mcpCall) {
 	addAttentionTool(srv, c)
 	addOrganizeTool(srv, c)
 	addSquadronTools(srv, c)
+	addAccountTools(srv, c)
 	addRecentTool(srv, c)
 	text := func(uri, mime, body string) mcp.ResourceHandler {
 		return func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {

@@ -224,6 +224,9 @@ func (h sshHandler) Serve(ctx context.Context, sess gitssh.Session, cmd gitssh.C
 		say("%s", dec.msg)
 		return 1
 	}
+	if dec.movedFrom != "" {
+		say("%s", movedNotice(dec.movedFrom, dec.repo))
+	}
 	res := s.Forge.Git.Stream(ctx, githttp.StreamRequest{
 		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user, Notice: s.pushNotice(c, dec.repo, nil)},
 		Protocol: cmd.Protocol, In: sess.In, Out: sess.Out, Policy: s.pushPolicy(c, dec.repo)})

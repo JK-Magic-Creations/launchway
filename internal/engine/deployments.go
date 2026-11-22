@@ -381,7 +381,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 	}
 	deadline := c.now + def.Timeout.D().Milliseconds()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
-		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected}})
+		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected, Address: c.deployAddress(def)}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionApply}})
 	c.after(c.e.kickDeploys)
 }
@@ -649,9 +649,9 @@ func (c *cmd) persistSchema11() error {
 				prevID, prevVersion = d.Previous.Deployment, d.Previous.Version
 			}
 			_, err = c.tx.Exec(`INSERT INTO deployments(id, run_id, run_number, project, step_id, environment, service, target,
-					application, mode, version, previous_id, previous_version, opened_at)
-				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, d.ID, st.ID, st.Number, st.Project, ev.Data.Step, d.Environment, d.Service,
-				d.Target, d.Application, d.Mode, d.Version, prevID, prevVersion, ev.At)
+					application, mode, version, previous_id, previous_version, opened_at, address)
+				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, d.ID, st.ID, st.Number, st.Project, ev.Data.Step, d.Environment, d.Service,
+				d.Target, d.Application, d.Mode, d.Version, prevID, prevVersion, ev.At, d.Address)
 		case StepQueued:
 			if d != nil && d.Action == ActionRevert {
 				c.after(func() { metrics.Rollbacks.Inc() })

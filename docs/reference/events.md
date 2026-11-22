@@ -415,6 +415,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.sync` | `POST /api/v1/repositories/{owner}/{name}/sync`; the detail: the branch, the parent's branch and what happened |
 | `repository.from_template` | `POST /api/v1/repositories/{owner}/{name}/generate`; the target is the template, the detail the new repository |
 | `owner.fork_settings` | `PUT /api/v1/owners/{owner}/fork-settings`; the target is the owner, the detail the new switch |
+| `repository.restore` | `POST /api/v1/repository-trash/{id}/restore`; the detail says what address it had |
+| `repository.purge` | `DELETE /api/v1/repository-trash/{id}`, or the background worker (user `system`) when the retention ended; the detail counts the packs and blobs removed |
 | `mirror.create` | `POST /api/v1/repositories/{owner}/{name}/mirrors` (also `launchway repos mirror add`); the detail says the direction, the address and where the credential is read from, never the credential |
 | `mirror.update` | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}`: paused, resumed, a new interval or prune setting, or a push mirror's `publish_releases` turned on or off |
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |
@@ -431,8 +433,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.file_delete` | `DELETE /api/v1/repositories/{owner}/{name}/files` (also `launchway repos delete-file`): one commit made by the server that removes a file; the detail names the branch, the path and the commit range |
 | `repository.files_upload` | `POST /api/v1/repositories/{owner}/{name}/files` (also `launchway repos upload`): several files added in one commit by the server; the detail names the branch, the paths and the commits before and after |
 | `repository.inspect` | `POST /api/v1/repositories/{owner}/{name}/inspections` (also `launchway repos inspect`): an Inspection started by hand; the detail names the Flight (codebase), the Sortie (run) and the commit. A refusal (no Flight watches the repository, Standing orders off, no Station online) is audited with its reason |
+| `repository.decisions_export` | `POST /api/v1/repositories/{owner}/{name}/decisions/export` (also `launchway work decisions export`): decision records written to a branch and a pull request opened; the detail names the branch and the number of files |
 | `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
 | `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
+| `repository.branch_delete_stale` | `POST /api/v1/repositories/{owner}/{name}/branches/delete-stale` (also `launchway repos branches stale --delete --yes`): merged stale branches removed in one go; the detail lists the names removed |
+| `repository.branch_from_item` | `POST /api/v1/repositories/{owner}/{name}/branches/from-item` (also `launchway repos branches start`): a branch made for a work item; the detail names the branch, where it started and the item |
 | `repository.branch_rename` | `POST /api/v1/repositories/{owner}/{name}/branches/rename` (also `launchway repos branches rename`): a branch renamed; the detail names both names and the commit |
 | `repository.tag_create` | `POST /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags create`): a lightweight tag made by the server; the detail names the tag and the commit |
 | `repository.tag_delete` | `DELETE /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags delete`): a tag removed; the detail names the tag and the object it was at, which brings it back |
@@ -525,6 +530,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `auth.local.second_factor_added` | `POST /api/v1/account/second-factor/confirm`: the authenticator was proven with a code |
 | `auth.local.second_factor_removed` | `DELETE /api/v1/account/second-factor` |
 | `auth.local.recovery_codes_renewed` | `POST /api/v1/account/recovery-codes`: a new set; the old codes stopped working |
+| `auth.session_end` | `DELETE /api/v1/account/sessions/{id}`: one of a person's sessions ended |
+| `auth.session_end_others` | `POST /api/v1/account/sessions/end-others` |
 | `auth.sign_out_everywhere` | `POST /api/v1/account/sign-out-everywhere` |
 | `user.invite` | `POST /api/v1/users`: an administrator invited a person (the target is the user name; the link is never recorded) |
 | `user.reset` | `POST /api/v1/users/{name}/reset`: a one-time reset link was issued |
@@ -538,6 +545,14 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `work.take_over` | `POST /api/v1/work/items/{ref}/take-over`: a person took work from an agent |
 | `work.comment` | `POST /api/v1/work/items/{ref}/comments` |
 | `work.comment_edit` | `PATCH /api/v1/work/comments/{id}`: the earlier text is kept |
+| `work.react` | `PUT` or `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` and `/api/v1/work/comments/{id}/reactions/{reaction}`: a reaction made or taken back |
+| `work.time_log` | `POST /api/v1/work/items/{ref}/time`: an entry added; the detail says how long |
+| `work.timer_start` | `POST /api/v1/work/items/{ref}/timer` |
+| `work.timer_stop` | `POST /api/v1/work/timer/stop`: the detail says how long it counted for |
+| `work.time_edit` | `PATCH /api/v1/work/time/{id}` |
+| `work.time_delete` | `DELETE /api/v1/work/time/{id}` |
+| `work.decision_accept` | `POST /api/v1/work/items/{ref}/decision/accept`: a decision answered |
+| `work.decision_supersede` | `POST /api/v1/work/items/{ref}/decision/supersede` |
 | `work.link` | `POST /api/v1/work/items/{ref}/links`: blocks, relates or duplicates |
 | `work.unlink` | `DELETE /api/v1/work/links/{id}` |
 | `work.code_link` | `POST /api/v1/work/items/{ref}/code`: a commit, branch, pull request or run was tied to an item by hand or by an agent |

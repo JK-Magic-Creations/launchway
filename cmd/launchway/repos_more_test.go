@@ -151,3 +151,58 @@ func TestCLIPullTemplate(t *testing.T) {
 		t.Fatalf("template: %v %q", err, out.String())
 	}
 }
+
+// The command line lists the trash, restores a repository (under another name when its address is taken) and removes
+// one for good only when the address is typed.
+func TestCLIRepositoryTrash(t *testing.T) {
+	hc := newHostedCLI(t)
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	if err := ada.reposCreate([]string{"shop", "--owner", "acme"}); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := ada.reposTrash(nil); err != nil || !strings.Contains(out.String(), "No deleted repositories") {
+		t.Fatalf("empty: %v %q", err, out.String())
+	}
+	if err := ada.reposDelete([]string{"acme/shop"}); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := ada.reposTrash(nil); err != nil || !strings.Contains(out.String(), "acme/shop") || !strings.Contains(out.String(), "deleted by ada") {
+		t.Fatalf("listed: %v %q", err, out.String())
+	}
+	var id string
+	for _, f := range strings.Fields(out.String()) {
+		if strings.HasPrefix(f, "rep_") {
+			id = f
+		}
+	}
+	if id == "" {
+		t.Fatalf("no id in %q", out.String())
+	}
+	if err := ada.reposCreate([]string{"shop", "--owner", "acme"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ada.reposRestore([]string{id}); err == nil || !strings.Contains(err.Error(), "another name") {
+		t.Fatalf("restoring onto a taken address: %v", err)
+	}
+	out.Reset()
+	if err := ada.reposRestore([]string{id, "--name", "shop-old"}); err != nil || !strings.Contains(out.String(), "Restored acme/shop-old") {
+		t.Fatalf("restore: %v %q", err, out.String())
+	}
+	if err := ada.reposDelete([]string{"acme/shop-old"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ada.reposPurge([]string{id}); err == nil || !strings.Contains(err.Error(), "type the address") {
+		t.Fatalf("no confirmation: %v", err)
+	}
+	out.Reset()
+	if err := ada.reposPurge([]string{id, "--confirm", "acme/shop-old"}); err != nil || !strings.Contains(out.String(), "Removed acme/shop-old for good") {
+		t.Fatalf("purge: %v %q", err, out.String())
+	}
+	out.Reset()
+	if err := ada.reposTrash(nil); err != nil || !strings.Contains(out.String(), "No deleted repositories") {
+		t.Fatalf("empty again: %v %q", err, out.String())
+	}
+}

@@ -4,7 +4,7 @@
 import { useId } from "react";
 import type { RuleInfo } from "../api";
 import { POINT, RULES, type RuleField } from "../configKinds";
-import { splitList } from "./ConfigForm";
+import { Problems, splitList } from "./ConfigForm";
 import { terms } from "../terms";
 
 type Rules = Record<string, unknown>;
@@ -67,7 +67,7 @@ function RuleRow({ info, on, value, onToggle, onValue, problems }: {
               <textarea className="cf-input cf-textarea mono" defaultValue={JSON.stringify(value ?? {}, null, 1)}
                 onChange={(e) => { try { onValue(JSON.parse(e.target.value)); } catch { /* finish typing */ } }} /></label>
           )}
-          <div className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>
+          <Problems problems={problems} />
         </div>
       )}
     </li>

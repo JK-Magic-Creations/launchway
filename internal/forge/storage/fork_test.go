@@ -42,7 +42,7 @@ func hasObject(t *testing.T, dir, sha string) bool {
 	return err == nil
 }
 
-func blobExists(t *testing.T, w *world, repo string) []bool {
+func packBlobsExist(t *testing.T, w *world, repo string) []bool {
 	t.Helper()
 	snap, err := w.st.Ledger().Snapshot(context.Background(), repo)
 	if err != nil {
@@ -286,7 +286,7 @@ func TestPurgeFailsAtEveryStepAndTheRetryConverges(t *testing.T) {
 	if got := fingerprint(t, cloneMirror(t, a, "frk1")); got != want {
 		t.Fatal("the purge of the parent changed the fork")
 	}
-	for _, ok := range blobExists(t, w, "frk1") {
+	for _, ok := range packBlobsExist(t, w, "frk1") {
 		if !ok {
 			t.Error("a blob the fork needs was deleted")
 		}

@@ -4,6 +4,7 @@ import { ErrorBox, Mono } from "../components/ui";
 import { forgeApi, type HostedRepo } from "../forgeApi";
 import { Button, Sheet } from "../kit/layout";
 import { navigate } from "../router";
+import { RepoTransfer } from "./RepoTransfer";
 
 /** A destructive change asks for the repository's name, typed in, and says what is lost. */
 function Confirm({ repo, what, lost, action, busy, onGo, onCancel }: { repo: HostedRepo; what: string; lost: string; action: string; busy: boolean; onGo: () => void; onCancel: () => void }) {
@@ -58,9 +59,10 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
       {saved && <p className="sub" role="status">{saved}</p>}
       <form className="inputs-form" aria-label="Rename the repository" onSubmit={(e) => { e.preventDefault(); void rename(); }}>
         <label className="field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <p className="sub">Renaming moves the repository to <Mono>{owner}/{name.trim() || "…"}</Mono>. Its history, pull requests and settings stay. The old address and the old clone address stop working: anyone with a clone must change its remote, and links to the old name do not redirect.</p>
+        <p className="sub">Renaming moves the repository to <Mono>{owner}/{name.trim() || "…"}</Mono>. Its history, pull requests and settings stay. The old address keeps working, for Git (which says where the repository is now) and as a redirect for the API and web pages, until another repository takes the name. Anyone with a clone should change its remote.</p>
         <div><Button type="submit" disabled={busy || !name.trim() || name.trim() === repo.name}>Rename</Button></div>
       </form>
+      <RepoTransfer repo={repo} owner={owner} />
       <form className="inputs-form" aria-label="Visibility of the repository" onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { visibility }), "Visibility changed."); }}>
         <label className="field"><span>Who may see it</span>
           <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
@@ -85,7 +87,7 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
           : <p className="sub">Archiving stops pushes and changes; everything stays readable. <Button onClick={() => setAsking("archive")}>Archive this repository</Button></p>}
       {asking === "delete"
         ? <Confirm repo={repo} what="Delete this repository" action="Delete" busy={busy} onCancel={() => setAsking("")}
-            lost="It stops being served and listed: clones, pushes, pull requests and webhooks of it stop working at once. Its data is kept in the server's trash, not erased, but there is no button here to bring it back."
+            lost="It stops being served and listed: clones, pushes, pull requests and webhooks of it stop working at once. Its data is kept in the server's trash, not erased, until the retention ends: you can bring it back from Deleted repositories."
             onGo={() => run(async () => { await forgeApi.remove(owner, repo.name); navigate("/repositories"); }, "Deleted.")} />
         : <p className="sub">Deleting takes the repository out of service. <Button onClick={() => setAsking("delete")}>Delete this repository</Button></p>}
     </Sheet>

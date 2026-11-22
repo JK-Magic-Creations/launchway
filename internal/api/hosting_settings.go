@@ -14,9 +14,12 @@ import (
 const (
 	settingArchiveMax = "archive_max_mib"
 	settingTrashDays  = "trash_retention_days"
+	settingStaleDays  = "stale_branch_days"
 
 	defaultArchiveMaxMiB = 512
 	defaultTrashDays     = 30
+	defaultStaleDays     = 90
+	maxStaleDays         = 3650
 	maxArchiveMaxMiB     = 65536
 	maxTrashDays         = 3650
 )
@@ -27,10 +30,17 @@ type HostingSettings struct {
 	ArchiveMaxMiB int `json:"archive_max_mib"`
 	// TrashRetentionDays is how long a deleted repository can still be restored.
 	TrashRetentionDays int `json:"trash_retention_days"`
+	// StaleBranchDays is how many days without a commit make a branch stale.
+	StaleBranchDays int `json:"stale_branch_days"`
 }
 
 func (s *Server) hostingSettings() HostingSettings {
-	out := HostingSettings{ArchiveMaxMiB: defaultArchiveMaxMiB, TrashRetentionDays: defaultTrashDays}
+	out := HostingSettings{ArchiveMaxMiB: defaultArchiveMaxMiB, TrashRetentionDays: defaultTrashDays, StaleBranchDays: defaultStaleDays}
+	if v, ok, err := s.Engine.HostingSetting(settingStaleDays); err == nil && ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			out.StaleBranchDays = n
+		}
+	}
 	if v, ok, err := s.Engine.HostingSetting(settingArchiveMax); err == nil && ok {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			out.ArchiveMaxMiB = n
@@ -59,6 +69,7 @@ func (s *Server) putHostingSettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		ArchiveMaxMiB      *int `json:"archive_max_mib"`
 		TrashRetentionDays *int `json:"trash_retention_days"`
+		StaleBranchDays    *int `json:"stale_branch_days"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -71,7 +82,17 @@ func (s *Server) putHostingSettings(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, fmt.Sprintf("a deleted repository is kept between 1 and %d days", maxTrashDays))
 		return
 	}
+	if in.StaleBranchDays != nil && (*in.StaleBranchDays < 1 || *in.StaleBranchDays > maxStaleDays) {
+		writeErr(w, http.StatusBadRequest, fmt.Sprintf("a branch is stale after between 1 and %d days without a commit", maxStaleDays))
+		return
+	}
 	who := identityFrom(r).User
+	if in.StaleBranchDays != nil {
+		if err := s.Engine.SetHostingSetting(settingStaleDays, strconv.Itoa(*in.StaleBranchDays), who); err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
 	if in.ArchiveMaxMiB != nil {
 		if err := s.Engine.SetHostingSetting(settingArchiveMax, strconv.Itoa(*in.ArchiveMaxMiB), who); err != nil {
 			s.fail(w, err)
@@ -85,6 +106,6 @@ func (s *Server) putHostingSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	out := s.hostingSettings()
-	setAudit(r, "hosting", fmt.Sprintf("largest snapshot %d MiB; a deleted repository is kept %d days", out.ArchiveMaxMiB, out.TrashRetentionDays))
+	setAudit(r, "hosting", fmt.Sprintf("largest snapshot %d MiB; a deleted repository is kept %d days; a branch is stale after %d days", out.ArchiveMaxMiB, out.TrashRetentionDays, out.StaleBranchDays))
 	writeJSON(w, http.StatusOK, out)
 }

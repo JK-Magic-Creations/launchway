@@ -51,18 +51,29 @@ func (s *Store) CreateRepository(ctx context.Context, r forge.Repository) (forge
 		}
 		return r, err
 	}
-	return r, nil
+	return r, s.takeAddress(ctx, r.Path)
 }
 
 // MoveRepository gives a repository a new home, name and path (and the clone
 // address that goes with it). A path in use is ErrExists.
 func (s *Store) MoveRepository(ctx context.Context, id, home, name, path string, clone forge.CloneAddresses) error {
+	before, err := s.Repository(ctx, id)
+	if err != nil {
+		return err
+	}
 	res, err := s.db.Exec(ctx, `UPDATE forge_repositories SET home = ?, name = ?, path = ?, clone_https = ?, clone_ssh = ?, updated_at = ? WHERE id = ?`,
 		home, name, path, clone.HTTPS, clone.SSH, ms(s.now()), id)
 	if err != nil && isUnique(err) {
 		return fmt.Errorf("%w: repository %s", ErrExists, path)
 	}
-	return affected(res, err, "repository "+id)
+	if err := affected(res, err, "repository "+id); err != nil {
+		return err
+	}
+	// The address it had keeps answering until another repository takes it; the new address is no one's alias.
+	if err := s.keepOldAddress(ctx, before, path, ""); err != nil {
+		return err
+	}
+	return s.takeAddress(ctx, path)
 }
 
 // TrashRepository moves a repository to the trash.

@@ -1,0 +1,137 @@
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+// Work for a repository, and reactions, from the command line against a real server.
+func TestWorkRepositoryAndReactionCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	hc.repo("acme/app")
+	hc.repo("acme/lib")
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+
+	if s := mustWork(t, ada, &out, "items", "create", "For the app", "--for-repo", "acme/app"); !strings.Contains(s, "Made ") {
+		t.Fatalf("create for a repository: %q", s)
+	}
+	mustWork(t, ada, &out, "items", "create", "Tied to the app", "--scope", "project:acme/lib", "--for-repo", "acme/app")
+	mustWork(t, ada, &out, "items", "create", "Library only", "--scope", "project:acme/lib")
+	s := mustWork(t, ada, &out, "items", "list", "--in-repo", "acme/app")
+	if !strings.Contains(s, "For the app") || !strings.Contains(s, "Tied to the app") || strings.Contains(s, "Library only") {
+		t.Fatalf("a repository's work: %q", s)
+	}
+	first := ""
+	for _, f := range strings.Fields(s) {
+		if strings.HasPrefix(f, "APP-") {
+			first = f
+			break
+		}
+	}
+	if first == "" {
+		t.Fatalf("no reference in %q", s)
+	}
+	if s := mustWork(t, ada, &out, "items", "react", first, "heart"); !strings.Contains(s, "heart 1*") {
+		t.Fatalf("react: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "items", "react", first, "heart", "--remove"); strings.Contains(s, "heart") {
+		t.Fatalf("react back: %q", s)
+	}
+	if _, err := runWork(t, ada, &out, "items", "react", first, "banana"); err == nil {
+		t.Error("a reaction outside the set was accepted")
+	}
+}
+
+// Time from the command line: a timer, an entry by hand, the report and the CSV.
+func TestWorkTimeCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	hc.repo("acme/app")
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	mustWork(t, ada, &out, "items", "create", "Ring the bell", "--repo", "acme/app", "--estimate", "2")
+	if s := mustWork(t, ada, &out, "time", "running"); !strings.Contains(s, "No timer running") {
+		t.Fatalf("running: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "time", "start", "APP-1"); !strings.Contains(s, "APP-1") {
+		t.Fatalf("start: %q", s)
+	}
+	if _, err := runWork(t, ada, &out, "time", "start", "APP-1"); err == nil {
+		t.Error("a second timer was started")
+	}
+	if s := mustWork(t, ada, &out, "time", "stop", "--note", "done"); !strings.Contains(s, "Logged 0:01 on APP-1") {
+		t.Fatalf("stop: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "time", "log", "APP-1", "90", "--day", "2026-03-01", "--note", "review"); !strings.Contains(s, "Logged 1:30") {
+		t.Fatalf("log: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "time", "show", "APP-1"); !strings.Contains(s, "review") || !strings.Contains(s, "Logged 1:31") || !strings.Contains(s, "points") {
+		t.Fatalf("show: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "time", "report", "--person", "me"); !strings.Contains(s, "ada") || !strings.Contains(s, "Total 1:31") {
+		t.Fatalf("report: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "time", "export"); !strings.HasPrefix(s, "day,person,item,title,minutes,hours,kind,note") || !strings.Contains(s, "APP-1") {
+		t.Fatalf("export: %q", s)
+	}
+	if _, err := runWork(t, ada, &out, "time", "log", "APP-1", "lots"); err == nil {
+		t.Error("minutes that are not a number were accepted")
+	}
+}
+
+// The account from the command line: the summary, the browsers, and a profile.
+func TestAccountCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	if err := ada.accountShow(nil); err != nil || !strings.Contains(out.String(), "ada") || !strings.Contains(out.String(), "This server has:") || !strings.Contains(out.String(), "hosting") {
+		t.Fatalf("show: %q %v", out.String(), err)
+	}
+	out.Reset()
+	if err := ada.accountSessions(nil); err != nil {
+		t.Fatalf("sessions: %v", err)
+	}
+	out.Reset()
+	if err := ada.accountProfile([]string{"zz-unknown"}); err == nil {
+		t.Error("the profile of a person who is not there was shown")
+	}
+	if err := ada.accountRevoke([]string{"nonsense-id"}); err == nil {
+		t.Error("an id that is not a session ended something")
+	}
+	if err := ada.accountRevoke(nil); err == nil {
+		t.Error("revoke without saying which")
+	}
+	out.Reset()
+	if err := ada.accountRevoke([]string{"--others"}); err != nil || !strings.Contains(out.String(), "Ended") {
+		t.Fatalf("others: %q %v", out.String(), err)
+	}
+}
+
+// Decision records from the command line, with the export as a pull request.
+func TestWorkDecisionCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	hc.repo("acme/app")
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	mustWork(t, ada, &out, "items", "create", "Use PostgreSQL", "--type", "decision", "--repo", "acme/app")
+	mustWork(t, ada, &out, "items", "create", "Migrate", "--repo", "acme/app")
+	if s := mustWork(t, ada, &out, "items", "link", "APP-1", "decides", "APP-2"); !strings.Contains(s, "decides") {
+		t.Fatalf("link: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "decisions", "list", "--in-repo", "acme/app"); !strings.Contains(s, "APP-1") || !strings.Contains(s, "proposed") {
+		t.Fatalf("list: %q", s)
+	}
+	if _, err := runWork(t, ada, &out, "decisions", "accept", "APP-2", "x"); err == nil {
+		t.Error("an item that is not a decision was answered")
+	}
+	if s := mustWork(t, ada, &out, "decisions", "accept", "APP-1", "PostgreSQL."); !strings.Contains(s, "accepted") {
+		t.Fatalf("accept: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "decisions", "show", "APP-1"); !strings.Contains(s, "Status: accepted") || !strings.Contains(s, "Decides APP-2") {
+		t.Fatalf("show: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "decisions", "list", "--status", "accepted"); !strings.Contains(s, "ada") {
+		t.Fatalf("list accepted: %q", s)
+	}
+}

@@ -247,6 +247,8 @@ export default defineConfig({
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Git over SSH', link: '/guide/git-over-ssh' },
           { text: 'Browsing code', link: '/guide/browsing-code' },
+          { text: 'Deleted repositories', link: '/guide/repository-trash' },
+          { text: 'Renaming and transferring repositories', link: '/guide/renaming-repositories' },
           { text: 'Searching code', link: '/guide/searching-code' },
           { text: 'Editing in the browser', link: '/guide/editing-in-the-browser' },
           { text: 'Pull requests and code review', link: '/guide/pull-requests' },

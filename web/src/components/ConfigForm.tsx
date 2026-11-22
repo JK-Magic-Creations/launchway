@@ -127,9 +127,7 @@ export function Field({ label, help, problems, children, wide, required }: {
       <label htmlFor={id} className="cf-label">{label}{required && <span className="cf-req" aria-hidden="true"> *</span>}</label>
       {children({ id, describedBy, invalid })}
       {help && <div id={helpId} className="cf-help">{help}</div>}
-      <div id={probId} className="cf-problems" aria-live="polite">
-        {problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}
-      </div>
+      <Problems id={probId} problems={problems} />
     </div>
   );
 }
@@ -199,7 +197,7 @@ export function CheckInput({ label, help, checked, onChange, problems }: {
         <span className="cf-label">{label}</span>
       </label>
       {help && <div id={id + "-help"} className="cf-help cf-help-indent">{help}</div>}
-      <div className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>
+      <Problems problems={problems} />
     </div>
   );
 }
@@ -227,7 +225,7 @@ export function Choices({ legend, help, value, onChange, options, problems, name
           </label>
         ))}
       </div>
-      <div className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>
+      <Problems problems={problems} />
     </fieldset>
   );
 }
@@ -366,7 +364,7 @@ export function SecretRefInput({ label, help, value, onChange, problems }: {
         <label className="cf-mini"><span>Field (optional)</span><input className="cf-input mono" value={v.field ?? ""} placeholder="api_key" onChange={(e) => set({ field: e.target.value.trim() })} /></label>
       </div>
       {help && <div id={id + "-help"} className="cf-help">{help}</div>}
-      <div className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>
+      <Problems problems={problems} />
     </fieldset>
   );
 }
@@ -442,6 +440,11 @@ export function CheckLine({ check, okText = "The server's checks pass." }: { che
         : <span className="cf-problem">{check.problems.length === 1 ? "The server found a problem." : `The server found ${check.problems.length} problems.`}</span>}
     </div>
   );
+}
+
+/** The live region under a field that says what is wrong with it. */
+export function Problems({ id, problems }: { id?: string; problems?: string[] }) {
+  return <div id={id} className="cf-problems" aria-live="polite">{problems?.map((p) => <div key={p} className="cf-problem">{p}</div>)}</div>;
 }
 
 export function ProblemList({ problems, title }: { problems: string[]; title?: string }) {

@@ -1,6 +1,6 @@
 /* A table that scrolls sideways is a region the keyboard can reach (axe: scrollable-region-focusable), so its tabindex is deliberate. */
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApiError } from "../api";
 import { RepoTabs } from "../components/RepoTabs";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -261,7 +261,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
         </Sheet>
       )}
       <Sheet title={`The same things as a table (${shown.length})`}>
-        <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table sg-table">
+        <ScrollTable cls="sg-table">
           <caption className="sr-only">Nodes around {focus}</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Next to it</th><th scope="col">Where it came from</th><th scope="col">Actions</th></tr></thead>
           <tbody>
@@ -282,7 +282,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
               );
             })}
           </tbody>
-        </table></div>
+        </ScrollTable>
       </Sheet>
       <ErrorBox error={pathError} />
       {path && (
@@ -316,14 +316,14 @@ function ImpactView({ focus }: { focus: string }) {
           <Truncated t={impact} />
           {impact.deployments.length > 0 && (
             <Sheet title="Running now, affected">
-              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+              <ScrollTable>
                 <caption className="sr-only">Deployments that run affected digests</caption>
                 <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">Why</th></tr></thead>
                 <tbody>{impact.deployments.map((d) => (
                   <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
                     <td><details><summary>The way a change gets there</summary><WhyList steps={d.why} /></details></td></tr>
                 ))}</tbody>
-              </table></div>
+              </ScrollTable>
             </Sheet>
           )}
           {impact.by_owner.map((g) => (
@@ -392,7 +392,7 @@ function OrderView({ repo }: { repo?: string }) {
           )}
           <Sheet title={`Why the order is what it is (${order.edges.length})`}>
             {order.edges.length === 0 ? <p className="faint pad">No dependencies.</p> : (
-              <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+              <ScrollTable>
                 <caption className="sr-only">Dependencies between repositories</caption>
                 <thead><tr><th scope="col">Repository</th><th scope="col">Depends on</th><th scope="col">Through</th><th scope="col">Override</th></tr></thead>
                 <tbody>{order.edges.map((e) => (
@@ -400,7 +400,7 @@ function OrderView({ repo }: { repo?: string }) {
                     <td>{e.via.map((v) => <div key={v}><Mono>{v}</Mono></div>)}{e.versions?.length ? <small className="faint">{e.versions.join(", ")}</small> : null}</td>
                     <td>{e.override ? <><strong>{e.override}</strong>: {e.reason}</> : "—"}</td></tr>
                 ))}</tbody>
-              </table></div>
+              </ScrollTable>
             )}
           </Sheet>
           <OverridesPanel overrides={overrides} repos={repos} onChange={load} />
@@ -457,14 +457,14 @@ const SOURCE_WORDS: Record<string, string> = { declared: "Declared in the file",
 function FactsTable({ facts, name }: { facts: Fact[]; name: string }) {
   if (facts.length === 0) return <p className="faint pad">Nothing declared or inferred yet.</p>;
   return (
-    <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+    <ScrollTable>
       <caption className="sr-only">What {name} needs</caption>
       <thead><tr><th scope="col">Needs</th><th scope="col">Value</th><th scope="col">Where from</th></tr></thead>
       <tbody>{facts.map((f) => (
         <tr key={f.facet + f.value}><th scope="row">{f.facet}</th><td><Mono>{f.value}</Mono></td>
           <td><span className={"pill " + (f.source === "declared" ? "pill-ok" : "pill-idle")}>{SOURCE_WORDS[f.source] ?? f.source}</span>{f.evidence && <><br /><small className="faint">{f.evidence}</small></>}</td></tr>
       ))}</tbody>
-    </table></div>
+    </ScrollTable>
   );
 }
 
@@ -553,14 +553,14 @@ function RunningView({ focus }: { focus: string }) {
       {!where && !error && <p className="faint" role="status">Looking for where it runs…</p>}
       {where && (where.deployments.length === 0 ? <p className="faint" role="status"><Mono>{focus}</Mono> is not running anywhere you may see.</p> : (
         <Sheet title={`Running in ${where.airfields.length} ${where.airfields.length === 1 ? "Airfield" : "Airfields"}`}>
-          <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className="table">
+          <ScrollTable>
             <caption className="sr-only">Deployments that run {focus}</caption>
             <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">How we know</th></tr></thead>
             <tbody>{where.deployments.map((d) => (
               <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
                 <td>{d.exact ? "It is in the digest that runs." : "Through a dependency or a build: the digest may not contain it."}<details><summary>The way</summary><WhyList steps={d.why} /></details></td></tr>
             ))}</tbody>
-          </table></div>
+          </ScrollTable>
           <Truncated t={where} />
         </Sheet>
       ))}
@@ -569,3 +569,8 @@ function RunningView({ focus }: { focus: string }) {
 }
 
 export { sameRef };
+
+/** A table in a region that scrolls sideways (and can be focused to do so) when it is wider than the page. */
+function ScrollTable({ cls, children }: { cls?: string; children: ReactNode }) {
+  return <div className="sg-scroll" tabIndex={0} role="region" aria-label="Table, which scrolls sideways when it is wider than the page"><table className={"table" + (cls ? " " + cls : "")}>{children}</table></div>;
+}

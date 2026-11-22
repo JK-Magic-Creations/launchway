@@ -13,6 +13,8 @@ const (
 	LinkBlocks     = "blocks"
 	LinkRelates    = "relates"
 	LinkDuplicates = "duplicates"
+	// LinkDecides runs from a decision record to what it decides (an item); see decisions.go.
+	LinkDecides = "decides"
 )
 
 // Link is a typed link from one item to another. blocks and duplicates have a
@@ -33,8 +35,8 @@ type Link struct {
 // AddLink links two items. Linking across projects needs the caller to see
 // both; a blocks link that would make a cycle is refused and the chain named.
 func (s *Store) AddLink(ctx context.Context, c Caller, fromRef, kind, toRef string) (*Link, error) {
-	if !slices.Contains([]string{LinkBlocks, LinkRelates, LinkDuplicates}, kind) {
-		return nil, invalid("a link is blocks, relates or duplicates")
+	if !slices.Contains([]string{LinkBlocks, LinkRelates, LinkDuplicates, LinkDecides}, kind) {
+		return nil, invalid("a link is blocks, relates, duplicates or decides")
 	}
 	from, err := s.Get(ctx, c, fromRef)
 	if err != nil {
@@ -49,6 +51,9 @@ func (s *Store) AddLink(ctx context.Context, c Caller, fromRef, kind, toRef stri
 	}
 	if !c.canWrite(from.Scope) {
 		return nil, forbidden("you may not change work in %s", from.Scope)
+	}
+	if kind == LinkDecides && from.Type != TypeDecision {
+		return nil, invalid("only a decision record decides: %s is a %s", from.Ref, from.Type)
 	}
 	if kind == LinkRelates && from.ID > to.ID {
 		from, to = to, from
@@ -198,8 +203,10 @@ func (s *Store) Links(ctx context.Context, c Caller, ref string) ([]Link, error)
 const (
 	CodeCommit = "commit"
 	CodeBranch = "branch"
-	CodePull   = "pull"
-	CodeSortie = "run"
+	// CodeRepository ties an item to a repository as a whole (Ref is the repository path).
+	CodeRepository = "repository"
+	CodePull       = "pull"
+	CodeSortie     = "run"
 )
 
 // CodeLink ties an item to something in the code or in delivery.
@@ -223,8 +230,8 @@ func (s *Store) LinkCode(ctx context.Context, c Caller, itemRef string, l CodeLi
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Contains([]string{CodeCommit, CodeBranch, CodePull, CodeSortie}, l.Kind) || l.Ref == "" || len(l.Ref) > 300 {
-		return nil, invalid("a code link is a commit, branch, pull or run with a reference")
+	if !slices.Contains([]string{CodeCommit, CodeBranch, CodePull, CodeSortie, CodeRepository}, l.Kind) || l.Ref == "" || len(l.Ref) > 300 {
+		return nil, invalid("a code link is a commit, branch, pull, run or repository with a reference")
 	}
 	if !c.canWrite(it.Scope) && c.Kind != KindSystem {
 		return nil, forbidden("you may not change work in %s", it.Scope)

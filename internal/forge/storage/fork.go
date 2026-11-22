@@ -69,26 +69,6 @@ func (s *Store) Fork(ctx context.Context, parent, child string) (ForkResult, err
 	return ForkResult{Refs: r.Refs, Packs: r.Packs, Generation: r.Gen}, nil
 }
 
-// Purge ends a repository's storage for good (the trash is emptied): its refs
-// go, its packs are retired, and the blobs that no other repository (a fork)
-// still needs are deleted at once. It returns how many blobs it deleted.
-func (s *Store) Purge(ctx context.Context, repo string) (int, error) {
-	f := orNone(faultsFrom(ctx))
-	if _, err := store.PurgeLedger(ctx, s.begin, s.o.DB.Postgres(), repo, nowMS(), f.Hit); err != nil {
-		return 0, err
-	}
-	if err := f.Hit(PtPurgeAfterLedger); err != nil {
-		return 0, err
-	}
-	// Zero grace: nobody is served from a purged repository.
-	n, err := s.Collect(ctx, repo, 0, 0)
-	if err != nil {
-		return n, err
-	}
-	_ = s.Wipe(repo)
-	return n, nil
-}
-
 // blobNeeded says whether the blob of a retired or pending pack must stay
 // because another repository's pack needs it.
 func (s *Store) blobNeeded(ctx context.Context, repo string, p Pack, grace, pendingAge time.Duration) (bool, error) {

@@ -4,7 +4,7 @@ import { api, ApiError, type FindingView, type ProjectSecurity, type SecurityRun
 import { ago, shortSha } from "../format";
 import { navigate, onLink } from "../router";
 import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
-import { FindingsHowTo, SEVERITIES, SeverityLegend, serious, seriousLabel, severityLabel, severityRank } from "../components/Security";
+import { FindingsHowTo, SEVERITIES, SeverityLegend, serious, seriousLabel, severityLabel, severityRank, SearchIcon } from "../components/Security";
 import { FindingRow } from "./RunSecurity";
 import { terms } from "../terms";
 
@@ -141,7 +141,7 @@ function OpenFindings({ data }: { data: ProjectSecurity }) {
         <div className="ttools-right">
           <label className="search">
             <span className="visually-hidden">Search open findings</span>
-            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
+            <SearchIcon />
             <input type="search" placeholder="Search rules, messages, files" value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
           {tools.length > 1 && (

@@ -33,8 +33,10 @@ type DeploymentView struct {
 	Snapshot        json.RawMessage `json:"snapshot,omitempty"`
 	ObservedAt      int64           `json:"observed_at,omitempty"`
 	ObservedBy      string          `json:"observed_by,omitempty"`
-	Holding         bool            `json:"holding"` // it holds its environment's lock
-	Timeline        []TimelineEntry `json:"timeline,omitempty"`
+	// Address is where the deployment can be seen, when its deploy step said (an http or https address).
+	Address  string          `json:"address,omitempty"`
+	Holding  bool            `json:"holding"` // it holds its environment's lock
+	Timeline []TimelineEntry `json:"timeline,omitempty"`
 	// Schema 14: the deployment's pod template hash as first seen in its
 	// rollout, the commands given to the rollout, and the runner observing
 	// its target (empty when none does).

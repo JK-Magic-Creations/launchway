@@ -54,6 +54,7 @@ func (s *Server) pullRoutes() []route {
 		{"PUT " + prBase + "/pulls/{number}/viewed", repoRead, "", s.pullViewedSet},
 		{"GET /api/v1/pulls/inbox", signedIn, "", s.pullInbox},
 		{"GET " + prBase + "/pulls/{number}/owners", repoRead, "", s.pullOwners},
+		{"GET " + prBase + "/pulls/{number}/checks", repoRead, "", s.pullChecks},
 		{"POST " + prBase + "/owners/check", repoRead, "pull.owners_check", s.checkOwnersFile},
 		{"GET " + prBase + "/compare", repoRead, "", s.compareBranches},
 		{"GET " + prBase + "/pull-settings", repoRead, "", s.getPullSettings},

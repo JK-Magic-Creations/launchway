@@ -75,10 +75,12 @@ const (
 	TypeStory = "story"
 	TypeTask  = "task"
 	TypeEpic  = "epic"
+	// TypeDecision is a decision record (decisions.go).
+	TypeDecision = "decision"
 )
 
 // Types are the item types, in the order the interface lists them.
-var Types = []string{TypeIssue, TypeBug, TypeStory, TypeTask, TypeEpic}
+var Types = []string{TypeIssue, TypeBug, TypeStory, TypeTask, TypeEpic, TypeDecision}
 
 // Priorities, most urgent first.
 var Priorities = []string{"urgent", "high", "normal", "low"}
@@ -186,6 +188,8 @@ type Item struct {
 	UpdatedAt    string         `json:"updated_at"`
 	ClosedAt     string         `json:"closed_at,omitempty"`
 	Comments     int            `json:"comment_count,omitempty"`
+	// Reactions are the counts of each reaction and whether the caller made it (filled for the API).
+	Reactions []ReactionCount `json:"reactions,omitempty"`
 }
 
 // Limits.

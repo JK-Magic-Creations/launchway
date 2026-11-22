@@ -62,6 +62,9 @@ type NewItem struct {
 	CreatedAt    string         `json:"created_at"`
 	ClosedAt     string         `json:"closed_at"`
 	Resolution   string         `json:"resolution"`
+	// Repository (OWNER/NAME) is the repository the item is for: it is the item's scope when none is given, and
+	// otherwise the item is tied to the repository (the API does this; Create ignores it).
+	Repository string `json:"repository"`
 }
 
 const itemCols = `id, scope_kind, scope_id, number, type, title, body, state, resolution, priority, estimate_milli, parent_id, milestone_id, sprint_id, rank,
@@ -140,6 +143,9 @@ func (s *Store) Get(ctx context.Context, c Caller, ref string) (*Item, error) {
 	}
 	if !c.canSee(it) {
 		return nil, notFound("no item " + ref)
+	}
+	if err := s.fillItemReactions(ctx, c, []*Item{it}); err != nil {
+		return nil, err
 	}
 	return it, nil
 }

@@ -71,6 +71,9 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersCustomSteps,
 	schemaMarkersForks,
 	schemaMarkersForkPulls,
+	schemaMarkersTrash,
+	schemaMarkersOverview,
+	schemaMarkersWorkExtras,
 }
 
 type schemaMarker struct {

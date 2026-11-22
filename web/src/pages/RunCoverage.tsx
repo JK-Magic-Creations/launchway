@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type CoverageFiles, type CoverageSort, type CoverageStep, type CoverageTotals, type RunCoverage, type RunDetail } from "../api";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
-import { bytes } from "../components/Security";
+import { bytes, SearchIcon } from "../components/Security";
 import { CoverageHowTo, Delta, MEASURES, Meter, MiniBar, level, measureLabel, pct, ratio, type Measure } from "../components/Coverage";
 import { terms } from "../terms";
 
@@ -204,7 +204,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
           <div className="cfiles-tools">
             <label className="search">
               <span className="visually-hidden">Search files</span>
-              <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
+              <SearchIcon />
               <input type="search" placeholder="Search paths and packages" value={search} onChange={(e) => setSearch(e.target.value)} />
             </label>
             {many && (

@@ -244,6 +244,7 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 			}
 		}
 	}
+	h.PurgeExpired(ctx)
 	if h.o.CacheBytes > 0 {
 		if _, err := h.Store.EvictCaches(h.o.CacheBytes); err != nil {
 			h.log.Warn("hosting maintenance: evicting caches", "err", err)
@@ -251,20 +252,12 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 	}
 }
 
-// Purge ends the storage of a repository that is in the trash: its branches go and
-// its stored packs are deleted, except the packs a fork of it still needs (forks
-// share their parent's packs, so purging a parent never takes anything a fork
-// uses). It returns how many stored packs it deleted. A repository that is not in
-// the trash is refused.
+// Purge removes a repository that is in the trash for good, by the one removal path (TrashPurge, which the
+// background worker and the API use too: storage.Store.Purge, which keeps every blob a fork or a parent still
+// names). It returns how many blobs it deleted. A repository that is not in the trash is refused.
 func (h *Hosting) Purge(ctx context.Context, id string) (int, error) {
-	r, err := h.Forge.Repository(ctx, id)
-	if err != nil {
-		return 0, err
-	}
-	if !store.InTrash(r) {
-		return 0, fmt.Errorf("repository %s is not in the trash; delete it first", id)
-	}
-	return h.Store.Purge(ctx, id)
+	sum, err := h.TrashPurge(ctx, id)
+	return sum.BlobsDeleted, err
 }
 
 // Check lists what an operator should know: repositories whose owner is a

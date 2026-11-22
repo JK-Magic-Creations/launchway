@@ -219,3 +219,28 @@ func TestSyncRefreshParses(t *testing.T) {
 		t.Fatalf("an unknown refresh was accepted: %v", err)
 	}
 }
+
+func TestDeployAddressIsAWebAddress(t *testing.T) {
+	const head = "pipeline: p\nsteps:\n  build:\n    image: alpine:3.22\n    run: x\n  ship:\n    kind: deploy\n    needs: build\n    environment: prod\n"
+	const tail = "    argocd: { application: a, write_back: { repo: r, branch: main, changes: [{ file: f, image: i, tag: t }] } }\n"
+	for _, tc := range []struct{ addr, problem string }{
+		{"https://preview.example.com/pr-1", ""},
+		{"{ output: build.url }", ""},
+		{"javascript:alert(1)", "http:// or https://"},
+		{"https://ada:pw@example.com/", "no user name"},
+		{"ftp://example.com/", "http:// or https://"},
+		{"https://exa mple.com", "no spaces"},
+		{"/relative/path", "full web address"},
+		{"https://example.com/" + strings.Repeat("a", MaxAddress), "1 to 2000"},
+	} {
+		p, err := Parse([]byte(head + "    address: " + tc.addr + "\n" + tail))
+		switch {
+		case tc.problem == "" && err != nil:
+			t.Errorf("%q: %v", tc.addr, err)
+		case tc.problem != "" && (err == nil || !strings.Contains(err.Error(), tc.problem)):
+			t.Errorf("%q: want a problem with %q, got %v", tc.addr, tc.problem, err)
+		case tc.problem == "" && p.Steps[1].Address == nil:
+			t.Errorf("%q: the address was not read", tc.addr)
+		}
+	}
+}

@@ -712,7 +712,7 @@ func (e *Engine) dispatchLocks() {
 
 const deploymentCols = `d.id, d.run_id, d.run_number, d.project, d.step_id, d.rollback_step, d.environment, d.service, d.target,
 	d.application, d.mode, d.version, d.previous_id, d.previous_version, d.repo, d.branch, d.commit_sha, d.changed, d.revert_sha,
-	d.phase, d.detail, d.verdict, d.opened_at, d.deployed_at, d.closed_at, d.snapshot, d.observed_at, d.observed_by,
+	d.phase, d.detail, d.verdict, d.opened_at, d.deployed_at, d.closed_at, d.snapshot, d.observed_at, d.observed_by, d.address,
 	(SELECT COUNT(*) FROM deploy_locks l WHERE l.deployment = d.id)`
 
 // deployments reads deployments, newest first, with their timelines if
@@ -733,7 +733,7 @@ func (e *Engine) deployments(where string, args []any, limit int, timeline bool)
 		var snap string
 		if err := rows.Scan(&v.ID, &v.RunID, &v.RunNumber, &v.Project, &v.Step, &v.RollbackStep, &v.Environment, &v.Service, &v.Target,
 			&v.Application, &v.Mode, &v.Version, &v.PreviousID, &v.PreviousVersion, &v.Repo, &v.Branch, &v.Commit, &changed, &v.Revert,
-			&v.Phase, &v.Detail, &v.Verdict, &v.OpenedAt, &v.DeployedAt, &v.ClosedAt, &snap, &v.ObservedAt, &v.ObservedBy, &holding); err != nil {
+			&v.Phase, &v.Detail, &v.Verdict, &v.OpenedAt, &v.DeployedAt, &v.ClosedAt, &snap, &v.ObservedAt, &v.ObservedBy, &v.Address, &holding); err != nil {
 			rows.Close()
 			return nil, err
 		}

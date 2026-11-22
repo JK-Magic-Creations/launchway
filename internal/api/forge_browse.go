@@ -32,6 +32,9 @@ func (s *Server) browseRoutes() []route {
 		{"POST " + base + "/branches", repoWrite, "repository.branch_create", s.createBranch},
 		{"DELETE " + base + "/branches", repoWrite, "repository.branch_delete", s.deleteBranch},
 		{"POST " + base + "/branches/rename", repoWrite, "repository.branch_rename", s.renameBranch},
+		{"GET " + base + "/branches/suggest", repoRead, "", s.suggestBranchName},
+		{"POST " + base + "/branches/from-item", repoWrite, "repository.branch_from_item", s.branchFromItem},
+		{"POST " + base + "/branches/delete-stale", repoWrite, "repository.branch_delete_stale", s.deleteStaleBranches},
 		{"GET " + base + "/tags", repoRead, "", s.listTags},
 		{"POST " + base + "/tags", repoWrite, "repository.tag_create", s.createTag},
 		{"DELETE " + base + "/tags", repoWrite, "repository.tag_delete", s.deleteTag},
@@ -139,11 +142,23 @@ func (s *Server) listBranches(w http.ResponseWriter, r *http.Request) {
 		Protected  bool   `json:"protected"`
 		OpenPull   int    `json:"open_pull,omitempty"`
 		BaseBranch string `json:"base"`
+		// Stale: no commit for the hosting setting's days; Merged: nothing the base lacks.
+		Stale   bool       `json:"stale"`
+		Merged  bool       `json:"merged"`
+		LastRun *branchRun `json:"last_run,omitempty"`
+		// WorkItem is the item the branch was started for.
+		WorkItem string `json:"work_item,omitempty"`
 	}
+	staleDays := s.hostingSettings().StaleBranchDays
 	out := make([]branch, len(items))
 	for i, it := range items {
 		b := branch{RefInfo: it, Default: it.Name == repo.DefaultBranch, BaseBranch: base}
 		_, b.Protected = refrules.Match(pats, "refs/heads/"+it.Name)
+		b.Stale, b.Merged = isStale(it.CommittedAt, staleDays, s.Now()), it.Ahead == 0 && !b.Default
+		if i < 100 {
+			b.LastRun = s.lastRunOfBranch(repo.Path, it.Name)
+			b.WorkItem = s.itemOfBranch(r, repo.Path, it.Name)
+		}
 		if s.Forge.Pulls != nil && i < 100 {
 			if open, err := s.Forge.Pulls.Store.OpenFromSource(r.Context(), repo.ID, it.Name); err == nil && len(open) > 0 {
 				b.OpenPull = open[0].Number
@@ -151,7 +166,7 @@ func (s *Server) listBranches(w http.ResponseWriter, r *http.Request) {
 		}
 		out[i] = b
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": out, "total": total, "default_branch": repo.DefaultBranch, "truncated": total > len(out)})
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "total": total, "default_branch": repo.DefaultBranch, "truncated": total > len(out), "stale_days": staleDays})
 }
 
 func (s *Server) protectedPatterns(r *http.Request, repo forge.Repository) ([]string, error) {
@@ -244,16 +259,24 @@ func (s *Server) deleteBranch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, repo.Path, name)
-	was, err := s.filesService().DeleteBranch(r.Context(), repo.ID, name, s.writePolicy(r.Context(), r, repo))
+	was, err := s.removeBranch(r, repo, name)
 	if err != nil {
 		s.failFiles(w, err)
 		return
 	}
 	setAudit(r, "", name+" was "+was)
-	zero := strings.Repeat("0", len(was))
-	s.afterServerCommit(r.Context(), gitCaller{id: identityFrom(r), user: identityFrom(r).User}, repo, "refs/heads/"+name, was, zero)
 	writeJSON(w, http.StatusOK, map[string]any{"name": name, "was": was,
 		"undo": "git push origin " + was + ":refs/heads/" + name + "  (or POST /api/v1/repositories/" + repo.Path + "/branches with {\"name\": \"" + name + "\", \"from\": \"" + was + "\"})"})
+}
+
+// removeBranch deletes one branch under the caller's rights and tells what listens to pushes.
+func (s *Server) removeBranch(r *http.Request, repo forge.Repository, name string) (string, error) {
+	was, err := s.filesService().DeleteBranch(r.Context(), repo.ID, name, s.writePolicy(r.Context(), r, repo))
+	if err != nil {
+		return "", err
+	}
+	s.afterServerCommit(r.Context(), gitCaller{id: identityFrom(r), user: identityFrom(r).User}, repo, "refs/heads/"+name, was, strings.Repeat("0", len(was)))
+	return was, nil
 }
 
 // renameIn is a branch rename.

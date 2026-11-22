@@ -85,7 +85,7 @@ func properties(lists ...[]string) obj {
 // Schema returns the JSON Schema (draft 2020-12) of the pipeline file.
 func Schema() map[string]any {
 	stepKeysAll := slices.Concat(stepKeys, deployKeys, rollbackKeys, rolloutStepKeys, imageKeys, verifyKeys, aiKeys,
-		[]string{"approvers", "environment", "service", "version"})
+		[]string{"approvers", "environment", "service", "version", "address"})
 	step := obj{
 		"type":                 "object",
 		"description":          "One step. The keys that apply depend on kind; the parser says which do not.",
