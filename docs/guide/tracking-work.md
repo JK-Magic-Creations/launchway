@@ -60,7 +60,7 @@ outline), whose links say what it blocks (`blocks`) and what it decides (`decide
 pull request), and which a person answers.
 
 A decision is **proposed** until a person who may change work at its level answers it with `launchway work decisions
-accept KEY-12 "PostgreSQL, one per environment."`: the answer, who gave it and when are kept, and the item is
+accept KEY-12 "PostgreSQL, one per Airfield."`: the answer, who gave it and when are kept, and the item is
 finished. An agent does not answer. An accepted decision can be **superseded** by another accepted decision
 (`work decisions supersede KEY-12 KEY-30`), which is named on both; a decision is never replaced by itself, by a
 proposal, or in a loop. `decision:accepted` in a query, `work decisions list` and the `list_decisions` tool find them.

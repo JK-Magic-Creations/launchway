@@ -39,10 +39,10 @@ type ContributorReport struct {
 	AtLeast bool `json:"at_least"`
 }
 
-// Contributors walks the history of ref back to since (zero: all of it), looking at no more than max commits.
-func (s *Service) Contributors(ctx context.Context, repoID, ref string, since time.Time, max int) (ContributorReport, error) {
-	if max <= 0 || max > MaxContributorCommits {
-		max = MaxContributorCommits
+// Contributors walks the history of ref back to since (zero: all of it), looking at no more than limit commits.
+func (s *Service) Contributors(ctx context.Context, repoID, ref string, since time.Time, limit int) (ContributorReport, error) {
+	if limit <= 0 || limit > MaxContributorCommits {
+		limit = MaxContributorCommits
 	}
 	var rep ContributorReport
 	err := s.Git.WithCache(ctx, repoID, func(dir string) error {
@@ -58,7 +58,7 @@ func (s *Service) Contributors(ctx context.Context, repoID, ref string, since ti
 			args = append(args[:2], append([]string{"--since=" + rep.Since}, args[2:]...)...)
 		}
 		by := map[string]*Contributor{}
-		w := &recordWriter{sep: 0x1e, limit: max, each: func(rec string) {
+		w := &recordWriter{sep: 0x1e, limit: limit, each: func(rec string) {
 			f := strings.Split(strings.TrimPrefix(rec, "\n"), "\x1f")
 			if len(f) < 3 {
 				return

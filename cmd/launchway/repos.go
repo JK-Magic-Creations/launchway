@@ -91,13 +91,7 @@ func cmdRepos(args []string) error {
 			return cl.reposRestore(args[1:])
 		case "purge":
 			return cl.reposPurge(args[1:])
-		case "activity":
-			return cl.reposActivity(args[1:])
-		case "languages":
-			return cl.reposLanguages(args[1:])
-		case "contributors":
-			return cl.reposContributors(args[1:])
-		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags":
+		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags", "activity", "languages", "contributors":
 			return cl.reposBrowse(args[0], args[1:])
 		}
 		return usageErr("unknown command repos %s\n\n%s", args[0], reposUsage)

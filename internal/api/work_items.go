@@ -92,7 +92,7 @@ func (s *Server) workCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, it.Ref, it.Title)
-	if in.Repository != "" && !(it.Scope.Kind == work.ScopeProject && it.Scope.ID == in.Repository) {
+	if in.Repository != "" && (it.Scope.Kind != work.ScopeProject || it.Scope.ID != in.Repository) {
 		// The item lives elsewhere: tie it to the repository so the repository's list finds it.
 		if _, err := s.work().LinkCode(r.Context(), s.workCaller(r), it.Ref, work.CodeLink{Kind: work.CodeRepository, Repo: in.Repository, Ref: in.Repository, Title: in.Repository, Source: "manual"}); err != nil {
 			s.failWork(w, err)

@@ -75,6 +75,12 @@ func (cl *client) reposBrowse(cmd string, args []string) error {
 		return cl.reposBranches(args)
 	case "tags":
 		return cl.reposTags(args)
+	case "activity":
+		return cl.reposActivity(args)
+	case "languages":
+		return cl.reposLanguages(args)
+	case "contributors":
+		return cl.reposContributors(args)
 	case "inspections":
 		return cl.reposInspections(args)
 	case "inspect":

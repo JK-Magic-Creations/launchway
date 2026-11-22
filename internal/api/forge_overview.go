@@ -183,87 +183,13 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 	if len(repos) == 0 || s.Engine == nil {
 		return []activityItem{}, nil
 	}
-	want := f.limit + 20
-	until := f.atBound
-	byPath, ids, paths := map[string]forge.Repository{}, []string{}, []string{}
-	byID := map[string]forge.Repository{}
-	for _, x := range repos {
-		byPath[x.Path], byID[x.ID] = x, x
-		ids, paths = append(ids, x.ID), append(paths, x.Path)
-	}
 	var all []activityItem
-	if f.wants("push") || f.wants("tag") {
-		rows, err := s.Engine.AuditActivity(ctx, paths, []string{"git.push", "repository.tag_create"}, f.actor, until, want)
+	for _, source := range []func(context.Context, *identity, []forge.Repository, activityFilter) ([]activityItem, error){s.activityPushes, s.activityPulls, s.activityFlights} {
+		items, err := source(ctx, id, repos, f)
 		if err != nil {
 			return nil, err
 		}
-		for _, row := range rows {
-			if row.Kind == "repository.tag_create" {
-				name := strings.TrimPrefix(strings.Fields(row.Detail + " ")[0], "refs/tags/")
-				all = append(all, activityItem{ID: "tag-" + row.Key, Kind: "tag", At: row.At, Actor: row.Who, Repository: row.Target, Ref: name, Title: name})
-				continue
-			}
-			var heads, tags []string
-			for _, ref := range refsOfPush(row.Detail) {
-				if t, ok := strings.CutPrefix(ref, "refs/tags/"); ok {
-					tags = append(tags, t)
-				} else if h, ok := strings.CutPrefix(ref, "refs/heads/"); ok {
-					heads = append(heads, h)
-				}
-			}
-			if len(heads) > 0 || len(tags) == 0 {
-				all = append(all, activityItem{ID: "push-" + row.Key, Kind: "push", At: row.At, Actor: row.Who, Repository: row.Target, Ref: strings.Join(heads, ", "), Title: strings.Join(heads, ", ")})
-			}
-			for i, t := range tags {
-				all = append(all, activityItem{ID: "tag-" + row.Key + "-" + strconv.Itoa(i), Kind: "tag", At: row.At, Actor: row.Who, Repository: row.Target, Ref: t, Title: t})
-			}
-		}
-	}
-	if f.wants("pull_opened") || f.wants("pull_merged") || f.wants("pull_closed") {
-		rows, err := s.Engine.PullActivity(ctx, ids, f.actor, until, want)
-		if err != nil {
-			return nil, err
-		}
-		for _, row := range rows {
-			all = append(all, activityItem{ID: row.Kind + "-" + row.Key, Kind: row.Kind, At: row.At, Actor: row.Who, Repository: byID[row.Target].Path, Number: row.Number, Title: row.Title})
-		}
-	}
-	if (f.wants("run") || f.wants("release")) && s.Projects != nil {
-		for _, repo := range repos {
-			for _, pr := range s.Projects.List() {
-				if !addressIsRepo(pr.URL, repo.Path) || !s.authorize(id, auth.Read, pr.Name) {
-					continue
-				}
-				if f.wants("run") {
-					flt := engine.RunFilter{Project: pr.Name, Limit: want}
-					if until > 0 {
-						flt.Before = &engine.RunCursor{CreatedAt: until, ID: "\xff"}
-					}
-					runs, err := s.Engine.ListRuns(flt)
-					if err != nil {
-						return nil, err
-					}
-					for _, ru := range runs {
-						if f.actor != "" && ru.Actor != f.actor {
-							continue
-						}
-						all = append(all, activityItem{ID: "run-" + ru.ID, Kind: "run", At: ru.CreatedAt, Actor: ru.Actor, Repository: repo.Path, Project: ru.Project,
-							Number: ru.Number, Status: string(ru.Status), Ref: firstOf(ru.Branch, ru.Tag), Title: ru.Pipeline})
-					}
-				}
-				if f.wants("release") {
-					rels, err := s.Engine.ListReleases(engine.ReleaseFilter{Project: pr.Name, State: "published", Limit: want})
-					if err == nil {
-						for _, rl := range rels {
-							if f.actor != "" && rl.PublishedBy != f.actor {
-								continue
-							}
-							all = append(all, activityItem{ID: "release-" + rl.ID, Kind: "release", At: rl.PublishedAt, Actor: rl.PublishedBy, Repository: repo.Path, Project: rl.Project, Version: rl.Version, Title: firstOf(rl.Title, rl.Version)})
-						}
-					}
-				}
-			}
-		}
+		all = append(all, items...)
 	}
 	out := all[:0]
 	for _, it := range all {
@@ -283,7 +209,111 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 	if out == nil {
 		out = []activityItem{}
 	}
-	_ = byPath
+	return out, nil
+}
+
+// want is how many rows each source is asked for: a little more than a page, for the cursor and for what is filtered after.
+func (f activityFilter) want() int { return f.limit + 20 }
+
+// activityPushes are the pushes and tags the audit trail holds for the repositories.
+func (s *Server) activityPushes(ctx context.Context, _ *identity, repos []forge.Repository, f activityFilter) ([]activityItem, error) {
+	if !f.wants("push") && !f.wants("tag") {
+		return nil, nil
+	}
+	paths := make([]string, len(repos))
+	for i, x := range repos {
+		paths[i] = x.Path
+	}
+	rows, err := s.Engine.AuditActivity(ctx, paths, []string{"git.push", "repository.tag_create"}, f.actor, f.atBound, f.want())
+	if err != nil {
+		return nil, err
+	}
+	var out []activityItem
+	for _, row := range rows {
+		if row.Kind == "repository.tag_create" {
+			name := strings.TrimPrefix(strings.Fields(row.Detail + " ")[0], "refs/tags/")
+			out = append(out, activityItem{ID: "tag-" + row.Key, Kind: "tag", At: row.At, Actor: row.Who, Repository: row.Target, Ref: name, Title: name})
+			continue
+		}
+		var heads, tags []string
+		for _, ref := range refsOfPush(row.Detail) {
+			if t, ok := strings.CutPrefix(ref, "refs/tags/"); ok {
+				tags = append(tags, t)
+			} else if h, ok := strings.CutPrefix(ref, "refs/heads/"); ok {
+				heads = append(heads, h)
+			}
+		}
+		if len(heads) > 0 || len(tags) == 0 {
+			out = append(out, activityItem{ID: "push-" + row.Key, Kind: "push", At: row.At, Actor: row.Who, Repository: row.Target, Ref: strings.Join(heads, ", "), Title: strings.Join(heads, ", ")})
+		}
+		for i, t := range tags {
+			out = append(out, activityItem{ID: "tag-" + row.Key + "-" + strconv.Itoa(i), Kind: "tag", At: row.At, Actor: row.Who, Repository: row.Target, Ref: t, Title: t})
+		}
+	}
+	return out, nil
+}
+
+// activityPulls are the pull requests opened, merged and closed.
+func (s *Server) activityPulls(ctx context.Context, _ *identity, repos []forge.Repository, f activityFilter) ([]activityItem, error) {
+	if !f.wants("pull_opened") && !f.wants("pull_merged") && !f.wants("pull_closed") {
+		return nil, nil
+	}
+	ids := make([]string, len(repos))
+	byID := map[string]forge.Repository{}
+	for i, x := range repos {
+		ids[i], byID[x.ID] = x.ID, x
+	}
+	rows, err := s.Engine.PullActivity(ctx, ids, f.actor, f.atBound, f.want())
+	if err != nil {
+		return nil, err
+	}
+	var out []activityItem
+	for _, row := range rows {
+		out = append(out, activityItem{ID: row.Kind + "-" + row.Key, Kind: row.Kind, At: row.At, Actor: row.Who, Repository: byID[row.Target].Path, Number: row.Number, Title: row.Title})
+	}
+	return out, nil
+}
+
+// activityFlights are the runs and releases of the Flights that watch the repositories, for those the caller may read.
+func (s *Server) activityFlights(ctx context.Context, id *identity, repos []forge.Repository, f activityFilter) ([]activityItem, error) {
+	if (!f.wants("run") && !f.wants("release")) || s.Projects == nil {
+		return nil, nil
+	}
+	var out []activityItem
+	for _, repo := range repos {
+		for _, pr := range s.Projects.List() {
+			if !addressIsRepo(pr.URL, repo.Path) || !s.authorize(id, auth.Read, pr.Name) {
+				continue
+			}
+			if f.wants("run") {
+				flt := engine.RunFilter{Project: pr.Name, Limit: f.want()}
+				if f.atBound > 0 {
+					flt.Before = &engine.RunCursor{CreatedAt: f.atBound, ID: "\xff"}
+				}
+				runs, err := s.Engine.ListRuns(flt)
+				if err != nil {
+					return nil, err
+				}
+				for _, ru := range runs {
+					if f.actor == "" || ru.Actor == f.actor {
+						out = append(out, activityItem{ID: "run-" + ru.ID, Kind: "run", At: ru.CreatedAt, Actor: ru.Actor, Repository: repo.Path, Project: ru.Project,
+							Number: ru.Number, Status: string(ru.Status), Ref: firstOf(ru.Branch, ru.Tag), Title: ru.Pipeline})
+					}
+				}
+			}
+			if f.wants("release") {
+				rels, err := s.Engine.ListReleases(engine.ReleaseFilter{Project: pr.Name, State: "published", Limit: f.want()})
+				if err != nil {
+					continue // releases are not kept by this database: there are none to show
+				}
+				for _, rl := range rels {
+					if f.actor == "" || rl.PublishedBy == f.actor {
+						out = append(out, activityItem{ID: "release-" + rl.ID, Kind: "release", At: rl.PublishedAt, Actor: rl.PublishedBy, Repository: repo.Path, Project: rl.Project, Version: rl.Version, Title: firstOf(rl.Title, rl.Version)})
+					}
+				}
+			}
+		}
+	}
 	return out, nil
 }
 
@@ -434,7 +464,7 @@ func (s *Server) repoContributors(w http.ResponseWriter, r *http.Request) {
 	default:
 		out.State = "computing"
 		if need || !s.overviewJobRunning(repo.ID, period) {
-			s.startContributorsJob(engine.ContributorsJob{RepoID: repo.ID, Period: period, Commit: key}, repo.DefaultBranch, days)
+			s.startContributorsJob(r.Context(), engine.ContributorsJob{RepoID: repo.ID, Period: period, Commit: key}, days)
 		}
 	}
 	if out.Contributors == nil {
@@ -453,7 +483,7 @@ func (s *Server) overviewJobRunning(repoID, period string) bool {
 }
 
 // startContributorsJob makes the answer in the background: at most two at a time, each bounded in time and in commits.
-func (s *Server) startContributorsJob(j engine.ContributorsJob, branch string, days int) {
+func (s *Server) startContributorsJob(parent context.Context, j engine.ContributorsJob, days int) {
 	s.Forge.overview.mu.Lock()
 	if s.Forge.overview.inflight == nil {
 		s.Forge.overview.inflight, s.Forge.overview.sem = map[string]bool{}, make(chan struct{}, 2)
@@ -478,7 +508,7 @@ func (s *Server) startContributorsJob(j engine.ContributorsJob, branch string, d
 		case <-stop:
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(parent), 10*time.Minute) // the request that started it may end first
 		defer cancel()
 		go func() {
 			select {
