@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { announce } from "../../kit/announce";
 import { ago } from "../../format";
@@ -102,7 +103,7 @@ export function RepoFrame({ path, tab, title, sentence, actions, error, children
           onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); navigate(href); } }}>{label}</a>)}
       </nav>
       <ErrorBox error={error} />
-      {children}
+      <ErrorBoundary name="This part of the repository page" resetKey={path + tab}>{children}</ErrorBoundary>
     </div>
   );
 }

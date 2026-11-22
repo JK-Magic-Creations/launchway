@@ -28,7 +28,8 @@ export function sourceWord(s: VarSource): string {
     case "file": return "the pipeline file's with:";
     case "default": return "the template's own default";
   }
-  return levelWord(s.level!, s.scope) + (s.environment ? ` for ${s.environment}` : "");
+  if (!s.level) return "a built-in value";
+  return levelWord(s.level, s.scope) + (s.environment ? ` for ${s.environment}` : "");
 }
 
 /** A value as shown: a secret is its reference and says so, never a value. */
@@ -256,15 +257,18 @@ export function RunVariables({ runId }: { runId: string }) {
   useEffect(() => { variablesApi.run(runId).then(setRec).catch(setError); }, [runId]);
   if (error) return null; // older servers have no record; the run page does not depend on it
   if (!rec) return null;
-  if (!rec.variables || rec.variables.length === 0) return null;
+  // A variable with no value and no source (a template's built-in, such as launchway_project, that nothing set) says
+  // nothing to a person: it is not listed.
+  const shown = (rec.variables ?? []).filter((e) => e.display !== "" || e.value != null && e.value !== "" || ((e.from?.kind as string | undefined) ?? "") !== "");
+  if (shown.length === 0) return null;
   return (
     <section className="card vr vr-compact" aria-labelledby="runvars-title">
       <h2 id="runvars-title">Variables in effect</h2>
       <p className="sub">{terms().say("What this {run} used, as recorded when it was created. Changing a variable later does not change it.")}</p>
       {rec.rerun_of && <p className="sub">A re-run: it used the variables of the run it repeats, as recorded.</p>}
       <ul className="vr-list">
-        {rec.variables.map((e) => (
-          <li key={e.name} className="vr-item">
+        {shown.map((e) => (
+          <li key={e.name + (e.environment ?? "")} className="vr-item">
             <div className="vr-head">
               <strong className="vr-name">{e.name}</strong><Value v={e} />
               <span className="vr-from">from {sourceWord(e.from)}</span>{e.environment && <span className="vr-from">for {e.environment}</span>}

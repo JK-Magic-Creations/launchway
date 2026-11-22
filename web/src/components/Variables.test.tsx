@@ -65,12 +65,17 @@ describe("the variables hierarchy", () => {
 describe("the variables a run recorded", () => {
   // What a server really sends for a template's built-in variables: a null chain and a null
   // value. Reading chain.length once blanked the whole run page.
-  it("shows them when the server sends null for the chain", async () => {
+  it("does not list a built-in variable with no value and no source, and never prints undefined", async () => {
     vi.mocked(variablesApi.run).mockResolvedValue({
-      rerun_of: "", variables: [{ name: "launchway_project", type: "", value: null, display: "", from: { kind: "" }, chain: null, why: "", run_id: "run_1" }],
+      rerun_of: "", variables: [
+        { name: "launchway_project", type: "", value: null, display: "", from: { kind: "" }, chain: null, why: "", run_id: "run_1" },
+        { name: "replicas", type: "number", value: 2, display: "2", from: { kind: "level", level: "installation" }, chain: null, why: "", run_id: "run_1" },
+      ],
     } as never);
-    render(<RunVariables runId="run_1" />);
-    expect(await screen.findByText("launchway_project")).toBeInTheDocument();
+    const { container } = render(<RunVariables runId="run_1" />);
+    expect(await screen.findByText("replicas")).toBeInTheDocument();
+    expect(screen.queryByText("launchway_project")).toBeNull();
+    expect(container.textContent).not.toMatch(/undefined|null/);
   });
 
   it("shows nothing, and does not fail, when the server sends null for the list", async () => {

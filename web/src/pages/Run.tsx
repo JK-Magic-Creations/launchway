@@ -39,6 +39,7 @@ import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
 import { FailurePanel } from "../components/FailurePanel";
 import { explainFailure } from "../guided/derive";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { useCrumbLabel } from "../nav/crumbs";
 import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
@@ -335,8 +336,8 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
-      <RunTrigger run={run} />
-      <RunVariables runId={run.id} />
+      <ErrorBoundary name="The record of how this run was started" resetKey={run.id}><RunTrigger run={run} /></ErrorBoundary>
+      <ErrorBoundary name="The variables in effect" resetKey={run.id}><RunVariables runId={run.id} /></ErrorBoundary>
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
@@ -414,6 +415,7 @@ export function RunPage({ id }: { id: string }) {
         ))}
       </div>
 
+      <ErrorBoundary name={`The ${shownTab} tab`} resetKey={shownTab + run.id}>
       {shownTab === "graph" && (
         <>
           <section className="sheet runline-sheet" aria-label={terms().say("The pipeline of this {run}")}>
@@ -440,6 +442,7 @@ export function RunPage({ id }: { id: string }) {
       {tab === "policy" && <PolicyTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
+      </ErrorBoundary>
     </div>
   );
 }
