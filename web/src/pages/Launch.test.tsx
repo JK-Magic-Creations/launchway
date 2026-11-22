@@ -23,7 +23,7 @@ describe("what a Launch page works out", () => {
   it("leads with the cause: crash-looping canary pods, with the last log line", () => {
     expect(cause(launchTree(false))).toBeNull();
     const c = cause(launchTree(true));
-    expect(c?.text).toMatch(/^Canary pods are not healthy: container app is waiting: CrashLoopBackOff/);
+    expect(c?.text).toMatch(/^Pathfinder pods are not healthy: container app is waiting: CrashLoopBackOff/);
     expect(c?.text).toMatch(/Last log line: panic: database password is empty/);
   });
   it("says what happens next, and who may step in", () => {
@@ -87,7 +87,7 @@ describe("the Launch page", () => {
   it("leads with the cause when the canary crash-loops", async () => {
     await open("/runs/run_7?launch=dep_1", true);
     const alert = await screen.findByRole("alert", { name: "What is wrong" }, { timeout: 8000 });
-    expect(alert.textContent).toMatch(/Canary pods are not healthy.*CrashLoopBackOff/);
+    expect(alert.textContent).toMatch(/Pathfinder pods are not healthy.*CrashLoopBackOff/);
     fireEvent.click(within(alert).getByRole("button", { name: "Open it" }));
     expect(location.search).toContain("tab=objects");
     expect(location.search).toContain("obj=Pod%2Fshop%2Fshop-bbb-1");
