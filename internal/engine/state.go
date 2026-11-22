@@ -249,6 +249,7 @@ type StepEvidence struct {
 	SBOM     *SBOMSummary
 	Image    *ImageRecord
 	Caches   []CacheResult // what the attempt's build caches did (schema 25)
+	Notes    []StepNote    // what a custom step wrote besides outputs (schema 68)
 }
 
 // What a waiting deploy or rollback step waits for.
@@ -470,6 +471,7 @@ func (st *RunState) checkCreated(p Payload) bool {
 		{p.Pipeline.UsesSchemaVerify(), schemaVerify, "verify or ai steps (schema %d)"},
 		{p.Pipeline.UsesSchemaFlow(), schemaFlow, "a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)"},
 		{p.Pipeline.UsesRestore(), schemaRollback, "a rollback run (schema %d: the rollback step's restore key)"},
+		{p.Pipeline.UsesSchemaCustomSteps(), schemaCustomSteps, "custom steps (schema %d)"},
 		{p.Pipeline.UsesSchemaParity2(), schemaParity2, "a pipeline key of schema %d (fetch from a loop, a step's own runner, approvers, service readiness)"},
 	} {
 		if !k.uses {
@@ -775,10 +777,10 @@ func (st *RunState) deadline() int64 {
 // evidenceOf is what an event that ends a step attempt says it reported,
 // or nil.
 func evidenceOf(p Payload) *StepEvidence {
-	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil && len(p.Caches) == 0 {
+	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil && len(p.Caches) == 0 && len(p.Notes) == 0 {
 		return nil
 	}
-	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image, Caches: p.Caches}
+	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image, Caches: p.Caches, Notes: p.Notes}
 }
 
 // ReviewState is an approver's acknowledgment of an emergency rollback.

@@ -169,3 +169,13 @@ func SortedKeys[V any](m map[string]V) []string {
 	sort.Strings(out)
 	return out
 }
+
+// OutputsManifest is a manifest that has only the outputs a step declares,
+// for a Station that was handed the types and not the manifest.
+func OutputsManifest(name string, types map[string]string) *Manifest {
+	m := &Manifest{Name: name}
+	for _, k := range SortedKeys(types) {
+		m.Outputs = append(m.Outputs, &Output{Name: k, Type: types[k]})
+	}
+	return m
+}

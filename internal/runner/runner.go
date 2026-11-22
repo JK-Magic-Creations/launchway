@@ -103,6 +103,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	if !r.Info.Has(engine.FeatureCoverage) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCoverage)
 	}
+	if !r.Info.Has(engine.FeatureCustomSteps) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCustomSteps)
+	}
 	if !r.Info.Has(engine.FeatureCache) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCache)
 	}
@@ -593,6 +596,15 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
+	var cust *customRun
+	if job.Custom != nil {
+		var err error
+		if cust, err = r.customStart(job, ws, env, values); err != nil {
+			sys("Could not prepare the custom step: %v", err)
+			return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the custom step: " + err.Error()}, nil
+		}
+		cust.retarget(job)
+	}
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
 	sys("Image %s", job.Image)
@@ -618,8 +630,14 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		}
 	}
 	spec.Exclude = job.WorkspaceExclude
+	if cust != nil {
+		spec.Sandbox = cust.sandbox()
+	}
 	caches := r.newCacheRun(job, spec, sys)
 	collect := r.collector(job, spec, sys, caches)
+	if cust != nil {
+		collect = withCustom(collect, cust)
+	}
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
 		return *failed, nil
 	}
@@ -666,9 +684,18 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return res, collect
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
+	var notes []engine.StepNote
+	customWhy := ""
+	if cust != nil {
+		d := cust.finish(ctx, r, spec, code, mask, sys)
+		outputs, notes, customWhy, code = d.outputs, d.notes, d.why, d.code
+	}
 	ec := code
 	if code != 0 {
 		why := fmt.Sprintf("exit code %d", code)
+		if customWhy != "" {
+			why = customWhy
+		}
 		if x, ok := r.Exec.(executor.ExitExplainer); ok {
 			if note := x.ExplainExit(ctx, spec, code); note != "" {
 				why = note
@@ -679,14 +706,14 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		if line := usageLine(spec.Usage); line != "" {
 			sys("%s", line)
 		}
-		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs,
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs, Notes: notes,
 			Excerpt: tail.excerpt(), Usage: usageOf(spec.Usage)}, collect
 	}
 	sys("Succeeded in %s", took)
 	if line := usageLine(spec.Usage); line != "" {
 		sys("%s", line)
 	}
-	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Usage: usageOf(spec.Usage)}, collect
+	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Notes: notes, Usage: usageOf(spec.Usage)}, collect
 }
 
 // Limits on a failed step's excerpt, as sent to the server.

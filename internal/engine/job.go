@@ -25,6 +25,6 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
 		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Event: st.Trigger.Event, Workspace: st.Workspace, Library: def.Library,
-		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def), Cache: c.jobCache(def),
+		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def), Cache: c.jobCache(def), Custom: def.Custom,
 	}
 }

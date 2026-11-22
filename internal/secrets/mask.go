@@ -81,3 +81,21 @@ func (m *Masker) Hold(s string) int {
 	}
 	return most
 }
+
+// Chain returns a masker that applies a, then b. Either may be nil.
+func Chain(a, b *Masker) *Masker {
+	switch {
+	case a == nil:
+		return b
+	case b == nil:
+		return a
+	}
+	pieces := append(append([]string{}, a.pieces...), b.pieces...)
+	slices.SortFunc(pieces, func(x, y string) int { return cmp.Or(len(y)-len(x), strings.Compare(x, y)) })
+	pieces = slices.Compact(pieces)
+	pairs := make([]string, 0, 2*len(pieces))
+	for _, p := range pieces {
+		pairs = append(pairs, p, "***")
+	}
+	return &Masker{r: strings.NewReplacer(pairs...), pieces: pieces}
+}

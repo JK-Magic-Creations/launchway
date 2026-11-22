@@ -786,6 +786,9 @@
             },
             "egress": {
               "$ref": "#/definitions/objectList"
+            },
+            "customHosts": {
+              "$ref": "#/definitions/objectList"
             }
           }
         }

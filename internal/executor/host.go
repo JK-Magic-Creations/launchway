@@ -13,14 +13,24 @@ import (
 
 // Host runs the script directly on this machine, ignoring the image. It is
 // for machines without a container runtime, and for tests.
-type Host struct{}
+type Host struct {
+	// AllowUnsandboxed lets the host run custom steps although it enforces none of what their
+	// manifests ask for (no network, a read-only workspace). Off by default.
+	AllowUnsandboxed bool
+}
 
 func (*Host) Name() string { return "host" }
 
 // WorkspacePath is hostDir: the host executor runs steps in it directly.
 func (*Host) WorkspacePath(hostDir string) string { return hostDir }
 
-func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
+func (h *Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
+	if s.Sandbox != nil {
+		if !h.AllowUnsandboxed {
+			return -1, cannotStart("%v", errHostCannotSandbox(s.Sandbox.Name))
+		}
+		out("system", "The host executor does not enforce the step's sandbox ("+s.Sandbox.Describe()+"); the runner allows steps that are not sandboxed")
+	}
 	if len(s.services()) > 0 {
 		return -1, errors.New("services need the container executor with Podman, or the kubernetes executor: this runner uses the host executor")
 	}

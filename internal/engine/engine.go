@@ -285,6 +285,9 @@ type Job struct {
 	// asks.
 	Verify *VerifyJob `json:"verify,omitempty"`
 	AI     *AIJob     `json:"ai,omitempty"`
+	// Custom, for a step that came from a custom step, is who it is and what
+	// it may do (schema 68); only runners with FeatureCustomSteps are given one.
+	Custom *pipeline.CustomStep `json:"custom,omitempty"`
 }
 
 // JobReports is what a runner collects after a step.
@@ -343,6 +346,8 @@ type Result struct {
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
 	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
+	// Notes are the summary and annotations a custom step wrote (schema 68).
+	Notes []StepNote `json:"notes,omitempty"`
 	Usage  *StepUsage    `json:"usage,omitempty"`  // what the attempt used (schema 54)
 }
 
@@ -1162,6 +1167,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			return err
 		}
 		p.Caches = c.keepCacheResults(c.st.Pipeline.Step(l.stepID), res.Caches)
+		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.Custom != nil && c.e.knows(schemaCustomSteps) {
+			p.Notes = keepNotes(res.Notes)
+		}
 		quarantineFlip(c.e, &res, &p)
 		coverageFail, err := c.finish18(l, res, &p, prep18)
 		if err != nil {
@@ -1687,6 +1695,7 @@ func (c *cmd) persist() error {
 		{schemaVerify, c.persistVerify},
 		{schemaPools, c.persistPools},
 		{schemaRollback, c.persistRollback},
+		{schemaCustomSteps, c.persistCustomSteps},
 	} {
 		if !c.e.knows(w.schema) {
 			continue

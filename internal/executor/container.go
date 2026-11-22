@@ -54,6 +54,13 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	s.Name = containerName(s.Name)
 	s = s.withParallelism()
 	var podArgs []string
+	sandbox, err := c.sandboxArgs(s, out)
+	if err != nil {
+		return -1, err
+	}
+	if sandbox.args != nil {
+		s.Env = withEnv(s.Env, sandbox.envValue)
+	}
 	if len(s.services()) > 0 {
 		pod, err := c.ensurePod(ctx, s, out)
 		if err != nil {
@@ -68,13 +75,14 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		// Do not relabel the workspace for SELinux; it may be a directory
 		// the user owns, such as their own checkout with `launchway run`.
 		"--security-opt", "label=disable",
-		"-v", s.Workspace + ":/workspace",
+		"-v", s.Workspace + ":/workspace" + sandbox.wsMode,
 		"-v", s.MetaDir + ":/launchway",
 		"-w", "/workspace",
 		"--entrypoint", "/bin/sh",
 	}
+	args = append(args, sandbox.args...)
 	args = append(args, podArgs...)
-	if c.Network != "" {
+	if c.Network != "" && sandbox.args == nil {
 		args = append(args, "--network", c.Network)
 	}
 	if sc, ok := s.stepContainer(); ok && !sc.Service {

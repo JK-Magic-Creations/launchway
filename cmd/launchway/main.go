@@ -589,7 +589,7 @@ func cmdRunner(args []string) error {
 	if o.Deploy != nil {
 		return runDeployRunner(ctx, o, client, id, secretStores)
 	}
-	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id, DataDir: o.Data})
+	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id, DataDir: o.Data, AllowUnsandboxed: o.AllowUnsandboxedSteps})
 	if err != nil {
 		return err
 	}

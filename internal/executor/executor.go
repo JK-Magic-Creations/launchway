@@ -53,6 +53,9 @@ type Spec struct {
 	// step through the Station leaves out: what the step makes there stays in the step.
 	Cache   *CacheScope
 	Exclude []string
+	// Sandbox, if set, says that the step is a custom step and what it may
+	// do (see sandbox.go).
+	Sandbox *Sandbox
 	// Usage, if set, is filled by an executor that can read what the step
 	// used (see usage.go); the caller reads it after Run returns.
 	Usage *Usage
@@ -202,6 +205,8 @@ type Options struct {
 	// DataDir is the runner's data directory; the Kubernetes executor keeps its copies of workspaces in a
 	// directory of it unless kubernetes.work_dir says otherwise.
 	DataDir string
+	// AllowUnsandboxed lets the host executor run custom steps (see Host).
+	AllowUnsandboxed bool
 }
 
 // ByName returns the executor with the given name: auto, container, podman,
@@ -217,6 +222,9 @@ func ByName(name string, o Options) (Executor, error) {
 	ex, err := byNameLocal(name)
 	if c, ok := ex.(*Container); ok {
 		c.Owner = ownerID(o.RunnerID)
+	}
+	if h, ok := ex.(*Host); ok {
+		h.AllowUnsandboxed = o.AllowUnsandboxed
 	}
 	return ex, err
 }
