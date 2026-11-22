@@ -189,6 +189,7 @@ await journey("the help buttons are in the same place on every page", async (pag
   const seen = [];
   for (const p of ["/", "/activity", "/projects", "/settings", "/learn", `/runs/${runs.RUN_FAILED}`]) {
     await open(page, p);
+    await page.waitForLoadState("networkidle"); // the top bar's inbox count arrives after the first draw; measure once it has
     seen.push(await page.evaluate(() => ["learn", "guide"].map((a) => { const r = document.querySelector(`[data-act="${a}"]`)?.getBoundingClientRect(); return r ? Math.round(r.x / 4) + "," + Math.round(r.y) : "missing"; }).join(" ")));
   }
   assert.equal(new Set(seen).size, 1, "positions differ between pages: " + seen.join(" | "));
