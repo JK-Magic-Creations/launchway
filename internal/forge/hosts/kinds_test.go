@@ -17,6 +17,8 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops/azuredevopsfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket/bitbucketfake"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit/codecommitfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitea/giteafake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitlab/gitlabfake"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
@@ -34,6 +36,14 @@ type hostCase struct {
 	// ("acme/app.git" when empty) and owners the connection's allow-list (none when empty).
 	repo, cloneEnd string
 	owners         []string
+	// credential is what the connection's credential reference holds when it is not the bare token (a document).
+	credential string
+	// pollingOnly says the host sends no webhook and takes no commit status: the journey skips the webhook
+	// assertions and expects a result to go to the pull request number prNumber as its one comment.
+	pollingOnly bool
+	prNumber    int
+	// cloneOK checks the clone credential when it is not the token itself (a signature minted per request).
+	cloneOK func(ca hosts.CloneAuth) bool
 }
 
 func (c hostCase) repoPath() string {
@@ -126,7 +136,31 @@ func azureDevOpsCase() hostCase {
 
 var adoFake *azuredevopsfake.Host
 
-var kindCases = []hostCase{bitbucketCase(), azureDevOpsCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
+// codeCommitCase: a host with no webhook and no commit status, whose Git credential is a signature made per
+// request (so the clone's secret is not the connection's credential) and whose repository is account/name.
+func codeCommitCase() hostCase {
+	var fake *codecommitfake.Host
+	return hostCase{
+		kind: forge.KindCodeCommit,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			fake = codecommitfake.New()
+			t.Cleanup(fake.Close)
+			t.Cleanup(codecommit.UseTestAPI(fake.API()))
+			return "", codecommitfake.SigningKey, "", func() []string { return fake.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(`{}`))
+			return r
+		},
+		lacks: forge.CapResults, repo: codecommitfake.Account + "/" + codecommitfake.Repo, cloneEnd: "/v1/repos/" + codecommitfake.Repo,
+		owners: []string{codecommitfake.Account}, credential: codecommitfake.CredentialDoc(), pollingOnly: true, prNumber: 1,
+		cloneOK: func(ca hosts.CloneAuth) bool {
+			return ca.Username == codecommitfake.AccessKeyID && fake.CheckGit(ca.Username, ca.Secret)
+		},
+	}
+}
+
+var kindCases = []hostCase{bitbucketCase(), azureDevOpsCase(), codeCommitCase(), giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()
@@ -153,7 +187,11 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			}
 			t.Cleanup(func() { eng.Close() })
 			base, token, hook, violations := c.start(t)
-			t.Setenv("LW_KIND_TOKEN", token)
+			if c.credential != "" {
+				t.Setenv("LW_KIND_TOKEN", c.credential)
+			} else {
+				t.Setenv("LW_KIND_TOKEN", token)
+			}
 			t.Setenv("LW_KIND_HOOK", hook)
 			g, _ := egress.New([]string{"127.0.0.1"})
 			s := hosts.New(eng.Database(), eng, g)
@@ -164,7 +202,7 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			if err != nil || v.Kind != string(c.kind) || len(v.Capabilities) == 0 {
 				t.Fatalf("%+v %v", v, err)
 			}
-			if strings.Contains(v.Credential, token) {
+			if strings.Contains(v.Credential, token) || strings.Contains(v.Credential, "secret_access_key") {
 				t.Fatal("the view shows the token")
 			}
 			res, err := s.Test(ctx, "h")
@@ -187,10 +225,38 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			if err != nil || fv.Kind != string(c.kind) || len(fv.Additions) == 0 || fv.Unsupported[c.lacks].Support == "" || fv.Unsupported[c.lacks].Reason == "" {
 				t.Fatalf("view: %+v %v", fv, err)
 			}
-			if ca, err := s.Clone(ctx, "shop"); err != nil || ca.Secret != token || !strings.HasSuffix(ca.URL, c.cloneSuffix()) {
+			ca, err := s.Clone(ctx, "shop")
+			good := err == nil && ca.Secret == token
+			if c.cloneOK != nil {
+				good = err == nil && c.cloneOK(ca)
+			}
+			if !good || !strings.HasSuffix(ca.URL, c.cloneSuffix()) {
 				t.Fatalf("clone: %+v %v", ca, err)
 			}
-			if ok, err := s.ReportRun(ctx, "shop", forge.Result{Producer: "launchway", Name: "launchway/ci", SHA: strings.Repeat("d", 40), State: forge.Passing}); err != nil || !ok {
+			result := forge.Result{Producer: "launchway", Name: "launchway/ci", SHA: strings.Repeat("d", 40), State: forge.Passing}
+			if c.pollingOnly {
+				// No commit status: the result goes to the pull request's one comment, and a commit with no pull request has nowhere.
+				if ok, err := s.ReportRun(ctx, "shop", result); err != nil || ok {
+					t.Fatalf("a host with no statuses sends no step status: %v %v", ok, err)
+				}
+				if via, err := s.ReportResult(ctx, "shop", result, c.prNumber, "Sortie passed"); err != nil || via != hosts.ViaComment {
+					t.Fatalf("the result goes to the comment: %v %v", via, err)
+				}
+				if via, err := s.ReportResult(ctx, "shop", result, 0, ""); err != nil || via != hosts.ViaNone {
+					t.Fatalf("no pull request, nothing sent: %v %v", via, err)
+				}
+				if n := fv.Unsupported[forge.CapEvents]; n.Support != forge.Emulated || n.Workaround == "" {
+					t.Errorf("the page says webhooks are polled: %+v", n)
+				}
+				if _, err := s.Webhook(ctx, "h", c.delivery(t, hook)); err == nil {
+					t.Fatal("a delivery to a host that sends none is accepted")
+				}
+				if vs := violations(); len(vs) > 0 {
+					t.Errorf("the fake saw: %v", vs)
+				}
+				return
+			}
+			if ok, err := s.ReportRun(ctx, "shop", result); err != nil || !ok {
 				t.Fatalf("status: %v %v", ok, err)
 			}
 			// A webhook: a wrong secret is refused, a right one is read once, its replay is dropped.

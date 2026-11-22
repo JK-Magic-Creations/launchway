@@ -109,7 +109,7 @@ func resultsNote(v Via) (forge.Declaration, bool) {
 	switch v {
 	case ViaComment:
 		return forge.Declaration{Support: forge.Emulated, Reason: "the host takes no commit status from this connection (it has none, or the token may not write one)",
-			Workaround: "Launchway posts each result in the pull request's one summary comment instead; for a status, give the token the permission to write commit statuses"}, true
+			Workaround: "Launchway posts each result in the pull request's one summary comment instead (a commit with no pull request has nowhere to say it, and its result is read in Launchway); for a status, give the token the permission to write commit statuses"}, true
 	case ViaNone:
 		return forge.Declaration{Support: forge.None, Reason: "the host has neither commit statuses nor comments Launchway can use",
 			Workaround: "Read results in Launchway"}, true

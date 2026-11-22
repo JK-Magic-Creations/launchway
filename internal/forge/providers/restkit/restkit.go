@@ -58,6 +58,10 @@ type Client struct {
 	// Message extracts the host's own words from an error body.
 	Message func(body []byte) string
 	Now     func() time.Time
+	// Sign, when set, signs the request after its headers are set, given the
+	// whole body (a host that signs requests, as AWS does, hashes it). It runs
+	// for every request, so credentials that rotate are read at that moment.
+	Sign func(req *http.Request, body []byte) error
 }
 
 // NewClient makes a client. The guard is the product's egress allow-list.
@@ -112,6 +116,12 @@ func (k *call) errf(format string, a ...any) error {
 // Do sends one request to raw, which must be at an allowed host. A body of
 // size 0 with a non-nil reader is sent empty.
 func (c *Client) Do(ctx context.Context, method, raw string, body io.Reader, size int64, ctype string) (Answer, error) {
+	return c.DoWith(ctx, method, raw, body, size, ctype, nil)
+}
+
+// DoWith is Do with more headers for this one request (the host's per-call
+// header, such as an action name).
+func (c *Client) DoWith(ctx context.Context, method, raw string, body io.Reader, size int64, ctype string, extra http.Header) (Answer, error) {
 	tok, err := c.Token()
 	if err != nil {
 		return Answer{}, errors.New(redact.URLs(err.Error()))
@@ -129,6 +139,13 @@ func (c *Client) Do(ctx context.Context, method, raw string, body io.Reader, siz
 	if err := c.guard.Check(ctx, bare.String()); err != nil {
 		return Answer{}, k.errf("%v", err)
 	}
+	var whole []byte
+	if c.Sign != nil && body != nil {
+		if whole, err = io.ReadAll(body); err != nil {
+			return Answer{}, k.errf("reading the request body: %v", err)
+		}
+		body, size = bytes.NewReader(whole), int64(len(whole))
+	}
 	req, err := http.NewRequestWithContext(ctx, method, raw, body)
 	if err != nil {
 		return Answer{}, k.errf("%v", err)
@@ -143,9 +160,19 @@ func (c *Client) Do(ctx context.Context, method, raw string, body io.Reader, siz
 		req.Header.Set(h, v)
 	}
 	req.Header.Set("User-Agent", "launchway")
-	c.Auth(req.Header, tok)
+	for h, vs := range extra {
+		req.Header[http.CanonicalHeaderKey(h)] = vs
+	}
+	if c.Auth != nil {
+		c.Auth(req.Header, tok)
+	}
 	if ctype != "" {
 		req.Header.Set("Content-Type", ctype)
+	}
+	if c.Sign != nil {
+		if err := c.Sign(req, whole); err != nil {
+			return Answer{}, k.errf("signing the request: %v", err)
+		}
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {

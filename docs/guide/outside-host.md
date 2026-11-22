@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) and `azuredevops` (the cloud service and the self-managed server product). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) and [Azure DevOps](#azure-devops) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) `gitea` and `forgejo` (self-managed installs: the base address is required) `bitbucket` (Bitbucket Cloud) `azuredevops` (the cloud service and the self-managed server product) and `codecommit` (AWS CodeCommit, signed requests and IAM). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) [Gitea and Forgejo](#gitea-and-forgejo) [Bitbucket Cloud](#bitbucket-cloud) [Azure DevOps](#azure-devops) and [AWS CodeCommit](#aws-codecommit) follow, each with its own token scopes, roles or IAM actions. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -290,9 +290,73 @@ launchway repos outside attach shop --connection acme-ado --repository acme/web/
 
 This provider is labelled experimental until it has passed the conformance suite against a live service (`LAUNCHWAY_LIVE_AZUREDEVOPS_TOKEN`, `LAUNCHWAY_LIVE_AZUREDEVOPS_REPO` as `organization/project/repository` and, for the server product, `LAUNCHWAY_LIVE_AZUREDEVOPS_BASE` run that test).
 
-## Not yet: `codecommit`
+## AWS CodeCommit
 
-The kind `codecommit` is named in the model, but **no code path offers it**: it has no provider, no strict fake and no conformance run, so a connection of it is refused ("a connection to keep code on is of kind ...") and it is not in the kind picker, the command line or the tools. A host kind is either complete or absent in Launchway. Until it is built, keep such a repository as a plain Git address (polled, with a credential reference) or mirror it into Launchway.
+The kind `codecommit` is the cloud provider's Git service. It differs from every other kind in three ways: requests are **signed** with an access key (there is no token), the host has **no webhook, no commit status, no release object and no tag call**, and who may do what is decided by **IAM policy**, not by scopes. Each of those is declared in the capabilities and shown on the Flight's Code host page, with the way around it.
+
+**The base address is the Git endpoint of the repositories' region**, which carries the region: `--base-url https://git-codecommit.us-east-2.amazonaws.com` (also `git-codecommit-fips.<region>.amazonaws.com`, and the `.amazonaws.com.cn` domain). It is required. The API endpoint `codecommit.<region>.amazonaws.com` and, for a role, the token service `sts.<region>.amazonaws.com` are derived from it, so a connection is for one region; make one connection for each region. A repository is `account/name`: the 12-digit account id and the repository name (`123456789012/web`). The **owners** list names account ids and may be empty.
+
+### The credential
+
+The credential reference names one secret holding a small JSON document (Launchway never stores it; it is read when a call is made):
+
+```json
+{"access_key_id": "AKIA...", "secret_access_key": "..."}
+```
+
+Optional fields: `session_token` (when the key pair is itself temporary), and, to have Launchway **assume a role** with the key pair, `role_arn`, `external_id`, `role_session_name` (default `launchway`) and `duration_seconds` (900 to 43200, 3600 by default). With a role, Launchway calls the token service's `AssumeRole` (a signed request, no AWS SDK), keeps the temporary credentials **in memory only**, renews them five minutes before they expire, and never logs or returns them. Prefer a role: the key pair then only needs permission to assume it, and what Launchway can do is the role's policy. A document with a field it does not know, or an invalid value, is refused with a message that does not repeat the credential.
+
+```sh
+launchway repos host add acme-aws --kind codecommit \
+  --base-url https://git-codecommit.us-east-2.amazonaws.com \
+  --credential-env ACME_AWS_CREDENTIAL \
+  --owner 123456789012
+launchway repos host test acme-aws
+launchway repos outside attach shop --connection acme-aws --repository 123456789012/web
+```
+
+**Git is signed per request too.** The server image has no shell and no credential helper, so Launchway does in process what the AWS CLI's credential helper does: the user name is the access key id (followed by `%` and the session token for temporary credentials) and the password is the time, a `Z`, and the signature of the request `GIT` for the repository's path (`/v1/repos/<name>`) and host. It depends on the path and the time, so it is made for each clone, fetch or push and is good for a few minutes. The host's static **Git credentials** (the service-specific user name and password) are not used: the host says they cannot be used with rotating or temporary credentials, and a role is the better practice.
+
+### The IAM actions each feature needs
+
+Give the role (or user) these on the repositories (`arn:aws:codecommit:<region>:<account>:<repository>`), least first. Actions marked `*` take the resource `*` in the host's permission reference.
+
+| Feature | IAM actions |
+| --- | --- |
+| Choose a repository | `codecommit:ListRepositories` (`*`), `codecommit:BatchGetRepositories` |
+| Run Sorties, checkout | `codecommit:GitPull`, `codecommit:ListBranches`, `codecommit:GetBranch`, `codecommit:GetCommit` |
+| Follow pull requests (polling), read approvals | `codecommit:ListPullRequests`, `codecommit:GetPullRequest`, `codecommit:GetPullRequestApprovalStates`, `codecommit:ListAssociatedApprovalRuleTemplatesForRepository` (`*`), `codecommit:GetApprovalRuleTemplate` (`*`) |
+| Summary comment (where results go) | `codecommit:PostCommentForPullRequest`, `codecommit:UpdateComment` (only the comment's author may edit it) |
+| Tags | `codecommit:GitPull`, `codecommit:GitPush` |
+| File changes and write-back pull requests | `codecommit:GetBranch`, `codecommit:CreateBranch`, `codecommit:PutFile`, `codecommit:CreatePullRequest` |
+| Close or edit a pull request | `codecommit:UpdatePullRequestStatus`, `codecommit:UpdatePullRequestTitle`, `codecommit:UpdatePullRequestDescription` |
+| Assume the role (on the key pair's user) | `sts:AssumeRole` on the role, and the role's trust policy must trust that user (and require your `external_id`, if you set one); the role's maximum session duration must be at least `duration_seconds` |
+
+The host also requires that no policy on the identity denies the AWS Key Management Service actions it uses (`kms:Encrypt`, `kms:Decrypt`, `kms:ReEncrypt`, `kms:GenerateDataKey`, `kms:GenerateDataKeyWithoutPlaintext`, `kms:DescribeKey`). **Test** reads and lists the permissions it did not try, marked "not checked"; a missing one shows as a 403 (`AccessDeniedException`) from the call that needs it, with the host's message.
+
+### What Launchway does with it
+
+- **Events are polled.** CodeCommit has no webhook to an address you choose: its events leave through the cloud provider's own event and notification services. The capability is declared with that reason, and the connection is followed by polling (the Flight's repository and its open pull requests): a new pull request and a moved source branch are found; a delivery posted to the connection's webhook address is refused. To react faster, route the host's events to a service of yours that calls Launchway's API.
+- **Results go to the pull request's one summary comment.** There is **no commit status** (declared none), so each Sortie's result is written into the pull request's one comment, which Launchway edits in place and posts again if it was deleted or if the credentials changed (only a comment's author may edit it). A commit with **no pull request has nowhere to say it**: nothing is sent and the Flight's page says so; read the result in Launchway. A comment is cut at the host's 10,240 characters.
+- **Tags are made with Git**, because the API has no call that creates one. Launchway makes the annotated tag with the product's own git and pushes that one tag, signed as above; it needs `GitPull` and `GitPush`. A tag already at that commit is accepted; one that points elsewhere is refused. It fetches the repository's branches into a scratch directory to have the commit, so a very large repository takes a while the first time.
+- **Releases: the host has none.** The capability is declared **none** as for Bitbucket and Azure DevOps: **Cut a release** makes the tag, and the release page and its files stay in Launchway.
+- **Write-back** writes one file with `PutFile` (a file is 1 byte to 6 MB; a new branch is cut with `CreateBranch` from the base branch's head; the same content again is not an error) and opens a pull request with `CreatePullRequest`. It cannot merge: **merge, auto-merge and reopening** are not done through a connection. A closed CodeCommit pull request cannot be reopened (a status goes only from open to closed): open a new one. There are **no drafts**.
+- **Forks do not exist**: a pull request names one repository for its source and destination, so every pull request comes from a branch of its repository and fork detection has nothing to detect. The host publishes no ref for a pull request's head; Launchway uses the source branch's commit.
+- **Approval rules** are read, never changed: the approval rule templates associated with the repository (their destination branches and the number of approvals needed) and each pull request's approval states (who approved or revoked). A template governs the **merge** of a pull request; it does not stop a push, which only IAM policy limits and Launchway cannot read, so a direct write is not refused here.
+- **Identity.** The host has no call Launchway uses that names the owner of an access key, so Test shows the key (masked) or the assumed role session.
+
+What a connection cannot do: create or delete repositories, merge or approve a pull request, change an approval rule, or write a commit status (the host has none).
+
+What CodeCommit adds (shown "from AWS CodeCommit" on the Flight's Code host page):
+
+| Addition | What it gives | Launchway drives it |
+| --- | --- | --- |
+| Approval rules | a pull request needs a number of approvals from named people or roles before it may be merged | no: set on the host through templates; Launchway reads them |
+| Approval rule templates | the same rule created on every new pull request of the repositories it is associated with, for chosen destination branches | no: set up on the host |
+| Approval state | who approved or revoked their approval of the current revision of a pull request | no: read and shown on the Flight |
+| IAM access control | who may read, push, tag or merge is decided by IAM policy (and the role Launchway assumes) | no: set in IAM |
+
+This provider is labelled experimental until it has passed the conformance suite against a live service. The opt-in test is read-only: `LAUNCHWAY_LIVE_CODECOMMIT_CREDENTIAL` (the credential JSON), `LAUNCHWAY_LIVE_CODECOMMIT_BASE` (the region's Git endpoint) and `LAUNCHWAY_LIVE_CODECOMMIT_REPO` (`account/name`) run it. The strict fake recomputes every signature (the API's, the token service's and the Git password's) and serves a real repository over Git, so the signing and the tag push are proved in the unit tests; only the host's own answers cannot be.
 
 ## In the Logbook
 

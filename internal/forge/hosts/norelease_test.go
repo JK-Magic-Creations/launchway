@@ -15,6 +15,8 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/azuredevops/azuredevopsfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/bitbucket/bitbucketfake"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/codecommit/codecommitfake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitlab/gitlabfake"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
@@ -123,5 +125,45 @@ func TestCutAReleaseOnAzureDevOpsMakesTheTagOnly(t *testing.T) {
 	}
 	if !tagged || len(h.Violations) > 0 {
 		t.Errorf("tagged %v, violations %v", tagged, h.Violations)
+	}
+}
+
+// CodeCommit has no tag call and no release object: the tag is made and pushed with the product's own git (signed
+// as the host asks), the release stays in Launchway, and the page says so.
+func TestCutAReleaseOnCodeCommitPushesTheTagOnly(t *testing.T) {
+	h := codecommitfake.New()
+	defer h.Close()
+	defer codecommit.UseTestAPI(h.API())()
+	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer eng.Close()
+	t.Setenv("LW_CC_CRED", codecommitfake.RoleCredentialDoc())
+	g, _ := egress.New([]string{"127.0.0.1"})
+	s := hosts.New(eng.Database(), eng, g)
+	ctx := t.Context()
+	if _, err := s.Add(ctx, hosts.AddInput{Name: "cc", Kind: forge.KindCodeCommit, Credential: forge.SecretRef{Env: "LW_CC_CRED"}, Owners: []string{codecommitfake.Account}}, "dana"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Attach(ctx, "shop", "cc", h.RepoPath()); err != nil {
+		t.Fatal(err)
+	}
+	commit := h.Branch("main")
+	link, err := s.CutRelease(ctx, "shop", commit, forge.ReleaseSpec{Tag: "v1.0.0", Title: "One", Notes: "n"}, "Release 1.0.0")
+	if err != nil || link != "" {
+		t.Fatalf("the tag is made and nothing else is asked: %q %v", link, err)
+	}
+	if kind, at := h.Tag("v1.0.0"); kind != "tag" || at != commit {
+		t.Errorf("the host has %q at %q: an annotated tag at the commit", kind, at)
+	}
+	if _, err := s.PublishRelease(ctx, "shop", forge.ReleaseSpec{Tag: "v1.0.0"}); !errors.Is(err, hosts.ErrNoRelease) || !strings.Contains(err.Error(), "no release object") {
+		t.Fatalf("publishing says so: %v", err)
+	}
+	if n := s.ReleaseNote(ctx, "shop"); !strings.Contains(n, "release page and its files stay in Launchway") {
+		t.Fatalf("note %q", n)
+	}
+	if h.Seen("GIT push") == 0 || len(h.Violations) > 0 {
+		t.Errorf("pushes %d, violations %v", h.Seen("GIT push"), h.Violations)
 	}
 }

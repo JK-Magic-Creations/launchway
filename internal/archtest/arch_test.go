@@ -33,7 +33,8 @@ var allowedImports = map[string][]string{
 	"internal/cac/ansible":                                 {},
 	"internal/cac/tfplan":                                  {"internal/cac/ansible"},
 	"internal/cac/tfstate":                                 {"internal/ids", "internal/keyring"},
-	"internal/blobstore":                                   {},
+	"internal/awssig":                                      {},
+	"internal/blobstore":                                   {"internal/awssig"},
 	"internal/bootstrap":                                   {},
 	"internal/config":                                      {"internal/accept", "internal/ai", "internal/auth", "internal/blobstore", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/forge/egress", "internal/imagebuild", "internal/notify", "internal/pipeline", "internal/policy", "internal/secrets", "internal/source", "internal/starters", "internal/verify/source"},
 	"internal/coverage":                                    {},
@@ -108,10 +109,12 @@ var allowedImports = map[string][]string{
 	"internal/redact":                                      {},
 	"internal/resources":                                   {},
 	"internal/securitycheck":                               {},
-	"internal/forge/hosts":                                 {"internal/forge", "internal/forge/egress", "internal/forge/providers/github", "internal/forge/providers/azuredevops", "internal/forge/providers/bitbucket", "internal/forge/providers/gitea", "internal/forge/providers/gitlab", "internal/forge/store", "internal/store"},
+	"internal/forge/hosts":                                 {"internal/forge", "internal/forge/egress", "internal/forge/providers/github", "internal/forge/providers/azuredevops", "internal/forge/providers/bitbucket", "internal/forge/providers/codecommit", "internal/forge/providers/gitea", "internal/forge/providers/gitlab", "internal/forge/store", "internal/store"},
 	"internal/forge/providers/restkit":                     {"internal/forge", "internal/forge/egress", "internal/redact"},
 	"internal/forge/providers/azuredevops":                 {"internal/forge", "internal/forge/egress", "internal/forge/providers/restkit"},
 	"internal/forge/providers/azuredevops/azuredevopsfake": {},
+	"internal/forge/providers/codecommit":                  {"internal/awssig", "internal/forge", "internal/forge/egress", "internal/forge/providers/restkit", "internal/gitexec", "internal/redact"},
+	"internal/forge/providers/codecommit/codecommitfake":   {"internal/awssig"},
 	"internal/forge/providers/bitbucket":                   {"internal/forge", "internal/forge/egress", "internal/forge/providers/restkit"},
 	"internal/forge/providers/bitbucket/bitbucketfake":     {},
 	"internal/forge/providers/gitea":                       {"internal/forge", "internal/forge/egress", "internal/forge/providers/restkit"},
@@ -179,7 +182,7 @@ func under(prefixes ...string) func(string) bool {
 var leaves = []string{
 	"internal/redact", "internal/ids", "internal/resources", "internal/hub",
 	"internal/policy", "internal/auth", "internal/verify", "internal/testreport",
-	"internal/blobstore", "internal/coverage", "internal/runnerauth", "internal/accept", "internal/forge",
+	"internal/blobstore", "internal/awssig", "internal/coverage", "internal/runnerauth", "internal/accept", "internal/forge",
 	"internal/keyring", "internal/store",
 }
 
@@ -196,7 +199,9 @@ var forbidden = []rule{
 		label: "leaf packages import nothing internal",
 		why:   "leaf packages are the foundation; an internal import turns them into a node of the graph",
 		from:  in(leaves...),
-		to:    under("internal"),
+		// internal/awssig is itself a leaf (the standard library only): the object store client and the
+		// AWS CodeCommit provider share its one implementation of request signing, so a leaf may use it.
+		to: func(p string) bool { return under("internal")(p) && p != "internal/awssig" },
 	},
 	{
 		label: "runner-side packages must not import internal/engine",

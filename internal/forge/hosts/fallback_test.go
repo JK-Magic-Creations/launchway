@@ -105,7 +105,10 @@ func (plainReleases) CommitFile(context.Context, forge.Repository, forge.FileCha
 }
 
 func init() {
-	hosts.Register(hosts.Entry{Kind: forge.KindCodeCommit, Label: "Test host",
+	// The double stands in for a host of a kind the product does not offer (launchway is the built-in forge,
+	// which has no entry of its own here), so that it never collides with a real kind. The real codecommit kind
+	// has its own test of this path in codecommit_test.go.
+	hosts.Register(hosts.Entry{Kind: forge.KindLaunchway, Label: "Test host",
 		New: func(c forge.Connection, _ *egress.Guard) (forge.Provider, error) {
 			if v, ok := hostsByName.Load(c.BaseURL); ok {
 				return v.(*plainHost), nil
@@ -128,7 +131,7 @@ func plainService(t *testing.T, base string) (*hosts.Service, *plainHost) {
 	t.Setenv("LW_PLAIN_TOKEN", "tok-123456")
 	g, _ := egress.New([]string{"comments.example", "denied.example", "bare.example", "failing.example"})
 	s := hosts.New(eng.Database(), eng, g)
-	if _, err := s.Add(t.Context(), hosts.AddInput{Name: "p", Kind: forge.KindCodeCommit, BaseURL: base, Credential: forge.SecretRef{Env: "LW_PLAIN_TOKEN"}}, "dana"); err != nil {
+	if _, err := s.Add(t.Context(), hosts.AddInput{Name: "p", Kind: forge.KindLaunchway, BaseURL: base, Credential: forge.SecretRef{Env: "LW_PLAIN_TOKEN"}}, "dana"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.Attach(t.Context(), "shop", "p", "acme/app"); err != nil {
