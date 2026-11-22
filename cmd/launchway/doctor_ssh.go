@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/config"
 )
+
+// errHostKeyRead ends the handshake once the host key is read: the probe
+// only reports the key (it is not trusting it, and it sends no credentials,
+// so there is nothing for a forged server to steal).
+var errHostKeyRead = errors.New("host key read")
 
 // sshProbe connects to an SSH address and reads the host key it presents for
 // one algorithm, without signing in.
@@ -25,7 +31,7 @@ func sshProbe(addr, algo string, timeout time.Duration) (ssh.PublicKey, error) {
 	_ = conn.SetDeadline(time.Now().Add(timeout))
 	var got ssh.PublicKey
 	cfg := &ssh.ClientConfig{User: "git", HostKeyAlgorithms: []string{algo}, Timeout: timeout,
-		HostKeyCallback: func(_ string, _ net.Addr, k ssh.PublicKey) error { got = k; return nil }}
+		HostKeyCallback: func(_ string, _ net.Addr, k ssh.PublicKey) error { got = k; return errHostKeyRead }}
 	c, _, _, err := ssh.NewClientConn(conn, addr, cfg)
 	if err == nil {
 		_ = c.Close()
