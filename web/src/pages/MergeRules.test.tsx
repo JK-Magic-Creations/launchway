@@ -35,6 +35,25 @@ describe("merge rules and pull request settings", () => {
     const put = calls.find((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))!;
     expect(JSON.parse(put.body!).rules[0]).toMatchObject({ pattern: "main", require_resolved_threads: true, require_up_to_date: true });
   });
+  it("keeps a comma typed in the checks field, and saves the checks it makes", async () => {
+    const calls = serve(true);
+    render(<MergeRulesPanel path="acme/shop" />);
+    const form = await screen.findByRole("form", { name: "Merge rule for main" });
+    const field = within(form).getByLabelText(/Checks that must have passed/) as HTMLInputElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, "build, build/test");
+    expect(field.value).toBe("build, build/test"); // the comma and the space after it are not eaten while typing
+    await userEvent.type(field, ",");
+    expect(field.value).toBe("build, build/test,");
+    const paths = within(form).getByLabelText(/Checks required only when matching files change/) as HTMLInputElement;
+    await userEvent.clear(paths);
+    await userEvent.type(paths, "docs/,*.md=docs;");
+    expect(paths.value).toBe("docs/,*.md=docs;");
+    await userEvent.click(within(form).getByRole("button", { name: /Save the rule for main/ }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))).toBe(true));
+    const put = calls.find((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))!;
+    expect(JSON.parse(put.body!).rules[0]).toMatchObject({ required_checks: ["build", "build/test"], required_checks_by_path: [{ paths: ["docs/", "*.md"], check: "docs" }] });
+  });
   it("offers no switch for verified commits where the server has them off, and says why", async () => {
     serve(true);
     render(<MergeRulesPanel path="acme/shop" />);

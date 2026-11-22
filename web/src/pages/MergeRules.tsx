@@ -17,8 +17,9 @@ export function MergeRulesPanel({ path }: { path: string }) {
   const [error, setError] = useState<unknown>(null);
   const [saved, setSaved] = useState("");
   const [newBranch, setNewBranch] = useState("");
+  const [texts, setTexts] = useState<Record<string, string>>({}); // what is typed in the two lists, before it is split (a typed comma or semicolon must stay)
   const load = () => {
-    pullsApi.rules(path).then((r) => { setRules(r.rules); setActions(r.actions); }).catch(setError);
+    pullsApi.rules(path).then((r) => { setRules(r.rules); setActions(r.actions); setTexts({}); }).catch(setError);
     pullsApi.settings(path).then(setSettings).catch(setError);
   };
   useEffect(load, [path]);
@@ -31,7 +32,7 @@ export function MergeRulesPanel({ path }: { path: string }) {
   const patch = (i: number, p: Partial<MergeRule>) => { setRules(rules.map((r, j) => (j === i ? { ...r, ...p } : r))); setSaved(""); };
   const saveRule = async (i: number) => {
     setError(null); setSaved("");
-    try { const r = await pullsApi.setRules(path, [rules[i]]); setRules(r.rules); setActions(r.actions); setSaved(rules[i].pattern); } catch (e) { setError(e); }
+    try { const r = await pullsApi.setRules(path, [rules[i]]); setRules(r.rules); setActions(r.actions); setTexts({}); setSaved(rules[i].pattern); } catch (e) { setError(e); }
   };
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +58,7 @@ export function MergeRulesPanel({ path }: { path: string }) {
                   <option value="admin">Administrators of the repository only</option>
                 </select></label>
               <label className="field"><span>Checks that must have passed</span>
-                <input value={r.required_checks.join(", ")} placeholder="build, build/test" onChange={(e) => patch(i, { required_checks: e.target.value.split(",").map((c) => c.trim()).filter(Boolean) })} />
+                <input value={texts[`c${i}`] ?? r.required_checks.join(", ")} placeholder="build, build/test" onChange={(e) => { setTexts({ ...texts, [`c${i}`]: e.target.value }); patch(i, { required_checks: e.target.value.split(",").map((c) => c.trim()).filter(Boolean) }); }} />
                 <small>A pipeline name, or a step as <Mono>pipeline/step</Mono>. A bare name matches a step of that name in any pipeline.</small></label>
               <label className="check"><input type="checkbox" checked={r.require_up_to_date} onChange={(e) => patch(i, { require_up_to_date: e.target.checked })} /> The branch must contain the latest target</label>
               <label className="check"><input type="checkbox" checked={r.require_resolved_threads} onChange={(e) => patch(i, { require_resolved_threads: e.target.checked })} /> Every review thread must be resolved</label>
@@ -67,8 +68,8 @@ export function MergeRulesPanel({ path }: { path: string }) {
               <label className="check"><input type="checkbox" checked={!!r.dismiss_stale_approvals} onChange={(e) => patch(i, { dismiss_stale_approvals: e.target.checked })} /> Dismiss approvals when new commits are pushed to a pull request into it</label>
               <label className="check"><input type="checkbox" checked={!!r.merge_queue} onChange={(e) => patch(i, { merge_queue: e.target.checked })} /> Merge through the merge queue (tested on the latest target, one at a time)</label>
               <label className="field"><span>Checks required only when matching files change</span>
-                <input value={(r.required_checks_by_path ?? []).map((c) => `${c.paths.join(",")}=${c.check}`).join("; ")} placeholder="docs/,*.md=docs; /cmd/**=build"
-                  onChange={(e) => patch(i, { required_checks_by_path: e.target.value.split(";").map((part) => part.trim()).filter(Boolean).map((part) => { const [paths, check] = part.split("="); return { paths: (paths ?? "").split(",").map((x) => x.trim()).filter(Boolean), check: (check ?? "").trim() }; }) })} />
+                <input value={texts[`p${i}`] ?? (r.required_checks_by_path ?? []).map((c) => `${c.paths.join(",")}=${c.check}`).join("; ")} placeholder="docs/,*.md=docs; /cmd/**=build"
+                  onChange={(e) => { setTexts({ ...texts, [`p${i}`]: e.target.value }); patch(i, { required_checks_by_path: e.target.value.split(";").map((part) => part.trim()).filter(Boolean).map((part) => { const [paths, check] = part.split("="); return { paths: (paths ?? "").split(",").map((x) => x.trim()).filter(Boolean), check: (check ?? "").trim() }; }) }); }} />
                 <small>Each entry is <Mono>paths=check</Mono>. A pipeline that its own path filter kept from running never blocks.</small></label>
               <label className="check"><input type="checkbox" checked={r.allow_admin_bypass} onChange={(e) => patch(i, { allow_admin_bypass: e.target.checked })} /> Administrators may merge past the rule, saying why (recorded)</label>
               {signed?.available && <label className="check"><input type="checkbox" checked={r.require_signed_commits} onChange={(e) => patch(i, { require_signed_commits: e.target.checked })} /> Every commit a merge brings must be verified (signed by a registered key); Launchway signs the merge commit itself</label>}
