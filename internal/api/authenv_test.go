@@ -144,7 +144,11 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	o.idp.Now = o.clk.Now
 	// The test repositories are paths on this machine.
 	oldEgress := egress.Default.Policy()
-	_ = egress.Default.Set(egress.Policy{AllowLocal: true, Allow: []string{"127.0.0.1"}})
+	pol := egress.Policy{AllowLocal: true}
+	if o.projectsAt != nil {
+		pol.Allow = []string{"127.0.0.1"} // a Flight that reads this very server
+	}
+	_ = egress.Default.Set(pol)
 	t.Cleanup(func() { _ = egress.Default.Set(oldEgress) })
 	no := false
 	var arts engine.ArtifactOptions
