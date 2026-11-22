@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 4 in progress · 22 planned · 28 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 5 available · 1 in progress · 22 planned · 28 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -47,9 +47,9 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Know what you run](#g-know-what-you-run) | 11 | 1 | 2 | 8 |
-| [Fix it safely](#g-fix-it-safely) | 6 | 1 | 1 | 4 |
-| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 1 | 10 |
+| [Know what you run](#g-know-what-you-run) | 11 | 2 | 1 | 8 |
+| [Fix it safely](#g-fix-it-safely) | 6 | 2 | 0 | 4 |
+| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 1 | 0 | 10 |
 
 ### Know what you run {#g-know-what-you-run}
 
@@ -67,7 +67,7 @@ The starting point already works: findings and components recorded for every Sor
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. Built, tested on its own branch and in final integration; not yet on the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.
+Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. On the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.
 
 **Depends on:** Built-in Depot.
 
@@ -153,9 +153,9 @@ From an advisory, see which deployed services and Airfields are affected and who
 
 #### One graph from code to hardware {#one-graph-from-code-to-hardware}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The software graph holds code and what it needs, what is built from it (images per architecture, operating-system images, machine images), the machines that satisfy those needs, and what is deployed where, with the source of every link. Built, tested on its own branch and in final integration; not yet on the main branch. It feeds dependency order and impact.
+The software graph holds code and what it needs, what is built from it (images per architecture, operating-system images, machine images), the machines that satisfy those needs, and what is deployed where, with the source of every link. It feeds dependency order and impact.
 
 [Area page](dependency-order.md)
 
@@ -185,9 +185,9 @@ Launchway finds outdated and vulnerable dependencies in a repository and propose
 
 #### Lock files regenerated in a container and checked {#lock-files-regenerated-in-a-container-and-checked}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
+When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
 
 **Depends on:** Built-in Maintenance.
 
@@ -261,9 +261,9 @@ Batching and caps keep one library change from starting a flood of dependent bui
 
 #### Order you can override {#order-you-can-override}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. Built, tested on its own branch and in final integration; not yet on the main branch. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.
+Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned.
 
 [Area page](dependency-order.md)
 

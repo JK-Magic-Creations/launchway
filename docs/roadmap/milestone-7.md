@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 3 in progress · 65 planned · 69 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 3 in progress · 68 planned · 72 capabilities</p>
 
 Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.
 
@@ -48,14 +48,14 @@ flowchart TD
 |---|---|---|---|---|
 | [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
 | [Sign up and go](#g-sign-up-and-go) | 8 | 0 | 0 | 8 |
-| [Three ways to run, and easy moves between them](#g-three-ways-to-run-and-easy-moves-between-them) | 8 | 0 | 0 | 8 |
+| [Three ways to run, and easy moves between them](#g-three-ways-to-run-and-easy-moves-between-them) | 9 | 0 | 0 | 9 |
 | [A size ceiling, with notices, and nothing held hostage](#g-a-size-ceiling-with-notices-and-nothing-held-hostage) | 2 | 0 | 0 | 2 |
 | [Never a place to park files](#g-never-a-place-to-park-files) | 5 | 0 | 0 | 5 |
 | [Opening in stages](#g-opening-in-stages) | 4 | 0 | 0 | 4 |
 | [Plans that follow your choices](#g-plans-that-follow-your-choices) | 1 | 0 | 0 | 1 |
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
-| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 1 | 1 | 5 |
+| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 9 | 1 | 1 | 7 |
 | [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 2 | 10 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
@@ -225,6 +225,14 @@ One product, three places to keep your work. Choose at sign-up, change your mind
 The default: repositories, pipelines, Stations, secrets, Depot and reports all on the hosted service, with nothing to install. The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.
 
 **Depends on:** Every customer has its own Base.
+
+[Area page](hosted-service.md)
+
+#### Git over SSH for hosted and meeting-point modes {#git-over-ssh-for-hosted-and-meeting-point-modes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Reach Git over SSH on the hosted service and in the mode where a relay meets your machines. Deferred until there are outside customers: the hosted service is HTTPS-only until then.
 
 [Area page](hosted-service.md)
 
@@ -627,6 +635,20 @@ Policy templates and an evidence report that maps controls to requirements. It s
 Every service, Station and person proves identity on every call. No shared secrets between components.
 
 
+#### Public and internal paths kept apart {#public-and-internal-paths-kept-apart}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every HTTP path is either public or internal, and only the public ones can be reached from outside a web edge. A list of the paths that answer without a sign-in is checked by a test, so a new one cannot appear unnoticed.
+
+
+#### The real client address behind a web edge {#the-real-client-address-behind-a-web-edge}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+When Launchway sits behind a web edge or proxy, lockout and rate limits count the address of the person, not of the proxy. An address is trusted only from the proxies you name, so it cannot be forged by the caller.
+
+
 ### Your own Base, and what the service sees {#g-your-own-base-and-what-the-service-sees}
 
 On the hosted product every customer has its own complete Base. The service operator sees the service, never your work, and you choose what to send when you need help.
@@ -635,7 +657,7 @@ On the hosted product every customer has its own complete Base. The service oper
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. The first stage is being built and is not on a branch yet. Inside it the usual levels apply.
+A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. Stage 1 is on the main branch: Bases, accounts and memberships exist, every table is registered with its owner, and a switch for several Bases is off and refused for now. Missing: turning on a second Base, which needs the later stages.
 
 [Area page](hosted-service.md)
 
@@ -651,7 +673,7 @@ The service operator’s own Base is a separate Base that no customer or demonst
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.
+No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Only the identity tables are walled so far, and tests guard that no new table is added without an owner. Missing: the rest of the data, which is registered as pending its stage.
 
 [Area page](hosted-service.md)
 

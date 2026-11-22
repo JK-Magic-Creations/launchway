@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 6 in progress · 28 planned · 38 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 9 available · 1 in progress · 28 planned · 38 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -48,7 +48,7 @@ flowchart TD
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 5 | 10 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 5 | 0 | 10 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -284,33 +284,33 @@ The scans Launchway holds itself to are offered to every repository it hosts or 
 
 #### A profile for each repository {#a-profile-for-each-repository}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended. Built, tested on its own branch and in final integration; not yet on the main branch. Checks are on from the first push.
+Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended. Checks are on from the first push.
 
 [Area page](repository-standards.md)
 
 #### Every check on, advice or block {#every-check-on-advice-or-block}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum. Built, tested on its own branch and in final integration; not yet on the main branch. The team in charge of a repository keeps the choice unless a level above locks it.
+Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum. The team in charge of a repository keeps the choice unless a level above locks it.
 
 [Area page](repository-standards.md)
 
 #### Vulnerability, secret, dependency and license checks {#vulnerability-secret-dependency-and-license-checks}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own. Built, tested on its own branch and in final integration; not yet on the main branch. Checks are visible steps, never hidden magic.
+Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own. Checks are visible steps, never hidden magic.
 
 [Area page](repository-standards.md)
 
 #### Language profiles {#language-profiles}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow. Built, tested on its own branch and in final integration; not yet on the main branch. Each profile brings starter files the team may change.
+Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow. Each profile brings starter files the team may change.
 
 [Area page](repository-standards.md)
 
@@ -364,9 +364,9 @@ Start a campaign that opens one fix per affected repository and tracks it until 
 
 #### Standards kept in Git, edited in either place {#standards-kept-in-git-edited-in-either-place}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Built, tested on its own branch and in final integration; not yet on the main branch. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.
+A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.
 
 **Depends on:** Every check on, advice or block.
 

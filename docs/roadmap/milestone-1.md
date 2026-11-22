@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 34 available · 31 in progress · 59 planned · 124 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 57 available · 15 in progress · 56 planned · 128 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,19 +48,19 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 4 | 4 | 12 |
-| [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 3 | 4 |
-| [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 3 | 8 |
-| [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
+| [Host your code](#g-host-your-code) | 22 | 8 | 0 | 14 |
+| [Review and merge changes](#g-review-and-merge-changes) | 10 | 5 | 1 | 4 |
+| [Work items and decisions](#g-work-items-and-decisions) | 11 | 5 | 2 | 4 |
+| [People and access on the host](#g-people-and-access-on-the-host) | 8 | 0 | 1 | 7 |
 | [Move your repositories in](#g-move-your-repositories-in) | 5 | 2 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 7 | 0 | 0 | 7 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 8 | 2 | 3 |
-| [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 8 | 2 | 6 | 0 |
-| [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 9 | 1 | 3 |
+| [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 8 | 6 | 2 | 0 |
+| [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 2 | 4 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
 | [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 11 | 4 | 4 | 3 |
 | [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 8 | 1 | 3 |
-| [Organized, and yours to arrange](#g-organized-and-yours-to-arrange) | 10 | 0 | 5 | 5 |
+| [Organized, and yours to arrange](#g-organized-and-yours-to-arrange) | 10 | 7 | 0 | 3 |
 
 ### Host your code {#g-host-your-code}
 
@@ -96,6 +96,14 @@ Clone, fetch and push over SSH with your own keys, beside HTTPS. User keys and p
 
 [Read the documentation](../guide/git-over-ssh.md) · [Area page](git-hosting.md)
 
+#### Sign in from the command line through the browser {#sign-in-from-the-command-line-through-the-browser}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Git over HTTPS from the command line asks you to sign in in the browser instead of pasting a token. The browser shows what is being allowed and for how long, and the grant ends by itself.
+
+[Area page](git-hosting.md)
+
 #### Create, rename, archive and set visibility {#create-rename-archive-and-set-visibility}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
@@ -108,9 +116,9 @@ The everyday repository lifecycle: create, rename with redirects, transfer, arch
 
 #### Browse and search your code {#browse-and-search-your-code}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder. Built, tested on its own branch and in final integration; not yet on the main branch. Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.
+History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder. Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.
 
 **Depends on:** Built-in Git hosting.
 
@@ -118,9 +126,9 @@ History, file history, blame, raw files, archives, permanent links with line ran
 
 #### Search inside a repository {#search-inside-a-repository}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Built, tested on its own branch and in final integration; not yet on the main branch. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
+Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
 
 **Depends on:** Browse and search your code.
 
@@ -138,9 +146,9 @@ Markdown, diagrams, math, tables of data, images with before and after, document
 
 #### Edit in the browser, as a commit {#edit-in-the-browser-as-a-commit}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. Built, tested on its own branch and in final integration; not yet on the main branch. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
+Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
 
 **Depends on:** Built-in Git hosting.
 
@@ -186,11 +194,19 @@ Pull a repository from another host on a schedule, or push every change to anoth
 
 [Area page](git-hosting.md)
 
+#### Mirroring one release branch behind required checks {#mirroring-one-release-branch-behind-required-checks}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Publish a single release branch to a public mirror, and update the mirror only after the required checks have passed. The public copy then never gets a change that has not passed its checks. Today a push mirror sends every change.
+
+[Area page](git-hosting.md)
+
 #### Repository settings screens {#repository-settings-screens}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Built, tested on its own branch and in final integration; not yet on the main branch. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
+Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
 
 **Depends on:** Built-in Git hosting.
 
@@ -284,7 +300,7 @@ Open, review, discuss and merge changes inside Launchway, with branch rules that
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.
+Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Files can be marked as viewed, and several suggestions can be applied as one commit.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -302,9 +318,9 @@ Required approvals, stale-approval dismissal, blocked merges, linear history, pr
 
 #### Code owners {#code-owners}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Name who must review changes to which paths, using people or groups. Built, tested on its own branch and in final integration; not yet on the main branch. Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.
+Name who must review changes to which paths, using people or groups. Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.
 
 **Depends on:** Review with inline comments and suggestions.
 
@@ -322,9 +338,9 @@ Merge commit, squash and rebase, chosen per repository, and merge automatically 
 
 #### Merge queue {#merge-queue}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Queue approved changes and test the real merged result with the real pipeline before it lands. Built, tested on its own branch and in final integration; not yet on the main branch. The Holding pattern is visible on each change, so people see where they stand and why a change was held back.
+Queue approved changes and test the real merged result with the real pipeline before it lands. The Holding pattern is visible on each change, so people see where they stand and why a change was held back.
 
 **Depends on:** Merge styles and auto-merge.
 
@@ -375,9 +391,9 @@ Track work, decisions and releases next to the code.
 
 #### Issues and work items {#issues-and-work-items}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. Built, tested on its own branch and in final integration; not yet on the main branch. An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.
+Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.
 
 **Depends on:** Built-in Git hosting.
 
@@ -385,7 +401,7 @@ Track work next to the code, with labels, milestones, assignees and links betwee
 
 #### Labels, milestones and templates for work {#labels-milestones-and-templates-for-work}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 Colored and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across projects at the levels you choose.
 
@@ -395,7 +411,7 @@ Colored and exclusive labels, milestones with progress, and templates and forms 
 
 #### Dependencies and parent items {#dependencies-and-parent-items}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 Mark that one item blocks another, and group items under a parent. A blocked item drops out of the list of what is ready next, for people and for agents.
 
@@ -405,9 +421,9 @@ Mark that one item blocks another, and group items under a parent. A blocked ite
 
 #### Boards that show delivery {#boards-that-show-delivery}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. Built, tested on its own branch and in final integration; not yet on the main branch. The board is the same data as the list, drawn differently.
+A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. The board is the same data as the list, drawn differently.
 
 **Depends on:** Issues and work items.
 
@@ -435,9 +451,9 @@ Bring issues in from other trackers, or keep them in sync in both directions whi
 
 #### Optional time tracking and due dates {#optional-time-tracking-and-due-dates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Estimates, timers and due dates, off until a project turns them on. Time joins the delivery chain, so effort can be read next to lead time.
+Estimates, timers and due dates, off until a project turns them on. Estimates and start and due dates are on the main branch. Missing: timers.
 
 **Depends on:** Issues and work items.
 
@@ -445,9 +461,9 @@ Estimates, timers and due dates, off until a project turns them on. Time joins t
 
 #### Confidential items and links to the code {#confidential-items-and-links-to-the-code}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Items visible only to chosen people, and branches started from an item that carry its reference. Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. The branch name needs no typing to stay traceable.
+Items visible only to chosen people, and branches started from an item that carry its reference. Confidential items, and links between an item and the commits, branches and pull requests that name it, are on the main branch. Missing: starting a branch from an item in one step.
 
 **Depends on:** Issues and work items.
 
@@ -475,9 +491,9 @@ Publish a static site from a branch of a repository, built by a pipeline. The si
 
 #### Releases with notes and evidence {#releases-with-notes-and-evidence}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. Built, tested on its own branch and in final integration; not yet on the main branch. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.
+Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.
 
 **Depends on:** Issues and work items.
 
@@ -504,6 +520,22 @@ Teams with their own permissions on repositories, and invitations for people fro
 Personal and service tokens limited to chosen repositories and actions. Tokens use the same audit trail and limits as sign-in sessions. Service accounts are for tools, not people.
 
 **Depends on:** Built-in Git hosting.
+
+[Area page](git-hosting.md)
+
+#### Personal settings in one place {#personal-settings-in-one-place}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Your keys, and your tokens with their scopes and expiry, together on one page, with each one revocable. Today the SSH keys and the tokens are on separate pages.
+
+[Area page](git-hosting.md)
+
+#### Access tokens for one repository {#access-tokens-for-one-repository}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A token that works on one repository only, with the actions it may take, and a list of source addresses it may be used from. A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to projects.
 
 [Area page](git-hosting.md)
 
@@ -688,9 +720,9 @@ Services with readiness checks and logs, a Station and workspace of their own pe
 
 #### Platform matrices {#platform-matrices}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Built, tested on its own branch and in final integration; not yet on the main branch. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.
+Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.
 
 [Area page](pipelines.md)
 
@@ -790,39 +822,39 @@ Write a step once as a template and use it in many pipelines, with its inputs ch
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file. Being built now. Each starter builds, tests and scans; a team can change any part.
+Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file. Built-in starters for the common languages are on the main branch. Missing: assistant instruction files, formatter and linter configuration and a test layout written into the repository.
 
 [Area page](developer-experience.md)
 
 #### A pipeline with no file, by detection {#a-pipeline-with-no-file-by-detection}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Push a repository with no pipeline file and Launchway looks at what it holds and proposes the right pipeline, which you accept as it is or save into the repository to edit. Being built now. The proposal is shown in full before anything runs, and nothing is hidden.
+Push a repository with no pipeline file and Launchway looks at what it holds and proposes the right pipeline, which you accept as it is or save into the repository to edit. The proposal is shown in full before anything runs.
 
 [Area page](developer-experience.md)
 
 #### A gallery of examples {#a-gallery-of-examples}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Browse working example pipelines for common jobs, copy one and see it run. Being built now. Every example is tested, so a copied example works.
+Browse working example pipelines for common jobs, copy one and see it run. Every example is tested, so a copied example works.
 
 [Area page](developer-experience.md)
 
 #### launchway init {#launchway-init}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-One command in a repository that writes a first pipeline from what it finds there. Being built now. It explains each choice in plain words and never overwrites a file you already have.
+One command in a repository that writes a first pipeline from what it finds there. It explains each choice in plain words and never overwrites a file you already have.
 
 [Area page](developer-experience.md)
 
 #### An editor schema for pipeline files {#an-editor-schema-for-pipeline-files}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A published description of the pipeline format that gives completion and inline errors in common editors. Being built now. It is generated from the same definition the server checks, so they cannot disagree.
+A published description of the pipeline format that gives completion and inline errors in common editors. It is generated from the same definition the server checks, so they cannot disagree. A language server is separate and not built.
 
 [Area page](developer-experience.md)
 
@@ -894,9 +926,9 @@ Every detail the current interface shows is kept, and the new one adds to it. Ea
 
 #### A do bar for every task {#a-do-bar-for-every-task}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A search box that finds pages and starts guided actions such as turn a toggle off or why did this fail. It reaches everything without adding to the menu.
+A search box that finds pages and starts guided actions such as turn a toggle off or why did this fail. One search box, opened with the slash key, finds pages, Sorties and repositories and starts common actions. Missing: a guided action for every task.
 
 **Depends on:** The guided interface.
 
@@ -1147,39 +1179,39 @@ Every list is a hierarchy you can search, and the Tower shows what needs a perso
 
 #### Folders and search on every list {#folders-and-search-on-every-list}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Pipelines, repositories, projects and runs sit in folders you can search, grouped by level. Built, tested on its own branch and in final integration; not yet on the main branch. A long flat list gets cluttered; folders keep it findable.
+Pipelines, repositories, projects and runs sit in folders you can search, grouped by level. A long flat list gets cluttered; folders keep it findable.
 
 [Area page](guided-interface.md)
 
 #### Folders made from names {#folders-made-from-names}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Name a pipeline payments/api/build and the folders appear without anyone filing it. Built, tested on its own branch and in final integration; not yet on the main branch. No setup: the name is the filing.
+Name a pipeline payments/api/build and the folders appear without anyone filing it. No setup: the name is the filing.
 
 [Area page](guided-interface.md)
 
 #### Shared layouts and personal layouts {#shared-layouts-and-personal-layouts}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A default layout per level, and your own on top: order, pins and hidden sections, with drag and drop, keyboard equivalents and a reset. Built, tested on its own branch and in final integration; not yet on the main branch. Arrange for everyone and arrange for me are separate, explicit modes. A layout can be exported and kept in Git.
+A default layout per level, and your own on top: order, pins and hidden sections, with drag and drop, keyboard equivalents and a reset. Arrange for everyone and arrange for me are separate, explicit modes. A layout can be exported and kept in Git.
 
 [Area page](guided-interface.md)
 
 #### A home page that shows what needs a person {#a-home-page-that-shows-what-needs-a-person}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Cards by category, what is running, and what truly needs attention; a failure that is already being retried is not shown as needing you. Built, tested on its own branch and in final integration; not yet on the main branch. The home page is calm when nothing needs you.
+Cards by category, what is running, and what truly needs attention; a failure that is already being retried is not shown as needing you. The home page is calm when nothing needs you.
 
 [Area page](guided-interface.md)
 
 #### Home panels that you choose {#home-panels-that-you-choose}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 Add the panels you want to the home page, including one that remembers what you were looking at and working on so you can go straight back. Panels are personal and can be shared as a default for a team.
 
@@ -1187,17 +1219,17 @@ Add the panels you want to the home page, including one that remembers what you 
 
 #### Every view has an address {#every-view-has-an-address}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-As you move around the interface the address changes, so any page, filter and tab can be bookmarked and shared. This includes the history view of a pipeline and each tab of a Sortie.
+As you move around the interface the address changes, so any page, filter and tab can be bookmarked and shared. This includes the history view of a pipeline and each tab of a Sortie. A test walks the main pages to hold the rule.
 
 [Area page](guided-interface.md)
 
 #### Live streaming and time estimates {#live-streaming-and-time-estimates}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier Sorties. Built, tested on its own branch and in final integration; not yet on the main branch. A queued step is never drawn as running, and the list, the launch line and the Sortie page agree.
+Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier Sorties. A queued step is never drawn as running, and the list, the launch line and the Sortie page agree.
 
 [Area page](guided-interface.md)
 

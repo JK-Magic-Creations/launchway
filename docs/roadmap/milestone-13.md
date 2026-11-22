@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 13 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 5 planned · 8 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 1 in progress · 5 planned · 8 capabilities</p>
 
 Work is planned and tracked beside the code, releases are managed as things that move through Airfields, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.
 
@@ -42,8 +42,8 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Work tracking](#g-work-tracking) | 3 | 0 | 2 | 1 |
-| [Release management](#g-release-management) | 1 | 0 | 1 | 0 |
+| [Work tracking](#g-work-tracking) | 3 | 1 | 1 | 1 |
+| [Release management](#g-release-management) | 1 | 1 | 0 | 0 |
 | [Keep it healthy](#g-keep-it-healthy) | 4 | 0 | 0 | 4 |
 
 ### Work tracking {#g-work-tracking}
@@ -52,9 +52,9 @@ Plan the work where the code and the delivery are.
 
 #### Issues, stories, epics and boards {#issues-stories-epics-and-boards}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Plan, assign and follow work in the product, linked to commits, runs and the places where a fix is running. Built, tested on its own branch and in final integration; not yet on the main branch. Backlog and sprints are included.
+Plan, assign and follow work in the product, linked to commits, runs and the places where a fix is running. Backlog and sprints are included.
 
 [Area page](git-hosting.md)
 
@@ -80,9 +80,9 @@ A release is what moves through Airfields.
 
 #### Releases that are promoted {#releases-that-are-promoted}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals. Built, tested on its own branch and in final integration; not yet on the main branch. Things released together are grouped, and four delivery measures are reported.
+A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals. Things released together are grouped, and four delivery measures are reported.
 
 [Area page](git-hosting.md)
 

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-21",
+  "updated": "2026-11-22",
   "vision": [
     "Launchway is one place to host your code, build it, test it, scan it and deliver it, on servers you control or as a hosted service.",
     "It aims to be complete without being complicated: every task is a guided wizard, every capability is also in the API, the command line, the agent endpoint and Terraform, and the only things it needs are a database and Git.",
@@ -316,6 +316,114 @@
       "title": "Plain messages when a step is killed",
       "value": "A step killed for memory says so, with the limit and the setting to raise.",
       "link": "guide/pipelines"
+    },
+    {
+      "theme": "Git hosting",
+      "title": "Hosted repositories on the Code page",
+      "value": "The Code page lists every repository Launchway hosts, even when no project reads a pipeline from it, and opens it to browse, search and edit.",
+      "link": "guide/browsing-code"
+    },
+    {
+      "theme": "Git hosting",
+      "title": "Code review in depth",
+      "value": "Code owners, a merge queue, viewed marks, batched suggestions and the pull requests that wait on you.",
+      "link": "guide/pull-requests"
+    },
+    {
+      "theme": "Git hosting",
+      "title": "Git over SSH, mirrors and the issue archive",
+      "value": "Clone and push over SSH, pull and push mirrors, and a read-only archive of another tracker's issues.",
+      "link": "guide/git-over-ssh"
+    },
+    {
+      "theme": "Delivery",
+      "title": "The Depot",
+      "value": "Container images, charts and other Cargo in Launchway itself, with permissions, retention and signatures stored beside them.",
+      "link": "guide/registry"
+    },
+    {
+      "theme": "Delivery",
+      "title": "Releases and promotion",
+      "value": "Releases with notes, evidence, checklists, promotion through Airfields and groups released together.",
+      "link": "guide/releases"
+    },
+    {
+      "theme": "Delivery",
+      "title": "Switches",
+      "value": "A built-in Switch service read through an open standard, with Master switches and stale-Switch notes.",
+      "link": "guide/feature-toggles"
+    },
+    {
+      "theme": "Delivery",
+      "title": "Terraform, OpenTofu and Ansible",
+      "value": "State and locking built in, plans reviewed before an apply, inventories, results for every host and drift checks.",
+      "link": "guide/terraform-opentofu"
+    },
+    {
+      "theme": "Delivery",
+      "title": "Delivery to machines",
+      "value": "Hosts with their fleets, staged upgrades and delivery over SSH.",
+      "link": "guide/deployments"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "The event log and event sources",
+      "value": "Every decision about a push or a call is recorded with its reason, and signed calls from other systems can start pipelines.",
+      "link": "guide/events"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "Starters and pipelines with no file",
+      "value": "Built-in starters, detection of what a repository needs, a gallery of tested examples and launchway init.",
+      "link": "guide/starters"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "Watching a Sortie live",
+      "value": "Output within a second, time estimates and the time left along the longest path.",
+      "link": "guide/watching-runs"
+    },
+    {
+      "theme": "Reports",
+      "title": "The Debrief",
+      "value": "Test results with flaky tests, quarantine, coverage of a change, shards and exports.",
+      "link": "guide/debrief"
+    },
+    {
+      "theme": "Security",
+      "title": "Standing orders",
+      "value": "Every repository is inspected for secrets, vulnerable dependencies and more, with a verdict that blocks only what a change introduces.",
+      "link": "guide/standing-orders"
+    },
+    {
+      "theme": "Security",
+      "title": "The software graph",
+      "value": "What depends on what, what is built from what, and where it runs, with the source of every link.",
+      "link": "guide/software-graph"
+    },
+    {
+      "theme": "Work",
+      "title": "Work tracking and boards",
+      "value": "Issues, stories and epics, boards, sprints and charts, linked to the pull requests and deployments that carry them out.",
+      "link": "guide/tracking-work"
+    },
+    {
+      "theme": "Work",
+      "title": "Agents that take work",
+      "value": "Work assigned to registered agents on a lease, with an autonomy policy, independent review and budgets enforced by the server.",
+      "link": "guide/working-with-agents"
+    },
+    {
+      "theme": "Platform",
+      "title": "Organized and personal",
+      "value": "Folders, labels, shared and personal layouts, a Tower based on what needs you, and an address for every view.",
+      "link": "guide/organizing"
+    },
+    {
+      "theme": "Platform",
+      "title": "The wall between Bases, stage 1",
+      "value": "Bases, accounts and memberships, and a list of who owns every table. A second Base cannot be turned on yet.",
+      "link": "development/the-wall"
     }
   ],
   "milestones": [
@@ -403,6 +511,13 @@
             },
             {
               "status": "planned",
+              "title": "Sign in from the command line through the browser",
+              "value": "Git over HTTPS from the command line asks you to sign in in the browser instead of pasting a token.",
+              "detail": "The browser shows what is being allowed and for how long, and the grant ends by itself.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
               "title": "Create, rename, archive and set visibility",
               "value": "The everyday repository lifecycle: create, rename with redirects, transfer, archive as read-only, and private, internal or public visibility.",
               "detail": "The same wizard connects an existing repository from another host or creates a hosted one, so people do not need to learn two flows. Old addresses keep working after a rename.",
@@ -410,18 +525,18 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Browse and search your code",
               "value": "History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.",
+              "detail": "Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Search inside a repository",
               "value": "Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.",
+              "detail": "Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.",
               "needs": "Browse and search your code.",
               "area": "git-hosting"
             },
@@ -434,10 +549,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Edit in the browser, as a commit",
               "value": "Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.",
+              "detail": "It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -474,10 +589,17 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "planned",
+              "title": "Mirroring one release branch behind required checks",
+              "value": "Publish a single release branch to a public mirror, and update the mirror only after the required checks have passed.",
+              "detail": "The public copy then never gets a change that has not passed its checks. Today a push mirror sends every change.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "available",
               "title": "Repository settings screens",
               "value": "Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.",
+              "detail": "Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -556,7 +678,7 @@
               "status": "available",
               "title": "Review with inline comments and suggestions",
               "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads.",
-              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.",
+              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Files can be marked as viewed, and several suggestions can be applied as one commit.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
@@ -569,10 +691,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Code owners",
               "value": "Name who must review changes to which paths, using people or groups.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.",
+              "detail": "Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.",
               "needs": "Review with inline comments and suggestions.",
               "area": "git-hosting"
             },
@@ -585,10 +707,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Merge queue",
               "value": "Queue approved changes and test the real merged result with the real pipeline before it lands.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The Holding pattern is visible on each change, so people see where they stand and why a change was held back.",
+              "detail": "The Holding pattern is visible on each change, so people see where they stand and why a change was held back.",
               "needs": "Merge styles and auto-merge.",
               "area": "git-hosting"
             },
@@ -630,15 +752,15 @@
           "blurb": "Track work, decisions and releases next to the code.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Issues and work items",
               "value": "Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.",
+              "detail": "An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Labels, milestones and templates for work",
               "value": "Colored and exclusive labels, milestones with progress, and templates and forms for new items.",
               "detail": "Labels and milestones are shared across projects at the levels you choose.",
@@ -646,7 +768,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Dependencies and parent items",
               "value": "Mark that one item blocks another, and group items under a parent.",
               "detail": "A blocked item drops out of the list of what is ready next, for people and for agents.",
@@ -654,10 +776,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Boards that show delivery",
               "value": "A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The board is the same data as the list, drawn differently.",
+              "detail": "The board is the same data as the list, drawn differently.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
@@ -678,18 +800,18 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Optional time tracking and due dates",
               "value": "Estimates, timers and due dates, off until a project turns them on.",
-              "detail": "Time joins the delivery chain, so effort can be read next to lead time.",
+              "detail": "Estimates and start and due dates are on the main branch. Missing: timers.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Confidential items and links to the code",
               "value": "Items visible only to chosen people, and branches started from an item that carry its reference.",
-              "detail": "Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. The branch name needs no typing to stay traceable.",
+              "detail": "Confidential items, and links between an item and the commits, branches and pull requests that name it, are on the main branch. Missing: starting a branch from an item in one step.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
@@ -710,10 +832,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Releases with notes and evidence",
               "value": "Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.",
+              "detail": "A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             }
@@ -737,6 +859,20 @@
               "value": "Personal and service tokens limited to chosen repositories and actions.",
               "detail": "Tokens use the same audit trail and limits as sign-in sessions. Service accounts are for tools, not people.",
               "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Personal settings in one place",
+              "value": "Your keys, and your tokens with their scopes and expiry, together on one page, with each one revocable.",
+              "detail": "Today the SSH keys and the tokens are on separate pages.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Access tokens for one repository",
+              "value": "A token that works on one repository only, with the actions it may take, and a list of source addresses it may be used from.",
+              "detail": "A stolen token then opens one repository, from the places you named, and nothing else. Today a token can be limited to a role and to projects.",
               "area": "git-hosting"
             },
             {
@@ -896,10 +1032,10 @@
               "area": "pipelines"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Platform matrices",
               "value": "Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, \"3 of 4 passed\" on the launch line, a pull request check that counts a matrix as one, and re-running one combination.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.",
+              "detail": "Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.",
               "area": "pipelines"
             },
             {
@@ -990,35 +1126,35 @@
               "status": "in-progress",
               "title": "A built-in starter library for each language",
               "value": "Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file.",
-              "detail": "Being built now. Each starter builds, tests and scans; a team can change any part.",
+              "detail": "Built-in starters for the common languages are on the main branch. Missing: assistant instruction files, formatter and linter configuration and a test layout written into the repository.",
               "area": "developer-experience"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A pipeline with no file, by detection",
               "value": "Push a repository with no pipeline file and Launchway looks at what it holds and proposes the right pipeline, which you accept as it is or save into the repository to edit.",
-              "detail": "Being built now. The proposal is shown in full before anything runs, and nothing is hidden.",
+              "detail": "The proposal is shown in full before anything runs.",
               "area": "developer-experience"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A gallery of examples",
               "value": "Browse working example pipelines for common jobs, copy one and see it run.",
-              "detail": "Being built now. Every example is tested, so a copied example works.",
+              "detail": "Every example is tested, so a copied example works.",
               "area": "developer-experience"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "launchway init",
               "value": "One command in a repository that writes a first pipeline from what it finds there.",
-              "detail": "Being built now. It explains each choice in plain words and never overwrites a file you already have.",
+              "detail": "It explains each choice in plain words and never overwrites a file you already have.",
               "area": "developer-experience"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "An editor schema for pipeline files",
               "value": "A published description of the pipeline format that gives completion and inline errors in common editors.",
-              "detail": "Being built now. It is generated from the same definition the server checks, so they cannot disagree.",
+              "detail": "It is generated from the same definition the server checks, so they cannot disagree. A language server is separate and not built.",
               "area": "developer-experience"
             },
             {
@@ -1080,10 +1216,10 @@
               "area": "guided-interface"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "A do bar for every task",
               "value": "A search box that finds pages and starts guided actions such as turn a toggle off or why did this fail.",
-              "detail": "It reaches everything without adding to the menu.",
+              "detail": "One search box, opened with the slash key, finds pages, Sorties and repositories and starts common actions. Missing: a guided action for every task.",
               "needs": "The guided interface.",
               "area": "guided-interface"
             },
@@ -1307,52 +1443,52 @@
           "blurb": "Every list is a hierarchy you can search, and the Tower shows what needs a person.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Folders and search on every list",
               "value": "Pipelines, repositories, projects and runs sit in folders you can search, grouped by level.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A long flat list gets cluttered; folders keep it findable.",
+              "detail": "A long flat list gets cluttered; folders keep it findable.",
               "area": "guided-interface"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Folders made from names",
               "value": "Name a pipeline payments/api/build and the folders appear without anyone filing it.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. No setup: the name is the filing.",
+              "detail": "No setup: the name is the filing.",
               "area": "guided-interface"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Shared layouts and personal layouts",
               "value": "A default layout per level, and your own on top: order, pins and hidden sections, with drag and drop, keyboard equivalents and a reset.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Arrange for everyone and arrange for me are separate, explicit modes. A layout can be exported and kept in Git.",
+              "detail": "Arrange for everyone and arrange for me are separate, explicit modes. A layout can be exported and kept in Git.",
               "area": "guided-interface"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A home page that shows what needs a person",
               "value": "Cards by category, what is running, and what truly needs attention; a failure that is already being retried is not shown as needing you.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The home page is calm when nothing needs you.",
+              "detail": "The home page is calm when nothing needs you.",
               "area": "guided-interface"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Home panels that you choose",
               "value": "Add the panels you want to the home page, including one that remembers what you were looking at and working on so you can go straight back.",
               "detail": "Panels are personal and can be shared as a default for a team.",
               "area": "guided-interface"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Every view has an address",
               "value": "As you move around the interface the address changes, so any page, filter and tab can be bookmarked and shared.",
-              "detail": "This includes the history view of a pipeline and each tab of a Sortie.",
+              "detail": "This includes the history view of a pipeline and each tab of a Sortie. A test walks the main pages to hold the rule.",
               "area": "guided-interface"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Live streaming and time estimates",
               "value": "Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier Sorties.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A queued step is never drawn as running, and the list, the launch line and the Sortie page agree.",
+              "detail": "A queued step is never drawn as running, and the list, the launch line and the Sortie page agree.",
               "area": "guided-interface"
             },
             {
@@ -1537,10 +1673,10 @@
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Pipeline history and flaky tests",
               "value": "Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page.",
-              "detail": "Flaky tests are marked on the Sortie and on the pull request, so they are quarantined instead of argued over.",
+              "detail": "Flaky detection, test history and the Debrief are on the main branch. Missing: duration charts, pass rate and the slowest steps across Sorties.",
               "needs": "Test, coverage and HTML reports.",
               "area": "pipelines"
             },
@@ -1553,18 +1689,18 @@
               "area": "pipelines"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "An event log that explains every decision",
               "value": "Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. ",
-              "area": "pipelines"
+              "area": "pipelines",
+              "detail": "A push that no trigger starts is listed with the reason, and a push that starts a Sortie is one entry, not two."
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Standing orders for every repository",
               "value": "A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. ",
-              "area": "repository-standards"
+              "area": "repository-standards",
+              "detail": "Every repository gets the Inspection with no change to it; a team can turn each check off, advise or block, and a level above can set a floor."
             }
           ]
         },
@@ -1627,10 +1763,10 @@
           "blurb": "Test results that are a pleasure to read and easy to hand to someone else.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Polished test reports as HTML and PDF",
               "value": "Every run can produce a detailed, well-laid-out Debrief as a web page and as a PDF that can be sent to someone without an account.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Builds on the thirteen test formats and coverage already available.",
+              "detail": "Builds on the thirteen test formats and coverage already available.",
               "needs": "Test, coverage and HTML reports.",
               "area": "developer-experience"
             }
@@ -1734,7 +1870,7 @@
               "status": "in-progress",
               "title": "Language starters",
               "value": "Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.",
+              "detail": "On the main branch. Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.",
               "needs": "Templates that read like code.",
               "area": "pipelines"
             },
@@ -1765,7 +1901,7 @@
               "status": "in-progress",
               "title": "Starters that deliver end to end",
               "value": "A library of starters per language and kind, proven through delivery, with detection, a gallery and `launchway init`.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. ",
+              "detail": "On the main branch.",
               "area": "pipelines"
             }
           ]
@@ -1775,38 +1911,38 @@
           "blurb": "A cache may only make a build faster, never change its result. Build tools become ready-made recipes that work out the cache for you.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "The cache rule",
               "value": "A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces.",
-              "detail": "Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the Sortie says so and names the path.",
+              "detail": "A build never silently uses an older copy of something it asked for the latest of. Where Launchway cannot promise this for a path, the Sortie says so and names the path.",
               "area": "build-tools-caches"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Fixed things reused, moving things looked up again",
               "value": "Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build.",
-              "detail": "Being built. A re-check is a cheap lookup, not a download.",
+              "detail": "A re-check is a cheap lookup, not a download.",
               "area": "build-tools-caches"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Every restore is a head start, never the answer",
               "value": "What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result.",
-              "detail": "Being built, with generations and a maximum age.",
+              "detail": "Entries have generations and a maximum age.",
               "area": "build-tools-caches"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Warnings for unsafe cache patterns",
               "value": "Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix.",
-              "detail": "Being built.",
+              "detail": "The validator and the pipeline editor warn about the common cases; they are warnings, not refusals, except for a path that holds a credential.",
               "area": "build-tools-caches"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Caches by trust scope",
               "value": "What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes.",
-              "detail": "Being built.",
+              "detail": "A fork reads nothing from the project's caches and writes none; a pull request's entries are its own. Entries are not signed or encrypted by Launchway yet.",
               "area": "build-tools-caches"
             },
             {
@@ -1914,10 +2050,10 @@
               "area": "developer-experience"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Flaky tests quarantined, with an owner",
               "value": "A flaky test still runs and reports but stops blocking, with an owner and an expiry, and a failure says whether it is new or known.",
-              "detail": "Retry only the failed tests, using each tool’s own option.",
+              "detail": "A quarantined test has an owner and an expiry, and an expired quarantine excuses nothing.",
               "area": "developer-experience"
             },
             {
@@ -1931,7 +2067,7 @@
               "status": "in-progress",
               "title": "Why is my run waiting",
               "value": "One answer to why something is not moving: no Station with the capability, a Sortie ahead, a lock, an approval, a quota.",
-              "detail": "Being built with waiting for room; the rest follows.",
+              "detail": "The Sortie page says why a step waits for room and where it stands in the Holding pattern, and an approval says who must decide. Missing: one answer that covers every cause, such as a lock or a quota.",
               "area": "developer-experience"
             },
             {
@@ -2082,10 +2218,10 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Rollout control inside a run",
               "value": "A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an Abort even after a rollout succeeded.",
+              "detail": "Promote, abort and restart a rollout from the pipeline, and an Abort even after a rollout succeeded.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/deployments"
@@ -2189,17 +2325,17 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Ordered GitOps sync, parent then child",
               "value": "An application and its values are written as two ordered commits, the values only once the cluster shows the new pin, and parents sync before children.",
-              "detail": "The write-back half is on the main branch; the full ordered app-of-apps flow and its guard are in final integration.",
+              "detail": "The write-back and the ordered app-of-apps flow, with its guard, are on the main branch.",
               "area": "delivery"
             },
             {
               "status": "in-progress",
               "title": "Drill down into everything a delivery created",
               "value": "From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.",
+              "detail": "Built and tested on its own branch; it comes in the next release and is not on the main branch yet. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.",
               "area": "delivery"
             }
           ]
@@ -2209,10 +2345,10 @@
           "blurb": "Why did it fail, in one sentence, then every resource behind it.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Why did it fail to deploy",
               "value": "A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A failed deploy states its cause in one sentence with the evidence; a crash-looping pod fails the step with its own last words, and a stuck sync is named and ended (the last two are on the main branch).",
+              "detail": "A failed deploy states its cause in one sentence with the evidence; a crash-looping pod fails the step with its own last words, and a stuck sync is named and ended (the last two are on the main branch).",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/deployments"
@@ -2272,10 +2408,10 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "VM deploys",
               "value": "Roll a change across virtual machines in batches over SSH, with verification between batches.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Hosts appear next to applications on the fleet page, with what runs on each.",
+              "detail": "Hosts appear next to applications on the fleet page, with what runs on each.",
               "area": "delivery"
             },
             {
@@ -2286,10 +2422,10 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Image-based hosts",
               "value": "Machines that are really images (built on bootc), built, signed, upgraded and returned to base like container images, with host setup done at first boot.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.",
+              "detail": "Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.",
               "needs": "Machine images with Packer.",
               "area": "delivery"
             },
@@ -2357,10 +2493,10 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Delivery to machines over SSH",
               "value": "Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic Return to base on a failed health check.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Also boots a new operating-system image in a throwaway virtual machine as a test.",
+              "detail": "Also boots a new operating-system image in a throwaway virtual machine as a test.",
               "area": "delivery"
             }
           ]
@@ -2370,25 +2506,25 @@
           "blurb": "State, plans and checks you can trust.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Terraform and OpenTofu",
               "value": "Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Users never wonder where state goes, and Launchway guides them to good practice by default.",
+              "detail": "Users never wonder where state goes, and Launchway guides them to good practice by default.",
               "area": "config-as-code"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "State and locking built in",
               "value": "Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.",
+              "detail": "The HTTP backend with locks, 50 sealed versions with who, when and which run, Return to base, and run-scoped credentials; the API, command line and MCP server show no value. Not yet: diff between versions, import wizard, the S3 way, per-environment mapping.",
               "needs": "Terraform and OpenTofu.",
               "area": "platform-services"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Ansible",
               "value": "Typed steps with per-host results and a check mode before apply.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Results show per host, with the check result shown before anything is changed.",
+              "detail": "Results show per host, with the check result shown before anything is changed.",
               "area": "config-as-code"
             },
             {
@@ -2420,11 +2556,11 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Configuration as code, first slice",
               "value": "Ansible run reports, plan reports and a built-in state backend for OpenTofu, with runs that show hosts by plays, drift and plan.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. ",
-              "area": "delivery"
+              "area": "delivery",
+              "detail": "This is the first slice: a built-in state backend for OpenTofu, plan and Ansible reports, and drift per host."
             }
           ]
         },
@@ -2433,10 +2569,10 @@
           "blurb": "Settings, keys and toggles managed together, per zone and Airfield.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Feature toggles",
               "value": "A built-in toggle service that applications and agents read through the OpenFeature standard, per Airfield, with percentages and rules.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
+              "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
               "area": "platform-services"
             },
             {
@@ -2821,17 +2957,17 @@
           "blurb": "Everything that configures a system is code in Git, reviewed like code, applied from a plan, and watched for drift.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A configuration change is a plan",
               "value": "A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.",
+              "detail": "For OpenTofu the plan file is applied exactly. For Ansible the reviewed thing is the check run: the apply is not forced to match it, and the page says so.",
               "area": "config-as-code"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Inventories",
               "value": "Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Inventory stays on your side on the hosted service.",
+              "detail": "Inventory stays on your side on the hosted service.",
               "area": "config-as-code"
             },
             {
@@ -2842,17 +2978,17 @@
               "area": "config-as-code"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Results for every host",
               "value": "See per host and per task what changed, with the tool’s own output kept alongside.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Launchway keeps the tool’s own output beside a readable summary.",
+              "detail": "Launchway keeps the tool’s own output beside a readable summary.",
               "area": "config-as-code"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Drift and converge now",
               "value": "See which hosts and resources differ from their code and why, and press converge with the same clearance as any change.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Drift is checked on a schedule and shown per host.",
+              "detail": "Drift is checked on a schedule and shown per host.",
               "area": "config-as-code"
             },
             {
@@ -2930,26 +3066,26 @@
           "blurb": "Images, charts and other Cargo stored beside the code, under the same permissions.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A built-in OCI registry",
               "value": "Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.",
+              "detail": "It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.",
               "needs": "Built-in Cargo storage.",
               "area": "registry"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Helm charts and other artifacts as first-class",
               "value": "Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Charts and any OCI Cargo are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.",
+              "detail": "Charts and any OCI Cargo are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "An image page that tells the whole story",
               "value": "Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the Sortie and commit that built it.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The Depot tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.",
+              "detail": "The Depot tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -2962,10 +3098,10 @@
               "area": "registry"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Retention that protects what runs",
               "value": "Clean up old images without ever deleting one that is deployed.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.",
+              "detail": "Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -3002,10 +3138,10 @@
               "area": "registry"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Per-project packages and permissions",
               "value": "A packages tab in each project that is a filtered view of the Depot, with per-package access.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.",
+              "detail": "Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -3013,7 +3149,7 @@
               "status": "in-progress",
               "title": "Signing and verification",
               "value": "Sign images on build and verify signatures on pull and deploy.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.",
+              "detail": "On the main branch. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
             },
@@ -3055,10 +3191,10 @@
               "area": "dependency-order"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "The Depot: one area for everything stored",
               "value": "Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The old Images tab becomes one section of it.",
+              "detail": "The old Images tab becomes one section of it.",
               "area": "registry"
             }
           ]
@@ -3121,7 +3257,7 @@
               "status": "in-progress",
               "title": "What is deployed where",
               "value": "Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.",
+              "detail": "On the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.",
               "needs": "Built-in Depot.",
               "area": "software-graph"
             },
@@ -3189,10 +3325,10 @@
               "area": "software-graph"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "One graph from code to hardware",
               "value": "The software graph holds code and what it needs, what is built from it (images per architecture, operating-system images, machine images), the machines that satisfy those needs, and what is deployed where, with the source of every link.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It feeds dependency order and impact.",
+              "detail": "It feeds dependency order and impact.",
               "area": "dependency-order"
             }
           ]
@@ -3218,10 +3354,10 @@
               "area": "software-graph"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Lock files regenerated in a container and checked",
               "value": "When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened.",
-              "detail": "Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.",
+              "detail": "The container has no secrets and no route to your network, so an update cannot reach anything it should not.",
               "needs": "Built-in Maintenance.",
               "area": "software-graph"
             },
@@ -3284,10 +3420,10 @@
               "area": "dependency-order"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Order you can override",
               "value": "Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.",
+              "detail": "The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned.",
               "area": "dependency-order"
             },
             {
@@ -3507,24 +3643,24 @@
           "blurb": "Documents become stories, stories become changes, and changes reach production when the gates pass, with a person in control.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Assign a story to an agent",
               "value": "An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a Master switch from the start.",
-              "detail": "The author never approves its own work.",
+              "detail": "Work can be assigned to a registered agent that claims it on a lease, works under the same rules as a person and hands it back for review. Missing: the sandboxed agent machine that Launchway itself provides.",
               "area": "ai"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Autonomy levels set by policy",
               "value": "Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason.",
-              "detail": "Defaults are cautious.",
+              "detail": "Levels 1 and 2 are enforced by the server. Levels 3 and 4, which launch, can be written down but are not acted on: they are held to level 2.",
               "area": "ai"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "An independent reviewing agent",
               "value": "Where policy allows, a separate session with a different identity and no shared context may approve listed kinds of change, with a share of changes sampled by people.",
-              "detail": "Starts with documentation and tests only.",
+              "detail": "Where the policy allows, another agent's structured review counts for the kinds of change the policy lists, and a share is sampled by a person. It starts with documentation and tests only.",
               "area": "ai"
             },
             {
@@ -3734,6 +3870,13 @@
               "value": "The default: repositories, pipelines, Stations, secrets, Depot and reports all on the hosted service, with nothing to install.",
               "detail": "The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.",
               "needs": "Every customer has its own Base.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Git over SSH for hosted and meeting-point modes",
+              "value": "Reach Git over SSH on the hosted service and in the mode where a relay meets your machines.",
+              "detail": "Deferred until there are outside customers: the hosted service is HTTPS-only until then.",
               "area": "hosted-service"
             },
             {
@@ -4081,6 +4224,18 @@
               "title": "Zero trust throughout",
               "value": "Every service, Station and person proves identity on every call.",
               "detail": "No shared secrets between components."
+            },
+            {
+              "status": "planned",
+              "title": "Public and internal paths kept apart",
+              "value": "Every HTTP path is either public or internal, and only the public ones can be reached from outside a web edge.",
+              "detail": "A list of the paths that answer without a sign-in is checked by a test, so a new one cannot appear unnoticed."
+            },
+            {
+              "status": "planned",
+              "title": "The real client address behind a web edge",
+              "value": "When Launchway sits behind a web edge or proxy, lockout and rate limits count the address of the person, not of the proxy.",
+              "detail": "An address is trusted only from the proxies you name, so it cannot be forged by the caller."
             }
           ]
         },
@@ -4092,7 +4247,7 @@
               "status": "in-progress",
               "title": "Every customer has its own Base",
               "value": "A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name.",
-              "detail": "The first stage is being built and is not on a branch yet. Inside it the usual levels apply.",
+              "detail": "Stage 1 is on the main branch: Bases, accounts and memberships exist, every table is registered with its owner, and a switch for several Bases is off and refused for now. Missing: turning on a second Base, which needs the later stages.",
               "area": "hosted-service"
             },
             {
@@ -4106,7 +4261,7 @@
               "status": "in-progress",
               "title": "Nothing crosses between Bases",
               "value": "No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
-              "detail": "The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.",
+              "detail": "Only the identity tables are walled so far, and tests guard that no new table is added without an owner. Missing: the rest of the data, which is registered as pending its stage.",
               "area": "hosted-service"
             },
             {
@@ -4316,7 +4471,7 @@
               "status": "in-progress",
               "title": "The rollout panel",
               "value": "One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.",
+              "detail": "Built and tested on its own branch; it comes in the next release and is not on the main branch yet. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.",
               "needs": "Every rollout strategy.",
               "area": "zero-downtime"
             },
@@ -4390,10 +4545,10 @@
           "blurb": "Second phase. Everything that can change behavior without a new build is versioned, rolled out and returnable.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A toggle service in the model",
               "value": "Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.",
+              "detail": "Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.",
               "needs": "Switches.",
               "area": "zero-downtime"
             },
@@ -4401,15 +4556,15 @@
               "status": "in-progress",
               "title": "Kill switches and automatic toggle-back",
               "value": "A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.",
+              "detail": "On the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.",
               "needs": "The watch; a toggle service in the model.",
               "area": "zero-downtime"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Stale-toggle hygiene",
               "value": "Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A suggested pull request that removes the check and the toggle is still to come.",
+              "detail": "A suggested pull request that removes the check and the toggle is still to come.",
               "needs": "A toggle service in the model.",
               "area": "zero-downtime"
             },
@@ -5650,31 +5805,31 @@
           "blurb": "The scans Launchway holds itself to are offered to every repository it hosts or builds, built in, with nothing to install and every check a switch.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A profile for each repository",
               "value": "Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Checks are on from the first push.",
+              "detail": "Checks are on from the first push.",
               "area": "repository-standards"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Every check on, advice or block",
               "value": "Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The team in charge of a repository keeps the choice unless a level above locks it.",
+              "detail": "The team in charge of a repository keeps the choice unless a level above locks it.",
               "area": "repository-standards"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Vulnerability, secret, dependency and license checks",
               "value": "Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Checks are visible steps, never hidden magic.",
+              "detail": "Checks are visible steps, never hidden magic.",
               "area": "repository-standards"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Language profiles",
               "value": "Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Each profile brings starter files the team may change.",
+              "detail": "Each profile brings starter files the team may change.",
               "area": "repository-standards"
             },
             {
@@ -5720,10 +5875,10 @@
               "area": "repository-standards"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Standards kept in Git, edited in either place",
               "value": "A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.",
+              "detail": "Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.",
               "needs": "Every check on, advice or block.",
               "area": "repository-standards"
             },
@@ -5796,10 +5951,10 @@
           "blurb": "Plan the work where the code and the delivery are.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Issues, stories, epics and boards",
               "value": "Plan, assign and follow work in the product, linked to commits, runs and the places where a fix is running.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Backlog and sprints are included.",
+              "detail": "Backlog and sprints are included.",
               "area": "git-hosting"
             },
             {
@@ -5823,10 +5978,10 @@
           "blurb": "A release is what moves through Airfields.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Releases that are promoted",
               "value": "A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Things released together are grouped, and four delivery measures are reported.",
+              "detail": "Things released together are grouped, and four delivery measures are reported.",
               "area": "git-hosting"
             }
           ]
@@ -6114,16 +6269,14 @@
     }
   ],
   "whatChanged": {
-    "date": "21 November 2026",
+    "date": "22 November 2026",
     "items": [
-      "Every request from today is now in the roadmap, in the milestone where it belongs, with an honest status.",
-      "Work and agents: work tracking, release management, agents that deliver (with levels of autonomy, independent review and spending limits), and keeping services healthy by detecting, diagnosing and, where policy allows, fixing.",
-      "Your editor and your own systems: editor plug-ins, one-step setup for agent tools, an optional development Airfield in the browser, and extension points so site-specific systems never live in the product.",
-      "Organized and personal: folders and search on every list, shared and personal layouts, a Tower based on what needs attention, home panels, an address for every view, and live streaming with time estimates.",
-      "The Depot (one area for everything stored), delivery by choice (GitOps controller, direct chart installs or plain manifests), drill-down from a deploy into every object it created, every cloud and on-premises within the Airfield's limits, one graph from code to hardware, and adopting machines that already exist.",
-      "A new short section, Who Launchway is for, and the build order now follows the order decided today.",
-      "Statuses checked against the main branch: the guided installer, built-in accounts with a second factor, encryption at rest, fair queueing, path filters, restricted pull requests, notifications, Maintenance, offline validation and the delivery fixes are now Available. Everything built on a separate branch is In progress, marked as built and in final integration.",
-      "Duplicate rows for the same work were merged."
+      "Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.",
+      "Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.",
+      "Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.",
+      "Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.",
+      "Next release: the rollout page for watching and steering a delivery.",
+      "New planned items: tokens for one repository with source-address limits, signing in from the command line through the browser, mirroring a release branch behind required checks, personal settings in one place, the real client address behind a web edge, a public and internal split of paths, and Git over SSH for the hosted modes."
     ]
   },
   "standsToday": {
@@ -6132,28 +6285,29 @@
       "Failures that explain themselves: a failed Sortie says why, with the evidence, and re-runs from the failed step.",
       "Pipelines you can see: steps drawn the way they run, and a change followed from idea to running software.",
       "Runs on your own hardware: one program and a database, with no outside service required.",
-      "Install, secrets and sign-in: a guided installer, secrets sealed under a key kept outside the database, and built-in accounts with a second factor."
+      "Install, secrets and sign-in: a guided installer, secrets sealed under a key kept outside the database, and built-in accounts with a second factor.",
+      "Work and code together: hosted repositories, review in depth, work tracking with agents, and releases promoted through Airfields."
     ],
     "missing": [
       "The first self-upgrade exposed upgrade-ordering problems that are now fixed and guarded by tests, and the upgrade gate is still being finished.",
-      "Most of the new work is built on separate branches and in final integration; it counts as Available only when it is on the main branch.",
+      "The rollout page (watching and steering a delivery object by object) is built and comes in the next release.",
       "The wall between Bases and sign-up, so people outside a team can use the hosted service: not built yet.",
       "Works alongside a hosted code host without moving repositories: planned.",
       "Windows and macOS Stations, and the mobile and games needs that follow them.",
       "Maturity: Launchway is young, has few users and has not been through an independent security audit or a certification."
     ],
-    "note": "Much of what is listed as in progress is built and tested but not yet merged; it counts as Available only when it is."
+    "note": "The rounds built on separate branches are now on the main branch. What is still on a branch is marked as such."
   },
   "buildQueue": [
+    {
+      "title": "The rollout page",
+      "value": "Watch and steer every object a delivery created, and test before real traffic.",
+      "area": "delivery"
+    },
     {
       "title": "The wall between Bases, then sign-up",
       "value": "Several Bases on one installation, isolated and proven by tests, then sign-up with the least setup.",
       "area": "hosted-service"
-    },
-    {
-      "title": "Merge and deploy the finished rounds",
-      "value": "What is built is joined, tested together, and put to use.",
-      "area": "build-order"
     },
     {
       "title": "The upgrade gate and network detection",

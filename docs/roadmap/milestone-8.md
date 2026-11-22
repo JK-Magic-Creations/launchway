@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 5 in progress · 42 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 3 in progress · 42 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -51,7 +51,7 @@ flowchart TD
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
 | [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 1 | 4 |
 | [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
-| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 3 | 3 |
+| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 2 | 1 | 3 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
 | [Argo CD, first class](#g-argo-cd-first-class) | 9 | 0 | 0 | 9 |
 | [Prove it: chaos, performance and temporary capacity](#g-prove-it-chaos-performance-and-temporary-capacity) | 7 | 0 | 0 | 7 |
@@ -166,7 +166,7 @@ A few plain questions (what is it, how do users reach it, how do we know it is h
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. Built, tested on its own branch and in final integration; not yet on the main branch. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
+One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. Built and tested on its own branch; it comes in the next release and is not on the main branch yet. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
 
 **Depends on:** Every rollout strategy.
 
@@ -252,9 +252,9 @@ Second phase. Everything that can change behavior without a new build is version
 
 #### A toggle service in the model {#a-toggle-service-in-the-model}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base. Built, tested on its own branch and in final integration; not yet on the main branch. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
+Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
 
 **Depends on:** Switches.
 
@@ -264,7 +264,7 @@ Toggles are known to Launchway, shown beside deployments on an Airfield's timeli
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval. Built, tested on its own branch and in final integration; not yet on the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
+A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval. On the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
 
 **Depends on:** The watch; a toggle service in the model.
 
@@ -272,9 +272,9 @@ A toggle marked as a Master switch has a safe value, and turning it to that valu
 
 #### Stale-toggle hygiene {#stale-toggle-hygiene}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. Built, tested on its own branch and in final integration; not yet on the main branch. A suggested pull request that removes the check and the toggle is still to come.
+Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. A suggested pull request that removes the check and the toggle is still to come.
 
 **Depends on:** A toggle service in the model.
 
