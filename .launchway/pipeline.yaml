@@ -35,10 +35,12 @@ steps:
         max_age: 7d
     run: |
       export npm_config_cache="$PWD/.cache/npm"
+      # The site has grown past Node's default heap (about 1 GB): give the build 3 GB of the step's 4.
+      export NODE_OPTIONS="--max-old-space-size=3072"
       cd docs
       npm ci --no-audit --no-fund
       npx vitepress build .
-    resources: { cpu: 1, memory: 2Gi }
+    resources: { cpu: 1, memory: 4Gi }
 
   check-code:
     description: Look for common mistakes with go vet
