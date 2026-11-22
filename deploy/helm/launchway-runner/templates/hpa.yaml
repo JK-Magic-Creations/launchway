@@ -1,0 +1,3 @@
+{{- if and .Values.runner.enabled .Values.runner.autoscaling.enabled }}
+{{ include "launchway.shared.hpa" (dict "root" . "a" .Values.runner.autoscaling "name" (include "launchway.fullname" .) "component" "runner") }}
+{{- end }}

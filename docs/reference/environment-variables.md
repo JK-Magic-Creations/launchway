@@ -20,6 +20,13 @@ These are read by the `launchway` binary itself: the server, a Station, or the c
 | `LAUNCHWAY_ENCRYPTION_REQUIRE` | the same | `true` refuses to start with no root key (the chart sets it): same as `encryption.require`. |
 | `LAUNCHWAY_RUNNER_TOKEN` | `launchway server` | The token Stations must send. When set, it wins over the token kept in the database, and the start-up banner says `Runner token for other machines: LAUNCHWAY_RUNNER_TOKEN` instead of a file path. |
 | `LAUNCHWAY_RUNNER_TOKEN` | `launchway runner` | The Station token, when `--token` is not given. Not together with a join token. |
+| `LAUNCHWAY_METRICS_LISTEN` | `launchway server` | Where the metrics listener binds when `observability.metrics.listen` is not set (default `127.0.0.1:9102`). The chart sets it to the pod's address. |
+| `LAUNCHWAY_METRICS_ENABLED` | `launchway server` | `false` turns the metrics endpoint off when `observability.metrics.enabled` is not set. |
+| `LAUNCHWAY_METRICS_NAME_LABELS` | `launchway server` | `true` records Flight names as a label of one extra metric, as `observability.metrics.name_labels` does. |
+| `LAUNCHWAY_METRICS_TOKEN` | `launchway server`, `launchway runner` | The bearer token a scraper must send to `/metrics`. A server reads another variable instead if `observability.metrics.token_env` names one. |
+| `LAUNCHWAY_TRACING_ENDPOINT` | `launchway runner` | The collector's OTLP/HTTP traces address; a Station sends spans for its steps when set. |
+| `LAUNCHWAY_TRACING_HEADERS` | `launchway runner`, `launchway server` | Extra request headers for the collector, `Name=value,Name2=value2`. A server reads it when `observability.tracing.headers_env` names it. |
+| `LAUNCHWAY_TRACING_SAMPLE_RATIO` | `launchway runner` | The share of traces a Station keeps, from 0 to 1 (default 1). |
 | `LAUNCHWAY_JOIN` | `launchway runner` | A join token, when `--join` is not given: the Station enrols with it once and gets an identity of its own, then starts without it. In a container, use it instead of `--join`. |
 | `LAUNCHWAY_SERVER` | `launchway runner` | The server URL, when `--server` is not given. It wins over `server:` in the `--config` file. |
 | `LAUNCHWAY_SERVER` | `launchway login`, `runs`, `policy`, `waivers`, `mcp`, `runners`, `verifications`, `health-sources`, `models` | The server URL. For `login` it is the default of `--server`; for the other commands it replaces the server stored by `login`. |

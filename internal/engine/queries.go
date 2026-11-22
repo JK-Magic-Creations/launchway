@@ -215,6 +215,10 @@ type StepView struct {
 // RunDetail is everything about one run.
 type RunDetail struct {
 	RunSummary
+	// TraceID is the run's trace id and TraceURL a link to it in the installation's trace viewer; both are set
+	// by the server only when trace export is on (TraceURL only with a viewer address template).
+	TraceID  string             `json:"trace_id,omitempty"`
+	TraceURL string             `json:"trace_url,omitempty"`
 	Source   Source             `json:"source"`
 	Graph    *pipeline.Pipeline `json:"graph"`
 	Levels   [][]string         `json:"levels"`

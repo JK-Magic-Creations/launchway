@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"io"
 	"strings"
 	"sync"
@@ -146,6 +147,9 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 		}
 	}
 	if err != nil || en == nil {
+		if err == nil {
+			metrics.CacheLookups.Inc("miss")
+		}
 		return res, err
 	}
 	// The use counts only if the entry is still kept: another server may
@@ -172,8 +176,10 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 		return nil, err
 	}
 	if !used {
+		metrics.CacheLookups.Inc("miss")
 		return &CacheLookupResult{MaxAgeSeconds: res.MaxAgeSeconds}, nil
 	}
+	metrics.CacheLookups.Inc("hit")
 	res.Entry, res.Expired = en, nil
 	return res, nil
 }

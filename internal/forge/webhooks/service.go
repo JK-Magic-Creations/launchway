@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"io"
 	"log/slog"
 	"net/http"
@@ -426,6 +427,12 @@ func (s *Service) attempt(ctx context.Context, id string, once bool) (Delivery, 
 			d.State = Pending
 			d.NextAttempt = s.o.Now().Add(s.o.Backoff[min(d.Attempts-1, len(s.o.Backoff)-1)])
 		}
+	}
+	switch d.State {
+	case Delivered:
+		metrics.WebhookDeliveries.Inc("out", "accepted")
+	case Failed:
+		metrics.WebhookDeliveries.Inc("out", "failed")
 	}
 	if err := s.st.recordAttempt(ctx, d); err != nil {
 		return d, err

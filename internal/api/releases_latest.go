@@ -79,10 +79,10 @@ func (s *Server) publicReleasePage(w http.ResponseWriter, r *http.Request) {
 		"tag": rel.Tag, "prerelease": rel.Prerelease, "latest": rel.Latest, "published_at": rel.PublishedAt, "files": files})
 }
 
-// countingWriter sees whether a download reached its end: the response was a whole file or a range that ends at the
+// sizedWriter sees whether a download reached its end: the response was a whole file or a range that ends at the
 // file's last byte, and every byte of it was written. A continuation of a broken download is counted once, when it
 // reaches the end, and the broken part not at all; a HEAD, a partial range or a client that went away counts nothing.
-type countingWriter struct {
+type sizedWriter struct {
 	http.ResponseWriter
 	size    int64
 	status  int
@@ -92,7 +92,7 @@ type countingWriter struct {
 	ends    bool
 }
 
-func (c *countingWriter) WriteHeader(code int) {
+func (c *sizedWriter) WriteHeader(code int) {
 	if c.status == 0 {
 		c.status = code
 		c.length, _ = strconv.ParseInt(c.Header().Get("Content-Length"), 10, 64)
@@ -113,7 +113,7 @@ func (c *countingWriter) WriteHeader(code int) {
 	c.ResponseWriter.WriteHeader(code)
 }
 
-func (c *countingWriter) Write(b []byte) (int, error) {
+func (c *sizedWriter) Write(b []byte) (int, error) {
 	if c.status == 0 {
 		c.WriteHeader(http.StatusOK)
 	}
@@ -125,9 +125,9 @@ func (c *countingWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-func (c *countingWriter) Unwrap() http.ResponseWriter { return c.ResponseWriter }
+func (c *sizedWriter) Unwrap() http.ResponseWriter { return c.ResponseWriter }
 
 // complete says whether what was sent counts as a download of the file.
-func (c *countingWriter) complete() bool {
+func (c *sizedWriter) complete() bool {
 	return !c.failed && c.ends && c.written == c.length
 }

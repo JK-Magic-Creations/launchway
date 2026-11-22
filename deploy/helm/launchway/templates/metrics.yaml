@@ -1,0 +1,89 @@
+{{- if .Values.metrics.enabled }}
+{{- $fullname := include "launchway.fullname" . }}
+# The metrics Service of the servers: in-cluster only (ClusterIP, no Ingress or route points at it), for a ServiceMonitor or a scraper that finds Services.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+    launchway.dev/metrics: "true"
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+{{- if and .Values.metrics.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Values.metrics.serviceMonitor.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ .Release.Namespace }}]
+  selector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 6 }}
+      launchway.dev/metrics: "true"
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- with .Values.metrics.token.existingSecret }}
+      authorization:
+        type: Bearer
+        credentials: { name: {{ . }}, key: {{ $.Values.metrics.token.existingSecretKey }} }
+      {{- end }}
+{{- else if .Values.metrics.serviceMonitor.enabled }}
+{{- fail "metrics.serviceMonitor.enabled is true, but this cluster does not serve monitoring.coreos.com/v1 (install the Prometheus Operator CRDs, or turn it off)" }}
+{{- end }}
+{{- if .Values.metrics.podMonitor.enabled }}
+{{- if not (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+{{- fail "metrics.podMonitor.enabled is true, but this cluster does not serve monitoring.coreos.com/v1 (install the Prometheus Operator CRDs, or turn it off)" }}
+{{- end }}
+{{- range $comp := list "runner" "deploy-runner" }}
+{{- if or (and (eq $comp "runner") $.Values.runner.enabled) (and (eq $comp "deploy-runner") $.Values.delivery.deployRunner.enabled) }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ $fullname }}-{{ $comp }}
+  namespace: {{ $.Values.metrics.podMonitor.namespace | default $.Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list $ $comp) | nindent 4 }}
+    {{- with $.Values.metrics.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ $.Release.Namespace }}]
+  selector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list $ $comp) | nindent 6 }}
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ $.Values.metrics.podMonitor.interval }}
+      scrapeTimeout: {{ $.Values.metrics.podMonitor.scrapeTimeout }}
+      {{- with $.Values.metrics.token.existingSecret }}
+      authorization:
+        type: Bearer
+        credentials: { name: {{ . }}, key: {{ $.Values.metrics.token.existingSecretKey }} }
+      {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

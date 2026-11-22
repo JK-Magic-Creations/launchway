@@ -262,7 +262,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.requestIDs(s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.registryMiddleware(s.gitAlias(mux)))))))
+	return s.requestIDs(s.requestMetrics(s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.registryMiddleware(s.gitAlias(routed(mux)))))))))
 }
 
 // ---- shutting down ----

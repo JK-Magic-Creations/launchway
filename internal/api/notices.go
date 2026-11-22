@@ -19,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/mail"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"github.com/jk-magic-creations/launchway/internal/notices"
 	"github.com/jk-magic-creations/launchway/internal/work"
 )
@@ -78,6 +79,7 @@ func (s *Server) EnableNotices(o NoticeOptions) {
 				s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "system", Action: action, Target: person, Detail: detail, Outcome: outcome})
 			}}
 		svc.Mail = s.Mail
+		s.Mail.RegisterMetrics(metrics.Default)
 	}
 	s.Notices = svc
 	s.Engine.SetPersonNotifier(s.personEvent)

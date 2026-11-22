@@ -47,6 +47,7 @@ A Station takes each setting from the first of:
 | `--k8s-unrestricted` | | `kubernetes.restricted: false` | restricted. The flag also drops `run_as_user` and `run_as_group` from the file |
 | `--secrets-config FILE` | | `secrets` | none. The file holds the same map as `secrets`, and replaces the file's `secrets` entirely |
 | `--health-listen ADDR` | | | none. Serves `/healthz` (the process is up), `/livez` (the loop that takes work polled within five minutes) and `/readyz` (the server answered within two minutes), such as `:8081` |
+| `--metrics-listen ADDR` | | | none. Serves `/metrics` (the [metrics reference](metrics.md)), such as `:9102`. A bearer token is read from `LAUNCHWAY_METRICS_TOKEN` if set. For a Station that also exports traces: `LAUNCHWAY_TRACING_ENDPOINT`, `LAUNCHWAY_TRACING_HEADERS` and `LAUNCHWAY_TRACING_SAMPLE_RATIO` |
 | `--config FILE` | | | none |
 
 The token is the shared Station token for build Stations, or a

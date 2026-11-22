@@ -12,6 +12,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 )
 
 // A runner that is up but not asking for work looks, from outside, just like
@@ -262,3 +264,25 @@ func (l ctxLock) lock(ctx context.Context) error {
 }
 
 func (l ctxLock) unlock() { <-l }
+
+// publish copies the pulse to the metrics (last poll age per loop, actions
+// running, actions abandoned) when the endpoint is scraped.
+func (v *vitals) publish(reg *metrics.Registry) {
+	if v == nil {
+		return
+	}
+	var seen int64
+	reg.OnScrape(func() {
+		now := time.Now()
+		v.mu.Lock()
+		for _, l := range v.loops {
+			metrics.RunnerPollAge.Set(now.Sub(time.Unix(0, l.last.Load())).Seconds(), l.name)
+		}
+		metrics.RunnerActionsRunning.Set(float64(len(v.acts)))
+		v.mu.Unlock()
+		if n := v.abandoned.Load(); n > seen {
+			metrics.RunnerActionsAbandoned.Add(float64(n - seen))
+			seen = n
+		}
+	})
+}

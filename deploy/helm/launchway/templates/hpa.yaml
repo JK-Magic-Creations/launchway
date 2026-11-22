@@ -1,0 +1,8 @@
+{{- $fullname := include "launchway.fullname" . }}
+{{- if .Values.server.autoscaling.enabled }}
+{{ include "launchway.shared.hpa" (dict "root" . "a" .Values.server.autoscaling "name" (printf "%s-server" $fullname) "component" "server") }}
+{{- end }}
+{{- if and .Values.runner.enabled .Values.runner.autoscaling.enabled }}
+---
+{{ include "launchway.shared.hpa" (dict "root" . "a" .Values.runner.autoscaling "name" (printf "%s-runner" $fullname) "component" "runner") }}
+{{- end }}

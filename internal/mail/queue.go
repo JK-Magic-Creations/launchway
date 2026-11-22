@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
@@ -177,12 +179,15 @@ func (q *Queue) RunOnce(ctx context.Context) (int, error) {
 		switch {
 		case err == nil:
 			sent++
+			metrics.MailMessages.Inc("sent")
 			store.MailSent(ctx, q.DB, r.ID, at, q.now().UnixMilli())
 			q.audit(ctx, "mail.sent", r.Person, fmt.Sprintf("%s %s, try %d", r.ID, r.Kind, at), "ok")
 		case at >= q.maxAttempts():
+			metrics.MailMessages.Inc("failed")
 			store.MailFailed(ctx, q.DB, r.ID, at, clip(err.Error(), 300))
 			q.audit(ctx, "mail.failed", r.Person, fmt.Sprintf("%s %s gave up after %d tries", r.ID, r.Kind, at), "error")
 		default:
+			metrics.MailMessages.Inc("retried")
 			store.MailRetry(ctx, q.DB, r.ID, at, q.now().Add(q.backoff(at)).UnixMilli(), clip(err.Error(), 300))
 			q.audit(ctx, "mail.retry", r.Person, fmt.Sprintf("%s %s try %d failed", r.ID, r.Kind, at), "error")
 		}
@@ -238,4 +243,24 @@ func headersFor(text string) map[string]string {
 		return nil
 	}
 	return map[string]string{"List-Unsubscribe": "<" + link[0] + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+}
+
+// RegisterMetrics makes a scrape refresh the queue's gauges (messages pending
+// and failed). The counts are read at most every ten seconds, however often
+// the endpoint is scraped.
+func (q *Queue) RegisterMetrics(reg *metrics.Registry) {
+	var mu sync.Mutex
+	var last time.Time
+	reg.OnScrape(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if !last.IsZero() && time.Since(last) < 10*time.Second {
+			return
+		}
+		last = time.Now()
+		if c, err := q.Counts(context.Background()); err == nil { //nolint:contextcheck // a scrape has no request context
+			metrics.MailQueued.Set(float64(c.Pending), "pending")
+			metrics.MailQueued.Set(float64(c.Failed), "failed")
+		}
+	})
 }

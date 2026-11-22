@@ -24,3 +24,4 @@ behind it.
 | [Policy rules](policy-rules.md) | the policy rule catalog |
 | [Vocabulary](vocabulary.md) | the words Launchway uses for its own concepts, and the rules for using them |
 | [Environment variables](environment-variables.md) | what Launchway reads, and what steps receive |
+| [Metrics](metrics.md) | every metric the servers and Stations serve: name, type, labels, meaning |

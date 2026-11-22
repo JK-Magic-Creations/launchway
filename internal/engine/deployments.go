@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"path"
 	"strconv"
 	"strings"
@@ -144,18 +145,6 @@ func checkEnvironments(envs []Environment) (map[string]Environment, error) {
 	return out, nil
 }
 
-func validName(s string) bool {
-	if s == "" || len(s) > 63 || s[0] == '-' {
-		return false
-	}
-	for _, r := range s {
-		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
-			return false
-		}
-	}
-	return true
-}
-
 // Environments returns the configured environments, by name.
 func (e *Engine) Environments() []Environment {
 	out := make([]Environment, 0, len(e.live().envs))
@@ -194,19 +183,6 @@ func (e *Engine) CheckDeploys(project string, p *pipeline.Pipeline) pipeline.Pro
 		}
 	}
 	return out
-}
-
-func envNames(envs map[string]Environment) string {
-	list := make([]Environment, 0, len(envs))
-	for _, e := range envs {
-		list = append(list, e)
-	}
-	sortEnvs(list)
-	names := make([]string, len(list))
-	for i, e := range list {
-		names[i] = e.Name
-	}
-	return strings.Join(names, ", ")
 }
 
 // unit is what a lock is for.
@@ -678,6 +654,7 @@ func (c *cmd) persistSchema11() error {
 				d.Target, d.Application, d.Mode, d.Version, prevID, prevVersion, ev.At)
 		case StepQueued:
 			if d != nil && d.Action == ActionRevert {
+				c.after(func() { metrics.Rollbacks.Inc() })
 				_, err = c.tx.Exec(`UPDATE deployments SET rollback_step = ? WHERE id = ?`, ev.Data.Step, d.ID)
 			}
 		case DeployActionDone:
@@ -689,6 +666,8 @@ func (c *cmd) persistSchema11() error {
 		case StepFinished:
 			err = c.deployFinished(ev, s)
 		case DeployClosed:
+			verdict := d.Verdict
+			c.after(func() { metrics.Deploys.Inc(verdict) })
 			if _, err = c.tx.Exec(`UPDATE deployments SET verdict = ?, closed_at = ? WHERE id = ?`, d.Verdict, ev.At, d.ID); err == nil {
 				_, err = c.tx.Exec(`DELETE FROM deploy_locks WHERE deployment = ?`, d.ID)
 			}

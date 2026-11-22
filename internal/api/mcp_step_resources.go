@@ -28,6 +28,7 @@ func addStepResourceTools(srv *mcp.Server, c *mcpCall) {
 	addDependencyTools(srv, c) // dependency updates (mcp_depupdates.go)
 	addStandardsTools(srv, c)  // Standing orders (mcp_standards.go)
 	addGraphTools(srv, c)      // the software graph (mcp_graph.go)
+	addInsightsTools(srv, c)   // Insights (mcp_insights.go)
 	addWorkTools(srv, c)       // work tracking (mcp_work.go)
 	addRunUsageTool(srv, c)    // what a Sortie's steps used (mcp_run_usage.go)
 	addTool(srv, c, &mcp.Tool{Name: "get_step_resources", Annotations: readOnly("Get step resources"),

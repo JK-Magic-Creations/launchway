@@ -9,7 +9,7 @@ One binary does everything: the server, Stations, local runs and the API client.
 ```text
 launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
 launchway runner   --server URL --join J      enrol a runner with a join token, then take work
-                   [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
+                   [--config runner.yaml] [--health-listen ADDR] [--metrics-listen ADDR] [--labels a,b]
 launchway runner   --server URL --token T     run a runner with the shared token (no identity)
 launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
 launchway validate [file] [--project P]       check a pipeline file
@@ -592,6 +592,15 @@ launchway runs trust RUN_ID [--comment TEXT]
 ```
 
 The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
+
+## launchway insights
+
+The numbers of the Insights pages, for the Flights you may read.
+
+| Command | What it does |
+|---|---|
+| `launchway insights [--flight NAME \| --squadron NAME] [--from T] [--to T] [--branch B] [--bucket hour\|day\|week\|month] [--json]` | Sortie success rate and duration (median and 95th percentile), time in the holding pattern, the slowest and flakiest steps, test totals and the delivery measures. Without `--flight` and `--squadron`, every Flight you may read |
+| `launchway insights ... --csv FILE` | Write the series as a CSV file |
 
 ## launchway debrief and launchway tests
 

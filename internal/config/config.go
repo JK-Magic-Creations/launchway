@@ -76,6 +76,8 @@ type Config struct {
 	Artifacts ArtifactsConfig `yaml:"artifacts"`
 	Findings  FindingsConfig  `yaml:"findings"`
 	Forge     ForgeConfig     `yaml:"forge"`
+	// Observability: the metrics endpoint and trace export (bootstrap settings).
+	Observability ObservabilityConfig `yaml:"observability"`
 	// Registry is the built-in OCI registry.
 	Registry RegistryConfig `yaml:"registry"`
 	// Reports bounds test attachments, coverage and HTML reports, and says

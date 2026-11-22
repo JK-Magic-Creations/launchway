@@ -1,0 +1,31 @@
+# Alert rules for the platform's health. Examples: change the thresholds to what your installation needs.
+groups:
+  - name: launchway-platform-health
+    rules:
+      - alert: LaunchwayServerErrors
+        expr: sum(rate(launchway_http_requests_total{class="5xx"}[5m])) / sum(rate(launchway_http_requests_total[5m])) > 0.05
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: More than 5 percent of requests to Launchway fail with a server error
+          description: Look at the 5xx share by route on the platform health dashboard, then at the server logs and the database.
+      - alert: LaunchwayWorkerStalled
+        expr: time() - max by (worker) (launchway_worker_last_success_timestamp_seconds) > 600
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "The background worker {{ $labels.worker }} has not finished a pass for 10 minutes"
+          description: A worker that stops leaves leases unreaped, repositories unpolled or mirrors unsynchronised.
+      - alert: LaunchwayDatabaseConnectionsExhausted
+        expr: max(launchway_db_pool_connections{state="in_use"}) / max(launchway_db_pool_connections{state="open"}) > 0.9
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: Nearly every database connection of a server is in use
+          description: Queries may be waiting for a connection. See the time queries waited on the platform health dashboard.
+      - alert: LaunchwayMetricSeriesDropped
+        expr: sum(increase(launchway_metrics_series_dropped_total[1h])) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: A Launchway metric reached its cap of series and dropped some
+          description: A label that grows without bound is a bug. Report which metric, from the metric label.

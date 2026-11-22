@@ -107,6 +107,7 @@ func runDeployRunner(ctx context.Context, o *runnerOptions, client *runner.Clien
 		go func() { _ = hs.Serve(ln) }()
 		defer hs.Close()
 	}
+	startRunnerMetrics(ctx, o)
 	return d.Run(ctx)
 }
 

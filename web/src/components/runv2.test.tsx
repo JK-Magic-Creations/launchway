@@ -121,6 +121,19 @@ describe("the run header and its density", () => {
     expect(d).toHaveTextContent("main");
     expect(d).toHaveTextContent("took");
   });
+  it("shows the trace id with a copy button, and a link when the installation has a trace viewer", () => {
+    const withTrace = (over: Partial<RunDetail> & { trace_id?: string; trace_url?: string }) => (
+      <RunHeader run={detail([s("test", { status: "failed", exit_code: 1 })], { status: "failed", started_at: 1000, finished_at: 5000, ...over } as Partial<RunDetail>)} now={NOW} done live density="summary"
+        onDensity={() => {}} select={() => {}} setTab={() => {}} actions={null} />
+    );
+    const { unmount } = render(withTrace({}));
+    expect(screen.queryByText(/^Trace/)).not.toBeInTheDocument(); // tracing is off: nothing to show
+    unmount();
+    render(withTrace({ trace_id: "0123456789abcdef0123456789abcdef", trace_url: "https://traces.example.com/trace/0123456789abcdef0123456789abcdef" }));
+    expect(screen.getByText("0123456789abcdef0123456789abcdef")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy the trace id" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open in the trace viewer/ })).toHaveAttribute("href", "https://traces.example.com/trace/0123456789abcdef0123456789abcdef");
+  });
   it("the toggle says which is pressed", () => {
     render(base("summary"));
     expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-pressed", "true");

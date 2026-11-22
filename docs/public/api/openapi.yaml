@@ -3581,6 +3581,29 @@ paths:
             tags:
                 - info
             x-launchway-access: public
+    /api/v1/insights:
+        get:
+            description: 'The Insights numbers over a period: ?flight= or ?squadron= (neither: every Flight the caller may read), ?from=, ?to= (default 30 days), ?branch=, ?bucket= (hour, day, week or month), ?format=csv for the series as a spreadsheet file. Counts only Flights the caller may read; a Flight they may not read is 404.'
+            operationId: get_api_v1_insights
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The Insights numbers over a period: ?flight= or ?squadron= (neither: every Flight the caller may read), ?from=, ?to= (default 30 days), ?branch=, ?bucket= (hour, day, week or month), ?format=csv for the series as a spreadsheet file.'
+            tags:
+                - insights
+            x-launchway-access: signed-in
     /api/v1/launch-lines:
         get:
             description: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a Flight the caller may not see). Only Flights the caller may see.'

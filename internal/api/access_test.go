@@ -638,6 +638,7 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/config/export":  {"GET", "/api/v1/config/export", "", [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/config/imports": {"GET", "/api/v1/config/imports", "", [6]int{401, 403, 403, 403, 403, 200}},
 	// Squadrons and Flights: the page of a Squadron is for anyone signed in; making, filling, moving and organizing are for admins.
+	"GET /api/v1/insights":               {"GET", "/api/v1/insights", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/units":                  {"GET", "/api/v1/units", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/units":                 {"POST", "/api/v1/units", `{"name":"matrix-squadron"}`, [6]int{401, 403, 403, 403, 403, 201}},
 	"GET /api/v1/units/{name}":           {"GET", "/api/v1/units/no-such-squadron", "", [6]int{401, 404, 404, 404, 404, 404}},

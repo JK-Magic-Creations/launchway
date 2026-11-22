@@ -500,6 +500,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/releases", MCP: "list_releases", CLI: "release list", Status: Equal},
 	{Route: "GET /api/v1/release-matrix", MCP: "get_release_matrix", CLI: "release matrix", Status: Equal},
 	{Route: "GET /api/v1/release-calendar", MCP: "get_release_calendar", CLI: "release calendar", Status: Equal},
+	{Route: "GET /api/v1/insights", MCP: "get_insights", CLI: "insights", Status: Equal},
 	{Route: "GET /api/v1/release-report", MCP: "get_release_report", CLI: "release report", Status: Equal},
 	{Route: "GET /api/v1/release-installation", MCP: "get_release_settings", CLI: "release installation", Status: Equal},
 	{Route: "PUT /api/v1/release-installation", MCP: "set_release_installation", CLI: "release installation", Status: Equal},

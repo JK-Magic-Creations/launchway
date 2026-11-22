@@ -207,6 +207,14 @@ owns may not appear in it.
 {{- $_ := set $runner "enabled" false -}}
 {{- $_ := set $extra "runner" $runner -}}
 {{- $config := dict "listen" .Values.config.listen "data" "/var/lib/launchway" -}}
+{{- /* Trace export is written only when it is on, so the file stays readable by the version before. */ -}}
+{{- if .Values.tracing.enabled -}}
+{{- $tr := dict "enabled" true "endpoint" .Values.tracing.endpoint -}}
+{{- if .Values.tracing.headers.existingSecret }}{{ $_ := set $tr "headers_env" "LAUNCHWAY_TRACING_HEADERS" }}{{ end -}}
+{{- if not (kindIs "invalid" .Values.tracing.sampleRatio) }}{{ $_ := set $tr "sample_ratio" (float64 .Values.tracing.sampleRatio) }}{{ end -}}
+{{- with .Values.tracing.viewerURLTemplate }}{{ $_ := set $tr "viewer_url_template" . }}{{ end -}}
+{{- $_ := set $config "observability" (dict "tracing" $tr) -}}
+{{- end -}}
 {{- /* Since schema 23 the file is bootstrap only: projects (and every other setting an
        administrator manages) are imported into the database once, by the first server that
        starts, and the file's copies are ignored after that. The chart writes them only when set. */ -}}
@@ -436,3 +444,20 @@ does not know the setting. */}}
 {{- if $p.policies }}{{ $_ := set $out "policies" $p.policies }}{{ end -}}
 {{- if $out }}{{ toYaml $out }}{{ end -}}
 {{- end -}}
+
+{{/* The environment that tells a server where to serve metrics: the pod's own address, on the metrics port.
+     It is the environment, not the configuration file, so that servers of the version before an upgrade can still read the file. */}}
+{{- define "launchway.metricsEnv" -}}
+{{- if .Values.metrics.enabled }}
+- name: LAUNCHWAY_METRICS_LISTEN
+  value: {{ printf "0.0.0.0:%d" (int .Values.metrics.port) | quote }}
+{{- if .Values.metrics.nameLabels }}
+- name: LAUNCHWAY_METRICS_NAME_LABELS
+  value: "true"
+{{- end }}
+{{- else }}
+- name: LAUNCHWAY_METRICS_ENABLED
+  value: "false"
+{{- end }}
+{{- include "launchway.shared.metricsEnv" . }}
+{{- end }}

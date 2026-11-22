@@ -77,6 +77,15 @@ spec:
     - ports:
         - { protocol: TCP, port: {{ .Values.ssh.port }} }
     {{- end }}
+    {{- with $np.metrics.from }}
+    {{- if $.Values.metrics.enabled }}
+    # Metrics: only the pods named in networkPolicy.metrics.from.
+    - from:
+        {{- toYaml . | nindent 8 }}
+      ports:
+        - { protocol: TCP, port: {{ $.Values.metrics.port }} }
+    {{- end }}
+    {{- end }}
   egress:
     {{- include "launchway.dnsEgress" . | nindent 4 }}
     # The servers themselves, on the server port: a project that watches a repository this installation
@@ -186,7 +195,16 @@ spec:
     matchLabels:
       {{- include "launchway.componentSelectorLabels" (list $ $comp) | nindent 6 }}
   policyTypes: [Ingress, Egress]
+  {{- if and $np.metrics.from $.Values.metrics.enabled }}
+  ingress:
+    # Metrics: only the pods named in networkPolicy.metrics.from.
+    - from:
+        {{- toYaml $np.metrics.from | nindent 8 }}
+      ports:
+        - { protocol: TCP, port: {{ $.Values.metrics.port }} }
+  {{- else }}
   ingress: []
+  {{- end }}
   egress:
     {{- include "launchway.dnsEgress" $ | nindent 4 }}
     - ports:

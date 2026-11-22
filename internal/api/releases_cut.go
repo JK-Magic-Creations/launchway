@@ -113,7 +113,7 @@ func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request, rel *engine.
 		http.ServeContent(w, r, "", time.Time{}, rs)
 		return
 	}
-	cw := &countingWriter{ResponseWriter: w, size: a.Size}
+	cw := &sizedWriter{ResponseWriter: w, size: a.Size}
 	http.ServeContent(cw, r, "", time.Time{}, rs)
 	if cw.complete() && r.Context().Err() == nil {
 		if err := s.Engine.CountReleaseDownload(rel.ID, a.Name); err != nil {

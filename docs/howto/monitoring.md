@@ -85,10 +85,12 @@ In the UI, **Stations** lists every Station with its executor, version and when 
 `GET /api/v1/runners` gives the same with `online` true or false (any signed-in person with a role
 may read it).
 
-## Prometheus metrics
+## Metrics and traces
 
-There is no `/metrics` endpoint: Launchway does not export Prometheus metrics yet. See the
-[roadmap](../roadmap-list.md). Until then, probe the endpoints above, read the logs, and query the API.
+Servers, Stations and the launch Station serve metrics in the text exposition format on a port of their
+own, and can send traces to a collector. See [Metrics and traces](metrics-and-traces.md) for how to scrape
+them, the [metrics reference](../reference/metrics.md) for every metric, and the Insights pages for charts
+that need no outside server.
 
 ## Logs
 

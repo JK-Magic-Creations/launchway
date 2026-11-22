@@ -1,3 +1,5 @@
+import { CopyValue } from "./Security";
+import type { RunTrace } from "../traceApi";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import type { ReactNode } from "react";
@@ -47,6 +49,7 @@ export interface RunHeaderProps {
 /** The top of the run page: the status and the sentence, a band of the numbers that matter, and under
  * Everything the run's every field. */
 export function RunHeader({ run, now, done, live, density, onDensity, select, waitingStep, verifyWaiting, deploying, deployingPhase, actions }: RunHeaderProps) {
+  const trace = run as typeof run & RunTrace;
   const libraries = run.graph.libraries ?? [];
   const overridden = libraries.filter((l) => l.override);
   const all = density === "everything";
@@ -72,6 +75,10 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
           </div>
           <p className="sentence" aria-live="polite">{runSentence(run, now)}{run.status === "failed" && <> <LearnLink to={EXPLAIN.stopped} /></>}</p>
           <RunEstimateLine run={run} now={now} />
+          {trace.trace_id && (
+            <p className="run-trace small">Trace <CopyValue value={trace.trace_id} label="the trace id" keep={32} />
+              {trace.trace_url && <> · <a href={trace.trace_url} target="_blank" rel="noreferrer">Open in the trace viewer<span className="visually-hidden"> (opens in a new tab)</span></a></>}</p>
+          )}
         </div>
         <div className="acts">
           <DensityToggle value={density} onChange={onDensity} />

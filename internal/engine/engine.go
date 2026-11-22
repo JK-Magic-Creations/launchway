@@ -32,6 +32,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/coverage"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/store"
 )
@@ -221,18 +222,20 @@ const (
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID   string            `json:"lease_id"`
-	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
-	Beat      pipeline.Duration `json:"beat,omitempty"` // heartbeat every; 0 (older server): a third of LeaseTTL
-	RunID     string            `json:"run_id"`
-	Project   string            `json:"project"`
-	RunNumber int               `json:"run_number"`
-	Pipeline  string            `json:"pipeline"`
-	StepID    string            `json:"step_id"`
-	Attempt   int               `json:"attempt"`
-	Image     string            `json:"image"`
-	Script    string            `json:"script"`
-	Env       map[string]string `json:"env"`
+	// Traceparent is the W3C trace context the step's Station continues (empty when tracing is off).
+	Traceparent string            `json:"traceparent,omitempty"`
+	LeaseID     string            `json:"lease_id"`
+	LeaseTTL    pipeline.Duration `json:"lease_ttl"`
+	Beat        pipeline.Duration `json:"beat,omitempty"` // heartbeat every; 0 (older server): a third of LeaseTTL
+	RunID       string            `json:"run_id"`
+	Project     string            `json:"project"`
+	RunNumber   int               `json:"run_number"`
+	Pipeline    string            `json:"pipeline"`
+	StepID      string            `json:"step_id"`
+	Attempt     int               `json:"attempt"`
+	Image       string            `json:"image"`
+	Script      string            `json:"script"`
+	Env         map[string]string `json:"env"`
 	// Secrets are references only. The runner looks the values up, adds
 	// them to the environment and masks them in the step's output.
 	Secrets map[string]pipeline.SecretRef `json:"secrets,omitempty"`
@@ -1280,6 +1283,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.recoverLanes()
 			e.recoverQueues()
 			e.dispatchLocks()
+			metrics.Worker("reaper")
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
 				e.forgetRunners()
@@ -1335,6 +1339,7 @@ func (e *Engine) reap() {
 			}
 			s := c.st.Steps[l.stepID]
 			if s != nil && s.LeaseID == l.id && s.Status.Active() {
+				metrics.HeartbeatsMissed.Inc()
 				c.lose(l.stepID, "the runner stopped responding")
 				c.advance()
 				c.after(func() { e.log.Warn("runner stopped responding", "run", l.runID, "step", l.stepID, "runner", l.runner) })
@@ -1369,6 +1374,8 @@ type cmd struct {
 	changed map[string]bool
 	queued  bool
 	hooks   []func()
+	// before is the run as it was before the command, for the metrics (metrics_obs.go).
+	before *runSnapshot
 	// others are the other runs this command changed (see alsoRun).
 	others []*cmd
 	// tests are the test results to store with this command's events, by
@@ -1513,6 +1520,7 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 		c.st = &RunState{vocab: e.schema}
 	}
 	c.schemaBefore = c.st.Schema
+	c.before = snapshotRun(c.st)
 	if err := needsNewer(c.st); err != nil {
 		return nil, err
 	}
@@ -1530,6 +1538,7 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	observeTransitions(c.before, c.st, c.now)
 	return c, nil
 }
 
@@ -1924,20 +1933,6 @@ func (e *Engine) publishChanges(runID string, steps map[string]bool) {
 	}
 }
 
-func (e *Engine) waitChan() <-chan struct{} {
-	e.wakeMu.Lock()
-	defer e.wakeMu.Unlock()
-	return e.wake
-}
-
-// notify wakes every Lease waiting on this server.
-func (e *Engine) notify() {
-	e.wakeMu.Lock()
-	close(e.wake)
-	e.wake = make(chan struct{})
-	e.wakeMu.Unlock()
-}
-
 // Runner rows are kept for the runners list and for run affinity (see Lease).
 const (
 	// RunnerOffline is how long a runner may go unseen before it is listed
@@ -2001,10 +1996,37 @@ func (e *Engine) forgetRunners() {
 	}
 }
 
+// validLabels keeps the labels that are valid, at most 32.
+func validLabels(l []string) []string {
+	var out []string
+	for _, s := range l {
+		if pipeline.ValidLabel(s) && len(out) < 2*pipeline.MaxRunnerLabels {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func nonEmpty(s, fallback string) string {
+	if strings.TrimSpace(s) == "" {
+		return fallback
+	}
+	return s
+}
+
+// touchRunner records that a runner is alive and what it says it is.
 func (e *Engine) touchRunner(r RunnerInfo) {
 	if r.ID == "" {
 		return
 	}
+	runnerPools.Store(r.ID, r.Pool)
 	unlock := e.writeLock()
 	defer unlock()
 	if e.knows(schemaIdentity) {
@@ -2053,29 +2075,4 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 		r.ID, r.Name, r.Executor, r.Version, e.now().UnixMilli()); err != nil {
 		e.log.Error("recording runner", "err", err)
 	}
-}
-
-// validLabels keeps the labels that are valid, at most 32.
-func validLabels(l []string) []string {
-	var out []string
-	for _, s := range l {
-		if pipeline.ValidLabel(s) && len(out) < 2*pipeline.MaxRunnerLabels {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
-func boolInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func nonEmpty(s, fallback string) string {
-	if strings.TrimSpace(s) == "" {
-		return fallback
-	}
-	return s
 }

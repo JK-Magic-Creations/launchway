@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"log/slog"
 	"sort"
 	"strings"
@@ -383,6 +384,7 @@ func (s *Service) Start(ctx context.Context) <-chan struct{} {
 		defer wg.Wait()
 		for {
 			s.tick(ctx, sem, &wg)
+			metrics.Worker("mirror")
 			select {
 			case <-ctx.Done():
 				return
@@ -468,10 +470,12 @@ func (s *Service) run(ctx context.Context, m Mirror) error {
 	if m.Direction == Push {
 		gen, refs, err := s.runPush(ctx, m)
 		s.finishPush(ctx, m, started, gen, refs, err)
+		countMirror(err)
 		return err
 	}
 	refs, err := s.runPull(ctx, m)
 	s.finishPull(ctx, m, started, refs, err)
+	countMirror(err)
 	return err
 }
 
@@ -510,3 +514,12 @@ func (s *Service) clean(m Mirror, msg string) string {
 }
 
 var errNotMirror = errors.New("this repository is not a mirror, so a sync will not write to it")
+
+// countMirror counts a finished synchronisation in the metrics.
+func countMirror(err error) {
+	if err != nil {
+		metrics.MirrorSyncs.Inc("error")
+		return
+	}
+	metrics.MirrorSyncs.Inc("ok")
+}

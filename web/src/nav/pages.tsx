@@ -26,6 +26,9 @@ const ProjectTestsPage = lz(() => import("../pages/ProjectTests"), "ProjectTests
 const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "ProjectSecurityPage");
 const ProjectStandardsPage = lz(() => import("../pages/Standards"), "ProjectStandardsPage");
 const SettingsStandardsPage = lz(() => import("../pages/Standards"), "SettingsStandardsPage");
+const FlightInsightsPage = lz(() => import("../pages/Insights"), "FlightInsightsPage");
+const SquadronInsightsPage = lz(() => import("../pages/Insights"), "SquadronInsightsPage");
+const InstallationInsightsPage = lz(() => import("../pages/Insights"), "InstallationInsightsPage");
 const ProjectCachesPage = lz(() => import("../pages/Caches"), "ProjectCachesPage");
 const ProjectConfigurationPage = lz(() => import("../pages/Configuration"), "ProjectConfigurationPage");
 const ConfigReportPage = lz(() => import("../pages/ConfigReport"), "ConfigReportPage");
@@ -110,6 +113,9 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/tests": return <ProjectTestsPage key={p.name} name={p.name} />;
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/standards": return <ProjectStandardsPage key={p.name} name={p.name} />;
+    case "/projects/:name/insights": return <FlightInsightsPage key={p.name} name={p.name} />;
+    case "/units/:name/insights": return <SquadronInsightsPage key={p.name} name={p.name} />;
+    case "/activity/insights": return <InstallationInsightsPage />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/configuration": return <ProjectConfigurationPage key={p.name} name={p.name} />;
     case "/runs/:id/configuration/:step": return <ConfigReportPage key={p.id + p.step} run={p.id} step={p.step} />;

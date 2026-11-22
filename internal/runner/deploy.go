@@ -16,6 +16,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	hs "github.com/jk-magic-creations/launchway/internal/verify/source"
 )
@@ -132,6 +133,7 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	stalled := make(chan error, 1)
 	gctx, stopGuard := context.WithCancel(ctx)
 	defer stopGuard()
+	d.vitals().publish(metrics.Default)
 	go d.vitals().guard(gctx, d.Log, stalled)
 	go d.vitals().report(gctx, d.Log, d.StatusEvery, "deploy runner")
 	allDone := make(chan struct{})

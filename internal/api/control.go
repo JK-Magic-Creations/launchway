@@ -201,6 +201,7 @@ func (s *Server) recordCommandOutcome(r *http.Request, runner engine.RunnerInfo,
 // presentRun redacts the run for sending, and makes a run's actions say what this person may do: without the
 // operator role none is available, and each says why and what would help.
 func (s *Server) presentRun(id *identity, d *engine.RunDetail) {
+	addTrace(d) // the run's trace id, when tracing is on (metrics_mw.go)
 	d.Source = redactSource(d.Source)
 	s.presentDeployments(id, d.Deployments)
 	if s.authorize(id, auth.Operate, d.Project) {

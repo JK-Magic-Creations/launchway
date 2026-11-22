@@ -295,6 +295,7 @@ export default defineConfig({
           { text: 'Backup, restore, upgrade', link: '/howto/backup-restore-upgrade' },
           { text: 'Self-deploy', link: '/howto/self-deploy' },
           { text: 'Monitor Launchway', link: '/howto/monitoring' },
+          { text: 'Metrics and traces', link: '/howto/metrics-and-traces' },
           { text: 'Troubleshooting', link: '/howto/troubleshooting' },
         ],
       },
@@ -324,6 +325,7 @@ export default defineConfig({
           { text: 'Roles and permissions', link: '/reference/roles' },
           { text: 'Policy rules', link: '/reference/policy-rules' },
           { text: 'Environment variables', link: '/reference/environment-variables' },
+          { text: 'Metrics', link: '/reference/metrics' },
         ],
       },
       {
