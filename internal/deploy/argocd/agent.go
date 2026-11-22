@@ -387,13 +387,9 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 	// its values), and a refresh asked after the first only would leave the last unseen: the application is asked (hard)
 	// for the LAST commit, and asked again with a growing pause, up to a bound, while it still reports a revision that
 	// does not hold that commit.
-	refreshKey, saidRefresh := "sync:"+d.Deployment+":"+commit, false
-	if t.asksRefresh(d.Sync) {
-		if err := cl.Refresh(ctx, d.Application); err != nil {
-			log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll", d.Application, err)
-		}
-	}
-	defer a.refresh.forget(refreshKey)
+	ra := &reask{a: a, cl: cl, ok: t.asksRefresh(d.Sync), key: "sync:" + d.Deployment + ":" + commit, app: d.Application, commit: commit, log: log}
+	defer a.refresh.forget(ra.key)
+	ra.first(ctx)
 	rc := a.Config.Repos[d.Repo]
 	spec := deploy.Spec{Health: "application"}
 	automated := deploy.ReduceApplication(app, spec, rc.ArgoCDURL, nil).Automated
@@ -436,9 +432,7 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 			return "", errors.New(st.SourceError)
 		}
 		seen := st.Contains != nil && *st.Contains
-		if !seen && t.asksRefresh(d.Sync) {
-			saidRefresh = a.askAgain(ctx, cl, refreshKey, d.Application, commit, saidRefresh, log)
-		}
+		ra.again(ctx, seen)
 		busy := st.Operation != nil && (st.Operation.Phase == "Running" || st.Operation.Phase == "Terminating")
 		if seen && st.Sync == "Synced" && len(d.Sync.Resources) == 0 && !busy {
 			log("%s is already synced at %s", d.Application, short(st.Revision))
@@ -858,18 +852,40 @@ func (a *Agent) revertPin(ctx context.Context, job *engine.Job, valueFiles []str
 	return res.Commit, nil
 }
 
-// askAgain asks for a hard refresh of the application while it has not shown the commit (with the pause and bound of
-// refresh.go) and says, once, what it did or why it could not. It returns whether it has said.
-func (a *Agent) askAgain(ctx context.Context, cl *Cluster, key, app, commit string, said bool, log func(string, ...any)) bool {
-	n, denied, err := a.refresh.try(ctx, cl, key, app, a.refreshFirst())
-	switch {
-	case said:
-	case denied || err != nil:
-		log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll. To ask now: %s", app, errors.Join(err), howToRefresh(app))
-		return true
-	case n == 1:
-		log("Asked Argo CD to re-read the repository for %s; it is asked again, with a growing pause, until it shows commit %s", app, short(commit))
-		return true
+// reask is what requestSync asks of the controller about the commit it wrote: one normal refresh at once, then,
+// while the application has not shown the commit, a hard one with the pause and bound of refresh.go, saying once
+// what it did or why it could not.
+type reask struct {
+	a        *Agent
+	cl       *Cluster
+	ok       bool // sync.refresh allows asking and the credentials may
+	key, app string
+	commit   string
+	said     bool
+	log      func(string, ...any)
+}
+
+func (r *reask) first(ctx context.Context) {
+	if !r.ok {
+		return
 	}
-	return said
+	if err := r.cl.Refresh(ctx, r.app); err != nil {
+		r.log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll", r.app, err)
+	}
+}
+
+func (r *reask) again(ctx context.Context, seen bool) {
+	if seen || !r.ok {
+		return
+	}
+	n, denied, err := r.a.refresh.try(ctx, r.cl, r.key, r.app, r.a.refreshFirst())
+	switch {
+	case r.said:
+	case denied || err != nil:
+		r.said = true
+		r.log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll. To ask now: %s", r.app, errors.Join(err), howToRefresh(r.app))
+	case n == 1:
+		r.said = true
+		r.log("Asked Argo CD to re-read the repository for %s; it is asked again, with a growing pause, until it shows commit %s", r.app, short(r.commit))
+	}
 }

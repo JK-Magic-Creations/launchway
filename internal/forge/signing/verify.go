@@ -136,32 +136,11 @@ func (v *Verifier) Verify(ctx context.Context, sha, kind string, raw []byte, pus
 			key, found, kerr = v.Dir.KeyByFingerprint(ctx, c.Fingerprint)
 		}
 	case "openpgp":
-		// The signature does not carry its key: the registered key is found by the fingerprint the signature
-		// names, and the check is made against it (and not cached, because the answer depends on the key).
-		c = Cached{Object: sha, SigType: "openpgp"}
-		sig, perr := parsePGPSignature(p.Signature)
-		switch {
-		case perr != nil:
-			c.Reason = perr.Error()
-		case sig.fingerprint == "":
-			res.State = UnknownKey
-			res.Explanation = "This " + kind + " is signed with OpenPGP, but the signature does not name its key by fingerprint, so Launchway cannot tell which registered key to check it against."
+		pv := v.checkOpenPGP(ctx, sha, kind, p, &res)
+		if pv.done {
 			return res
-		default:
-			c.Fingerprint = sig.fingerprint
-			key, found, kerr = v.Dir.KeyByFingerprint(ctx, sig.fingerprint)
-			if found && kerr == nil {
-				st, cerr := checkPGP(key.PublicKey, p.Signature, p.Payload, sig.at)
-				switch st {
-				case Verified:
-					c.CryptoOK = true
-				case KeyRevoked, KeyExpired:
-					c.CryptoOK, native = true, st
-				default:
-					c.Reason = cerr.Error()
-				}
-			}
 		}
+		c, key, found, kerr, native = pv.c, pv.key, pv.found, pv.kerr, pv.native
 	default:
 		res.State = Unsupported
 		res.Explanation = fmt.Sprintf("This %s is signed with %s, which this Launchway does not check (SSH and OpenPGP signatures are checked). It is not counted as verified.", kind, sigLabel(p.SigType))
@@ -257,4 +236,45 @@ func hasEmail(list []string, e string) bool {
 		}
 	}
 	return false
+}
+
+// checkOpenPGP judges an OpenPGP signature: the signature does not carry its key, so the registered key is found by the
+// fingerprint the signature names, and the check is made against it (and not cached, because the answer depends on the
+// key). done is true when the verdict is already in res.
+func (v *Verifier) checkOpenPGP(ctx context.Context, sha, kind string, p Parsed, res *Result) (out pgpVerdict) {
+	c, key, found, kerr, native := Cached{Object: sha, SigType: "openpgp"}, Key{}, false, error(nil), State("")
+	sig, perr := parsePGPSignature(p.Signature)
+	switch {
+	case perr != nil:
+		c.Reason = perr.Error()
+	case sig.fingerprint == "":
+		res.State = UnknownKey
+		res.Explanation = "This " + kind + " is signed with OpenPGP, but the signature does not name its key by fingerprint, so Launchway cannot tell which registered key to check it against."
+		return pgpVerdict{c: c, done: true}
+	default:
+		c.Fingerprint = sig.fingerprint
+		key, found, kerr = v.Dir.KeyByFingerprint(ctx, sig.fingerprint)
+		if found && kerr == nil {
+			st, cerr := checkPGP(key.PublicKey, p.Signature, p.Payload, sig.at)
+			switch st {
+			case Verified:
+				c.CryptoOK = true
+			case KeyRevoked, KeyExpired:
+				c.CryptoOK, native = true, st
+			default:
+				c.Reason = cerr.Error()
+			}
+		}
+	}
+	return pgpVerdict{c: c, key: key, found: found, kerr: kerr, native: native}
+}
+
+// pgpVerdict is what checkOpenPGP found out.
+type pgpVerdict struct {
+	c      Cached
+	key    Key
+	found  bool
+	kerr   error
+	native State
+	done   bool // the verdict is already in the result
 }

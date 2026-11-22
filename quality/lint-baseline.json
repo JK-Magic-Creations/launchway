@@ -341,7 +341,7 @@
     {
       "file": "internal/deploy/argocd/agent.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 47 of func `(*Agent).requestSync` is high (\u003e 30)",
+      "text": "cyclomatic complexity 45 of func `(*Agent).requestSync` is high (\u003e 30)",
       "count": 1
     },
     {
