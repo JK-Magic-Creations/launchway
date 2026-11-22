@@ -1,0 +1,14 @@
+# The secret scan, as a custom step written against the step contract. It does what
+# scripts/secrets.sh does (the same patterns, the same files, passes or fails the same way) and also
+# reports each hit as a finding, which the Security tab shows. Use: uses: launchway/scan-secrets
+step: scan-secrets
+contract: 1
+description: "Look for private keys and provider tokens committed to the repository (a safety net, not a full scanner)"
+toolchain: sh
+command: sh main.sh
+inputs:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository" }
+outputs:
+  files: { type: number, description: How many files were looked at }
+  hits: { type: number, description: How many lines look like secrets }
+# It reads the repository and writes nothing but its own report; it needs no network.

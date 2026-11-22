@@ -201,6 +201,8 @@ Generated from the route table. "yes" means a person with that role on the Fligh
 | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream` | run-operator | no | yes | yes | as the logs |
 | `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` | run-operator | no | yes | yes | the operator role on the Airfield; a reason is required |
 | `GET /api/v1/libraries` | any-viewer | yes | yes | yes | the role on any Flight |
+| `GET /api/v1/libraries/{library}/steps` | any-viewer | yes | yes | yes | the role on any Flight |
+| `GET /api/v1/libraries/{library}/steps/{step}` | any-viewer | yes | yes | yes | the role on any Flight |
 | `GET /api/v1/libraries/{library}/templates` | any-viewer | yes | yes | yes | the role on any Flight |
 | `GET /api/v1/runs/{id}/verifications` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/verifications` | signed-in | yes | yes | yes |  |

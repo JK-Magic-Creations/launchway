@@ -193,6 +193,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `--secrets-config` | none | A YAML file of secret stores. An `env` store, which reads your own environment, is always added. |
 | `--library` | none | `NAME=DIRECTORY`: read the templates of the library the pipeline calls NAME from a directory (the root, which holds `templates/`), as `launchway validate --library` does; repeat for each library. The directory is committed to a repository of its own under a temporary directory, which is what the steps fetch the library's scripts from. The starters that ship with Launchway (`launchway/...`) need none. |
 | `--images-config` | none | A file with an `images:` section (builders and Depots (registries)), as in a Station's configuration. Required if a step builds an image. |
+| `--allow-unsandboxed-steps` | off | Let the host executor run [custom steps](step-manifest.md) although it cannot enforce their sandbox (no network, a read-only workspace). Without it a custom step needs a container executor. `uses: ./steps/NAME` reads the steps of the current directory. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 
 The run is recorded as Flight `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.
@@ -1488,6 +1489,36 @@ launchway templates list [LIBRARY] [--version V] [--json]
 Without a library, the libraries the server lists; with one, its templates and each parameter's type,
 default, and `[names a secret]` when a step takes a secret reference's store, key or field from it. The
 same data is `GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.
+
+### launchway steps
+
+```text
+launchway steps list LIBRARY [--version V] [--json]
+launchway steps get LIBRARY STEP [--version V] [--json]
+```
+
+The [custom steps](step-manifest.md) of a library: what each takes and gives, with types, and what it may
+do (network hosts, secrets, writable paths). `get` is the step's page: an example, its tagged versions with
+what changed in each, the Flights that use it, and the update on offer for each, and whether the newer
+version asks for more permissions. The same data is `GET /api/v1/libraries/{library}/steps[/{step}]` and the
+MCP tools `list_steps` and `get_step`.
+
+### launchway step
+
+```text
+launchway step new --lang go|python|ts|sh [--name NAME] [--dir REPOSITORY]
+launchway step test [DIR] [--with NAME=VALUE]... [--inputs FILE] [--secret NAME=VALUE]... [--executor auto|podman|docker|host] [--json]
+launchway step validate [DIR...] [--against GITREF]
+```
+
+Writing a custom step needs no server. `new` scaffolds `steps/NAME` with a manifest, the kit for the
+language, code, a test and a README. `test` runs the step as a Station would: in its container, with no
+network, a read-only workspace and only the secrets it names, when Podman or Docker is installed (else on
+this machine, which cannot enforce the sandbox, and it says so), then shows the outputs, summary and notes,
+and checks the step against the [step contract](step-contract.md); the exit code is 0 when it passed and
+kept to the contract. `validate` checks manifests and prints what each step may do; with `--against` it
+lists what changed in inputs, outputs and permissions since a tag, branch or commit, and marks changes that
+widen what the step may do. [Write your own step](../guide/write-your-own-step.md) walks through it.
 
 ## launchway work
 

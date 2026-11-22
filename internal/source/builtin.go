@@ -27,10 +27,20 @@ func isBuiltin(l *pipeline.Library) bool {
 
 // builtinTemplate reads a template of the built-in library.
 func builtinTemplate(name string) ([]byte, error) {
-	if data, ok := starters.Template(name); ok {
-		return data, nil
-	}
-	return nil, pipeline.ErrNoTemplate
+	return pipeline.TemplateOrStep(func(p string) ([]byte, error) {
+		if tn, ok := strings.CutSuffix(strings.TrimPrefix(p, "templates/"), ".yaml"); ok && strings.HasPrefix(p, "templates/") {
+			if data, ok := starters.Template(tn); ok {
+				return data, nil
+			}
+			return nil, pipeline.ErrNoTemplate
+		}
+		if sn, ok := strings.CutSuffix(strings.TrimPrefix(p, "steps/"), "/step.yaml"); ok {
+			if data, ok := starters.Step(sn); ok {
+				return data, nil
+			}
+		}
+		return nil, pipeline.ErrNoTemplate
+	}, name, false)
 }
 
 // builtinProblem is a problem on one line of the pipeline file.
@@ -110,13 +120,23 @@ func builtinTemplates() *LibraryTemplates {
 // with Launchway, and says where a runner gets them: for a run on one's own
 // machine, with no server and no Git library.
 func ExpandBound(p *pipeline.Pipeline) (*pipeline.Pipeline, []engine.LibrarySource, error) {
+	return ExpandBoundIn(p, "")
+}
+
+// ExpandBoundIn is ExpandBound that also reads the custom steps of the directory the pipeline is run in
+// (uses: ./steps/<name>); dir "" reads none.
+func ExpandBoundIn(p *pipeline.Pipeline, dir string) (*pipeline.Pipeline, []engine.LibrarySource, error) {
 	for _, l := range p.Libraries {
 		if !isBuiltin(l) {
 			return nil, nil, fmt.Errorf("the pipeline uses the library %s, which comes from a server: run it there (launchway run reads only the starters that ship with Launchway)", l.Name)
 		}
 		l.Commit, l.RefKind = starters.Commit(), "builtin"
 	}
-	out, _, err := pipeline.ExpandWith(p, func(_ *pipeline.Library, name string) ([]byte, error) { return builtinTemplate(name) }, nil)
+	var self *pipeline.SelfSource
+	if dir != "" {
+		self = &pipeline.SelfSource{Library: &pipeline.Library{Name: pipeline.SelfLibrary, Version: pipeline.OfflineCommit, Commit: pipeline.OfflineCommit, RefKind: "directory"}, Read: pipeline.DirReader(dir)}
+	}
+	out, _, err := pipeline.ExpandWithSelf(p, func(_ *pipeline.Library, name string) ([]byte, error) { return builtinTemplate(name) }, nil, self)
 	if err != nil {
 		return nil, nil, plainBuiltin(err)
 	}
@@ -198,7 +218,10 @@ func writeStarters(dir string) error {
 // not the one that ships with Launchway from directories (--library NAME=DIRECTORY, as validate takes it). A
 // runner fetches a library from a Git repository at a commit, so each directory is copied into a repository of
 // its own under work and committed; the run records that commit and URL. Nothing is fetched from a server.
-func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pipeline.Pipeline, []engine.LibrarySource, error) {
+//
+// selfDir is the directory the pipeline is run in, where `uses: ./steps/<name>` reads the repository's own custom
+// steps; "" reads none.
+func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work, selfDir string) (*pipeline.Pipeline, []engine.LibrarySource, error) {
 	var problems pipeline.Problems
 	loaders := map[string]string{} // library → its copy
 	for _, l := range p.Libraries {
@@ -215,7 +238,7 @@ func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pi
 				l.Name, l.Repo, l.Wanted(), l.Name)})
 			continue
 		}
-		if st, err := os.Stat(filepath.Join(dir, "templates")); err != nil || !st.IsDir() {
+		if st, err := os.Stat(filepath.Join(dir, "templates")); (err != nil || !st.IsDir()) && !dirExists(filepath.Join(dir, "steps")) {
 			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at, Message: fmt.Sprintf(
 				"%s has no templates directory: --library %s=DIRECTORY takes the root of a library, the directory that holds templates/", dir, l.Name)})
 			continue
@@ -237,17 +260,17 @@ func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pi
 	if len(problems) > 0 {
 		return nil, nil, problems
 	}
-	out, _, err := pipeline.ExpandWith(p, func(l *pipeline.Library, name string) ([]byte, error) {
+	var self *pipeline.SelfSource
+	if selfDir != "" {
+		self = &pipeline.SelfSource{Library: &pipeline.Library{Name: pipeline.SelfLibrary, Version: pipeline.OfflineCommit, Commit: pipeline.OfflineCommit, RefKind: "directory"}, Read: pipeline.DirReader(selfDir)}
+	}
+	out, _, err := pipeline.ExpandWithSelf(p, func(l *pipeline.Library, name string) ([]byte, error) {
 		repo, ok := loaders[l.Name]
 		if !ok {
 			return builtinTemplate(name)
 		}
-		b, err := os.ReadFile(filepath.Join(repo, pipeline.TemplatePath(name)))
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, pipeline.ErrNoTemplate
-		}
-		return b, err
-	}, nil)
+		return pipeline.TemplateOrStep(pipeline.DirReader(repo), name, false)
+	}, nil, self)
 	if err != nil {
 		return nil, nil, plainBuiltin(err)
 	}
@@ -260,6 +283,11 @@ func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pi
 		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: starters.URL, Commit: l.Commit})
 	}
 	return out, libs, nil
+}
+
+func dirExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
 }
 
 // commitDirectory copies a directory into a new Git repository and commits it, and returns the commit.

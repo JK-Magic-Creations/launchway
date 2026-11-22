@@ -213,13 +213,6 @@ type RunnerInfo struct {
 // without retries, saying why. Older servers read it as failed.
 const OutcomeRefused = "refused"
 
-// How a runner authenticated (RunnerInfo.Auth).
-const (
-	AuthIdentity  = "identity" // an enrolled runner's access token
-	AuthShared    = "shared"   // the shared runner token
-	AuthPoolToken = "pool"     // a deploy pool's token
-)
-
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
 	// Traceparent is the W3C trace context the step's Station continues (empty when tracing is off).
@@ -286,8 +279,9 @@ type Job struct {
 	// Verify, for a verify step, is the verification a deploy runner reads
 	// (schema 19); AI, for an ai step, the question a runner with FeatureAI
 	// asks.
-	Verify *VerifyJob `json:"verify,omitempty"`
-	AI     *AIJob     `json:"ai,omitempty"`
+	Verify *VerifyJob           `json:"verify,omitempty"`
+	AI     *AIJob               `json:"ai,omitempty"`
+	Custom *pipeline.CustomStep `json:"custom,omitempty"` // a step from a custom step: who it is, what it may do (schema 63)
 }
 
 // JobReports is what a runner collects after a step.
@@ -346,6 +340,7 @@ type Result struct {
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
 	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
+	Notes  []StepNote    `json:"notes,omitempty"`  // the summary and annotations a custom step wrote (schema 63)
 	Usage  *StepUsage    `json:"usage,omitempty"`  // what the attempt used (schema 54)
 }
 
@@ -1165,6 +1160,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			return err
 		}
 		p.Caches = c.keepCacheResults(c.st.Pipeline.Step(l.stepID), res.Caches)
+		p.Notes = c.stepNotes(l.stepID, res.Notes)
 		quarantineFlip(c.e, &res, &p)
 		coverageFail, err := c.finish18(l, res, &p, prep18)
 		if err != nil {
@@ -1696,6 +1692,7 @@ func (c *cmd) persist() error {
 		{schemaVerify, c.persistVerify},
 		{schemaPools, c.persistPools},
 		{schemaRollback, c.persistRollback},
+		{schemaCustomSteps, c.persistCustomSteps},
 	} {
 		if !c.e.knows(w.schema) {
 			continue

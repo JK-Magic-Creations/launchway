@@ -52,6 +52,9 @@ func (e *Engine) checkSchemas(nr *NewRun) error {
 			return fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
 		}
 	}
+	if nr.Pipeline.UsesSchemaCustomSteps() && !e.knows(schemaCustomSteps) {
+		return fmt.Errorf("%w: this server does not know custom steps (schema %d)", ErrConflict, schemaCustomSteps)
+	}
 	if nr.Pipeline.UsesSchemaFlow() && !e.knows(schemaFlow) {
 		return fmt.Errorf("%w: this server does not know flow control keys (when.output, on_failure, retry waits, timeout, lane or into, schema %d)", ErrConflict, schemaFlow)
 	}

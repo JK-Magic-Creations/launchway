@@ -320,7 +320,7 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 			return nil, nil, nil, fmt.Errorf("%w: the pipeline uses no library called %s, so it cannot be overridden", engine.ErrInvalid, name)
 		}
 	}
-	if len(pl.Libraries) == 0 {
+	if len(pl.Libraries) == 0 && !pipelineUsesSelf(pl) {
 		return pl, nil, nil, nil
 	}
 	var problems pipeline.Problems
@@ -362,12 +362,12 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 	if len(problems) > 0 {
 		return nil, nil, nil, problems
 	}
-	out, used, err := pipeline.ExpandWith(pl, func(l *pipeline.Library, name string) ([]byte, error) {
+	out, used, err := pipeline.ExpandWithSelf(pl, func(l *pipeline.Library, name string) ([]byte, error) {
 		if isBuiltin(l) {
 			return builtinTemplate(name)
 		}
 		return m.c().libraries[l.Repo].templateAt(ctx, l.Commit, name)
-	}, vars)
+	}, vars, m.selfSource(ctx))
 	if err != nil {
 		return nil, nil, nil, plainBuiltin(err)
 	}
@@ -433,14 +433,9 @@ func (lib *project) resolveVersion(ctx context.Context, version string, fresh ti
 	return "", "", fmt.Errorf("%w: no tag, branch or commit %q", engine.ErrNotFound, version)
 }
 
-// templateAt reads a template from the library's mirror at a commit.
-func (lib *project) templateAt(ctx context.Context, sha, name string) ([]byte, error) {
-	if !pipeline.IsCommitID(sha) || !pipeline.ValidTemplateName(name) {
-		return nil, pipeline.ErrNoTemplate
-	}
-	lib.mu.Lock()
-	defer lib.mu.Unlock()
-	data, err := gitOut(ctx, lib.dir, "show", sha+":"+pipeline.TemplatePath(name))
+// fileAt reads a file of the library's mirror at a commit, or pipeline.ErrNoTemplate.
+func (p *project) showAt(ctx context.Context, sha, path string) ([]byte, error) {
+	data, err := gitOut(ctx, p.dir, "show", sha+":"+path)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") || strings.Contains(err.Error(), "exists on disk, but not in") {
 			return nil, pipeline.ErrNoTemplate
@@ -448,6 +443,18 @@ func (lib *project) templateAt(ctx context.Context, sha, name string) ([]byte, e
 		return nil, errors.New(redact.URLs(err.Error()))
 	}
 	return []byte(data), nil
+}
+
+// templateAt reads a template from the library's mirror at a commit, or, when
+// the library has none of that name, the template made from the custom step
+// of that name (steps/<name>/step.yaml).
+func (lib *project) templateAt(ctx context.Context, sha, name string) ([]byte, error) {
+	if !pipeline.IsCommitID(sha) || !pipeline.ValidTemplateName(name) {
+		return nil, pipeline.ErrNoTemplate
+	}
+	lib.mu.Lock()
+	defer lib.mu.Unlock()
+	return pipeline.TemplateOrStep(func(path string) ([]byte, error) { return lib.showAt(ctx, sha, path) }, name, false)
 }
 
 // LibraryStatus is a library as shown in the UI.

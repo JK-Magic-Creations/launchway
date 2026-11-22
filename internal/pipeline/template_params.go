@@ -51,6 +51,9 @@ func (ps *parser) parseLibraries(n *yaml.Node, p *Pipeline) {
 		if !libNameRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid library name: use lower-case letters, digits and hyphens, starting with a letter (at most 40)", k.Value)
 		}
+		if k.Value == SelfLibrary {
+			ps.add(k, at, "the name %q is kept for the steps of the repository the pipeline is in (uses: ./steps/name); call the library something else", SelfLibrary)
+		}
 		l := &Library{Name: k.Value, Line: k.Line}
 		ps.eachKey(v, at, []string{"repo", "version"}, func(k2, v2 *yaml.Node) {
 			switch k2.Value {
@@ -118,6 +121,12 @@ func (ps *parser) parseUseStep(at string, s *Step, keys map[string]*yaml.Node) {
 		}
 	}
 	lib, name, cross := strings.Cut(s.Uses, "/")
+	if _, stepName, self := SplitUses(s.Uses); self && ps.tmpl == nil {
+		if !ValidStepName(stepName) {
+			ps.add(keys["uses"], at+".uses", "%q is not a step name; write uses: ./steps/<name>, the directory of the step", clipText(stepName, 60))
+		}
+		return
+	}
 	switch {
 	case ps.tmpl != nil && cross:
 		if !libNameRe.MatchString(lib) || !templateNameRe.MatchString(name) {
@@ -356,6 +365,9 @@ func hasKey(m *yaml.Node, key string) bool {
 func (ps *parser) checkUses(p *Pipeline) {
 	for _, s := range p.Steps {
 		if !s.IsUse() || ps.tmpl != nil {
+			continue
+		}
+		if _, _, self := SplitUses(s.Uses); self {
 			continue
 		}
 		lib, _, ok := strings.Cut(s.Uses, "/")

@@ -122,6 +122,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	if !r.Info.Has(engine.FeatureCoverage) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCoverage)
 	}
+	if !r.Info.Has(engine.FeatureCustomSteps) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCustomSteps)
+	}
 	if !r.Info.Has(engine.FeatureCache) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCache)
 	}
@@ -585,6 +588,10 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
+	cust, failed := r.startCustom(job, ws, env, values, sys)
+	if failed != nil {
+		return *failed, nil
+	}
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
 	sys("Image %s", job.Image)
@@ -614,7 +621,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	}
 	spec.Exclude = job.WorkspaceExclude
 	caches := r.newCacheRun(job, spec, sys)
-	collect := r.collector(job, spec, sys, caches)
+	collect := cust.arm(&spec, r.collector(job, spec, sys, caches))
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
 		return *failed, nil
 	}
@@ -661,9 +668,13 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return res, collect
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
+	outputs, notes, customWhy, code := cust.settle(ctx, r, spec, code, mask, sys, outputs)
 	ec := code
 	if code != 0 {
 		why := fmt.Sprintf("exit code %d", code)
+		if customWhy != "" {
+			why = customWhy
+		}
 		if x, ok := r.Exec.(executor.ExitExplainer); ok {
 			if note := x.ExplainExit(ctx, spec, code); note != "" {
 				why = note
@@ -674,14 +685,14 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		if line := usageLine(spec.Usage); line != "" {
 			sys("%s", line)
 		}
-		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs,
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs, Notes: notes,
 			Excerpt: tail.excerpt(), Usage: usageOf(spec.Usage)}, collect
 	}
 	sys("Succeeded in %s", took)
 	if line := usageLine(spec.Usage); line != "" {
 		sys("%s", line)
 	}
-	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Usage: usageOf(spec.Usage)}, collect
+	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Notes: notes, Usage: usageOf(spec.Usage)}, collect
 }
 
 // Limits on a failed step's excerpt, as sent to the server.

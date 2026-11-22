@@ -701,6 +701,11 @@ type RunnerSettings struct {
 	// server's registry; their keys come from this runner's secret stores.
 	// Unset or false: it calls none.
 	AI *bool `yaml:"ai"`
+	// AllowUnsandboxedSteps lets a runner with the host executor run custom
+	// steps although it cannot enforce their sandbox (no network, a read-only
+	// workspace). Off: such steps are refused. Only for a machine that runs
+	// code its owner trusts.
+	AllowUnsandboxedSteps bool `yaml:"allow_unsandboxed_steps"`
 }
 
 // AIEnabled reports whether the runner calls models.

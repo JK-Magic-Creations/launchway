@@ -30,7 +30,7 @@ func TestExpandLocalReadsALibraryDirectory(t *testing.T) {
 	p, err := pipeline.Parse([]byte("pipeline: p\nlibraries:\n  mine: { repo: ci, version: v1 }\nsteps:\n  a:\n    uses: mine/hello\n"))
 	must(err)
 	work := t.TempDir()
-	out, libs, err := ExpandLocal(p, map[string]string{"mine": lib}, work)
+	out, libs, err := ExpandLocal(p, map[string]string{"mine": lib}, work, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,16 +45,16 @@ func TestExpandLocalReadsALibraryDirectory(t *testing.T) {
 	}
 	// A library with no directory is refused with the flag to add; a directory without templates, too.
 	p, _ = pipeline.Parse([]byte("pipeline: p\nlibraries:\n  mine: { repo: ci, version: v1 }\nsteps:\n  a:\n    uses: mine/hello\n"))
-	if _, _, err := ExpandLocal(p, nil, work); err == nil || !strings.Contains(err.Error(), "--library mine=DIRECTORY") {
+	if _, _, err := ExpandLocal(p, nil, work, ""); err == nil || !strings.Contains(err.Error(), "--library mine=DIRECTORY") {
 		t.Errorf("%v", err)
 	}
 	p, _ = pipeline.Parse([]byte("pipeline: p\nlibraries:\n  mine: { repo: ci, version: v1 }\nsteps:\n  a:\n    uses: mine/hello\n"))
-	if _, _, err := ExpandLocal(p, map[string]string{"mine": t.TempDir()}, work); err == nil || !strings.Contains(err.Error(), "no templates directory") {
+	if _, _, err := ExpandLocal(p, map[string]string{"mine": t.TempDir()}, work, ""); err == nil || !strings.Contains(err.Error(), "no templates directory") {
 		t.Errorf("%v", err)
 	}
 	// The starters need no directory.
 	p, _ = pipeline.Parse([]byte("pipeline: p\nsteps:\n  ci:\n    uses: launchway/go-check\n"))
-	if _, libs, err := ExpandLocal(p, nil, work); err != nil || len(libs) != 1 || libs[0].Name != "launchway" {
+	if _, libs, err := ExpandLocal(p, nil, work, ""); err != nil || len(libs) != 1 || libs[0].Name != "launchway" {
 		t.Errorf("%v %+v", err, libs)
 	}
 }

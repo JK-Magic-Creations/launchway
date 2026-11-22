@@ -393,6 +393,8 @@ func (x *expander) adaptStages(sc *scope, a *Adaptation, t *Template, at string,
 			unknown(set.Line, "stages", id)
 		case (set.Resources != nil || set.ServicesSet || set.ServicesAll) && s.ResourceKind() == "":
 			x.problem(sc, set.Line, 0, at+".stages."+id, "the stage %s of %s runs no script, so it takes no resources or services", id, t.Name)
+		case s.Custom != nil && (set.ServicesSet || set.ServicesAll):
+			x.problem(sc, set.Line, 0, at+".stages."+id+".services", "a custom step takes no services: its manifest has none, and it runs alone in its sandbox. A step that needs a database is a stage of a template")
 		case set.Resources != nil || set.ServicesSet || set.ServicesAll:
 			c := *s
 			if set.Resources != nil {

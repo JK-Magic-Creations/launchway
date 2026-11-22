@@ -25,7 +25,8 @@ func expandRunLibraries(p *pipeline.Pipeline, path string, dirs map[string]strin
 		return nil, nil, none, err
 	}
 	cleanup := func() { os.RemoveAll(work) }
-	out, libs, err := source.ExpandLocal(p, dirs, work)
+	here, _ := os.Getwd() // the repository's own custom steps (uses: ./steps/<name>)
+	out, libs, err := source.ExpandLocal(p, dirs, work, here)
 	if err != nil {
 		cleanup()
 		return nil, nil, none, explainProblems(path, err)

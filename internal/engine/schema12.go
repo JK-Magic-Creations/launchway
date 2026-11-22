@@ -59,6 +59,11 @@ func (c *cmd) runnerCan(r RunnerInfo, stepID string) bool {
 	if c.e.knows(schemaReports) && needsCoverage(def) && !r.Has(FeatureCoverage) {
 		return false
 	}
+	if def != nil && def.Custom != nil && !r.Has(FeatureCustomSteps) {
+		// A runner that does not speak the step contract would run the code with no
+		// inputs and no sandbox, and not say so.
+		return false
+	}
 	if c.e.knows(schemaCache) && needsCache(def) && !r.Has(FeatureCache) {
 		// A runner that does not know caches would run the step without
 		// restoring or saving anything, and not say so.

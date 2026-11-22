@@ -1,0 +1,18 @@
+# The Go licence listing, as a custom step written in Go against the step contract. It does what
+# scripts/go/licenses.sh does: lists the licences of the dependencies with go-licenses, and fails only
+# when one is of a type on license_deny. Use: uses: launchway/go-licenses
+step: go-licenses
+contract: 1
+description: List the licenses of a Go module's dependencies; fail only for the types on license_deny
+toolchain: go@1.25
+command: go run main.go lwstep.go
+inputs:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository" }
+  license_deny: { type: list, default: [], description: "go-licenses license types that fail the step (forbidden, restricted, ...); empty only lists them" }
+outputs:
+  checked: { type: boolean, description: Whether the deny list was applied }
+permissions:
+  # go-licenses is installed and the module's dependencies are read through the Go module proxy.
+  network: [proxy.golang.org, sum.golang.org, "*.golang.org", github.com, "*.githubusercontent.com"]
+  # The package caches of the starters.
+  write: [.cache]

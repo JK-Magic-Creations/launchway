@@ -118,6 +118,8 @@ Usage:
   launchway attention [--json]                          what needs you: the Tower's rule, for a script or an agent
   launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
+  launchway steps    list|get                   the custom steps of the server's libraries: what each takes, gives and may do, and who uses it
+  launchway step     new|test|validate          custom steps: write one in Go, Python, TypeScript or shell, run it as a Station would, check it
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -167,6 +169,8 @@ var commands = map[string]func([]string) error{
 	"bases":            cmdBases,
 	"install":          cmdInstall,
 	"work":             cmdWork,
+	"step":             cmdStep,
+	"steps":            cmdSteps,
 }
 
 func main() {
@@ -602,7 +606,7 @@ func cmdRunner(args []string) error {
 	if o.Deploy != nil {
 		return runDeployRunner(ctx, o, client, id, secretStores)
 	}
-	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id, DataDir: o.Data})
+	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id, DataDir: o.Data, AllowUnsandboxed: o.AllowUnsandboxedSteps})
 	if err != nil {
 		return err
 	}
@@ -706,6 +710,7 @@ func cmdRun(args []string) error {
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
 	imagesConfig := fs.String("images-config", "", "a file with the Station's images: section (builders and registries), for image steps")
+	unsandboxed := fs.Bool("allow-unsandboxed-steps", false, "let the host executor run custom steps although it cannot enforce their sandbox (no network, a read-only workspace)")
 	var given multi
 	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	var libs libraryFlag
@@ -758,7 +763,7 @@ func cmdRun(args []string) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser(), DataDir: filepath.Join(tmp, "runner")})
+	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser(), DataDir: filepath.Join(tmp, "runner"), AllowUnsandboxed: *unsandboxed})
 	if err != nil {
 		return err
 	}

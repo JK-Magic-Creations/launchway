@@ -210,6 +210,10 @@ type StepView struct {
 	// 25): restored, missed, saved or not saved, with sizes and the reason
 	// for a refusal.
 	Caches []CacheResult `json:"caches,omitempty"`
+	// Notes are the summary and annotations a custom step wrote in its latest attempt (schema 63).
+	Notes []StepNote `json:"notes,omitempty"`
+	// Custom is what a custom step is and may do (schema 63), from the run's graph.
+	Custom *pipeline.CustomStep `json:"custom,omitempty"`
 }
 
 // RunDetail is everything about one run.
@@ -732,6 +736,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
 			v.Caches = s.Evidence.Caches
 		}
+		attachCustom(v, st)
 		d.StepList = append(d.StepList, *v)
 	}
 	if err := rows.Err(); err != nil {

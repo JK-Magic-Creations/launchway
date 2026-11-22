@@ -44,7 +44,7 @@ var keyHelp = map[string]obj{
 	"resources":    prop("object", "CPU and memory of the step: { cpu, cpu_limit, memory, memory_limit }. On a step that uses a template: the default of every stage that runs a script."),
 	"services":     prop([]string{"array", "string"}, "The service containers that run beside this step ([] for none, all for every one); a step that says nothing starts them all."),
 	"stages":       prop("object", "On a step that uses a template: settings of single stages by name, such as { test: { resources: { memory: 6Gi }, services: [db] } }."),
-	"uses":         prop("string", "A template to use in place of this step: library/template, such as launchway/go-service."),
+	"uses":         prop("string", "A template or custom step to use in place of this step: library/template, such as launchway/go-service, library/step, or ./steps/name for a custom step of this repository."),
 	"with":         prop("object", "The values of the template's parameters."),
 	"for_each":     prop("object", "Repeat the step once for each combination of the lists (a matrix); see exclude, add, max_parallel, fail_fast, continue_for."),
 	"exclude":      prop("array", "With for_each: combinations to leave out."),

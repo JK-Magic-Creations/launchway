@@ -236,6 +236,9 @@ type Payload struct {
 	// caches did. Older servers ignore it, which is harmless: it only
 	// records.
 	Caches []CacheResult `json:"caches,omitempty"`
+	// step.finished and step.canceled of a custom step (schema 63): the
+	// summary and annotations it wrote. Older servers ignore it.
+	Notes []StepNote `json:"notes,omitempty"`
 	// step.finished and step.canceled of an image step (schema 15): what it
 	// built, pushed and signed. Older servers never read it: runs with image
 	// steps have min_schema 15.

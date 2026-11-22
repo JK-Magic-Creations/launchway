@@ -87,6 +87,12 @@ func (k *Kubernetes) preparePod(ctx context.Context, s *Spec, name string, sys f
 	}
 	s.Containers = specs
 	pod, containers := k.podSpec(name, s.RunID, s.Containers)
+	if s.Sandbox != nil {
+		if !k.perStep() {
+			return nil, nil, cannotStart("the custom step %s runs in a sandbox of its own, which needs a pod of its own: set kubernetes.pod to per-step", s.Sandbox.Name)
+		}
+		k.sandboxPod(pod, s.Sandbox, sys)
+	}
 	if err := checkPod(pod); err != nil {
 		return nil, nil, cannotStart("the run's pod would be refused by the API server: %v", err)
 	}

@@ -219,7 +219,7 @@ func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSu
 	if err != nil {
 		return nil, err
 	}
-	pl, libs, vals, rec, err := m.prepare(ctx, d.Project, pl, d.Inputs, d.Libraries)
+	pl, libs, vals, rec, err := m.prepare(WithRepository(ctx, d.Project, r.SHA), d.Project, pl, d.Inputs, d.Libraries)
 	if err != nil {
 		return nil, err
 	}

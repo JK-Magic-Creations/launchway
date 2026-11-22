@@ -56,6 +56,12 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
         example: "pipeline: my-project\nsteps:\n  ci:\n    uses: launchway/go-service\n",
         graph: [{ id: "ci/check", description: "Format and vet" }, { id: "ci/test", description: "Run every test" }, { id: "ci/build", needs: ["ci/check", "ci/test"], description: "Build" }] },
       { name: "secret-scan", kind: "step template", description: "Look for private keys committed to the repository", outputs: [], params: [] }] },
+    "/api/v1/libraries/launchway/steps": { library: "launchway", version: "builtin", commit: "0123456789abcdef0123456789abcdef01234567", versions: ["builtin"], steps: [stepFixture()] },
+    "/api/v1/libraries/launchway/steps/scan-secrets": { library: "launchway", version: "builtin", commit: "0123456789abcdef0123456789abcdef01234567", step: stepFixture(), versions: [
+      { version: "v2", commit: "1123456789abcdef0123456789abcdef01234567", digest: "d2", widens: true, changes: [{ what: "permission: the step may now reach evil.example.org", permission: true, widening: true }] },
+      { version: "v1", commit: "0123456789abcdef0123456789abcdef01234567", digest: "d1" }],
+      newest: "v2", newest_widens: true, newest_changes: [{ what: "permission: the step may now reach evil.example.org", permission: true, widening: true }],
+      used_by: [{ project: "shop-api", commit: "0123456789abcdef0123456789abcdef01234567", digest: "d1", runs: 3, last_run_at: 0, last_run_id: "run_7", newest: "v2", widens: true }] },
     "/api/v1/projects/shop-api/variables": { words: {}, variables: [] },
     "/api/v1/projects/shop-api/tests": { ref: "main", runs: [], slowest: [], failing: [], flaky: [], refs: ["main"] },
     "/api/v1/runner-pools": { pools: [], manage: true, identities: false },
@@ -323,4 +329,14 @@ export function homeFixture() {
 
 export function organizeFixture() {
   return { area: "pipelines", folders: [], items: {}, favorites: [], may_arrange_base: false, layout: { page: "pipelines", scope: "base", shared: {}, personal: {}, effective: {}, levels: [], customized: false, may_arrange: {} } };
+}
+
+
+/** A custom step as the server describes it. */
+function stepFixture() {
+  return { name: "scan-secrets", description: "Look for private keys and provider tokens committed to the repository", contract: 1, image: "docker.io/library/alpine:3.22", command: "sh main.sh", digest: "d1",
+    inputs: [{ name: "working_directory", type: "string", required: false, default: ".", description: "The directory with the code" }],
+    outputs: [{ name: "hits", type: "number", description: "How many lines look like secrets" }], network: [], write: [], secrets: [],
+    permissions: [{ Kind: "network", Detail: "reach no network" }, { Kind: "secret", Detail: "read no secrets" }, { Kind: "write", Detail: "write only its own output files (the workspace is read-only to it)" }],
+    sentence: "This step can reach no network, read no secrets and write only its own output files (the workspace is read-only to it).", example: "steps:\n  scan-secrets:\n    uses: launchway/scan-secrets\n" };
 }

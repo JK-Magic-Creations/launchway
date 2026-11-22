@@ -261,7 +261,7 @@ func startBuiltinRunner(runnerCtx, ctx context.Context, cfg *config.Config, ln n
 	// Unique per server: two servers on one machine must not share an identity.
 	_, port, _ := net.SplitHostPort(ln.Addr().String())
 	runnerID := "builtin-" + host + "-" + port
-	ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: runnerID, DataDir: filepath.Join(cfg.Data, "runner")})
+	ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: runnerID, DataDir: filepath.Join(cfg.Data, "runner"), AllowUnsandboxed: cfg.Runner.AllowUnsandboxedSteps})
 	if err != nil {
 		return nil, err
 	}

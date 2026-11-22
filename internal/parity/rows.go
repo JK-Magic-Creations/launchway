@@ -156,6 +156,8 @@ var rows = []Row{
 	{Route: "DELETE /api/v1/admin/tokens/{id}", MCP: "", CLI: "", Terraform: "", Status: Gap, Reason: "API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned"},
 	{Route: "GET /api/v1/projects/{name}/schedules", MCP: "get_project", CLI: "projects get", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/libraries", MCP: "list_config (kind libraries)", CLI: "libraries list", Terraform: "launchway_library", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/libraries/{library}/steps", MCP: "list_steps", CLI: "steps list", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/libraries/{library}/steps/{step}", MCP: "get_step", CLI: "steps get", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/libraries/{library}/templates", MCP: "list_templates", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no templates command yet"},
 	{Route: "POST /api/v1/projects/{name}/git-hook", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "called by Git hosts and other systems with their own proof, not by people"},
 	{Route: "POST /api/v1/projects/{name}/webhooks/{trigger}", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "called by Git hosts and other systems with their own proof, not by people"},

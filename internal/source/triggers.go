@@ -184,7 +184,7 @@ func (m *Manager) StartRunWith(ctx context.Context, rq StartRequest) (*engine.Ru
 	if err != nil {
 		return nil, startProblem(r, err)
 	}
-	pl, libs, vals, rec, err := m.prepare(ctx, rq.Project, pl, rq.Inputs, rq.Libraries)
+	pl, libs, vals, rec, err := m.prepare(WithRepository(ctx, rq.Project, r.SHA), rq.Project, pl, rq.Inputs, rq.Libraries)
 	if err != nil {
 		return nil, startProblem(r, err)
 	}
@@ -453,7 +453,7 @@ func (m *Manager) fire(ctx context.Context, p *project, s *pipeline.Schedule, f 
 	if err != nil {
 		return startProblem(r, err)
 	}
-	pl, libs, vals, rec, err := m.prepare(ctx, p.Name, pl, s.Inputs, nil)
+	pl, libs, vals, rec, err := m.prepare(WithRepository(ctx, p.Name, r.SHA), p.Name, pl, s.Inputs, nil)
 	if err != nil {
 		return startProblem(r, err)
 	}
@@ -642,7 +642,7 @@ func (m *Manager) StartWebhook(ctx context.Context, rq WebhookRequest) (run *eng
 			return nil, false, startProblem(r, err)
 		}
 	}
-	pl, libs, vals, rec, err := m.prepare(ctx, rq.Project, pl, given, nil)
+	pl, libs, vals, rec, err := m.prepare(WithRepository(ctx, rq.Project, r.SHA), rq.Project, pl, given, nil)
 	if err != nil {
 		return nil, false, startProblem(r, err)
 	}

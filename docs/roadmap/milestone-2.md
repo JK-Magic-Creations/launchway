@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 11 available · 4 in progress · 54 planned · 69 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 14 available · 8 in progress · 47 planned · 69 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Write pipelines your way](#g-write-pipelines-your-way) | 17 | 2 | 1 | 14 |
+| [Write pipelines your way](#g-write-pipelines-your-way) | 17 | 5 | 5 | 7 |
 | [Builds use every machine sensibly](#g-builds-use-every-machine-sensibly) | 6 | 0 | 0 | 6 |
 | [Reports people want to read](#g-reports-people-want-to-read) | 1 | 1 | 0 | 0 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
@@ -61,9 +61,9 @@ Pipelines as real programs, checked before they run.
 
 #### Custom steps in your own language {#custom-steps-in-your-own-language}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code. You write the step in a language you already use and unit-test it like any application. A template is the interface and the code is what runs.
+A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code. A step is a directory with a manifest and code in any language, used as uses: library/step or uses: ./steps/name. Its inputs are typed and checked against the manifest before a Sortie starts, its outputs are typed, and its summary, notes, findings and test results come through a file a build tool cannot forge. Every use is recorded on the Sortie with the library and commit. Missing: a step cannot yet ask a person to decide in the middle of a Sortie (exit code 65 fails the step with the question), and outputs of one step are not yet checked against the inputs of the next before the Sortie starts.
 
 **Depends on:** Pipelines as code.
 
@@ -71,19 +71,17 @@ A step is a program in your repository with typed inputs, outputs and secrets, r
 
 #### A step contract and starter kits {#a-step-contract-and-starter-kits}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A published contract for what a step receives and returns, with starter kits for common languages. Starter kits include the types, a local test harness and an example, so the first step takes minutes.
-
-**Depends on:** Custom steps in your own language.
+A published contract for what a step receives and returns, with starter kits for common languages. The contract is versioned and documented, with a conformance checker, and launchway step new scaffolds a step with a manifest, the kit, a test and a README in Go, Python, TypeScript or shell. launchway step test runs it as a Station would and checks it.
 
 [Area page](pipelines.md)
 
 #### Steps run in a sandbox {#steps-run-in-a-sandbox}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Custom steps run in an isolated container with only the secrets and network they declared. A shared step cannot read what it was not given, which makes sharing steps across teams safe.
+Custom steps run in an isolated container with only the secrets and network they declared. Built: no network unless the manifest lists hosts, a read-only root filesystem, only the secrets it names, dropped capabilities, and (on Podman and Docker) a read-only workspace except the paths it lists; on Kubernetes the pod carries labels the chart's network policies select on. Missing: a list of hosts is recorded and shown but not enforced by name (a policy has addresses), the list of writable paths is not enforced on Kubernetes, and the host executor enforces nothing and refuses custom steps unless the operator allows it.
 
 **Depends on:** Custom steps in your own language.
 
@@ -91,11 +89,9 @@ Custom steps run in an isolated container with only the secrets and network they
 
 #### Share and pin steps and templates {#share-and-pin-steps-and-templates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. Releases are plain Git tags, so versions, history and review use the tools you already have.
-
-**Depends on:** Shared libraries.
+Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. A library holds custom steps beside its templates, pinned by tag or commit; a pinned step never changes under a pipeline, and every use is recorded.
 
 [Area page](pipelines.md)
 
@@ -119,9 +115,9 @@ A small typed expression language with no loops and no side effects, checked bef
 
 #### Typed outputs between steps {#typed-outputs-between-steps}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.
+A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it. Built: a custom step declares the type of each output (string, number, boolean, list, record, secret), the Station checks what it wrote against them, and later steps receive them as text with the type recorded. Missing: a reference to an output that does not exist is not yet refused before the Sortie starts.
 
 [Area page](pipelines.md)
 
@@ -137,9 +133,9 @@ Shared libraries pinned by tag already work; the catalog lets you find, compare 
 
 #### Update notices for shared libraries {#update-notices-for-shared-libraries}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See which Flights use an old version of a template and open an update as a reviewable change. Teams keep common pipeline logic current without a manual hunt.
+See which Flights use an old version of a template and open an update as a reviewable change. Built for custom steps: a step's page and launchway steps get show, for every Flight that uses a version, the newer tag and what it changes in inputs, outputs and permissions, with a call-out when it asks for more. Missing: the same for templates, and opening the update as a reviewable change.
 
 **Depends on:** A browsable catalog of templates and steps.
 
@@ -197,11 +193,9 @@ Duration charts, pass rate and the slowest steps across runs, and flaky tests fl
 
 #### Step pages {#step-pages}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Each step has a page: where its code lives, its inputs and types, and which pipelines use it. Before changing a step, you see who it would affect.
-
-**Depends on:** Custom steps in your own language.
+Each step has a page: where its code lives, its inputs and types, and which pipelines use it. Each step of a library has a page generated from its manifest: description, inputs and outputs with types, what it may do, an example, its versions with what changed, and the Flights that use it.
 
 [Area page](pipelines.md)
 

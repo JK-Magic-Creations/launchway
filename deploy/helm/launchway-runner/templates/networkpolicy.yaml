@@ -79,7 +79,10 @@ metadata:
   labels:
     {{- include "launchway.labels" . | nindent 4 }}
 spec:
-  podSelector: {}
+  # Not the pods of custom steps: their policies are below, and a policy that allowed more would add to them.
+  podSelector:
+    matchExpressions:
+      - { key: launchway.dev/step-sandbox, operator: DoesNotExist }
   policyTypes: [Ingress, Egress]
   ingress: []
   egress:
@@ -96,6 +99,56 @@ spec:
         - { protocol: TCP, port: 53 }
     {{- end }}
     {{- with $np.steps.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+# Pods of custom steps (launchway.dev/step-sandbox=custom): nothing comes in and, unless the step lists hosts, nothing
+# goes out, not even DNS. This policy selects them all and allows nothing; the policy below adds for the ones that
+# listed hosts.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "launchway.fullname" . }}-steps-sandbox
+  namespace: {{ include "launchway.stepNamespace" . }}
+  labels:
+    {{- include "launchway.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      launchway.dev/step-sandbox: custom
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress: []
+---
+# Custom steps that list network hosts (launchway.dev/step-network=hosts): DNS and what networkPolicy.steps.customHosts
+# allows. A step that lists a host this policy does not allow can run but cannot reach it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "launchway.fullname" . }}-steps-hosts
+  namespace: {{ include "launchway.stepNamespace" . }}
+  labels:
+    {{- include "launchway.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      launchway.dev/step-sandbox: custom
+      launchway.dev/step-network: hosts
+  policyTypes: [Egress]
+  egress:
+    {{- if $np.dns.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.dns.namespace }}
+          podSelector:
+            matchLabels:
+              {{- toYaml $np.dns.podLabels | nindent 14 }}
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    {{- end }}
+    {{- with $np.steps.customHosts }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 {{- end }}

@@ -8,6 +8,7 @@
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": { "types": "./dist/src/index.d.ts", "default": "./dist/src/index.js" },
+    "./step": { "types": "./dist/src/step.d.ts", "default": "./dist/src/step.js" },
     "./web": { "types": "./dist/src/web.d.ts", "default": "./dist/src/web.js" },
     "./openfeature": { "types": "./dist/src/openfeature.d.ts", "default": "./dist/src/openfeature.js" }
   },

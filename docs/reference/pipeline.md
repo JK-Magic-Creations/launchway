@@ -592,7 +592,7 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 <!-- keys: kind-uses -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `uses` | `library/template` | required | The library, as named under `libraries`, and the template. In a template, a template of the same library is written by name alone, a starter as `launchway/<name>`, and a template of a library the library [requires](#libraries-that-use-libraries) as `<name>/<template>` |
+| `uses` | `library/template` or `./steps/name` | required | The library, as named under `libraries`, and the template or [custom step](step-manifest.md) (`steps/<name>/step.yaml` of the library). `./steps/<name>` is a custom step of the repository the pipeline is in, at the Sortie's commit. In a template, a template of the same library is written by name alone, a starter as `launchway/<name>`, and a template of a library the library [requires](#libraries-that-use-libraries) as `<name>/<template>` |
 | `with` | mapping | none | Values for the template's parameters, by name; at most 50, each at most 4096 bytes. A value is text, a YAML list (for a `list` parameter), or [`{ input: name }`](#value-forms) with an optional `format` |
 | `for_each` | mapping | none | Repeat the whole template once for each combination; see [For each](#for-each) |
 | `exclude` | list | none | With `for_each`: combinations to leave out |
@@ -1938,6 +1938,22 @@ steps:
     run: pip install -r requirements.txt && pytest
 ```
 
+## Custom steps
+
+A **custom step** is a directory with a manifest, `steps/<name>/step.yaml`, and code in any language. It
+is used as `uses: <library>/<name>` (a library's step, at the library's pinned tag or commit) or
+`uses: ./steps/<name>` (a step of the same repository), with `with:` checked against the manifest's
+inputs before a Sortie starts: an unknown input, a value of the wrong type, one out of its range or a
+missing required input is a plain error on the line of the `with` value. It becomes one step, named
+`<step>/run`, whose Sortie record names the step, the library and the commit. The step receives its
+inputs and returns its outputs under the [step contract](step-contract.md), runs in the sandbox its
+[manifest](step-manifest.md) asks for and no wider, and shows what it may do wherever it is added.
+The expanded step carries a `custom` object: `name`, `library` (`self` for the repository), `commit`,
+`contract`, `digest` (of the manifest), `network`, `write`, `secrets`, and the input and output types.
+
+A secret input is given by reference: `with: { token_store: vault, token_key: apps/shop/token, token_field: value }`
+(the field is optional). A list is written as a YAML list, a record as JSON text.
+
 ## Template files
 
 A shared library is a Git repository with templates in `templates/<name>.yaml` and any other files
@@ -1954,6 +1970,7 @@ step syntax as a pipeline, plus typed parameters and the outputs it exposes. See
 | `containers` | mapping | none | As in a pipeline's [`containers`](#containers). They are added to the run as `<step>-<name>` |
 | `steps` | mapping | required | As in a pipeline's [`steps`](#steps), with the differences below |
 | `outputs` | mapping | none | Step outputs it exposes to steps that need the using step |
+| `step_manifest` | text | none | Set only in the template Launchway makes from a [custom step](step-manifest.md): the step's `step.yaml`, which carries what the step may do into the Sortie (run). A library does not write it |
 
 ### Parameters
 
@@ -2165,6 +2182,7 @@ older server. Use them only once every server and Station is upgraded; see
 | 22 | a step's `resources` |
 | 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane`, `on.pull_request.into` |
 | 25 | a step's `cache` |
+| 63 | `uses` of a [custom step](step-manifest.md) |
 
 ## What next
 

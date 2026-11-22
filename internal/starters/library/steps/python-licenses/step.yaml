@@ -1,0 +1,17 @@
+# The Python licence listing, as a custom step written in Python against the step contract. It does what
+# scripts/python/licenses.sh does: lists the licenses of the installed dependencies with pip-licenses,
+# and fails only when one is on license_deny. Use: uses: launchway/python-licenses
+step: python-licenses
+contract: 1
+description: List the licenses of a Python project's installed dependencies; fail only for the names on license_deny
+toolchain: python@3.13
+command: python3 -B main.py
+inputs:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository" }
+  license_deny: { type: list, default: [], description: "License names that fail the step, such as GPL-3.0; empty only lists them" }
+outputs:
+  checked: { type: boolean, description: Whether the deny list was applied }
+permissions:
+  network: [pypi.org, files.pythonhosted.org]
+  # pip-licenses is installed into the project's virtual environment.
+  write: [.venv]

@@ -266,6 +266,9 @@ type Step struct {
 	// the template's parameters, as written.
 	Uses string            `json:"uses,omitempty"`
 	With map[string]string `json:"with,omitempty"`
+	// Custom is set on a step that came from a custom step: what it is and
+	// what it may do (see custom.go).
+	Custom *CustomStep `json:"custom,omitempty"`
 	// Group is the uses step a template's step came from (the innermost,
 	// when templates use templates); empty for a step written in the
 	// pipeline itself.

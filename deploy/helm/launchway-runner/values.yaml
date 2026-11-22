@@ -345,6 +345,10 @@ networkPolicy:
   steps:
     enabled: false
     egress: []
+    # -- What the pods of custom steps that list network hosts may reach (label launchway.dev/step-network=hosts).
+    # A NetworkPolicy has addresses, not names, so the operator turns the hosts steps may ask for into rules here.
+    # Custom steps that list no hosts (label ...=none) get no egress at all, whatever `egress` above allows.
+    customHosts: []
 
 # ---------------------------------------------------------------------------------------------
 # Health sources for verify steps, using the same entries as delivery.verification.sources in the

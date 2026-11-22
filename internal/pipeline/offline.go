@@ -3,6 +3,7 @@ package pipeline
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/starters"
+	"github.com/jk-magic-creations/launchway/internal/stepkit"
 )
 
 // Offline expansion: the templates of a pipeline read from library
@@ -64,7 +66,8 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 	if p, err = Preview(p, o); err != nil {
 		return nil, err
 	}
-	if len(p.Libraries) == 0 {
+	selfDir := dirs[SelfLibrary]
+	if len(p.Libraries) == 0 && selfDir == "" && !p.usesSelf() {
 		return p, nil
 	}
 	var problems Problems
@@ -76,7 +79,7 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 					l.Name, l.Repo, l.Wanted(), l.Name, knownDirs(dirs))})
 			continue
 		}
-		if st, err := os.Stat(filepath.Join(dir, templatesDir)); err != nil || !st.IsDir() {
+		if st, err := os.Stat(filepath.Join(dir, templatesDir)); (err != nil || !st.IsDir()) && !isDir(filepath.Join(dir, stepkit.StepDir)) {
 			problems = append(problems, Problem{Line: l.Line, Path: "libraries." + l.Name,
 				Message: fmt.Sprintf("%s has no %s directory: --library %s=DIRECTORY takes the root of a library, the directory that holds templates/", dir, strings.TrimSuffix(templatesDir, "/"), l.Name)})
 			continue
@@ -85,14 +88,18 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 		problems = append(problems, requireOffline(l, dirs, 0, []string{dir})...)
 	}
 	for name := range dirs {
-		if p.Library(name) == nil && !requiredName(p, name) {
+		if p.Library(name) == nil && name != SelfLibrary && !requiredName(p, name) {
 			problems = append(problems, Problem{Message: fmt.Sprintf("--library %s: the pipeline has no library called %s, and none of its libraries requires one", name, name)})
 		}
 	}
 	if len(problems) > 0 {
 		return nil, problems
 	}
-	out, _, err := ExpandWith(p, func(l *Library, name string) ([]byte, error) {
+	var self *SelfSource
+	if selfDir != "" {
+		self = &SelfSource{Library: &Library{Name: SelfLibrary, Version: OfflineCommit, Commit: OfflineCommit, RefKind: "directory"}, Read: DirReader(selfDir)}
+	}
+	out, _, err := ExpandWithSelf(p, func(l *Library, name string) ([]byte, error) {
 		dir := l.Dir
 		if dir == "" {
 			if _, given := dirs[l.Name]; !given && l.Repo == starters.Name {
@@ -104,12 +111,8 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 			}
 			dir = dirs[l.Name]
 		}
-		b, err := os.ReadFile(filepath.Join(dir, TemplatePath(name)))
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, ErrNoTemplate
-		}
-		return b, err
-	}, vars)
+		return TemplateOrStep(DirReader(dir), name, false)
+	}, vars, self)
 	return out, err
 }
 
@@ -180,4 +183,31 @@ func requiredName(p *Pipeline, name string) bool {
 		}
 	}
 	return false
+}
+
+// DirReader reads files of a directory by their path from its root, for the
+// templates and steps of a library checked out on disk. It never follows a
+// link out of the directory.
+func DirReader(dir string) func(path string) ([]byte, error) {
+	return func(path string) ([]byte, error) {
+		root, err := os.OpenRoot(dir)
+		if err != nil {
+			return nil, err
+		}
+		defer root.Close()
+		f, err := root.Open(path)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrNoTemplate
+		}
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		return io.ReadAll(io.LimitReader(f, MaxFileBytes+1))
+	}
+}
+
+func isDir(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
 }

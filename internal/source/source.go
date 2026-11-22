@@ -490,7 +490,7 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		var vals map[string]string
 		var rec *varRecord
 		if err == nil && pl.On.MatchPush(branchOf(r), tagOf(r)) {
-			pl, libs, vals, rec, err = m.prepare(ctx, p.Name, pl, nil, nil)
+			pl, libs, vals, rec, err = m.prepare(WithRepository(ctx, p.Name, r.SHA), p.Name, pl, nil, nil)
 		}
 		cs, pathSkip := p.pushPathRule(ctx, pl, err, r, old)
 		switch {
@@ -597,7 +597,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 			var vals map[string]string
 			var rec *varRecord
 			if asks {
-				pl, libs, vals, rec, err = m.prepare(ctx, p.Name, pl, nil, nil)
+				pl, libs, vals, rec, err = m.prepare(WithRepository(ctx, p.Name, r.SHA), p.Name, pl, nil, nil)
 			}
 			switch {
 			case errors.Is(err, ErrNoPipeline):
