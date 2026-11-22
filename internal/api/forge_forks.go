@@ -64,10 +64,11 @@ func trimPrefixes(s string) string {
 	return s
 }
 
-// mayMakeUnder says whether a person may make repositories under an owner: their
-// own space (the owner is their name) or anywhere, as an administrator.
-func (s *Server) mayMakeUnder(id *identity, owner string) bool {
-	return owner != "" && (owner == id.User || s.authorize(id, auth.Administer, ""))
+// mayMakeUnder says whether a person may make the repository owner/name: as an
+// administrator of every Flight, or with the admin role on that path (an
+// installation gives people their own space by binding them to "<their name>/*").
+func (s *Server) mayMakeUnder(id *identity, owner, name string) bool {
+	return owner != "" && name != "" && (s.authorize(id, auth.Administer, "") || s.authorize(id, auth.AdministerProject, repoSubject(owner, name)))
 }
 
 // refuseLimitedToken answers 403 for a token limited to repositories.
@@ -179,8 +180,8 @@ func (s *Server) forkRepo(w http.ResponseWriter, r *http.Request) {
 	if in.Owner == "" {
 		in.Owner = id.User
 	}
-	if !s.mayMakeUnder(id, in.Owner) {
-		writeErr(w, http.StatusForbidden, fmt.Sprintf("you can fork into your own space (%s) or, as an administrator, into any owner", id.User))
+	if !s.mayMakeUnder(id, in.Owner, orName(in.Name, parent.Name)) {
+		writeErr(w, http.StatusForbidden, fmt.Sprintf("you need the admin role on %s to make a fork there (an administrator of every Flight may fork anywhere; an installation can bind people to their own space, %s/*)", repoSubject(in.Owner, orName(in.Name, parent.Name)), id.User))
 		return
 	}
 	setAudit(r, parent.Path, "fork to "+repoSubject(in.Owner, orName(in.Name, parent.Name)))
@@ -351,8 +352,8 @@ func (s *Server) useTemplate(w http.ResponseWriter, r *http.Request) {
 	if in.Owner == "" {
 		in.Owner = id.User
 	}
-	if !s.mayMakeUnder(id, in.Owner) {
-		writeErr(w, http.StatusForbidden, fmt.Sprintf("you can make a repository in your own space (%s) or, as an administrator, under any owner", id.User))
+	if !s.mayMakeUnder(id, in.Owner, in.Name) {
+		writeErr(w, http.StatusForbidden, fmt.Sprintf("you need the admin role on %s to make a repository there (an administrator of every Flight may anywhere; an installation can bind people to their own space, %s/*)", repoSubject(in.Owner, in.Name), id.User))
 		return
 	}
 	setAudit(r, tpl.Path, "from template to "+repoSubject(in.Owner, in.Name))
