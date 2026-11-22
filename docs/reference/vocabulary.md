@@ -38,7 +38,7 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. | yes | build (for any run), job (for a whole run), execution |
 | `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. | yes | backlog |
 | `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. | yes | console output |
-| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit). | yes | post-mortem (for every run) |
+| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which are flaky, and its exports. | yes | post-mortem (for every run) |
 | `schedule` | **Patrol** | Scheduled run | A run that starts by itself at set times, such as every night. | yes | cron job (in text a person reads) |
 
 ### Delivery
@@ -76,8 +76,8 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. | yes | none |
 | `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. | yes | repository (for the store) |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. | yes | build output |
-| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks. | yes | compliance rules, default policy |
-| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces. | yes | scan job |
+| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks every repository gets without asking, and the gates that block a change that introduces a serious problem. | yes | compliance rules, default policy |
+| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security checks, then one verdict on what the change introduces. | yes | scan job |
 | `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. | yes | none |
 | `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. | yes | none |
 | `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. | yes | none |

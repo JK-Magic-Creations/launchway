@@ -503,7 +503,7 @@
         "plain": {
           "one": "Run summary"
         },
-        "meaning": "The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit).",
+        "meaning": "The report of a run's tests: what passed, what failed and why, which are flaky, and its exports.",
         "renameable": true,
         "mustNotBeCalled": [
           "post-mortem (for every run)"
@@ -958,7 +958,7 @@
           "one": "Standards",
           "many": "Standards"
         },
-        "meaning": "The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks.",
+        "meaning": "The checks every repository gets without asking, and the gates that block a change that introduces a serious problem.",
         "renameable": true,
         "mustNotBeCalled": [
           "compliance rules",
@@ -974,7 +974,7 @@
         "plain": {
           "one": "Security scan"
         },
-        "meaning": "The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces.",
+        "meaning": "The stage Standing orders add to every run: the security checks, then one verdict on what the change introduces.",
         "renameable": true,
         "mustNotBeCalled": [
           "scan job"

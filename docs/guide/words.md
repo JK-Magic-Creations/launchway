@@ -33,7 +33,7 @@ Three rules keep this safe:
 | `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. |
 | `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. |
 | `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. |
-| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which tests are flaky, and the exports (HTML, PDF, JSON, JUnit). |
+| `debrief` | **Debrief** | Run summary | The report of a run's tests: what passed, what failed and why, which are flaky, and its exports. |
 | `schedule` | **Patrol** | Scheduled run | A run that starts by itself at set times, such as every night. |
 
 ### Delivery
@@ -71,8 +71,8 @@ Three rules keep this safe:
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. |
 | `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. |
-| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks and rules every repository gets without asking: security scans, best-practice checks and the gates that block a change which introduces a serious problem, with settings by level and locks. |
-| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security and best-practice checks, then one verdict on what the change introduces. |
+| `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks every repository gets without asking, and the gates that block a change that introduces a serious problem. |
+| `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security checks, then one verdict on what the change introduces. |
 | `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. |
 | `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. |
 | `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. |

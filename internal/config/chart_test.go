@@ -90,7 +90,7 @@ delivery:
 		t.Fatalf("server: %v\n%s", err, files["server"])
 	}
 	c, _ := Load(writeTemp(t, files["server"]))
-	if pools, err := c.Pools("shared"); err != nil || len(pools) != 1 || pools[0].Name != "deploy-main" {
+	if pools, err := c.Pools("shared"); err != nil || len(pools) != 1 || pools[0].Name != "deploy-cluster-a" {
 		t.Fatalf("pools: %+v %v", pools, err)
 	}
 	if err := loadFile(t, files["deploy-runner"], true); err != nil {
