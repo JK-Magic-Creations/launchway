@@ -26,37 +26,22 @@ func targetOf(s *StepState) string {
 // serve its target (every poll of a runner records when it was last seen) have not asked for work lately, or are busy.
 // It returns nothing when a runner is free: the step is about to be taken.
 func (e *Engine) deployWait(target string) (string, string) {
-	rows, err := e.db.Query(`SELECT r.id, r.pool, r.targets, r.last_seen, r.kind, (SELECT COUNT(*) FROM leases l WHERE l.runner = r.id)
-		FROM runners r`)
+	all, err := e.Runners()
 	if err != nil {
 		return "", ""
 	}
-	defer rows.Close()
-	type runnerRow struct {
-		id, pool string
-		seen     int64
-		leases   int
-	}
-	var serving []runnerRow
-	for rows.Next() {
-		var r runnerRow
-		var targets, kind string
-		if rows.Scan(&r.id, &r.pool, &targets, &r.seen, &kind, &r.leases) != nil {
-			return "", ""
-		}
-		if (kind == PoolDeploy || (kind == "" && r.pool != "")) && slices.Contains(strings.Split(targets, ","), target) {
+	var serving []RunnerView
+	for _, r := range all {
+		if r.Kind == PoolDeploy && slices.Contains(r.Targets, target) {
 			serving = append(serving, r)
 		}
-	}
-	if rows.Err() != nil {
-		return "", ""
 	}
 	if len(serving) == 0 {
 		return fmt.Sprintf("waiting for a deploy runner serving target %s: none has asked for work lately, and none is known", target), WaitNoRunner
 	}
 	pools := map[string]bool{}
 	for _, r := range serving {
-		pools[r.pool] = true
+		pools[r.Pool] = true
 	}
 	names := make([]string, 0, len(pools))
 	for p := range pools {
@@ -74,12 +59,12 @@ func (e *Engine) deployWait(target string) (string, string) {
 	online, busy, actions := 0, 0, 0
 	var last int64
 	for _, r := range serving {
-		last = max(last, r.seen)
-		if r.seen >= e.now().Add(-RunnerOffline).UnixMilli() {
+		last = max(last, r.LastSeen)
+		if r.Online {
 			online++
-			if r.leases > 0 {
+			if len(r.Work) > 0 {
 				busy++
-				actions += r.leases
+				actions += len(r.Work)
 			}
 		}
 	}
