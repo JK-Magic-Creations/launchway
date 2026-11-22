@@ -1672,6 +1672,11 @@ it uses) may be a parameter's value:
 | `param` | parameter name | required | A parameter the template declares |
 | `format` | text | none | Text with exactly one `%s`, and no other `%`. For `string` parameters |
 
+A parameter of type `list` is a list wherever a list of patterns or paths is accepted: `when.branch`, `when.tag`, `when.event`, `when.changed`, `skip`, report globs
+(`reports.tests`, `findings` and the others), Cargo `paths`, cache `paths` and `key.files`, `platforms` and `runner.labels`. `when: { branch: { param: branches } }` with
+`branches: [feat/*, fix/*]` is the two patterns `feat/*` and `fix/*`, and `{ param: branches }` may stand next to other items of a list (`branch: [release, { param: branches }]`).
+Written as a single value where one is expected, a list parameter is its JSON text, as it always was.
+
 ## Secret references
 
 A secret reference says where a value is kept; it never holds the value. The Station looks it up

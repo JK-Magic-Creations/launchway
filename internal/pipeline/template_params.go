@@ -264,6 +264,9 @@ func (ps *parser) scalar(n *yaml.Node, at string) string {
 func (ps *parser) valueList(n *yaml.Node, at string) []string {
 	switch n.Kind {
 	case yaml.MappingNode:
+		if items, ok := ps.listParam(n, at); ok {
+			return items
+		}
 		if v := ps.scalar(n, at); v != "" {
 			return []string{v}
 		}
@@ -273,7 +276,11 @@ func (ps *parser) valueList(n *yaml.Node, at string) []string {
 		for _, c := range n.Content {
 			switch {
 			case c.Kind == yaml.MappingNode:
-				out = append(out, ps.scalar(c, at))
+				if items, ok := ps.listParam(c, at); ok {
+					out = append(out, items...)
+				} else {
+					out = append(out, ps.scalar(c, at))
+				}
 			case c.Kind != yaml.ScalarNode:
 				ps.add(c, at, "expected a list of values")
 			default:
@@ -283,6 +290,51 @@ func (ps *parser) valueList(n *yaml.Node, at string) []string {
 		return out
 	}
 	return ps.strList(n, at)
+}
+
+// spliceListParams replaces, in the items of a list of patterns, each { param: name } that stands for a parameter of
+// type list by one item for each of the list's values, so that a list parameter is a list of patterns wherever one is
+// accepted, not one pattern that reads ["a","b"].
+func (ps *parser) spliceListParams(items []*yaml.Node, at string) []*yaml.Node {
+	if ps.tmpl == nil {
+		return items
+	}
+	var out []*yaml.Node
+	for _, it := range items {
+		list, ok := ps.listParam(it, at)
+		if !ok {
+			out = append(out, it)
+			continue
+		}
+		for _, v := range list {
+			out = append(out, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: v, Line: it.Line, Column: it.Column})
+		}
+	}
+	return out
+}
+
+// listParam reads { param: name } where name is a parameter of type list: its items, as many as the list has,
+// each a value of the list the reference stands in. ok is false for anything else, which the caller reads as a
+// single value.
+func (ps *parser) listParam(n *yaml.Node, at string) ([]string, bool) {
+	if ps.tmpl == nil || n.Kind != yaml.MappingNode || !hasKey(n, "param") || hasKey(n, "format") {
+		return nil, false
+	}
+	var name string
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == "param" {
+			name = n.Content[i+1].Value
+		}
+	}
+	p := ps.tmpl.params[name]
+	if p == nil || p.Type != paramTypeList || len(n.Content) != 2 {
+		return nil, false
+	}
+	items := ListItems(ps.tmpl.values[name])
+	if items == nil {
+		items = []string{}
+	}
+	return items, true
 }
 
 func (ps *parser) unknownParam(name string) string {

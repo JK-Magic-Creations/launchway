@@ -22,7 +22,7 @@ type Param struct {
 	Options     []string     `json:"options,omitempty"`
 	// Fields are the fields a record of a parameter of type objects may have besides its name; empty: any.
 	Fields []string `json:"fields,omitempty"`
-	From        string       `json:"from,omitempty"` // the variable it takes (variables.go)
+	From   string   `json:"from,omitempty"` // the variable it takes (variables.go)
 	// SecretReference says a step takes its secret reference's store, key or
 	// field from the parameter; set when templates are described.
 	SecretReference bool `json:"secret_reference,omitempty"`
