@@ -560,8 +560,10 @@ var permissionTable = map[string]matrixRow{
 
 	// Shared libraries and their templates: anyone who may see a project.
 	// The test server has no library called nope.
-	"GET /api/v1/libraries":                     {"GET", "/api/v1/libraries", "", [6]int{401, 403, 200, 200, 200, 200}},
-	"GET /api/v1/libraries/{library}/templates": {"GET", "/api/v1/libraries/nope/templates", "", [6]int{401, 403, 404, 404, 404, 404}},
+	"GET /api/v1/libraries":                        {"GET", "/api/v1/libraries", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/libraries/{library}/templates":    {"GET", "/api/v1/libraries/nope/templates", "", [6]int{401, 403, 404, 404, 404, 404}},
+	"GET /api/v1/libraries/{library}/steps":        {"GET", "/api/v1/libraries/nope/steps", "", [6]int{401, 403, 404, 404, 404, 404}},
+	"GET /api/v1/libraries/{library}/steps/{step}": {"GET", "/api/v1/libraries/nope/steps/x", "", [6]int{401, 403, 404, 404, 404, 404}},
 
 	// Images: what a run built; a search over the projects the caller may see.
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},

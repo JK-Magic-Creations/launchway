@@ -240,6 +240,8 @@ A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committe
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/libraries` | `any-viewer` | — | The shared libraries pipelines may use, by `name`, with the time of the last fetch (`last_fetch`). The first is always `launchway`, marked `builtin: true`: the [starters](../guide/starters.md) that ship with Launchway. |
+| `GET /api/v1/libraries/{library}/steps` | `any-viewer` | — | A library's custom steps at `?version=` (default: its newest tag, else its default branch), each with its inputs and outputs (types), what it may do (network hosts, secrets, writable paths) and an example, read from its `step.yaml`. `404` when no libraries are configured. |
+| `GET /api/v1/libraries/{library}/steps/{step}` | `any-viewer` | — | One step's page at `?version=`: its manifest, its tagged versions with what changed in inputs, outputs and permissions (and whether a version asks for more), the Flights the caller may see that use it with the update on offer for each, and the newest version's changes. |
 | `GET /api/v1/libraries/{library}/templates` | `any-viewer` | — | A library's templates at `?version=` (default: its newest tag, else its default branch), with their parameters and outputs. `404` when no libraries are configured. For `launchway` (one version, `builtin`) each template also has its `kind` (`flight plan` or `step template`), an `example` pipeline file and the `graph` of steps that file runs. |
 
 ## Runs

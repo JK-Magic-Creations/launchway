@@ -251,7 +251,7 @@ func (m *Manager) preparedFor(ctx context.Context, p *project, src engine.EventS
 	if err != nil {
 		return r, nil, nil, nil, nil, startProblem(r, err)
 	}
-	pl, libs, vals, rec, err := m.prepare(ctx, p.Name, pl, given, nil)
+	pl, libs, vals, rec, err := m.prepare(WithRepository(ctx, p.Name, r.SHA), p.Name, pl, given, nil)
 	if err != nil {
 		return r, nil, nil, nil, nil, startProblem(r, err)
 	}

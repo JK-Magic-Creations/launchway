@@ -144,6 +144,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
+| `GET /api/v1/libraries/{library}/steps` | `list_steps` | `steps list` | `not needed by terraform` | equal |
+| `GET /api/v1/libraries/{library}/steps/{step}` | `get_step` | `steps get` | `not needed by terraform` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
 | `POST /api/v1/me/favorites` | — | — | — | exempt: a person's own favorites; a token or agent has no pages |

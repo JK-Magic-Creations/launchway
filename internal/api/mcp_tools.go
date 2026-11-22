@@ -288,6 +288,7 @@ func addReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_templates", Annotations: readOnly("List library templates"),
 		Description: "The shared libraries pipelines may use, and with library, that library's templates at a version (default its newest tag): each template's description, parameters (type, default, options) and outputs, for a uses: step."},
 		mcpCallTimeout, listTemplates)
+	addCustomStepTools(srv, c)
 }
 
 // ---- projects ----

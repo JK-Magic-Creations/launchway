@@ -163,6 +163,15 @@ func (m *Manager) CheckFor(ctx context.Context, project, text string, overrides 
 	if pl, err = m.preview(pl); err != nil {
 		return nil, err
 	}
+	if p := m.c().projects[project]; p != nil && pipelineUsesSelf(pl) {
+		// The editor checks the steps of the repository at the default branch's tip.
+		p.mu.Lock()
+		r, rerr := p.resolve(ctx, "", false)
+		p.mu.Unlock()
+		if rerr == nil {
+			ctx = WithRepository(ctx, project, r.SHA)
+		}
+	}
 	pl, _, _, err = m.expandVars(ctx, pl, overrides, checkFresh, vars)
 	return pl, err
 }

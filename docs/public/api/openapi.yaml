@@ -3582,6 +3582,73 @@ paths:
             tags:
                 - libraries
             x-launchway-access: any-viewer
+    /api/v1/libraries/{library}/steps:
+        get:
+            description: 'A library''s custom steps at ?version= (default: its newest tag, else its default branch), each with its inputs and outputs (types), what it may do (network hosts, secrets, writable paths) and an example, read from its step.yaml. 404 when no libraries are configured.'
+            operationId: get_api_v1_libraries_library_steps
+            parameters:
+                - in: path
+                  name: library
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A library''s custom steps at ?version= (default: its newest tag, else its default branch), each with its inputs and outputs (types), what it may do (network hosts, secrets, writable paths) and an example, read from its step.yaml.'
+            tags:
+                - libraries
+            x-launchway-access: any-viewer
+    /api/v1/libraries/{library}/steps/{step}:
+        get:
+            description: 'One step''s page at ?version=: its manifest, its tagged versions with what changed in inputs, outputs and permissions (and whether a version asks for more), the Flights the caller may see that use it with the update on offer for each, and the newest version''s changes.'
+            operationId: get_api_v1_libraries_library_steps_step
+            parameters:
+                - in: path
+                  name: library
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: step
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One step''s page at ?version=: its manifest, its tagged versions with what changed in inputs, outputs and permissions (and whether a version asks for more), the Flights the caller may see that use it with the update on offer for each, and the newest version''s changes.'
+            tags:
+                - libraries
+            x-launchway-access: any-viewer
     /api/v1/libraries/{library}/templates:
         get:
             description: 'A library''s templates at ?version= (default: its newest tag, else its default branch), with their parameters and outputs. 404 when no libraries are configured. For launchway (one version, builtin) each template also has its kind (flight plan or step template), an example pipeline file and the graph of steps that file runs.'
