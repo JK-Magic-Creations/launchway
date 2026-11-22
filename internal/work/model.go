@@ -75,10 +75,12 @@ const (
 	TypeStory = "story"
 	TypeTask  = "task"
 	TypeEpic  = "epic"
+	// TypeDecision is a decision record (decisions.go).
+	TypeDecision = "decision"
 )
 
 // Types are the item types, in the order the interface lists them.
-var Types = []string{TypeIssue, TypeBug, TypeStory, TypeTask, TypeEpic}
+var Types = []string{TypeIssue, TypeBug, TypeStory, TypeTask, TypeEpic, TypeDecision}
 
 // Priorities, most urgent first.
 var Priorities = []string{"urgent", "high", "normal", "low"}

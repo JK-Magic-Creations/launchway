@@ -16,7 +16,7 @@ import (
 //
 //	state:in_progress  type:bug  label:ui  -label:wontfix  assignee:me
 //	is:open  is:closed  is:blocked  is:unassigned  is:claimed  is:confidential
-//	repo:acme/shop
+//	repo:acme/shop  decision:accepted
 //	milestone:"Q1"  sprint:"Sprint 4"  priority:high  parent:PAY-3  reporter:ada
 //	updated:>2026-01-01  updated:<7d  created:>30d  due:<today
 //	"words in quotes"  any other word  (searched in titles and bodies)
@@ -73,7 +73,7 @@ func ParseQuery(raw string) (*Query, error) {
 	return q, nil
 }
 
-var queryKeys = []string{"state", "type", "label", "assignee", "is", "milestone", "sprint", "priority", "parent", "epic", "reporter", "updated", "created", "due", "closed", "ref", "agent", "key", "repo"}
+var queryKeys = []string{"state", "type", "label", "assignee", "is", "milestone", "sprint", "priority", "parent", "epic", "reporter", "updated", "created", "due", "closed", "ref", "agent", "key", "repo", "decision"}
 
 func tokenize(s string) []string {
 	var out []string
@@ -293,6 +293,12 @@ var termBuilders = map[string]termBuilder{
 			return `1 = 0`, nil
 		}
 		return `i.number = ? AND EXISTS (SELECT 1 FROM work_scopes sc WHERE sc.scope_kind = i.scope_kind AND sc.scope_id = i.scope_id AND sc.prefix = ?)`, []any{n, prefix}
+	},
+	"decision": func(_ *termEnv, t term) (string, []any) {
+		if !slices.Contains(DecisionStatuses, t.val) {
+			return `1 = 0`, nil
+		}
+		return store.WorkIsDecisionSQL, []any{t.val}
 	},
 	"repo": func(_ *termEnv, t term) (string, []any) {
 		return store.WorkInRepositorySQL, []any{t.val, t.val}

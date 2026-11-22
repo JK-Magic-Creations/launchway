@@ -47,9 +47,29 @@ Flight. See [Roles and permissions](../reference/roles.md#work-tracking).
 | `story` | A change a user would notice | tasks |
 | `task` | A piece of work | nothing |
 | `epic` | A body of work made of stories, issues and bugs | stories, issues, bugs |
+| `decision` | A [decision record](#decision-records): a question, the options, a recommendation, then the answer | tasks |
 
 An epic has no parent. An item cannot be its own ancestor. A level may switch types off for new items;
 existing items keep theirs.
+
+## Decision records {#decision-records}
+
+An approval says yes or no to one action. A **decision record** keeps why something was done: a work item of type
+`decision` whose description holds the question, the options and a recommendation (a new decision starts from that
+outline), whose links say what it blocks (`blocks`) and what it decides (`decides` to an item, a pull code link to a
+pull request), and which a person answers.
+
+A decision is **proposed** until a person who may change work at its level answers it with `launchway work decisions
+accept KEY-12 "PostgreSQL, one per environment."`: the answer, who gave it and when are kept, and the item is
+finished. An agent does not answer. An accepted decision can be **superseded** by another accepted decision
+(`work decisions supersede KEY-12 KEY-30`), which is named on both; a decision is never replaced by itself, by a
+proposal, or in a loop. `decision:accepted` in a query, `work decisions list` and the `list_decisions` tool find them.
+
+`launchway work decisions export OWNER/NAME` writes the repository's accepted and superseded decisions (its own work
+and work tied to its code, as far as you may see them) as Markdown files, `docs/decisions/key-title.md`, on a new
+branch and opens a pull request, so that the records live with the code once it is merged. A file already in the
+default branch with the same text is left alone, and when nothing differs nothing is made. Neither the commit nor the
+pull request names a decision, so merging it does not tie it to the decisions it records.
 
 ## Workflow
 

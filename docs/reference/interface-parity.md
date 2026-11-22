@@ -355,6 +355,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/contributors` | `get_repository_contributors` | `repos contributors` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts list` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
 | `POST /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts token` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
+| `POST /api/v1/repositories/{owner}/{name}/decisions/export` | `export_decisions` | `work decisions export` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/dependencies` | `list_dependencies` | `deps list` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
@@ -577,6 +578,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/comments/{id}/edits` | `get_work_comment_edits` | `work items history` | — | equal |
 | `DELETE /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `PUT /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `GET /api/v1/work/decisions` | `list_decisions` | `work decisions list` | — | equal |
 | `POST /api/v1/work/health` | `run_repository_health` | `work health` | — | equal |
 | `GET /api/v1/work/home` | `get_work_home` | `work home` | — | equal |
 | `POST /api/v1/work/import/archive` | `promote_archive` | `work import --format archive` | — | equal |
@@ -593,6 +595,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/work/items/{ref}/code` | `link_work_code` | `work items code-link` | — | equal |
 | `GET /api/v1/work/items/{ref}/comments` | `get_work_item` | `work items show` | — | equal |
 | `POST /api/v1/work/items/{ref}/comments` | `comment_on_work_item` | `work items comment` | — | equal |
+| `GET /api/v1/work/items/{ref}/decision` | `get_decision` | `work decisions show` | — | equal |
+| `POST /api/v1/work/items/{ref}/decision/accept` | `accept_decision` | `work decisions accept` | — | equal |
+| `POST /api/v1/work/items/{ref}/decision/supersede` | `supersede_decision` | `work decisions supersede` | — | equal |
 | `GET /api/v1/work/items/{ref}/delivery` | `get_work_item` | `work items show` | — | equal |
 | `GET /api/v1/work/items/{ref}/history` | `get_work_history` | `work items history` | — | equal |
 | `GET /api/v1/work/items/{ref}/links` | `get_work_item` | `work items show` | — | equal |

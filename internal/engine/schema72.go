@@ -16,7 +16,9 @@ func init() {
 // 72: work_reactions has one row per person, target (an item or a comment) and reaction, from a fixed set that the
 // server checks. work_time_entries holds the time people log on work items: a timer (started_at, and ended_at 0
 // while it runs: a unique index allows one running timer per person) or a manual entry; minutes is what counts.
-// deployments.address is where a deployment can be seen (a preview), as its deploy step said.
+// deployments.address is where a deployment can be seen (a preview), as its deploy step said. work_decisions holds
+// what a decision record (a work item of type decision) adds to an item: no row is a proposed decision; the row of an
+// accepted one has the answer, who gave it and when, and of a superseded one the decision that replaced it.
 //
 //	Compatibility: additive: new tables (and columns with defaults), ignored by an older server.
 //	Downgrade: nothing to undo.
@@ -46,6 +48,17 @@ CREATE TABLE work_time_entries (
 CREATE INDEX work_time_item ON work_time_entries(item_id, day);
 CREATE INDEX work_time_who ON work_time_entries(who, day);
 CREATE UNIQUE INDEX work_time_one_timer ON work_time_entries(who) WHERE kind = 'timer' AND ended_at = 0;
+
+CREATE TABLE work_decisions (
+  item_id       TEXT    NOT NULL PRIMARY KEY,
+  status        TEXT    NOT NULL DEFAULT 'accepted',
+  answer        TEXT    NOT NULL DEFAULT '',
+  decided_by    TEXT    NOT NULL DEFAULT '',
+  decided_at    {{BIG}} NOT NULL DEFAULT 0,
+  superseded_by TEXT    NOT NULL DEFAULT '',
+  superseded_at {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX work_decisions_by ON work_decisions(superseded_by);
 
 ALTER TABLE deployments ADD COLUMN address TEXT NOT NULL DEFAULT '';
 `}

@@ -352,7 +352,7 @@ func itemsComment(w *wcmd) func([]string) (*workReq, error) {
 func itemsLink(w *wcmd) func([]string) (*workReq, error) {
 	return func(pos []string) (*workReq, error) {
 		if len(pos) != 3 {
-			return nil, usageErr("launchway work items link REF blocks|relates|duplicates OTHER")
+			return nil, usageErr("launchway work items link REF blocks|relates|duplicates|decides OTHER")
 		}
 		return &workReq{method: "POST", path: apiItem(pos[0]) + "/links", body: map[string]any{"kind": pos[1], "to": pos[2]},
 			show: func(out any) {

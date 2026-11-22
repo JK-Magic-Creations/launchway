@@ -13,6 +13,8 @@ const (
 	LinkBlocks     = "blocks"
 	LinkRelates    = "relates"
 	LinkDuplicates = "duplicates"
+	// LinkDecides runs from a decision record to what it decides (an item); see decisions.go.
+	LinkDecides = "decides"
 )
 
 // Link is a typed link from one item to another. blocks and duplicates have a
@@ -33,8 +35,8 @@ type Link struct {
 // AddLink links two items. Linking across projects needs the caller to see
 // both; a blocks link that would make a cycle is refused and the chain named.
 func (s *Store) AddLink(ctx context.Context, c Caller, fromRef, kind, toRef string) (*Link, error) {
-	if !slices.Contains([]string{LinkBlocks, LinkRelates, LinkDuplicates}, kind) {
-		return nil, invalid("a link is blocks, relates or duplicates")
+	if !slices.Contains([]string{LinkBlocks, LinkRelates, LinkDuplicates, LinkDecides}, kind) {
+		return nil, invalid("a link is blocks, relates, duplicates or decides")
 	}
 	from, err := s.Get(ctx, c, fromRef)
 	if err != nil {
@@ -49,6 +51,9 @@ func (s *Store) AddLink(ctx context.Context, c Caller, fromRef, kind, toRef stri
 	}
 	if !c.canWrite(from.Scope) {
 		return nil, forbidden("you may not change work in %s", from.Scope)
+	}
+	if kind == LinkDecides && from.Type != TypeDecision {
+		return nil, invalid("only a decision record decides: %s is a %s", from.Ref, from.Type)
 	}
 	if kind == LinkRelates && from.ID > to.ID {
 		from, to = to, from

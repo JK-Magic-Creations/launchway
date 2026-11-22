@@ -10509,6 +10509,44 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: token.create
+    /api/v1/repositories/{owner}/{name}/decisions/export:
+        post:
+            description: 'Writes the accepted and superseded decision records the caller may see for the repository as Markdown files under {folder} (default docs/decisions) on a new branch and opens a pull request: {changed, branch, commit, files, unchanged, pull}. A file already on the default branch with the same text is left alone; when nothing differs, {changed: 0, message} and nothing is made. A branch rule that refuses the branch refuses the export.'
+            operationId: post_api_v1_repositories_owner_name_decisions_export
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Writes the accepted and superseded decision records the caller may see for the repository as Markdown files under {folder} (default docs/decisions) on a new branch and opens a pull request: {changed, branch, commit, files, unchanged, pull}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.decisions_export
     /api/v1/repositories/{owner}/{name}/dependencies:
         get:
             description: 'What a hosted repository''s default branch depends on, read from its manifests and lock files (Go modules, npm, Python, container images, workflow references): per dependency the version in use, the newest, the version the policy would move to, its age, known vulnerabilities (advisory, severity, fixed version) and why nothing is proposed. Also the settings that apply (policy, with which level locked what), files read, files that could not be read, and the ecosystems that are coming. Reads the default branch only, changes nothing; answers are kept for five minutes per branch tip. 404 feature_off without Git hosting, 409 for a repository with no default branch, 502 report_failed when the Depots (registries) or the vulnerability data cannot be reached.'
@@ -17806,6 +17844,29 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.react
+    /api/v1/work/decisions:
+        get:
+            description: 'The decision records you may see: ?scope=, ?repository=OWNER/NAME, ?status=. Answers {items: [{item, title, status, answer, decided_by, decided_at, superseded_by}]}.'
+            operationId: get_api_v1_work_decisions
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The decision records you may see: ?scope=, ?repository=OWNER/NAME, ?status=.'
+            tags:
+                - work
+            x-launchway-access: signed-in
     /api/v1/work/health:
         post:
             description: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
@@ -18256,6 +18317,103 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.comment
+    /api/v1/work/items/{ref}/decision:
+        get:
+            description: 'A decision record (an item of type decision): {item, title, status (proposed, accepted or superseded), answer, decided_by, decided_at, superseded_by, supersedes, decides, pulls, blocks}. 400 for an item of another type.'
+            operationId: get_api_v1_work_items_ref_decision
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A decision record (an item of type decision): {item, title, status (proposed, accepted or superseded), answer, decided_by, decided_at, superseded_by, supersedes, decides, pulls, blocks}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/items/{ref}/decision/accept:
+        post:
+            description: 'A person who may change work at the level answers a proposed decision: {answer} (1 to 4000 bytes). The answer, who and when are kept and the item is finished. 409 when it is already decided; an agent is refused.'
+            operationId: post_api_v1_work_items_ref_decision_accept
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A person who may change work at the level answers a proposed decision: {answer} (1 to 4000 bytes).'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.decision_accept
+    /api/v1/work/items/{ref}/decision/supersede:
+        post:
+            description: 'Says an accepted decision is replaced by another accepted one: {by}. Never itself, never a proposal, never a loop.'
+            operationId: post_api_v1_work_items_ref_decision_supersede
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Says an accepted decision is replaced by another accepted one: {by}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.decision_supersede
     /api/v1/work/items/{ref}/delivery:
         get:
             description: Where the item's merged change is running, per Airfield (environment), from real deployments, with a sentence. null before anything merged.

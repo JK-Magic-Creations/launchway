@@ -429,6 +429,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.file_delete` | `DELETE /api/v1/repositories/{owner}/{name}/files` (also `launchway repos delete-file`): one commit made by the server that removes a file; the detail names the branch, the path and the commit range |
 | `repository.files_upload` | `POST /api/v1/repositories/{owner}/{name}/files` (also `launchway repos upload`): several files added in one commit by the server; the detail names the branch, the paths and the commits before and after |
 | `repository.inspect` | `POST /api/v1/repositories/{owner}/{name}/inspections` (also `launchway repos inspect`): an Inspection started by hand; the detail names the Flight (codebase), the Sortie (run) and the commit. A refusal (no Flight watches the repository, Standing orders off, no Station online) is audited with its reason |
+| `repository.decisions_export` | `POST /api/v1/repositories/{owner}/{name}/decisions/export` (also `launchway work decisions export`): decision records written to a branch and a pull request opened; the detail names the branch and the number of files |
 | `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
 | `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
 | `repository.branch_delete_stale` | `POST /api/v1/repositories/{owner}/{name}/branches/delete-stale` (also `launchway repos branches stale --delete --yes`): merged stale branches removed in one go; the detail lists the names removed |
@@ -538,6 +539,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `work.timer_stop` | `POST /api/v1/work/timer/stop`: the detail says how long it counted for |
 | `work.time_edit` | `PATCH /api/v1/work/time/{id}` |
 | `work.time_delete` | `DELETE /api/v1/work/time/{id}` |
+| `work.decision_accept` | `POST /api/v1/work/items/{ref}/decision/accept`: a decision answered |
+| `work.decision_supersede` | `POST /api/v1/work/items/{ref}/decision/supersede` |
 | `work.link` | `POST /api/v1/work/items/{ref}/links`: blocks, relates or duplicates |
 | `work.unlink` | `DELETE /api/v1/work/links/{id}` |
 | `work.code_link` | `POST /api/v1/work/items/{ref}/code`: a commit, branch, pull request or run was tied to an item by hand or by an agent |

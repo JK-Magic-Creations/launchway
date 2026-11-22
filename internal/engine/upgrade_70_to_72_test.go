@@ -104,6 +104,22 @@ func TestUpgradeFromSchema70KeepsEverythingAndAddsTheWorkTables(t *testing.T) {
 	if err := store.TimeInsert(ctx, db, now); err != nil {
 		t.Fatalf("a new timer after the first was stopped: %v", err)
 	}
+	// Decision records: no row is a proposal; the old item can be answered once and then replaced.
+	if _, ok, err := store.DecisionGet(ctx, db, "wi_1"); err != nil || ok {
+		t.Fatalf("an old item has a decision row: %v %v", ok, err)
+	}
+	if added, err := store.DecisionAccept(ctx, db, "wi_1", "Yes.", "ada", 10); err != nil || !added {
+		t.Fatalf("%v %v", added, err)
+	}
+	if again, _ := store.DecisionAccept(ctx, db, "wi_1", "No.", "bob", 11); again {
+		t.Fatal("a decision was answered twice")
+	}
+	if ok, err := store.DecisionSupersede(ctx, db, "wi_1", "wi_2", 12); err != nil || !ok {
+		t.Fatalf("%v %v", ok, err)
+	}
+	if row, _, _ := store.DecisionGet(ctx, db, "wi_1"); row.Status != "superseded" || row.SupersededBy != "wi_2" || row.Answer != "Yes." {
+		t.Fatalf("%+v", row)
+	}
 	cur.Close()
 
 	older := mustOpenAs(t, addr, clk, schemaOverview, &syncBuffer{})

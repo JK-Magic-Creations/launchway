@@ -17,6 +17,7 @@ import (
 const workUsage = `Usage:
   launchway work items list|show|create|update|move|rank|comment|react|link|unlink|code-link|history|attach|file|by-code|take-over
   launchway work time start|stop|running|log|show|edit|delete|report|export
+  launchway work decisions list|show|accept|supersede|export
   launchway work board|roadmap|release-notes|home|inbox|spend|import|propose|health
   launchway work milestones list|create|update
   launchway work sprints list|show|create|update|start|complete|burndown
@@ -55,7 +56,7 @@ Items:
   launchway work items rank REF top|bottom|before OTHER|after OTHER     reorder (those who maintain the level)
   launchway work items comment REF TEXT               add a comment; --file F reads it from a file
   launchway work items comment --edit COMMENT_ID TEXT change a comment you wrote
-  launchway work items link REF blocks|relates|duplicates OTHER
+  launchway work items link REF blocks|relates|duplicates|decides OTHER
   launchway work items unlink LINK_ID                 remove a link (the id is in work items show)
   launchway work items code-link REF --kind commit|branch|pull|run --code-repo OWNER/NAME --ref X
                             [--title T] [--state S] [--closes]         tie a commit, branch, pull request or run
@@ -74,6 +75,15 @@ Time:
   launchway work time edit ENTRY_ID [--minutes N] [--day D] [--note T] | delete ENTRY_ID    your own entries
   launchway work time report [--scope S] [--person P|me] [--from D] [--to D]    totals per person and item
   launchway work time export [same flags] [--out FILE]           the entries as CSV
+
+Decisions (work items of type decision; create one with work items create --type decision):
+  launchway work decisions list [--scope S] [--in-repo OWNER/NAME] [--status proposed|accepted|superseded]
+  launchway work decisions show REF                    status, answer, who and when, what it replaces, decides and blocks
+  launchway work decisions accept REF ANSWER           a person answers a proposed decision
+  launchway work decisions supersede REF BY_REF        an accepted decision is replaced by another accepted one
+  launchway work decisions export OWNER/NAME [--folder DIR]   write the accepted decisions as Markdown into the repository's docs
+                            folder on a new branch and open a pull request
+  A decision decides items by  work items link DECISION decides ITEM  and pull requests by  work items code-link DECISION --kind pull ...
 
 Planning:
   launchway work board [--query Q] [--lanes assignee|epic|priority] [--sprint NAME]
@@ -183,6 +193,7 @@ var workGroups = map[string]func(*client, []string) error{
 	"samples":       (*client).workSamples,
 	"agent":         (*client).workAgent,
 	"time":          (*client).workTime,
+	"decisions":     (*client).workDecisions,
 }
 
 // ---- one command: flags, a request, an answer ----

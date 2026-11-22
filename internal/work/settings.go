@@ -222,9 +222,10 @@ func DefaultTransitions() []Transition {
 	}
 }
 
-// DefaultTypes are the five item types.
+// DefaultTypes are the six item types.
 func DefaultTypes() []TypeDef {
-	return []TypeDef{{Key: TypeIssue, Name: "Issue"}, {Key: TypeBug, Name: "Bug"}, {Key: TypeStory, Name: "Story"}, {Key: TypeTask, Name: "Task"}, {Key: TypeEpic, Name: "Epic"}}
+	return []TypeDef{{Key: TypeIssue, Name: "Issue"}, {Key: TypeBug, Name: "Bug"}, {Key: TypeStory, Name: "Story"}, {Key: TypeTask, Name: "Task"}, {Key: TypeEpic, Name: "Epic"},
+		{Key: TypeDecision, Name: "Decision", Template: DecisionTemplate}}
 }
 
 // DefaultClose moves an item to Done when its pull request merges.
