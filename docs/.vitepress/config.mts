@@ -378,6 +378,8 @@ export default defineConfig({
           { text: 'Writing a migration', link: '/development/migrations' },
           { text: 'Releasing', link: '/development/releasing' },
           { text: 'Every table has an owner', link: '/development/the-wall' },
+          { text: 'Writer rules that say what may change', link: '/development/writer-rules-what-may-change' },
+          { text: 'Automatic resources', link: '/development/automatic-resources' },
           { text: 'Quality bar for the API, MCP and CLI', link: '/development/interface-quality' },
         ],
       },
