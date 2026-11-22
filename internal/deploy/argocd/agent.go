@@ -382,7 +382,7 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 	if app == nil {
 		return "", fmt.Errorf("there is no application %s in namespace %s", d.Application, cl.argoNS)
 	}
-	if t.Refresh() && d.Sync.Refresh != "never" {
+	if t.asksRefresh(d.Sync) {
 		if err := cl.Refresh(ctx, d.Application); err != nil {
 			log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll", d.Application, err)
 		}

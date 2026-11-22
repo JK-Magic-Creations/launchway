@@ -9,6 +9,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/deploy"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // Asking the controller to REFRESH an application (to re-read its sources) is not a sync: it changes nothing in the
@@ -112,3 +113,7 @@ func (a *Agent) noticeCommit(ctx context.Context, cl *Cluster, t Target, it engi
 		app.RefreshAsked = fmt.Sprintf("Launchway asked Argo CD to re-read the repository for %s (a hard refresh, which syncs nothing) %d time(s) so that it notices the commit", it.Application, n)
 	}
 }
+
+// asksRefresh reports whether a deployment with this sync setting may ask the controller to refresh: the target does
+// not turn refreshing off (deploy.targets.NAME.refresh) and the step does not say sync.refresh: never.
+func (t Target) asksRefresh(s pipeline.Sync) bool { return t.Refresh() && s.Refresh != "never" }

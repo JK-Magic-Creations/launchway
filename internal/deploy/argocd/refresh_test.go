@@ -47,13 +47,12 @@ func twoCommits(t *testing.T) (bare, first, second string) {
 // staleController is an Argo CD that caches what the branch points at: the application shows the first commit until
 // somebody asks it for a hard refresh, which makes it read the second. A refresh is the only thing it does.
 type staleController struct {
-	mu         sync.Mutex
-	bare       string
-	old, tip   string
-	refreshed  bool
-	asked      int
-	forbidden  bool // the credentials may not change the Application
-	annotation string
+	mu        sync.Mutex
+	bare      string
+	old, tip  string
+	refreshed bool
+	asked     int
+	forbidden bool // the credentials may not change the Application
 }
 
 func (c *staleController) app() map[string]any {
