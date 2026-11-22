@@ -54,8 +54,9 @@ function LockBadge({ e }: { e: VarResolved }) {
 }
 
 /** The chain behind a value: what it overrides, nearest first, struck through. */
-export function Chain({ chain }: { chain: VarLink[] }) {
-  if (chain.length < 2) return null;
+export function Chain({ chain }: { chain: VarLink[] | null | undefined }) {
+  // The server sends null, not an empty list, for a variable nothing overrides.
+  if (!chain || chain.length < 2) return null;
   return (
     <ol className="vr-chain" aria-label="Values this one overrides, nearest first">
       {chain.slice(1).map((l, i) => (
@@ -255,7 +256,7 @@ export function RunVariables({ runId }: { runId: string }) {
   useEffect(() => { variablesApi.run(runId).then(setRec).catch(setError); }, [runId]);
   if (error) return null; // older servers have no record; the run page does not depend on it
   if (!rec) return null;
-  if (rec.variables.length === 0) return null;
+  if (!rec.variables || rec.variables.length === 0) return null;
   return (
     <section className="card vr vr-compact" aria-labelledby="runvars-title">
       <h2 id="runvars-title">Variables in effect</h2>
