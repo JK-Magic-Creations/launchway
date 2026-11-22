@@ -11,7 +11,7 @@ import (
 
 const reposMoreUsage = `  launchway repos download OWNER/NAME [--ref REF] [--format tar.gz|zip] [-o FILE]
                                                          save a snapshot of a branch, tag or commit (read access; the server limits its size)
-  launchway repos settings [--archive-max-mib N] [--trash-days N] [--json]
+  launchway repos settings [--archive-max-mib N] [--trash-days N] [--stale-days N] [--json]
                                                          the largest snapshot and how long a deleted repository is kept (changing them: administrators)
 `
 
@@ -47,6 +47,7 @@ func (cl *client) reposSettings(args []string) error {
 	fs := flag.NewFlagSet("repos settings", flag.ContinueOnError)
 	archive := fs.Int("archive-max-mib", 0, "the most a snapshot may hold, in MiB of files")
 	trash := fs.Int("trash-days", 0, "how many days a deleted repository can be restored")
+	stale := fs.Int("stale-days", 0, "how many days without a commit make a branch stale")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
@@ -54,15 +55,19 @@ func (cl *client) reposSettings(args []string) error {
 	var s struct {
 		ArchiveMaxMiB      int `json:"archive_max_mib"`
 		TrashRetentionDays int `json:"trash_retention_days"`
+		StaleBranchDays    int `json:"stale_branch_days"`
 	}
 	var err error
-	if v := visited(fs); v["archive-max-mib"] || v["trash-days"] {
+	if v := visited(fs); v["archive-max-mib"] || v["trash-days"] || v["stale-days"] {
 		body := map[string]any{}
 		if v["archive-max-mib"] {
 			body["archive_max_mib"] = *archive
 		}
 		if v["trash-days"] {
 			body["trash_retention_days"] = *trash
+		}
+		if v["stale-days"] {
+			body["stale_branch_days"] = *stale
 		}
 		err = cl.call("PUT", "/api/v1/hosting-settings", body, &s)
 	} else {
@@ -72,7 +77,7 @@ func (cl *client) reposSettings(args []string) error {
 		return err
 	}
 	return cl.print(s, *asJSON, func() {
-		fmt.Fprintf(cl.out, "A snapshot of a ref may hold up to %d MiB of files.\nA deleted repository is kept %d days before it is removed for good.\n", s.ArchiveMaxMiB, s.TrashRetentionDays)
+		fmt.Fprintf(cl.out, "A snapshot of a ref may hold up to %d MiB of files.\nA deleted repository is kept %d days before it is removed for good.\nA branch is stale after %d days without a commit.\n", s.ArchiveMaxMiB, s.TrashRetentionDays, s.StaleBranchDays)
 	})
 }
 

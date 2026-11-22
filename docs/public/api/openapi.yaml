@@ -3299,7 +3299,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/hosting-settings:
         get:
-            description: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            description: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30, "stale_branch_days": 90}: the most a snapshot may hold, how many days a deleted repository can be restored and how many days without a commit make a branch stale.'
             operationId: get_api_v1_hosting_settings
             responses:
                 "200":
@@ -3316,12 +3316,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30}: the most a snapshot may hold and how many days a deleted repository can be restored.'
+            summary: 'The installation''s hosting settings: {"archive_max_mib": 512, "trash_retention_days": 30, "stale_branch_days": 90}: the most a snapshot may hold, how many days a deleted repository can be restored and how many days without a commit make a branch stale.'
             tags:
                 - hosting-settings
             x-launchway-access: signed-in
         put:
-            description: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}. Answers with both.'
+            description: 'Changes any setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650, "stale_branch_days": 1..3650}. Answers with all.'
             operationId: put_api_v1_hosting_settings
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -3340,7 +3340,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Changes either setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650}.'
+            summary: 'Changes any setting (leave one out to keep it): {"archive_max_mib": 1..65536, "trash_retention_days": 1..3650, "stale_branch_days": 1..3650}.'
             tags:
                 - hosting-settings
             x-launchway-access: admin
@@ -9934,6 +9934,44 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.branch_create
+    /api/v1/repositories/{owner}/{name}/branches/delete-stale:
+        post:
+            description: 'Removes merged stale branches: a branch merged into the default branch, with no commit for stale_branch_days (hosting settings), not protected and without an open pull request. {"confirm": false} only lists them as candidates; {"confirm": true, "names": [...]} deletes those of the names that are still candidates (at most 200) and answers with deleted and skipped (name to reason). The branch list (GET .../branches) carries stale, merged and last_run for each branch.'
+            operationId: post_api_v1_repositories_owner_name_branches_delete_stale
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Removes merged stale branches: a branch merged into the default branch, with no commit for stale_branch_days (hosting settings), not protected and without an open pull request.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_delete_stale
     /api/v1/repositories/{owner}/{name}/branches/rename:
         post:
             description: 'Rename a branch: {"name", "new_name"}. Never the default branch (409: make another the default first) and never onto a name that exists (409). The rules of a push apply to both names, so a protected name is for administrators. Pull requests and runs that name the old branch are not moved. Answers {"name", "was", "commit", "note"}.'

@@ -38,6 +38,7 @@ func addParityTools(srv *mcp.Server, c *mcpCall) {
 type hostingSettingsOut struct {
 	ArchiveMaxMiB      int `json:"archive_max_mib"`
 	TrashRetentionDays int `json:"trash_retention_days"`
+	StaleBranchDays    int `json:"stale_branch_days"`
 }
 
 func getHostingSettings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ struct{}) (hostingSettingsOut, error) {
@@ -49,6 +50,7 @@ func getHostingSettings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest,
 type setHostingSettingsIn struct {
 	ArchiveMaxMiB      *int `json:"archive_max_mib,omitempty" jsonschema:"the most a snapshot of a ref may hold, in MiB of files (1 to 65536)"`
 	TrashRetentionDays *int `json:"trash_retention_days,omitempty" jsonschema:"how many days a deleted repository can be restored (1 to 3650)"`
+	StaleBranchDays    *int `json:"stale_branch_days,omitempty" jsonschema:"how many days without a commit make a branch stale (1 to 3650)"`
 }
 
 func setHostingSettings(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setHostingSettingsIn) (hostingSettingsOut, error) {

@@ -52,6 +52,9 @@ func addBrowseTools(srv *mcp.Server, c *mcpCall) {
 		addTool(srv, c, &mcp.Tool{Name: "delete_repository_branch", Annotations: changes("Delete a branch", true, false),
 			Description: "Operators of the repository. Delete a branch (never the default branch); protected branches are for administrators. The answer says which commit it pointed at and how to bring it back. Audited."},
 			mcpCallTimeout, deleteBranchTool)
+		addTool(srv, c, &mcp.Tool{Name: "delete_stale_branches", Annotations: changes("Delete merged stale branches", true, false),
+			Description: "Operators of the repository. Without confirm, list the branches that are merged into the default branch, have had no commit for the hosting setting's days (default 90), are not protected and have no open pull request. With confirm true and names (taken from that list, which a person should have seen), delete those that are still on it; the answer says what was deleted and what was skipped and why. Audited."},
+			mcpCallTimeout, deleteStaleBranchesTool)
 		addTool(srv, c, &mcp.Tool{Name: "rename_repository_branch", Annotations: changes("Rename a branch", false, false),
 			Description: "Operators of the repository. Rename a branch (never the default branch: make another the default first). Protected names are for administrators. Pull requests and runs that name the old branch are not moved. Audited."},
 			mcpCallTimeout, renameBranchTool)
@@ -88,6 +91,10 @@ type branchOut struct {
 	Default   bool `json:"default"`
 	Protected bool `json:"protected"`
 	OpenPull  int  `json:"open_pull,omitempty"`
+	// Stale: no commit for the hosting setting's days; Merged: nothing its base lacks; LastRun: its newest pipeline run.
+	Stale   bool       `json:"stale"`
+	Merged  bool       `json:"merged"`
+	LastRun *branchRun `json:"last_run,omitempty"`
 }
 type branchesOut struct {
 	Items     []branchOut `json:"items"`
@@ -343,5 +350,20 @@ func inspectRepoTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 		return out, errors.New("say which repository: owner and name")
 	}
 	err := c.apiJSON(ctx, "inspect_repository", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/inspections", in.Owner, in.Name), map[string]string{"ref": in.Ref}, &out)
+	return out, err
+}
+
+type staleBranchesToolIn struct {
+	repositoryIn
+	Confirm bool     `json:"confirm,omitempty" jsonschema:"true to delete the named branches; false (default) only lists the candidates"`
+	Names   []string `json:"names,omitempty" jsonschema:"the branches to delete, from the list of candidates"`
+}
+
+func deleteStaleBranchesTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in staleBranchesToolIn) (staleBranchesOut, error) {
+	var out staleBranchesOut
+	if err := in.check(); err != nil {
+		return out, err
+	}
+	err := c.apiJSON(ctx, "delete_stale_branches", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/branches/delete-stale", in.Owner, in.Name), staleBranchesIn{Confirm: in.Confirm, Names: in.Names}, &out)
 	return out, err
 }
