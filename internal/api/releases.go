@@ -61,6 +61,7 @@ func (s *Server) releaseRoutes() []route {
 		{"POST " + p + "/releases/{version}/candidate", projectOperate, "release.candidate", s.makeCandidate},
 		{"POST " + p + "/releases/{version}/publish", projectOperate, "release.publish", s.publishRelease},
 		{"POST " + p + "/releases/{version}/yank", projectOperate, "release.yank", s.yankRelease},
+		{"POST " + p + "/releases/{version}/outside/{mirror}/retry", projectOperate, "release.outside_retry", s.retryOutside},
 		{"POST " + p + "/releases/{version}/changelog", projectOperate, "release.changelog", s.proposeChangelog},
 		{"GET /public/releases/{name}/{version}/{asset}", public, "release.asset.download", s.publicDownload},
 	}
@@ -119,12 +120,14 @@ func (s *Server) releaseView(r *http.Request, rel *engine.Release) map[string]an
 		out["clearances"] = ck
 	}
 	out["links"] = s.releaseLinks(r, rel)
+	out["outside"] = s.outsideViews(r, rel)
 	id := identityFrom(r)
 	out["may"] = map[string]bool{
 		"edit": s.authorize(id, auth.Operate, rel.Project) && !rel.Immutable, "publish": s.authorize(id, auth.Operate, rel.Project) && (rel.State == engine.ReleaseDraft || rel.State == engine.ReleaseCandidate),
-		"promote":    s.authorize(id, auth.Operate, rel.Project) && (rel.State == engine.ReleasePublished || rel.State == engine.ReleaseCandidate),
-		"yank":       s.authorize(id, auth.Operate, rel.Project) && (rel.State == engine.ReleasePublished || rel.State == engine.ReleaseCandidate),
-		"administer": s.isProjectAdmin(id, rel.Project),
+		"promote":       s.authorize(id, auth.Operate, rel.Project) && (rel.State == engine.ReleasePublished || rel.State == engine.ReleaseCandidate),
+		"yank":          s.authorize(id, auth.Operate, rel.Project) && (rel.State == engine.ReleasePublished || rel.State == engine.ReleaseCandidate),
+		"administer":    s.isProjectAdmin(id, rel.Project),
+		"outside_retry": s.authorize(id, auth.Operate, rel.Project) && rel.State == engine.ReleasePublished,
 	}
 	return out
 }
@@ -705,6 +708,7 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 		return s.refusal(err)
 	}
 	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
+	s.queueOutside(context.WithoutCancel(r.Context()), got)
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
 	return got, http.StatusOK, ""
 }

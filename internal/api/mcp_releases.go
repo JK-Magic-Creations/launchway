@@ -301,6 +301,20 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 			}
 			return relCall(ctx, c, "withdraw_release", http.MethodPost, p, map[string]any{"reason": in.Reason})
 		})
+	addTool(srv, c, &mcp.Tool{Name: "retry_outside_release",
+		Annotations: changes("Publish a release on the outside Git host again", false, true),
+		Description: "Makes a published release on a push mirror's outside Git host again after it failed (get_release shows each mirror's state under outside, with the reason, credentials removed), or for the first time when the mirror's publish_releases was turned on after the release was published. The Launchway release is not touched. The mirror's ID is in list_mirrors. Audited."},
+		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
+			Project  string `json:"project" jsonschema:"the Flight's name"`
+			Version  string `json:"version" jsonschema:"the release's version, or its tag"`
+			MirrorID string `json:"mirror_id" jsonschema:"the push mirror's ID (mir_...), from list_mirrors"`
+		}) (relOut, error) {
+			p, err := relRef{in.Project, in.Version}.path("/outside/" + url.PathEscape(in.MirrorID) + "/retry")
+			if err != nil {
+				return nil, err
+			}
+			return relCall(ctx, c, "retry_outside_release", http.MethodPost, p, nil)
+		})
 	addTool(srv, c, &mcp.Tool{Name: "delete_draft_release", Annotations: changes("Delete a draft release", true, true),
 		Description: "Deletes a draft release and its files. A candidate or published release is never deleted."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in relRef) (relOut, error) {

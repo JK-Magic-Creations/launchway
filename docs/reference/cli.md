@@ -784,6 +784,7 @@ launchway release assets get PROJECT VERSION NAME [-o FILE]
 launchway release candidate PROJECT VERSION
 launchway release publish PROJECT VERSION [--public]
 launchway release yank PROJECT VERSION --reason TEXT
+launchway release outside retry PROJECT VERSION --mirror mir_...
 launchway release delete PROJECT VERSION
 launchway release changelog PROJECT VERSION [--base BRANCH]
 launchway release compare PROJECT VERSION-A VERSION-B
@@ -1212,6 +1213,8 @@ Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirr
 launchway repos mirror status [OWNER/NAME] [--behind] [--json]
 launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
                   [--credential-env NAME | --credential-file PATH] [--interval 1h] [--no-prune]
+                  [--publish-releases [--outside-api URL]]
+launchway repos mirror set OWNER/NAME --id mir_... [--publish-releases=true|false] [--outside-api URL]
 launchway repos mirror sync OWNER/NAME [--id mir_...]
 launchway repos mirror pause|resume OWNER/NAME --id mir_...
 launchway repos mirror remove OWNER/NAME --id mir_...
@@ -1220,9 +1223,11 @@ launchway repos mirror stop OWNER/NAME [--final-sync]
 
 `status` lists each mirror with its state (`ok`, `error`, `pending`, `paused`, `running`), its lag, the number of refs and the last error, with credentials removed; `--behind` lists only those that have fallen behind. `add --direction pull` needs a repository with no branches or tags of its own, because mirroring replaces them. `sync` runs the pull mirror (or the one named with `--id`) now and exits with `4` if the Sortie failed, printing why.
 
+`add --direction push --publish-releases` (off by default) also makes each published Launchway release on the outside Git host the mirror copies to: same tag, title and notes, every file uploaded, with the mirror's own credential; `--outside-api` gives that host's API address when it cannot be derived from the mirror's address (a self-hosted host). `set` changes both on an existing push mirror. `status` then lists how each release stands there (`pending`, `published` with its address, or `failed` with the reason, credentials removed). See [Cut a release](../guide/cut-a-release.md).
+
 `stop` is the cut-over step: the repository stops being a mirror, the mirror is deleted and pushes are accepted. With `--final-sync` the mirror runs once more first, and nothing changes if that run fails. A pull mirror whose source suddenly lists no branches or tags refuses to delete everything; stop mirroring if the other server really was emptied.
 
-A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `sync_mirror` and `stop_mirroring`.
+A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `change_mirror`, `sync_mirror` and `stop_mirroring`.
 
 ## launchway install
 

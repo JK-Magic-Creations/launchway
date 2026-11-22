@@ -1,8 +1,8 @@
-# Publishing a release to an outside Git host (design, not built)
+# Publishing a release to an outside Git host (built)
 
-Status: designed, not built. A push mirror copies a hosted repository's refs, so the tag of a published release reaches the outside host. The release itself (its notes and files, the page people open there) is not created. This page says how it would be, and why it was not built with the cut-a-release work.
+Status: built (schema 55; the number may change at merge, see below). A push mirror copies a hosted repository's refs, so the tag of a published release reaches the outside host. This page says how the release itself (its notes and files, the page people open there) is made there, and what is not done yet.
 
-## What is wanted
+## What it does
 
 After a release is published here, create the matching release on the outside host of a push mirror: same tag, same notes, same files. Off by default, per repository, audited, and failing soft: the Launchway release stands, the outside publish shows as failed with its reason and a retry.
 
@@ -15,6 +15,12 @@ After a release is published here, create the matching release on the outside ho
 - State: a table `release_outside` (migration 55, additive): release id, mirror id, state (`pending`, `published`, `failed`), outside address, reason, attempts, times. A background worker takes `pending` rows after the tag has been mirrored (it waits for the mirror's next successful sync, so the tag exists there), retries with backoff, and records every attempt as `release.outside_publish` in the Logbook. The release page shows the state and a **Retry** button (`POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry`, with CLI, MCP and parity rows).
 - Notes are Markdown written by people and are sent as they are; files are streamed from the release store, so large files are not held in memory. Withdrawing a release marks the outside release a draft, never deletes it.
 
-## Why it was not built now
+## What was built, and what is left
 
-It needs a migration, a worker with retries, a mirror setting across API, CLI, MCP and Terraform, a retry action in every interface, a REST client with uploads, and a fake server for its tests: more than the small, safe addition the cut-a-release work allowed, and it must not be rushed because it sends the owner's files to a third party. The tag mirroring that exists already gives the outside host the tag and the source archive of that tag.
+- `internal/release/outside`: the `Publisher` interface and one implementation (`REST`) of the most common public host's REST API. Before anything it looks the tag up on the outside host and never asks for a release of a tag that is missing (the host would create the tag from its default branch). It finds or creates the release, and uploads each file that is missing there (a second try adds only what is missing, and replaces a file whose size differs). Files are streamed from the release store. The credential is sent only to the API's host, the mirror's host and its `uploads.` host, redirects are not followed, and every request goes through the mirror's egress guard, at the address check and again when connecting. Errors are redacted of the credential.
+- State: table `release_outside` (migration 55, additive; the same migration adds `publish_releases` and `outside_api` to `repo_mirrors`). The number was the next free one on `main` (54 was the last) when it was built; other unmerged branches also claim 55, so the merge renumbers one of them (change `schemaOutside`, its marker and `schemaLast`).
+- Worker: the release worker (`RunReleaseWork`) has a loop that takes pending rows, claims each with a lease, and publishes. A missing tag keeps the row pending with a delay of 15 s doubling to 10 min, for 12 tries, then failed with that reason; any other failure is failed at once. Every attempt is a Logbook entry `release.outside_publish` (outcome `ok`, `waiting` or `failed`).
+- Setting: `publish_releases` and `outside_api` on a push mirror, through the HTTP API (`POST` and `PATCH` on the mirror), the CLI (`repos mirror add --publish-releases`, `repos mirror set`) and the MCP tools `set_mirror` and `change_mirror` (action `update`). Changes are audited as `mirror.create` and `mirror.update`.
+- Retry: `POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry` (audited `release.outside_retry`), the CLI `release outside retry`, the MCP tool `retry_outside_release`, a button on the release page; each has its row in the parity table. The release view and `repos mirror status` show each state and reason.
+
+Not done: marking the outside release a draft when a release is withdrawn here; a Terraform setting; a second host implementation; waiting on the mirror's actual sync instead of looking for the tag (the look-and-wait is simpler and safe because nothing is created for a missing tag).

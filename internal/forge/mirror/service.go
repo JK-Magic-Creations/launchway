@@ -241,8 +241,9 @@ func hasManaged(name string) bool {
 	return false
 }
 
-// Update changes whether a mirror runs, how often, and whether it prunes.
-func (s *Service) Update(ctx context.Context, id string, enabled *bool, interval *int64, prune *bool) (Mirror, error) {
+// Update changes whether a mirror runs, how often, whether it prunes and, for
+// a push mirror, whether it publishes releases (out may be nil).
+func (s *Service) Update(ctx context.Context, id string, enabled *bool, interval *int64, prune *bool, out *OutsideChange) (Mirror, error) {
 	m, err := s.Get(ctx, id)
 	if err != nil {
 		return m, err
@@ -253,6 +254,20 @@ func (s *Service) Update(ctx context.Context, id string, enabled *bool, interval
 	if prune != nil {
 		m.Prune = *prune
 	}
+	if out != nil && (out.PublishReleases != nil || out.OutsideAPI != nil) {
+		if m.Direction != Push {
+			return m, fmt.Errorf("%w: mirror: publish_releases and outside_api belong to a push mirror", forge.ErrInvalid)
+		}
+		if out.PublishReleases != nil {
+			m.PublishReleases = *out.PublishReleases
+		}
+		if out.OutsideAPI != nil {
+			if err := checkOutsideAPI(*out.OutsideAPI); err != nil {
+				return m, fmt.Errorf("%w: mirror: %v", forge.ErrInvalid, err)
+			}
+			m.OutsideAPI = strings.TrimSpace(*out.OutsideAPI)
+		}
+	}
 	if interval != nil {
 		d := time.Duration(*interval) * time.Second
 		if d < minInterval || d > maxInterval {
@@ -260,8 +275,8 @@ func (s *Service) Update(ctx context.Context, id string, enabled *bool, interval
 		}
 		m.Interval = d
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE repo_mirrors SET enabled = ?, prune = ?, interval_secs = ?, next_at = ? WHERE id = ?`,
-		b2i(m.Enabled), b2i(m.Prune), int64(m.Interval/time.Second), ms(s.now()), id); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE repo_mirrors SET enabled = ?, prune = ?, interval_secs = ?, next_at = ?, publish_releases = ?, outside_api = ? WHERE id = ?`,
+		b2i(m.Enabled), b2i(m.Prune), int64(m.Interval/time.Second), ms(s.now()), b2i(m.PublishReleases), m.OutsideAPI, id); err != nil {
 		return m, err
 	}
 	s.kick()

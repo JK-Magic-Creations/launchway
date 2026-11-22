@@ -444,7 +444,7 @@ func TestSchedulerRunsDueMirrorsAndTwoServersDoNotRunOneTwice(t *testing.T) {
 	defer func() { cancel(); <-done }()
 	s.commit("while the scheduler runs")
 	s.pushAll()
-	if _, err := w.h.Mirrors.Update(ctx, m.ID, nil, nil, nil); err != nil { // makes it due now
+	if _, err := w.h.Mirrors.Update(ctx, m.ID, nil, nil, nil, nil); err != nil { // makes it due now
 		t.Fatal(err)
 	}
 	eventually(t, "the scheduled sync", 20*time.Second, func() bool { return equal(w.hostedRefs(repo), refsOf(t, s.bare)) })

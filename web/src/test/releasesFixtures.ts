@@ -26,7 +26,11 @@ export const view = (r: Release, may: Partial<ReleaseView["may"]> = {}): Release
   promotions: r.state === "published" ? [{ id: "prm_1", release_id: r.id, project: r.project, version: r.version, airfield: "staging", sha: r.sha, digests: r.digests, run_id: "run_8", run_number: 8, requested_by: "ann", requested_at: T - day / 2, state: "launched" },
     { id: "prm_2", release_id: r.id, project: r.project, version: r.version, airfield: "prod", sha: r.sha, digests: r.digests, run_id: "run_9", run_number: 9, requested_by: "ada", requested_at: T - day / 4, state: "launched", override: "customer outage", overridden: "window" }] : [],
   clearances: r.state === "published" ? [{ id: "rcl_1", airfield: "prod", who: "bob", role: "operator", comment: "read the notes", at: T - day / 3 }] : [],
-  may: { edit: !r.immutable, publish: !r.immutable, promote: r.state === "published" || r.state === "candidate", yank: r.state === "published" || r.state === "candidate", administer: true, ...may },
+  may: { edit: !r.immutable, publish: !r.immutable, promote: r.state === "published" || r.state === "candidate", yank: r.state === "published" || r.state === "candidate", administer: true, outside_retry: r.state === "published", ...may },
+  outside: r.state === "published" ? [
+    { id: "rou_1", release_id: r.id, mirror_id: "mir_1", mirror_url: "https://git.example.com/acme/shop-api.git", repository: "acme/shop-api", state: "published", url: "https://git.example.com/acme/shop-api/releases/tag/v1.4.0", attempts: 2, updated_at: T - day / 2 },
+    { id: "rou_2", release_id: r.id, mirror_id: "mir_2", mirror_url: "https://git.partner.example/acme/shop-api.git", repository: "acme/shop-api", state: "failed", reason: "the outside host refused the credential (403). A token that may push may not be allowed to make releases", attempts: 1, updated_at: T - day / 3 },
+  ] : [],
 });
 
 const checklist = (ready: boolean): Checklist => ({

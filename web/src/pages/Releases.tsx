@@ -5,6 +5,7 @@ import { PromoteDialog } from "../components/ReleasePromote";
 import { CutReleaseButton } from "../components/CutRelease";
 import { QrCode } from "../kit/QrCode";
 import { encodeQR } from "../kit/qr";
+import { OutsideSheet } from "../components/ReleaseOutside";
 import { EntityLink } from "../components/EntityLink";
 import { ErrorBox } from "../components/ui";
 import { ago, clock } from "../format";
@@ -208,6 +209,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
       </Sheet>
       {r.state === "published" && (r.assets ?? []).some((a) => a.kind === "file") && <PhoneSheet v={v} />}
       <AssetsSheet v={v} onChanged={data.reload} />
+      <OutsideSheet v={v} onChanged={data.reload} />
       {v.may.promote && airfields.length > 0 && (
         <Sheet title="Promote">
           <p className="rel-hint" style={{ padding: "12px 16px 0" }}>Build once, promote the same thing: a promotion starts the pipeline at this tag with this version and image digest. Each Airfield has its own checklist.</p>

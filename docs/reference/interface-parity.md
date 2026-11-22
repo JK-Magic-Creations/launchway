@@ -227,6 +227,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/releases/{version}/checklist` | `get_release_checklist` | `release checklist` | — | equal |
 | `POST /api/v1/projects/{name}/releases/{version}/clearances` | `give_release_clearance` | `release clearance` | — | equal |
 | `POST /api/v1/projects/{name}/releases/{version}/notes` | `edit_release` | `release edit` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/outside/{mirror}/retry` | `retry_outside_release` | `release outside retry` | — | equal |
 | `POST /api/v1/projects/{name}/releases/{version}/plan` | `plan_release_promotion` | `release plan` | — | equal |
 | `POST /api/v1/projects/{name}/releases/{version}/promote` | `promote_release` | `release promote` | — | equal |
 | `POST /api/v1/projects/{name}/releases/{version}/publish` | `publish_release` | `release publish` | — | equal |

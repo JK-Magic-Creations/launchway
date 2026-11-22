@@ -31,7 +31,15 @@ export interface Clearance { id: string; airfield: string; who: string; role: st
 
 export interface ReleaseView {
   release: Release; settings: ReleaseSettings; promotions: Promotion[]; clearances?: Clearance[]; links?: Record<string, string>;
-  may: { edit: boolean; publish: boolean; promote: boolean; yank: boolean; administer: boolean }; warnings?: string[];
+  may: { edit: boolean; publish: boolean; promote: boolean; yank: boolean; administer: boolean; outside_retry?: boolean }; warnings?: string[];
+  /** How the release stands on each push mirror's outside Git host; empty when no mirror publishes releases. */
+  outside?: OutsidePublish[];
+}
+
+/** One release on one push mirror's outside Git host. The reason never holds a credential. */
+export interface OutsidePublish {
+  id: string; release_id: string; mirror_id: string; mirror_url?: string; repository?: string;
+  state: "pending" | "published" | "failed"; url?: string; reason?: string; attempts: number; updated_at: number;
 }
 
 export interface ReleaseSettings { project: string; scheme: string; tag_prefix: string; public: boolean; changelog: string }
@@ -97,6 +105,7 @@ export const releasesApi = {
   candidate: (project: string, version: string) => call<ReleaseView>("POST", `${rel(project, version)}/candidate`, {}),
   publish: (project: string, version: string, body: { public?: boolean } = {}) => call<ReleaseView>("POST", `${rel(project, version)}/publish`, body),
   yank: (project: string, version: string, reason: string) => call<ReleaseView>("POST", `${rel(project, version)}/yank`, { reason }),
+  retryOutside: (project: string, version: string, mirror: string) => call<{ outside: OutsidePublish[] }>("POST", `${rel(project, version)}/outside/${encodeURIComponent(mirror)}/retry`, {}),
   changelog: (project: string, version: string) => call<{ proposal: { branch: string; base: string; pull_request_url?: string }; pull_request?: { number: number; url: string }; pull_request_error?: string }>("POST", `${rel(project, version)}/changelog`, {}),
   removeAsset: (project: string, version: string, name: string) => call<{ ok: boolean }>("DELETE", `${rel(project, version)}/assets/${encodeURIComponent(name)}`),
   attach: (project: string, version: string, body: { run_id: string; images?: boolean; files?: { artifact: string; path: string; name?: string }[] }) => call<ReleaseAsset[]>("POST", `${rel(project, version)}/assets`, body),
