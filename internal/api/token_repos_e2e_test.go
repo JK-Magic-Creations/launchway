@@ -401,3 +401,44 @@ func TestRepoTokenCombinesWithRoleAndAsksNothingElse(t *testing.T) {
 		}
 	}
 }
+
+// A repository removed without the API (so no token was rewritten) and made again under a listed name is
+// not reachable by ID-bound tokens on any route class: read, write, list, get.
+func TestRepoTokenIsBoundByIDOnEveryRoute(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	old := hostedRepo(t, e, "acme/shop")
+	_, tok := repoToken(t, e, `{"name":"bound","repositories":["acme/shop"],"repo_access":"write"}`)
+	cli, base := newBrowser(t), e.srv.URL
+	probe := func(want int) {
+		t.Helper()
+		for _, c := range []struct{ m, p, b string }{
+			{"GET", "/api/v1/repositories/acme/shop", ""}, {"GET", "/api/v1/repositories/acme/shop/branches", ""},
+			{"PUT", "/api/v1/repositories/acme/shop/files", `{"path":"a.txt","content":"eA==","message":"m","branch":"main"}`},
+			{"POST", "/api/v1/repositories/acme/shop/graph/refresh", ""},
+		} {
+			r := cli.do(c.m, base+c.p, c.b, bearer(tok)...)
+			gone := r.status == 404 && strings.Contains(string(r.body), "no such repository")
+			if (want == 200) == gone {
+				t.Errorf("%s %s: %d %s (the repository is reachable: %v)", c.m, c.p, r.status, r.body, want == 200)
+			}
+		}
+		if got := gitStatus(e, tok, "/acme/shop", "git-upload-pack"); (got == 200) != (want == 200) {
+			t.Errorf("git: %d", got)
+		}
+		var list forge.Page[forge.Repository]
+		cli.get(base+"/api/v1/repositories", bearer(tok)...).json(t, &list)
+		if (len(list.Items) == 1) != (want == 200) {
+			t.Errorf("the listing has %d repositories", len(list.Items))
+		}
+	}
+	probe(200)
+	// Removed behind the API's back, then made again: a different repository with the same name.
+	if err := e.api.Forge.Provider.Repositories().Delete(t.Context(), "acme/shop"); err != nil {
+		t.Fatal(err)
+	}
+	fresh := hostedRepo(t, e, "acme/shop")
+	if fresh.ID == old.ID {
+		t.Fatal("the repository kept its ID")
+	}
+	probe(404)
+}

@@ -128,7 +128,7 @@ func (s *Server) listRepos(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
 	out := make([]forge.Repository, 0, len(page.Items))
 	for _, x := range page.Items {
-		if s.authorize(id, auth.Read, x.Path) {
+		if s.authorize(id, auth.Read, x.Path) && (!id.repoLimited() || id.repoIDMatches(x)) {
 			out = append(out, x)
 		}
 	}
@@ -274,6 +274,14 @@ func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int,
 func (s *Server) checkRepo(id *identity, a access, repo string) (int, string) {
 	if !s.authorize(id, auth.Read, repo) {
 		return http.StatusNotFound, "no such repository"
+	}
+	if id.repoLimited() {
+		// A token limited to repositories is bound to them by ID, on every route: a repository
+		// made again under a listed name, or removed some other way, is not the one it was made for.
+		got, err := s.Forge.Provider.Repositories().Get(context.Background(), repo)
+		if err != nil || !id.repoIDMatches(got) {
+			return http.StatusNotFound, "no such repository"
+		}
 	}
 	switch {
 	case a == repoWrite && !s.authorize(id, auth.Operate, repo):
