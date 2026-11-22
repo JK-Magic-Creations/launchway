@@ -24,7 +24,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
-const outsideToken = "not-a-real-credential-2"
+const outsideToken = "tok-acme-the-outside-token"
 
 // outsideHost is a local stand-in for an outside Git host's API: the only server these tests talk to.
 type outsideHost struct {

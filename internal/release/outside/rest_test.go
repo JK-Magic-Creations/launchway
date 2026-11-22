@@ -15,7 +15,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 )
 
-const testToken = "not-a-real-credential"
+const testToken = "tok-acme-a-test-token"
 
 // fakeHost is a local stand-in for the outside host's API.
 type fakeHost struct {
