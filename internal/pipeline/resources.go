@@ -55,7 +55,7 @@ func (s *Step) ResourcesLine() int { return s.resourcesLine }
 // ResourceKind is the kind a step's defaults are kept under, or "" if the
 // step runs in no container of the run's.
 func (s *Step) ResourceKind() string {
-	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
+	if s.IsApproval() || s.IsGate() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
 		return ""
 	}
 	return KindStep

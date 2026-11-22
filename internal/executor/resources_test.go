@@ -291,7 +291,7 @@ func kubeWith(o KubernetesOptions, objs ...runtime.Object) *Kubernetes {
 	if o.Memory == "" {
 		o.Memory = "64Mi"
 	}
-	return &Kubernetes{o: o, client: fake.NewSimpleClientset(objs...)}
+	return &Kubernetes{o: o, client: newFakeAPI(objs...)}
 }
 
 func limitRange(name string, items ...corev1.LimitRangeItem) *corev1.LimitRange {
