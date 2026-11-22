@@ -19,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	mirroregress "github.com/jk-magic-creations/launchway/internal/forge/egress"
+	"github.com/jk-magic-creations/launchway/internal/forge/forks"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
@@ -94,6 +95,8 @@ type Hosting struct {
 	Hooks *webhooks.Service
 	// Pulls is pull requests and code review.
 	Pulls *pulls.Service
+	// Forks is forks and template repositories.
+	Forks *forks.Service
 	o     Options
 	log   *slog.Logger
 }
@@ -166,6 +169,8 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	pullSvc := pulls.NewService(pulls.NewStore(o.Engine.Database()), sto, o.Log)
 	po.Pulls = pullSvc // the provider answers for proposals with the pull-request service
 	prov := launchway.New(conn, fs, sto, po)
+	fk := &forks.Service{Repos: prov.Repositories(), ByID: fs.Repository, Git: sto, DB: o.Engine.Database(), Log: o.Log}
+	pullSvc.SameNetwork = fk.SameNetwork
 	ms.SetCreator(prov.Repositories())
 	db := o.Engine.Database()
 	hk := o.Hooks
@@ -181,7 +186,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 		hk.Client = g.HTTPClient(10 * time.Second)
 	}
 	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt,
-		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pullSvc, o: o, log: o.Log}, nil
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pullSvc, Forks: fk, o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.
@@ -244,6 +249,22 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 			h.log.Warn("hosting maintenance: evicting caches", "err", err)
 		}
 	}
+}
+
+// Purge ends the storage of a repository that is in the trash: its branches go and
+// its stored packs are deleted, except the packs a fork of it still needs (forks
+// share their parent's packs, so purging a parent never takes anything a fork
+// uses). It returns how many stored packs it deleted. A repository that is not in
+// the trash is refused.
+func (h *Hosting) Purge(ctx context.Context, id string) (int, error) {
+	r, err := h.Forge.Repository(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	if !store.InTrash(r) {
+		return 0, fmt.Errorf("repository %s is not in the trash; delete it first", id)
+	}
+	return h.Store.Purge(ctx, id)
 }
 
 // Check lists what an operator should know: repositories whose owner is a

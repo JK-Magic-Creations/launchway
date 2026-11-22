@@ -20,6 +20,9 @@ func (s *Server) WirePulls() {
 	}
 	s.EnableSigning()
 	p := s.Forge.Pulls
+	if s.Projects != nil {
+		s.Projects.SetForkGate(s.forkGate)
+	}
 	p.OnEvent = s.pullEvent
 	p.Runs = pullRuns{s}
 	p.MergeCheck = s.workMergeCheck

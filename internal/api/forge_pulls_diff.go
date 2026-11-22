@@ -135,7 +135,7 @@ func (s *Server) compareBranches(w http.ResponseWriter, r *http.Request) {
 	if base == "" {
 		base = repo.DefaultBranch
 	}
-	bc, err := s.Forge.Pulls.CompareBranches(r.Context(), repo.ID, base, head, pulls.DefaultLimits)
+	bc, err := s.compareHead(r, repo, base, head)
 	if err != nil {
 		s.failPull(w, err)
 		return

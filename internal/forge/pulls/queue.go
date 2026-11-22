@@ -415,7 +415,7 @@ func (s *Service) UpdateBranch(ctx context.Context, repoID string, p PullRequest
 	case p.State != Open:
 		return "", conflict("this pull request is %s", p.State)
 	case p.SourceRepo != "":
-		return "", conflict("a branch of another repository cannot be updated here")
+		return s.updateForkBranch(ctx, repoID, p, method, by)
 	case method == "":
 		method = "merge"
 	case method != "merge" && method != "rebase":

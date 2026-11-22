@@ -24,7 +24,7 @@ Git hosting must be turned on (the installation setting forge.hosting); otherwis
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
 come from the same role bindings as a Flight's, matched on that path. Changes are
 recorded in the audit trail. Delete keeps the data and frees the name.
-` + "\n" + reposMirrorUsage + reposArchiveUsage + reposFilesUsage + reposBrowseUsage
+` + "\n" + reposMirrorUsage + reposArchiveUsage + reposFilesUsage + reposBrowseUsage + reposForksUsage
 
 func cmdRepos(args []string) error {
 	return runClient(func() error {
@@ -73,6 +73,18 @@ func cmdRepos(args []string) error {
 			return cl.reposUpdate(args[1:])
 		case "delete":
 			return cl.reposDelete(args[1:])
+		case "fork":
+			return cl.reposFork(args[1:])
+		case "forks":
+			return cl.reposForks(args[1:])
+		case "fork-status":
+			return cl.reposForkStatus(args[1:])
+		case "sync":
+			return cl.reposSync(args[1:])
+		case "template":
+			return cl.reposTemplate(args[1:])
+		case "fork-settings":
+			return cl.reposForkSettings(args[1:])
 		case "deploy-keys":
 			return cl.deployKeys(args[1:])
 		case "hooks":

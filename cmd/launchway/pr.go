@@ -42,7 +42,7 @@ const prUsage = `Usage:
   launchway pr queue N [-R OWNER/NAME] [--method M] [--priority P] [--cancel]
                                                           add it to the branch's merge queue, show its place, or take it out (--cancel)
   launchway pr update-branch N [-R OWNER/NAME] [--rebase]   bring the source branch up to date with the target
-  launchway pr viewed N [-R OWNER/NAME] [--mark PATH,PATH] [--unmark PATH,PATH]   the files you marked viewed (a file that changes is unmarked)
+` + prForksUsage + `  launchway pr viewed N [-R OWNER/NAME] [--mark PATH,PATH] [--unmark PATH,PATH]   the files you marked viewed (a file that changes is unmarked)
   launchway pr inbox [--json]                             the pull requests that wait on you: reviews asked, changes asked, a queue that failed
   launchway pr settings [-R OWNER/NAME] [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M]
                       [--delete-branch=B] [--dismiss-stale=B] [--assign-reviewers owners|round_robin|least_loaded|off]
@@ -238,6 +238,14 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prQueue(args)
 	case "update-branch":
 		return cl.prUpdateBranch(args)
+	case "conflicts":
+		return cl.prConflicts(args)
+	case "resolve":
+		return cl.prResolve(args)
+	case "maintainer-edits":
+		return cl.prMaintainerEdits(args)
+	case "approve-run":
+		return cl.prApproveRun(args)
 	case "viewed":
 		return cl.prViewed(args)
 	case "inbox":
@@ -446,8 +454,16 @@ func (cl *client) prCreate(args []string) error {
 	draft := f.fs.Bool("draft", false, "open it as a draft")
 	labels := f.fs.String("label", "", "labels, comma separated")
 	reviewers := f.fs.String("reviewer", "", "people to ask to review, comma separated")
+	allowEdits := f.fs.Bool("allow-edits", false, "for a branch of a fork: let the target's maintainers update it")
 	if err := f.parse(args); err != nil {
 		return err
+	}
+	if strings.Contains(*head, ":") { // OWNER:branch is a branch of a fork
+		text, err := forkBodyText(*body, *bodyFile)
+		if err != nil {
+			return err
+		}
+		return cl.prCreateFromFork(f, *head, *title, text, *target, *draft, *allowEdits)
 	}
 	if *head == "" {
 		out, err := gitOut("rev-parse", "--abbrev-ref", "HEAD")
@@ -456,13 +472,9 @@ func (cl *client) prCreate(args []string) error {
 		}
 		*head = strings.TrimSpace(out)
 	}
-	text := *body
-	if *bodyFile != "" {
-		b, err := os.ReadFile(*bodyFile) //nolint:gosec // the person named their own file
-		if err != nil {
-			return err
-		}
-		text = string(b)
+	text, err := forkBodyText(*body, *bodyFile)
+	if err != nil {
+		return err
 	}
 	var p prSummary
 	if err := cl.call("POST", f.base+"/pulls", map[string]any{"title": *title, "body": text, "source_branch": *head, "target_branch": *target, "draft": *draft,

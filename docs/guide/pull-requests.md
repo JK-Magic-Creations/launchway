@@ -5,8 +5,9 @@ number in its repository, a title, a description in Markdown, a conversation, re
 pipelines that ran on it, and rules that say when it may land. Everything below works the same in the web
 interface, over the HTTP API, with the MCP tools and with the `launchway pr` command.
 
-Git hosting must be on (`forge.hosting`). Pull requests from a fork are not available yet: the source is
-a branch of the same repository.
+Git hosting must be on (`forge.hosting`). The source is a branch of the same repository, or of a
+[fork](forks.md#pull-requests-from-a-fork). When the branch conflicts with the target, see
+[resolving conflicts](resolving-conflicts.md).
 
 ## Opening one
 

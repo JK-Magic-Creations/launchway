@@ -56,16 +56,24 @@ type PullRequest struct {
 	// it with the product's sanitizer, never as raw HTML.
 	Body   string `json:"body"`
 	Author string `json:"author"`
-	// SourceRepo is reserved for a pull request from a fork: the path of the
-	// repository the source branch lives in. Empty: the same repository.
-	SourceRepo   string   `json:"source_repository,omitempty"`
-	SourceBranch string   `json:"source_branch"`
-	TargetBranch string   `json:"target_branch"`
-	State        State    `json:"state"`
-	Draft        bool     `json:"draft"`
-	Labels       []string `json:"labels"`
-	Assignees    []string `json:"assignees"`
-	Reviewers    []string `json:"requested_reviewers"`
+	// SourceRepo is the repository the source branch lives in, for a pull
+	// request from a fork: the store keeps its ID, and the API shows its path.
+	// Empty: the same repository.
+	SourceRepo string `json:"source_repository,omitempty"`
+	// AllowMaintainerEdits says that the people who may write to the target
+	// repository may update the source branch in the fork (a pull request
+	// from a fork only).
+	AllowMaintainerEdits bool `json:"allow_maintainer_edits,omitempty"`
+	// RunApprovedHead is the head a person with write access to the target
+	// approved to run the pipeline for (a first-time contributor's fork).
+	RunApprovedHead string   `json:"-"`
+	SourceBranch    string   `json:"source_branch"`
+	TargetBranch    string   `json:"target_branch"`
+	State           State    `json:"state"`
+	Draft           bool     `json:"draft"`
+	Labels          []string `json:"labels"`
+	Assignees       []string `json:"assignees"`
+	Reviewers       []string `json:"requested_reviewers"`
 	// ReviewerGroups are groups (of the sign-in provider or the local ones)
 	// asked to review: a review by any member of one answers the request.
 	ReviewerGroups []string `json:"requested_reviewer_groups"`
@@ -129,8 +137,15 @@ type New struct {
 	Body         string
 	SourceBranch string
 	TargetBranch string
-	// SourceRepo is reserved for forks and refused while forks do not exist.
-	SourceRepo     string
+	// SourceRepo is the ID of the fork the source branch lives in (empty: this
+	// repository). The API resolves "owner/name:branch" to it.
+	SourceRepo string
+	// AllowMaintainerEdits is the author's choice for a pull request from a
+	// fork (see PullRequest).
+	AllowMaintainerEdits bool
+	// Number is a number the service reserved for the pull request before it
+	// made it (0: take the next one).
+	Number         int
 	Draft          bool
 	Labels         []string
 	Assignees      []string
@@ -156,9 +171,7 @@ func (n *New) Validate() error {
 		return invalid("the description is %d KiB, more than the %d KiB allowed", len(n.Body)/1024, maxBody/1024)
 	case n.SourceBranch == "" || n.TargetBranch == "":
 		return invalid("name the branch with the changes and the branch they go to")
-	case n.SourceRepo != "":
-		return invalid("pull requests from a fork are not available yet; push a branch to this repository")
-	case n.SourceBranch == n.TargetBranch:
+	case n.SourceRepo == "" && n.SourceBranch == n.TargetBranch:
 		return invalid("the branch %s is both the source and the target; choose two different branches", n.SourceBranch)
 	}
 	labels, err := cleanNames(n.Labels, "label")

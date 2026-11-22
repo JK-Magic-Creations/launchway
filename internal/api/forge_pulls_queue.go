@@ -95,11 +95,9 @@ func (s *Server) pullUpdateBranch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := identityFrom(r)
-	if rules, _ := s.Forge.Rules.Patterns(r.Context(), repo.ID); len(rules) > 0 {
-		if err := refrulesCheck(rules, p.SourceBranch, s.authorize(id, auth.AdministerProject, repo.Path)); err != nil {
-			writeErr(w, http.StatusForbidden, err.Error())
-			return
-		}
+	if code, msg := s.mayUpdateHead(r, id, repo, p); code != 0 {
+		writeErr(w, code, msg)
+		return
 	}
 	head, err := s.Forge.Pulls.UpdateBranch(r.Context(), repo.ID, p, in.Method, id.User)
 	if err != nil {

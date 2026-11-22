@@ -64,6 +64,9 @@ func (s *Server) EnableSigning() {
 	s.Signing = svc
 	p := s.Forge.Pulls
 	p.Sign = svc.SignPayload
+	if s.Forge.Forks != nil {
+		s.Forge.Forks.Sign = svc.SignPayload
+	}
 	p.Verify = func(ctx context.Context, objs []storage.PushObject) []signing.Result {
 		return svc.VerifyRaw(ctx, objs, "")
 	}

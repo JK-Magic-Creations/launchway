@@ -173,6 +173,8 @@ type Manager struct {
 	vars atomic.Pointer[varHolder]
 	// inspector adds the Inspection of Standing orders to runs (see standings.go).
 	inspector atomic.Pointer[inspectorHolder]
+	// forkGate says which pull requests come from forks (forkgate.go).
+	forkGate atomic.Pointer[forkGateHolder]
 	// RegistryFacts says whether this server's own registry can serve and which registry to use when it cannot,
 	// for the starters' image steps (nil: not said). It is called when a run is made.
 	RegistryFacts func() pipeline.RegistryFacts
@@ -580,6 +582,11 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
 		pipelineAt, restr := p.trustedPipelineSHA(refs, r)
+		num, _ := strconv.Atoi(r.Name)
+		fork := m.forkVerdict(ctx, p, num, r.SHA)
+		if fork.Fork {
+			pipelineAt, restr = p.forkPipelineSHA(refs, r, fork.Reason)
+		}
 		pl, from, err := p.parsedAt(ctx, pipelineAt)
 		asks := err == nil && pl.On.MatchPullRequest()
 		if !gateOn {
@@ -611,6 +618,12 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
 			case !asks:
 				d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline at the pull request's head does not ask for pull requests "+p.note(from))
+			case fork.Wait != "":
+				// Not claimed: the next poll looks at this head again, and it runs once approved.
+				if err := m.eng.RecordDecision(p.Name, Decision{Ref: r.FullRef(), SHA: r.SHA, Outcome: "waiting", Detail: fork.Wait}); err != nil {
+					return err
+				}
+				continue
 			default:
 				n, _ := strconv.Atoi(r.Name)
 				// The default branch's pipeline says whether to filter by the
@@ -637,6 +650,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				t := trigger(r, pipeline.EventPullRequest, r.Author)
 				t.Changed = cs
 				t.PullRequest = n
+				t.Fork = fork.Fork
 				t.PullRequestInto = into.Target
 				t.Inputs = vals
 				note := p.note(from)

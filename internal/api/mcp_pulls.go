@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -364,15 +365,17 @@ func compareBranchesTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest
 }
 
 type createPullIn struct {
-	Owner     string   `json:"owner" jsonschema:"the repository's owner"`
-	Name      string   `json:"name" jsonschema:"the repository's name"`
-	Title     string   `json:"title" jsonschema:"the title"`
-	Body      string   `json:"body,omitempty" jsonschema:"the description, Markdown"`
-	Head      string   `json:"head" jsonschema:"the branch with the changes"`
-	Base      string   `json:"base,omitempty" jsonschema:"the branch they go into (default: the default branch)"`
-	Draft     bool     `json:"draft,omitempty" jsonschema:"open it as a draft"`
-	Labels    []string `json:"labels,omitempty" jsonschema:"labels to put on it"`
-	Reviewers []string `json:"reviewers,omitempty" jsonschema:"people to ask to review"`
+	Owner string `json:"owner" jsonschema:"the repository's owner"`
+	Name  string `json:"name" jsonschema:"the repository's name"`
+	Title string `json:"title" jsonschema:"the title"`
+	Body  string `json:"body,omitempty" jsonschema:"the description, Markdown"`
+	Head  string `json:"head" jsonschema:"the branch with the changes; owner:branch (or owner/name:branch) for a branch of a fork"`
+	Base  string `json:"base,omitempty" jsonschema:"the branch they go into (default: the default branch)"`
+	// AllowEdits, for a branch of a fork, lets maintainers of the repository update it.
+	AllowEdits bool     `json:"allow_maintainer_edits,omitempty" jsonschema:"for a branch of a fork: let the target's maintainers update it"`
+	Draft      bool     `json:"draft,omitempty" jsonschema:"open it as a draft"`
+	Labels     []string `json:"labels,omitempty" jsonschema:"labels to put on it"`
+	Reviewers  []string `json:"reviewers,omitempty" jsonschema:"people to ask to review"`
 }
 
 func createPullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in createPullIn) (pullOut, error) {
@@ -380,6 +383,11 @@ func createPullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, 
 		return pullOut{}, errors.New("say which repository: owner and name")
 	}
 	var raw map[string]any
+	if strings.Contains(in.Head, ":") { // a branch of a fork
+		err := c.apiJSON(ctx, "create_pull_request", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/pulls/from-fork", in.Owner, in.Name),
+			map[string]any{"head": in.Head, "title": in.Title, "body": in.Body, "target_branch": in.Base, "draft": in.Draft, "labels": in.Labels, "allow_maintainer_edits": in.AllowEdits}, &raw)
+		return pullFromAPI(raw), err
+	}
 	err := c.apiJSON(ctx, "create_pull_request", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/pulls", in.Owner, in.Name),
 		map[string]any{"title": in.Title, "body": in.Body, "source_branch": in.Head, "target_branch": in.Base, "draft": in.Draft, "labels": in.Labels, "requested_reviewers": in.Reviewers}, &raw)
 	return pullFromAPI(raw), err

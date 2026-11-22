@@ -114,13 +114,24 @@ func (s *Store) Collect(ctx context.Context, repo string, grace, pendingAge time
 		return n, err
 	}
 	for _, p := range retired {
-		if err := s.o.Blobs.Delete(ctx, p.BlobKey); err != nil {
+		// A fork shares the blobs of its parent (fork.go): the blob goes only
+		// when no other repository's pack needs it any more.
+		keep, err := s.blobNeeded(ctx, repo, p, grace, pendingAge)
+		if err != nil {
 			return n, err
+		}
+		if !keep {
+			if err := s.o.Blobs.Delete(ctx, p.BlobKey); err != nil {
+				return n, err
+			}
+			n++
+			if err := orNone(faultsFrom(ctx)).Hit(PtCollectAfterBlob); err != nil {
+				return n, err
+			}
 		}
 		if err := s.l.SetPackState(ctx, repo, p.ID, PackRetired, PackOrphan); err != nil {
 			return n, err
 		}
-		n++
 	}
 	pend, err := s.l.Pending(ctx, repo, nowMS()-pendingAge.Milliseconds())
 	if err != nil {
@@ -129,13 +140,19 @@ func (s *Store) Collect(ctx context.Context, repo string, grace, pendingAge time
 	for _, p := range pend {
 		// A pending pack may be the very pack a push in flight is about to make
 		// live; the age keeps this from ever being a fresh one.
-		if err := s.o.Blobs.Delete(ctx, p.BlobKey); err != nil {
+		keep, err := s.blobNeeded(ctx, repo, p, grace, pendingAge)
+		if err != nil {
 			return n, err
+		}
+		if !keep {
+			if err := s.o.Blobs.Delete(ctx, p.BlobKey); err != nil {
+				return n, err
+			}
+			n++
 		}
 		if err := s.l.SetPackState(ctx, repo, p.ID, PackPending, PackOrphan); err != nil {
 			return n, err
 		}
-		n++
 	}
 	return n, nil
 }

@@ -1233,6 +1233,23 @@ launchway repos delete OWNER/NAME
 
 The same operations are the routes under [Repositories](http-api.md#repositories-git-hosting) in the HTTP API, and the MCP tools `list_repositories`, `get_repository`, `create_repository`, `update_repository` and `delete_repository`. A Terraform resource `launchway_repository` is planned.
 
+## launchway repos fork, sync and template
+
+[Forks](../guide/forks.md) and [template repositories](../guide/templates.md) of hosted repositories (the server needs `forge.hosting`).
+
+```text
+launchway repos fork OWNER/NAME [--owner O] [--name N] [--visibility V] [--json]
+launchway repos forks OWNER/NAME [--json]
+launchway repos fork-status OWNER/NAME [--json]
+launchway repos sync OWNER/NAME [--branch B] [--upstream B] [--merge] [--json]
+launchway repos fork-settings OWNER/NAME [--allow-forks on|off|default] [--template=true|false]
+launchway repos fork-settings --owner O [--allow-forks on|off|default]
+launchway repos template show OWNER/NAME [--json]
+launchway repos template use OWNER/NAME --name N [--owner O] [--var NAME=VALUE]... [--all-branches] [--visibility V]
+```
+
+`fork` needs read access to the repository and the admin role on the path of the fork; the fork is never more visible than its parent. `sync` fast-forwards the fork's branch to the parent's, or with `--merge` merges it in; it answers **diverged** or lists the conflicting files and changes nothing. `fork-settings` sets who may fork (a repository's own switch beats its owner's, which beats the default: on for public, off for the rest) and marks a template; with no flag it reads. `template use` starts a new repository from a template as one commit with no history, with the declared values filled in. The same operations are the routes `POST .../forks`, `GET .../forks`, `GET .../fork`, `POST .../sync`, `GET .../template`, `POST .../generate` and `GET`/`PUT /api/v1/owners/{owner}/fork-settings` in the [HTTP API](http-api.md), and the MCP tools `fork_repository`, `list_forks`, `get_fork_status`, `sync_fork`, `get_template`, `use_template` and `fork_settings`.
+
 ## launchway repos mirror
 
 Mirrors of hosted repositories (the server needs `forge.hosting`). A **pull mirror** keeps a hosted repository an exact copy of another server's repository: every branch, tag and note, deletions followed, on a schedule and on demand; meanwhile it takes no pushes. A **push mirror** copies every accepted update to another server. Setting one up needs the admin role on the repository, running one now the operator role; both are recorded in the Logbook (`mirror.create`, `mirror.sync`, `mirror.promote`).
@@ -1376,6 +1393,11 @@ launchway pr owners N [--json]
 launchway pr owners --check FILE
 launchway pr queue N [--method M] [--priority P] [--cancel]
 launchway pr update-branch N [--rebase]
+launchway pr create --head OWNER:BRANCH [--allow-edits] --title T
+launchway pr conflicts N [--json]
+launchway pr resolve N [--file F]... --take ours|theirs|both|delete [--message M]
+launchway pr maintainer-edits N --allow|--deny
+launchway pr approve-run N
 launchway pr viewed N [--mark PATH,PATH] [--unmark PATH,PATH]
 launchway pr inbox [--json]
 launchway pr review N --request-group G,G | --unrequest-group G,G
@@ -1384,6 +1406,8 @@ launchway pr rules [--branch PATTERN --approvals N --approval-role operator|admi
 ```
 
 `owners` shows who owns each file a pull request changes, from `.launchway/owners` on the target branch, or with `--check` says what is wrong with an owners file on your computer, by line. `apply` with several comment IDs applies the suggestions as one commit. `queue` shows a pull request's place in its branch's merge queue; with `--method` it adds it, with `--cancel` it takes it out. `update-branch` merges the target into the source branch (`--rebase` replays the branch instead and rewrites it). `viewed` lists or changes the files you marked viewed. `inbox` lists the pull requests that wait on you.
+
+`create --head OWNER:BRANCH` opens a pull request from a branch of a [fork](../guide/forks.md); `maintainer-edits` lets the target's maintainers update that branch, and `approve-run` lets the pipeline of a first-time contributor's pull request from a fork run (restricted). `conflicts` lists what stops the target from merging into the branch and `resolve` answers whole files (ours is the pull request's branch, theirs the target) and makes the merge commit; regions and text are answered through the API or MCP ([Resolving conflicts](../guide/resolving-conflicts.md)).
 
 `view` prints what blocks the merge in one sentence and the actions you may take; a merge that the rules refuse prints the same sentence and exits non-zero. `checkout` fetches `refs/pull/N/head` and checks it out as the branch `pr/N`. `settings` and `rules` show the repository's merge settings and the merge rules of its protected branches, or set them (repository administrators). The same operations are the MCP tools `list_pull_requests`, `get_pull_request`, `compare_branches`, `create_pull_request`, `update_pull_request`, `merge_pull_request`, `revert_pull_request`, `comment_on_pull_request`, `update_pull_comment`, `review_pull_request`, `get_pull_settings` and `set_pull_settings`.
 

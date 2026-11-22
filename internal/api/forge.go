@@ -8,6 +8,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/forks"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
@@ -59,6 +60,9 @@ type ForgeHosting struct {
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
 	Updates UpdatesService
+	// Forks makes forks and template repositories and keeps forks current (nil:
+	// not available).
+	Forks *forks.Service
 	// Local reads a hosted repository straight from this server's storage
 	// (nil: servers fetch hosted repositories like any other).
 	Local interface {
@@ -86,7 +90,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(append(append(append(append(s.updateRoutes(), s.archiveRoutes()...), s.filesRoutes()...), s.hookRoutes()...), s.parityRoutes()...), []route{
+	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(append(append(append(append(append(append(s.updateRoutes(), s.archiveRoutes()...), s.filesRoutes()...), s.hookRoutes()...), s.parityRoutes()...), s.forkRoutes()...), s.conflictRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},
@@ -145,7 +149,7 @@ func (s *Server) getRepo(w http.ResponseWriter, r *http.Request) {
 		s.failForge(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, got)
+	s.writeRepo(w, r, http.StatusOK, got)
 }
 
 func (s *Server) createRepo(w http.ResponseWriter, r *http.Request) {
@@ -180,6 +184,10 @@ type repoUpdate struct {
 	DefaultBranch *string           `json:"default_branch"`
 	Visibility    *forge.Visibility `json:"visibility"`
 	Archived      *bool             `json:"archived"`
+	// AllowForks is "on", "off" or "default"; Template marks the repository as one
+	// new repositories can be started from (see forge_forks.go).
+	AllowForks *string `json:"allow_forks"`
+	Template   *bool   `json:"template"`
 }
 
 func (s *Server) updateRepo(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +228,12 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		}
 		changes = append(changes, "archived")
 	}
+	forkChanges, err := s.applyForkSettings(r, path, in)
+	if err != nil {
+		s.failFork(w, err)
+		return
+	}
+	changes = append(changes, forkChanges...)
 	if in.Name != nil || in.Owner != nil {
 		owner, name := r.PathValue("owner"), r.PathValue("name")
 		if in.Owner != nil {
@@ -246,7 +260,7 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		s.tokensFollowRename(renamedFrom, got)
 		s.emitRepository(ctx, identityFrom(r).User, got, "renamed", map[string]string{"old_path": renamedFrom})
 	}
-	writeJSON(w, http.StatusOK, got)
+	s.writeRepo(w, r, http.StatusOK, got)
 }
 
 func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {

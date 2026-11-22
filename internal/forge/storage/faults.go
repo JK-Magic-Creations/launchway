@@ -22,6 +22,24 @@ const (
 	PtPostReceive    = "post-receive:start"
 )
 
+// The named points of making a fork and of purging a repository.
+const (
+	PtForkBefore       = "fork:start"
+	PtForkAfterRefs    = "fork:after-refs"
+	PtForkAfterPacks   = "fork:after-packs"
+	PtForkBeforeCommit = "fork:before-commit"
+	PtForkAfter        = "fork:after-commit"
+	PtPurgeAfterPacks  = "purge:after-packs"
+	PtPurgeAfterLedger = "purge:after-ledger"
+	PtCollectAfterBlob = "collect:after-blob-delete"
+)
+
+// ForkPoints is every point of making a fork, in order; PurgePoints of a purge.
+var (
+	ForkPoints  = []string{PtForkBefore, PtForkAfterRefs, PtForkAfterPacks, PtForkBeforeCommit, PtForkAfter}
+	PurgePoints = []string{PtPurgeAfterPacks, PtPurgeAfterLedger, PtCollectAfterBlob}
+)
+
 // PushPoints is every point of a push, in order.
 var PushPoints = []string{PtPreReceive, PtAfterUpload, PtAfterRegister, PtPrepared, PtTxAfterCheck, PtTxAfterRefs,
 	PtTxAfterPack, PtTxBeforeCommit, PtTxAfterCommit, PtCommitted, PtPostReceive}
