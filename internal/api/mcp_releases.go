@@ -187,11 +187,15 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 		GenerateNotes bool   `json:"generate_notes,omitempty" jsonschema:"generate notes value"`
 		RunID         string `json:"run_id,omitempty" jsonschema:"the Sortie that built it: its image digests are recorded, and are what is promoted"`
 		AllowLower    bool   `json:"allow_lower,omitempty" jsonschema:"allow a version lower than the highest (a release from a maintenance branch)"`
+		AttachCargo   bool   `json:"attach_cargo,omitempty" jsonschema:"copy the files the Sortie kept, and its image digests, into the release (the latest successful Sortie at the commit when run_id is empty)"`
+		Publish       bool   `json:"publish,omitempty" jsonschema:"make the annotated tag and publish the release in the same call (a cut)"`
+		Public        bool   `json:"public,omitempty" jsonschema:"with publish: allow downloading its files without signing in, where the installation and the Flight allow it"`
 	}
 	addTool(srv, c, &mcp.Tool{Name: "create_release", Annotations: changes("Create a draft release", false, false),
-		Description: "Makes a draft release of a commit: its version, notes (written or generated from the changes since the last release) and, with run_id, the image digests its Sortie built. A draft is edited freely; nothing is tagged until it is published. The version must be higher than the last release unless allow_lower is set."},
+		Description: "Makes a draft release of a commit: its version, notes (written or generated from the changes since the last release) and, with run_id, the image digests its Sortie built. A draft is edited freely; nothing is tagged until it is published. With publish (and attach_cargo for the built files) it is made, tagged and published in one call. The version must be higher than the last release unless allow_lower is set."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in createIn) (relOut, error) {
-			body := map[string]any{"version": in.Version, "from": in.From, "adopt": in.Adopt, "title": in.Title, "notes": in.Notes, "generate_notes": in.GenerateNotes, "run_id": in.RunID, "allow_lower": in.AllowLower}
+			body := map[string]any{"version": in.Version, "from": in.From, "adopt": in.Adopt, "title": in.Title, "notes": in.Notes, "generate_notes": in.GenerateNotes, "run_id": in.RunID, "allow_lower": in.AllowLower,
+				"attach_cargo": in.AttachCargo, "publish": in.Publish, "public": in.Public}
 			return relCall(ctx, c, "create_release", http.MethodPost, apiPath("/api/v1/projects/%s/releases", in.Project), body)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "edit_release", Annotations: changes("Edit a draft release", false, true),

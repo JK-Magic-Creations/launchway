@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -58,12 +57,12 @@ func (s *Server) releaseRoutes() []route {
 		{"PUT " + p + "/releases/{version}/assets/{asset}", projectOperate, "release.asset.add", s.uploadReleaseAsset},
 		{"POST " + p + "/releases/{version}/assets", projectOperate, "release.asset.add", s.addReleaseAssets},
 		{"DELETE " + p + "/releases/{version}/assets/{asset}", projectOperate, "release.asset.remove", s.removeReleaseAsset},
-		{"GET " + p + "/releases/{version}/assets/{asset}", projectRead, "", s.downloadReleaseAsset},
+		{"GET " + p + "/releases/{version}/assets/{asset}", projectRead, "release.asset.download", s.downloadReleaseAsset},
 		{"POST " + p + "/releases/{version}/candidate", projectOperate, "release.candidate", s.makeCandidate},
 		{"POST " + p + "/releases/{version}/publish", projectOperate, "release.publish", s.publishRelease},
 		{"POST " + p + "/releases/{version}/yank", projectOperate, "release.yank", s.yankRelease},
 		{"POST " + p + "/releases/{version}/changelog", projectOperate, "release.changelog", s.proposeChangelog},
-		{"GET /public/releases/{name}/{version}/{asset}", public, "", s.publicDownload},
+		{"GET /public/releases/{name}/{version}/{asset}", public, "release.asset.download", s.publicDownload},
 	}
 }
 
@@ -150,7 +149,7 @@ func (s *Server) getReleaseSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	allowed, _ := s.Engine.PublicReleasesAllowed()
 	writeJSON(w, http.StatusOK, map[string]any{"settings": set, "installation_allows_public": allowed,
-		"writable": s.Projects != nil && s.Projects.WritableForReleases(set.Project), "schemes": release.Schemes})
+		"writable": s.canTag(r.Context(), set.Project), "schemes": release.Schemes})
 }
 
 func (s *Server) putReleaseSettings(w http.ResponseWriter, r *http.Request) {
@@ -231,6 +230,12 @@ type createReleaseIn struct {
 	GenerateNotes bool   `json:"generate_notes"`
 	RunID         string `json:"run_id"`
 	AllowLower    bool   `json:"allow_lower"`
+	// AttachCargo copies every file the Sortie kept into the release, and records its image digests (RunID, or the
+	// latest successful Sortie at the release's commit when none is named).
+	AttachCargo bool `json:"attach_cargo"`
+	// Publish makes the tag and fixes the release in the same request; Public asks for downloads without signing in.
+	Publish bool `json:"publish"`
+	Public  bool `json:"public"`
 }
 
 func (s *Server) createRelease(w http.ResponseWriter, r *http.Request) {
@@ -305,6 +310,24 @@ func (s *Server) createRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, releaseTarget(rel), "draft at "+rel.SHA[:8])
+	if in.AttachCargo {
+		if err := s.attachCargoOf(r.Context(), rel, in.RunID, identityFrom(r).User); err != nil {
+			s.releaseHalfDone(w, rel, "attaching the files failed", err)
+			return
+		}
+	}
+	if in.Publish {
+		got, _, msg := s.publishCore(r, rel, in.Public, "")
+		if got == nil {
+			s.releaseHalfDone(w, rel, "publishing failed", errors.New(msg))
+			return
+		}
+		rel = got
+		setAudit(r, releaseTarget(rel), "cut: draft at "+rel.SHA[:8]+", published as tag "+rel.Tag)
+	}
+	if fresh, err := s.Engine.FindRelease(rel.Project, rel.Version); err == nil {
+		rel = fresh
+	}
 	writeJSON(w, http.StatusCreated, s.releaseView(r, rel))
 }
 
@@ -476,7 +499,13 @@ func (s *Server) nextVersion(w http.ResponseWriter, r *http.Request) {
 			p.Warnings = append(p.Warnings, err.Error())
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "highest": hi, "note": "a person confirms or overrides this: pass the version you choose to create a release"})
+	branch := ""
+	if ref.Kind == "branch" {
+		branch = ref.Name
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "branch": branch, "highest": hi, "scheme": set.Scheme, "tag_prefix": set.TagPrefix,
+		"hosted": s.isHosted(r.Context(), project), "can_tag": s.canTag(r.Context(), project), "build": s.buildAt(project, ref.SHA),
+		"note": "a person confirms or overrides this: pass the version you choose to create a release"})
 }
 
 func (s *Server) compareReleases(w http.ResponseWriter, r *http.Request) {
@@ -612,72 +641,88 @@ func (s *Server) publishRelease(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	id := identityFrom(r)
 	setAudit(r, releaseTarget(rel), "publish")
-	if rel.State != engine.ReleaseDraft && rel.State != engine.ReleaseCandidate {
-		writeErr(w, http.StatusConflict, fmt.Sprintf("release %s %s is already %s", rel.Project, rel.Version, rel.State))
+	got, status, msg := s.publishCore(r, rel, in.Public, in.Tag)
+	if got == nil {
+		writeErr(w, status, msg)
 		return
 	}
-	if in.Public {
+	writeJSON(w, http.StatusOK, s.releaseView(r, got))
+}
+
+// publishCore makes the annotated tag and fixes the release. On a refusal it returns no release, the status and the words.
+func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, tagOverride string) (*engine.Release, int, string) {
+	id := identityFrom(r)
+	if rel.State != engine.ReleaseDraft && rel.State != engine.ReleaseCandidate {
+		return nil, http.StatusConflict, fmt.Sprintf("release %s %s is already %s", rel.Project, rel.Version, rel.State)
+	}
+	if public {
 		if !s.isProjectAdmin(id, rel.Project) {
-			writeErr(w, http.StatusForbidden, "only an administrator of "+rel.Project+" may make a release public")
-			return
+			return nil, http.StatusForbidden, "only an administrator of " + rel.Project + " may make a release public"
 		}
 		set, _ := s.Engine.ReleaseSettingsOf(rel.Project)
 		if ok, _ := s.Engine.PublicReleasesAllowed(); !ok || !set.Public {
-			writeErr(w, http.StatusConflict, "public downloads are off: the installation must allow them and the {project}'s release settings must ask for them")
-			return
+			return nil, http.StatusConflict, "public downloads are off: the installation must allow them and the {project}'s release settings must ask for them"
 		}
 	}
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no {projects} are configured")
-		return
+		return nil, http.StatusNotFound, "no {projects} are configured"
 	}
 	set, _ := s.Engine.ReleaseSettingsOf(rel.Project)
 	tag := rel.Tag
 	if tag == "" {
-		tag = nonEmpty(in.Tag, release.TagName(set.TagPrefix, rel.Version))
+		tag = nonEmpty(tagOverride, release.TagName(set.TagPrefix, rel.Version))
 	}
-	pi := engine.PublishInput{Tag: tag, Actor: id.User, Public: in.Public}
+	pi := engine.PublishInput{Tag: tag, Actor: id.User, Public: public}
 	ti, err := s.Projects.ReleaseTag(r.Context(), rel.Project, tag)
 	if err != nil {
-		s.fail(w, err)
-		return
+		return s.refusal(err)
 	}
 	switch {
 	case ti.Exists && ti.Commit != rel.SHA:
-		writeErr(w, http.StatusConflict, fmt.Sprintf("the tag %s already points to %s, not the release's commit %s; a tag is never moved. Release under another version", tag, ti.Commit[:8], rel.SHA[:8]))
-		return
+		return nil, http.StatusConflict, fmt.Sprintf("the tag %s already points to %s, not the release's commit %s; a tag is never moved. Release under another version", tag, ti.Commit[:8], rel.SHA[:8])
 	case ti.Exists:
 		pi.TagObject, pi.TagCreated = ti.Object, false
-	case !s.Projects.WritableForReleases(rel.Project):
-		writeErr(w, http.StatusConflict, "Launchway cannot write to "+rel.Project+"'s repository (its configuration has no push section), so it cannot create the tag "+tag+". Create the annotated tag yourself (git tag -a "+tag+" "+rel.SHA[:8]+" && git push origin "+tag+") and publish again")
-		return
+	case !s.canTag(r.Context(), rel.Project):
+		return nil, http.StatusConflict, "Launchway cannot write to " + rel.Project + "'s repository (it is not hosted here, and its configuration has no push section), so it cannot create the tag " + tag + ". Create the annotated tag yourself (git tag -a " + tag + " " + rel.SHA[:8] + " && git push origin " + tag + ") and publish again"
+	case s.isHosted(r.Context(), rel.Project):
+		repo, _ := s.hostedRepoOf(r.Context(), rel.Project)
+		obj, err := s.createHostedTag(r, repo, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes))
+		if err != nil {
+			return s.refusal(err)
+		}
+		pi.TagObject, pi.TagCreated = obj, true
 	default:
 		made, err := s.Projects.CreateTag(r.Context(), rel.Project, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes),
 			source.Author{User: id.User, Name: id.Profile.Name, Email: id.Profile.Email}, s.Now())
 		if err != nil {
-			s.fail(w, err)
-			return
+			return s.refusal(err)
 		}
 		pi.TagObject, pi.TagCreated = made.Object, true
 	}
 	got, err := s.Engine.PublishRelease(rel.ID, pi)
 	if err != nil {
-		s.fail(w, err)
-		return
+		return s.refusal(err)
 	}
 	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
-	writeJSON(w, http.StatusOK, s.releaseView(r, got))
+	return got, http.StatusOK, ""
 }
 
+// firstParagraph is what the tag says about the release: the notes without their headings, shortened.
 func firstParagraph(md string) string {
-	md = strings.TrimSpace(md)
-	if i := strings.Index(md, "\n\n"); i > 0 && i < 600 {
-		return md[:i]
+	var keep []string
+	for _, l := range strings.Split(md, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(l), "#") {
+			continue
+		}
+		keep = append(keep, l)
 	}
-	return clip(md, 600)
+	text := strings.TrimSpace(strings.Join(keep, "\n"))
+	for strings.Contains(text, "\n\n\n") {
+		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
+	}
+	return clip(text, 600)
 }
 
 func (s *Server) yankRelease(w http.ResponseWriter, r *http.Request) {
@@ -833,24 +878,6 @@ func (s *Server) downloadReleaseAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.serveAsset(w, r, rel)
-}
-
-func (s *Server) serveAsset(w http.ResponseWriter, r *http.Request, rel *engine.Release) {
-	rc, a, err := s.Engine.OpenReleaseAsset(r.Context(), rel.ID, r.PathValue("asset"))
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	defer rc.Close()
-	h := w.Header()
-	h.Set("Content-Type", "application/octet-stream")
-	h.Set("Content-Disposition", `attachment; filename="`+strings.ReplaceAll(a.Name, `"`, "")+`"`)
-	h.Set("Content-Length", strconv.FormatInt(a.Size, 10))
-	h.Set("X-Content-Type-Options", "nosniff")
-	h.Set("X-Launchway-SHA256", a.SHA256)
-	h.Set("ETag", `"`+a.SHA256+`"`)
-	h.Set("Cache-Control", "private, no-store")
-	_, _ = io.Copy(w, rc)
 }
 
 // publicDownload serves a file with no sign-in, only when the installation

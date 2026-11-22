@@ -12,6 +12,7 @@ import { trendOf } from "../guided/decide";
 import { useInstallation } from "../guided/facts";
 import { useLoad } from "../guided/useLoad";
 import { Chip, Status, StateChip, stateOf } from "../kit/Status";
+import { CutReleaseButton } from "../components/CutRelease";
 import { Button, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Tabs } from "../kit/Tabs";
 import { useTab } from "../components/PageTabs";
@@ -50,6 +51,7 @@ export function RepoPage({ name }: { name: string }) {
         sentence={p.error ? <><b>Launchway cannot reach this repository.</b> {p.error}</> : <>A repository Launchway reads from Git, on the branch <Mono>{p.default_branch}</Mono>. Checked every {p.poll_seconds}s{p.last_fetch > 0 ? `, last ${ago(p.last_fetch, now)}` : ""}.</>}
         actions={<>
           {canOperate(me, p.name) && <Button kind="pri" icon="play" onClick={() => setStarting(true)}>{terms().say("Start a {run}")}</Button>}
+          <CutReleaseButton project={p.name} />
           {base && <a className="btn" href={base} target="_blank" rel="noreferrer noopener">Open on {host}</a>}
           <LinkButton href={`/projects/${enc}/pipeline`} icon="graph">Pipeline</LinkButton>
         </>} />

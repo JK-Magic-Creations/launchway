@@ -91,7 +91,7 @@ export function releaseFixtures(): Record<string, unknown> {
     "/api/v1/projects/shop-api/releases/1.4.0": view(release()),
     "/api/v1/projects/shop-api/releases/1.5.0": view(release({ id: "rel_3", version: "1.5.0", state: "draft", published_at: undefined, tag: undefined, immutable: false })),
     "/api/v1/projects/shop-api/releases/1.4.0/checklist": checklistAnswer(false),
-    "/api/v1/projects/shop-api/releases/next": { proposal: { next: "1.5.0", last: "1.4.0", bump: "minor", summary: "1.5.0: 2 changes since 1.4.0; the highest is minor, so 1.4.0 → 1.5.0.", reasons: [{ change: { title: "feat: a page", kind: "pull", ref: 14 }, bump: "minor", why: "new feature" }] }, source: "x", commit: "0123" },
+    "/api/v1/projects/shop-api/releases/next": { proposal: { next: "1.5.0", last: "1.4.0", bump: "minor", summary: "1.5.0: 2 changes since 1.4.0; the highest is minor, so 1.4.0 → 1.5.0.", reasons: [{ change: { title: "feat: a page", kind: "pull", ref: 14 }, bump: "minor", why: "new feature" }] }, source: "x", commit: "0123456789abcdef0123456789abcdef01234567", branch: "main", highest: "1.4.0", scheme: "semver", tag_prefix: "v", hosted: true, can_tag: true, build: { run_id: "run_7", run_number: 7, files: [{ name: "shop-api.apk", path: "dist/shop-api.apk", size: 3000000, sha256: "cd".repeat(32) }] } },
     "/api/v1/release-matrix": matrix(),
     "/api/v1/release-calendar": calendar(),
     "/api/v1/release-freezes": freezes(),

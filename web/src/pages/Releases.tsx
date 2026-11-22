@@ -1,7 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { canOperate, useMe } from "../auth";
 import { ReleasesNav } from "../components/ReleasesNav";
 import { PromoteDialog } from "../components/ReleasePromote";
+import { CutReleaseButton } from "../components/CutRelease";
+import { QrCode } from "../components/QrCode";
 import { EntityLink } from "../components/EntityLink";
 import { ErrorBox } from "../components/ui";
 import { ago, clock } from "../format";
@@ -44,7 +46,9 @@ export function ReleasesPage() {
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Releases"
         sentence="A release is the thing that is versioned, cleared, promoted from Airfield to Airfield and reported on: a commit, a tag, notes, Cargo and the image digests its Sortie built."
-        actions={operable.length > 0 ? <Button kind="pri" icon="plus" onClick={() => setMaking(true)}>New release</Button> : undefined} />
+        actions={operable.length > 0 ? <>
+          {(project && operable.includes(project)) ? <CutReleaseButton project={project} kind="pri" /> : operable.length === 1 ? <CutReleaseButton project={operable[0]} kind="pri" /> : null}
+          <Button icon="plus" onClick={() => setMaking(true)}>New release</Button></> : undefined} />
       <ReleasesNav path="/deployments/releases" />
       <div className="toolbar2">
         <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span>
@@ -134,7 +138,7 @@ function NewReleaseDialog({ projects, initial, onClose }: { projects: string[]; 
             {(prop.warnings ?? []).map((w) => <p key={w} className="rel-hint">{w}</p>)}
           </div>
         )}
-        <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={generate} onChange={(e) => setGenerate(e.target.checked)} /> Write the notes from the pull requests and commits since the last release</label>
+        <label className="rel-check"><input type="checkbox" checked={generate} onChange={(e) => setGenerate(e.target.checked)} /> Write the notes from the pull requests and commits since the last release</label>
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
@@ -201,6 +205,7 @@ export function ReleasePage({ project, version }: { project: string; version: st
           r.notes.trim() ? <div className="rel-notes"><Markdown text={underNotes(r.notes)} /></div> : <p className="rel-hint" style={{ padding: "14px 16px" }}>No notes yet.</p>}
         {r.notes_source && <p className="rel-hint" style={{ padding: "0 16px 12px" }}>Source: {r.notes_source}.</p>}
       </Sheet>
+      {r.state === "published" && (r.assets ?? []).some((a) => a.kind === "file") && <PhoneSheet v={v} />}
       <AssetsSheet v={v} onChanged={data.reload} />
       {v.may.promote && airfields.length > 0 && (
         <Sheet title="Promote">
@@ -280,16 +285,20 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
   return (
     <Sheet title="Cargo and images">
       {assets.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No files or images are attached.</p> : (
-        <div className="rel-table-wrap"><table className="rel-table">
+        <div className="rel-table-wrap"><table className="rel-table rel-assets">
           <caption className="visually-hidden">Files and images of this release, with where each came from</caption>
-          <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col" className="n">Size</th><th scope="col">SHA-256 or digest</th><th scope="col">Where it came from</th><th scope="col"><span className="visually-hidden">Actions</span></th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
           <tbody>{assets.map((a: ReleaseAsset) => (
             <tr key={a.id}>
               <td>{a.kind === "file" ? <a href={releasesApi.downloadUrl(r.project, r.version, a.name)} download>{a.name}</a> : a.name}</td>
-              <td>{a.kind}</td><td className="n">{a.kind === "file" ? size(a.size) : ""}</td>
+              <td className="hide-narrow">{a.kind}</td><td className="n">{a.kind === "file" ? size(a.size) : ""}</td>
               <td className="rel-sha">{a.sha256 ?? a.digest ?? ""}{a.detail ? <span className="faint"> · {a.detail}</span> : null}</td>
-              <td>{a.run_id ? <>Sortie #{a.run_number} at {a.source_sha?.slice(0, 8)}, added by {a.added_by}</> : <>uploaded by {a.added_by}</>}</td>
-              <td>{v.may.edit && <Button sm onClick={async () => { try { await releasesApi.removeAsset(r.project, r.version, a.name); onChanged(); } catch (e) { setError(e); } }}>Remove<span className="visually-hidden"> {a.name}</span></Button>}</td>
+              <td className="hide-narrow">{a.run_id ? <>Sortie #{a.run_number} at {a.source_sha?.slice(0, 8)}, added by {a.added_by}</> : <>uploaded by {a.added_by}</>}</td>
+              <td>
+                {a.kind === "file" && <a className="btn btn-sm" href={releasesApi.downloadUrl(r.project, r.version, a.name)} download>Download<span className="visually-hidden"> {a.name}</span></a>}
+                {a.kind === "file" && r.state === "published" && <AssetQr release={r} asset={a} />}
+                {v.may.edit && <Button sm onClick={async () => { try { await releasesApi.removeAsset(r.project, r.version, a.name); onChanged(); } catch (e) { setError(e); } }}>Remove<span className="visually-hidden"> {a.name}</span></Button>}
+              </td>
             </tr>))}</tbody></table></div>
       )}
       {v.may.edit && (
@@ -305,6 +314,45 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
   );
 }
 
+/** The address a phone should open for one file: the public link when anyone may download, else the page that signs in first. */
+function assetAddress(r: Release, a: ReleaseAsset): string {
+  return location.origin + (r.public && r.state === "published" ? releasesApi.publicUrl(r.project, r.version, a.name) : releasesApi.getUrl(r.project, r.version, a.name));
+}
+
+function AssetQr({ release, asset }: { release: Release; asset: ReleaseAsset }) {
+  const addr = assetAddress(release, asset);
+  return (
+    <details className="rel-asset-qr">
+      <summary>Open on a phone<span className="visually-hidden"> ({asset.name})</span></summary>
+      <QrCode value={addr} label={`QR code that downloads ${asset.name} on a phone`} size={132} />
+      <span className="rel-hint">Scan it with the camera. {release.public ? "Anyone may download it." : "A phone that is not signed in is asked to sign in first."}</span>
+    </details>
+  );
+}
+
+/** For a published release: a code that opens its page on a phone, where each file has its own download. */
+function PhoneSheet({ v }: { v: ReleaseView }) {
+  const r = v.release;
+  const files = (r.assets ?? []).filter((a) => a.kind === "file");
+  const page = location.origin + releasesApi.pageUrl(r.project, r.version);
+  const apk = files.find((a) => /\.apk$/i.test(a.name));
+  const main = apk ?? (files.length === 1 ? files[0] : undefined);
+  const addr = main ? assetAddress(r, main) : page;
+  return (
+    <Sheet title="Get it on a phone">
+      <div className="rel-phone">
+        <QrCode value={addr} label={main ? `QR code that downloads ${main.name} on a phone` : `QR code that opens ${r.project} ${r.version} on a phone`} />
+        <div>
+          <p>{main ? <>Point the phone's camera at the code to download <b>{main.name}</b>{apk ? ", the Android app" : ""}.</> : <>Point the phone's camera at the code to open this release, where each file has its own download.</>} {r.public ? "Anyone with the address may download it." : "A phone that is not signed in is sent to sign in and then back to the download."}</p>
+          {apk && <p className="rel-hint">Android asks once to allow installing from the browser it was downloaded with.</p>}
+          <p className="addr">{addr}</p>
+          {main && <p><a href={page} onClick={onLink}>All files of this release</a></p>}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 function PublishDialog({ release, may, onClose, onDone }: { release: Release; may: boolean; onClose: () => void; onDone: () => void }) {
   const [pub, setPub] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -315,7 +363,7 @@ function PublishDialog({ release, may, onClose, onDone }: { release: Release; ma
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); go(); }}>
         <h2>Publish {release.project} {release.version}?</h2>
         <p className="rel-hint">Publishing makes the annotated tag {release.tag || "for this version"} at commit {release.sha.slice(0, 8)} (an existing tag at that commit is adopted) and fixes the release. Its notes, files, tag and image digests can never change; if something is wrong, withdraw it and make a new release.</p>
-        {may && <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> {terms().say("Allow downloading its files without signing in (only where the installation and the {project} allow it)")}</label>}
+        {may && <label className="rel-check"><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} /> {terms().say("Allow downloading its files without signing in (only where the installation and the {project} allow it)")}</label>}
         <ErrorBox error={error} />
         <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Not yet</button><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Publishing…" : "Publish"}</button></div>
       </form>
@@ -366,5 +414,38 @@ function CompareSheet({ project, version }: { project: string; version: string }
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** The page a download's QR code opens: it needs a signed-in person (the sign-in page comes first and returns here), then starts the download. */
+export function ReleaseGetPage({ project, version, asset }: { project: string; version: string; asset: string }) {
+  useCrumbLabel(`${project} ${version}`);
+  const fn = useCallback((b: boolean) => releasesApi.get(project, version, b), [project, version]);
+  const data = useLoad<ReleaseView>(fn, 0);
+  const url = releasesApi.downloadUrl(project, version, asset);
+  const a = data.data?.release.assets?.find((x) => x.name === asset);
+  const started = useRef(false);
+  useEffect(() => {
+    if (!a || started.current) return;
+    started.current = true;
+    const link = document.createElement("a");
+    link.href = url; link.download = asset; link.rel = "noopener";
+    document.body.appendChild(link); link.click(); link.remove();
+  }, [a, url, asset]);
+  return (
+    <div className="page">
+      <PageHead eyebrow={<><a href="/deployments/releases" onClick={onLink}>Releases</a> · {project}</>} title={asset} sentence={`From ${project} ${version}.`} />
+      <ErrorBox error={data.error} />
+      {a ? (
+        <Sheet title="Your download">
+          <div className="rel-actions" role="status">
+            <span>The download should start now. If it does not, use the button.</span>
+            <a className="btn btn-primary" href={url} download>Download {asset} ({size(a.size)})</a>
+            <a className="btn" href={href({ project, version })} onClick={onLink}>Back to the release</a>
+          </div>
+          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>SHA-256 <span className="rel-sha">{a.sha256}</span></p>
+        </Sheet>
+      ) : !data.loading && !data.error ? <Sheet><EmptyState title="There is no such file in this release">Open <a href={href({ project, version })} onClick={onLink}>the release</a> to see its files.</EmptyState></Sheet> : <div className="loading">Loading…</div>}
+    </div>
   );
 }

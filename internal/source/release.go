@@ -137,6 +137,7 @@ func (m *Manager) CommitsBetween(ctx context.Context, name, from, to string) ([]
 		return nil, err
 	}
 	var list []CommitInfo
+	var joined [][2]string
 	for _, rec := range strings.Split(out, "\x1e") {
 		rec = strings.TrimLeft(rec, "\n")
 		if rec == "" {
@@ -148,6 +149,28 @@ func (m *Manager) CommitsBetween(ctx context.Context, name, from, to string) ([]
 		}
 		ts, _ := strconv.ParseInt(f[3], 10, 64)
 		list = append(list, CommitInfo{SHA: f[0], Parents: len(strings.Fields(f[1])), Author: f[2], Time: ts * 1000, Subject: f[4], Body: strings.TrimSpace(f[5])})
+		if ps := strings.Fields(f[1]); len(ps) == 2 && mergePR.MatchString(f[4]) {
+			joined = append(joined, [2]string{ps[0], ps[1]})
+		}
+	}
+	// The commits a merged pull request brought are part of that pull request: listing them again beside it would
+	// say each change twice in the notes.
+	if len(joined) > 0 {
+		inPull := map[string]bool{}
+		for _, j := range joined {
+			if out, err := gitOut(ctx, p.dir, "rev-list", "--max-count=500", j[0]+".."+j[1]); err == nil {
+				for _, c := range strings.Fields(out) {
+					inPull[c] = true
+				}
+			}
+		}
+		kept := list[:0]
+		for _, c := range list {
+			if !inPull[c.SHA] {
+				kept = append(kept, c)
+			}
+		}
+		list = kept
 	}
 	return list, nil
 }

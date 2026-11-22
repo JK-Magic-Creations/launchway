@@ -51,6 +51,20 @@ describe.each(["light", "dark"])("releases, %s theme", (theme) => {
     await clean("promote dialog");
   }, 20000);
 
+  it("the download page a QR code opens", async () => {
+    await open("/deployments/releases/shop-api/1.4.0/get/shop-api-linux-amd64");
+    await screen.findByText(/The download should start now/, {}, { timeout: 8000 });
+    await clean("download page");
+  }, 20000);
+
+  it("the dialog that cuts a release", async () => {
+    await open("/projects/shop-api");
+    fireEvent.click(await screen.findByRole("button", { name: /Cut a release/ }, { timeout: 8000 }));
+    await screen.findByRole("dialog", {}, { timeout: 8000 });
+    await screen.findByText(/Attach the 1 file built at this commit/, {}, { timeout: 8000 });
+    await clean("cut a release dialog");
+  }, 20000);
+
   it("the dialog that makes a release", async () => {
     await open("/deployments/releases");
     fireEvent.click(await screen.findByRole("button", { name: /New release/ }, { timeout: 8000 }));

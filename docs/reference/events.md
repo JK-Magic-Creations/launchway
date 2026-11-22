@@ -312,6 +312,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `release.asset.add` | `PUT` or `POST` on a release's assets: a file uploaded or what a Sortie made attached |
 | `release.asset.remove` | `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` |
 | `release.candidate` | `POST /api/v1/projects/{name}/releases/{version}/candidate` |
+| `release.asset.download` | `GET .../releases/{version}/assets/{asset}` and `GET /public/releases/...`: a release file was downloaded (the file and its size; `continued` for a resumed range) |
 | `release.publish` | `POST /api/v1/projects/{name}/releases/{version}/publish`: the release and the tag it was published under |
 | `release.yank` | `POST /api/v1/projects/{name}/releases/{version}/yank`: a release withdrawn, with the reason |
 | `release.changelog` | `POST /api/v1/projects/{name}/releases/{version}/changelog`: the changelog branch proposed |

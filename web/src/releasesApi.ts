@@ -44,6 +44,11 @@ export interface Checklist {
 export interface ChecklistAnswer { checklist: Checklist; may_promote: boolean; may_override: boolean; environment_refusal?: string }
 
 export interface Reason { change: { title: string; kind: string; ref?: number }; bump: string; why: string }
+/** What a person needs to cut a release: the proposal, the commit and tag it would make, and what the pipeline built at that commit. */
+export interface NextAnswer {
+  proposal: Proposal; source: string; commit: string; branch?: string; highest?: string; scheme: string; tag_prefix: string;
+  hosted: boolean; can_tag: boolean; build: null | { run_id: string; run_number: number; files: { name: string; path: string; size: number; sha256: string }[] };
+}
 export interface Proposal { next: string; last?: string; bump: string; summary: string; reasons: Reason[]; warnings?: string[] }
 
 export interface Cell {
@@ -82,9 +87,9 @@ const bg = (b?: boolean) => ({ background: !!b });
 export const releasesApi = {
   list: (o: { project?: string; state?: string } = {}, b?: boolean) => call<Release[]>("GET", `/api/v1/releases${q(o)}`, undefined, bg(b)),
   get: (project: string, version: string, b?: boolean) => call<ReleaseView>("GET", rel(project, version), undefined, bg(b)),
-  next: (project: string, o: { from?: string; pre?: string } = {}) => call<{ proposal: Proposal; source: string; commit: string }>("GET", `${p(project)}/releases/next${q(o)}`),
+  next: (project: string, o: { from?: string; pre?: string } = {}) => call<NextAnswer>("GET", `${p(project)}/releases/next${q(o)}`),
   notes: (project: string, o: { to?: string; version?: string } = {}) => call<{ notes: { markdown: string; count: number; source: string } }>("GET", `${p(project)}/releases/notes${q(o)}`),
-  create: (project: string, body: { version: string; from?: string; adopt?: string; title?: string; notes?: string; generate_notes?: boolean; run_id?: string; allow_lower?: boolean }) =>
+  create: (project: string, body: { version: string; from?: string; adopt?: string; title?: string; notes?: string; generate_notes?: boolean; run_id?: string; allow_lower?: boolean; attach_cargo?: boolean; publish?: boolean; public?: boolean }) =>
     call<ReleaseView>("POST", `${p(project)}/releases`, body),
   edit: (project: string, version: string, body: { title?: string; notes?: string }) => call<ReleaseView>("PATCH", rel(project, version), body),
   regenerate: (project: string, version: string) => call<ReleaseView>("POST", `${rel(project, version)}/notes`, {}),
@@ -106,6 +111,10 @@ export const releasesApi = {
     return data as unknown as ReleaseAsset;
   },
   downloadUrl: (project: string, version: string, name: string) => `${rel(project, version)}/assets/${encodeURIComponent(name)}`,
+  /** The address of a release's page, and of the page that downloads one file (it signs a phone in first, then starts the download). */
+  pageUrl: (project: string, version: string) => `/deployments/releases/${encodeURIComponent(project)}/${encodeURIComponent(version)}`,
+  getUrl: (project: string, version: string, name: string) => `/deployments/releases/${encodeURIComponent(project)}/${encodeURIComponent(version)}/get/${encodeURIComponent(name)}`,
+  publicUrl: (project: string, version: string, name: string) => `/public/releases/${encodeURIComponent(project)}/${encodeURIComponent(version)}/${encodeURIComponent(name)}`,
   checklist: (project: string, version: string, airfield: string) => call<ChecklistAnswer>("GET", `${rel(project, version)}/checklist${q({ airfield })}`),
   clearance: (project: string, version: string, airfield: string, comment: string) => call<Clearance>("POST", `${rel(project, version)}/clearances`, { airfield, comment }),
   promote: (project: string, version: string, airfield: string, override?: string) => call<{ promotion: Promotion; run: { id: string; number: number } }>("POST", `${rel(project, version)}/promote`, { airfield, override }),

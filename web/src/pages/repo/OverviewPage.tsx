@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { browseApi, codeHref, commitHref, type CommitEntry, type Item } from "../../browseApi";
+import { CutReleaseForRepository } from "../../components/CutRelease";
 import { Mono } from "../../components/ui";
 import { EmptyState, Sheet } from "../../kit/layout";
 import { CloneBox } from "../Repositories";
@@ -27,7 +28,7 @@ export function OverviewPage({ path }: { path: string }) {
   const readme = Array.isArray(root?.entries) ? findReadme(root.entries) : undefined;
   const branch = repo?.default_branch ?? "main";
   return (
-    <RepoFrame path={path} tab="overview" title={path}
+    <RepoFrame path={path} tab="overview" title={path} actions={<CutReleaseForRepository cloneUrl={repo?.clone.https} />}
       sentence={repo ? <>{repo.visibility} repository{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</> : undefined} error={error}>
       {facts && (
         <p className="sub" aria-label="Facts about the repository">

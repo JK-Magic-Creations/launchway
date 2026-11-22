@@ -1,5 +1,7 @@
 # Making a release
 
+The short path is [Cut a release](cut-a-release.md): one button that makes the tag, attaches the built files and publishes.
+
 A release is more than a tag with a zip. It is the thing that is versioned, cleared, promoted from Airfield to Airfield and reported on: a version, the commit and annotated tag it was made from, notes, Cargo (files with checksums), the image digests its Sortie built, and a record of who did each step. This page is about making one. [Promoting a release](promoting-releases.md) is about moving it through the Airfields, [Release checklists, windows and freezes](release-checklists.md) about what must be true first, and [Measuring delivery](measuring-delivery.md) about what it tells you afterwards.
 
 You can do everything here from the web interface (Deployments, then Releases), the command line (`launchway release ...`), the HTTP API, or through an agent (the `*_release*` tools); they are the same operations with the same permissions.
@@ -61,11 +63,11 @@ launchway release assets add shop 1.5.0 --file ./shop-linux-amd64
 launchway release assets add shop 1.5.0 --run run_abc --artifact art_1 --path dist/shop --images
 ```
 
-A file is kept with the release with its SHA-256 (worked out as it is stored; give `X-Launchway-SHA256` to have it checked). Files copied from a Sortie's Cargo are checked against the checksum the Sortie recorded and are copied into the release's own storage, so they outlive the Cargo, which expires. `--images` records the Sortie's image digests and, where they exist, summaries of its SBOM and scans. Each asset shows its provenance: which Sortie built it, at which commit, and who added it. Downloads need a signed-in person who can read the Flight.
+A file is kept with the release with its SHA-256 (worked out as it is stored; give `X-Launchway-SHA256` to have it checked). Files copied from a Sortie's Cargo are checked against the checksum the Sortie recorded and are copied into the release's own storage, so they outlive the Cargo, which expires. `--images` records the Sortie's image digests and, where they exist, summaries of its SBOM and scans. Each asset shows its provenance: which Sortie built it, at which commit, and who added it. Downloads need a signed-in person who can read the Flight, are streamed, answer `Range` and are recorded in the Logbook.
 
 ## Publishing
 
-`launchway release publish PROJECT VERSION` creates the **annotated tag** at the release's commit and publishes the release. If the tag already exists at that commit it is adopted; if it exists anywhere else, publishing is refused, because a tag is never moved. Launchway can create the tag when the Flight has a `push:` section (see [Editing pipelines](editor.md)); without one, create the annotated tag yourself (`git tag -a v1.5.0 <commit> && git push origin v1.5.0`) and publish, and Launchway adopts it. Tags are not signed: Launchway has no signing key for Git objects, so there is nothing to claim. Image signing is separate (see [Container images](images.md)).
+`launchway release publish PROJECT VERSION` creates the **annotated tag** at the release's commit and publishes the release. If the tag already exists at that commit it is adopted; if it exists anywhere else, publishing is refused, because a tag is never moved. Launchway can create the tag when the Flight reads a repository it hosts, or has a `push:` section (see [Editing pipelines](editor.md)); without one, create the annotated tag yourself (`git tag -a v1.5.0 <commit> && git push origin v1.5.0`) and publish, and Launchway adopts it. Tags are not signed: Launchway has no signing key for Git objects, so there is nothing to claim. Image signing is separate (see [Container images](images.md)).
 
 A published release's tag is checked again when it is promoted: if the tag no longer points to the released commit, nothing is promoted and the release page says so.
 

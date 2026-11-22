@@ -135,7 +135,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/deployments": return <DeploymentsPage />;
     case "/deployments/environments": return <EnvironmentsPage />;
     case "/deployments/environments/:name": return <EnvironmentPage key={p.name} name={p.name} />;
-    case "/deployments/releases": case "/deployments/releases/:a": case "/deployments/releases/:a/:b": return <ReleasesRoot key={path} a={p.a} b={p.b} />;
+    case "/deployments/releases": case "/deployments/releases/:a": case "/deployments/releases/:a/:b": case "/deployments/releases/:a/:b/get/:c": return <ReleasesRoot key={path} a={p.a} b={p.b} c={p.c} />;
     case "/deployments/applications": return <ApplicationsPage />;
     case "/deployments/applications/:name": return <ApplicationPage key={p.name} name={p.name} />;
     case "/library": return <LibraryPage />;

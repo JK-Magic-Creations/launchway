@@ -776,7 +776,7 @@ launchway release list [--project P] [--state draft|candidate|published|yanked] 
 launchway release show PROJECT VERSION [--json]
 launchway release next --project P [--from REF] [--pre rc] [--json]
 launchway release notes --project P [--to REF] [--version V]
-launchway release create --project P --version V [--from REF | --adopt TAG] [--notes-file F | --generate-notes] [--title T] [--run RUN] [--allow-lower]
+launchway release create --project P --version V [--from REF | --adopt TAG] [--notes-file F | --generate-notes] [--title T] [--run RUN] [--allow-lower] [--attach-cargo] [--publish [--public]]
 launchway release edit PROJECT VERSION [--notes-file F] [--title T] [--regenerate-notes]
 launchway release assets add PROJECT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
 launchway release assets remove PROJECT VERSION NAME

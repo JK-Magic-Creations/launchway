@@ -62,3 +62,19 @@
   .rel-dl { grid-template-columns: 1fr; gap: 2px; }
   .rel-dl dd { margin-bottom: 8px; }
 }
+.qr { display: block; border: 1px solid var(--line-2); border-radius: var(--r1); background: #fff; flex: none; }
+.rel-phone { display: flex; flex-wrap: wrap; gap: 18px; padding: 16px; align-items: flex-start; }
+.rel-phone p { margin: 0 0 8px; max-width: 52ch; }
+.rel-phone .addr { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; overflow-wrap: anywhere; }
+.rel-asset-qr { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.rel-asset-qr summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+.rel-cut-notes { border: 1px solid var(--line-2); border-radius: var(--r1); padding: 8px 12px; background: var(--sheet-2); font-size: 13px; }
+.rel-cut-tag { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 13.5px; }
+.rel-cut-tag dt { color: var(--ink-3); }
+.rel-cut-tag dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .rel-form { min-width: 0; width: 100%; } .rel-phone { flex-direction: column; } }
+.rel-assets .rel-sha { overflow-wrap: anywhere; word-break: break-all; }
+@media (max-width: 560px) { .rel-assets .hide-narrow { display: none; } .rel-assets td, .rel-assets th { padding: 8px 8px; } }
+.rel-check { display: flex; gap: 10px; align-items: center; justify-content: flex-start; font-size: 14px; }
+.rel-check input[type="checkbox"] { width: 24px; height: 24px; flex: none; margin: 0; }
+.rel-form .dialog-actions { position: sticky; bottom: 0; background: var(--sheet, #fff); padding: 10px 0 0; }
