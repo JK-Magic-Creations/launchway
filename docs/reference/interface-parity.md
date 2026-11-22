@@ -414,6 +414,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/tags` | `create_repository_tag` | `repos tags create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
+| `GET /api/v1/repository-trash` | `list_repository_trash` | `repos trash` | — | equal |
+| `DELETE /api/v1/repository-trash/{id}` | `purge_repository` | `repos purge` | — | equal |
+| `POST /api/v1/repository-trash/{id}/restore` | `restore_repository` | `repos restore` | — | equal |
 | `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |

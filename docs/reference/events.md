@@ -411,6 +411,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.create` | `POST /api/v1/repositories`; the target is the repository's path, the detail its visibility |
 | `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |
 | `repository.delete` | `DELETE /api/v1/repositories/{owner}/{name}`; the repository moves to the trash |
+| `repository.restore` | `POST /api/v1/repository-trash/{id}/restore`; the detail says what address it had |
+| `repository.purge` | `DELETE /api/v1/repository-trash/{id}`, or the background worker (user `system`) when the retention ended; the detail counts the packs and blobs removed |
 | `mirror.create` | `POST /api/v1/repositories/{owner}/{name}/mirrors` (also `launchway repos mirror add`); the detail says the direction, the address and where the credential is read from, never the credential |
 | `mirror.update` | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}`: paused, resumed, a new interval or prune setting, or a push mirror's `publish_releases` turned on or off |
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |

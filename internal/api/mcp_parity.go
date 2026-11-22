@@ -13,6 +13,7 @@ import (
 )
 
 func addParityTools(srv *mcp.Server, c *mcpCall) {
+	addTrashTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "get_hosting_settings", Annotations: readOnly("Get the hosting settings"),
 		Description: "The installation's hosting settings: the most a snapshot (tar.gz or zip) of a repository's ref may hold, in MiB, and how many days a deleted repository stays in the trash before it is removed for good."},
 		mcpCallTimeout, getHostingSettings)

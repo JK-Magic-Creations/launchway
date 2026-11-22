@@ -301,6 +301,22 @@ func (p *Provider) Restore(ctx context.Context, id string) error {
 	return p.st.RestoreRepository(ctx, id)
 }
 
+// RestoreAs brings a deleted repository back under an owner and name: the ones
+// it had, or others when its address has been taken since. A taken address is
+// forge.ErrExists.
+func (p *Provider) RestoreAs(ctx context.Context, id, home, name string) (forge.Repository, error) {
+	if err := ValidSegment(home); err != nil {
+		return forge.Repository{}, err
+	}
+	if err := ValidSegment(name); err != nil {
+		return forge.Repository{}, err
+	}
+	if err := p.st.RestoreRepositoryAs(ctx, id, home, name, p.cloneOf(home+"/"+name)); err != nil {
+		return forge.Repository{}, err
+	}
+	return p.st.Repository(ctx, id)
+}
+
 // Trash lists the deleted repositories.
 func (p *Provider) Trash(ctx context.Context) ([]forge.Repository, error) {
 	return p.st.Trashed(ctx, p.conn.ID)

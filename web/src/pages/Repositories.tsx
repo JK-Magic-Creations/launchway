@@ -51,7 +51,7 @@ export function RepositoriesPage() {
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
         sentence={repos && repos.length === 0 ? "No repository is hosted here yet." : `${repos?.length ?? 0} hosted by Launchway.`}
-        actions={<><Link href="/graph" className="btn btn-sm">Graph</Link> <Link href="/settings/access/ssh-keys" className="btn btn-sm">SSH keys</Link></>} />
+        actions={<><Link href="/graph" className="btn btn-sm">Graph</Link> <Link href="/repositories/trash" className="btn btn-sm">Deleted</Link> <Link href="/settings/access/ssh-keys" className="btn btn-sm">SSH keys</Link></>} />
       <ErrorBox error={error} />
       {repos && repos.length > 0 && (
         <Suspense fallback={flat}><RepositoriesExplorer repos={repos} now={opened} /></Suspense>

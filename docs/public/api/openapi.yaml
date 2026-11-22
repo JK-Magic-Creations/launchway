@@ -12936,6 +12936,95 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repository-trash:
+        get:
+            description: 'The deleted repositories you administer (everything for an administrator of every Flight): {"items": [{"id", "path" (the address it had), "deleted_by", "deleted_at", "purge_at", "name_taken", "purging"}]}. purge_at is the deletion plus the retention (trash_retention_days in the hosting settings).'
+            operationId: get_api_v1_repository_trash
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The deleted repositories you administer (everything for an administrator of every Flight): {"items": [{"id", "path" (the address it had), "deleted_by", "deleted_at", "purge_at", "name_taken", "purging"}]}.'
+            tags:
+                - repository-trash
+            x-launchway-access: signed-in
+    /api/v1/repository-trash/{id}:
+        delete:
+            description: 'Removes a deleted repository for good, with its Git storage: {"confirm": "owner/name"} must be the address it had (400 otherwise, nothing removed). Answers {"path", "packs", "blobs_deleted", "blobs_kept", "bytes"}. Cannot be undone.'
+            operationId: delete_api_v1_repository_trash_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Removes a deleted repository for good, with its Git storage: {"confirm": "owner/name"} must be the address it had (400 otherwise, nothing removed).'
+            tags:
+                - repository-trash
+            x-launchway-access: admin
+            x-launchway-audit: repository.purge
+    /api/v1/repository-trash/{id}/restore:
+        post:
+            description: 'Brings a deleted repository back (its administrators): {"owner", "name"} give another address, which 409 asks for when the old one was taken. Another owner needs an administrator of every Flight. Answers the repository.'
+            operationId: post_api_v1_repository_trash_id_restore
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Brings a deleted repository back (its administrators): {"owner", "name"} give another address, which 409 asks for when the old one was taken.'
+            tags:
+                - repository-trash
+            x-launchway-access: signed-in
+            x-launchway-audit: repository.restore
     /api/v1/rollbacks/review:
         get:
             description: 'Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only Flights the caller may see.'

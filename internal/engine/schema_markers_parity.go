@@ -10,3 +10,8 @@ var schemaMarkersBadges = schemaMarker{
 	schema: schemaBadges, feature: "Flight badges, old repository addresses, hosting settings",
 	tables: []string{"flight_badges", "repo_aliases", "hosting_settings"},
 }
+
+var schemaMarkersTrash = schemaMarker{
+	schema: schemaTrash, feature: "who deleted a repository and when, and permanent removal",
+	tables: []string{"repo_trash"},
+}

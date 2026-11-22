@@ -63,7 +63,7 @@ func newHostedCLI(t *testing.T) *hostedCLI {
 		t.Fatal(err)
 	}
 	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r", Auth: &api.Auth{Policy: pol, IdleTimeout: time.Hour, Lifetime: time.Hour},
-		Forge: &api.ForgeHosting{Provider: h.Provider, Mirrors: h.Mirrors, RunTokens: h.RunTokens, Pulls: h.Pulls, Rules: h.Rules, Git: githttp.New(githttp.Options{Backend: h.Store, Log: quiet})}}
+		Forge: &api.ForgeHosting{Provider: h.Provider, Mirrors: h.Mirrors, RunTokens: h.RunTokens, Pulls: h.Pulls, Trash: h, Rules: h.Rules, Git: githttp.New(githttp.Options{Backend: h.Store, Log: quiet})}}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	now := time.Now().UnixMilli()

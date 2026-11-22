@@ -54,7 +54,9 @@ type ForgeHosting struct {
 	// Pulls is pull requests and code review (nil: not available); RepoByID
 	// finds a repository from its ID, which the pull request service names
 	// repositories by.
-	Pulls    *pulls.Service
+	Pulls *pulls.Service
+	// Trash is the trash of deleted repositories (nil: not available).
+	Trash    TrashService
 	RepoByID func(ctx context.Context, id string) (forge.Repository, error)
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
@@ -258,6 +260,9 @@ func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if gone.ID != "" {
+		if s.Forge.Trash != nil {
+			_ = s.Forge.Trash.NoteDeleted(r.Context(), gone.ID, identityFrom(r).User)
+		}
 		s.tokensForgetRepo(gone)
 		s.emitRepository(r.Context(), identityFrom(r).User, gone, "deleted", nil)
 	}

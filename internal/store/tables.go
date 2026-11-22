@@ -87,6 +87,7 @@ var Tables = []Table{
 	{Name: "tag_rules", Class: Pending, Stage: "S3", Why: "repo_id"},
 	{Name: "flight_badges", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "repo_aliases", Class: Pending, Stage: "S3", Why: "repo_id"},
+	{Name: "repo_trash", Class: Pending, Stage: "S3", Why: "repo_id"},
 	{Name: "hosting_settings", Class: Global, Why: "the operator's hosting settings"},
 	{Name: "lane_holders", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_waiting", Class: Pending, Stage: "S2", Why: "run"},

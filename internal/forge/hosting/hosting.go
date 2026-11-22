@@ -239,6 +239,7 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 			}
 		}
 	}
+	h.PurgeExpired(ctx)
 	if h.o.CacheBytes > 0 {
 		if _, err := h.Store.EvictCaches(h.o.CacheBytes); err != nil {
 			h.log.Warn("hosting maintenance: evicting caches", "err", err)
