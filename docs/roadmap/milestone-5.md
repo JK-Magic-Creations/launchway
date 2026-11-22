@@ -18,7 +18,7 @@ Milestone 5 connects code, dependencies, images and deployments in one graph kep
 
 - A new advisory arrives; Launchway lists the services affected and who owns each.
 - You search for a function across every repository you can see.
-- Automatic patching is switched on for one zone; a dependency update arrives as a change, passes its tests and rolls out.
+- Automatic patching is switched on for one zone; a Maintenance arrives as a change, passes its tests and rolls out.
 - An agent asks which services use a library and gets an answer from the graph, not from reading files.
 
 ## How it fits together
@@ -59,7 +59,7 @@ One connected picture of code, dependencies, images and deployments.
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The starting point already works: findings and components recorded for every run. Components are recorded as bills of materials and findings are kept with the run.
+The starting point already works: findings and components recorded for every Sortie. Components are recorded as bills of materials and findings are kept with the Sortie.
 
 [Read the documentation](../guide/security-findings.md)
 
@@ -69,7 +69,7 @@ The starting point already works: findings and components recorded for every run
 
 Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. Built, tested on its own branch and in final integration; not yet on the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.
 
-**Depends on:** Built-in registry.
+**Depends on:** Built-in Depot.
 
 [Area page](software-graph.md)
 
@@ -145,7 +145,7 @@ Answer AI questions from a graph of code and deployments instead of pasting file
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-From an advisory, see which deployed services and environments are affected and who owns them. The list becomes a set of proposed fixes.
+From an advisory, see which deployed services and Airfields are affected and who owns them. The list becomes a set of proposed fixes.
 
 **Depends on:** What is deployed where.
 
@@ -189,7 +189,7 @@ Launchway finds outdated and vulnerable dependencies in a repository and propose
 
 When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened. Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.
 
-**Depends on:** Built-in dependency updates.
+**Depends on:** Built-in Maintenance.
 
 [Area page](software-graph.md)
 
@@ -303,7 +303,7 @@ One change that spans several repositories is tracked, tested and merged togethe
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, Airfields and fixes.
 
 [Area page](dependency-order.md)
 

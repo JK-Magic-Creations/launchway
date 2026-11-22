@@ -150,7 +150,7 @@ it starts, and its sign-in, webhook deliveries and Git run tokens fail.
    price of sealing, and the reason to wait for a quiet period before relying on it.
 3. Do not delete the root key Secret: a database sealed with it cannot be read without it.
 
-The chart refuses values it does not know, so an automatic or manual rollback that pins the previous chart while
-the values file holds a new key (for example `networkPolicy`) cannot render. Launchway's own rollback checks the
+The chart refuses values it does not know, so an automatic or manual Return to base (rollback) that pins the previous chart while
+the values file holds a new key (for example `networkPolicy`) cannot render. Launchway's own Return to base checks the
 old chart's `values.schema.json` before it reverts the pin; if the old chart refuses the values it does not revert
 the pin, says which keys and why, and leaves Git at the new pin, matching what runs ("held: needs a person").

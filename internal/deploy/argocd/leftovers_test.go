@@ -50,7 +50,7 @@ func pruneRes(group, kind, name string) map[string]any {
 func observeLeftovers(t *testing.T, bare, commit string, cl *Cluster) (*deploy.App, deploy.Verdict) {
 	t.Helper()
 	a := agentFor(t, bare, cl)
-	it := engine.WatchItem{Key: "k", Project: "shop", Target: "homelab", Application: "shop", Repo: "gitops", Branch: "main"}
+	it := engine.WatchItem{Key: "k", Project: "shop", Target: "cluster-a", Application: "shop", Repo: "gitops", Branch: "main"}
 	it.Spec.Kind, it.Spec.Commit, it.Spec.Health, it.Spec.Windows = "deploy", commit, "application", "wait"
 	snap := a.Observe(context.Background(), it)
 	if snap.Error != "" || snap.App == nil {

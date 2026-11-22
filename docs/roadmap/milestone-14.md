@@ -10,13 +10,13 @@ Developers use Launchway from the editor they already have, and companies connec
 
 ## What it is, and who it is for
 
-Milestone 14 keeps Launchway out of the developer's way and out of your private business. Editor plug-ins and a one-step setup for agent tools put runs, findings and approvals where the developer already is. An optional development environment in the browser is available for those who want one. Everything specific to one company connects through extension points that run outside the product, with their own credentials, budgets and permissions.
+Milestone 14 keeps Launchway out of the developer's way and out of your private business. Editor plug-ins and a one-step setup for agent tools put runs, findings and approvals where the developer already is. An optional development Airfield in the browser is available for those who want one. Everything specific to one company connects through extension points that run outside the product, with their own credentials, budgets and permissions.
 
 **Who it is for.** Developers who live in an editor, and teams with systems of their own that should connect to delivery.
 
 ## What you will be able to do
 
-- A developer starts a run, reads a failure and approves a change without leaving the editor.
+- A developer starts a Sortie, reads a failure and approves a change without leaving the editor.
 - One command configures the agent tool you use, with read-only access by default.
 - A team connects its own alerting or house systems through an extension point, and Launchway needs no code change.
 

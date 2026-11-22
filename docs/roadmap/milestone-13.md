@@ -6,17 +6,17 @@
 
 <p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 5 planned · 8 capabilities</p>
 
-Work is planned and tracked beside the code, releases are managed as things that move through environments, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.
+Work is planned and tracked beside the code, releases are managed as things that move through Airfields, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.
 
 ## What it is, and who it is for
 
-Milestone 13 adds the human side of delivery. Issues, stories, boards and sprints are linked to the commits and the running software that answer them. A release is a version with notes and assets that is promoted through environments with checklists, windows and freezes. A first scan of an imported repository files a small, grouped set of work. After delivery, Launchway detects trouble, explains it and, only where a policy allows, applies a fix, with traffic failing over automatically.
+Milestone 13 adds the human side of delivery. Issues, stories, boards and sprints are linked to the commits and the running software that answer them. A release is a version with notes and assets that is promoted through Airfields with checklists, windows and freezes. A first scan of an imported repository files a small, grouped set of work. After delivery, Launchway detects trouble, explains it and, only where a policy allows, applies a fix, with traffic failing over automatically.
 
 **Who it is for.** Teams that want planning, release management and operations in the same place as their code and their delivery.
 
 ## What you will be able to do
 
-- You open a story and see the pull request, the run, the release and the environment where the fix is running.
+- You open a story and see the pull request, the Sortie, the release and the Airfield where the fix is running.
 - A release moves from test to production with its checklist, its freeze windows and its approvals in one record.
 - You import a repository and get a short, grouped list of things worth fixing, not a thousand tickets.
 - An alert fires; Launchway shows what changed, proposes a fix, and applies it only if a policy you set allows it.
@@ -27,7 +27,7 @@ Milestone 13 adds the human side of delivery. Issues, stories, boards and sprint
 flowchart TD
   Story["Story or issue"] --> Change["Change and pull request"]
   Change --> Release["Release"]
-  Release --> Env["Environments"]
+  Release --> Env["Airfields"]
   Env --> Watch["Detect and diagnose"]
   Watch -->|policy allows| Fix["Fix or fail over"]
   Watch -->|otherwise| Person["A person decides"]
@@ -76,13 +76,13 @@ When repositories are imported, and on demand afterwards, Launchway scans and an
 
 ### Release management {#g-release-management}
 
-A release is what moves through environments.
+A release is what moves through Airfields.
 
 #### Releases that are promoted {#releases-that-are-promoted}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A release has a version, notes and assets, is immutable once published, and is promoted through environments with checklists, windows, freezes and approvals. Built, tested on its own branch and in final integration; not yet on the main branch. Things released together are grouped, and four delivery measures are reported.
+A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals. Built, tested on its own branch and in final integration; not yet on the main branch. Things released together are grouped, and four delivery measures are reported.
 
 [Area page](git-hosting.md)
 
@@ -94,7 +94,7 @@ Detect, diagnose, remediate: native, optional and gated by policy.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Alerts on the services Launchway delivers come with the changes that preceded them, the evidence and a plain explanation. Builds on the watch after a deployment and the environment health view.
+Alerts on the services Launchway delivers come with the changes that preceded them, the evidence and a plain explanation. Builds on the watch after a deployment and the Airfield health view.
 
 [Area page](zero-downtime.md)
 
@@ -110,7 +110,7 @@ Automatic fixes are off by default and start with returning to the last good ver
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-When an environment or site is unhealthy, traffic moves to a healthy one under rules you set, and the move is shown and recorded. Optional; Launchway helps and does not enforce.
+When an Airfield or site is unhealthy, traffic moves to a healthy one under rules you set, and the move is shown and recorded. Optional; Launchway helps and does not enforce.
 
 [Area page](network.md)
 

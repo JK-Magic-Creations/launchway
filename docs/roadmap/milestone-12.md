@@ -12,7 +12,7 @@ Everything Launchway holds is encrypted at rest with a key kept outside the data
 
 Milestone 12 raises the foundation. A root key kept outside the database protects a small hierarchy of keys that protects every secret and stored file, so a database copy alone is useless. Launchway gets its own vault, and every built-in is optional: you can use a popular backend instead. Scans become gates with a stated policy, and the certification path is written down in an honest order.
 
-**Who it is for.** Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated environment.
+**Who it is for.** Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated Airfield.
 
 ## What you will be able to do
 
@@ -76,7 +76,7 @@ Take the installation key from a mounted secret, a passphrase, a cloud key servi
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. Every stored secret goes through one helper and a registry that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.
+The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. Every stored secret goes through one helper and a Depot that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -86,7 +86,7 @@ The keys that sat in plaintext in the database are sealed under the hierarchy, i
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Artifacts, caches, repository data and logs are encrypted as streams, re-encrypted lazily. Large files are never loaded whole.
+Cargo, caches, repository data and logs are encrypted as streams, re-encrypted lazily. Large files are never loaded whole.
 
 **Depends on:** Encrypt stored secrets and tokens.
 
@@ -134,7 +134,7 @@ Built-in transport encryption, refusal of unencrypted database connections, and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-For the hosted service, keep logs and artifacts under a key you hold, and prove deletion by destroying it. Leaving is complete.
+For the hosted service, keep logs and Cargo under a key you hold, and prove deletion by destroying it. Leaving is complete.
 
 **Depends on:** Rotation without downtime.
 
@@ -158,7 +158,7 @@ Keep secrets in Launchway with policies and an audit trail, sealed by the same k
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for runners; this widens it.
+Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for Stations; this widens it.
 
 **Depends on:** A built-in secret store.
 
@@ -244,7 +244,7 @@ Signed provenance for every release, then a build platform that isolates runs an
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A specialist firm audits the server, sign-in, runner protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault.
+A specialist firm audits the server, sign-in, Station protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -376,7 +376,7 @@ A level’s standards can live as files in a repository that level owns, so a ch
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
+The results of commercial Cargo repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults. The free defaults always work with nothing else; an adapter only adds to them.
 
 **Depends on:** Findings in one list.
 
@@ -402,7 +402,7 @@ A report for a period shows which checks were on, evidence that they ran, findin
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-On the hosted service checks run on your runners, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
+On the hosted service checks run on your Stations, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
 
 [Area page](repository-standards.md)
 

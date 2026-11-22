@@ -44,21 +44,21 @@ in the GitOps repository by hand, or deploy the version you want with a normal r
 ### When the old chart cannot render the values
 
 A deployment that changed both the chart pin and the values is reverted in two commits, values first, then the
-pin. Before the pin revert is committed, the deploy runner reads the old chart's `values.schema.json` at the old
-pin (when the chart is in a Git repository the runner is configured for) and compares it with the values the
+pin. Before the pin revert is committed, the Station that serves the Airfield reads the old chart's `values.schema.json` at the old
+pin (when the chart is in a Git repository the Station is configured for) and compares it with the values the
 application will read. If the old chart does not accept them (for example `additional properties
 'networkPolicy' not allowed`), the pin is **not** reverted. The step fails with one plain message: which chart pin
 and which keys, that Git is at the new pin (what actually runs: the new chart with the previous image), and the
-two next actions: remove or rename those keys and roll back again, or deploy a fixed version forward. The
-environment is marked as needing a person. A chart served from a chart repository cannot be read by the runner;
+two next actions: remove or rename those keys and Return to base again, or Launch a fixed version forward. The
+Airfield (environment) is marked as needing a person. A chart served from a chart repository cannot be read by the Station;
 the check is then skipped and said so in the step's log.
 
 If the pin revert is committed and the controller still cannot render the application (a ComparisonError that
 lasts), Launchway reverts its own pin revert, so Git again names what runs, and reports the same way. If it
 cannot, the message names the exact commit to revert. A deployment that is not in progress can still be left
-with a controller operation retrying stale revisions; the deploy runner has a check for it (a command to run it by hand is not built yet) that finds it and, with
+with a controller operation retrying stale revisions; the Station has a check for it (a command to run it by hand is not built yet) that finds it and, with
 the clear option, ends it. It needs `get` and `patch` on `applications.argoproj.io` in the Argo CD namespace,
-which the deploy runner already has.
+which the Station already has.
 
 "Still in effect" means a successful deployment that no Return to base has undone. A deployment that failed, one
 that its own pipeline's Return to base step reverted, and one an earlier Return to base undid are never reverted

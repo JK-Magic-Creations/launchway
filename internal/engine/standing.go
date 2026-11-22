@@ -120,6 +120,10 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 			continue
 		}
 		check := checkOfStep(nd)
+		// A check ran only if its step succeeded. A step that failed for good (a scanner that could not reach
+		// its advisory database, a tool that wrote no report) keeps whatever it did report, but is never
+		// taken for a clean result: the verdict names it as not finished, and the Standing orders say
+		// whether that blocks (by default it does not).
 		if s.Status == StepSucceeded {
 			ev.ran[check] = true
 		}
@@ -134,22 +138,10 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 							ev.findings = append(ev.findings, f.std)
 						}
 					}
-					ev.ran[check] = true
 					continue
 				}
 			}
 			ts = append(ts, triple{st.ID, need, s.Attempt})
-			var n int
-			if err := c.tx.QueryRow(`SELECT count(*) FROM finding_reports WHERE run_id = ? AND step_id = ? AND attempt = ?`, st.ID, need, s.Attempt).Scan(&n); err != nil {
-				return nil, err
-			}
-			var m int
-			if err := c.tx.QueryRow(`SELECT count(*) FROM sbom_reports WHERE run_id = ? AND step_id = ? AND attempt = ?`, st.ID, need, s.Attempt).Scan(&m); err != nil {
-				return nil, err
-			}
-			if n+m > 0 {
-				ev.ran[check] = true
-			}
 		}
 	}
 	for len(ts) > 0 {

@@ -34,6 +34,9 @@ func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 		exec(`INSERT INTO caches(id, project, scope, name, key, platform, blob_key, status, created_at, last_used_at) VALUES(?,?,?,?,?,?,?,?,?,?)`,
 			fmt.Sprintf("cch_%d", i), "shop", "branch:main", "gomod", fmt.Sprintf("k%d", i), "linux/amd64", fmt.Sprintf("caches/%d", i), "kept", 10, 20)
 	}
+	// A finding written by the build of schema 39: schema 45 adds columns to this table, and the row must
+	// keep its values, with the new columns empty, and still be readable by the older build.
+	exec(`INSERT INTO findings(run_id, step_id, attempt, project, run_number, fingerprint, tool, rule_id, severity, message) VALUES('run_1','scan',1,'shop',3,'fp1','gosec','G101','high','hard-coded credential')`)
 	old.Close()
 
 	var log syncBuffer
@@ -63,7 +66,8 @@ func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 	}
 	for q, want := range map[string]int{
 		`SELECT count(*) FROM imported_issues`: 1, `SELECT count(*) FROM imported_comments`: 1, `SELECT count(*) FROM pull_requests`: 1, `SELECT count(*) FROM caches WHERE status = 'kept'`: 2,
-		`SELECT count(*) FROM registry_repositories`: 0, `SELECT count(*) FROM registry_blobs`: 0, `SELECT count(*) FROM toggles`: 0, `SELECT count(*) FROM toggle_envs`: 0,
+		`SELECT count(*) FROM findings WHERE message = 'hard-coded credential' AND check_id = '' AND package = ''`: 1,
+		`SELECT count(*) FROM registry_repositories`:                                                               0, `SELECT count(*) FROM registry_blobs`: 0, `SELECT count(*) FROM toggles`: 0, `SELECT count(*) FROM toggle_envs`: 0,
 	} {
 		if got := count(q); got != want {
 			t.Errorf("%s: %d, want %d", q, got, want)
@@ -77,5 +81,9 @@ func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 	var title string
 	if err := older.db.QueryRow(`SELECT title FROM imported_issues WHERE number = 7`).Scan(&title); err != nil || title != "Prices round wrongly" {
 		t.Fatalf("the first build cannot read its issue: %q %v", title, err)
+	}
+	var msg string
+	if err := older.db.QueryRow(`SELECT message FROM findings WHERE fingerprint = 'fp1'`).Scan(&msg); err != nil || msg != "hard-coded credential" {
+		t.Fatalf("the first build cannot read its finding: %q %v", msg, err)
 	}
 }

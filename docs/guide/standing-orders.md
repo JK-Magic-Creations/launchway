@@ -44,7 +44,7 @@ Settings live at four levels and the repository's own file; the nearest wins, an
 | Project | the same page, or the project's Standing orders page |
 | The repository | `.launchway/standards.yaml` on the default branch |
 
-Everything is on by default; you opt out. Each level can set a check to `off`, `advise` or `block`, set the severity that blocks, require a fix, choose what findings on the default branch do, allow or deny licenses, and list exemptions. Each level also has one **off switch** for Standing orders as a whole: it needs a reason, it is written to the Logbook, and the Security pages show a reminder while it is off.
+Everything is on by default; you opt out. Each level can set a check to `off`, `advise` or `block`, set the severity that blocks, require a fix, choose what findings on the default branch do, allow or deny licenses, and list exemptions. Each level also has one **off switch** for Standing orders as a whole: it needs a reason, it is written to the Logbook, and the Security pages show a reminder while it is off. An installation can also switch them off for everything with one setting in the server's settings, `LAUNCHWAY_STANDING_ORDERS=off` (in the Helm chart, `server.extraEnv`). It is read for every Sortie and needs no database, so an operator can set it before upgrading to the release that brings Standing orders, and remove it when ready; an older server ignores it. Each Sortie it applies to says so in its note.
 
 ```yaml
 # .launchway/standards.yaml

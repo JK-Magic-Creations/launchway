@@ -110,7 +110,7 @@ Use an Argo CD that Launchway runs for you, or connect one you already have. Bot
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an emergency rollback even after a rollout succeeded.
+A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an Abort even after a rollout succeeded.
 
 **Depends on:** Argo CD in depth.
 
@@ -140,7 +140,7 @@ Send a share of traffic, by client type, to a new version through the Gateway AP
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Ship several services as one ordered, gated release with a promotion view across environments. Promotion moves the same digest, never a rebuild, and every step shows who approved it.
+Ship several services as one ordered, gated release with a promotion view across Airfields. Promotion moves the same digest, never a rebuild, and every step shows who approved it.
 
 **Depends on:** A single pane of glass.
 
@@ -150,7 +150,7 @@ Ship several services as one ordered, gated release with a promotion view across
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move a version from one environment to the next with checks and approvals in between. The matrix shows what runs where, which places are behind, and a button to move a version.
+Move a version from one Airfield to the next with checks and approvals in between. The matrix shows what runs where, which places are behind, and a button to move a version.
 
 **Depends on:** Releases across services.
 
@@ -170,7 +170,7 @@ Keep watching after release, roll back automatically, and tie incidents to the c
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production. Plain threshold checks remain the default, and AI can decide only where you allow it.
+Let a verification step use AI analysis of metrics and logs to trigger automatic Return to base, off by default and able to require a person for production. Plain threshold checks remain the default, and AI can decide only where you allow it.
 
 **Depends on:** A built-in model gateway.
 
@@ -180,7 +180,7 @@ Let a verification step use AI analysis of metrics and logs to trigger automatic
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.
+A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. HTTP and TCP checks from the deploy Station, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.
 
 **Depends on:** Argo CD in depth.
 
@@ -190,7 +190,7 @@ A verify step can call the service it just deployed, over its window, with no mo
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. Not yet: rolling back several deployments at once by pull request.
+Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. Not yet: returning to base several deployments at once by pull request.
 
 **Depends on:** Argo CD in depth.
 
@@ -200,7 +200,7 @@ Several pipelines may write one manifest at once, a tag can sit beside its diges
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. Email, per-person muting and a rollback review on Home are not done yet.
+An approval that waits, a failed Sortie or deployment, a Return to base and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. Email, per-person muting and a Return to base review on Home are not done yet.
 
 **Depends on:** Argo CD in depth.
 
@@ -210,7 +210,7 @@ An approval that waits, a failed run or deployment, a rollback and a step that w
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.
+A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or Airfields a server allows.
 
 **Depends on:** Argo CD in depth.
 
@@ -220,7 +220,7 @@ A parameter's default can follow another parameter, any step kind or list entry 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A pipeline chooses how to deliver per environment: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller. None is required. Short-lived environments for feature branches use direct installs; long-lived branches default to the GitOps path.
+A pipeline chooses how to deliver per Airfield: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller. None is required. Short-lived Airfields for feature branches use direct installs; long-lived branches default to the GitOps path.
 
 [Area page](delivery.md)
 
@@ -310,7 +310,7 @@ Clusters, virtual machines, machine images, clouds and serverless.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Deploy and roll back without Argo CD; Argo stays first class for long-lived environments. The deploy is a typed step with a plan, a diff, health checks and a rollback to the last good release.
+Deploy and roll back without Argo CD; Argo stays first class for long-lived Airfields. The deploy is a typed step with a plan, a diff, health checks and a Return to base to the last good release.
 
 **Depends on:** Container images.
 
@@ -346,7 +346,7 @@ Bake machine images in a pipeline and roll them through instance groups. Images 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Machines that are really images (built on bootc), built, signed, upgraded and rolled back like container images, with host setup done at first boot. Built, tested on its own branch and in final integration; not yet on the main branch. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.
+Machines that are really images (built on bootc), built, signed, upgraded and returned to base like container images, with host setup done at first boot. Built, tested on its own branch and in final integration; not yet on the main branch. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.
 
 **Depends on:** Machine images with Packer.
 
@@ -416,7 +416,7 @@ Deploy to the three major clouds with their own features, with no stored cloud k
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Functions, container services and managed instance groups as deploy targets. Rollouts, health checks and rollbacks follow the same model as on Kubernetes.
+Functions, container services and managed instance groups as deploy targets. Rollouts, health checks and Returns to base follow the same model as on Kubernetes.
 
 **Depends on:** Cloud targets: AWS, Google Cloud and Azure.
 
@@ -426,7 +426,7 @@ Functions, container services and managed instance groups as deploy targets. Rol
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same behavior on the major clouds, on-premises hypervisors, bare metal and sites with no internet. Before acting, Launchway discovers what the environment allows (quotas, permissions, network reach, services, approved images and regions) and works inside it. Anything that cannot be done there is said plainly before it is attempted.
+The same behavior on the major clouds, on-premises hypervisors, bare metal and sites with no internet. Before acting, Launchway discovers what the Airfield allows (quotas, permissions, network reach, services, approved images and regions) and works inside it. Anything that cannot be done there is said plainly before it is attempted.
 
 [Area page](delivery.md)
 
@@ -434,7 +434,7 @@ The same behavior on the major clouds, on-premises hypervisors, bare metal and s
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic rollback on a failed health check. Built, tested on its own branch and in final integration; not yet on the main branch. Also boots a new operating-system image in a throwaway virtual machine as a test.
+Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic Return to base on a failed health check. Built, tested on its own branch and in final integration; not yet on the main branch. Also boots a new operating-system image in a throwaway virtual machine as a test.
 
 [Area page](delivery.md)
 
@@ -480,7 +480,7 @@ A real step with per-node results where Chef reports them, check mode before app
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Run image builds with their results, logs and artifacts attached to the run. Output images go to the registry or the image store with provenance.
+Run image builds with their results, logs and Cargo attached to the Sortie. Output images go to the Depot or the image store with provenance.
 
 [Area page](delivery.md)
 
@@ -496,7 +496,7 @@ Scan a running system read-only, understand its configuration, generate the play
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A guided path from a conventionally installed server to an image-based one that is built, tested and rolled back like a container image. Needs the adopt step first.
+A guided path from a conventionally installed server to an image-based one that is built, tested and returned to base like a container image. Needs the adopt step first.
 
 [Area page](delivery.md)
 
@@ -510,13 +510,13 @@ Ansible run reports, plan reports and a built-in state backend for OpenTofu, wit
 
 ### Runtime configuration {#g-runtime-configuration}
 
-Settings, keys and toggles managed together, per zone and environment.
+Settings, keys and toggles managed together, per zone and Airfield.
 
 #### Feature toggles {#feature-toggles}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules. Built, tested on its own branch and in final integration; not yet on the main branch. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
+A built-in toggle service that applications and agents read through the OpenFeature standard, per Airfield, with percentages and rules. Built, tested on its own branch and in final integration; not yet on the main branch. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
 
 [Area page](platform-services.md)
 
@@ -524,7 +524,7 @@ A built-in toggle service that applications and agents read through the OpenFeat
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike. A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.
+Manage settings and secrets together per zone and Airfield, for virtual machines and Kubernetes alike. A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.
 
 [Area page](traffic.md)
 
@@ -534,7 +534,7 @@ Manage settings and secrets together per zone and environment, for virtual machi
 
 Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network. The effective exposure of route share times toggle share is always shown.
 
-**Depends on:** Feature toggles.
+**Depends on:** Switches.
 
 [Area page](traffic.md)
 
@@ -544,7 +544,7 @@ Decide which version a request gets from who sent it, such as a share of mobile 
 
 Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits. Moving a lever to its safe state is never gated, and moving away from it always is.
 
-**Depends on:** Feature toggles.
+**Depends on:** Switches.
 
 [Area page](traffic.md)
 
@@ -552,9 +552,9 @@ Preview, policy check, approval where required, applied and audited, with an und
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work. The store stays authoritative and values never reach the control plane.
+Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the Airfield already work. The store stays authoritative and values never reach the control plane.
 
-**Depends on:** Secrets that stay with runners.
+**Depends on:** Secrets that stay with Stations.
 
 [Area page](traffic.md)
 
@@ -564,7 +564,7 @@ Read secrets from more external stores, such as the cloud providers’ own secre
 
 Traffic, identity and policy for services on a mesh, and for virtual machines that join it. Machines outside the mesh still appear on the map as declared.
 
-**Depends on:** Weighted canaries and traffic control.
+**Depends on:** Weighted Pathfinders and traffic control.
 
 [Area page](traffic.md)
 
@@ -648,7 +648,7 @@ Services ranked by error budget, saturation and restarts, with deploys, settings
 
 Which features are on where and for whom, with the effect of a toggle shown and one button to turn it off. Toggle first, roll back second, in seconds.
 
-**Depends on:** Feature toggles.
+**Depends on:** Switches.
 
 [Area page](traffic.md)
 
@@ -678,7 +678,7 @@ Know what changed, who approved it, and how delivery is going.
 
 Automatic change records with risk scores, freezes and approvals, and optional two-way sync with an IT service tool. Works standalone, so a team without such a tool still has records.
 
-**Depends on:** Approvals and protected environments.
+**Depends on:** Approvals and protected Airfields.
 
 [Area page](delivery.md)
 
@@ -696,7 +696,7 @@ Create and update change records in ServiceNow or Jira Service Management and ta
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number. Graphs are meant for people who do not use Launchway daily.
+Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the Sorties behind each number. Graphs are meant for people who do not use Launchway daily.
 
 [Area page](delivery.md)
 
@@ -726,7 +726,7 @@ Write extra policy rules in an open policy language alongside the built-in rules
 
 A bill of materials across every image as well as every project, with export. Searching components across projects already works. Pairs with the software graph.
 
-**Depends on:** Findings and SBOMs per run.
+**Depends on:** Findings and SBOMs per Sortie.
 
 [Area page](delivery.md)
 
@@ -736,7 +736,7 @@ A bill of materials across every image as well as every project, with export. Se
 
 Compare outcomes between users with a toggle on and off. Results join delivery data, so you see effect and cost.
 
-**Depends on:** Feature toggles.
+**Depends on:** Switches.
 
 [Area page](traffic.md)
 
@@ -748,7 +748,7 @@ Importers and proof for teams that already have a delivery platform.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Convert pipelines, services and environments from other delivery and GitOps platforms, with a report of what needs a person. The report is honest about gaps.
+Convert pipelines, services and Airfields from other delivery and GitOps platforms, with a report of what needs a person. The report is honest about gaps.
 
 
 #### Published proof points {#published-proof-points}
@@ -789,7 +789,7 @@ The workload description reads and writes the open Score specification, so you a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The platform team chooses where each environment lands, and the same description is delivered there. Kubernetes first.
+The platform team chooses where each Airfield lands, and the same description is delivered there. Kubernetes first.
 
 [Area page](developer-experience.md)
 
@@ -875,13 +875,13 @@ See how many deliveries follow the path, where developers leave it and which sta
 
 ### Built-in platform services {#g-built-in-platform-services}
 
-Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and feature toggles. Each can be swapped for the product you already run.
+Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and Switches. Each can be swapped for the product you already run.
 
 #### S3-compatible object storage {#s3-compatible-object-storage}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, registries, backup tools and build caches use. Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.
+A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, Depots, backup tools and build caches use. Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.
 
 [Area page](platform-services.md)
 
@@ -905,7 +905,7 @@ Keep versions, expire objects by rule and send events when objects change. Secon
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and rollback. Second phase, after state and locking.
+Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and Return to base. Second phase, after state and locking.
 
 **Depends on:** State and locking built in.
 
@@ -915,7 +915,7 @@ Terraform and OpenTofu state is shown as a difference with secrets masked and ne
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Give an application a cache in an environment: a managed Valkey, installed through GitOps, with its credentials in the vault. Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.
+Give an application a cache in an Airfield: a managed Valkey, installed through GitOps, with its credentials in the vault. Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.
 
 [Area page](platform-services.md)
 
@@ -923,7 +923,7 @@ Give an application a cache in an environment: a managed Valkey, installed throu
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same pattern provisions a cache, a database, a queue or object storage for an application and wires it in as a connection. Third phase.
+The same pattern provisions a cache, a database, a Holding pattern or object storage for an application and wires it in as a connection. Third phase.
 
 [Area page](platform-services.md)
 
@@ -1031,16 +1031,16 @@ Agent-based tools and other infrastructure tools join through one common interfa
 
 This milestone is done when all of these are true.
 
-- An application, a virtual machine and an image-based host can each be deployed, verified and rolled back from the interface.
+- An application, a virtual machine and an image-based host can each be deployed, verified and returned to base from the interface.
 - A failed deployment shows a diagnosis, its evidence and the full resource tree with logs.
-- Canary weights by client type work on the gateway and on a mesh, and the map shows them.
+- Pathfinder weights by client type work on the gateway and on a mesh, and the map shows them.
 - State for infrastructure code is stored, locked and recoverable inside Launchway.
 - Toggles, settings and secrets resolve per zone with one clear rule.
 - Every lever change goes through preview, policy and audit, with an undo.
 
 ## What is deliberately not in it
 
-- The built-in registry (Milestone 4).
+- The built-in Depot (Milestone 4).
 - The software graph and patching loop (Milestone 5).
 - Hosted-service features (Milestone 7).
 

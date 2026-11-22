@@ -3,7 +3,7 @@
   "vision": [
     "Launchway is one place to host your code, build it, test it, scan it and deliver it, on servers you control or as a hosted service.",
     "It aims to be complete without being complicated: every task is a guided wizard, every capability is also in the API, the command line, the agent endpoint and Terraform, and the only things it needs are a database and Git.",
-    "AI helps where you ask for it and stays off where you do not, and every run, change and approval is a durable record you can audit."
+    "AI helps where you ask for it and stays off where you do not, and every Sortie, change and approval is a durable record you can audit."
   ],
   "available": [
     {
@@ -27,7 +27,7 @@
     {
       "theme": "Pipelines",
       "title": "Triggers",
-      "value": "Push, pull request (with target-branch filters, and newer pushes cancelling older runs), manual, schedule and webhook.",
+      "value": "Push, pull request (with target-branch filters, and newer pushes cancelling older Sorties), manual, schedule and webhook.",
       "link": "guide/triggers"
     },
     {
@@ -45,7 +45,7 @@
     {
       "theme": "Platform",
       "title": "Configuration in the database",
-      "value": "Projects, runner pools, environments, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit.",
+      "value": "Projects, Flight lines, Airfields, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit.",
       "link": "guide/configuration"
     },
     {
@@ -57,13 +57,13 @@
     {
       "theme": "Platform",
       "title": "Guided setup wizards",
-      "value": "First-run setup, connecting a repository, adding a runner, an environment, a policy or a verification step: plain questions, explained options, answers checked as you go.",
+      "value": "First-run setup, connecting a repository, adding a Station, an Airfield, a policy or a verification step: plain questions, explained options, answers checked as you go.",
       "link": "howto/setup-first-run"
     },
     {
       "theme": "Platform",
       "title": "A guided interface",
-      "value": "A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a run page that says why each wait is happening.",
+      "value": "A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a Sortie page that says why each wait is happening.",
       "link": "demo"
     },
     {
@@ -75,7 +75,7 @@
     {
       "theme": "Platform",
       "title": "High availability",
-      "value": "Several servers on one PostgreSQL database with no leader; a run survives a server or a runner dying. SQLite for a single server.",
+      "value": "Several servers on one PostgreSQL database with no leader; a Sortie survives a server or a Station dying. SQLite for a single server.",
       "link": "guide/high-availability"
     },
     {
@@ -87,19 +87,19 @@
     {
       "theme": "Delivery",
       "title": "GitOps with Argo CD",
-      "value": "Deploy by Git commit, watch sync and health, control Argo Rollouts (promote, abort, retry), roll back, lock environments.",
+      "value": "Deploy by Git commit, watch sync and health, control Argo Rollouts (promote, abort, retry), roll back, lock Airfields.",
       "link": "guide/deployments"
     },
     {
       "theme": "Delivery",
       "title": "Applications view",
-      "value": "The Argo CD applications a deploy runner has seen, shown with their status next to your environments.",
+      "value": "The Argo CD applications a deploy Station has seen, shown with their status next to your environments.",
       "link": "guide/deployments"
     },
     {
       "theme": "Delivery",
       "title": "Verification after a deploy",
-      "value": "Checks on Prometheus, Loki, ClickHouse and OpenSearch with automatic abort or rollback; an optional model explains the verdict and never turns a failure into a pass.",
+      "value": "Checks on Prometheus, Loki, ClickHouse and OpenSearch with automatic abort or Return to base; an optional model explains the verdict and never turns a failure into a pass.",
       "link": "guide/verification"
     },
     {
@@ -111,7 +111,7 @@
     {
       "theme": "Delivery",
       "title": "Approvals and protected environments",
-      "value": "Approval steps; the person who started a run cannot approve its production deploy.",
+      "value": "Approval steps; the person who started a Sortie cannot approve its production deploy.",
       "link": "guide/approvals-and-reruns"
     },
     {
@@ -123,13 +123,13 @@
     {
       "theme": "Security",
       "title": "Sign-in and access",
-      "value": "OpenID Connect sign-in with groups, roles per project and environment, scoped API tokens and an audit trail.",
+      "value": "OpenID Connect sign-in with groups, roles per project and Airfield, scoped API tokens and an audit trail.",
       "link": "guide/access"
     },
     {
       "theme": "Security",
       "title": "Secrets that stay with runners",
-      "value": "Pipelines hold references; runners read values from Vault, OpenBao, files or the environment, and mask them.",
+      "value": "Pipelines hold references; Stations read values from Vault, OpenBao, files or the Airfield, and mask them.",
       "link": "guide/secrets"
     },
     {
@@ -141,13 +141,13 @@
     {
       "theme": "Security",
       "title": "Secure step execution",
-      "value": "Non-root step pods under strict pod security, a step pod removed when its run ends and leaked ones reaped, container and host executors, and runners that only connect outward.",
+      "value": "Non-root step pods under strict pod security, a step pod removed when its Sortie ends and leaked ones reaped, container and host executors, and Stations that only connect outward.",
       "link": "security/trust-model"
     },
     {
       "theme": "Security",
       "title": "Runner identity and pools",
-      "value": "Join tokens, a key per runner, pools scoped to projects, and allow-lists on the runner itself.",
+      "value": "Join tokens, a key per Station, pools scoped to projects, and allow-lists on the Station itself.",
       "link": "guide/runner-identity"
     },
     {
@@ -159,7 +159,7 @@
     {
       "theme": "Reports",
       "title": "Built-in artifact storage",
-      "value": "Artifacts and hosted reports live in the database by default, so several servers need nothing else; S3 or a shared folder are optional.",
+      "value": "Cargo and hosted reports live in the database by default, so several servers need nothing else; S3 or a shared folder are optional.",
       "link": "artifacts"
     },
     {
@@ -213,7 +213,7 @@
     {
       "theme": "Platform",
       "title": "Rides through outages",
-      "value": "Database errors are retried, runner writes are safe to repeat, a runner keeps its logs and results while the server is away, and a doctor command checks the database.",
+      "value": "Database errors are retried, Station writes are safe to repeat, a Station keeps its logs and results while the server is away, and a doctor command checks the database.",
       "link": "guide/high-availability"
     },
     {
@@ -231,7 +231,7 @@
     {
       "theme": "Pipelines",
       "title": "A push starts a run",
-      "value": "A push to a hosted repository starts the matching pipeline, with markers to skip a run, and a minimum Git version checked at install.",
+      "value": "A push to a hosted repository starts the matching pipeline, with markers to skip a Sortie, and a minimum Git version checked at install.",
       "link": "guide/triggers"
     },
     {
@@ -249,7 +249,7 @@
     {
       "theme": "Pipelines",
       "title": "Pipelines drawn the way they run",
-      "value": "Steps that run together appear side by side on the run page, drawn from their dependencies."
+      "value": "Steps that run together appear side by side on the Sortie page, drawn from their dependencies."
     },
     {
       "theme": "Delivery",
@@ -296,7 +296,7 @@
     {
       "theme": "Security",
       "title": "Dependency update pull requests",
-      "value": "Launchway proposes dependency updates as pull requests, with lock files regenerated in a container.",
+      "value": "Launchway proposes Maintenance as pull requests, with lock files regenerated in a container.",
       "link": "guide/dependency-updates"
     },
     {
@@ -331,16 +331,16 @@
       "scenarios": [
         "You push a branch and open a change. The page shows the pipeline running, the tests and findings as they arrive, and a plain sentence saying what stops it from merging.",
         "A teammate suggests a one-line fix in review and you apply it with one click; the checks run again by themselves.",
-        "You keep your code on another host. Launchway runs the pipeline and writes the result back to the pull request, and a failing run blocks the merge there too.",
+        "You keep your code on another host. Launchway runs the pipeline and writes the result back to the pull request, and a failing Sortie blocks the merge there too.",
         "You re-run a failed run from the third step, and the first two steps use what they produced last time.",
         "A new colleague opens Home and is told, in order, what to set up next."
       ],
-      "diagram": "flowchart TD\n  Dev[\"Developer\"] -->|push| Host[\"Git hosting<br/>built in or connected\"]\n  Host --> PR[\"Change for review\"]\n  PR -->|starts| Run[\"Pipeline run\"]\n  Run --> Runners[\"Runners\"]\n  Runners -->|results| Run\n  Run -->|status and evidence| PR\n  Rules[\"Branch rules and policy\"] --> PR\n  Reviewer[\"Reviewer\"] -->|approve| PR\n  PR -->|merge when allowed| Main[\"Main branch\"]\n  Main -->|starts| Run",
+      "diagram": "flowchart TD\n  Dev[\"Developer\"] -->|push| Host[\"Git hosting<br/>built in or connected\"]\n  Host --> PR[\"Change for review\"]\n  PR -->|starts| Run[\"Pipeline run\"]\n  Run --> Stations[\"Stations\"]\n  Stations -->|results| Run\n  Run -->|status and evidence| PR\n  Rules[\"Branch rules and policy\"] --> PR\n  Reviewer[\"Reviewer\"] -->|approve| PR\n  PR -->|merge when allowed| Main[\"Main branch\"]\n  Main -->|starts| Run",
       "diagramNote": "A change from push to merge. The built-in host and a connected host look the same to the pipeline engine.",
       "done": [
         "A repository can be created, cloned, pushed to, reviewed and merged in Launchway, and a deliberate failure of a server during a push never loses an acknowledged push.",
         "A written acceptance suite for hosting passes, including importing from another host.",
-        "A pull request on a connected host receives a status from Launchway and cannot be merged when the run fails.",
+        "A pull request on a connected host receives a status from Launchway and cannot be merged when the Sortie fails.",
         "Every pipeline feature in the milestone has a reference page and a worked example.",
         "Every setting introduced has a command, an API call, an agent tool and a Terraform resource, checked by a test.",
         "A new user can complete setup from Home without editing a file."
@@ -348,8 +348,8 @@
       "notIncluded": [
         "Custom step languages, generated pipelines and the visual designer (Milestone 2).",
         "Deep application and host delivery (Milestone 3).",
-        "The built-in registry (Milestone 4).",
-        "Hosted service and sandboxed runners (Milestone 7)."
+        "The built-in Depot (Milestone 4).",
+        "Hosted service and sandboxed Stations (Milestone 7)."
       ],
       "buildsOn": [],
       "deepDives": [
@@ -379,7 +379,7 @@
               "status": "available",
               "title": "Built-in Git hosting",
               "value": "Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost.",
-              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.",
+              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the Base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a Sortie.",
               "needs": "A database; the shared blob store that already exists.",
               "area": "git-hosting",
               "link": "guide/git-over-ssh"
@@ -452,7 +452,7 @@
             {
               "status": "planned",
               "title": "Repository maintenance and health",
-              "value": "Scheduled housekeeping, an integrity check, a size report and a health note on the home page.",
+              "value": "Scheduled housekeeping, an integrity check, a size report and a health note on the Tower.",
               "detail": "Problems appear in the same attention list as everything else instead of being found when a push is slow. Maintenance runs as separate programs, not inside the server.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
@@ -469,7 +469,7 @@
               "status": "available",
               "title": "Mirrors in and out",
               "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
-              "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.",
+              "detail": "Status, last error and lag show on the Tower and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -493,7 +493,7 @@
               "status": "planned",
               "title": "Large files",
               "value": "Store large binary files outside the normal history, with locks and quotas.",
-              "detail": "Quotas and usage are shown next to the repository. The runner image includes the tooling, so builds fetch large files without extra setup.",
+              "detail": "Quotas and usage are shown next to the repository. The Station image includes the tooling, so builds fetch large files without extra setup.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -501,14 +501,14 @@
               "status": "planned",
               "title": "Forks and templates",
               "value": "Fork a repository to propose changes from your own copy, and start new repositories from templates.",
-              "detail": "A template can carry a pipeline and an environment setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.",
+              "detail": "A template can carry a pipeline and an Airfield setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
             {
               "status": "planned",
               "title": "Repository quotas and size limits",
-              "value": "Limits on repository size, large-file storage and per-organization usage, shared with artifact and log quotas.",
+              "value": "Limits on repository size, large-file storage and per-organization usage, shared with Cargo and log quotas.",
               "detail": "One quota model for everything that takes space, with warnings before a limit is reached.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
@@ -542,13 +542,13 @@
         },
         {
           "name": "Review and merge changes",
-          "blurb": "Pull requests that show the run, the tests and the policy verdict on one page.",
+          "blurb": "Pull requests that show the Sortie, the tests and the policy verdict on one page.",
           "items": [
             {
               "status": "available",
               "title": "Pull requests on the built-in host",
               "value": "Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass.",
-              "detail": "Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest run's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview environment and deployment on the same page.",
+              "detail": "Works in the web interface, the HTTP API, MCP and the launchway pr command. The page shows the latest Sortie's launch line, the required checks and the plain reason a change cannot merge yet. A push prints the address to open one, and git push -o pr.create opens it. Not built yet: pull requests from forks, and tests, coverage change, findings, policy verdict, preview Airfield and deployment on the same page.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -572,7 +572,7 @@
               "status": "in-progress",
               "title": "Code owners",
               "value": "Name who must review changes to which paths, using people or groups.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Owners can be the group that owns the deployment environment, so the people who run a service review the changes to it.",
+              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.",
               "needs": "Review with inline comments and suggestions.",
               "area": "git-hosting"
             },
@@ -588,7 +588,7 @@
               "status": "in-progress",
               "title": "Merge queue",
               "value": "Queue approved changes and test the real merged result with the real pipeline before it lands.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The queue is visible on each change, so people see where they stand and why a change was held back.",
+              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The Holding pattern is visible on each change, so people see where they stand and why a change was held back.",
               "needs": "Merge styles and auto-merge.",
               "area": "git-hosting"
             },
@@ -619,8 +619,8 @@
             {
               "status": "planned",
               "title": "Pull-request status everywhere",
-              "value": "Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one.",
-              "detail": "Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest run and the required checks.",
+              "value": "Report each Sortie back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one.",
+              "detail": "Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest Sortie and the required checks.",
               "needs": "Every Git host, equally."
             }
           ]
@@ -633,7 +633,7 @@
               "status": "in-progress",
               "title": "Issues and work items",
               "value": "Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. An item also traces to commits, runs and deployments, so the question which environment a request reached has a one-click answer.",
+              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. An item also traces to commits, runs and deployments, so the question which Airfield a request reached has a one-click answer.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -727,7 +727,7 @@
               "status": "planned",
               "title": "Wings, Squadrons and collaborators",
               "value": "Teams with their own permissions on repositories, and invitations for people from outside.",
-              "detail": "One permission model covers code, work items, pipelines and environments, so there is no second set of users to maintain.",
+              "detail": "One permission model covers code, work items, pipelines and Airfields, so there is no second set of users to maintain.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -802,7 +802,7 @@
               "status": "planned",
               "title": "Replacing a self-hosted Git server",
               "value": "A guide and a checklist for retiring a self-hosted Git server in favor of Launchway.",
-              "detail": "Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.",
+              "detail": "Covers moving, redirects, users, hooks, integrations, backups and a Return to base plan, with each step verified by the acceptance suite.",
               "needs": "An acceptance suite for hosting."
             },
             {
@@ -836,7 +836,7 @@
               "status": "planned",
               "title": "Hosts without webhooks",
               "value": "Hosts that cannot call Launchway are watched through polling or a bridge from their event service.",
-              "detail": "The result is the same: a push starts a run. Launchway posts status as a comment and an approval where the host has no status feature.",
+              "detail": "The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature.",
               "needs": "Every Git host, equally."
             },
             {
@@ -891,7 +891,7 @@
             {
               "status": "in-progress",
               "title": "Flow control, part two",
-              "value": "Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members.",
+              "value": "Services with readiness checks and logs, a Station and workspace of their own per step, approval quorums, and loops that tolerate chosen members.",
               "detail": "This completes the control a complex pipeline needs without dropping into scripts.",
               "area": "pipelines"
             },
@@ -906,41 +906,41 @@
               "status": "planned",
               "title": "Cloud sign-in per step",
               "value": "Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored.",
-              "detail": "The trust is set up in the cloud once, and the token carries the project, branch and environment.",
+              "detail": "The trust is set up in the cloud once, and the token carries the project, branch and Airfield.",
               "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Re-run only what failed",
-              "value": "Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works.",
+              "value": "Re-run just the failed steps of a Sortie, with earlier results reused. Re-running from a chosen step already works.",
               "detail": "Combined with caches, a flaky test costs minutes instead of a full run.",
               "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Per-step runner and workspace",
-              "value": "Each step can choose its own image, runner and working area.",
+              "value": "Each step can choose its own image, Station and working area.",
               "detail": "A step that needs a large machine or special hardware asks for it without moving the whole pipeline.",
               "area": "pipelines"
             },
             {
               "status": "available",
               "title": "Parallel steps drawn as parallel",
-              "value": "Steps that run together are drawn side by side on the run page, so the shape of a pipeline is the shape you see.",
-              "detail": "Steps are drawn from their dependencies, so a run reads like the pipeline you wrote.",
+              "value": "Steps that run together are drawn side by side on the Sortie page, so the shape of a pipeline is the shape you see.",
+              "detail": "Steps are drawn from their dependencies, so a Sortie reads like the pipeline you wrote.",
               "area": "pipelines"
             },
             {
               "status": "available",
               "title": "A step's user has an account entry",
               "value": "The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work.",
-              "detail": "Applies to steps on runners and on Kubernetes.",
+              "detail": "Applies to steps on Stations and on Kubernetes.",
               "area": "pipelines"
             },
             {
               "status": "available",
               "title": "Steps wait for room instead of failing",
-              "value": "A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build.",
+              "value": "A full step namespace makes a step wait, with the reason, the Sorties that hold the room and its place in line, instead of failing the build.",
               "detail": "A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.",
               "needs": "Nothing beyond what runs pipelines today.",
               "area": "pipelines",
@@ -950,7 +950,7 @@
               "status": "available",
               "title": "Limits and a fair order for runs",
               "value": "Runs over a limit are held with a reason, in a visible order, and the main build is never held.",
-              "detail": "Limits on concurrent runs of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
+              "detail": "Limits on concurrent Sorties of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
               "needs": "Nothing beyond what runs pipelines today.",
               "area": "pipelines",
               "link": "guide/queues"
@@ -959,7 +959,7 @@
               "status": "available",
               "title": "Path filters on triggers and steps",
               "value": "A documentation-only change builds the docs and skips the image and the deploy approvals.",
-              "detail": "paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a run that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.",
+              "detail": "paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a Sortie that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.",
               "needs": "Nothing beyond what runs pipelines today.",
               "area": "pipelines",
               "link": "reference/pipeline#path-filters"
@@ -968,7 +968,7 @@
               "status": "available",
               "title": "Restricted runs for untrusted pull requests",
               "value": "Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves.",
-              "detail": "A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a registry; a maintainer can choose Run with secrets, which is recorded. The run page says which mode it is in and why.",
+              "detail": "A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a Depot; a maintainer can choose Run with secrets, which is recorded. The Sortie page says which mode it is in and why.",
               "needs": "Nothing beyond what runs pipelines today.",
               "area": "pipelines",
               "link": "guide/pull-request-trust"
@@ -983,7 +983,7 @@
               "status": "in-progress",
               "title": "Shared step templates",
               "value": "Write a step once as a template and use it in many pipelines, with its inputs checked.",
-              "detail": "Being built now. Templates declare what they need and what they offer, so a mistake is caught before a run.",
+              "detail": "Being built now. Templates declare what they need and what they offer, so a mistake is caught before a Sortie.",
               "area": "pipelines"
             },
             {
@@ -1031,7 +1031,7 @@
             {
               "status": "available",
               "title": "Notifications to webhooks and chat services",
-              "value": "Rules that send a signed webhook or a chat message when a run, a gate or a deployment changes, with a delivery log and retries.",
+              "value": "Rules that send a signed webhook or a chat message when a Sortie, a gate or a deployment changes, with a delivery log and retries.",
               "detail": "On the main branch: rules, signed webhook and chat channels, and a delivery log with retries. Email is separate and still planned.",
               "area": "pipelines"
             }
@@ -1092,14 +1092,14 @@
               "title": "Decision cards that read on a phone",
               "value": "An approval is a card with what, who, risk, evidence and what happens next, readable in seconds.",
               "detail": "Reject needs a reason. A decision can be undone until it has acted.",
-              "needs": "Approvals and protected environments.",
+              "needs": "Approvals and protected Airfields.",
               "area": "guided-interface"
             },
             {
               "status": "planned",
               "title": "Pipelines drawn as living lines",
               "value": "A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs.",
-              "detail": "Parallel steps are already drawn side by side on the run page. The rest, stations on tracks with live motion, is still to come.",
+              "detail": "Parallel steps are already drawn side by side on the Sortie page. The rest, stations on tracks with live motion, is still to come.",
               "needs": "The guided interface.",
               "area": "guided-interface"
             },
@@ -1153,19 +1153,19 @@
               "status": "in-progress",
               "title": "Launchway builds and deploys itself",
               "value": "Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks.",
-              "detail": "Runners on virtual machines and customer machines update themselves too (see the runner update item). The pipeline and the runbook are written and checked; a first real run, with its rollback, is still to come.",
+              "detail": "Stations on virtual machines and customer machines update themselves too (see the Station update item). The pipeline and the runbook are written and checked; a first real run, with its Return to base, is still to come.",
               "link": "howto/self-deploy"
             },
             {
               "status": "planned",
               "title": "Fewer concepts to learn",
-              "value": "No pile of connectors, services and environments to define before anything works.",
-              "detail": "Six words cover everyday use: project, pipeline, step, run, environment and runner."
+              "value": "No pile of connectors, services and Airfields to define before anything works.",
+              "detail": "Six words cover everyday use: project, pipeline, step, run, Airfield and Station."
             },
             {
               "status": "in-progress",
               "title": "Signed releases and installers",
-              "value": "Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow.",
+              "value": "Reproducible release builds with SBOMs, deb and rpm packages, an install script for Stations and a runner-only Helm chart, with signing and provenance in the release workflow.",
               "detail": "All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.",
               "link": "security/verify-downloads"
             },
@@ -1227,7 +1227,7 @@
               "status": "available",
               "title": "Secrets made once and kept",
               "value": "The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades.",
-              "detail": "Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the runner token and the database password it found; installing again, and upgrading with unchanged values, kept them.",
+              "detail": "Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the Station token and the database password it found; installing again, and upgrading with unchanged values, kept them.",
               "area": "installing"
             },
             {
@@ -1261,7 +1261,7 @@
             {
               "status": "available",
               "title": "A first-run wizard",
-              "value": "After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a runner and Git hosting, imports repositories and starts a first pipeline.",
+              "value": "After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a Station and Git hosting, imports repositories and starts a first pipeline.",
               "detail": "On the main branch: the first-run guide in the web interface. A new sign-in provider is tested before sign-in is switched to it.",
               "area": "installing"
             },
@@ -1304,7 +1304,7 @@
         },
         {
           "name": "Organized, and yours to arrange",
-          "blurb": "Every list is a hierarchy you can search, and the home page shows what needs a person.",
+          "blurb": "Every list is a hierarchy you can search, and the Tower shows what needs a person.",
           "items": [
             {
               "status": "in-progress",
@@ -1345,20 +1345,20 @@
               "status": "planned",
               "title": "Every view has an address",
               "value": "As you move around the interface the address changes, so any page, filter and tab can be bookmarked and shared.",
-              "detail": "This includes the history view of a pipeline and each tab of a run.",
+              "detail": "This includes the history view of a pipeline and each tab of a Sortie.",
               "area": "guided-interface"
             },
             {
               "status": "in-progress",
               "title": "Live streaming and time estimates",
-              "value": "Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier runs.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A queued step is never drawn as running, and the list, the launch line and the run page agree.",
+              "value": "Runs and logs stream as they happen, and each step shows a typical time and the time left, learned from earlier Sorties.",
+              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. A queued step is never drawn as running, and the list, the launch line and the Sortie page agree.",
               "area": "guided-interface"
             },
             {
               "status": "planned",
               "title": "Views that agree with each other",
-              "value": "The run list, the run page and the checks on a pull request always show the same state, and a check never stays open after its run has ended.",
+              "value": "The Sortie list, the Sortie page and the checks on a pull request always show the same state, and a check never stays open after its run has ended.",
               "detail": "An empty page says why it is empty: for example, the build cache page says what was stored and where, or why nothing has been.",
               "area": "guided-interface"
             },
@@ -1391,9 +1391,9 @@
       "what": "Milestone 2 makes pipelines as dynamic as real code needs without giving up checking. Steps become programs you test, pipelines can be generated, conditions are typed, and you can design visually. Teams on automation servers get a tested gap analysis and an importer.",
       "scenarios": [
         "You write a deployment step in the language your team already uses, test it on your laptop, and share it as a pinned version.",
-        "A step looks at the repository and prints the extra steps it needs; Launchway checks them and shows them on the run.",
+        "A step looks at the repository and prints the extra steps it needs; Launchway checks them and shows them on the Sortie.",
         "You drag a step onto a pipeline and see the exact lines it will change in Git before you save.",
-        "A message on a queue starts a pipeline, and a rejected message is visible with the reason.",
+        "A message on a Holding pattern starts a pipeline, and a rejected message is visible with the reason.",
         "You import jobs from an automation server and read a report of what needs a person."
       ],
       "diagram": "flowchart TD\n  Repo[\"Repository<br/>pipeline file, step programs\"] --> Plan[\"Check and expand<br/>schema, types, policy\"]\n  Gen[\"Generated steps\"] --> Plan\n  Trig[\"Triggers<br/>push, queue, schedule\"] --> Plan\n  Plan --> Graph[\"Run graph\"]\n  Graph --> Steps[\"Steps in sandboxes\"]\n  Steps -->|typed outputs| Graph\n  Designer[\"Visual designer\"] <-->|same file| Repo\n  Catalog[\"Catalog of templates and steps\"] --> Repo",
@@ -1401,14 +1401,14 @@
       "done": [
         "A custom step in at least three languages runs from a published contract and is unit-tested outside Launchway.",
         "A generated pipeline is checked against the same schema and policy as a written one.",
-        "Expressions are checked before a run and have no loops or side effects.",
+        "Expressions are checked before a Sortie and have no loops or side effects.",
         "The designer and the text editor produce identical files for identical pipelines.",
         "The gap analysis lists every gap with a test, and each gap is closed or recorded as a decision.",
-        "Runners on virtual machines update under policy without manual work."
+        "Stations on virtual machines update under policy without manual work."
       ],
       "notIncluded": [
         "Applications, hosts and traffic (Milestone 3).",
-        "Hosted runners (Milestone 7)."
+        "Hosted Stations (Milestone 7)."
       ],
       "buildsOn": [
         "m1"
@@ -1467,7 +1467,7 @@
             {
               "status": "planned",
               "title": "Generated pipelines",
-              "value": "A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run.",
+              "value": "A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the Sortie.",
               "detail": "This gives the freedom of a script with the safety of a checked definition, and it makes dynamic pipelines possible without file-first configuration.",
               "needs": "Custom steps in your own language.",
               "area": "pipelines"
@@ -1475,7 +1475,7 @@
             {
               "status": "planned",
               "title": "Expressions for conditions",
-              "value": "A small typed expression language with no loops and no side effects, checked before the run; today's conditions keep working.",
+              "value": "A small typed expression language with no loops and no side effects, checked before the Sortie; today's conditions keep working.",
               "detail": "Because expressions cannot loop or change anything, a pipeline is always checkable without running it.",
               "area": "pipelines",
               "link": "reference/pipeline#when"
@@ -1483,7 +1483,7 @@
             {
               "status": "planned",
               "title": "Typed outputs between steps",
-              "value": "A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it.",
+              "value": "A step declares what it passes on, and a reference to an output that does not exist fails before the Sortie, not in the middle of it.",
               "detail": "Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.",
               "area": "pipelines"
             },
@@ -1531,16 +1531,16 @@
             {
               "status": "planned",
               "title": "Runners that keep themselves updated",
-              "value": "Runners on VMs and on customers' machines update under your policy, so the fleet never drifts.",
-              "detail": "Hosted pools update automatically, self-hosted pools are notified, and Kubernetes runners follow the chart.",
-              "needs": "Runner identity and pools.",
+              "value": "Stations on VMs and on customers' machines update under your policy, so the fleet never drifts.",
+              "detail": "Hosted pools update automatically, self-hosted pools are notified, and Kubernetes Stations follow the chart.",
+              "needs": "Station identity and pools.",
               "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Pipeline history and flaky tests",
-              "value": "Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page.",
-              "detail": "Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.",
+              "value": "Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the Sortie page.",
+              "detail": "Flaky tests are marked on the Sortie and on the pull request, so they are quarantined instead of argued over.",
               "needs": "Test, coverage and HTML reports.",
               "area": "pipelines"
             },
@@ -1576,16 +1576,16 @@
               "status": "planned",
               "title": "Builds placed by free processor and memory",
               "value": "A build can run on any of a team’s machines and is placed on one with room for it.",
-              "detail": "Today a runner takes work when it has a free slot; placement by what is really free comes next.",
-              "needs": "Runner identity and pools.",
+              "detail": "Today a Station takes work when it has a free slot; placement by what is really free comes next.",
+              "needs": "Station identity and pools.",
               "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Runners on personal machines hold back when busy",
-              "value": "A runner on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets.",
+              "value": "A Station on a laptop or workstation stops taking work while the machine is busy, and respects the limits its owner sets.",
               "detail": "This is the first piece of placement to be built, because it makes lending a personal machine safe.",
-              "needs": "Runner identity and pools.",
+              "needs": "Station identity and pools.",
               "area": "pipelines"
             },
             {
@@ -1599,7 +1599,7 @@
             {
               "status": "planned",
               "title": "Size hints for steps",
-              "value": "A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier runs, to place it.",
+              "value": "A step can say how much processor and memory it needs, and Launchway uses that, and what it has learned from earlier Sorties, to place it.",
               "detail": "The hints are advice; a wrong hint wastes time but never breaks a build.",
               "needs": "Builds placed by free processor and memory.",
               "area": "pipelines"
@@ -1607,7 +1607,7 @@
             {
               "status": "planned",
               "title": "Windows and macOS runners",
-              "value": "Runners that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run.",
+              "value": "Stations that run on Windows and macOS, so a matrix can cover them and desktop builds have a place to run.",
               "detail": "This is a gap, listed honestly.",
               "needs": "Matrix builds.",
               "area": "build-tools-caches"
@@ -1629,7 +1629,7 @@
             {
               "status": "in-progress",
               "title": "Polished test reports as HTML and PDF",
-              "value": "Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account.",
+              "value": "Every run can produce a detailed, well-laid-out Debrief as a web page and as a PDF that can be sent to someone without an account.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Builds on the thirteen test formats and coverage already available.",
               "needs": "Test, coverage and HTML reports.",
               "area": "developer-experience"
@@ -1659,7 +1659,7 @@
               "status": "planned",
               "title": "Generated architecture views",
               "value": "Views of your delivery and runtime drawn from what Launchway knows, always current.",
-              "detail": "Applications, pipelines and environments appear as diagrams you can paste into a document.",
+              "detail": "Applications, pipelines and Airfields appear as diagrams you can paste into a document.",
               "area": "pipelines"
             },
             {
@@ -1698,9 +1698,9 @@
             {
               "status": "planned",
               "title": "Agents anywhere",
-              "value": "Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work.",
+              "value": "Guidance and checks that show Stations on any machine, in any network, replace the build agents teams rely on. Stations that connect outward, with pools and labels, already work.",
               "detail": "Equivalent to the build agents teams rely on, with identity and audit on every connection.",
-              "needs": "Runner identity and pools."
+              "needs": "Station identity and pools."
             }
           ]
         },
@@ -1719,7 +1719,7 @@
               "status": "available",
               "title": "Overrides, locks and the hierarchy view",
               "value": "Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline.",
-              "detail": "Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every run records the values it used.",
+              "detail": "Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every Sortie records the values it used.",
               "link": "guide/variables"
             },
             {
@@ -1741,14 +1741,14 @@
             {
               "status": "planned",
               "title": "Light environments and services",
-              "value": "Environments and services as short lists with sensible defaults, not another set of ideas to learn before anything works.",
-              "detail": "You will be able to start with one environment and grow, with locks and defaults coming from the level above.",
+              "value": "Airfields and services as short lists with sensible defaults, not another set of ideas to learn before anything works.",
+              "detail": "You will be able to start with one Airfield and grow, with locks and defaults coming from the level above.",
               "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Shared connections",
-              "value": "A connection to a registry, a cluster or a cloud set up once at a level and used below it, with its use shown.",
+              "value": "A connection to a Depot, a cluster or a cloud set up once at a level and used below it, with its use shown.",
               "detail": "Secrets stay where they are; only the name of the connection is shared.",
               "needs": "Overrides, locks and the hierarchy view.",
               "area": "pipelines"
@@ -1778,7 +1778,7 @@
               "status": "in-progress",
               "title": "The cache rule",
               "value": "A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces.",
-              "detail": "Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the run says so and names the path.",
+              "detail": "Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the Sortie says so and names the path.",
               "area": "build-tools-caches"
             },
             {
@@ -1812,7 +1812,7 @@
             {
               "status": "planned",
               "title": "What the run restored, and how old",
-              "value": "Every run shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify.",
+              "value": "Every Sortie shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify.",
               "detail": "Resolved versions are recorded, for example “resolved a snapshot to the build published four minutes ago”.",
               "area": "build-tools-caches"
             },
@@ -1826,7 +1826,7 @@
             {
               "status": "planned",
               "title": "Recipes for the popular tools",
-              "value": "Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and test reports.",
+              "value": "Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready Flight plan, a correct cache and Debriefs.",
               "detail": "No hand-written cache keys. First phase of the recipes.",
               "area": "build-tools-caches"
             },
@@ -1854,14 +1854,14 @@
             {
               "status": "planned",
               "title": "iOS and macOS builds",
-              "value": "Apple projects build on macOS runners you provide, with signing kept on your side.",
+              "value": "Apple projects build on macOS Stations you provide, with signing kept on your side.",
               "detail": "The honest constraint: Apple builds need Apple hardware.",
               "area": "build-tools-caches"
             },
             {
               "status": "planned",
               "title": "Cross-platform mobile frameworks",
-              "value": "Each cross-platform framework says which runner it needs, so a build lands on the right machine.",
+              "value": "Each cross-platform framework says which Station it needs, so a build lands on the right machine.",
               "detail": "Follows Android and iOS.",
               "area": "build-tools-caches"
             }
@@ -1909,7 +1909,7 @@
             {
               "status": "planned",
               "title": "Reproduce a failed step",
-              "value": "Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its environment.",
+              "value": "Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its Airfield.",
               "detail": "Never with production secrets.",
               "area": "developer-experience"
             },
@@ -1923,14 +1923,14 @@
             {
               "status": "planned",
               "title": "A preview environment for every pull request",
-              "value": "An environment that expires by itself and has a cost cap, with its link posted on the pull request.",
+              "value": "An Airfield that expires by itself and has a cost cap, with its link posted on the pull request.",
               "detail": "A mobile equivalent is an install link per pull request.",
               "area": "developer-experience"
             },
             {
               "status": "in-progress",
               "title": "Why is my run waiting",
-              "value": "One answer to why something is not moving: no runner with the capability, a run ahead, a lock, an approval, a quota.",
+              "value": "One answer to why something is not moving: no Station with the capability, a Sortie ahead, a lock, an approval, a quota.",
               "detail": "Being built with waiting for room; the rest follows.",
               "area": "developer-experience"
             },
@@ -1972,14 +1972,14 @@
             {
               "status": "planned",
               "title": "Builds on macOS and Windows machines",
-              "value": "Runners for Apple and Windows, signing and store upload, very large files and long builds, for mobile and games.",
-              "detail": "A first basic version of the runner for each is a small step; signing and store upload come after.",
+              "value": "Stations for Apple and Windows, signing and store upload, very large files and long builds, for mobile and games.",
+              "detail": "A first basic version of the Station for each is a small step; signing and store upload come after.",
               "area": "build-tools-caches"
             },
             {
               "status": "planned",
               "title": "A development environment in the browser, optional",
-              "value": "Use a full editor environment inside Launchway, turned on by choice and off by default; it is made available, not copied.",
+              "value": "Use a full editor Airfield inside Launchway, turned on by choice and off by default; it is made available, not copied.",
               "detail": "Your normal editor stays as it is: the plug-in route gives it Launchway features.",
               "area": "developer-experience"
             }
@@ -2006,15 +2006,15 @@
       "diagram": "flowchart TD\n  Image[\"Image or chart\"] --> Plan[\"Delivery plan<br/>policy, approval\"]\n  Plan --> Targets\n  subgraph Targets[\"Where it runs\"]\n    K8s[\"Kubernetes<br/>Argo CD or built-in\"]\n    VMs[\"Virtual machines\"]\n    Hosts[\"Image-based hosts\"]\n    Cloud[\"Clouds and serverless\"]\n  end\n  Targets --> Watch[\"Watch<br/>health, traffic, errors\"]\n  Config[\"Configuration, secrets, toggles<br/>per zone\"] --> Targets\n  Watch -->|verdict| Plan\n  Watch --> Insight[\"Metrics, changes, incidents\"]",
       "diagramNote": "One plan, many targets, and a watch loop that can send a change back.",
       "done": [
-        "An application, a virtual machine and an image-based host can each be deployed, verified and rolled back from the interface.",
+        "An application, a virtual machine and an image-based host can each be deployed, verified and returned to base from the interface.",
         "A failed deployment shows a diagnosis, its evidence and the full resource tree with logs.",
-        "Canary weights by client type work on the gateway and on a mesh, and the map shows them.",
+        "Pathfinder weights by client type work on the gateway and on a mesh, and the map shows them.",
         "State for infrastructure code is stored, locked and recoverable inside Launchway.",
         "Toggles, settings and secrets resolve per zone with one clear rule.",
         "Every lever change goes through preview, policy and audit, with an undo."
       ],
       "notIncluded": [
-        "The built-in registry (Milestone 4).",
+        "The built-in Depot (Milestone 4).",
         "The software graph and patching loop (Milestone 5).",
         "Hosted-service features (Milestone 7)."
       ],
@@ -2085,7 +2085,7 @@
               "status": "in-progress",
               "title": "Rollout control inside a run",
               "value": "A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station.",
-              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an emergency rollback even after a rollout succeeded.",
+              "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Promote, abort and restart a rollout from the pipeline, and an Abort even after a rollout succeeded.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/deployments"
@@ -2109,7 +2109,7 @@
             {
               "status": "planned",
               "title": "Releases across services",
-              "value": "Ship several services as one ordered, gated release with a promotion view across environments.",
+              "value": "Ship several services as one ordered, gated release with a promotion view across Airfields.",
               "detail": "Promotion moves the same digest, never a rebuild, and every step shows who approved it.",
               "needs": "A single pane of glass.",
               "area": "delivery"
@@ -2117,7 +2117,7 @@
             {
               "status": "planned",
               "title": "Promotion across environments",
-              "value": "Move a version from one environment to the next with checks and approvals in between.",
+              "value": "Move a version from one Airfield to the next with checks and approvals in between.",
               "detail": "The matrix shows what runs where, which places are behind, and a button to move a version.",
               "needs": "Releases across services.",
               "area": "delivery"
@@ -2133,7 +2133,7 @@
             {
               "status": "planned",
               "title": "AI analysis as an optional rollback gate",
-              "value": "Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production.",
+              "value": "Let a verification step use AI analysis of metrics and logs to trigger automatic Return to base, off by default and able to require a person for production.",
               "detail": "Plain threshold checks remain the default, and AI can decide only where you allow it.",
               "needs": "A built-in model gateway.",
               "area": "ai"
@@ -2142,7 +2142,7 @@
               "status": "available",
               "title": "A health proof built into verification",
               "value": "A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer.",
-              "detail": "HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.",
+              "detail": "HTTP and TCP checks from the deploy Station, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/verification"
@@ -2151,7 +2151,7 @@
               "status": "available",
               "title": "GitOps write-back done right",
               "value": "Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request.",
-              "detail": "Not yet: rolling back several deployments at once by pull request.",
+              "detail": "Not yet: returning to base several deployments at once by pull request.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/gitops-write-back"
@@ -2159,8 +2159,8 @@
             {
               "status": "available",
               "title": "Delivery notifications",
-              "value": "An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries.",
-              "detail": "Email, per-person muting and a rollback review on Home are not done yet.",
+              "value": "An approval that waits, a failed Sortie or deployment, a Return to base and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries.",
+              "detail": "Email, per-person muting and a Return to base review on Home are not done yet.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/notifications"
@@ -2169,7 +2169,7 @@
               "status": "available",
               "title": "Templates with derived defaults and optional parts",
               "value": "A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server.",
-              "detail": "Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.",
+              "detail": "Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or Airfields a server allows.",
               "needs": "Argo CD in depth.",
               "area": "delivery",
               "link": "guide/libraries"
@@ -2177,8 +2177,8 @@
             {
               "status": "planned",
               "title": "Delivery by choice",
-              "value": "A pipeline chooses how to deliver per environment: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller.",
-              "detail": "None is required. Short-lived environments for feature branches use direct installs; long-lived branches default to the GitOps path.",
+              "value": "A pipeline chooses how to deliver per Airfield: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller.",
+              "detail": "None is required. Short-lived Airfields for feature branches use direct installs; long-lived branches default to the GitOps path.",
               "area": "delivery"
             },
             {
@@ -2258,8 +2258,8 @@
             {
               "status": "planned",
               "title": "Built-in Helm and Kubernetes deploys",
-              "value": "Deploy and roll back without Argo CD; Argo stays first class for long-lived environments.",
-              "detail": "The deploy is a typed step with a plan, a diff, health checks and a rollback to the last good release.",
+              "value": "Deploy and roll back without Argo CD; Argo stays first class for long-lived Airfields.",
+              "detail": "The deploy is a typed step with a plan, a diff, health checks and a Return to base to the last good release.",
               "needs": "Container images.",
               "area": "delivery"
             },
@@ -2288,7 +2288,7 @@
             {
               "status": "in-progress",
               "title": "Image-based hosts",
-              "value": "Machines that are really images (built on bootc), built, signed, upgraded and rolled back like container images, with host setup done at first boot.",
+              "value": "Machines that are really images (built on bootc), built, signed, upgraded and returned to base like container images, with host setup done at first boot.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.",
               "needs": "Machine images with Packer.",
               "area": "delivery"
@@ -2345,21 +2345,21 @@
               "status": "planned",
               "title": "Serverless and managed instance groups",
               "value": "Functions, container services and managed instance groups as deploy targets.",
-              "detail": "Rollouts, health checks and rollbacks follow the same model as on Kubernetes.",
+              "detail": "Rollouts, health checks and Returns to base follow the same model as on Kubernetes.",
               "needs": "Cloud targets: AWS, Google Cloud and Azure.",
               "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Every cloud and on-premises, within the limits of the environment",
-              "value": "The same behavior on the major clouds, on-premises hypervisors, bare metal and sites with no internet. Before acting, Launchway discovers what the environment allows (quotas, permissions, network reach, services, approved images and regions) and works inside it.",
+              "value": "The same behavior on the major clouds, on-premises hypervisors, bare metal and sites with no internet. Before acting, Launchway discovers what the Airfield allows (quotas, permissions, network reach, services, approved images and regions) and works inside it.",
               "detail": "Anything that cannot be done there is said plainly before it is attempted.",
               "area": "delivery"
             },
             {
               "status": "in-progress",
               "title": "Delivery to machines over SSH",
-              "value": "Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic rollback on a failed health check.",
+              "value": "Roll a fleet in place with pinned host keys, audited commands and draining, and roll image-based hosts by digest with a staged reboot and automatic Return to base on a failed health check.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Also boots a new operating-system image in a throwaway virtual machine as a test.",
               "area": "delivery"
             }
@@ -2401,8 +2401,8 @@
             {
               "status": "planned",
               "title": "Packer builds as a first-class step",
-              "value": "Run image builds with their results, logs and artifacts attached to the run.",
-              "detail": "Output images go to the registry or the image store with provenance.",
+              "value": "Run image builds with their results, logs and Cargo attached to the Sortie.",
+              "detail": "Output images go to the Depot or the image store with provenance.",
               "area": "delivery"
             },
             {
@@ -2415,7 +2415,7 @@
             {
               "status": "planned",
               "title": "Convert a server to an image-based system",
-              "value": "A guided path from a conventionally installed server to an image-based one that is built, tested and rolled back like a container image.",
+              "value": "A guided path from a conventionally installed server to an image-based one that is built, tested and returned to base like a container image.",
               "detail": "Needs the adopt step first.",
               "area": "delivery"
             },
@@ -2430,19 +2430,19 @@
         },
         {
           "name": "Runtime configuration",
-          "blurb": "Settings, keys and toggles managed together, per zone and environment.",
+          "blurb": "Settings, keys and toggles managed together, per zone and Airfield.",
           "items": [
             {
               "status": "in-progress",
               "title": "Feature toggles",
-              "value": "A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules.",
+              "value": "A built-in toggle service that applications and agents read through the OpenFeature standard, per Airfield, with percentages and rules.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
               "area": "platform-services"
             },
             {
               "status": "planned",
               "title": "Configuration, keys and toggles per zone",
-              "value": "Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike.",
+              "value": "Manage settings and secrets together per zone and Airfield, for virtual machines and Kubernetes alike.",
               "detail": "A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.",
               "area": "traffic"
             },
@@ -2451,7 +2451,7 @@
               "title": "Routing by client attributes",
               "value": "Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network.",
               "detail": "The effective exposure of route share times toggle share is always shown.",
-              "needs": "Feature toggles.",
+              "needs": "Switches.",
               "area": "traffic"
             },
             {
@@ -2459,15 +2459,15 @@
               "title": "A guided change for every lever",
               "value": "Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits.",
               "detail": "Moving a lever to its safe state is never gated, and moving away from it always is.",
-              "needs": "Feature toggles.",
+              "needs": "Switches.",
               "area": "traffic"
             },
             {
               "status": "planned",
               "title": "Secrets with an external store",
-              "value": "Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work.",
+              "value": "Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the Airfield already work.",
               "detail": "The store stays authoritative and values never reach the control plane.",
-              "needs": "Secrets that stay with runners.",
+              "needs": "Secrets that stay with Stations.",
               "area": "traffic"
             },
             {
@@ -2475,7 +2475,7 @@
               "title": "Service mesh support including VMs",
               "value": "Traffic, identity and policy for services on a mesh, and for virtual machines that join it.",
               "detail": "Machines outside the mesh still appear on the map as declared.",
-              "needs": "Weighted canaries and traffic control.",
+              "needs": "Weighted Pathfinders and traffic control.",
               "area": "traffic"
             }
           ]
@@ -2545,7 +2545,7 @@
               "title": "Toggles in context",
               "value": "Which features are on where and for whom, with the effect of a toggle shown and one button to turn it off.",
               "detail": "Toggle first, roll back second, in seconds.",
-              "needs": "Feature toggles.",
+              "needs": "Switches.",
               "area": "traffic"
             },
             {
@@ -2573,7 +2573,7 @@
               "title": "Change management",
               "value": "Automatic change records with risk scores, freezes and approvals, and optional two-way sync with an IT service tool.",
               "detail": "Works standalone, so a team without such a tool still has records.",
-              "needs": "Approvals and protected environments.",
+              "needs": "Approvals and protected Airfields.",
               "area": "delivery"
             },
             {
@@ -2587,7 +2587,7 @@
             {
               "status": "planned",
               "title": "Delivery metrics and executive dashboards",
-              "value": "Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number.",
+              "value": "Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the Sorties behind each number.",
               "detail": "Graphs are meant for people who do not use Launchway daily.",
               "area": "delivery"
             },
@@ -2612,7 +2612,7 @@
               "title": "Portfolio bill of materials",
               "value": "A bill of materials across every image as well as every project, with export. Searching components across projects already works.",
               "detail": "Pairs with the software graph.",
-              "needs": "Findings and SBOMs per run.",
+              "needs": "Findings and SBOMs per Sortie.",
               "area": "delivery"
             },
             {
@@ -2620,7 +2620,7 @@
               "title": "Experiments with toggles",
               "value": "Compare outcomes between users with a toggle on and off.",
               "detail": "Results join delivery data, so you see effect and cost.",
-              "needs": "Feature toggles.",
+              "needs": "Switches.",
               "area": "traffic"
             }
           ]
@@ -2632,7 +2632,7 @@
             {
               "status": "planned",
               "title": "Importers for other delivery platforms",
-              "value": "Convert pipelines, services and environments from other delivery and GitOps platforms, with a report of what needs a person.",
+              "value": "Convert pipelines, services and Airfields from other delivery and GitOps platforms, with a report of what needs a person.",
               "detail": "The report is honest about gaps."
             },
             {
@@ -2670,7 +2670,7 @@
             {
               "status": "planned",
               "title": "Landings chosen per environment",
-              "value": "The platform team chooses where each environment lands, and the same description is delivered there.",
+              "value": "The platform team chooses where each Airfield lands, and the same description is delivered there.",
               "detail": "Kubernetes first.",
               "area": "developer-experience"
             },
@@ -2748,12 +2748,12 @@
         },
         {
           "name": "Built-in platform services",
-          "blurb": "Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and feature toggles. Each can be swapped for the product you already run.",
+          "blurb": "Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and Switches. Each can be swapped for the product you already run.",
           "items": [
             {
               "status": "planned",
               "title": "S3-compatible object storage",
-              "value": "A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, registries, backup tools and build caches use.",
+              "value": "A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, Depots, backup tools and build caches use.",
               "detail": "Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.",
               "area": "platform-services"
             },
@@ -2774,7 +2774,7 @@
             {
               "status": "planned",
               "title": "State you can read safely",
-              "value": "Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and rollback.",
+              "value": "Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and Return to base.",
               "detail": "Second phase, after state and locking.",
               "needs": "State and locking built in.",
               "area": "platform-services"
@@ -2782,14 +2782,14 @@
             {
               "status": "planned",
               "title": "A managed cache as a backing service",
-              "value": "Give an application a cache in an environment: a managed Valkey, installed through GitOps, with its credentials in the vault.",
+              "value": "Give an application a cache in an Airfield: a managed Valkey, installed through GitOps, with its credentials in the vault.",
               "detail": "Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.",
               "area": "platform-services"
             },
             {
               "status": "planned",
               "title": "Give this app a backing service",
-              "value": "The same pattern provisions a cache, a database, a queue or object storage for an application and wires it in as a connection.",
+              "value": "The same pattern provisions a cache, a database, a Holding pattern or object storage for an application and wires it in as a connection.",
               "detail": "Third phase.",
               "area": "platform-services"
             },
@@ -2893,23 +2893,23 @@
       "when": "later",
       "name": "A built-in registry",
       "short": "Registry",
-      "promise": "Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.",
+      "promise": "Images, Helm charts and other OCI Cargo stored beside the code, under the same permissions and policies.",
       "audience": "Teams that want images and charts stored beside the code, with the same permissions, policy and audit and nothing else to run.",
-      "what": "Milestone 4 adds a registry to the binary. Images, charts and other artifacts are stored in the same database and blob store as everything else, promoted by digest, cleaned up without ever deleting what is deployed, and checked by policy on the way in and on the way out. Any other registry stays equally supported.",
+      "what": "Milestone 4 adds a Depot to the binary. Images, charts and other Cargo are stored in the same database and blob store as everything else, promoted by digest, cleaned up without ever deleting what is deployed, and checked by policy on the way in and on the way out. Any other registry stays equally supported.",
       "scenarios": [
         "A build pushes an image; policy refuses it because it is unsigned.",
         "You promote the exact image tested in staging to production with no copy.",
         "Retention cleans old images but keeps the one a cluster is running.",
         "A project's packages tab shows its images and charts and where each runs."
       ],
-      "diagram": "flowchart TD\n  Build[\"Build\"] -->|push| Gate[\"Policy on push\"]\n  Gate --> Store[\"Registry<br/>database + blob store\"]\n  Store --> Scan[\"Scan, sign, record\"]\n  Scan --> Promote[\"Promote by digest\"]\n  Promote --> Deploy[\"Policy on deploy\"]\n  Deploy --> Run[\"Running\"]\n  Public[\"Public registries\"] -->|pull-through cache| Store\n  Store -->|replicate| Other[\"Other registries\"]\n  Retention[\"Retention\"] -.->|never deletes deployed| Store",
+      "diagram": "flowchart TD\n  Build[\"Build\"] -->|push| Gate[\"Policy on push\"]\n  Gate --> Store[\"Depot<br/>database + blob store\"]\n  Store --> Scan[\"Scan, sign, record\"]\n  Scan --> Promote[\"Promote by digest\"]\n  Promote --> Deploy[\"Policy on deploy\"]\n  Deploy --> Run[\"Running\"]\n  Public[\"Public registries\"] -->|pull-through cache| Store\n  Store -->|replicate| Other[\"Other registries\"]\n  Retention[\"Retention\"] -.->|never deletes deployed| Store",
       "diagramNote": "An image from build to running, with policy at both ends.",
       "done": [
         "The OCI conformance suite passes.",
         "Docker, container runtimes and Helm work against it with no special setup.",
         "Retention never deletes an image that is deployed, proven by a test.",
         "Promotion by digest moves no bytes.",
-        "A registry operation is available in the API, the command line, the agent endpoint and Terraform."
+        "A Depot operation is available in the API, the command line, the agent endpoint and Terraform."
       ],
       "notIncluded": [
         "Package formats beyond the first set, which come in order of demand.",
@@ -2927,14 +2927,14 @@
       "groups": [
         {
           "name": "The registry",
-          "blurb": "Images, charts and other artifacts stored beside the code, under the same permissions.",
+          "blurb": "Images, charts and other Cargo stored beside the code, under the same permissions.",
           "items": [
             {
               "status": "in-progress",
               "title": "A built-in OCI registry",
-              "value": "Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run.",
+              "value": "Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.",
-              "needs": "Built-in artifact storage.",
+              "needs": "Built-in Cargo storage.",
               "area": "registry"
             },
             {
@@ -2956,7 +2956,7 @@
             {
               "status": "planned",
               "title": "Promotion by digest",
-              "value": "Move an image from one environment to the next without copying or rebuilding it.",
+              "value": "Move an image from one Airfield to the next without copying or rebuilding it.",
               "detail": "What was tested is exactly what ships.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
@@ -2972,7 +2972,7 @@
             {
               "status": "planned",
               "title": "Policy on push and deploy",
-              "value": "The same policy engine checks an image when it is pushed to the built-in registry, as it already does for a push from a pipeline and for a deploy.",
+              "value": "The same policy engine checks an image when it is pushed to the built-in Depot, as it already does for a push from a pipeline and for a deploy.",
               "detail": "Unsigned, unscanned or vulnerable images can be refused at either point.",
               "needs": "Policy gates.",
               "area": "registry"
@@ -3037,7 +3037,7 @@
               "status": "planned",
               "title": "Pipelines that build, test and publish only",
               "value": "Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available.",
-              "detail": "The run page says what was published and who uses it.",
+              "detail": "The Sortie page says what was published and who uses it.",
               "area": "dependency-order"
             },
             {
@@ -3077,7 +3077,7 @@
       "scenarios": [
         "A new advisory arrives; Launchway lists the services affected and who owns each.",
         "You search for a function across every repository you can see.",
-        "Automatic patching is switched on for one zone; a dependency update arrives as a change, passes its tests and rolls out.",
+        "Automatic patching is switched on for one zone; a Maintenance arrives as a change, passes its tests and rolls out.",
         "An agent asks which services use a library and gets an answer from the graph, not from reading files."
       ],
       "diagram": "flowchart TD\n  Code[\"Code and commits\"] --> Graph[(\"Software graph\")]\n  Deps[\"Packages and licenses\"] --> Graph\n  Img[\"Images and charts\"] --> Graph\n  Dep[\"Deployments and hosts\"] --> Graph\n  Adv[\"Advisories\"] --> Graph\n  Graph --> Q[\"Questions<br/>what, where, who, how bad\"]\n  Graph --> Patch[\"Patch proposal\"]\n  Patch --> Review[\"Tests and change management\"]\n  Review --> Roll[\"Rollout and verification\"]\n  Roll --> Dep",
@@ -3113,8 +3113,8 @@
             {
               "status": "available",
               "title": "Findings and SBOMs per run",
-              "value": "The starting point already works: findings and components recorded for every run.",
-              "detail": "Components are recorded as bills of materials and findings are kept with the run.",
+              "value": "The starting point already works: findings and components recorded for every Sortie.",
+              "detail": "Components are recorded as bills of materials and findings are kept with the Sortie.",
               "link": "guide/security-findings"
             },
             {
@@ -3122,7 +3122,7 @@
               "title": "What is deployed where",
               "value": "Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.",
-              "needs": "Built-in registry.",
+              "needs": "Built-in Depot.",
               "area": "software-graph"
             },
             {
@@ -3183,7 +3183,7 @@
             {
               "status": "planned",
               "title": "Blast radius of a vulnerability",
-              "value": "From an advisory, see which deployed services and environments are affected and who owns them.",
+              "value": "From an advisory, see which deployed services and Airfields are affected and who owns them.",
               "detail": "The list becomes a set of proposed fixes.",
               "needs": "What is deployed where.",
               "area": "software-graph"
@@ -3222,7 +3222,7 @@
               "title": "Lock files regenerated in a container and checked",
               "value": "When an update changes a dependency, the lock file is rebuilt in an isolated container and the result is verified before the pull request is opened.",
               "detail": "Built and tested, in final integration. The container has no secrets and no route to your network, so an update cannot reach anything it should not.",
-              "needs": "Built-in dependency updates.",
+              "needs": "Built-in Maintenance.",
               "area": "software-graph"
             },
             {
@@ -3322,7 +3322,7 @@
               "status": "planned",
               "title": "Branching patterns as Flight plans",
               "value": "Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan.",
-              "detail": "Each says what it implies for branches, triggers, versions, environments and fixes.",
+              "detail": "Each says what it implies for branches, triggers, versions, Airfields and fixes.",
               "area": "dependency-order"
             },
             {
@@ -3509,14 +3509,14 @@
             {
               "status": "planned",
               "title": "Assign a story to an agent",
-              "value": "An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a kill switch from the start.",
+              "value": "An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a Master switch from the start.",
               "detail": "The author never approves its own work.",
               "area": "ai"
             },
             {
               "status": "planned",
               "title": "Autonomy levels set by policy",
-              "value": "Choose how much an agent may do, per environment, from suggesting to delivering; production stays at a low level until a person raises it with a written reason.",
+              "value": "Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason.",
               "detail": "Defaults are cautious.",
               "area": "ai"
             },
@@ -3563,7 +3563,7 @@
         "An auditor exports a tamper-evident audit trail to the security tools.",
         "A visitor explores the public demo with realistic data."
       ],
-      "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organization<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted runners\"]\n  Engine <-->|outbound only| Own[\"Runners on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
+      "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organization<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted Stations\"]\n  Engine <-->|outbound only| Own[\"Stations on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
       "diagramNote": "Two ways to run steps: hosted in a sandbox, or on your own machines connected outward.",
       "done": [
         "Wings cannot see each other, proven by a test.",
@@ -3620,16 +3620,16 @@
             {
               "status": "planned",
               "title": "Runners on your machines",
-              "value": "Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network.",
-              "detail": "Only outbound connections are needed, and the same runner command works from a laptop. Builds are placed across a team’s machines as described in Milestone 2.",
-              "needs": "Runner identity and pools.",
+              "value": "Stations on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network.",
+              "detail": "Only outbound connections are needed, and the same Station command works from a laptop. Builds are placed across a team’s machines as described in Milestone 2.",
+              "needs": "Station identity and pools.",
               "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "Sandboxed hosted runners",
               "value": "Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server.",
-              "detail": "Layers of isolation back each other up, and a kill switch exists at the network.",
+              "detail": "Layers of isolation back each other up, and a Master switch exists at the network.",
               "needs": "Hosted service.",
               "area": "hosted-service"
             },
@@ -3645,7 +3645,7 @@
               "status": "planned",
               "title": "A public demo",
               "value": "A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start.",
-              "detail": "Try it with your own runner follows once Wing isolation exists.",
+              "detail": "Try it with your own Station follows once Wing isolation exists.",
               "needs": "Organizations.",
               "area": "hosted-service",
               "link": "demo"
@@ -3697,7 +3697,7 @@
               "status": "planned",
               "title": "A guided first project",
               "value": "Pick a starter, create or import a repository, push or edit in the browser, see a green build, and invite a teammate with one link.",
-              "detail": "Everything is optional later: your own secrets manager, registry, runners and identity provider are offered with a wizard, never required.",
+              "detail": "Everything is optional later: your own secrets manager, Depot, Stations and identity provider are offered with a wizard, never required.",
               "needs": "A built-in starter library for each language.",
               "area": "hosted-service"
             },
@@ -3731,7 +3731,7 @@
             {
               "status": "planned",
               "title": "Fully hosted",
-              "value": "The default: repositories, pipelines, runners, secrets, registry and reports all on the hosted service, with nothing to install.",
+              "value": "The default: repositories, pipelines, Stations, secrets, Depot and reports all on the hosted service, with nothing to install.",
               "detail": "The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.",
               "needs": "Every customer has its own Base.",
               "area": "hosted-service"
@@ -3780,7 +3780,7 @@
               "status": "planned",
               "title": "Guided moves between the three",
               "value": "Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide.",
-              "detail": "A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a rollback window before the source is deleted.",
+              "detail": "A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.",
               "needs": "Leave completely.",
               "area": "hosted-service"
             },
@@ -3802,7 +3802,7 @@
               "status": "planned",
               "title": "Size ceilings on hosted Bases",
               "value": "Each hosted Base has a ceiling. As it approaches, Launchway says what is growing, offers cleanup and offers the guided move, and at the ceiling only the growing kind of data stops.",
-              "detail": "Reading, cloning, downloading, exporting and moving always keep working, builds on your own runners keep running, and data is never deleted for being over a ceiling. The limits themselves are not decided yet.",
+              "detail": "Reading, cloning, downloading, exporting and moving always keep working, builds on your own Stations keep running, and data is never deleted for being over a ceiling. The limits themselves are not decided yet.",
               "needs": "Guided moves between the three.",
               "area": "hosted-service"
             },
@@ -3822,14 +3822,14 @@
             {
               "status": "planned",
               "title": "Nothing anonymous or public",
-              "value": "No repository, artifact, image, page, report or file on the hosted service can be reached without signing in as a member of that Base.",
+              "value": "No repository, Cargo, image, page, report or file on the hosted service can be reached without signing in as a member of that Base.",
               "detail": "There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.",
               "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "No general file storage",
-              "value": "The service holds repositories, build results and registry images that pipelines produce, and nothing else: there is no upload-a-file feature.",
+              "value": "The service holds repositories, build results and Depot images that pipelines produce, and nothing else: there is no upload-a-file feature.",
               "detail": "Per-file, per-push and total quotas, short retention for build results and upload rate limits keep even that small and bounded.",
               "area": "hosted-service"
             },
@@ -3863,7 +3863,7 @@
             {
               "status": "planned",
               "title": "Stage 1: invited people",
-              "value": "A handful of people the operator knows use the hosted service under a short plain agreement, with their own runners.",
+              "value": "A handful of people the operator knows use the hosted service under a short plain agreement, with their own Stations.",
               "detail": "No customer code runs on the service at this stage.",
               "needs": "Proven by tests that gate every release.",
               "area": "hosted-service"
@@ -3872,14 +3872,14 @@
               "status": "planned",
               "title": "Stage 2: files on your own machines",
               "value": "The first public opening offers only the mode where files stay on your machines. Fully hosted is shown as coming, never as a choice that fails.",
-              "detail": "It needs no customer storage, no content scanning and no runner isolation, so it can open first. An independent penetration test is required before it does.",
+              "detail": "It needs no customer storage, no content scanning and no Station isolation, so it can open first. An independent penetration test is required before it does.",
               "needs": "Files on your own machines, through a sealed relay.",
               "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "Stage 3: fully hosted, on rented capacity",
-              "value": "Public sign-up with hosted storage, your own runners and takedown tools, on capacity rented for the purpose.",
+              "value": "Public sign-up with hosted storage, your own Stations and takedown tools, on capacity rented for the purpose.",
               "detail": "It requires the wall between Bases, the abuse process, the size ceilings and a second independent test.",
               "needs": "Never a place to park files.",
               "area": "hosted-service"
@@ -3887,9 +3887,9 @@
             {
               "status": "planned",
               "title": "Stage 4: hosted runners",
-              "value": "Public sign-up with sandboxed runners run by the service.",
-              "detail": "It requires the runner isolation suite, a test that tries to escape, and abuse limits on compute.",
-              "needs": "Sandboxed hosted runners.",
+              "value": "Public sign-up with sandboxed Stations run by the service.",
+              "detail": "It requires the Station isolation suite, a test that tries to escape, and abuse limits on compute.",
+              "needs": "Sandboxed hosted Stations.",
               "area": "hosted-service"
             }
           ]
@@ -3915,9 +3915,9 @@
             {
               "status": "planned",
               "title": "The Detachment",
-              "value": "One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS.",
+              "value": "One small program on your side starts your Stations, looks things up in your secret store and reads your clusters, metrics, logs and DNS.",
               "detail": "It only calls out; nothing is opened into your network. It holds your secrets, reaches your systems and sees your traffic, so the hosted side never does.",
-              "needs": "Runners on your machines.",
+              "needs": "Stations on your machines.",
               "area": "hosted-service"
             },
             {
@@ -3939,7 +3939,7 @@
             {
               "status": "planned",
               "title": "Your logs, artifacts and audit stay with you",
-              "value": "Build logs, test reports, artifacts and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold.",
+              "value": "Build logs, Debriefs, Cargo and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold.",
               "detail": "The hosted service keeps a separate record of what it did.",
               "needs": "The Detachment.",
               "area": "hosted-service"
@@ -3955,7 +3955,7 @@
             {
               "status": "planned",
               "title": "Updates you control",
-              "value": "Signed updates with a pin, a window and a rollback; your Detachment checks the signature and your policy before accepting.",
+              "value": "Signed updates with a pin, a window and a Return to base; your Detachment checks the signature and your policy before accepting.",
               "detail": "The hosted side cannot make it run new code.",
               "needs": "The Detachment.",
               "area": "hosted-service"
@@ -3964,14 +3964,14 @@
               "status": "planned",
               "title": "Works when the hosted service is unreachable",
               "value": "Your Detachment keeps working for what it can, then catches up.",
-              "detail": "Your runs are not hostage to an outage.",
+              "detail": "Your Sorties are not hostage to an outage.",
               "needs": "The Detachment.",
               "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "Verify the promise yourself",
-              "value": "Ways to check the boundary: the wire format is closed, a canary test shows nothing leaks, and you can inspect what the Detachment sends.",
+              "value": "Ways to check the boundary: the wire format is closed, a Pathfinder test shows nothing leaks, and you can inspect what the Detachment sends.",
               "detail": "Staff cannot read anything stored hosted without your approved, time-limited session.",
               "needs": "The boundary, data kind by data kind.",
               "area": "hosted-service"
@@ -4009,7 +4009,7 @@
             {
               "status": "planned",
               "title": "Isolated by construction",
-              "value": "The demonstration runs apart from everything else, runs no code a visitor brings, and has a kill switch.",
+              "value": "The demonstration runs apart from everything else, runs no code a visitor brings, and has a Master switch.",
               "detail": "A visitor never gets sight of the operator’s own network.",
               "needs": "A public demo.",
               "area": "hosted-service"
@@ -4066,7 +4066,7 @@
             {
               "status": "in-progress",
               "title": "Retention, legal hold and encryption at rest",
-              "value": "Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted.",
+              "value": "Choose how long data is kept, prove deletion, and encrypt logs and Cargo with rotating keys; encrypted by default when hosted.",
               "detail": "A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12)."
             },
             {
@@ -4079,7 +4079,7 @@
             {
               "status": "planned",
               "title": "Zero trust throughout",
-              "value": "Every service, runner and person proves identity on every call.",
+              "value": "Every service, Station and person proves identity on every call.",
               "detail": "No shared secrets between components."
             }
           ]
@@ -4105,7 +4105,7 @@
             {
               "status": "in-progress",
               "title": "Nothing crosses between Bases",
-              "value": "No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
+              "value": "No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
               "detail": "The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.",
               "area": "hosted-service"
             },
@@ -4119,7 +4119,7 @@
             {
               "status": "planned",
               "title": "A vendor console, separate from any Base",
-              "value": "The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, run logs, secrets, findings or traffic.",
+              "value": "The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, Flight recorders, secrets, findings or traffic.",
               "detail": "It can suspend a Base, change a plan or publish a service notice.",
               "area": "hosted-service"
             },
@@ -4183,22 +4183,22 @@
       "name": "Zero-downtime delivery for anything, with Argo CD as a first-class citizen",
       "short": "Zero downtime",
       "promise": "Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.",
-      "audience": "Enterprises that cannot afford to be hurt by a release yet want to deploy continuously, and any team that wants to see what is deployed and why something failed.",
+      "audience": "Enterprises that cannot afford to be hurt by a release yet want to deploy continuously, and any team that wants to see what is running and why something failed.",
       "what": "Milestone 8 gives delivery one model for everything: a plan, a mover that shifts traffic or work, proofs that say whether it is safe, controls you can press, and a record of the last stable state. The same model serves web services on Kubernetes, virtual machines behind a load balancer, serverless functions, queue workers and scheduled jobs. Argo CD becomes a first-class part of it: every application and its whole tree in one place, a plain sentence saying why something failed, and safe control. Everything is on by default and your team stays in charge; Launchway proposes changes and never rewrites your application.",
       "scenarios": [
-        "You describe a service in a few plain questions and get a plan with a picture. It is rehearsed in a safe environment, and written to Git for review.",
+        "You describe a service in a few plain questions and get a plan with a picture. It is rehearsed in a safe Airfield, and written to Git for review.",
         "A release reaches 5 percent of users, then 25, and each step shows the traffic you intended next to the traffic that actually arrived.",
         "Thirty minutes after a release has reached everyone, error rates climb. Launchway sees it, returns to the last stable state, and the Logbook says who and what decided.",
-        "You switch on a feature toggle, errors rise, and Launchway switches it back off and tells you which toggle it was.",
+        "You switch on a Switch, errors rise, and Launchway switches it back off and tells you which toggle it was.",
         "You open one page and see every Argo CD application, its parent and children, and a sentence saying why one of them cannot sync.",
         "A rollout command that cannot work is never offered as a button."
       ],
       "diagram": "flowchart TD\n  Plan[\"Plan<br/>what to roll out\"] --> Shift[\"Shifter<br/>moves traffic or work\"]\n  Shift --> Proof[\"Proof<br/>is it safe\"]\n  Proof -->|pass| Next[\"Next step\"]\n  Proof -->|worse| Back[\"Return\"]\n  Next --> Watch[\"The watch<br/>after the last step\"]\n  Watch -->|worse| Back\n  Watch -->|steady| Stable[\"Stable state<br/>version, settings, toggles\"]\n  Back --> Stable\n  Control[\"Controls<br/>pause, go, stop\"] -.-> Shift",
-      "diagramNote": "One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a queue reader or a function alias.",
+      "diagramNote": "One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a Holding pattern reader or a function alias.",
       "done": [
         "The same plan runs a progressive rollout on Kubernetes, with every Argo Rollouts strategy covered and shown.",
-        "A seeded bad release is stopped and returned within the time the plan states, and a seeded good one is promoted, in the rehearsal environment and in the automated tests.",
-        "After the last step, the watch returns to the last stable state when signals worsen, and a rollback after a success works from the interface, the API, the agent endpoint and the command line.",
+        "A seeded bad release is stopped and returned within the time the plan states, and a seeded good one is promoted, in the rehearsal Airfield and in the automated tests.",
+        "After the last step, the watch returns to the last stable state when signals worsen, and a Return to base after a success works from the interface, the API, the agent endpoint and the command line.",
         "A toggle that causes errors is switched back automatically, and a configuration or secret change can be rolled and returned by a plan.",
         "Every Argo CD application and its tree are visible, with a plain-language diagnosis for the common failures.",
         "No control is offered that cannot work, and every control says what it will do and who may press it."
@@ -4232,13 +4232,13 @@
               "title": "Delivery plans",
               "value": "Describe how a release rolls out as a plan kept in Git: the steps, how much at each, what to check and how careful to be.",
               "detail": "You will be able to read a plan as a picture, review it like code, and reuse a standard plan from your organization.",
-              "needs": "Rollout control inside a run.",
+              "needs": "Rollout control inside a Sortie.",
               "area": "zero-downtime"
             },
             {
               "status": "planned",
               "title": "Shifters",
-              "value": "The part of a plan that moves traffic or work to the new version: a traffic split, a load balancer pool, a queue reader or a function alias.",
+              "value": "The part of a plan that moves traffic or work to the new version: a traffic split, a load balancer pool, a Holding pattern reader or a function alias.",
               "detail": "One interface lets every kind of workload take the same journey and show the same controls.",
               "needs": "Delivery plans.",
               "area": "zero-downtime"
@@ -4261,7 +4261,7 @@
             {
               "status": "planned",
               "title": "The stable state",
-              "value": "For each environment Launchway records the version, settings, secret versions, toggles and routes that were known to work.",
+              "value": "For each Airfield Launchway records the version, settings, secret versions, toggles and routes that were known to work.",
               "detail": "The last good state is always one click, or one automatic decision, away.",
               "needs": "Delivery plans.",
               "area": "zero-downtime"
@@ -4277,7 +4277,7 @@
             {
               "status": "planned",
               "title": "Safeguards on by default",
-              "value": "Every protection starts on and your team can tune or turn it off per project and environment; only a level above can require one.",
+              "value": "Every protection starts on and your team can tune or turn it off per project and Airfield; only a level above can require one.",
               "detail": "You stay in charge, and Launchway says plainly when a safeguard has been relaxed.",
               "needs": "Variables at levels.",
               "area": "zero-downtime"
@@ -4299,9 +4299,9 @@
             {
               "status": "planned",
               "title": "Every rollout strategy",
-              "value": "Canary and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway.",
+              "value": "Pathfinder and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway.",
               "detail": "Today Launchway reads a rollout; this makes it create and edit the files in Git, with every field accounted for.",
-              "needs": "Rollout control inside a run.",
+              "needs": "Rollout control inside a Sortie.",
               "area": "zero-downtime"
             },
             {
@@ -4323,7 +4323,7 @@
             {
               "status": "planned",
               "title": "Rehearsal environments",
-              "value": "Try a rollout in a short-lived environment with a traffic generator and injected faults before it reaches production.",
+              "value": "Try a rollout in a short-lived Airfield with a traffic generator and injected faults before it reaches production.",
               "detail": "Rehearsal is a feature of the product, not only of its tests.",
               "needs": "An assistant for creating a rollout.",
               "area": "zero-downtime"
@@ -4394,7 +4394,7 @@
               "title": "A toggle service in the model",
               "value": "Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.",
-              "needs": "Feature toggles.",
+              "needs": "Switches.",
               "area": "zero-downtime"
             },
             {
@@ -4424,7 +4424,7 @@
             {
               "status": "planned",
               "title": "Drift detection for settings",
-              "value": "Find configuration that differs between what is declared and what runs, and between environments.",
+              "value": "Find configuration that differs between what is declared and what runs, and between Airfields.",
               "detail": "Drift is a finding with its cause, not an alarm without context.",
               "needs": "Configuration and secrets as rollouts.",
               "area": "zero-downtime"
@@ -4446,7 +4446,7 @@
             {
               "status": "planned",
               "title": "Hosts and pools",
-              "value": "Pools of virtual machines or hosts deployed in batches behind a load balancer, with draining first.",
+              "value": "Pools of virtual machines or hosts launched in batches behind a load balancer, with draining first.",
               "detail": "The first load balancer supported is a popular open-source one, then one cloud balancer.",
               "needs": "Shifters.",
               "area": "zero-downtime"
@@ -4478,7 +4478,7 @@
             {
               "status": "planned",
               "title": "Queue and stream consumers",
-              "value": "Roll out a new version of a worker that reads a queue, by moving which copies read which part, and prove it with lag.",
+              "value": "Roll out a new version of a worker that reads a Holding pattern, by moving which copies read which part, and prove it with lag.",
               "detail": "A seeded backlog tests that the new version keeps up.",
               "needs": "Hosts and pools.",
               "area": "zero-downtime"
@@ -4525,7 +4525,7 @@
               "status": "planned",
               "title": "Every application in context",
               "value": "For each application: which change made it what it is, which run wrote that change, which version runs where and who owns it.",
-              "detail": "It also lists the same service in other environments side by side.",
+              "detail": "It also lists the same service in other Airfields side by side.",
               "needs": "See every application and its tree.",
               "area": "delivery"
             },
@@ -4564,7 +4564,7 @@
             {
               "status": "planned",
               "title": "Adopt existing applications",
-              "value": "Discover the applications you already have and map them to projects and environments without changing them.",
+              "value": "Discover the applications you already have and map them to projects and Airfields without changing them.",
               "detail": "Discovery is opt-in and read-only.",
               "needs": "See every application and its tree.",
               "area": "delivery"
@@ -4572,7 +4572,7 @@
             {
               "status": "planned",
               "title": "Rollouts, sync and environments in one view",
-              "value": "A joined timeline of a sync and its rollout, and a matrix of what version runs in each environment.",
+              "value": "A joined timeline of a sync and its rollout, and a matrix of what version runs in each Airfield.",
               "detail": "Notification rules and Argo CD’s own notices appear in the same place.",
               "needs": "Every rollout strategy.",
               "area": "delivery"
@@ -4589,7 +4589,7 @@
         },
         {
           "name": "Prove it: chaos, performance and temporary capacity",
-          "blurb": "First phase for the first runner, later for more tools. Each is a plan or a proof, so they add no new concepts.",
+          "blurb": "First phase for the first Station, later for more tools. Each is a plan or a proof, so they add no new concepts.",
           "items": [
             {
               "status": "planned",
@@ -4604,7 +4604,7 @@
               "title": "Chaos authorization and safety",
               "value": "Experiments are off until switched on, allowed only where declared, bounded in what they can reach, and cleared by someone other than the starter.",
               "detail": "Production may require a lock from a level above.",
-              "needs": "Chaos experiments as plans.",
+              "needs": "Drills as plans.",
               "area": "zero-downtime"
             },
             {
@@ -4612,14 +4612,14 @@
               "title": "Game days and the scorecard",
               "value": "Scheduled game days, rehearsals with a fault, and a scorecard of what the system survived.",
               "detail": "Findings such as “never survived losing a replica” join the findings list.",
-              "needs": "Chaos experiments as plans.",
+              "needs": "Drills as plans.",
               "area": "zero-downtime"
             },
             {
               "status": "planned",
               "title": "Performance tests as proofs",
               "value": "Run a load test from the repository as a step and get a report with percentiles, throughput, errors and the saturation of the system under test.",
-              "detail": "A built-in constant-rate runner needs no install; popular open-source load tools run as separate containers.",
+              "detail": "A built-in constant-rate Station needs no install; popular open-source load tools run as separate containers.",
               "needs": "Proofs.",
               "area": "zero-downtime"
             },
@@ -4643,7 +4643,7 @@
               "status": "planned",
               "title": "Performance gates in preflight",
               "value": "Require a passing performance result before a promotion to production, advisory until a level makes it required.",
-              "detail": "Tests run only against environments declared for performance or not production.",
+              "detail": "Tests run only against Airfields declared for performance or not production.",
               "needs": "Baselines and regression detection.",
               "area": "zero-downtime"
             }
@@ -4841,7 +4841,7 @@
               "status": "planned",
               "title": "Fault injection in the traffic map",
               "value": "Inject delays and errors on one connection, with a bound and an automatic stop.",
-              "detail": "It shares its safety rules with chaos experiments.",
+              "detail": "It shares its safety rules with Drills.",
               "needs": "Chaos authorization and safety.",
               "area": "network"
             }
@@ -4940,7 +4940,7 @@
             {
               "status": "planned",
               "title": "Per-subset proofs",
-              "value": "Request metrics for each subset become proofs, so a canary for one group of clients is judged on that group.",
+              "value": "Request metrics for each subset become proofs, so a Pathfinder for one group of clients is judged on that group.",
               "detail": "It uses the same proof verdicts as everywhere else.",
               "needs": "Route a subset of clients or requests.",
               "area": "network"
@@ -4981,23 +4981,23 @@
       "short": "Databases",
       "promise": "Launchway keeps working when a database machine fails, loses no work it has acknowledged, and treats a change to your own databases as a first-class, checked, reversible part of a release.",
       "audience": "Teams that run Launchway for many people and teams whose releases include changes to their data.",
-      "what": "Milestone 10 has two halves. The first makes Launchway’s own database highly available: one writer at a time, always with a copy guaranteed to be up to date, and software that promotes that copy automatically while Launchway waits, retries and buffers. The second treats a customer’s database as a known thing in an environment: a change set is checked before it runs, a backup is taken first, a standard tool applies it, and proofs watch the database during and after. Launchway is honest about limits: rollback for data means roll forward, a compensating change or a restore.",
+      "what": "Milestone 10 has two halves. The first makes Launchway’s own database highly available: one writer at a time, always with a copy guaranteed to be up to date, and software that promotes that copy automatically while Launchway waits, retries and buffers. The second treats a customer’s database as a known thing in an Airfield: a change set is checked before it runs, a backup is taken first, a standard tool applies it, and proofs watch the database during and after. Launchway is honest about limits: Return to base for data means roll forward, a compensating change or a restore.",
       "scenarios": [
         "A database machine dies mid-push. Launchway serves again within a minute, no acknowledged push is lost, and no step is run twice.",
         "You open a change set in a pull request and see the SQL it will run, what it will lock and whether it removes something a running version still uses.",
         "A change runs through test, then production, only if its checksum is unchanged since you cleared it.",
-        "Two environments drift apart and Launchway shows exactly where."
+        "Two Airfields drift apart and Launchway shows exactly where."
       ],
-      "diagram": "flowchart TD\n  Change[\"Change set<br/>in Git\"] --> Pre[\"Preflight<br/>what it runs, locks, removes\"]\n  Pre --> Backup[\"Backup or snapshot\"]\n  Backup --> Run[\"Standard tool applies it\"]\n  Run --> Proof[\"Proofs watch the database\"]\n  Proof -->|pass| Promote[\"Promote to the next environment\"]\n  Proof -->|fail| Plan[\"Roll forward, compensate or restore\"]",
-      "diagramNote": "A database change as a plan like any other. Launchway never claims a data rollback it cannot do.",
+      "diagram": "flowchart TD\n  Change[\"Change set<br/>in Git\"] --> Pre[\"Preflight<br/>what it runs, locks, removes\"]\n  Pre --> Backup[\"Backup or snapshot\"]\n  Backup --> Run[\"Standard tool applies it\"]\n  Run --> Proof[\"Proofs watch the database\"]\n  Proof -->|pass| Promote[\"Promote to the next Airfield\"]\n  Proof -->|fail| Plan[\"Roll forward, compensate or restore\"]",
+      "diagramNote": "A database change as a plan like any other. Launchway never claims a data Return to base it cannot do.",
       "done": [
         "A seeded database failure is survived with no acknowledged work lost, measured and published.",
         "A change set is checked, backed up, applied by a standard tool, watched and promoted with its checksum verified.",
-        "The Databases list shows each database in each environment, its state and its drift."
+        "The Databases list shows each database in each Airfield, its state and its drift."
       ],
       "notIncluded": [
         "Making a long table rewrite zero-downtime by tooling alone: Launchway says so before running and proposes an online method.",
-        "Claiming a data rollback it cannot do.",
+        "Claiming a data Return to base it cannot do.",
         "An active-active multi-writer database as the default: it would trade correctness for speed."
       ],
       "buildsOn": [
@@ -5017,8 +5017,8 @@
             {
               "status": "in-progress",
               "title": "Retries and buffering through a database failover",
-              "value": "Transient database errors are retried inside a stall budget, writes are safe to repeat, and runners spool logs and results while the server is away.",
-              "detail": "Today the first parts exist: store retries, repeat-safe runner writes, a runner spool and a database doctor. The rest is covered by the failure-injection tests.",
+              "value": "Transient database errors are retried inside a stall budget, writes are safe to repeat, and Stations spool logs and results while the server is away.",
+              "detail": "Today the first parts exist: store retries, repeat-safe Station writes, a Station spool and a database doctor. The rest is covered by the failure-injection tests.",
               "area": "databases"
             },
             {
@@ -5094,7 +5094,7 @@
             {
               "status": "planned",
               "title": "Databases in environments",
-              "value": "A database is a known connection in an environment, with its engine, version and state.",
+              "value": "A database is a known connection in an Airfield, with its engine, version and state.",
               "detail": "Credentials are least-privilege and audited.",
               "needs": "Shared connections.",
               "area": "databases"
@@ -5104,7 +5104,7 @@
               "title": "A database change step with Liquibase",
               "value": "Apply a change set from your repository with Liquibase first, with dry run, apply and status.",
               "detail": "Other standard tools sit behind the same interface.",
-              "needs": "Databases in environments.",
+              "needs": "Databases in Airfields.",
               "area": "databases"
             },
             {
@@ -5128,7 +5128,7 @@
               "title": "A Databases list and review page",
               "value": "One list of every database and change, with a review page for each.",
               "detail": "It is also available in the API, the agent endpoint, the command line and Terraform.",
-              "needs": "Databases in environments.",
+              "needs": "Databases in Airfields.",
               "area": "databases"
             },
             {
@@ -5166,9 +5166,9 @@
             {
               "status": "planned",
               "title": "Drift between environments",
-              "value": "Show where one environment’s schema differs from another’s and from Git.",
+              "value": "Show where one Airfield’s schema differs from another’s and from Git.",
               "detail": "Drift is a finding with the exact difference.",
-              "needs": "Promotion through environments.",
+              "needs": "Promotion through Airfields.",
               "area": "databases"
             },
             {
@@ -5182,7 +5182,7 @@
             {
               "status": "planned",
               "title": "Masked and preview databases",
-              "value": "Short-lived databases for preview environments, with masking guidance for production-like data.",
+              "value": "Short-lived databases for preview Airfields, with masking guidance for production-like data.",
               "detail": "Documented first, built if teams ask.",
               "needs": "More change tools and online changes.",
               "area": "databases"
@@ -5393,7 +5393,7 @@
             {
               "status": "planned",
               "title": "Maintenance and hypervisor migration",
-              "value": "Drain and upgrade nodes with virtual machines moved safely, and move machines between environments.",
+              "value": "Drain and upgrade nodes with virtual machines moved safely, and move machines between Airfields.",
               "detail": "Maintenance is a plan with a watch.",
               "needs": "Virtual machine delivery.",
               "area": "kubernetes-vms"
@@ -5409,7 +5409,7 @@
       "name": "Security and trust: encrypted at rest, its own vault, and honest certification",
       "short": "Security and trust",
       "promise": "Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.",
-      "audience": "Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated environment.",
+      "audience": "Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated Airfield.",
       "what": "Milestone 12 raises the foundation. A root key kept outside the database protects a small hierarchy of keys that protects every secret and stored file, so a database copy alone is useless. Launchway gets its own vault, and every built-in is optional: you can use a popular backend instead. Scans become gates with a stated policy, and the certification path is written down in an honest order.",
       "scenarios": [
         "Someone gets a copy of the database. Without the installation key it is unreadable.",
@@ -5467,14 +5467,14 @@
               "status": "available",
               "title": "Encrypt stored secrets and tokens",
               "value": "The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key.",
-              "detail": "Every stored secret goes through one helper and a registry that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.",
+              "detail": "Every stored secret goes through one helper and a Depot that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.",
               "needs": "An installation key and a key hierarchy.",
               "area": "security-trust"
             },
             {
               "status": "planned",
               "title": "Encrypt stored files, logs and caches",
-              "value": "Artifacts, caches, repository data and logs are encrypted as streams, re-encrypted lazily.",
+              "value": "Cargo, caches, repository data and logs are encrypted as streams, re-encrypted lazily.",
               "detail": "Large files are never loaded whole.",
               "needs": "Encrypt stored secrets and tokens.",
               "area": "security-trust"
@@ -5513,7 +5513,7 @@
             {
               "status": "planned",
               "title": "Customer-held keys and deletion by key destruction",
-              "value": "For the hosted service, keep logs and artifacts under a key you hold, and prove deletion by destroying it.",
+              "value": "For the hosted service, keep logs and Cargo under a key you hold, and prove deletion by destroying it.",
               "detail": "Leaving is complete.",
               "needs": "Rotation without downtime.",
               "area": "security-trust"
@@ -5536,7 +5536,7 @@
               "status": "planned",
               "title": "Popular backends instead",
               "value": "Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix.",
-              "detail": "Vault and OpenBao work today for runners; this widens it.",
+              "detail": "Vault and OpenBao work today for Stations; this widens it.",
               "needs": "A built-in secret store.",
               "area": "security-trust"
             },
@@ -5614,7 +5614,7 @@
             {
               "status": "planned",
               "title": "An independent security audit",
-              "value": "A specialist firm audits the server, sign-in, runner protocol, encryption and chart defaults, and a summary is published.",
+              "value": "A specialist firm audits the server, sign-in, Station protocol, encryption and chart defaults, and a summary is published.",
               "detail": "It follows encryption at rest and the vault.",
               "needs": "An installation key and a key hierarchy.",
               "area": "security-trust"
@@ -5730,7 +5730,7 @@
             {
               "status": "planned",
               "title": "Adapters for the tools teams already pay for",
-              "value": "The results of commercial artifact repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults.",
+              "value": "The results of commercial Cargo repositories, code-analysis and security products come into the same findings list, gates and reports as the free, open defaults.",
               "detail": "The free defaults always work with nothing else; an adapter only adds to them.",
               "needs": "Findings in one list.",
               "area": "repository-standards"
@@ -5752,7 +5752,7 @@
             {
               "status": "planned",
               "title": "Checks that run on your side",
-              "value": "On the hosted service checks run on your runners, so source code and finding detail stay with you.",
+              "value": "On the hosted service checks run on your Stations, so source code and finding detail stay with you.",
               "detail": "Only counts and summaries cross to the hosted side.",
               "area": "repository-standards"
             }
@@ -5766,16 +5766,16 @@
       "when": "next",
       "name": "Plan the work, release it, and keep it healthy",
       "short": "Work, releases and health",
-      "promise": "Work is planned and tracked beside the code, releases are managed as things that move through environments, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.",
+      "promise": "Work is planned and tracked beside the code, releases are managed as things that move through Airfields, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.",
       "audience": "Teams that want planning, release management and operations in the same place as their code and their delivery.",
-      "what": "Milestone 13 adds the human side of delivery. Issues, stories, boards and sprints are linked to the commits and the running software that answer them. A release is a version with notes and assets that is promoted through environments with checklists, windows and freezes. A first scan of an imported repository files a small, grouped set of work. After delivery, Launchway detects trouble, explains it and, only where a policy allows, applies a fix, with traffic failing over automatically.",
+      "what": "Milestone 13 adds the human side of delivery. Issues, stories, boards and sprints are linked to the commits and the running software that answer them. A release is a version with notes and assets that is promoted through Airfields with checklists, windows and freezes. A first scan of an imported repository files a small, grouped set of work. After delivery, Launchway detects trouble, explains it and, only where a policy allows, applies a fix, with traffic failing over automatically.",
       "scenarios": [
-        "You open a story and see the pull request, the run, the release and the environment where the fix is running.",
+        "You open a story and see the pull request, the Sortie, the release and the Airfield where the fix is running.",
         "A release moves from test to production with its checklist, its freeze windows and its approvals in one record.",
         "You import a repository and get a short, grouped list of things worth fixing, not a thousand tickets.",
         "An alert fires; Launchway shows what changed, proposes a fix, and applies it only if a policy you set allows it."
       ],
-      "diagram": "flowchart TD\n  Story[\"Story or issue\"] --> Change[\"Change and pull request\"]\n  Change --> Release[\"Release\"]\n  Release --> Env[\"Environments\"]\n  Env --> Watch[\"Detect and diagnose\"]\n  Watch -->|policy allows| Fix[\"Fix or fail over\"]\n  Watch -->|otherwise| Person[\"A person decides\"]\n  Fix --> Env",
+      "diagram": "flowchart TD\n  Story[\"Story or issue\"] --> Change[\"Change and pull request\"]\n  Change --> Release[\"Release\"]\n  Release --> Env[\"Airfields\"]\n  Env --> Watch[\"Detect and diagnose\"]\n  Watch -->|policy allows| Fix[\"Fix or fail over\"]\n  Watch -->|otherwise| Person[\"A person decides\"]\n  Fix --> Env",
       "diagramNote": "From a story to a running fix, and from an alert back to a decision.",
       "done": [
         "Issues, stories, boards and sprints exist, are linked to code and deployments, and can be assigned to people.",
@@ -5820,12 +5820,12 @@
         },
         {
           "name": "Release management",
-          "blurb": "A release is what moves through environments.",
+          "blurb": "A release is what moves through Airfields.",
           "items": [
             {
               "status": "in-progress",
               "title": "Releases that are promoted",
-              "value": "A release has a version, notes and assets, is immutable once published, and is promoted through environments with checklists, windows, freezes and approvals.",
+              "value": "A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals.",
               "detail": "Built, tested on its own branch and in final integration; not yet on the main branch. Things released together are grouped, and four delivery measures are reported.",
               "area": "git-hosting"
             }
@@ -5839,7 +5839,7 @@
               "status": "planned",
               "title": "Detect and diagnose",
               "value": "Alerts on the services Launchway delivers come with the changes that preceded them, the evidence and a plain explanation.",
-              "detail": "Builds on the watch after a deployment and the environment health view.",
+              "detail": "Builds on the watch after a deployment and the Airfield health view.",
               "area": "zero-downtime"
             },
             {
@@ -5852,7 +5852,7 @@
             {
               "status": "planned",
               "title": "Automatic traffic failover",
-              "value": "When an environment or site is unhealthy, traffic moves to a healthy one under rules you set, and the move is shown and recorded.",
+              "value": "When an Airfield or site is unhealthy, traffic moves to a healthy one under rules you set, and the move is shown and recorded.",
               "detail": "Optional; Launchway helps and does not enforce.",
               "area": "network"
             },
@@ -5875,9 +5875,9 @@
       "short": "Editors and extension points",
       "promise": "Developers use Launchway from the editor they already have, and companies connect their own systems through published extension points, so nothing in the product only its authors can use.",
       "audience": "Developers who live in an editor, and teams with systems of their own that should connect to delivery.",
-      "what": "Milestone 14 keeps Launchway out of the developer's way and out of your private business. Editor plug-ins and a one-step setup for agent tools put runs, findings and approvals where the developer already is. An optional development environment in the browser is available for those who want one. Everything specific to one company connects through extension points that run outside the product, with their own credentials, budgets and permissions.",
+      "what": "Milestone 14 keeps Launchway out of the developer's way and out of your private business. Editor plug-ins and a one-step setup for agent tools put runs, findings and approvals where the developer already is. An optional development Airfield in the browser is available for those who want one. Everything specific to one company connects through extension points that run outside the product, with their own credentials, budgets and permissions.",
       "scenarios": [
-        "A developer starts a run, reads a failure and approves a change without leaving the editor.",
+        "A developer starts a Sortie, reads a failure and approves a change without leaving the editor.",
         "One command configures the agent tool you use, with read-only access by default.",
         "A team connects its own alerting or house systems through an extension point, and Launchway needs no code change."
       ],
@@ -5972,7 +5972,7 @@
       ],
       "notIncluded": [
         "Anything earlier in the roadmap.",
-        "Chaos testing, which has moved into Milestone 8."
+        "Drill, which has moved into Milestone 8."
       ],
       "buildsOn": [
         "m5"
@@ -5986,8 +5986,8 @@
             {
               "status": "planned",
               "title": "Cloud cost management",
-              "value": "See what each service, team and environment costs to run, next to what it delivers.",
-              "detail": "Includes the cost of runner pools.",
+              "value": "See what each service, team and Airfield costs to run, next to what it delivers.",
+              "detail": "Includes the cost of Flight lines.",
               "needs": "The software graph."
             },
             {
@@ -6013,9 +6013,9 @@
             {
               "status": "planned",
               "title": "Cloud development environments",
-              "value": "Ready-made environments to work on a project from a browser.",
-              "detail": "Reuses preview environments.",
-              "needs": "Preview environments."
+              "value": "Ready-made Airfields to work on a project from a browser.",
+              "detail": "Reuses preview Airfields.",
+              "needs": "Preview Airfields."
             },
             {
               "status": "planned",
@@ -6058,11 +6058,11 @@
     },
     {
       "title": "Boring upgrades",
-      "value": "One binary and a database, additive migrations, an older binary running on a newer schema, and rollback by image."
+      "value": "One binary and a database, additive migrations, an older binary running on a newer schema, and Return to base by image."
     },
     {
       "title": "High availability and security are part of done",
-      "value": "A feature says what happens when a server, the database or a runner dies, and who may do what, before it merges."
+      "value": "A feature says what happens when a server, the database or a Station dies, and who may do what, before it merges."
     },
     {
       "title": "Honest status",
@@ -6106,7 +6106,7 @@
     },
     {
       "title": "A cache only makes a build faster",
-      "value": "It may never change a build’s result: what can change is looked up again, and a run says when it cannot be sure."
+      "value": "It may never change a build’s result: what can change is looked up again, and a Sortie says when it cannot be sure."
     },
     {
       "title": "The system works out the order; a person can always override",
@@ -6118,18 +6118,18 @@
     "items": [
       "Every request from today is now in the roadmap, in the milestone where it belongs, with an honest status.",
       "Work and agents: work tracking, release management, agents that deliver (with levels of autonomy, independent review and spending limits), and keeping services healthy by detecting, diagnosing and, where policy allows, fixing.",
-      "Your editor and your own systems: editor plug-ins, one-step setup for agent tools, an optional development environment in the browser, and extension points so site-specific systems never live in the product.",
-      "Organized and personal: folders and search on every list, shared and personal layouts, a home page based on what needs attention, home panels, an address for every view, and live streaming with time estimates.",
-      "The Depot (one area for everything stored), delivery by choice (GitOps controller, direct chart installs or plain manifests), drill-down from a deploy into every object it created, every cloud and on-premises within the environment's limits, one graph from code to hardware, and adopting machines that already exist.",
+      "Your editor and your own systems: editor plug-ins, one-step setup for agent tools, an optional development Airfield in the browser, and extension points so site-specific systems never live in the product.",
+      "Organized and personal: folders and search on every list, shared and personal layouts, a Tower based on what needs attention, home panels, an address for every view, and live streaming with time estimates.",
+      "The Depot (one area for everything stored), delivery by choice (GitOps controller, direct chart installs or plain manifests), drill-down from a deploy into every object it created, every cloud and on-premises within the Airfield's limits, one graph from code to hardware, and adopting machines that already exist.",
       "A new short section, Who Launchway is for, and the build order now follows the order decided today.",
-      "Statuses checked against the main branch: the guided installer, built-in accounts with a second factor, encryption at rest, fair queueing, path filters, restricted pull requests, notifications, dependency updates, offline validation and the delivery fixes are now Available. Everything built on a separate branch is In progress, marked as built and in final integration.",
+      "Statuses checked against the main branch: the guided installer, built-in accounts with a second factor, encryption at rest, fair queueing, path filters, restricted pull requests, notifications, Maintenance, offline validation and the delivery fixes are now Available. Everything built on a separate branch is In progress, marked as built and in final integration.",
       "Duplicate rows for the same work were merged."
     ]
   },
   "standsToday": {
     "strong": [
-      "Delivery with verification and rollback: a deployment is checked, and you can return to the last good state even after it succeeded.",
-      "Failures that explain themselves: a failed run says why, with the evidence, and re-runs from the failed step.",
+      "Delivery with verification and Return to base: a deployment is checked, and you can return to the last good state even after it succeeded.",
+      "Failures that explain themselves: a failed Sortie says why, with the evidence, and re-runs from the failed step.",
       "Pipelines you can see: steps drawn the way they run, and a change followed from idea to running software.",
       "Runs on your own hardware: one program and a database, with no outside service required.",
       "Install, secrets and sign-in: a guided installer, secrets sealed under a key kept outside the database, and built-in accounts with a second factor."
@@ -6139,7 +6139,7 @@
       "Most of the new work is built on separate branches and in final integration; it counts as Available only when it is on the main branch.",
       "The wall between Bases and sign-up, so people outside a team can use the hosted service: not built yet.",
       "Works alongside a hosted code host without moving repositories: planned.",
-      "Windows and macOS runners, and the mobile and games needs that follow them.",
+      "Windows and macOS Stations, and the mobile and games needs that follow them.",
       "Maturity: Launchway is young, has few users and has not been through an independent security audit or a certification."
     ],
     "note": "Much of what is listed as in progress is built and tested but not yet merged; it counts as Available only when it is."

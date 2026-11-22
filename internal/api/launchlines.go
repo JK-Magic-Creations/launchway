@@ -302,12 +302,17 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 		}
 	}
 	b.Detail = withMatrix(b, d)
-	// A deploy that succeeded as a step may still be rolling out.
-	if b.State == stationDone && strings.HasPrefix(b.Key, "env:") {
-		for _, st := range b.steps {
-			if dep, ok := deps[st.ID]; ok && dep.Phase != "" && dep.Phase != "healthy" && dep.Phase != "leftovers" && dep.Verdict == "" {
-				b.State, b.Step, b.Detail = stationRunning, st.ID, dep.Detail
-			}
+	stillRollingOut(b, deps)
+}
+
+// stillRollingOut: a deploy that succeeded as a step may still be rolling out.
+func stillRollingOut(b *stationBuild, deps map[string]engine.DeploymentView) {
+	if b.State != stationDone || !strings.HasPrefix(b.Key, "env:") {
+		return
+	}
+	for _, st := range b.steps {
+		if dep, ok := deps[st.ID]; ok && dep.Phase != "" && dep.Phase != "healthy" && dep.Phase != "leftovers" && dep.Verdict == "" {
+			b.State, b.Step, b.Detail = stationRunning, st.ID, dep.Detail
 		}
 	}
 }

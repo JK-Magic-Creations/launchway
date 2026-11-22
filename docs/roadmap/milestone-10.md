@@ -10,7 +10,7 @@ Launchway keeps working when a database machine fails, loses no work it has ackn
 
 ## What it is, and who it is for
 
-Milestone 10 has two halves. The first makes Launchway’s own database highly available: one writer at a time, always with a copy guaranteed to be up to date, and software that promotes that copy automatically while Launchway waits, retries and buffers. The second treats a customer’s database as a known thing in an environment: a change set is checked before it runs, a backup is taken first, a standard tool applies it, and proofs watch the database during and after. Launchway is honest about limits: rollback for data means roll forward, a compensating change or a restore.
+Milestone 10 has two halves. The first makes Launchway’s own database highly available: one writer at a time, always with a copy guaranteed to be up to date, and software that promotes that copy automatically while Launchway waits, retries and buffers. The second treats a customer’s database as a known thing in an Airfield: a change set is checked before it runs, a backup is taken first, a standard tool applies it, and proofs watch the database during and after. Launchway is honest about limits: Return to base for data means roll forward, a compensating change or a restore.
 
 **Who it is for.** Teams that run Launchway for many people and teams whose releases include changes to their data.
 
@@ -19,7 +19,7 @@ Milestone 10 has two halves. The first makes Launchway’s own database highly a
 - A database machine dies mid-push. Launchway serves again within a minute, no acknowledged push is lost, and no step is run twice.
 - You open a change set in a pull request and see the SQL it will run, what it will lock and whether it removes something a running version still uses.
 - A change runs through test, then production, only if its checksum is unchanged since you cleared it.
-- Two environments drift apart and Launchway shows exactly where.
+- Two Airfields drift apart and Launchway shows exactly where.
 
 ## How it fits together
 
@@ -29,11 +29,11 @@ flowchart TD
   Pre --> Backup["Backup or snapshot"]
   Backup --> Run["Standard tool applies it"]
   Run --> Proof["Proofs watch the database"]
-  Proof -->|pass| Promote["Promote to the next environment"]
+  Proof -->|pass| Promote["Promote to the next Airfield"]
   Proof -->|fail| Plan["Roll forward, compensate or restore"]
 ```
 
-*A database change as a plan like any other. Launchway never claims a data rollback it cannot do.*
+*A database change as a plan like any other. Launchway never claims a data Return to base it cannot do.*
 
 **Builds on:** [Milestone 8: Zero downtime](milestone-8.md). 
 
@@ -54,7 +54,7 @@ Near term. One writer at a time with a guaranteed up-to-date copy and automatic 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Transient database errors are retried inside a stall budget, writes are safe to repeat, and runners spool logs and results while the server is away. Today the first parts exist: store retries, repeat-safe runner writes, a runner spool and a database doctor. The rest is covered by the failure-injection tests.
+Transient database errors are retried inside a stall budget, writes are safe to repeat, and Stations spool logs and results while the server is away. Today the first parts exist: store retries, repeat-safe Station writes, a Station spool and a database doctor. The rest is covered by the failure-injection tests.
 
 [Area page](databases.md)
 
@@ -146,7 +146,7 @@ First phase. A change set is a plan like any other.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A database is a known connection in an environment, with its engine, version and state. Credentials are least-privilege and audited.
+A database is a known connection in an Airfield, with its engine, version and state. Credentials are least-privilege and audited.
 
 **Depends on:** Shared connections.
 
@@ -158,7 +158,7 @@ A database is a known connection in an environment, with its engine, version and
 
 Apply a change set from your repository with Liquibase first, with dry run, apply and status. Other standard tools sit behind the same interface.
 
-**Depends on:** Databases in environments.
+**Depends on:** Databases in Airfields.
 
 [Area page](databases.md)
 
@@ -188,7 +188,7 @@ Move a change set from test to production only when it passed, unchanged. It use
 
 One list of every database and change, with a review page for each. It is also available in the API, the agent endpoint, the command line and Terraform.
 
-**Depends on:** Databases in environments.
+**Depends on:** Databases in Airfields.
 
 [Area page](databases.md)
 
@@ -236,9 +236,9 @@ Watch the database during and after a change and, for changes marked reversible,
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Show where one environment’s schema differs from another’s and from Git. Drift is a finding with the exact difference.
+Show where one Airfield’s schema differs from another’s and from Git. Drift is a finding with the exact difference.
 
-**Depends on:** Promotion through environments.
+**Depends on:** Promotion through Airfields.
 
 [Area page](databases.md)
 
@@ -256,7 +256,7 @@ Other standard change tools and online-change methods for large tables, behind t
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Short-lived databases for preview environments, with masking guidance for production-like data. Documented first, built if teams ask.
+Short-lived databases for preview Airfields, with masking guidance for production-like data. Documented first, built if teams ask.
 
 **Depends on:** More change tools and online changes.
 
@@ -278,12 +278,12 @@ This milestone is done when all of these are true.
 
 - A seeded database failure is survived with no acknowledged work lost, measured and published.
 - A change set is checked, backed up, applied by a standard tool, watched and promoted with its checksum verified.
-- The Databases list shows each database in each environment, its state and its drift.
+- The Databases list shows each database in each Airfield, its state and its drift.
 
 ## What is deliberately not in it
 
 - Making a long table rewrite zero-downtime by tooling alone: Launchway says so before running and proposes an online method.
-- Claiming a data rollback it cannot do.
+- Claiming a data Return to base it cannot do.
 - An active-active multi-writer database as the default: it would trade correctness for speed.
 
 ---

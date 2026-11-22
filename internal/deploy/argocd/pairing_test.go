@@ -499,11 +499,11 @@ func TestDoctorFindsAndClearsAStaleOperationWithNoDeploymentRunning(t *testing.T
 	bare, _ := bareRepo(t)
 	dyn, cl := fakeCluster(t, staleApp(bare))
 	a := agentFor(t, bare, cl)
-	dg, err := a.Doctor(context.Background(), "homelab", "shop", false)
+	dg, err := a.Doctor(context.Background(), "cluster-a", "shop", false)
 	if err != nil || !strings.Contains(dg.Stale, "started with source 0 at 2.0.0") || dg.Cleared || len(patches(dyn)) != 0 {
 		t.Fatalf("%v %+v %v", err, dg, patches(dyn))
 	}
-	dg, err = a.Doctor(context.Background(), "homelab", "shop", true)
+	dg, err = a.Doctor(context.Background(), "cluster-a", "shop", true)
 	if err != nil || !dg.Cleared || len(patches(dyn)) != 1 {
 		t.Fatalf("%v %+v %v", err, dg, patches(dyn))
 	}

@@ -208,7 +208,7 @@ Documents become stories, stories become changes, and changes reach production w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a kill switch from the start. The author never approves its own work.
+An agent runs on a sandboxed machine of your own, works from a story, and opens a pull request under the same rules as a person; no secrets, a budget, and a Master switch from the start. The author never approves its own work.
 
 [Area page](ai.md)
 
@@ -216,7 +216,7 @@ An agent runs on a sandboxed machine of your own, works from a story, and opens 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Choose how much an agent may do, per environment, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Defaults are cautious.
+Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Defaults are cautious.
 
 [Area page](ai.md)
 

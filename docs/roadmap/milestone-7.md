@@ -30,8 +30,8 @@ Milestone 7 lets you use Launchway without running it, and shows people the way 
 flowchart TD
   User["Your team"] --> Org["Your organization<br/>isolated"]
   Org --> Engine["Hosted engine"]
-  Engine --> Sand["Sandboxed hosted runners"]
-  Engine <-->|outbound only| Own["Runners on your machines"]
+  Engine --> Sand["Sandboxed hosted Stations"]
+  Engine <-->|outbound only| Own["Stations on your machines"]
   Engine --> Audit["Audit, retention, encryption"]
   Audit --> Siem["Your security tools"]
 ```
@@ -96,9 +96,9 @@ Choose where your data lives. Region choices are shown at sign-up and recorded.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network. Only outbound connections are needed, and the same runner command works from a laptop. Builds are placed across a team’s machines as described in Milestone 2.
+Stations on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network. Only outbound connections are needed, and the same Station command works from a laptop. Builds are placed across a team’s machines as described in Milestone 2.
 
-**Depends on:** Runner identity and pools.
+**Depends on:** Station identity and pools.
 
 [Area page](hosted-service.md)
 
@@ -106,7 +106,7 @@ Runners on your own servers or clusters connect out to the hosted engine, so cod
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server. Layers of isolation back each other up, and a kill switch exists at the network.
+Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server. Layers of isolation back each other up, and a Master switch exists at the network.
 
 **Depends on:** Hosted service.
 
@@ -126,7 +126,7 @@ Everything is portable, so capacity can be added on any provider as demand justi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own runner follows once Wing isolation exists.
+A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. Try it with your own Station follows once Wing isolation exists.
 
 **Depends on:** Organizations.
 
@@ -184,7 +184,7 @@ Rate limits, a small puzzle the browser solves and friction for throwaway addres
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Pick a starter, create or import a repository, push or edit in the browser, see a green build, and invite a teammate with one link. Everything is optional later: your own secrets manager, registry, runners and identity provider are offered with a wizard, never required.
+Pick a starter, create or import a repository, push or edit in the browser, see a green build, and invite a teammate with one link. Everything is optional later: your own secrets manager, Depot, Stations and identity provider are offered with a wizard, never required.
 
 **Depends on:** A built-in starter library for each language.
 
@@ -222,7 +222,7 @@ One product, three places to keep your work. Choose at sign-up, change your mind
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The default: repositories, pipelines, runners, secrets, registry and reports all on the hosted service, with nothing to install. The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.
+The default: repositories, pipelines, Stations, secrets, Depot and reports all on the hosted service, with nothing to install. The honest trade is stated at sign-up: the service stores your code and secrets, in your own Base, encrypted, walled off and never readable by the vendor console.
 
 **Depends on:** Every customer has its own Base.
 
@@ -282,7 +282,7 @@ Everything on your own machines, installed with the guided installer, with the s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a rollback window before the source is deleted.
+Move one project or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.
 
 **Depends on:** Leave completely.
 
@@ -306,7 +306,7 @@ Hosting is for teams that fit; the ones that outgrow it are helped on, never loc
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each hosted Base has a ceiling. As it approaches, Launchway says what is growing, offers cleanup and offers the guided move, and at the ceiling only the growing kind of data stops. Reading, cloning, downloading, exporting and moving always keep working, builds on your own runners keep running, and data is never deleted for being over a ceiling. The limits themselves are not decided yet.
+Each hosted Base has a ceiling. As it approaches, Launchway says what is growing, offers cleanup and offers the guided move, and at the ceiling only the growing kind of data stops. Reading, cloning, downloading, exporting and moving always keep working, builds on your own Stations keep running, and data is never deleted for being over a ceiling. The limits themselves are not decided yet.
 
 **Depends on:** Guided moves between the three.
 
@@ -328,7 +328,7 @@ The hosted service is for your work, not for storing arbitrary files, and it is 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-No repository, artifact, image, page, report or file on the hosted service can be reached without signing in as a member of that Base. There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.
+No repository, Cargo, image, page, report or file on the hosted service can be reached without signing in as a member of that Base. There are no public project pages, no hosted sites and no direct download addresses. Share links are absent at first.
 
 [Area page](hosted-service.md)
 
@@ -336,7 +336,7 @@ No repository, artifact, image, page, report or file on the hosted service can b
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The service holds repositories, build results and registry images that pipelines produce, and nothing else: there is no upload-a-file feature. Per-file, per-push and total quotas, short retention for build results and upload rate limits keep even that small and bounded.
+The service holds repositories, build results and Depot images that pipelines produce, and nothing else: there is no upload-a-file feature. Per-file, per-push and total quotas, short retention for build results and upload rate limits keep even that small and bounded.
 
 [Area page](hosted-service.md)
 
@@ -372,7 +372,7 @@ Outsiders are let in a step at a time, and a step opens only when every check fo
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A handful of people the operator knows use the hosted service under a short plain agreement, with their own runners. No customer code runs on the service at this stage.
+A handful of people the operator knows use the hosted service under a short plain agreement, with their own Stations. No customer code runs on the service at this stage.
 
 **Depends on:** Proven by tests that gate every release.
 
@@ -382,7 +382,7 @@ A handful of people the operator knows use the hosted service under a short plai
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The first public opening offers only the mode where files stay on your machines. Fully hosted is shown as coming, never as a choice that fails. It needs no customer storage, no content scanning and no runner isolation, so it can open first. An independent penetration test is required before it does.
+The first public opening offers only the mode where files stay on your machines. Fully hosted is shown as coming, never as a choice that fails. It needs no customer storage, no content scanning and no Station isolation, so it can open first. An independent penetration test is required before it does.
 
 **Depends on:** Files on your own machines, through a sealed relay.
 
@@ -392,7 +392,7 @@ The first public opening offers only the mode where files stay on your machines.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Public sign-up with hosted storage, your own runners and takedown tools, on capacity rented for the purpose. It requires the wall between Bases, the abuse process, the size ceilings and a second independent test.
+Public sign-up with hosted storage, your own Stations and takedown tools, on capacity rented for the purpose. It requires the wall between Bases, the abuse process, the size ceilings and a second independent test.
 
 **Depends on:** Never a place to park files.
 
@@ -402,9 +402,9 @@ Public sign-up with hosted storage, your own runners and takedown tools, on capa
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Public sign-up with sandboxed runners run by the service. It requires the runner isolation suite, a test that tries to escape, and abuse limits on compute.
+Public sign-up with sandboxed Stations run by the service. It requires the Station isolation suite, a test that tries to escape, and abuse limits on compute.
 
-**Depends on:** Sandboxed hosted runners.
+**Depends on:** Sandboxed hosted Stations.
 
 [Area page](hosted-service.md)
 
@@ -430,9 +430,9 @@ Before the first outside customer. The hosted side coordinates; a small program 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS. It only calls out; nothing is opened into your network. It holds your secrets, reaches your systems and sees your traffic, so the hosted side never does.
+One small program on your side starts your Stations, looks things up in your secret store and reads your clusters, metrics, logs and DNS. It only calls out; nothing is opened into your network. It holds your secrets, reaches your systems and sees your traffic, so the hosted side never does.
 
-**Depends on:** Runners on your machines.
+**Depends on:** Stations on your machines.
 
 [Area page](hosted-service.md)
 
@@ -460,7 +460,7 @@ The pages you read are drawn in your browser from data fetched live from your De
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Build logs, test reports, artifacts and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold. The hosted service keeps a separate record of what it did.
+Build logs, Debriefs, Cargo and an audit trail you own are kept on your side by default; storing them hosted is a per-Wing choice with a key you hold. The hosted service keeps a separate record of what it did.
 
 **Depends on:** The Detachment.
 
@@ -480,7 +480,7 @@ You grant access to your systems from none upward, each step showing what it add
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Signed updates with a pin, a window and a rollback; your Detachment checks the signature and your policy before accepting. The hosted side cannot make it run new code.
+Signed updates with a pin, a window and a Return to base; your Detachment checks the signature and your policy before accepting. The hosted side cannot make it run new code.
 
 **Depends on:** The Detachment.
 
@@ -490,7 +490,7 @@ Signed updates with a pin, a window and a rollback; your Detachment checks the s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Your Detachment keeps working for what it can, then catches up. Your runs are not hostage to an outage.
+Your Detachment keeps working for what it can, then catches up. Your Sorties are not hostage to an outage.
 
 **Depends on:** The Detachment.
 
@@ -500,7 +500,7 @@ Your Detachment keeps working for what it can, then catches up. Your runs are no
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Ways to check the boundary: the wire format is closed, a canary test shows nothing leaks, and you can inspect what the Detachment sends. Staff cannot read anything stored hosted without your approved, time-limited session.
+Ways to check the boundary: the wire format is closed, a Pathfinder test shows nothing leaks, and you can inspect what the Detachment sends. Staff cannot read anything stored hosted without your approved, time-limited session.
 
 **Depends on:** The boundary, data kind by data kind.
 
@@ -544,7 +544,7 @@ A visitor gets sample repositories, a simulated cluster and metrics, a rollout, 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The demonstration runs apart from everything else, runs no code a visitor brings, and has a kill switch. A visitor never gets sight of the operator’s own network.
+The demonstration runs apart from everything else, runs no code a visitor brings, and has a Master switch. A visitor never gets sight of the operator’s own network.
 
 **Depends on:** A public demo.
 
@@ -609,7 +609,7 @@ An audit trail nobody can quietly edit, streamed to your security tools. Entries
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted. A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12).
+Choose how long data is kept, prove deletion, and encrypt logs and Cargo with rotating keys; encrypted by default when hosted. A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12).
 
 
 #### A compliance pack for PCI DSS and HIPAA {#a-compliance-pack-for-pci-dss-and-hipaa}
@@ -624,7 +624,7 @@ Policy templates and an evidence report that maps controls to requirements. It s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every service, runner and person proves identity on every call. No shared secrets between components.
+Every service, Station and person proves identity on every call. No shared secrets between components.
 
 
 ### Your own Base, and what the service sees {#g-your-own-base-and-what-the-service-sees}
@@ -651,7 +651,7 @@ The service operator’s own Base is a separate Base that no customer or demonst
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.
+No interface, search, graph, Flight line, cache, Depot path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.
 
 [Area page](hosted-service.md)
 
@@ -667,7 +667,7 @@ A suite tries every list, search, lookup, count, error, export and agent tool fr
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, run logs, secrets, findings or traffic. It can suspend a Base, change a plan or publish a service notice.
+The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, Flight recorders, secrets, findings or traffic. It can suspend a Base, change a plan or publish a service notice.
 
 [Area page](hosted-service.md)
 

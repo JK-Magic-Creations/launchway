@@ -208,3 +208,22 @@ func TestAPullRequestCannotTurnItsOwnChecksOff(t *testing.T) {
 		t.Error("a pull request switched the Inspection off for itself")
 	}
 }
+
+// An installation can switch the Inspection off with one environment setting before it upgrades.
+func TestTheInstallationCanSwitchTheInspectionOffWithOneSetting(t *testing.T) {
+	s := newService(t)
+	dir, sha := repo(t, map[string]string{"go.mod": "module x\n\ngo 1.22\n", "main.go": "package main\n"})
+	t.Setenv(OffEnv, "off")
+	p, err := pipeline.Parse([]byte(basePipeline))
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, note, err := s.Inspect(context.Background(), source.InspectRequest{Project: "app", GitDir: dir, SHA: sha, DefaultBranch: "main", Event: pipeline.EventPullRequest}, p)
+	if err != nil || len(q.Steps) != len(p.Steps) || q.Step("inspection") != nil || !strings.Contains(note, OffEnv) {
+		t.Fatalf("steps %d (want %d), note %q, err %v", len(q.Steps), len(p.Steps), note, err)
+	}
+	t.Setenv(OffEnv, "")
+	if q := inspect(t, s, dir, sha, false); q.Step("inspection") == nil {
+		t.Error("with the setting empty the Inspection must be added")
+	}
+}

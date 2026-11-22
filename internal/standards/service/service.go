@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -34,6 +35,16 @@ func (s *Service) now() time.Time {
 	}
 	return time.Now().UTC()
 }
+
+// OffEnv is the one setting that switches Standing orders off for the whole installation, in the server's
+// environment (in the Helm chart: server.extraEnv). It is read on every run, needs no database, and an older
+// server ignores it, so an operator can set it before upgrading and remove it when ready. Anything but off
+// leaves Standing orders on. The off switch of a level (with its reason and Logbook entry) is the audited way
+// once the installation is running.
+const OffEnv = "LAUNCHWAY_STANDING_ORDERS"
+
+// SwitchedOff reports whether the installation's environment switches Standing orders off.
+func SwitchedOff() bool { return strings.EqualFold(strings.TrimSpace(os.Getenv(OffEnv)), "off") }
 
 // maxFiles bounds the paths listed for detection.
 const maxFiles = 200_000
@@ -152,6 +163,9 @@ func (s *Service) Effective(project string, files []string, file *standards.Sett
 func (s *Service) Inspect(ctx context.Context, req source.InspectRequest, p *pipeline.Pipeline) (*pipeline.Pipeline, string, error) {
 	if !s.Eng.StandingsKnown() {
 		return p, "", nil
+	}
+	if SwitchedOff() {
+		return p, "Standing orders are switched off for this installation (" + OffEnv + "=off), so no Inspection was added.", nil
 	}
 	files, err := Files(ctx, req.GitDir, req.SHA)
 	if err != nil {

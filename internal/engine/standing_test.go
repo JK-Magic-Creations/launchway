@@ -36,6 +36,13 @@ func leakSarif(file string) ReportFile {
 // run and the gate's final status.
 func inspectedRun(t *testing.T, e *Engine, defaultBranch bool, found map[string]ReportFile) (string, *RunState) {
 	t.Helper()
+	return inspectedRunWith(t, e, defaultBranch, found, false)
+}
+
+// inspectedRunWith is inspectedRun, and with failing set every check's step fails for good with no report,
+// as a scanner does that cannot reach the network it needs.
+func inspectedRunWith(t *testing.T, e *Engine, defaultBranch bool, found map[string]ReportFile, failing bool) (string, *RunState) {
+	t.Helper()
 	pl := parse(t, "pipeline: demo\non: { push: { branches: [main] }, pull_request: {} }\nsteps:\n  build: {image: x, run: build}\n")
 	off := map[string]standards.State{"license": standards.Off, "sbom": standards.Off, "vuln-reach-go": standards.Off, "sast-go": standards.Off}
 	eff := standards.Resolve(standards.ResolveInput{Files: []string{"go.mod"}, Now: e.now(), Levels: []standards.LevelDoc{{Level: standards.LevelProject, Scope: "demo", Settings: standards.Settings{Checks: off}}}})
@@ -64,8 +71,15 @@ func inspectedRun(t *testing.T, e *Engine, defaultBranch bool, found map[string]
 		if _, err := e.Start(j.LeaseID); err != nil {
 			t.Fatal(err)
 		}
-		zero := 0
+		zero, one := 0, 1
 		res := Result{Outcome: "succeeded", ExitCode: &zero}
+		if failing && strings.HasPrefix(j.StepID, "inspect-") {
+			res = Result{Outcome: "failed", ExitCode: &one, Error: "osv-scanner wrote no report (exit 127), so this check did not run."}
+			if err := e.Finish(j.LeaseID, res); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
 		if f, ok := found[strings.TrimPrefix(j.StepID, "inspect-")]; ok {
 			res.Findings = &CollectedReports{Files: []ReportFile{f}}
 		} else if strings.HasPrefix(j.StepID, "inspect-") {
@@ -237,5 +251,34 @@ func TestStandingSettingsAreVersioned(t *testing.T) {
 func TestInspectionAsksForTheSchemaThatBroughtIt(t *testing.T) {
 	if pipeline.SchemaStandings != schemaStandings {
 		t.Fatalf("pipeline.SchemaStandings is %d, the migration is %d", pipeline.SchemaStandings, schemaStandings)
+	}
+}
+
+// A cluster whose step pods may reach only an allow-list leaves the scanners without their registries and
+// advisory databases: every check step then fails with no report. That must never fail the pipeline, with
+// or without a baseline: the verdict says the checks did not finish, and nothing blocks unless the Standing
+// orders were told that an unfinished Inspection fails.
+func TestChecksThatCouldNotRunNeverFailTheRun(t *testing.T) {
+	e, _ := newEngine(t)
+	// The default branch is inspected once, so there is a baseline, then a change whose checks all fail.
+	inspectedRun(t, e, true, map[string]ReportFile{"vuln-deps": osvSarif("CVE-OLD")})
+	pr, st := inspectedRunWith(t, e, false, nil, true)
+	if ins, _ := e.RunInspection(pr, InspectionQuery{}); len(ins.Incomplete) != 2 {
+		t.Errorf("the checks that could not run are not listed as not finished: %+v", ins.Incomplete)
+	}
+	if g := st.Steps["inspection"]; g.Status != StepSucceeded {
+		t.Fatalf("the verdict of checks that could not run failed the run: %+v %q", g, gateReason(t, e, pr))
+	}
+	if st.Status != RunSucceeded {
+		t.Fatalf("the run is %s, want succeeded", st.Status)
+	}
+	if r := gateReason(t, e, pr); !strings.Contains(r, "Did not finish") {
+		t.Errorf("the verdict does not say the checks did not finish: %q", r)
+	}
+	// With no baseline at all the same holds.
+	e2, _ := newEngine(t)
+	pr2, st2 := inspectedRunWith(t, e2, false, nil, true)
+	if g := st2.Steps["inspection"]; g.Status != StepSucceeded || st2.Status != RunSucceeded {
+		t.Fatalf("%+v run %s %q", g, st2.Status, gateReason(t, e2, pr2))
 	}
 }
