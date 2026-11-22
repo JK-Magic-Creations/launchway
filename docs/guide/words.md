@@ -84,9 +84,9 @@ Three rules keep this safe:
 
 | Key | Default word | Plain word | What it means |
 |---|---|---|---|
-| `owner` | **Commander** | Owner | Can do everything, including who may do what. Today this is the admin role: the stored roles are viewer, operator and admin, and there is no separate owner role. |
-| `approver` | **Controller** | Approver | Decides whether a change may go on. Today a person who may approve holds the operator role: there is no separate approver role yet. |
-| `developer` | **Pilot** | Developer | Writes code and starts runs. Today a person who writes code and starts runs holds the operator role: there is no separate developer role. |
+| `owner` | **Commander** | Owner | Can do everything, including who may do what. Today the stored role is admin; there is no owner role. |
+| `approver` | **Controller** | Approver | Decides whether a change may go on. Today the stored role is operator; there is no approver role yet. |
+| `developer` | **Pilot** | Developer | Writes code and starts runs. Today the stored role is operator; there is no developer role. |
 | `viewer` | **Observer** | Viewer | Can read everything and change nothing. The stored role is viewer, as the word says. |
 
 ### Statuses

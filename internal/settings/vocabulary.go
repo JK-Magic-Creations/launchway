@@ -166,11 +166,11 @@ var vocabulary = []Word{
 
 	// roles
 	{Key: "owner", Group: "roles", Aviation: f("Commander"), Plain: f("Owner"),
-		Meaning: "Can do everything, including who may do what. Today this is the admin role: the stored roles are viewer, operator and admin, and there is no separate owner role.", Renameable: true},
+		Meaning: "Can do everything, including who may do what. Today the stored role is admin; there is no owner role.", Renameable: true},
 	{Key: "approver", Group: "roles", Aviation: f("Controller"), Plain: f("Approver"),
-		Meaning: "Decides whether a change may go on. Today a person who may approve holds the operator role: there is no separate approver role yet.", Renameable: true},
+		Meaning: "Decides whether a change may go on. Today the stored role is operator; there is no approver role yet.", Renameable: true},
 	{Key: "developer", Group: "roles", Aviation: f("Pilot"), Plain: f("Developer"),
-		Meaning: "Writes code and starts runs. Today a person who writes code and starts runs holds the operator role: there is no separate developer role.", Renameable: true},
+		Meaning: "Writes code and starts runs. Today the stored role is operator; there is no developer role.", Renameable: true},
 	{Key: "viewer", Group: "roles", Aviation: f("Observer"), Plain: f("Viewer"),
 		Meaning: "Can read everything and change nothing. The stored role is viewer, as the word says.", Renameable: true},
 

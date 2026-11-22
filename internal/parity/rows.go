@@ -3,6 +3,16 @@ package parity
 // The rows were drafted from the route table and are kept by hand.
 
 var rows = []Row{
+	{Route: "GET /api/v1/units", MCP: "list_units", CLI: "squadrons list", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/units", MCP: "create_unit", CLI: "squadrons create", Terraform: "launchway_unit (the same object; no change)", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/units/{name}", MCP: "get_unit", CLI: "squadrons show", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/units/{name}/projects", MCP: "create_project_in_unit", CLI: "squadrons add-flight", Terraform: "launchway_project with unit (the same object; no change)", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/project-candidates", MCP: "list_project_candidates", CLI: "squadrons candidates", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/unit-moves/preview", MCP: "preview_project_move", CLI: "squadrons move", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/unit-moves", MCP: "move_projects", CLI: "squadrons move", Terraform: "launchway_project unit (the same field; no change)", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/unit-organize", MCP: "organize_into_units", CLI: "squadrons organize", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/unit-organize", MCP: "organize_into_units", CLI: "squadrons organize", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/unit-organize/undo", MCP: "organize_into_units", CLI: "squadrons organize", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/activity", MCP: "recent", CLI: "recent", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "PUT /api/v1/activity", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the pages note what a person opened, in the background; a token or agent has no pages"},
 	{Route: "DELETE /api/v1/activity", MCP: "", CLI: "recent", Terraform: "", Status: Exempt, Reason: "a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail"},

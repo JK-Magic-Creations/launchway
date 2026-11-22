@@ -29,7 +29,7 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "list_config", Annotations: readOnly("List configuration objects"),
-		Description: "List the configuration objects of one kind, with their versions. kind is one of Flights, libraries, Airfields, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation, organization. With deleted true, list the deleted ones, which can be restored."},
+		Description: "List the configuration objects of one kind, with their versions. kind is one of projects, libraries, Airfields, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation, organization. With deleted true, list the deleted ones, which can be restored."},
 		mcpCallTimeout, listConfig)
 	addTool(srv, c, &mcp.Tool{Name: "get_config", Annotations: readOnly("Get a configuration object"),
 		Description: "One configuration object: its spec (the settings, with the keys the configuration file uses), version, who last changed it and who manages it (api, terraform, import)."},
@@ -78,7 +78,7 @@ type obj = map[string]any
 type noIn struct{}
 
 type kindIn struct {
-	Kind    string `json:"kind" jsonschema:"the kind: Flights, libraries, environments, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation or organization"`
+	Kind    string `json:"kind" jsonschema:"the kind: projects, libraries, environments, runner-pools, role-bindings, policies, policy-sources, health-sources, models, secret-stores, units, installation or organization"`
 	Deleted bool   `json:"deleted,omitempty" jsonschema:"list the deleted objects instead"`
 }
 

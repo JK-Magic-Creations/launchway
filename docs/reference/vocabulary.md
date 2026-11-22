@@ -91,9 +91,9 @@ The word **Project** is no longer used for the fourth level. A Flight is one rep
 
 | Key (stable) | Default word | Plain word | Meaning | Renameable | Never call it |
 |---|---|---|---|---|---|
-| `owner` | **Commander** | Owner | Can do everything, including who may do what. Today this is the admin role: the stored roles are viewer, operator and admin, and there is no separate owner role. | yes | none |
-| `approver` | **Controller** | Approver | Decides whether a change may go on. Today a person who may approve holds the operator role: there is no separate approver role yet. | yes | none |
-| `developer` | **Pilot** | Developer | Writes code and starts runs. Today a person who writes code and starts runs holds the operator role: there is no separate developer role. | yes | none |
+| `owner` | **Commander** | Owner | Can do everything, including who may do what. Today the stored role is admin; there is no owner role. | yes | none |
+| `approver` | **Controller** | Approver | Decides whether a change may go on. Today the stored role is operator; there is no approver role yet. | yes | none |
+| `developer` | **Pilot** | Developer | Writes code and starts runs. Today the stored role is operator; there is no developer role. | yes | none |
 | `viewer` | **Observer** | Viewer | Can read everything and change nothing. The stored role is viewer, as the word says. | yes | none |
 
 ### Statuses

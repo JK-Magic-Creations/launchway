@@ -4272,6 +4272,29 @@ paths:
             tags:
                 - policies
             x-launchway-access: any-viewer
+    /api/v1/project-candidates:
+        get:
+            description: Handled by GET /api/v1/project-candidates; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_project_candidates
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/project-candidates; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - project-candidates
+            x-launchway-access: admin
     /api/v1/projects:
         get:
             description: The Flights the caller may see.
@@ -14911,6 +14934,244 @@ paths:
             tags:
                 - tokens
             x-launchway-access: signed-in
+    /api/v1/unit-moves:
+        post:
+            description: Handled by POST /api/v1/unit-moves; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_unit_moves
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/unit-moves; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - unit-moves
+            x-launchway-access: admin
+            x-launchway-audit: project.move
+    /api/v1/unit-moves/preview:
+        post:
+            description: Handled by POST /api/v1/unit-moves/preview; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_unit_moves_preview
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/unit-moves/preview; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - unit-moves
+            x-launchway-access: admin
+            x-launchway-audit: project.move_preview
+    /api/v1/unit-organize:
+        get:
+            description: Handled by GET /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_unit_organize
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - unit-organize
+            x-launchway-access: admin
+        post:
+            description: Handled by POST /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_unit_organize
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/unit-organize; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - unit-organize
+            x-launchway-access: admin
+            x-launchway-audit: unit.organize
+    /api/v1/unit-organize/undo:
+        post:
+            description: Handled by POST /api/v1/unit-organize/undo; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_unit_organize_undo
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/unit-organize/undo; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - unit-organize
+            x-launchway-access: admin
+            x-launchway-audit: unit.organize_undo
+    /api/v1/units:
+        get:
+            description: Handled by GET /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_units
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - units
+            x-launchway-access: signed-in
+        post:
+            description: Handled by POST /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_units
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/units; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - units
+            x-launchway-access: admin
+            x-launchway-audit: unit.create
+    /api/v1/units/{name}:
+        get:
+            description: Handled by GET /api/v1/units/{name}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_units_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/units/{name}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - units
+            x-launchway-access: signed-in
+    /api/v1/units/{name}/projects:
+        post:
+            description: Handled by POST /api/v1/units/{name}/projects; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_units_name_projects
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/units/{name}/projects; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - units
+            x-launchway-access: admin
+            x-launchway-audit: project.create_in_unit
     /api/v1/user:
         get:
             description: 'The caller: login, username, full_name, email.'

@@ -90,6 +90,7 @@ Usage:
   launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
   launchway events   list|show|replay            what reached the server and what was decided about it; start one again
   launchway event-sources list|create|change|delete|test   incoming webhook sources: a signed address that starts a run
+  launchway squadrons list|create|show|candidates|add-flight|move|organize   Squadrons (folders of Flights): make, fill, move, organize
   launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another Flight's run or launch ends
   launchway standards show|set|explain|coverage|profile  the Standing orders every repository has: checks, gates, settings by level
   launchway findings list|show|accept|reopen|export|inspect  what the checks found: the backlog, decisions, a run's verdict
@@ -145,6 +146,8 @@ var commands = map[string]func([]string) error{
 	"events":         cmdEvents,
 	"event-sources":  cmdEventSources,
 	"run-triggers":   cmdRunTriggers,
+	"squadrons":      cmdSquadrons,
+	"units":          cmdSquadrons,
 	"standards":      cmdStandards,
 	"findings":       cmdFindings,
 	"state":          cmdState,

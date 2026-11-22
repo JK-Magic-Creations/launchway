@@ -280,6 +280,13 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run_trigger.delete` | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}`: a trigger on another Flight's results was removed |
 | `run_trigger.from_graph` | `POST /api/v1/projects/{name}/run-triggers/graph`: result triggers made from what the software graph says the Flight depends on; the detail says how many |
 | `run_trigger.allow` | `POST /api/v1/projects/{name}/run-trigger-allows`: the upstream Flight allowed another to trigger on its results (the detail says whether it may read step outputs) |
+| `project.move` | `POST /api/v1/unit-moves`: a request to move Flights (the answer lists which moved; see `project.moved`) |
+| `unit.create` | `POST /api/v1/units`: a Squadron was made with a name |
+| `project.create_in_unit` | `POST /api/v1/units/{name}/projects`: a Flight was made in a Squadron from a repository |
+| `project.move_preview` | `POST /api/v1/unit-moves/preview`: the effects of a move were read (nothing changed) |
+| `project.moved` | One Flight was moved to another Squadron (one entry per Flight; the detail says from and to) |
+| `unit.organize` | `POST /api/v1/unit-organize`: Squadrons were made and Flights filed in them as one change |
+| `unit.organize_undo` | `POST /api/v1/unit-organize/undo`: an organize was undone |
 | `run_trigger.revoke` | `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}`: that permission was withdrawn |
 | `event_source.create` | `POST /api/v1/projects/{name}/event-sources`: an incoming event source was made; the signing secret was shown once and is never recorded |
 | `event_source.change` | `POST /api/v1/projects/{name}/event-sources/{source}`: its settings changed, or its secret was replaced |
