@@ -62,7 +62,6 @@
   .rel-dl { grid-template-columns: 1fr; gap: 2px; }
   .rel-dl dd { margin-bottom: 8px; }
 }
-.qr { display: block; border: 1px solid var(--line-2); border-radius: var(--r1); background: #fff; flex: none; }
 .rel-phone { display: flex; flex-wrap: wrap; gap: 18px; padding: 16px; align-items: flex-start; }
 .rel-phone p { margin: 0 0 8px; max-width: 52ch; }
 .rel-phone .addr { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; overflow-wrap: anywhere; }

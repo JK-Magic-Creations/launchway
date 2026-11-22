@@ -3,7 +3,8 @@ import { canOperate, useMe } from "../auth";
 import { ReleasesNav } from "../components/ReleasesNav";
 import { PromoteDialog } from "../components/ReleasePromote";
 import { CutReleaseButton } from "../components/CutRelease";
-import { QrCode } from "../components/QrCode";
+import { QrCode } from "../kit/QrCode";
+import { encodeQR } from "../kit/qr";
 import { EntityLink } from "../components/EntityLink";
 import { ErrorBox } from "../components/ui";
 import { ago, clock } from "../format";
@@ -319,12 +320,18 @@ function assetAddress(r: Release, a: ReleaseAsset): string {
   return location.origin + (r.public && r.state === "published" ? releasesApi.publicUrl(r.project, r.version, a.name) : releasesApi.getUrl(r.project, r.version, a.name));
 }
 
+/** The code for an address, or, when the address is too long for a code, a plain statement and the address to copy: never a code that would not read. */
+function Code({ text, label, size }: { text: string; label: string; size?: number }) {
+  if (!encodeQR(text)) return <p className="rel-hint" role="status">This address is too long for a QR code. Copy it instead: <span className="addr">{text}</span></p>;
+  return <QrCode text={text} label={label} size={size} />;
+}
+
 function AssetQr({ release, asset }: { release: Release; asset: ReleaseAsset }) {
   const addr = assetAddress(release, asset);
   return (
     <details className="rel-asset-qr">
       <summary>Open on a phone<span className="visually-hidden"> ({asset.name})</span></summary>
-      <QrCode value={addr} label={`QR code that downloads ${asset.name} on a phone`} size={132} />
+      <Code text={addr} label={`QR code that downloads ${asset.name} on a phone`} size={132} />
       <span className="rel-hint">Scan it with the camera. {release.public ? "Anyone may download it." : "A phone that is not signed in is asked to sign in first."}</span>
     </details>
   );
@@ -341,7 +348,7 @@ function PhoneSheet({ v }: { v: ReleaseView }) {
   return (
     <Sheet title="Get it on a phone">
       <div className="rel-phone">
-        <QrCode value={addr} label={main ? `QR code that downloads ${main.name} on a phone` : `QR code that opens ${r.project} ${r.version} on a phone`} />
+        <Code text={addr} label={main ? `QR code that downloads ${main.name} on a phone` : `QR code that opens ${r.project} ${r.version} on a phone`} />
         <div>
           <p>{main ? <>Point the phone's camera at the code to download <b>{main.name}</b>{apk ? ", the Android app" : ""}.</> : <>Point the phone's camera at the code to open this release, where each file has its own download.</>} {r.public ? "Anyone with the address may download it." : "A phone that is not signed in is sent to sign in and then back to the download."}</p>
           {apk && <p className="rel-hint">Android asks once to allow installing from the browser it was downloaded with.</p>}
