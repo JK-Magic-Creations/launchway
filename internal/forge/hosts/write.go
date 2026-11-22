@@ -65,15 +65,15 @@ func (s *Service) ReportSummary(ctx context.Context, project string, number int,
 	if !f.ReportComment {
 		return false, nil
 	}
-	var key string
-	_ = s.db.QueryRow(ctx, `SELECT comment_id FROM outside_comments WHERE project = ? AND pr_number = ?`, project, number).Scan(&key)
+	key, err := s.fl.OutsideSummaryComment(project, number)
+	if err != nil {
+		return false, err
+	}
 	got, err := p.Releases().UpsertSummary(ctx, repo, number, key, body)
 	if err != nil {
 		return false, err
 	}
-	if _, err := s.db.Exec(ctx, `INSERT INTO outside_comments(project, pr_number, comment_id, updated_at) VALUES(?, ?, ?, ?)
-		ON CONFLICT(project, pr_number) DO UPDATE SET comment_id = excluded.comment_id, updated_at = excluded.updated_at`,
-		project, number, got, s.now().UnixMilli()); err != nil {
+	if err := s.fl.PutOutsideSummaryComment(project, number, got); err != nil {
 		return true, err
 	}
 	return true, nil

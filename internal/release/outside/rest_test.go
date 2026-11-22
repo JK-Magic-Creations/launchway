@@ -60,6 +60,15 @@ func (f *fakeHost) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(rel)
+	case r.Method == "PATCH" && p == "/releases/7":
+		var in map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		for tag, rel := range f.releases {
+			rel["body"] = in["body"]
+			_ = json.NewEncoder(w).Encode(f.releases[tag])
+			return
+		}
+		w.WriteHeader(404)
 	case r.Method == "POST" && p == "/releases":
 		var in map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&in)

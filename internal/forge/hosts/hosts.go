@@ -11,7 +11,6 @@ package hosts
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/github"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
+	engstore "github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // Kinds a connection of this service can be.
@@ -29,22 +29,37 @@ var Kinds = []forge.Kind{forge.KindGitHub}
 // ErrNotAttached is wrapped (with forge.ErrNotFound) when a project has no outside repository.
 var ErrNotAttached = errors.New("not attached")
 
+// FlightStore keeps which project is attached to which repository, the
+// report switches and the summary comment keys (the engine implements it).
+type FlightStore interface {
+	PutOutsideFlight(project, connection, repo string) error
+	DeleteOutsideFlight(project string) (bool, error)
+	SetOutsideReports(project string, statuses, comment bool) error
+	OutsideFlightOf(project string) (engstore.FlightRow, bool, error)
+	OutsideFlightsOfRepository(connection, repo string) ([]engstore.FlightRow, error)
+	OutsideFlightsOfConnection(connection string) ([]engstore.FlightRow, error)
+	OutsideSummaryComment(project string, number int) (string, error)
+	PutOutsideSummaryComment(project string, number int, key string) error
+}
+
 // Service is the connections and the Flights attached to them.
 type Service struct {
-	st    *store.Store
-	db    store.DB
-	guard *egress.Guard
-	now   func() time.Time
+	// PublicURL is the address people open Launchway at; links in reports use it.
+	PublicURL string
+	st        *store.Store
+	fl        FlightStore
+	guard     *egress.Guard
+	now       func() time.Time
 }
 
 // New makes the service. The guard is the installation's egress allow-list
 // (forge.mirror_allow): a connection whose host is internal is refused unless
 // it is listed there.
-func New(db store.DB, g *egress.Guard) *Service {
+func New(db store.DB, fl FlightStore, g *egress.Guard) *Service {
 	if g == nil {
 		g, _ = egress.New(nil)
 	}
-	return &Service{st: store.New(db), db: db, guard: g, now: time.Now}
+	return &Service{st: store.New(db), fl: fl, guard: g, now: time.Now}
 }
 
 // SetClock replaces the clock; for tests.
@@ -178,12 +193,12 @@ func (s *Service) Remove(ctx context.Context, name string) (View, error) {
 	if err != nil {
 		return View{}, err
 	}
-	var n int
-	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM outside_flights WHERE connection_id = ?`, c.ID).Scan(&n); err != nil {
+	used, err := s.fl.OutsideFlightsOfConnection(c.ID)
+	if err != nil {
 		return View{}, err
 	}
-	if n > 0 {
-		return View{}, fmt.Errorf("%w: %d Flights keep their code on %s; detach them first", forge.ErrInvalid, n, name)
+	if len(used) > 0 {
+		return View{}, fmt.Errorf("%w: %d Flights keep their code on %s; detach them first", forge.ErrInvalid, len(used), name)
 	}
 	return view(c), s.st.DeleteConnection(ctx, c.ID)
 }
@@ -268,10 +283,7 @@ func (s *Service) Attach(ctx context.Context, project, connection, repoPath stri
 	if err != nil {
 		return Flight{}, err
 	}
-	now := s.now().UnixMilli()
-	if _, err := s.db.Exec(ctx, `INSERT INTO outside_flights(project, connection_id, repo_path, created_at, updated_at) VALUES(?, ?, ?, ?, ?)
-		ON CONFLICT(project) DO UPDATE SET connection_id = excluded.connection_id, repo_path = excluded.repo_path, updated_at = excluded.updated_at`,
-		project, c.ID, repo.Path, now, now); err != nil {
+	if err := s.fl.PutOutsideFlight(project, c.ID, repo.Path); err != nil {
 		return Flight{}, err
 	}
 	return s.Flight(ctx, project)
@@ -279,56 +291,52 @@ func (s *Service) Attach(ctx context.Context, project, connection, repoPath stri
 
 // Detach removes the attachment; the project goes back to its Git address alone.
 func (s *Service) Detach(ctx context.Context, project string) error {
-	res, err := s.db.Exec(ctx, `DELETE FROM outside_flights WHERE project = ?`, project)
+	ok, err := s.fl.DeleteOutsideFlight(project)
 	if err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return fmt.Errorf("%w: project %s is not attached to an outside repository", forge.ErrNotFound, project)
+	if !ok {
+		return fmt.Errorf("%w: %w: project %s is not attached to an outside repository", forge.ErrNotFound, ErrNotAttached, project)
 	}
-	_, err = s.db.Exec(ctx, `DELETE FROM outside_comments WHERE project = ?`, project)
-	return err
+	return nil
 }
 
-const flightCols = `f.project, c.name, f.repo_path, f.report_statuses, f.report_comment, f.connection_id`
-
-func scanFlight(sc interface{ Scan(...any) error }) (Flight, error) {
-	var f Flight
-	var st, cm int
-	if err := sc.Scan(&f.Project, &f.Connection, &f.Repository, &st, &cm, &f.connID); err != nil {
-		return f, err
+func (s *Service) flightOf(row engstore.FlightRow) (Flight, error) {
+	c, err := s.st.Connection(context.Background(), row.ConnectionID)
+	if err != nil {
+		return Flight{}, err
 	}
-	f.ReportStatuses, f.ReportComment = st != 0, cm != 0
-	return f, nil
+	return Flight{Project: row.Project, Connection: c.Name, Repository: row.Repository, ReportStatuses: row.ReportStatuses, ReportComment: row.ReportComment, connID: row.ConnectionID}, nil
 }
 
 // Flight returns the attachment of a project; ErrNotFound when it has none
 // (its repository is hosted here, or is a plain Git address).
 func (s *Service) Flight(ctx context.Context, project string) (Flight, error) {
-	f, err := scanFlight(s.db.QueryRow(ctx, `SELECT `+flightCols+` FROM outside_flights f JOIN forge_connections c ON c.id = f.connection_id WHERE f.project = ?`, project))
-	if errors.Is(err, sql.ErrNoRows) {
-		return f, fmt.Errorf("%w: %w: project %s is not attached to an outside repository", forge.ErrNotFound, ErrNotAttached, project)
+	row, ok, err := s.fl.OutsideFlightOf(project)
+	if err != nil {
+		return Flight{}, err
 	}
-	return f, err
+	if !ok {
+		return Flight{}, fmt.Errorf("%w: %w: project %s is not attached to an outside repository", forge.ErrNotFound, ErrNotAttached, project)
+	}
+	return s.flightOf(row)
 }
 
-// Flights lists the projects attached to a repository of a connection.
+// flightsOf lists the projects attached to a repository of a connection.
 func (s *Service) flightsOf(ctx context.Context, connID, repoPath string) ([]Flight, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+flightCols+` FROM outside_flights f JOIN forge_connections c ON c.id = f.connection_id
-		WHERE f.connection_id = ? AND lower(f.repo_path) = lower(?) ORDER BY f.project`, connID, repoPath)
+	rows, err := s.fl.OutsideFlightsOfRepository(connID, repoPath)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []Flight
-	for rows.Next() {
-		f, err := scanFlight(rows)
+	for _, r := range rows {
+		f, err := s.flightOf(r)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, f)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // SetReports switches the commit statuses and the pull request summary comment
@@ -344,17 +352,32 @@ func (s *Service) SetReports(ctx context.Context, project string, statuses, comm
 	if comment != nil {
 		f.ReportComment = *comment
 	}
-	b := func(v bool) int {
-		if v {
-			return 1
-		}
-		return 0
-	}
-	if _, err := s.db.Exec(ctx, `UPDATE outside_flights SET report_statuses = ?, report_comment = ?, updated_at = ? WHERE project = ?`,
-		b(f.ReportStatuses), b(f.ReportComment), s.now().UnixMilli(), project); err != nil {
+	if err := s.fl.SetOutsideReports(project, f.ReportStatuses, f.ReportComment); err != nil {
 		return f, err
 	}
 	return f, nil
+}
+
+// FlightView is a Flight with what its host cannot do, in the host's own
+// declared words, so a page says so plainly.
+type FlightView struct {
+	Flight
+	Unsupported map[forge.Capability]forge.Declaration `json:"unsupported,omitempty"`
+}
+
+// View returns the attachment of a project with the features its host lacks.
+func (s *Service) View(ctx context.Context, project string) (FlightView, error) {
+	f, err := s.Flight(ctx, project)
+	if err != nil {
+		return FlightView{}, err
+	}
+	v := FlightView{Flight: f, Unsupported: map[forge.Capability]forge.Declaration{}}
+	for k, d := range github.Capabilities() {
+		if d.Support != forge.Native {
+			v.Unsupported[k] = d
+		}
+	}
+	return v, nil
 }
 
 // repoOf finds the repository of a Flight on its connection.

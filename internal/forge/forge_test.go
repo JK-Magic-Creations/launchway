@@ -20,7 +20,7 @@ var modelTypes = []any{
 	Connection{}, SecretRef{}, Repository{}, CloneAddresses{}, Ref{}, Result{}, Details{}, TestCounts{},
 	Principal{}, Mergeability{}, Proposal{}, Revision{}, Review{}, Thread{}, Message{}, Commit{}, TreeEntry{},
 	Comparison{}, RefRule{}, Event{}, Whoami{}, NewRepository{}, NewProposal{}, ProposalPatch{}, Credential{},
-	Declaration{}, ErrUnsupported{}, Page[Repository]{}, RefLayout{}, TagSpec{}, ReleaseFile{}, ReleaseSpec{}, FileChange{},
+	Declaration{}, ErrUnsupported{}, Page[Repository]{}, RefLayout{}, TagSpec{}, ReleaseFile{}, ReleaseSpec{}, FileChange{}, PermissionCheck{}, HostReport{},
 }
 
 // properties lists every JSON property name and Go field name reachable from

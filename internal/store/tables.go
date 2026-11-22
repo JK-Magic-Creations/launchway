@@ -83,6 +83,8 @@ var Tables = []Table{
 	{Name: "step_waits", Class: Pending, Stage: "S2", Why: "run"},
 	{Name: "step_usage", Class: Pending, Stage: "S2", Why: "run"},
 	{Name: "release_outside", Class: Pending, Stage: "S2", Why: "release id"},
+	{Name: "outside_flights", Class: Pending, Stage: "S2", Why: "project name"},
+	{Name: "outside_comments", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_holders", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_waiting", Class: Pending, Stage: "S2", Why: "run"},
 	{Name: "schedule_fires", Class: Pending, Stage: "S2", Why: "project name"},

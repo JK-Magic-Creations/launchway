@@ -476,10 +476,23 @@ type Source struct {
 	// Never stored with the run.
 	Hosted     string `json:"hosted,omitempty"`
 	Credential string `json:"credential,omitempty"`
+	// Outside is set at lease time for a Flight whose repository is kept on
+	// another Git host through a connection: the credential to send to that
+	// host's address only. Never stored with the run, never written to the
+	// workspace's git configuration.
+	Outside *OutsideAuth `json:"outside,omitempty"`
 	// Libraries are the shared libraries the run's templates came from, at
 	// the commits they were expanded from. The runner puts each one's files
 	// in the workspace, at .launchway/lib/<name>.
 	Libraries []LibrarySource `json:"libraries,omitempty"`
+}
+
+// OutsideAuth is a run's credential for a repository on another Git host.
+type OutsideAuth struct {
+	// URL is the clone address; the credential goes to its origin only.
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Secret   string `json:"secret"`
 }
 
 // LibrarySource is where a runner gets one library's files.

@@ -5,26 +5,15 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/forge"
 )
 
-// Check is one permission the features need, and whether the token has it.
-type Check struct {
-	Feature string `json:"feature"`
-	// Needs is the permission to grant, in the host's words.
-	Needs  string `json:"needs"`
-	OK     bool   `json:"ok"`
-	Detail string `json:"detail,omitempty"`
-}
-
-// Report is what "test connection" says, in words for people.
-type Report struct {
-	Account       string     `json:"account"`
-	TokenExpires  *time.Time `json:"token_expires,omitempty"`
-	RateRemaining int        `json:"rate_remaining"`
-	Checks        []Check    `json:"checks"`
-	// Reachable repositories seen on the first page, narrowed to the allow-list.
-	Repositories int `json:"repositories"`
-}
+// Report and Check are the shapes of the connection test.
+type (
+	Report = forge.HostReport
+	Check  = forge.PermissionCheck
+)
 
 // Probe asks the host who the credential is and which of the permissions
 // Launchway's features need it has. It reads only: GET /user (account and the

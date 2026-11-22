@@ -7,7 +7,8 @@ func (s *Server) routes() []route {
 		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.encryptionRoutes(), s.localRoutes(), s.queueRoutes(), s.starterRoutes(), s.registryRoutes(), s.toggleRoutes(), s.toggleSDKRoutes(), s.eventRoutes(), s.eventSourceRoutes(), s.runTriggerRoutes(), s.standardsRoutes(), s.releaseRoutes(), s.releaseManageRoutes(), s.graphRoutes(), s.graphFollowRoutes(), s.cacRoutes(), s.workRoutes(), s.inspectRoutes(), s.homeRoutes(), s.organizeRoutes(), s.searchRoutes(), s.activityRoutes(), s.serviceAccountRoutes(), s.repoCredentialRoutes()} {
 		all = append(all, part...)
 	}
-	all = append(all, s.guideRoutes()...) // the first-run guide (guide_routes.go)
+	all = append(all, s.outsideHostRoutes()...) // outside Git hosts (outside_hosts.go)
+	all = append(all, s.guideRoutes()...)       // the first-run guide (guide_routes.go)
 	return all
 }
 

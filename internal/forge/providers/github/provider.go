@@ -74,6 +74,13 @@ func New(c forge.Connection, g *egress.Guard) (*Provider, error) {
 	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental}, conn: c, c: cl, ep: ep}, nil
 }
 
+// NewWith makes a provider over explicit endpoints and a token reader: for the
+// release publisher of a push mirror, whose address and credential are the
+// mirror's and not a connection's. Every other behaviour is the connection's.
+func NewWith(c forge.Connection, ep Endpoints, g *egress.Guard, token func() (string, error)) *Provider {
+	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental}, conn: c, c: NewClient(ep, g, token), ep: ep}
+}
+
 // Client returns the connection's client, for the probe and the tests.
 func (p *Provider) Client() *Client { return p.c }
 

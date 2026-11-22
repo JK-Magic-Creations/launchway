@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -78,22 +79,21 @@ type Server struct {
 	Toggles     *togglestore.Service      // feature toggles (schema 41); nil: off
 	Secrets     *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
 	sealerMu    sync.Mutex
-	sealer      *auth.Sealer // seals the state of sign-ins in progress
-	reportKey   []byte       // signs links to HTML reports
-
-	MCP      *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
-	Forge    *ForgeHosting    // Git hosting; nil is off
-	Registry *RegistryHosting // the built-in OCI registry under /v2/; nil is off
-	Graph    *GraphService    // the integrated software graph (internal/graph); nil is off
-
-	mux      *http.ServeMux // the routes, which MCP tools call in process
-	checks   checkLimiter
-	live     atomic.Pointer[Live]                                // see Reconfigure
-	draining atomic.Bool                                         // see Drain
-	dbState  func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
-	stopMu   sync.Mutex
-	stopped  chan struct{} // closed by Stop; see longLived
-	local    localRuntime  // built-in accounts: throttle and setup state (local_auth.go)
+	sealer      *auth.Sealer     // seals the state of sign-ins in progress
+	reportKey   []byte           // signs links to HTML reports
+	MCP         *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
+	Forge       *ForgeHosting    // Git hosting; nil is off
+	Hosts       *hosts.Service   // connections to outside Git hosts (internal/forge/hosts); nil is off
+	Registry    *RegistryHosting // the built-in OCI registry under /v2/; nil is off
+	Graph       *GraphService    // the integrated software graph (internal/graph); nil is off
+	mux         *http.ServeMux   // the routes, which MCP tools call in process
+	checks      checkLimiter
+	live        atomic.Pointer[Live]                                // see Reconfigure
+	draining    atomic.Bool                                         // see Drain
+	dbState     func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
+	stopMu      sync.Mutex
+	stopped     chan struct{} // closed by Stop; see longLived
+	local       localRuntime  // built-in accounts: throttle and setup state (local_auth.go)
 }
 
 // Auth configures sign-in.

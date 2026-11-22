@@ -105,6 +105,7 @@ type Answer struct {
 	Status int
 	Body   []byte
 	Header http.Header
+	secret string // the credential used, to remove from messages
 }
 
 // Message is the host's own words for a refusal.
@@ -185,7 +186,7 @@ func (c *Client) do(ctx context.Context, method, raw string, body io.Reader, siz
 	if err != nil {
 		return Answer{}, k.errf("reading the host's answer: %v", err)
 	}
-	a := Answer{Status: resp.StatusCode, Body: b, Header: resp.Header}
+	a := Answer{Status: resp.StatusCode, Body: b, Header: resp.Header, secret: tok}
 	switch {
 	case a.Status == http.StatusUnauthorized:
 		return a, k.errf("the host refused the credential (401%s): it is wrong, revoked or expired", withMsg(a))
@@ -227,9 +228,9 @@ func (c *Client) finish(a Answer, out any, tolerate []int) error {
 				return nil
 			}
 		}
-		k := &call{secret: ""}
+		k := &call{secret: a.secret}
 		if a.Status == http.StatusForbidden || a.Status == http.StatusNotFound {
-			return k.errf("the host answered %d%s. Either the token lacks the permission this needs on the repository, or the repository is not visible to it", a.Status, withMsg(a))
+			return k.errf("the host answered %d%s. Either the token lacks the permission this needs on the repository (a token that may push may not be allowed to make releases, write statuses or comment), or the repository is not visible to it", a.Status, withMsg(a))
 		}
 		return k.errf("the host answered %d%s", a.Status, withMsg(a))
 	}

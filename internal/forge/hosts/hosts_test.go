@@ -30,7 +30,7 @@ func setup(t *testing.T) (*hosts.Service, *githubfake.Host) {
 	t.Setenv("LW_HOSTS_TOKEN", githubfake.Token)
 	t.Setenv("LW_HOSTS_HOOK", "hooksecret")
 	g, _ := egress.New([]string{"127.0.0.1"})
-	return hosts.New(eng.Database(), g), h
+	return hosts.New(eng.Database(), eng, g), h
 }
 
 func add(t *testing.T, s *hosts.Service, h *githubfake.Host, owners ...string) {
@@ -58,7 +58,7 @@ func TestConnectionRules(t *testing.T) {
 		t.Errorf("a reference that does not resolve: %v", err)
 	}
 	strict, _ := egress.New(nil)
-	if _, err := hosts.New(s.Store().DB(), strict).Add(ctx, hosts.AddInput{Name: "y", Kind: forge.KindGitHub, BaseURL: h.BaseURL(), Credential: forge.SecretRef{Env: "LW_HOSTS_TOKEN"}}, "d"); !errors.Is(err, forge.ErrInvalid) {
+	if _, err := hosts.New(s.Store().DB(), nil, strict).Add(ctx, hosts.AddInput{Name: "y", Kind: forge.KindGitHub, BaseURL: h.BaseURL(), Credential: forge.SecretRef{Env: "LW_HOSTS_TOKEN"}}, "d"); !errors.Is(err, forge.ErrInvalid) {
 		t.Errorf("an internal host is refused unless allowed: %v", err)
 	}
 	add(t, s, h)

@@ -868,6 +868,9 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 		// read-only credential made for this run: clone from the server, with no setup here.
 		from, env = r.hostedClone(job.Source.Hosted, job.Source.Credential)
 		sys("Checking out %s (hosted by this server) at %s", job.Source.Hosted, short(job.SHA))
+	} else if job.Source.Outside != nil {
+		from, env = outsideClone(job.Source.Outside)
+		sys("Checking out %s (kept on another Git host, through a connection) at %s", redact.URLs(from), short(job.SHA))
 	} else {
 		sys("Checking out %s at %s", redact.URLs(job.Source.URL), short(job.SHA))
 	}

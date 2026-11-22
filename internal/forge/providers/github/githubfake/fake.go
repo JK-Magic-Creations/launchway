@@ -246,6 +246,13 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 		}
 		h.Statuses = append(h.Statuses, Status{sha, st, ctx, d, tu})
 		return 201, map[string]any{"state": st}, true
+	}
+	return h.routeStatuses(r, m, sub, in, raw)
+}
+
+// routeStatuses is the middle of the routes: statuses, commits, branches, pulls, comments.
+func (h *Host) routeStatuses(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
+	switch {
 	case m == "GET" && strings.HasPrefix(sub, "/commits/") && strings.HasSuffix(sub, "/statuses"):
 		sha := strings.TrimSuffix(strings.TrimPrefix(sub, "/commits/"), "/statuses")
 		out := []any{}
@@ -303,6 +310,13 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 		b, _ := in["body"].(string)
 		h.Comments[id] = b
 		return 200, map[string]any{"id": id}, true
+	}
+	return h.routeReleases(r, m, sub, in, raw)
+}
+
+// routeReleases is the rest of the routes: releases, assets and file contents.
+func (h *Host) routeReleases(r *http.Request, m, sub string, in map[string]any, raw []byte) (int, any, bool) {
+	switch {
 	case m == "GET" && strings.HasPrefix(sub, "/releases/tags/"):
 		rel, ok := h.releases[strings.TrimPrefix(sub, "/releases/tags/")]
 		if !ok {
