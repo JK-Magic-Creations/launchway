@@ -106,6 +106,8 @@ var mcpPermissionTable = map[string]mcpRow{
 	"blame_repository_file":      {map[string]any{"owner": "o", "name": "x", "path": "a"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"search_repository_code":     {map[string]any{"owner": "o", "name": "x", "query": "a"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"create_repository_branch":   {map[string]any{"owner": "o", "name": "x", "branch": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"start_branch_for_item":      {map[string]any{"owner": "o", "name": "x", "item": "PAY-1"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"suggest_branch_name":        {map[string]any{"owner": "o", "name": "x", "item": "PAY-1"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"delete_stale_branches":      {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"delete_repository_branch":   {map[string]any{"owner": "o", "name": "x", "branch": "b"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"upload_repository_files":    {map[string]any{"owner": "o", "name": "x", "message": "m", "files": []any{map[string]any{"path": "a", "content": "YQ=="}}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},

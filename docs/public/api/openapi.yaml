@@ -9972,6 +9972,44 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.branch_delete_stale
+    /api/v1/repositories/{owner}/{name}/branches/from-item:
+        post:
+            description: 'Starts a branch for a work item: {"item", "name" (default: the suggestion), "from" (default: the default branch)}. The branch is made as POST .../branches makes one and the item gets a branch link; the answer has linked. The branch list names the item as work_item.'
+            operationId: post_api_v1_repositories_owner_name_branches_from_item
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Starts a branch for a work item: {"item", "name" (default: the suggestion), "from" (default: the default branch)}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_from_item
     /api/v1/repositories/{owner}/{name}/branches/rename:
         post:
             description: 'Rename a branch: {"name", "new_name"}. Never the default branch (409: make another the default first) and never onto a name that exists (409). The rules of a push apply to both names, so a protected name is for administrators. Pull requests and runs that name the old branch are not moved. Answers {"name", "was", "commit", "note"}.'
@@ -10010,6 +10048,42 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.branch_rename
+    /api/v1/repositories/{owner}/{name}/branches/suggest:
+        get:
+            description: 'The branch name a work item''s key and title make: ?item=PAY-12 gives {"item", "name", "from"}. Nothing is made.'
+            operationId: get_api_v1_repositories_owner_name_branches_suggest
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The branch name a work item''s key and title make: ?item=PAY-12 gives {"item", "name", "from"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/commits:
         get:
             description: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200). {"ref", "items": [{"sha", "subject", "message", "author", "authored_at", "committer", "committed_at", "parents"}]}.'

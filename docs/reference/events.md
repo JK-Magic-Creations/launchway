@@ -432,6 +432,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.branch_create` | `POST /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches create`): a branch made by the server; the detail names the branch and the commit |
 | `repository.branch_delete` | `DELETE /api/v1/repositories/{owner}/{name}/branches` (also `launchway repos branches delete`): a branch removed; the detail names the branch and the commit it was at, which brings it back |
 | `repository.branch_delete_stale` | `POST /api/v1/repositories/{owner}/{name}/branches/delete-stale` (also `launchway repos branches stale --delete --yes`): merged stale branches removed in one go; the detail lists the names removed |
+| `repository.branch_from_item` | `POST /api/v1/repositories/{owner}/{name}/branches/from-item` (also `launchway repos branches start`): a branch made for a work item; the detail names the branch, where it started and the item |
 | `repository.branch_rename` | `POST /api/v1/repositories/{owner}/{name}/branches/rename` (also `launchway repos branches rename`): a branch renamed; the detail names both names and the commit |
 | `repository.tag_create` | `POST /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags create`): a lightweight tag made by the server; the detail names the tag and the commit |
 | `repository.tag_delete` | `DELETE /api/v1/repositories/{owner}/{name}/tags` (also `launchway repos tags delete`): a tag removed; the detail names the tag and the object it was at, which brings it back |

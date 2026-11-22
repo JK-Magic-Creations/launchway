@@ -91,3 +91,97 @@ func TestStaleBranchesAreListedAndRemoved(t *testing.T) {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
 }
+
+func TestBranchNameFromAnItem(t *testing.T) {
+	for _, c := range []struct{ key, title, want string }{
+		{"PAY-12", "Fix the login bug!", "pay-12-fix-the-login-bug"},
+		{"PAY-12", "  ../../etc/passwd  ~^: *?[ ", "pay-12-etc-passwd"},
+		{"PAY-12", "Überweisung läuft nicht", "pay-12-berweisung-l-uft-nicht"},
+		{"PAY-12", "", "pay-12"},
+		{"PAY-12", strings.Repeat("word ", 30), "pay-12-word-word-word-word-word-word-word-word-word-word"},
+	} {
+		got := branchNameFor(c.key, c.title)
+		if len(got) > 60 || strings.HasSuffix(got, "-") || strings.Contains(got, "--") || strings.ContainsAny(got, " ~^:?*[\\.") {
+			t.Errorf("%q: unsafe name %q", c.title, got)
+		}
+		if got != c.want {
+			t.Errorf("%q: %q, want %q", c.title, got, c.want)
+		}
+	}
+}
+
+// A branch started from an item is named from it, tied to it both ways, and refused where a plain branch would be.
+func TestStartABranchFromAnItem(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	ada, vic := e.signIn(t, "ada"), e.signIn(t, "vic")
+	hostedRepo(t, e, "acme/shop")
+	tok := e.tokenFor(t, "ada", "t")
+	url := withToken(e.srv.URL, "/git/acme/shop.git", tok)
+	api := e.srv.URL + "/api/v1/repositories/acme/shop"
+	src := t.TempDir()
+	date := "2026-01-01T10:00:00Z"
+	gitAt(t, src, date, "init", "-q", "-b", "main")
+	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitAt(t, src, date, "add", "-A")
+	gitAt(t, src, date, "commit", "-q", "-m", "first")
+	mustGit(t, src, "push", "-q", url, "main:refs/heads/main")
+
+	var item struct {
+		Ref string `json:"ref"`
+	}
+	r := ada.do("POST", e.srv.URL+"/api/v1/work/items?scope=installation", `{"title":"Round prices to the cent"}`)
+	if r.status != 201 {
+		t.Fatalf("a work item: %d %s", r.status, r.body)
+	}
+	r.json(t, &item)
+	var sug struct{ Name, From string }
+	ada.get(api+"/branches/suggest?item="+item.Ref).json(t, &sug)
+	if !strings.HasSuffix(sug.Name, "-round-prices-to-the-cent") || sug.From != "main" {
+		t.Fatalf("suggestion: %+v", sug)
+	}
+	if r := vic.do("POST", api+"/branches/from-item", `{"item":"`+item.Ref+`"}`); r.status != 403 {
+		t.Fatalf("a viewer: %d %s", r.status, r.body)
+	}
+	if r := ada.do("POST", api+"/branches/from-item", `{"item":"NOPE-1"}`); r.status != 404 {
+		t.Fatalf("an item that is not there: %d %s", r.status, r.body)
+	}
+	var made struct {
+		Name, Item string
+		Linked     bool
+	}
+	r = ada.do("POST", api+"/branches/from-item", `{"item":"`+item.Ref+`"}`)
+	r.json(t, &made)
+	if r.status != 201 || made.Name != sug.Name || !made.Linked {
+		t.Fatalf("from item: %d %s", r.status, r.body)
+	}
+	// Both ways: the item lists the branch, and the branch list names the item.
+	var links struct {
+		Code []struct{ Kind, Repo, Ref string } `json:"code"`
+	}
+	ada.get(e.srv.URL+"/api/v1/work/items/"+item.Ref+"/code").json(t, &links)
+	if len(links.Code) != 1 || links.Code[0].Kind != "branch" || links.Code[0].Ref != made.Name {
+		t.Fatalf("the item's links: %+v", links)
+	}
+	var list struct {
+		Items []struct {
+			Name     string `json:"name"`
+			WorkItem string `json:"work_item"`
+		} `json:"items"`
+	}
+	ada.get(api+"/branches").json(t, &list)
+	var seen string
+	for _, b := range list.Items {
+		if b.Name == made.Name {
+			seen = b.WorkItem
+		}
+	}
+	if seen != item.Ref {
+		t.Fatalf("the branch list says %q, want %q: %+v", seen, item.Ref, list)
+	}
+	// The same name again is a conflict, as for any branch.
+	if r := ada.do("POST", api+"/branches/from-item", `{"item":"`+item.Ref+`"}`); r.status != 409 {
+		t.Fatalf("again: %d %s", r.status, r.body)
+	}
+}

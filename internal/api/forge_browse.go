@@ -32,6 +32,8 @@ func (s *Server) browseRoutes() []route {
 		{"POST " + base + "/branches", repoWrite, "repository.branch_create", s.createBranch},
 		{"DELETE " + base + "/branches", repoWrite, "repository.branch_delete", s.deleteBranch},
 		{"POST " + base + "/branches/rename", repoWrite, "repository.branch_rename", s.renameBranch},
+		{"GET " + base + "/branches/suggest", repoRead, "", s.suggestBranchName},
+		{"POST " + base + "/branches/from-item", repoWrite, "repository.branch_from_item", s.branchFromItem},
 		{"POST " + base + "/branches/delete-stale", repoWrite, "repository.branch_delete_stale", s.deleteStaleBranches},
 		{"GET " + base + "/tags", repoRead, "", s.listTags},
 		{"POST " + base + "/tags", repoWrite, "repository.tag_create", s.createTag},
@@ -144,6 +146,8 @@ func (s *Server) listBranches(w http.ResponseWriter, r *http.Request) {
 		Stale   bool       `json:"stale"`
 		Merged  bool       `json:"merged"`
 		LastRun *branchRun `json:"last_run,omitempty"`
+		// WorkItem is the item the branch was started for.
+		WorkItem string `json:"work_item,omitempty"`
 	}
 	staleDays := s.hostingSettings().StaleBranchDays
 	out := make([]branch, len(items))
@@ -153,6 +157,7 @@ func (s *Server) listBranches(w http.ResponseWriter, r *http.Request) {
 		b.Stale, b.Merged = isStale(it.CommittedAt, staleDays, s.Now()), it.Ahead == 0 && !b.Default
 		if i < 100 {
 			b.LastRun = s.lastRunOfBranch(repo.Path, it.Name)
+			b.WorkItem = s.itemOfBranch(r, repo.Path, it.Name)
 		}
 		if s.Forge.Pulls != nil && i < 100 {
 			if open, err := s.Forge.Pulls.Store.OpenFromSource(r.Context(), repo.ID, it.Name); err == nil && len(open) > 0 {

@@ -339,7 +339,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/branches` | `list_repository_branches` | `repos branches` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches` | `create_repository_branch` | `repos branches create` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches/delete-stale` | `delete_stale_branches` | `repos branches stale` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/branches/from-item` | `start_branch_for_item` | `repos branches start` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/branches/rename` | `rename_repository_branch` | `repos branches rename` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/branches/suggest` | `suggest_branch_name` | `repos branches start` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
