@@ -53,6 +53,7 @@ type staleController struct {
 	refreshed bool
 	asked     int
 	forbidden bool // the credentials may not change the Application
+	after     int  // the controller re-reads only at this many hard refreshes (0: the first)
 }
 
 func (c *staleController) app() map[string]any {
@@ -82,8 +83,8 @@ func (c *staleController) setup(t *testing.T) (*Agent, func() int) {
 			return true, nil, apierrors.NewForbidden(schema.GroupResource{Group: "argoproj.io", Resource: "applications"}, "shop", errors.New("not allowed"))
 		}
 		if strings.Contains(string(a.(k8stesting.PatchAction).GetPatch()), `"hard"`) {
-			c.refreshed = true
 			c.asked++
+			c.refreshed = c.asked >= max(c.after, 1)
 		}
 		return true, &unstructured.Unstructured{Object: c.app()}, nil
 	})
@@ -208,4 +209,33 @@ func TestTheParentIsRefreshedRepeatedlyAndTheTimeoutNamesTheRefresh(t *testing.T
 func asJSONText(m map[string]any) string {
 	b, _ := json.Marshal(m)
 	return string(b)
+}
+
+// A deployment of several commits asks for the refresh after the LAST of them: the step that requests the sync asks
+// the application (hard) until it shows that commit, again after a pause, and stops asking once it does.
+func TestTheSyncStepAsksForARefreshAfterTheLastCommitAndAgainUntilItIsSeen(t *testing.T) {
+	bare, old, tip := twoCommits(t)
+	c := &staleController{bare: bare, old: old, tip: tip, after: 2}
+	a, asked := c.setup(t)
+	a.SeeTimeout = 5 * time.Second
+	var logs []string
+	logf := func(f string, args ...any) { logs = append(logs, fmt.Sprintf(f, args...)) }
+	if _, err := a.requestSync(context.Background(), job("auto"), tip, logf); err != nil {
+		t.Fatal(err)
+	}
+	if got := asked(); got != 2 {
+		t.Fatalf("asked %d hard refreshes, want 2: the first ask was not enough and it asked again, then stopped", got)
+	}
+	if !strings.Contains(strings.Join(logs, "\n"), "re-read the repository") {
+		t.Fatalf("the step does not say it asked: %v", logs)
+	}
+	// With sync.refresh: never nothing is asked.
+	c2 := &staleController{bare: bare, old: old, tip: tip}
+	a2, asked2 := c2.setup(t)
+	j := job("auto")
+	j.Deploy.Sync.Refresh = "never"
+	_, _ = a2.requestSync(context.Background(), j, tip, logf)
+	if asked2() != 0 {
+		t.Fatalf("asked %d times with sync.refresh: never", asked2())
+	}
 }

@@ -382,11 +382,18 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 	if app == nil {
 		return "", fmt.Errorf("there is no application %s in namespace %s", d.Application, cl.argoNS)
 	}
+	// The controller caches what a branch points at, so a normal refresh can leave it on an older commit of the
+	// repository for minutes. A deployment can be several commits a minute apart (the application's own manifest, then
+	// its values), and a refresh asked after the first only would leave the last unseen: the application is asked (hard)
+	// for the LAST commit, and asked again with a growing pause, up to a bound, while it still reports a revision that
+	// does not hold that commit.
+	refreshKey, saidRefresh := "sync:"+d.Deployment+":"+commit, false
 	if t.asksRefresh(d.Sync) {
 		if err := cl.Refresh(ctx, d.Application); err != nil {
 			log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll", d.Application, err)
 		}
 	}
+	defer a.refresh.forget(refreshKey)
 	rc := a.Config.Repos[d.Repo]
 	spec := deploy.Spec{Health: "application"}
 	automated := deploy.ReduceApplication(app, spec, rc.ArgoCDURL, nil).Automated
@@ -429,6 +436,15 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 			return "", errors.New(st.SourceError)
 		}
 		seen := st.Contains != nil && *st.Contains
+		if !seen && t.asksRefresh(d.Sync) {
+			if n, denied, rerr := a.refresh.try(ctx, cl, refreshKey, d.Application, a.refreshFirst()); !saidRefresh && (denied || rerr != nil) {
+				saidRefresh = true
+				log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll. To ask now: %s", d.Application, errors.Join(rerr), howToRefresh(d.Application))
+			} else if n == 1 && !saidRefresh {
+				saidRefresh = true
+				log("Asked Argo CD to re-read the repository for %s; it is asked again, with a growing pause, until it shows commit %s", d.Application, short(commit))
+			}
+		}
 		busy := st.Operation != nil && (st.Operation.Phase == "Running" || st.Operation.Phase == "Terminating")
 		if seen && st.Sync == "Synced" && len(d.Sync.Resources) == 0 && !busy {
 			log("%s is already synced at %s", d.Application, short(st.Revision))
