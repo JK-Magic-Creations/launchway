@@ -11804,7 +11804,7 @@ paths:
             x-launchway-audit: pull.update
     /api/v1/repositories/{owner}/{name}/pulls/{number}/checks:
         get:
-            description: 'What each pipeline said about the head commit, in the words of the run page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}. A check has sentence, tests (totals, tests newly failing against the target branch''s last run), coverage and its change, findings (counts, the new ones apart) and policy_verdict; annotations are findings and failed tests that name a file (and line). A pipeline of a project the caller may not read shows only its status and sentence (detail false).'
+            description: 'What each pipeline said about the head commit, in the words of the Sortie page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}. A check has sentence, tests (totals, tests newly failing against the target branch''s last Sortie), coverage and its change, findings (counts, the new ones apart) and policy_verdict; annotations are findings and failed tests that name a file (and line). A pipeline of a Flight the caller may not read shows only its status and sentence (detail false).'
             operationId: get_api_v1_repositories_owner_name_pulls_number_checks
             parameters:
                 - in: path
@@ -11839,7 +11839,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What each pipeline said about the head commit, in the words of the run page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}.'
+            summary: 'What each pipeline said about the head commit, in the words of the Sortie page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}.'
             tags:
                 - repositories
             x-launchway-access: repo-viewer

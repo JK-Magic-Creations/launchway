@@ -220,12 +220,12 @@ func (s *Server) pullCheckOf(ctx context.Context, runID, target string, detail b
 		c.Findings = pf
 	}
 	// Policy: the worst verdict the run has.
-	if ds, err := s.Engine.RunPolicy(runID); err != nil {
+	ds, err := s.Engine.RunPolicy(runID)
+	if err != nil {
 		return c, nil, nil, err
-	} else {
-		for _, dc := range ds {
-			c.Policy = worseVerdict(c.Policy, dc.Verdict)
-		}
+	}
+	for _, dc := range ds {
+		c.Policy = worseVerdict(c.Policy, dc.Verdict)
 	}
 	return c, notes, deps, nil
 }

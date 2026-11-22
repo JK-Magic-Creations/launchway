@@ -98,7 +98,7 @@ func (cl *client) prChecks(args []string) error {
 			}
 		}
 		for _, d := range out.Deployments {
-			fmt.Fprintf(cl.out, "deployed to %s: %s (%s) %s\n", d.Environment, d.Version, d.Phase, d.Address)
+			fmt.Fprintf(cl.out, "launched to %s: %s (%s) %s\n", d.Environment, d.Version, d.Phase, d.Address)
 		}
 		if out.Verdict != "" {
 			fmt.Fprintln(cl.out, "policy verdict:", out.Verdict)

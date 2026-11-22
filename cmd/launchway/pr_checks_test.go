@@ -30,7 +30,7 @@ func TestCLIPullChecks(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"app #7 (shop): Tests passed", "8 passed, 1 failed, 1 skipped of 10", "1 newly failing, 0 fixed against main",
-		"newly failing: demo.Suite t1", "coverage: 81.5% (-1.2 points)", "1 new in this change", "policy verdict: warn", "a.go:12", "deployed to preview"} {
+		"newly failing: demo.Suite t1", "coverage: 81.5% (-1.2 points)", "1 new in this change", "policy verdict: warn", "a.go:12", "launched to preview"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %q in:\n%s", want, out.String())
 		}

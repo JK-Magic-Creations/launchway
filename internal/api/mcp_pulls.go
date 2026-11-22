@@ -33,7 +33,7 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 		Description: "The open pull requests that wait on you: reviews asked of you or your groups, changes asked on your own, and your own that the merge queue took out, each with why."},
 		mcpCallTimeout, getPullInbox)
 	addTool(srv, c, &mcp.Tool{Name: "get_pull_checks", Annotations: readOnly("What the pipelines said about a pull request"),
-		Description: "For the head commit of a pull request: each pipeline's status in the words of the run page, test totals and tests that newly fail against the target branch's last run, coverage and its change, findings by severity with the new ones apart, the policy verdict and deployments, and the findings and failed tests that name a file and line. Detail appears only for pipelines of projects you may read."},
+		Description: "For the head commit of a pull request: each pipeline's status in the words of the Sortie page, test totals and tests that newly fail against the target branch's last Sortie, coverage and its change, findings by severity with the new ones apart, the policy verdict and deployments, and the findings and failed tests that name a file and line. Detail appears only for pipelines of Flights you may read."},
 		mcpCallTimeout, getPullChecks)
 	addTool(srv, c, &mcp.Tool{Name: "get_pull_queue", Annotations: readOnly("A pull request's place in the merge queue"),
 		Description: "Whether the target branch has a merge queue, this pull request's place in it and its state (waiting, testing, or removed with the reason), and the whole queue of the branch."},

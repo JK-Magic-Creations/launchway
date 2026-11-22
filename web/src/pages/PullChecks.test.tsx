@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { installServer } from "../test/mockApi";
+import { scan } from "../test/axe";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,5 +33,7 @@ describe("results for the head commit on the pull request page", () => {
     fireEvent.click(mark);
     await waitFor(() => expect(screen.getByRole("note").textContent).toContain("scanner: Rounding drops cents here"));
     expect(mark.getAttribute("aria-expanded")).toBe("true");
+    const found = await scan(document.body, { page: true });
+    expect(found.map((f) => `${f.rule}: ${f.help}`)).toEqual([]);
   }, 20000);
 });

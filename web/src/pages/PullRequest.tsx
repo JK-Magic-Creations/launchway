@@ -102,7 +102,7 @@ function FileView({ f, path, n, conv, mode, since, canApply, reload, onError, st
           <button type="button" className="btn btn-sm cbtn" aria-label={`Comment on ${f.path} line ${r.neu}`} onClick={() => setComment({ line: r.neu!, text: "" })}>Comment</button>
         )}{note(r) && <button type="button" className="btn btn-sm" aria-expanded={shown === r.neu} aria-label={`Finding on line ${r.neu}`} onClick={() => setShown(shown === r.neu ? null : r.neu!)}>{note(r)!.severity ?? "Result"}</button>}</td>
       </tr>
-      {shown === r.neu && <tr className="thread-row"><td colSpan={4} className="pr-note" role="note">{note(r)!.tool && `${note(r)!.tool}: `}{note(r)!.message}</td></tr>}
+      {shown === r.neu && <tr className="thread-row"><td colSpan={4} className="pr-note"><div role="note">{note(r)!.tool && `${note(r)!.tool}: `}{note(r)!.message}</div></td></tr>}
       {at(r.neu).map((t) => <tr key={t.id} className="thread-row"><td colSpan={4}><ThreadView t={t} path={path} n={n} canApply={canApply} onChange={reload} onError={onError} /></td></tr>)}
       {comment && r.neu === comment.line && r.kind !== "del" && (
         <tr className="thread-row"><td colSpan={4}>
