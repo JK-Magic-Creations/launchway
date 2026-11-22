@@ -762,15 +762,20 @@ func (s *Service) CreateBranch(ctx context.Context, repoID, name, from string, c
 	if err := checkRef(name); err != nil || strings.HasPrefix(name, "refs/") || strings.HasSuffix(name, "/") || strings.HasSuffix(name, ".lock") || strings.Contains(name, "//") {
 		return "", invalid("%q is not a branch name", name)
 	}
+	return s.createRef(ctx, repoID, "refs/heads/", name, from, "the branch", check)
+}
+
+// createRef makes a ref under prefix at a commit, branch or tag, never moving one that exists.
+func (s *Service) createRef(ctx context.Context, repoID, prefix, name, from, what string, check func(ref, old, next string) error) (string, error) {
 	var created string
 	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
-		ref := "refs/heads/" + name
+		ref := prefix + name
 		if _, ok := refs[ref]; ok {
-			return nil, fmt.Errorf("%w: the branch %s exists already", ErrConflict, name)
+			return nil, fmt.Errorf("%w: %s %s exists already", ErrConflict, what, name)
 		}
 		for r := range refs {
 			if strings.HasPrefix(r, ref+"/") || strings.HasPrefix(ref, r+"/") {
-				return nil, fmt.Errorf("%w: %s clashes with the branch %s", ErrConflict, name, strings.TrimPrefix(r, "refs/heads/"))
+				return nil, fmt.Errorf("%w: %s clashes with %s %s", ErrConflict, name, what, strings.TrimPrefix(r, prefix))
 			}
 		}
 		g := runner{dir: scratch, limits: s.Git.Limits(), scratch: true}
@@ -827,44 +832,12 @@ func validRefName(name, kind string) error {
 	return nil
 }
 
-// CreateTag makes a lightweight tag at a commit, branch or tag. A tag that
-// exists is never moved.
+// CreateTag makes a lightweight tag at a commit, branch or tag. A tag that exists is never moved.
 func (s *Service) CreateTag(ctx context.Context, repoID, name, from string, check func(ref, old, next string) error) (string, error) {
 	if err := validRefName(name, "tag"); err != nil {
 		return "", err
 	}
-	var created string
-	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
-		ref := "refs/tags/" + name
-		if _, ok := refs[ref]; ok {
-			return nil, fmt.Errorf("%w: the tag %s exists already; a tag is never moved, delete it first", ErrConflict, name)
-		}
-		for r := range refs {
-			if strings.HasPrefix(r, ref+"/") || strings.HasPrefix(ref, r+"/") {
-				return nil, fmt.Errorf("%w: %s clashes with the tag %s", ErrConflict, name, strings.TrimPrefix(r, "refs/tags/"))
-			}
-		}
-		g := runner{dir: scratch, limits: s.Git.Limits(), scratch: true}
-		at := from
-		for _, pre := range []string{"refs/heads/", "refs/tags/"} {
-			if v, ok := refs[pre+from]; ok {
-				at = v
-				break
-			}
-		}
-		sha, err := g.resolve(ctx, at)
-		if err != nil {
-			return nil, err
-		}
-		if check != nil {
-			if err := check(ref, "", sha); err != nil {
-				return nil, err
-			}
-		}
-		created = sha
-		return []storage.RefUpdate{{Name: ref, Old: strings.Repeat("0", len(sha)), New: sha}}, nil
-	})
-	return created, err
+	return s.createRef(ctx, repoID, "refs/tags/", name, from, "the tag", check)
 }
 
 // DeleteTag removes a tag and says which object it pointed at.

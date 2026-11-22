@@ -379,34 +379,7 @@ func (cl *client) reposBranches(args []string) error {
 		return nil
 	}
 	if len(args) > 0 && (args[0] == "create" || args[0] == "delete") {
-		verb := args[0]
-		fs := flag.NewFlagSet("repos branches "+verb, flag.ContinueOnError)
-		from := fs.String("from", "", "a branch, tag or commit to start from (default: the default branch)")
-		pos, err := parseArgs(fs, args[1:])
-		if err != nil {
-			return err
-		}
-		if len(pos) != 2 {
-			return usageErr("launchway repos branches %s OWNER/NAME NAME", verb)
-		}
-		base, err := repoPath(pos[0])
-		if err != nil {
-			return err
-		}
-		if verb == "create" {
-			var out struct{ Name, Commit string }
-			if err := cl.call("POST", base+"/branches", map[string]string{"name": pos[1], "from": *from}, &out); err != nil {
-				return err
-			}
-			fmt.Fprintf(cl.out, "Made %s at %.10s.\n", out.Name, out.Commit)
-			return nil
-		}
-		var out struct{ Name, Was, Undo string }
-		if err := cl.call("DELETE", base+"/branches?name="+url.QueryEscape(pos[1]), nil, &out); err != nil {
-			return err
-		}
-		fmt.Fprintf(cl.out, "Deleted %s (it was at %s).\nTo bring it back: %s\n", out.Name, out.Was, out.Undo)
-		return nil
+		return cl.reposRefWrite("branches", "branch", args)
 	}
 	fs := flag.NewFlagSet("repos branches", flag.ContinueOnError)
 	q := fs.String("q", "", "only names containing this text")
@@ -457,34 +430,7 @@ func (cl *client) reposBranches(args []string) error {
 
 func (cl *client) reposTags(args []string) error {
 	if len(args) > 0 && (args[0] == "create" || args[0] == "delete") {
-		verb := args[0]
-		fs := flag.NewFlagSet("repos tags "+verb, flag.ContinueOnError)
-		from := fs.String("from", "", "a branch, tag or commit to tag (default: the default branch)")
-		pos, err := parseArgs(fs, args[1:])
-		if err != nil {
-			return err
-		}
-		if len(pos) != 2 {
-			return usageErr("launchway repos tags %s OWNER/NAME NAME", verb)
-		}
-		base, err := repoPath(pos[0])
-		if err != nil {
-			return err
-		}
-		if verb == "create" {
-			var out struct{ Name, Commit string }
-			if err := cl.call("POST", base+"/tags", map[string]string{"name": pos[1], "from": *from}, &out); err != nil {
-				return err
-			}
-			fmt.Fprintf(cl.out, "Made the tag %s at %.10s.\n", out.Name, out.Commit)
-			return nil
-		}
-		var out struct{ Name, Was, Undo string }
-		if err := cl.call("DELETE", base+"/tags?name="+url.QueryEscape(pos[1]), nil, &out); err != nil {
-			return err
-		}
-		fmt.Fprintf(cl.out, "Deleted the tag %s (it was at %s).\nTo bring it back: %s\n", out.Name, out.Was, out.Undo)
-		return nil
+		return cl.reposRefWrite("tags", "tag", args)
 	}
 	fs := flag.NewFlagSet("repos tags", flag.ContinueOnError)
 	q := fs.String("q", "", "only names containing this text")
@@ -673,4 +619,36 @@ func (cl *client) reposInspect(args []string) error {
 	return cl.print(out, *asJSON, func() {
 		fmt.Fprintf(cl.out, "Started the Inspection as run #%d of %s (%s).\n", out.Run.Number, out.Project, out.Run.ID)
 	})
+}
+
+// reposRefWrite makes or deletes a branch or a tag: repos branches create|delete, repos tags create|delete.
+func (cl *client) reposRefWrite(plural, one string, args []string) error {
+	verb := args[0]
+	fs := flag.NewFlagSet("repos "+plural+" "+verb, flag.ContinueOnError)
+	from := fs.String("from", "", "a branch, tag or commit to start from (default: the default branch)")
+	pos, err := parseArgs(fs, args[1:])
+	if err != nil {
+		return err
+	}
+	if len(pos) != 2 {
+		return usageErr("launchway repos %s %s OWNER/NAME NAME", plural, verb)
+	}
+	base, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	if verb == "create" {
+		var out struct{ Name, Commit string }
+		if err := cl.call("POST", base+"/"+plural, map[string]string{"name": pos[1], "from": *from}, &out); err != nil {
+			return err
+		}
+		fmt.Fprintf(cl.out, "Made the %s %s at %.10s.\n", one, out.Name, out.Commit)
+		return nil
+	}
+	var out struct{ Name, Was, Undo string }
+	if err := cl.call("DELETE", base+"/"+plural+"?name="+url.QueryEscape(pos[1]), nil, &out); err != nil {
+		return err
+	}
+	fmt.Fprintf(cl.out, "Deleted the %s %s (it was at %s).\nTo bring it back: %s\n", one, out.Name, out.Was, out.Undo)
+	return nil
 }

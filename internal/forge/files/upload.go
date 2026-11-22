@@ -43,38 +43,12 @@ type Uploaded struct {
 // PutFiles makes one commit on an existing branch that adds the files, in the same way Put adds one: the caller
 // checks authorization and the branch rules through check, and the update is a compare-and-swap on the branch.
 func (s *Service) PutFiles(ctx context.Context, repoID string, u Upload, check func(ref, old, next string) error) (Uploaded, error) {
-	switch {
-	case len(u.Files) == 0:
-		return Uploaded{}, invalid("an upload needs at least one file")
-	case len(u.Files) > MaxUploadFiles:
-		return Uploaded{}, invalid("an upload may hold at most %d files", MaxUploadFiles)
-	case strings.TrimSpace(u.Message) == "" || len(u.Message) > MaxMessage:
-		return Uploaded{}, invalid("a commit needs a message of at most %d bytes", MaxMessage)
-	case checkRef(u.Branch) != nil || strings.HasPrefix(u.Branch, "refs/"):
-		return Uploaded{}, invalid("%q is not a branch name", u.Branch)
-	}
-	paths := make([]string, len(u.Files))
-	seen := map[string]bool{}
-	total := 0
-	for i, f := range u.Files {
-		p, err := CleanPath(f.Path)
-		if err != nil || p == "" {
-			return Uploaded{}, invalid("%q is not a path inside the repository", f.Path)
-		}
-		if seen[p] {
-			return Uploaded{}, invalid("%s is in the upload twice", p)
-		}
-		if len(f.Content) > MaxFileBytes {
-			return Uploaded{}, invalid("%s is larger than %d MiB: a file uploaded here may be at most that", p, MaxFileBytes>>20)
-		}
-		total += len(f.Content)
-		seen[p], paths[i] = true, p
-	}
-	if total > MaxUploadBytes {
-		return Uploaded{}, invalid("an upload may carry at most %d MiB in all", MaxUploadBytes>>20)
+	paths, err := checkUpload(u)
+	if err != nil {
+		return Uploaded{}, err
 	}
 	var out Uploaded
-	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+	_, err = s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
 		ref := "refs/heads/" + u.Branch
 		tip := refs[ref]
 		if tip == "" {
@@ -133,4 +107,39 @@ func (s *Service) PutFiles(ctx context.Context, repoID string, u Upload, check f
 		return []storage.RefUpdate{{Name: ref, Old: tip, New: commit}}, nil
 	})
 	return out, err
+}
+
+// checkUpload validates an upload before the repository is touched and returns its cleaned paths.
+func checkUpload(u Upload) ([]string, error) {
+	switch {
+	case len(u.Files) == 0:
+		return nil, invalid("an upload needs at least one file")
+	case len(u.Files) > MaxUploadFiles:
+		return nil, invalid("an upload may hold at most %d files", MaxUploadFiles)
+	case strings.TrimSpace(u.Message) == "" || len(u.Message) > MaxMessage:
+		return nil, invalid("a commit needs a message of at most %d bytes", MaxMessage)
+	case checkRef(u.Branch) != nil || strings.HasPrefix(u.Branch, "refs/"):
+		return nil, invalid("%q is not a branch name", u.Branch)
+	}
+	paths := make([]string, len(u.Files))
+	seen := map[string]bool{}
+	total := 0
+	for i, f := range u.Files {
+		p, err := CleanPath(f.Path)
+		if err != nil || p == "" {
+			return nil, invalid("%q is not a path inside the repository", f.Path)
+		}
+		if seen[p] {
+			return nil, invalid("%s is in the upload twice", p)
+		}
+		if len(f.Content) > MaxFileBytes {
+			return nil, invalid("%s is larger than %d MiB: a file uploaded here may be at most that", p, MaxFileBytes>>20)
+		}
+		total += len(f.Content)
+		seen[p], paths[i] = true, p
+	}
+	if total > MaxUploadBytes {
+		return nil, invalid("an upload may carry at most %d MiB in all", MaxUploadBytes>>20)
+	}
+	return paths, nil
 }
