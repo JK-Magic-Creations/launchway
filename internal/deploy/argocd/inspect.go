@@ -20,42 +20,6 @@ import (
 // must be allowed for the project, and only the target's rollout
 // namespaces are read.
 
-// Answer is what a runner sends back for an inspect request.
-type Answer struct {
-	Tree    *inspect.Tree     `json:"tree,omitempty"`
-	Actions []inspect.Allowed `json:"actions,omitempty"`
-	Text    string            `json:"text,omitempty"`  // a manifest
-	Lines   []inspect.LogLine `json:"lines,omitempty"` // a log's tail
-	Notes   []string          `json:"notes,omitempty"`
-	Result  string            `json:"result,omitempty"` // a control's result
-	Detail  string            `json:"detail,omitempty"`
-}
-
-// LogParams are a logs request's parameters.
-type LogParams struct {
-	Pod          string `json:"pod,omitempty"`
-	Container    string `json:"container,omitempty"`
-	ReplicaSet   string `json:"replica_set,omitempty"`
-	Role         string `json:"role,omitempty"`
-	Job          string `json:"job,omitempty"`
-	Previous     bool   `json:"previous,omitempty"`
-	Tail         int    `json:"tail,omitempty"`
-	SinceSeconds int    `json:"since_seconds,omitempty"`
-}
-
-// ControlParams are a control request's parameters.
-type ControlParams struct {
-	Action   string `json:"action"`
-	Object   string `json:"object"`
-	Replicas int    `json:"replicas,omitempty"`
-	Reason   string `json:"reason,omitempty"`
-}
-
-// ManifestParams are a manifest request's parameters.
-type ManifestParams struct {
-	Object string `json:"object"`
-}
-
 type treeEntry struct {
 	tree *inspect.Tree
 	acts []inspect.Allowed
@@ -143,6 +107,9 @@ func (a *Agent) inspectTree(ctx context.Context, cl *Cluster, t Target, j *engin
 	b := &inspect.Builder{R: cl.dynamicReader(), Red: inspect.NewRedactor()}
 	tree := b.Build(ctx, req)
 	tree.Notes = append(notes, tree.Notes...)
+	if t.Inspect.Logs {
+		a.addLastLogs(ctx, cl, tree)
+	}
 	acts := inspect.Actions(tree, t.Inspect.ScaleMax)
 	if !t.Inspect.Control {
 		for i := range acts {
@@ -183,12 +150,12 @@ func (a *Agent) Inspect(ctx context.Context, j *engine.InspectJob, chunk func(st
 	if err != nil {
 		return "", err
 	}
-	var ans Answer
+	var ans inspect.Answer
 	switch j.Kind {
 	case engine.InspectTree:
 		ans.Tree, ans.Actions = tree, acts
 	case engine.InspectManifest:
-		var p ManifestParams
+		var p inspect.ManifestParams
 		if err := json.Unmarshal(j.Params, &p); err != nil {
 			return "", err
 		}
@@ -201,7 +168,7 @@ func (a *Agent) Inspect(ctx context.Context, j *engine.InspectJob, chunk func(st
 	case engine.InspectLogs:
 		return a.inspectLogs(ctx, cl, tree, j, chunk)
 	case engine.InspectControl:
-		var p ControlParams
+		var p inspect.ControlParams
 		if err := json.Unmarshal(j.Params, &p); err != nil {
 			return "", err
 		}
@@ -230,7 +197,7 @@ func parseObject(s string) (inspect.Ref, error) {
 }
 
 func (a *Agent) inspectLogs(ctx context.Context, cl *Cluster, tree *inspect.Tree, j *engine.InspectJob, chunk func(string) (bool, error)) (string, error) {
-	var p LogParams
+	var p inspect.LogParams
 	if err := json.Unmarshal(j.Params, &p); err != nil {
 		return "", err
 	}
@@ -252,7 +219,7 @@ func (a *Agent) inspectLogs(ctx context.Context, cl *Cluster, tree *inspect.Tree
 			return "", err
 		}
 		sort.SliceStable(all, func(i, k int) bool { return all[i].T < all[k].T })
-		out, err := json.Marshal(Answer{Lines: all, Notes: append(notes, n...)})
+		out, err := json.Marshal(inspect.Answer{Lines: all, Notes: append(notes, n...)})
 		return string(out), err
 	}
 	stopped := false
@@ -267,6 +234,40 @@ func (a *Agent) inspectLogs(ctx context.Context, cl *Cluster, tree *inspect.Tree
 	if err != nil {
 		return "", err
 	}
-	out, err := json.Marshal(Answer{Notes: append(notes, n...)})
+	out, err := json.Marshal(inspect.Answer{Notes: append(notes, n...)})
 	return string(out), err
+}
+
+// addLastLogs gives the first few pods that are not ready their last log lines
+// (of the container that ended, or the running one), so the reason is on the page.
+func (a *Agent) addLastLogs(ctx context.Context, cl *Cluster, tree *inspect.Tree) {
+	src, err := cl.logSource()
+	if err != nil {
+		return
+	}
+	lg := &inspect.Logger{Src: src, Red: tree.Redactor()}
+	done := 0
+	for i := range tree.Nodes {
+		n := &tree.Nodes[i]
+		if n.Kind != "Pod" || n.NotReady == nil || done >= 5 {
+			continue
+		}
+		done++
+		for _, c := range n.Containers {
+			if c.Init || c.State == "waiting" && c.Restarts == 0 {
+				continue
+			}
+			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			var lines []inspect.LogLine
+			_, _ = lg.Read(cctx, []inspect.LogTarget{{Namespace: n.Namespace, Pod: n.Name, Container: c.Name, Source: n.Name}},
+				inspect.LogOptions{TailLines: 5, Previous: c.Restarts > 0 && c.State != "running"}, func(l []inspect.LogLine) bool { lines = append(lines, l...); return true })
+			cancel()
+			for _, l := range lines {
+				n.NotReady.LastLogs = append(n.NotReady.LastLogs, l.Line)
+			}
+			if len(lines) > 0 {
+				break
+			}
+		}
+	}
 }

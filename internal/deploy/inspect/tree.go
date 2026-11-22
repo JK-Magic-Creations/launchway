@@ -252,8 +252,6 @@ func sectionOf(kind string) string {
 	return "other"
 }
 
-var workloadKinds = []string{"Rollout", "Deployment", "StatefulSet", "DaemonSet", "CronJob", "Job"}
-
 // addObject makes a node of an object.
 func (bd *build) addObject(kind string, obj map[string]any, parent string) *Node {
 	r := Ref{Kind: kind, Namespace: ns(obj), Name: name(obj)}
@@ -372,6 +370,21 @@ func (bd *build) describe(n *Node, o map[string]any) {
 		if n.Message == "" {
 			n.Message = strings.TrimSpace(digS(o, "status", "phase") + " " + digS(o, "status", "message"))
 		}
+	case "Job", "CronJob", "AnalysisRun", "Experiment":
+		bd.describeBatch(n, o)
+	case "Service", "ConfigMap", "Secret", "ServiceAccount", "Role", "RoleBinding":
+		bd.describeConfig(n, o)
+	case "HorizontalPodAutoscaler", "PodDisruptionBudget", "PersistentVolumeClaim", "NetworkPolicy", "Ingress", "HTTPRoute", "VirtualService", "DestinationRule":
+		bd.describeMisc(n, o)
+	}
+	if n.Health == "" {
+		n.Health = Unknown
+	}
+}
+
+func (bd *build) describeBatch(n *Node, o map[string]any) {
+	red := bd.red
+	switch n.Kind {
 	case "Job":
 		switch {
 		case digI(o, "status", "failed") > 0 && digI(o, "status", "active") == 0:
@@ -406,6 +419,12 @@ func (bd *build) describe(n *Node, o map[string]any) {
 		if n.Parent == "" {
 			n.Section = "testing"
 		}
+	}
+}
+
+func (bd *build) describeConfig(n *Node, o map[string]any) {
+	red := bd.red
+	switch n.Kind {
 	case "Service":
 		n.Health = Healthy
 		for _, p := range digL(o, "spec", "ports") {
@@ -464,6 +483,11 @@ func (bd *build) describe(n *Node, o map[string]any) {
 			sm := m(s)
 			n.Bound = append(n.Bound, digS(sm, "kind")+" "+digS(sm, "name"))
 		}
+	}
+}
+
+func (bd *build) describeMisc(n *Node, o map[string]any) {
+	switch n.Kind {
 	case "HorizontalPodAutoscaler":
 		n.Health = Healthy
 		n.Message = fmt.Sprintf("min %d, max %d; now %d, wants %d", digI(o, "spec", "minReplicas"), digI(o, "spec", "maxReplicas"), digI(o, "status", "currentReplicas"), digI(o, "status", "desiredReplicas"))
@@ -491,9 +515,6 @@ func (bd *build) describe(n *Node, o map[string]any) {
 	case "Ingress", "HTTPRoute", "VirtualService", "DestinationRule":
 		n.Health = Healthy
 		bd.route(n, o)
-	}
-	if n.Health == "" {
-		n.Health = Unknown
 	}
 }
 
@@ -606,7 +627,6 @@ func (bd *build) usedBy() {
 }
 
 func (bd *build) pod(n *Node, o map[string]any) {
-	red := bd.red
 	phase := digS(o, "status", "phase")
 	ready := false
 	for _, c := range digL(o, "status", "conditions") {
@@ -653,6 +673,10 @@ func (bd *build) pod(n *Node, o map[string]any) {
 	if len(n.Containers) > 0 {
 		n.Image = n.Containers[len(n.Containers)-1].Image
 	}
+	bd.podHealth(n, o, phase, ready)
+}
+
+func (bd *build) podHealth(n *Node, o map[string]any, phase string, ready bool) {
 	bad := ""
 	for _, c := range n.Containers {
 		switch c.Reason {
@@ -683,7 +707,6 @@ func (bd *build) pod(n *Node, o map[string]any) {
 	default:
 		n.Health = Unknown
 	}
-	_ = red
 	if n.Health != Healthy && n.Health != Completed {
 		n.NotReady = &NotReady{Why: bd.whyNotReady(n, o)}
 	}

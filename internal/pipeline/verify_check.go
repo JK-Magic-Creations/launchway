@@ -65,7 +65,7 @@ type HealthCheck struct {
 	// MaxLatency is the slowest answer that counts as healthy: a slower
 	// one fails the call even when its status and body are right.
 	MaxLatency Duration `json:"max_latency,omitempty"`
-	Every         Duration             `json:"every,omitempty"`
+	Every      Duration `json:"every,omitempty"`
 	// Success is the share of calls in an interval that must be healthy.
 	Success float64 `json:"success"`
 	// ServerName is the name to verify in the TLS certificate when the

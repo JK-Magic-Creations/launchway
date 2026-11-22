@@ -81,7 +81,7 @@ export function LaunchPage({ run, dep }: { run: string; dep: string }) {
         <h1 className="lw-title">Launch of {d.service} to {d.environment}</h1>
         <p className="lw-sub">
           Version <Mono>{d.version}</Mono> · Airfield <Mono>{d.target}</Mono> · application <Mono>{d.application}</Mono>
-          {ro && <> · <strong>{ro.strategy === "blueGreen" ? "blue-green" : ro.strategy}</strong> {ro.kind} <Mono>{ro.name}</Mono>: {ro.phase}{ro.paused ? ", paused" : ""}{ro.aborted ? ", aborted" : ""}</>}
+          {ro && <> · <strong>{ro.strategy === "blueGreen" ? "blue-green" : ro.strategy}</strong> {ro.kind} <Mono>{ro.name}</Mono>: {ro.phase}{ro.user_paused ? ", paused by a person" : ""}{ro.aborted ? ", aborted" : ""}</>}
           {view?.closed && <> · <strong>Launch over</strong></>}
         </p>
         {view && <p className="lw-live" role="status">

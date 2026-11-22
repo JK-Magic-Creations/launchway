@@ -42,7 +42,7 @@ func TestInspectLimitsAndIdle(t *testing.T) {
 	}
 	// Nobody took them: after two minutes they end.
 	clk.Add(3 * time.Minute)
-	e.purgeInspect(e.now().UnixMilli() + 1_000_000)
+	e.purgeInspectNow(e.now().UnixMilli())
 	if n, _ := e.OpenInspects("kind"); n != 0 {
 		t.Fatalf("%d requests still open after two minutes unanswered", n)
 	}

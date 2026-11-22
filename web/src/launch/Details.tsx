@@ -27,7 +27,7 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
       <p className="lw-det-sub">
         <HealthTag h={node.health} /> <ChangeTag c={node.change} />
         {node.role && <> <span className={`lw-role lw-role-${node.role}`}>{node.role}</span></>}
-        {node.created ? <span className="faint"> · created {ago(node.created, now)}<span className="sr-only"> ({clock(node.created)})</span></span> : null}
+        {node.created ? <span className="faint"> · created {ago(node.created, now)}<span className="visually-hidden"> ({clock(node.created)})</span></span> : null}
         {node.namespace && <span className="faint"> · namespace <Mono>{node.namespace}</Mono></span>}
       </p>
       {node.message && <p className="lw-msg"><span className="faint">The controller says: </span>{node.message}</p>}
@@ -45,7 +45,7 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
         <>
           <h3 className="h-xs">Containers</h3>
           <table className="lw-table">
-            <caption className="sr-only">Containers of {node.name}</caption>
+            <caption className="visually-hidden">Containers of {node.name}</caption>
             <thead><tr><th scope="col">Container</th><th scope="col">State</th><th scope="col">Restarts</th><th scope="col">Logs</th></tr></thead>
             <tbody>
               {node.containers.map((c) => (
@@ -56,8 +56,8 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
                   <td>
                     {v.can_logs ? (
                       <>
-                        <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name })}>Read<span className="sr-only"> logs of {c.name}</span></button>
-                        {c.previous && c.restarts > 0 && <> <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name, previous: "1" })}>Earlier run<span className="sr-only"> of {c.name}</span></button></>}
+                        <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name })}>Read<span className="visually-hidden"> logs of {c.name}</span></button>
+                        {c.previous && c.restarts > 0 && <> <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name, previous: "1" })}>Earlier run<span className="visually-hidden"> of {c.name}</span></button></>}
                       </>
                     ) : <span className="faint">needs the operator role</span>}
                   </td>
@@ -80,7 +80,7 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
       {node.weights && node.weights.length > 0 && (
         <>
           <h3 className="h-xs">Where requests go</h3>
-          <table className="lw-table"><caption className="sr-only">Backends of {node.name} and their weights</caption>
+          <table className="lw-table"><caption className="visually-hidden">Backends of {node.name} and their weights</caption>
             <thead><tr><th scope="col">Backend</th><th scope="col">Weight</th><th scope="col">Only when</th></tr></thead>
             <tbody>{node.weights.map((w, i) => <tr key={i}><th scope="row"><Mono>{w.backend}</Mono></th><td>{w.weight}</td><td>{w.match || "always"}</td></tr>)}</tbody>
           </table>

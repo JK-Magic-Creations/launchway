@@ -74,48 +74,7 @@ func (bd *build) canary(v *RolloutView, o map[string]any) {
 	}
 	steps := digL(c, "steps")
 	v.Current = cur
-	desired := 0
-	for i, s := range steps {
-		sm := m(s)
-		st := Step{Index: i}
-		switch {
-		case has(sm, "setWeight"):
-			w := toInt(sm["setWeight"])
-			st.Kind, st.Weight, st.Label = "setWeight", &w, fmt.Sprintf("Send %d%% of traffic to the new version", w)
-			if i <= cur {
-				desired = w
-			}
-		case sm["pause"] != nil:
-			st.Kind = "pause"
-			if d := digS(sm, "pause", "duration"); d != "" {
-				st.Seconds = durationSeconds(d)
-				st.Label = "Pause " + d
-			} else {
-				st.Label = "Pause until someone promotes"
-			}
-		case sm["analysis"] != nil:
-			st.Kind, st.Label = "analysis", "Analysis: "+templateNames(digL(sm, "analysis", "templates"))
-		case sm["experiment"] != nil:
-			st.Kind, st.Label = "experiment", "Experiment"
-		case sm["setCanaryScale"] != nil:
-			st.Kind, st.Label = "setCanaryScale", "Set the canary's scale"
-		case sm["setHeaderRoute"] != nil:
-			st.Kind, st.Label = "setHeaderRoute", "Route requests with header "+digS(sm, "setHeaderRoute", "name")+" to the new version only"
-		case sm["setMirrorRoute"] != nil:
-			st.Kind, st.Label = "setMirrorRoute", "Mirror requests to the new version"
-		default:
-			st.Kind, st.Label = "step", "Step"
-		}
-		switch {
-		case cur < 0 || i > cur:
-			st.State = "next"
-		case i == cur && digS(o, "status", "phase") != "Healthy":
-			st.State = "current"
-		default:
-			st.State = "done"
-		}
-		v.Steps = append(v.Steps, st)
-	}
+	desired := bd.canarySteps(v, o, steps, cur)
 	if digS(o, "status", "phase") == "Healthy" && len(steps) > 0 {
 		v.Current = -1
 		for i := range v.Steps {
@@ -326,4 +285,51 @@ func durationSeconds(d string) int {
 		n += cur
 	}
 	return n
+}
+
+// canarySteps fills the view with the canary strategy's steps and returns the weight the current step wants.
+func (bd *build) canarySteps(v *RolloutView, o map[string]any, steps []any, cur int) int {
+	desired := 0
+	for i, s := range steps {
+		sm := m(s)
+		st := Step{Index: i}
+		switch {
+		case has(sm, "setWeight"):
+			w := toInt(sm["setWeight"])
+			st.Kind, st.Weight, st.Label = "setWeight", &w, fmt.Sprintf("Send %d%% of traffic to the new version", w)
+			if i <= cur {
+				desired = w
+			}
+		case sm["pause"] != nil:
+			st.Kind = "pause"
+			if d := digS(sm, "pause", "duration"); d != "" {
+				st.Seconds = durationSeconds(d)
+				st.Label = "Pause " + d
+			} else {
+				st.Label = "Pause until someone promotes"
+			}
+		case sm["analysis"] != nil:
+			st.Kind, st.Label = "analysis", "Analysis: "+templateNames(digL(sm, "analysis", "templates"))
+		case sm["experiment"] != nil:
+			st.Kind, st.Label = "experiment", "Experiment"
+		case sm["setCanaryScale"] != nil:
+			st.Kind, st.Label = "setCanaryScale", "Set the canary's scale"
+		case sm["setHeaderRoute"] != nil:
+			st.Kind, st.Label = "setHeaderRoute", "Route requests with header "+digS(sm, "setHeaderRoute", "name")+" to the new version only"
+		case sm["setMirrorRoute"] != nil:
+			st.Kind, st.Label = "setMirrorRoute", "Mirror requests to the new version"
+		default:
+			st.Kind, st.Label = "step", "Step"
+		}
+		switch {
+		case cur < 0 || i > cur:
+			st.State = "next"
+		case i == cur && digS(o, "status", "phase") != "Healthy":
+			st.State = "current"
+		default:
+			st.State = "done"
+		}
+		v.Steps = append(v.Steps, st)
+	}
+	return desired
 }

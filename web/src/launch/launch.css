@@ -117,3 +117,10 @@
   .lw-title { font-size: 20px; }
   .lw-step { grid-template-columns: 22px 1fr; } .lw-step-state { grid-column: 2; }
 }
+.lw-page .vtabs { overflow-x: auto; scrollbar-width: thin; }
+.lw-page .vtabs button { white-space: nowrap; }
+@media (max-width: 900px) {
+  .lw-row { flex-wrap: wrap; row-gap: 2px; }
+  .lw-name { flex: 0 0 auto; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+  .lw-row .lw-health { margin-left: 0; }
+}

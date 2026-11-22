@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
-	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/deploy/inspect"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
@@ -178,7 +177,7 @@ func (s *Server) inspectTreeH(w http.ResponseWriter, r *http.Request) {
 		s.failInspect(w, err)
 		return
 	}
-	var ans argocd.Answer
+	var ans inspect.Answer
 	if err := json.Unmarshal(raw, &ans); err != nil || ans.Tree == nil {
 		writeErr(w, http.StatusBadGateway, "the deploy runner's answer could not be read")
 		return
@@ -216,12 +215,12 @@ func (s *Server) inspectManifestH(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), askTimeout+5*time.Second)
 	defer cancel()
-	raw, err := s.inspectAsk(ctx, t, engine.InspectManifest, argocd.ManifestParams{Object: obj}, identityFrom(r).User, manifestMaxAge)
+	raw, err := s.inspectAsk(ctx, t, engine.InspectManifest, inspect.ManifestParams{Object: obj}, identityFrom(r).User, manifestMaxAge)
 	if err != nil {
 		s.failInspect(w, err)
 		return
 	}
-	var ans argocd.Answer
+	var ans inspect.Answer
 	if err := json.Unmarshal(raw, &ans); err != nil {
 		writeErr(w, http.StatusBadGateway, "the deploy runner's answer could not be read")
 		return
@@ -229,9 +228,9 @@ func (s *Server) inspectManifestH(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"object": obj, "yaml": ans.Text})
 }
 
-func logParams(r *http.Request) argocd.LogParams {
+func logParams(r *http.Request) inspect.LogParams {
 	q := r.URL.Query()
-	p := argocd.LogParams{Pod: q.Get("pod"), Container: q.Get("container"), ReplicaSet: q.Get("replica_set"), Role: q.Get("role"), Job: q.Get("job"),
+	p := inspect.LogParams{Pod: q.Get("pod"), Container: q.Get("container"), ReplicaSet: q.Get("replica_set"), Role: q.Get("role"), Job: q.Get("job"),
 		Previous: q.Get("previous") == "true"}
 	p.Tail, _ = strconv.Atoi(q.Get("tail"))
 	p.SinceSeconds, _ = strconv.Atoi(q.Get("since_seconds"))
@@ -239,7 +238,7 @@ func logParams(r *http.Request) argocd.LogParams {
 	return p
 }
 
-func logTargetName(p argocd.LogParams) string {
+func logTargetName(p inspect.LogParams) string {
 	for _, v := range []string{p.Pod, p.ReplicaSet, p.Job, p.Role} {
 		if v != "" {
 			return v
@@ -269,7 +268,7 @@ func (s *Server) inspectLogsH(w http.ResponseWriter, r *http.Request) {
 		s.failInspect(w, err)
 		return
 	}
-	var ans argocd.Answer
+	var ans inspect.Answer
 	if err := json.Unmarshal(raw, &ans); err != nil {
 		writeErr(w, http.StatusBadGateway, "the deploy runner's answer could not be read")
 		return
@@ -329,7 +328,7 @@ func (s *Server) inspectLogStreamH(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(chunks) == 0 && (state == engine.InspectDone || state == engine.InspectFailed || state == engine.InspectCanceled) {
 			var notes []string
-			var ans argocd.Answer
+			var ans inspect.Answer
 			if json.Unmarshal([]byte(result), &ans) == nil {
 				notes = ans.Notes
 			}
@@ -403,12 +402,12 @@ func (s *Server) inspectControlH(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), askTimeout+5*time.Second)
 	defer cancel()
-	raw, err := s.inspectAsk(ctx, t, engine.InspectControl, argocd.ControlParams{Action: in.Action, Object: in.Object, Replicas: in.Replicas, Reason: in.Reason}, id.User, 0)
+	raw, err := s.inspectAsk(ctx, t, engine.InspectControl, inspect.ControlParams{Action: in.Action, Object: in.Object, Replicas: in.Replicas, Reason: in.Reason}, id.User, 0)
 	if err != nil {
 		s.failInspect(w, err)
 		return
 	}
-	var ans argocd.Answer
+	var ans inspect.Answer
 	if err := json.Unmarshal(raw, &ans); err != nil {
 		writeErr(w, http.StatusBadGateway, "the deploy runner's answer could not be read")
 		return
@@ -446,7 +445,7 @@ func (s *Server) deployInspect(w http.ResponseWriter, r *http.Request) {
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
 	ctx, cancel := s.longLived(r)
 	defer cancel()
-	job, err := s.Engine.TakeInspect(ctx, in.Runner, targets, wait)
+	job, err := s.Engine.TakeInspect(ctx, in.Runner, targets, wait) //nolint:contextcheck // the engine's database calls own their contexts, as for TakeCommand
 	switch {
 	case err != nil && ctx.Err() != nil, err == nil && job == nil:
 		w.WriteHeader(http.StatusNoContent)
@@ -497,4 +496,18 @@ func (s *Server) deployInspectDone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// inspectRoutes are the routes of this file: for people (viewers read, operators read logs and steer) and for deploy runners.
+func (s *Server) inspectRoutes() []route {
+	return []route{
+		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect", runRead, "", s.inspectTreeH},
+		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest", runRead, "deployment.manifest", s.inspectManifestH},
+		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs", runOperate, "deployment.logs", s.inspectLogsH},
+		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream", runOperate, "deployment.logs", s.inspectLogStreamH},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/inspect/control", runOperate, "deployment.control", s.inspectControlH},
+		{"POST /api/runner/v1/deploy/inspect", runnerOnly, "", s.deployInspect},
+		{"POST /api/runner/v1/deploy/inspect-chunk", runnerOnly, "", s.deployInspectChunk},
+		{"POST /api/runner/v1/deploy/inspect-done", runnerOnly, "", s.deployInspectDone},
+	}
 }

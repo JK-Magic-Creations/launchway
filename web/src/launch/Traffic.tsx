@@ -15,7 +15,7 @@ function Proof({ m }: { m: LMetric }) {
       </p>
       {m.points && m.points.length > 0 ? (
         <table className="lw-table">
-          <caption className="sr-only">Measurements of {m.name}, oldest first</caption>
+          <caption className="visually-hidden">Measurements of {m.name}, oldest first</caption>
           <thead><tr><th scope="col">When</th><th scope="col">Measured</th><th scope="col">Against the threshold</th></tr></thead>
           <tbody>
             {m.points.map((p, i) => (
@@ -60,7 +60,7 @@ export function TrafficTab({ v, run, onOpen }: { v: TreeView; run: RunDetail; on
         <h2 id="lw-meas-h" className="lw-h">Measured: analysis and tests</h2>
         {runs.length === 0 && <p className="faint">No analysis or test has run for this delivery{ro ? "" : " (it has no rollout)"}.</p>}
         {runs.map((a) => (
-          <div key={a.name} className="lw-run">
+          <div key={a.name} className="lw-arun">
             <h3 className="h-xs"><Mono>{a.name}</Mono> <span className={`lw-ph lw-ph-${a.phase.toLowerCase()}`}>{a.phase}</span></h3>
             {a.message && <p className="lw-small">{a.message}</p>}
             {a.metrics.map((m) => <Proof key={m.name} m={m} />)}
@@ -89,7 +89,7 @@ export function TrafficTab({ v, run, onOpen }: { v: TreeView; run: RunDetail; on
         <h2 id="lw-jobs-h" className="lw-h">Test pods (push tests)</h2>
         {jobs.length === 0 ? <p className="faint">No test job is running or was kept.</p> : (
           <table className="lw-table">
-            <caption className="sr-only">Test jobs of this delivery</caption>
+            <caption className="visually-hidden">Test jobs of this delivery</caption>
             <thead><tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">What it sent and got back</th></tr></thead>
             <tbody>
               {jobs.map((j) => (

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -123,9 +122,4 @@ func clip(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
-}
-
-func firstLine(s string) string {
-	s, _, _ = strings.Cut(s, "\n")
-	return s
 }

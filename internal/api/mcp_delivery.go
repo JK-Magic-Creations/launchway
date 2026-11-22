@@ -27,6 +27,9 @@ func addDeliveryTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_delivery_logs", Annotations: readOnly("Get a delivery's logs"),
 		Description: "The end of the logs of a pod, of all pods of a ReplicaSet, of a role (stable, canary, preview, active) or of a Job, merged by time and tagged by source, secrets masked. Needs the operator role. previous reads the earlier container of a crashed pod."},
 		mcpCallTimeout, getDeliveryLogs)
+	if c.mayOperate {
+		addDeliveryChangeTools(srv, c)
+	}
 }
 
 func addDeliveryChangeTools(srv *mcp.Server, c *mcpCall) {

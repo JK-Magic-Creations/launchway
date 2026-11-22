@@ -67,13 +67,13 @@ func (r *Redactor) Value(name, value string) string {
 	return r.Text(value)
 }
 
-// Data redacts a ConfigMap's data and clips each value to max bytes.
-func (r *Redactor) Data(in map[string]string, max int) map[string]string {
+// Data redacts a ConfigMap's data and clips each value to limit bytes.
+func (r *Redactor) Data(in map[string]string, limit int) map[string]string {
 	out := make(map[string]string, len(in))
 	for k, v := range in {
 		v = r.Value(k, v)
-		if max > 0 && len(v) > max {
-			v = v[:max] + "\n… (clipped, " + itoa(len(v)-max) + " more bytes)"
+		if limit > 0 && len(v) > limit {
+			v = v[:limit] + "\n… (clipped, " + itoa(len(v)-limit) + " more bytes)"
 		}
 		out[k] = v
 	}

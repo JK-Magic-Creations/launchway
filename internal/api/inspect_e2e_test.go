@@ -24,11 +24,14 @@ import (
 
 // fakeLogs gives each pod two lines (one with a planted secret), and when
 // followed a new line every 60 ms.
-type fakeLogs struct{}
+type fakeLogs struct{ broken bool }
 
-func (fakeLogs) Open(ctx context.Context, ns, pod, c string, o inspect.LogOptions) (io.ReadCloser, error) {
+func (f fakeLogs) Open(ctx context.Context, ns, pod, c string, o inspect.LogOptions) (io.ReadCloser, error) {
 	stamp := func(d time.Duration) string { return time.Now().Add(d).UTC().Format(time.RFC3339Nano) }
 	first := fmt.Sprintf("%s hello from %s\n%s login password=%s\n", stamp(-2*time.Second), pod, stamp(-time.Second), inspectfake.CanaryPassword)
+	if f.broken && strings.Contains(pod, "bbb") {
+		first = fmt.Sprintf("%s starting shop 1.4.0\n%s connecting to the database\n%s panic: database password is empty\n%s exit status 2\n", stamp(-4*time.Second), stamp(-3*time.Second), stamp(-2*time.Second), stamp(-time.Second))
+	}
 	if !o.Follow {
 		return io.NopCloser(strings.NewReader(first)), nil
 	}
@@ -64,6 +67,10 @@ type inspectEnv struct {
 // cluster holding the canary fixture, connected to the first server; a
 // second server on the same database answers the viewers.
 func setupInspect(t *testing.T, cfg argocd.Inspect) *inspectEnv {
+	return setupInspectWith(t, cfg, false)
+}
+
+func setupInspectWith(t *testing.T, cfg argocd.Inspect, broken bool) *inspectEnv {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("needs git")
@@ -75,7 +82,7 @@ func setupInspect(t *testing.T, cfg argocd.Inspect) *inspectEnv {
 		t.Fatalf("run %s: %+v", r.Status, r.StepList)
 	}
 	stopDeployer() // it would answer inspect requests too, without the settings under test
-	fake := inspectfake.New(inspect.KindLists(), false)
+	fake := inspectfake.New(inspect.KindLists(), broken)
 	if _, err := fake.Resource(appGVR).Namespace("argocd").Create(context.Background(), inspectfake.Application(), metav1Create); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +92,7 @@ func setupInspect(t *testing.T, cfg argocd.Inspect) *inspectEnv {
 		DataDir: t.TempDir(), Secrets: secrets.NewResolver(),
 		Connect: func(string, argocd.Target) (*argocd.Cluster, error) {
 			c := argocd.NewCluster(fake, "argocd")
-			c.Logs = fakeLogs{}
+			c.Logs = fakeLogs{broken: broken}
 			return c, nil
 		},
 	}
@@ -348,4 +355,13 @@ func keys(m map[string]engine.AuditEntry) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// A pod that is not ready comes with its last log lines, so the cause is on the page.
+func TestNotReadyPodCarriesItsLastLogLines(t *testing.T) {
+	ie := setupInspectWith(t, argocd.Inspect{Read: true, Logs: true}, true)
+	code, body := inspGet(t, ie.url(""))
+	if code != 200 || !strings.Contains(body, "panic: database password is empty") {
+		t.Fatalf("%d %s", code, body)
+	}
 }

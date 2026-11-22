@@ -24,6 +24,8 @@ import { RunTrigger } from "../components/RunTrigger";
 import { RunVariables } from "../components/Variables";
 import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
+// The Launch page rides with the run page's chunk: a lazy chunk of its own would add its names to the first load's preload map.
+import { LaunchPage } from "./Launch";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
 import { ReportsTab } from "./RunReports";
@@ -69,7 +71,26 @@ function setQuery(changes: Record<string, string>) {
   history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
 }
 
+/** From a deploy or verify step to the page of the delivery it is about: its objects, logs and tests. */
+function LaunchLink({ run, step }: { run: RunDetail; step: StepView }) {
+  const d = step.kind === "verify" ? (run.deployments ?? []).find((x) => x.step === step.deployment) : deploymentOf(run, step);
+  if (!d) return null;
+  return <p className="dep-launch"><Link href={`/runs/${run.id}?launch=${d.id}`}>Open this Launch</Link> <span className="faint">to see every object it made, their logs and tests, and to steer it.</span></p>;
+}
+
+/** A run's page; with ?launch=DEPLOYMENT in the address, the page of that deployment's Launch instead (see Launch.tsx). */
 export function RunPage({ id }: { id: string }) {
+  const [launch, setLaunch] = useState(() => new URLSearchParams(location.search).get("launch") ?? "");
+  useEffect(() => {
+    const on = () => setLaunch(new URLSearchParams(location.search).get("launch") ?? "");
+    window.addEventListener("popstate", on);
+    return () => window.removeEventListener("popstate", on);
+  }, []);
+  if (launch) return <LaunchPage key={launch} run={id} dep={launch} />;
+  return <RunBody id={id} />;
+}
+
+function RunBody({ id }: { id: string }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -550,6 +571,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
       </div>
       {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text} <LearnLink to={why.kind === "environment" ? EXPLAIN.lock : why.kind === "person" ? EXPLAIN.clearance : EXPLAIN.waits} /></span></div>}
       {reused && <ReusedNote run={run} step={step} />}
+      {(deploys || step.kind === "verify") && <LaunchLink run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
       {step.kind === "verify" && <VerificationPanel run={run} step={step} list={verifications.list} reload={verifications.reload} />}
       {step.kind === "ai" && <AIStepResult run={run} step={step} />}

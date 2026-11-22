@@ -161,8 +161,8 @@ export function LogsTab({ v, state, setState }: { v: TreeView; state: Record<"sr
       {!sel && !side && <p className="faint">Choose what to read: all the canary pods, the stable ones, one pod, or a test job.</p>}
       {(sel || side) && (
         <div className={side ? "lw-panes two" : "lw-panes"}>
-          <Pane title={side ? "Stable" : sel?.label ?? ""} lines={filt(main.lines)} state={main.state} notes={main.notes} error={main.error} search={state.q} wrap={state.wrap === "1"} interleaved={interleaved} follow={follow} />
-          {side && <Pane title={newer?.id === "role:preview" ? "Preview" : "Canary"} lines={filt(second.lines)} state={second.state} notes={second.notes} error={second.error} search={state.q} wrap={state.wrap === "1"} interleaved={false} follow={follow} />}
+          <Pane title={side ? "Stable" : sel?.label ?? ""} lines={filt(main.lines)} state={main.state} notes={main.notes} error={main.error} search={state.q} wrap={state.wrap === "1"} interleaved={interleaved || side} follow={follow} />
+          {side && <Pane title={newer?.id === "role:preview" ? "Preview" : "Canary"} lines={filt(second.lines)} state={second.state} notes={second.notes} error={second.error} search={state.q} wrap={state.wrap === "1"} interleaved follow={follow} />}
         </div>
       )}
     </div>

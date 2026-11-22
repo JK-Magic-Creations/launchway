@@ -17,9 +17,9 @@ import (
 // Canary strings: planted in ConfigMaps, logs and manifests; none may
 // come out of a Redactor.
 const (
-	CanaryPassword = "hunter2-LWCANARY-1"
-	CanarySecret   = "s3cr3t-LWCANARY-2-value"
-	CanaryToken    = "ghp_LWCANARYabcdefghijklmnopqrstuvwxyz0123"
+	CanaryPassword = "hunter2-LWCANARY-1"                         //nolint:gosec // a planted canary string, not a credential
+	CanarySecret   = "s3cr3t-LWCANARY-2-value"                    //nolint:gosec // a planted canary string, not a credential
+	CanaryToken    = "ghp_LWCANARYabcdefghijklmnopqrstuvwxyz0123" //nolint:gosec // a planted canary string, not a credential
 )
 
 var T0 = time.Date(2026, 11, 21, 10, 0, 0, 0, time.UTC)
@@ -69,7 +69,18 @@ func podOf(ns, name, uid, rsName, rsUID, hash string, ready bool, extra kv) *uns
 // pod (crash-looping when broken), services, a route, config, a secret, an
 // analysis run with a job and a pod, a leftover ConfigMap and objects in a
 // namespace the Airfield does not list.
+// New is a fake dynamic client holding Objects(broken).
 func New(lists map[schema.GroupVersionResource]string, broken bool) *dynfake.FakeDynamicClient {
+	return dynfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), lists, Objects(broken)...)
+}
+
+// PodNamed is another ready pod of the stable ReplicaSet.
+func PodNamed(name, rsName, rsUID, hash string) *unstructured.Unstructured {
+	return podOf("shop", name, "u-"+name, rsName, rsUID, hash, true, nil)
+}
+
+// Objects are the fixture's objects.
+func Objects(broken bool) []runtime.Object {
 	rollout := mk("argoproj.io/v1alpha1", "Rollout", "shop", "shop", "u-ro", kv{
 		"metadata": kv{"annotations": kv{"rollout.argoproj.io/revision": "7"},
 			"managedFields": []any{kv{"time": Stamp(-time.Minute), "manager": "argocd"}}},
@@ -125,8 +136,7 @@ func New(lists map[schema.GroupVersionResource]string, broken bool) *dynfake.Fak
 		// Outside the Airfield's namespaces.
 		mk("v1", "ConfigMap", "other", "elsewhere", "u-oth", kv{"data": kv{"a": "b"}}),
 	}
-	sc := runtime.NewScheme()
-	return dynfake.NewSimpleDynamicClientWithCustomListKinds(sc, lists, objs...)
+	return objs
 }
 
 // Object is a listed object.

@@ -191,6 +191,10 @@ func (e *Engine) purgeInspect(now int64) {
 	if now-last < 60_000 || !lastInspectPurge.CompareAndSwap(last, now) {
 		return
 	}
+	e.purgeInspectNow(now)
+}
+
+func (e *Engine) purgeInspectNow(now int64) {
 	cut := now - int64(24*time.Hour/time.Millisecond)
 	unlock := e.writeLock()
 	defer unlock()
@@ -253,20 +257,8 @@ func (e *Engine) tryTakeInspect(r RunnerInfo, targets []string) (*InspectJob, er
 	if err != nil {
 		return nil, err
 	}
-	var cands []InspectJob
-	for rows.Next() {
-		var j InspectJob
-		var params string
-		var follow int
-		if err := rows.Scan(&j.ID, &j.Target, &j.RunID, &j.Deployment, &j.Project, &j.Kind, &params, &j.Actor, &follow); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		j.Params, j.Follow = json.RawMessage(params), follow == 1
-		cands = append(cands, j)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	cands, err := scanInspectJobs(rows)
+	if err != nil {
 		return nil, err
 	}
 	for _, j := range cands {
@@ -495,4 +487,20 @@ func (e *Engine) OpenInspects(target string) (int, error) {
 	var n int
 	err := e.db.QueryRow(`SELECT count(*) FROM inspect_requests WHERE target = ? AND state IN ('pending','taken')`, target).Scan(&n)
 	return n, err
+}
+
+func scanInspectJobs(rows *sql.Rows) ([]InspectJob, error) {
+	defer rows.Close()
+	var out []InspectJob
+	for rows.Next() {
+		var j InspectJob
+		var params string
+		var follow int
+		if err := rows.Scan(&j.ID, &j.Target, &j.RunID, &j.Deployment, &j.Project, &j.Kind, &params, &j.Actor, &follow); err != nil {
+			return nil, err
+		}
+		j.Params, j.Follow = json.RawMessage(params), follow == 1
+		out = append(out, j)
+	}
+	return out, rows.Err()
 }

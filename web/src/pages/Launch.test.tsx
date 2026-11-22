@@ -31,7 +31,8 @@ describe("what a Launch page works out", () => {
     expect(nextUp(ro, Date.now(), false)).toMatch(/only a person ends/);
     expect(nextUp({ ...ro, pause_ends: Date.now() + 90_000 }, Date.now(), false)).toMatch(/Continues by itself in 1m 29s|Continues by itself in 1m 30s/);
     expect(nextUp({ ...ro, aborted: true }, Date.now(), false)).toMatch(/aborted/);
-    expect(nextUp(ro, Date.now(), true)).toMatch(/Launch is over/);
+    expect(nextUp({ ...ro, phase: "Healthy" }, Date.now(), true)).toMatch(/Launch is over/);
+    expect(nextUp(ro, Date.now(), true)).toMatch(/step has ended, but the rollout has not: Waiting at a pause/);
   });
   it("offers stable and canary logs, pods and test jobs, never a leftover", () => {
     const ids = sources(launchTree().tree.nodes).map((s) => s.id);
@@ -64,7 +65,7 @@ describe("the Launch page", () => {
   };
 
   it("shows the strategy's steps, what happens next and the weights", async () => {
-    await open("/runs/run_7/launch/dep_1");
+    await open("/runs/run_7?launch=dep_1");
     expect(await screen.findByRole("heading", { name: /Launch of shop to prod/ }, { timeout: 8000 })).toBeTruthy();
     const steps = await screen.findByRole("list", { name: /Steps of the canary rollout/ });
     expect(within(steps).getByText(/Pause until someone promotes/).closest("li")?.getAttribute("aria-current")).toBe("step");
@@ -75,7 +76,7 @@ describe("the Launch page", () => {
   }, 20000);
 
   it("offers only the controls the cluster allows, and says why not for the rest", async () => {
-    await open("/runs/run_7/launch/dep_1");
+    await open("/runs/run_7?launch=dep_1");
     const group = await screen.findByRole("group", { name: "Control the workload" });
     expect(within(group).getByRole("button", { name: "Pause" })).toBeTruthy();
     expect(within(group).getByRole("button", { name: "Restart the pods" })).toBeTruthy();
@@ -84,7 +85,7 @@ describe("the Launch page", () => {
   }, 20000);
 
   it("leads with the cause when the canary crash-loops", async () => {
-    await open("/runs/run_7/launch/dep_1", true);
+    await open("/runs/run_7?launch=dep_1", true);
     const alert = await screen.findByRole("alert", { name: "What is wrong" }, { timeout: 8000 });
     expect(alert.textContent).toMatch(/Canary pods are not healthy.*CrashLoopBackOff/);
     fireEvent.click(within(alert).getByRole("button", { name: "Open it" }));
@@ -94,7 +95,7 @@ describe("the Launch page", () => {
   }, 20000);
 
   it("is a tree you can use from the keyboard, and a ConfigMap shows redacted data and keys only for a Secret", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=objects");
+    await open("/runs/run_7?launch=dep_1&tab=objects");
     const tree = await screen.findByRole("tree", { name: "Objects of this Launch" }, { timeout: 8000 });
     const items = within(tree).getAllByRole("treeitem");
     expect(items.filter((i) => i.getAttribute("tabindex") === "0")).toHaveLength(1);
@@ -109,11 +110,27 @@ describe("the Launch page", () => {
   }, 20000);
 
   it("shows measurements against their threshold, with the query, and the test pods", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=traffic");
+    await open("/runs/run_7?launch=dep_1&tab=traffic");
     expect(await screen.findByText(/result\[0\] >= 0.95/, {}, { timeout: 8000 })).toBeTruthy();
     expect(screen.getByText(/sum\(rate\(http_requests_total/)).toBeTruthy();
     expect(screen.getByText("✓ pass")).toBeTruthy();
     expect(screen.getByText("✕ fail")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Read its output" })).toBeTruthy();
+  }, 20000);
+});
+
+describe("a release of 300 pods", () => {
+  it("draws its tree in a moment, and the tree stays one tab stop", async () => {
+    const { ObjectTree } = await import("../launch/Tree");
+    const base = launchTree().tree.nodes;
+    const pods = Array.from({ length: 300 }, (_, i) => ({ ...base.find((n) => n.id === "Pod/shop/shop-aaa-1")!, id: `Pod/shop/bulk-${i}`, name: `bulk-${i}`, parent: "ReplicaSet/shop/shop-aaa" }));
+    const started = performance.now();
+    render(<ObjectTree nodes={[...base, ...pods]} selected="" onSelect={() => {}} showLeftovers />);
+    const rows = screen.getAllByRole("treeitem");
+    const took = performance.now() - started;
+    expect(rows.length).toBeGreaterThan(300);
+    expect(rows.filter((r) => r.getAttribute("tabindex") === "0")).toHaveLength(1);
+    // Generous: it is a guard against drawing it quadratically, not a benchmark.
+    expect(took).toBeLessThan(4000);
   }, 20000);
 });

@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -104,36 +105,7 @@ func (cl *client) rollout(args []string) error {
 		fmt.Fprint(cl.out, v.YAML)
 		return nil
 	case "logs":
-		q := url.Values{}
-		for k, v := range map[string]string{"pod": *pod, "replica_set": *rs, "role": *role, "job": *job, "container": *container} {
-			if v != "" {
-				q.Set(k, v)
-			}
-		}
-		if len(q) == 0 || *pod == "" && *rs == "" && *role == "" && *job == "" {
-			return usageErr("say what to read: --pod, --replica-set, --role or --job\n\n%s", rolloutUsage)
-		}
-		if *previous {
-			q.Set("previous", "true")
-		}
-		q.Set("tail", fmt.Sprint(*tail))
-		if *follow {
-			return cl.followLogs(base + "/inspect/logs/stream?" + q.Encode())
-		}
-		var v struct {
-			Lines []inspect.LogLine `json:"lines"`
-			Notes []string          `json:"notes"`
-		}
-		if err := cl.call("GET", base+"/inspect/logs?"+q.Encode(), nil, &v); err != nil {
-			return err
-		}
-		for _, l := range v.Lines {
-			cl.printLogLine(l)
-		}
-		for _, n := range v.Notes {
-			fmt.Fprintln(os.Stderr, "note:", n)
-		}
-		return nil
+		return cl.rolloutLogs(base, logFlags{*pod, *rs, *role, *job, *container, *previous, *tail, *follow})
 	case "promote", "promote-full", "abort", "retry":
 		if strings.TrimSpace(*reason) == "" {
 			return usageErr("say why: --reason \"...\" (kept in the Logbook)")
@@ -145,11 +117,55 @@ func (cl *client) rollout(args []string) error {
 		fmt.Fprintf(cl.out, "Asked for %s; a deploy runner carries it out.\n", cmd)
 		return nil
 	}
-	// pause, resume, restart, scale: on the workload.
-	if strings.TrimSpace(*reason) == "" {
+	return cl.rolloutWorkload(cmd, base, *object, *reason, *replicas)
+}
+
+type logFlags struct {
+	pod, rs, role, job, container string
+	previous                      bool
+	tail                          int
+	follow                        bool
+}
+
+func (cl *client) rolloutLogs(base string, f logFlags) error {
+	q := url.Values{}
+	for k, v := range map[string]string{"pod": f.pod, "replica_set": f.rs, "role": f.role, "job": f.job, "container": f.container} {
+		if v != "" {
+			q.Set(k, v)
+		}
+	}
+	if len(q) == 0 || f.pod == "" && f.rs == "" && f.role == "" && f.job == "" {
+		return usageErr("say what to read: --pod, --replica-set, --role or --job\n\n%s", rolloutUsage)
+	}
+	if f.previous {
+		q.Set("previous", "true")
+	}
+	q.Set("tail", fmt.Sprint(f.tail))
+	if f.follow {
+		return cl.followLogs(base + "/inspect/logs/stream?" + q.Encode())
+	}
+	var v struct {
+		Lines []inspect.LogLine `json:"lines"`
+		Notes []string          `json:"notes"`
+	}
+	if err := cl.call("GET", base+"/inspect/logs?"+q.Encode(), nil, &v); err != nil {
+		return err
+	}
+	for _, l := range v.Lines {
+		cl.printLogLine(l)
+	}
+	for _, n := range v.Notes {
+		fmt.Fprintln(os.Stderr, "note:", n)
+	}
+	return nil
+}
+
+// rolloutWorkload pauses, resumes, restarts or scales the delivery's workload.
+func (cl *client) rolloutWorkload(cmd, base, object, reason string, replicas int) error {
+	if strings.TrimSpace(reason) == "" {
 		return usageErr("say why: --reason \"...\" (kept in the Logbook)")
 	}
-	obj := *object
+	obj := object
 	if obj == "" {
 		var v api.TreeView
 		if err := cl.call("GET", base+"/inspect", nil, &v); err != nil {
@@ -165,7 +181,7 @@ func (cl *client) rollout(args []string) error {
 		}
 	}
 	var out struct{ Result, Detail string }
-	body := map[string]any{"action": cmd, "object": obj, "replicas": *replicas, "reason": *reason}
+	body := map[string]any{"action": cmd, "object": obj, "replicas": replicas, "reason": reason}
 	if err := cl.call("POST", base+"/inspect/control", body, &out); err != nil {
 		return err
 	}
@@ -183,7 +199,7 @@ func (cl *client) printLogLine(l inspect.LogLine) {
 
 // followLogs reads the server-sent events of a followed log until it ends.
 func (cl *client) followLogs(path string) error {
-	req, err := http.NewRequest("GET", cl.c.Server+path, nil) //nolint:gosec // G704: the user's own configured server
+	req, err := http.NewRequestWithContext(context.Background(), "GET", cl.c.Server+path, nil) //nolint:gosec // G704: the user's own configured server
 	if err != nil {
 		return err
 	}

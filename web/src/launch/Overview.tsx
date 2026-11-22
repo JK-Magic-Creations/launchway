@@ -9,7 +9,9 @@ import { HealthTag } from "./Tree";
 
 /** What happens next, and who may step in, in a sentence. Zero touch is the default: this says so. */
 export function nextUp(ro: LRollout | undefined, now: number, over: boolean): string {
-  if (over) return "This Launch is over. Nothing happens by itself; Return to base goes back to an earlier release.";
+  const going = !!ro && ro.phase !== "Healthy" && ro.strategy !== "rolling";
+  if (over && !going) return "This Launch is over. Nothing happens by itself; Return to base goes back to an earlier release.";
+  if (over) return "The pipeline step has ended, but the rollout has not: " + nextUp(ro, now, false);
   if (!ro) return "The deploy runner has not shown a rollout for this delivery yet.";
   if (ro.aborted) return "The rollout was aborted: all traffic is on the stable version. Retry it, or roll back.";
   const cur = ro.steps.find((s) => s.state === "current");
@@ -54,7 +56,7 @@ function Weights({ ro, sets }: { ro: LRollout; sets: LNode[] }) {
       </div>
       {live !== null || want !== null ? (
         table ? (
-          <table className="lw-table"><caption className="sr-only">Wanted and actual weights</caption>
+          <table className="lw-table"><caption className="visually-hidden">Wanted and actual weights</caption>
             <thead><tr><th scope="col">Measure</th><th scope="col">New version</th><th scope="col">Stable</th></tr></thead>
             <tbody>
               {want !== null && <tr><th scope="row">Wanted by the current step</th><td>{want}%</td><td>{100 - want}%</td></tr>}
@@ -132,7 +134,7 @@ export function Overview({ v, run, d, now, onOpen, reload }: { v: TreeView; run:
       {ro?.strategy === "rolling" && <p className="faint">This is a plain Deployment: Kubernetes replaces its pods a few at a time. There are no traffic weights or steps; pause, resume, restart and scale apply, and the ReplicaSets below show the update.</p>}
       <section className="lw-card" aria-label="Controls">
         <h2 className="lw-h">Control this Launch</h2>
-        <h3 className="h-xs">Rollout commands</h3>
+        {(!!d.snapshot?.rollout || (d.commands?.length ?? 0) > 0) && <h3 className="h-xs">Rollout commands</h3>}
         <DeploymentControls run={run} d={d} now={now} />
         <WorkloadControls v={v} reload={reload} />
         <EmergencyReturn v={v} d={d} reload={reload} />

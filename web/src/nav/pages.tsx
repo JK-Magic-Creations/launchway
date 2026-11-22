@@ -25,7 +25,6 @@ const ProjectVariablesPage = lz(() => import("../pages/Variables"), "ProjectVari
 const SettingsVariablesPage = lz(() => import("../pages/Variables"), "SettingsVariablesPage");
 const PlaygroundPage = lz(() => import("../pages/Playground"), "PlaygroundPage");
 const RunsPage = lz(() => import("../pages/Activity"), "ActivityPage");
-const LaunchPage = lz(() => import("../pages/Launch"), "LaunchPage");
 const RunPage = lz(() => import("../pages/Run"), "RunPage");
 const ApprovalsPage = lz(() => import("../pages/Decisions"), "DecisionsPage");
 const SettingsApprovalsPage = lz(() => import("../pages/SettingsApprovals"), "SettingsApprovalsPage");
@@ -96,7 +95,6 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;
     case "/runs/:id": return <RunPage id={p.id} />;
-    case "/runs/:id/launch/:dep": return <LaunchPage key={p.id + "/" + p.dep} run={p.id} dep={p.dep} />;
     case "/deployments": return <DeploymentsPage />;
     case "/deployments/environments": return <EnvironmentsPage />;
     case "/deployments/environments/:name": return <EnvironmentPage key={p.name} name={p.name} />;

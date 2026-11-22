@@ -224,7 +224,6 @@ export const PAGES: PageInfo[] = [
 
   page("/activity", "activity", "runs", () => "Runs", () => [{ label: "Runs" }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
-  page("/runs/:id/launch/:dep", "activity", "runs", (p) => `Launch ${p.dep}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}`, href: `/runs/${p.id}` }, { label: "Launch" }]),
   page("/runs/:id", "activity", "runs", (p) => `Run ${p.id}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}` }]),
 
   page("/images", "images", undefined, () => "Images", () => []),

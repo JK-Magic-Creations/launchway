@@ -153,9 +153,6 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 		{"POST /api/runner/v1/deploy/commands", runnerOnly, "", s.deployCommands},
 		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.once(s.deployCommandDone)},
-		{"POST /api/runner/v1/deploy/inspect", runnerOnly, "", s.deployInspect},
-		{"POST /api/runner/v1/deploy/inspect-chunk", runnerOnly, "", s.deployInspectChunk},
-		{"POST /api/runner/v1/deploy/inspect-done", runnerOnly, "", s.deployInspectDone},
 		// Enrolment (schema 20): a join token, or an assertion signed by the
 		// runner's key, in the body; the handlers check and audit them.
 		{"POST /api/runner/v2/join", public, "", s.runnerJoin},
@@ -211,12 +208,6 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/v1/runs/{id}/deployments/{dep}/abort", runOperate, "deployment.abort", s.command("abort")},
 		{"POST /api/v1/runs/{id}/deployments/{dep}/retry", runOperate, "deployment.retry", s.command("retry")},
 		{"POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw", runOperate, "deployment.withdraw", s.withdrawCommand},
-		// Looking into a delivery (inspect.go): the tree and manifests for viewers; logs and controls for operators.
-		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect", runRead, "", s.inspectTreeH},
-		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest", runRead, "deployment.manifest", s.inspectManifestH},
-		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs", runOperate, "deployment.logs", s.inspectLogsH},
-		{"GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream", runOperate, "deployment.logs", s.inspectLogStreamH},
-		{"POST /api/v1/runs/{id}/deployments/{dep}/inspect/control", runOperate, "deployment.control", s.inspectControlH},
 		{"POST /api/v1/validate", readAny, "", s.validate},
 		{"GET /api/v1/stream", signedIn, "", s.stream},
 		{"GET /api/v1/tokens", signedIn, "", s.listTokens},

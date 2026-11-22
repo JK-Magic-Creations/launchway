@@ -32,38 +32,38 @@ describe.each(["light", "dark"])("the Launch page, %s theme", (theme) => {
   };
 
   it("the overview, mid-canary", async () => {
-    await open("/runs/run_7/launch/dep_1");
+    await open("/runs/run_7?launch=dep_1");
     await screen.findByRole("list", { name: /Steps of the canary rollout/ }, { timeout: 8000 });
     await expectClean("overview");
   }, 20000);
   it("the overview of a failing canary", async () => {
-    await open("/runs/run_7/launch/dep_1", true);
+    await open("/runs/run_7?launch=dep_1", true);
     await screen.findByRole("alert", { name: "What is wrong" }, { timeout: 8000 });
     await expectClean("failing canary");
   }, 20000);
   it("the object tree with a ConfigMap open", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=objects&obj=ConfigMap%2Fshop%2Fshop-config");
+    await open("/runs/run_7?launch=dep_1&tab=objects&obj=ConfigMap%2Fshop%2Fshop-config");
     await screen.findByText(/host=db/, { exact: false }, { timeout: 8000 });
     await expectClean("objects");
   }, 20000);
   it("a pod with its containers", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=objects&obj=Pod%2Fshop%2Fshop-bbb-1", true);
+    await open("/runs/run_7?launch=dep_1&tab=objects&obj=Pod%2Fshop%2Fshop-bbb-1", true);
     await screen.findByRole("table", { name: /Containers of shop-bbb-1/ }, { timeout: 8000 });
     await expectClean("pod");
   }, 20000);
   it("the logs, stable and canary side by side", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=logs&side=1");
+    await open("/runs/run_7?launch=dep_1&tab=logs&side=1");
     await screen.findAllByRole("log", {}, { timeout: 8000 });
     await waitFor(() => expect(screen.getAllByText(/GET \/cart/).length).toBeGreaterThan(0));
     await expectClean("logs");
   }, 20000);
   it("traffic and tests", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=traffic");
+    await open("/runs/run_7?launch=dep_1&tab=traffic");
     await screen.findByText(/result\[0\] >= 0.95/, {}, { timeout: 8000 });
     await expectClean("traffic");
   }, 20000);
   it("history", async () => {
-    await open("/runs/run_7/launch/dep_1?tab=history");
+    await open("/runs/run_7?launch=dep_1&tab=history");
     await screen.findByRole("heading", { name: "Commands to the rollout" }, { timeout: 8000 });
     await expectClean("history");
   }, 20000);

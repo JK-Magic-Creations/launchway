@@ -78,7 +78,7 @@ export function ObjectTree({ nodes, selected, onSelect, showLeftovers }: { nodes
                   <span className="lw-kind">{n.kind}</span>{" "}
                   <span className="lw-name">{n.name}</span>{" "}
                   {n.role && <><span className={`lw-role lw-role-${n.role}`}>{n.role}</span>{" "}</>}
-                  {n.replicas && <><span className="lw-reps" title="ready of wanted">{n.replicas.ready}/{n.replicas.desired}</span><span className="sr-only"> ready</span>{" "}</>}
+                  {n.replicas && <><span className="lw-reps" title="ready of wanted">{n.replicas.ready}/{n.replicas.desired}</span><span className="visually-hidden"> ready</span>{" "}</>}
                   {n.change && n.change !== "unchanged" && <><ChangeTag c={n.change} />{" "}</>}
                   <HealthTag h={n.health} />
                 </>

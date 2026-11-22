@@ -76,7 +76,7 @@ func (d *DeployRunner) inspect(ctx context.Context, job *engine.InspectJob) {
 		log.Info("inspect request could not be answered", "err", msg)
 	}
 	for i := 0; i < 4; i++ {
-		fctx, c := context.WithTimeout(context.Background(), 15*time.Second)
+		fctx, c := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 		err := d.Client.FinishInspect(fctx, d.Info, job.ID, result, msg)
 		c()
 		if err == nil {
