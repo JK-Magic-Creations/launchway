@@ -11,7 +11,10 @@ mode** until a maintainer has looked.
   name matches `automation.accounts` (by default `*[bot]`, `dependabot*`, `renovate*`,
   `github-actions*`, `release-please*`, `launchway-updater*`; matching ignores case). Accounts that a forge hosted by
   Launchway marks as bots count too.
-- A pull request from a **fork**, where the forge says so. (A Flight (codebase) that is polled from another
+- A pull request from a **fork**, where the forge says so: always for a repository hosted by Launchway (see
+  [Forks](forks.md#pipelines-of-fork-pull-requests)). A fork's pull request is restricted whatever
+  `pull_requests.untrusted` says, and a **first-time contributor's** also waits for a person with write access to
+  approve running it (`launchway pr approve-run`). (A Flight (codebase) that is polled from another
   Git host cannot tell a fork from a branch, so only the automation list applies there.)
 
 The policy is `pull_requests.untrusted`: `restrict` (the default) or `allow`, in the installation
@@ -41,4 +44,5 @@ the steps of that run that have **not started** may read secrets and launch. A s
 already skipped or failed because of the restriction is not started again by approving; re-run it
 from that step (a re-run of a restricted run is restricted again, until it is approved).
 
-An administrator who wants no restriction sets `pull_requests.untrusted: allow`.
+An administrator who wants no restriction on an automation account's pull requests sets
+`pull_requests.untrusted: allow`. That setting never lifts the restriction of a fork's pull request.
