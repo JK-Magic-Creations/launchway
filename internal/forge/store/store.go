@@ -420,3 +420,6 @@ func CleanAddress(raw string) (https, ssh string) {
 
 // IsUnique reports whether a database error is a violated uniqueness rule.
 func IsUnique(err error) bool { return isUnique(err) }
+
+// DB returns the database the store works on.
+func (s *Store) DB() DB { return s.db }
