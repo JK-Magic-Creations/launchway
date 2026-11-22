@@ -189,12 +189,15 @@ func TestParentAndForkCanBeCollectedAndPurgedInAnyOrder(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer rows.Close()
 			for rows.Next() {
 				var k string
 				_ = rows.Scan(&k)
 				keys = append(keys, k)
 			}
-			rows.Close()
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
+			}
 			for _, k := range keys {
 				if _, err := w.st.o.Blobs.Stat(ctx, k); !errors.Is(err, blobstore.ErrNotFound) {
 					t.Errorf("blob %s is still stored after both repositories were purged: %v", k, err)

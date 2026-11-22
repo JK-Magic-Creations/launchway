@@ -27,13 +27,12 @@ func forkPolicy(t *testing.T) *auth.Policy {
 }
 
 type forkEnv struct {
-	e                *authEnv
-	ada, otto, vic   *browser
-	dana, nobody     *browser
-	acme             string // the API address of acme/shop
-	adaTok, vicTok   string
-	main             string // a working copy that tracks acme/shop
-	forkSrc, forkAPI string
+	e              *authEnv
+	ada, otto, vic *browser
+	dana, nobody   *browser
+	acme           string // the API address of acme/shop
+	adaTok, vicTok string
+	main           string // a working copy that tracks acme/shop
 }
 
 // A private acme/shop with one commit, and vic (a viewer of acme/*, with their own space) as the person forking it.
@@ -163,16 +162,32 @@ func TestPullRequestFromAForkThroughTheAPI(t *testing.T) {
 	other := commit(t, w, "diary.txt", "not for the target\n", "private work")
 	mustGit(t, w, "push", "-q", "origin", "private-work")
 
-	pulls := f.acme + "/pulls/from-fork"
+	// Before opening one, the person can see what it would contain.
+	var cmp struct {
+		Ahead   int `json:"ahead"`
+		Behind  int `json:"behind"`
+		Commits []struct {
+			SHA string `json:"sha"`
+		} `json:"commits"`
+		Mergeability pulls.Mergeability `json:"mergeability"`
+	}
+	f.vic.get(f.acme+"/compare?head=vic:topic").json(t, &cmp)
+	if cmp.Ahead != 1 || cmp.Behind != 0 || len(cmp.Commits) != 1 || cmp.Mergeability.State != pulls.MergeClean {
+		t.Fatalf("compare with a fork's branch: %+v", cmp)
+	}
+	if r := f.dana.get(f.acme + "/compare?head=vic:topic"); r.status != 404 {
+		t.Fatalf("a stranger compared: %d", r.status)
+	}
+	pullsURL := f.acme + "/pulls/from-fork"
 	// Anyone who can read the target and the fork may offer a branch; a stranger cannot.
-	if r := f.dana.do("POST", pulls, `{"head":"vic:topic","title":"x"}`); r.status != 404 {
+	if r := f.dana.do("POST", pullsURL, `{"head":"vic:topic","title":"x"}`); r.status != 404 {
 		t.Fatalf("a stranger: %d %s", r.status, r.body)
 	}
-	if r := f.vic.do("POST", pulls, `{"head":"vic","title":"x"}`); r.status != 400 {
+	if r := f.vic.do("POST", pullsURL, `{"head":"vic","title":"x"}`); r.status != 400 {
 		t.Fatalf("no branch: %d %s", r.status, r.body)
 	}
 	var pr prView
-	r := f.vic.do("POST", pulls, `{"head":"vic:topic","title":"From my fork","allow_maintainer_edits":false}`)
+	r := f.vic.do("POST", pullsURL, `{"head":"vic:topic","title":"From my fork","allow_maintainer_edits":false}`)
 	r.json(t, &pr)
 	if r.status != 201 || pr.Number != 1 || pr.SourceRepo != "vic/shop" || pr.HeadSHA != topic || pr.FetchRef != "refs/pull/1/head" {
 		t.Fatalf("%d %s", r.status, r.body)

@@ -227,3 +227,20 @@ func (s *Server) forkGate(ctx context.Context, _, url string, number int, _ stri
 	}
 	return v
 }
+
+// compareHead compares a branch of the repository, or a branch of a fork written
+// "owner:branch", with the base. A fork's branch needs read access to the fork.
+func (s *Server) compareHead(r *http.Request, repo forge.Repository, base, head string) (pulls.BranchComparison, error) {
+	ctx := r.Context()
+	if !strings.Contains(head, ":") {
+		return s.Forge.Pulls.CompareBranches(ctx, repo.ID, base, head, pulls.DefaultLimits)
+	}
+	fork, branch, msg := s.parseHead(ctx, head, repo)
+	if msg != "" {
+		return pulls.BranchComparison{}, fmt.Errorf("%w: %s", pulls.ErrInvalid, msg)
+	}
+	if id := identityFrom(r); !s.authorize(id, auth.Read, fork.Path) || id.repoLimited() {
+		return pulls.BranchComparison{}, fmt.Errorf("%w: there is no repository %s", pulls.ErrInvalid, fork.Path)
+	}
+	return s.Forge.Pulls.CompareFork(ctx, repo.ID, fork.ID, base, branch, pulls.DefaultLimits)
+}

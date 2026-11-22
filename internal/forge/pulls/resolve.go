@@ -189,14 +189,14 @@ func (s *Service) resolution(ctx context.Context, g gitRunner, p PullRequest, he
 func (s *Service) answer(ctx context.Context, g gitRunner, p PullRequest, pm parsedMerge, sizes map[string]int64, r FileResolution) (mode, sha string, err error) {
 	e := pm.stages[r.Path]
 	side := func(i int) (string, string) { return e[i].mode, e[i].sha }
-	switch {
-	case r.Take == "ours":
+	switch r.Take {
+	case "ours":
 		m, h := side(1)
 		return m, h, nil
-	case r.Take == "theirs":
+	case "theirs":
 		m, h := side(2)
 		return m, h, nil
-	case r.Take == "delete":
+	case "delete":
 		return "", "", nil
 	}
 	file, err := s.conflictFile(ctx, g, p, r.Path, pm, sizes)

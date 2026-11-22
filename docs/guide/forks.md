@@ -111,9 +111,9 @@ the target's commits.
 ### Pipelines of fork pull requests
 
 A pull request from a fork runs code nobody on the team has read. Its pipeline runs **restricted**, as
-described in [Pull-request trust](pull-request-trust.md): no secrets, no launches (so no deploy lease), no
+described in [Pull-request trust](pull-request-trust.md): no secrets, no launches (so no lease on an Airfield), no
 saved caches, nothing pushed to the Depot, and the pipeline file of the **default branch**, not the one the pull
-request brings. The runner checks the pull request out from `refs/pull/N/head` in the target with the run's
+request brings. The Station (runner) checks the pull request out from `refs/pull/N/head` in the target with the Sortie's
 read credential for the target; it has no credential for the fork and cannot see the fork's other branches.
 
 A **first-time contributor's** pull request does not run at all until a person with write access to the

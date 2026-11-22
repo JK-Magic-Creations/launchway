@@ -130,7 +130,7 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 	}
 	// No number after 16 is a placeholder, whatever it brings.
 	for i := schemaPolicy; i < len(migrations); i++ {
-		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 && !(i+1 >= schemaStandIn57 && i+1 <= schemaStandIn74) { // 28 and 57 to 74 are held for unmerged branches (schema28.go, schema57.go to schema74.go)
+		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 && (i+1 < schemaStandIn57 || i+1 > schemaStandIn74) { // 28 and 57 to 74 are held for unmerged branches (schema28.go, schema57.go to schema74.go)
 			t.Errorf("migration %d is empty", i+1)
 		}
 	}

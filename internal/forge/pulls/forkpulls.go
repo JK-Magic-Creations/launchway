@@ -14,6 +14,7 @@ package pulls
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -279,4 +280,60 @@ func (s *Service) updateForkBranch(ctx context.Context, repoID string, p PullReq
 		s.AfterBranchMoved(ctx, p.SourceRepo, by, ups)
 	}
 	return made, nil
+}
+
+// CompareFork compares a branch of a fork with a branch of the repository, as
+// CompareBranches does for two branches of one: what a pull request from the
+// fork's branch would contain. It reads the fork's objects in a scratch
+// repository and changes nothing in either repository.
+func (s *Service) CompareFork(ctx context.Context, repoID, forkID, base, head string, lim Limits) (BranchComparison, error) {
+	bc := BranchComparison{Base: base, Head: head, Commits: []CommitInfo{}}
+	if s.SameNetwork == nil {
+		return bc, invalid("pull requests from forks are not available on this server")
+	}
+	if ok, err := s.SameNetwork(ctx, forkID, repoID); err != nil {
+		return bc, err
+	} else if !ok {
+		return bc, invalid("a pull request can come only from a fork of this repository, from its parent, or from another fork of the same repository")
+	}
+	href := branchRef(head)
+	_, err := s.Git.Transfer(ctx, repoID, forkID, []string{href}, func(ctx context.Context, scratch string, dst, tips map[string]string) ([]storage.RefUpdate, error) {
+		bc.BaseSHA, bc.HeadSHA = dst[branchRef(base)], tips[href]
+		if bc.BaseSHA == "" {
+			return nil, invalid("the branch %s does not exist", base)
+		}
+		g := s.runner(scratch, true)
+		var err error
+		if bc.MergeBase, err = g.mergeBase(ctx, bc.BaseSHA, bc.HeadSHA); err != nil {
+			return nil, err
+		}
+		if bc.Behind, bc.Ahead, err = g.counts(ctx, bc.BaseSHA, bc.HeadSHA); err != nil {
+			return nil, err
+		}
+		if bc.Commits, err = g.commits(ctx, bc.BaseSHA, bc.HeadSHA, 1000); err != nil {
+			return nil, err
+		}
+		from := bc.MergeBase
+		if from == "" {
+			from = bc.BaseSHA
+		}
+		if bc.Files, err = g.compare(ctx, from, bc.HeadSHA, lim); err != nil {
+			return nil, err
+		}
+		m := Mergeability{State: MergeUnknown, Behind: bc.Behind, Ahead: bc.Ahead}
+		if _, files, clean, err := g.trial(ctx, bc.BaseSHA, bc.HeadSHA); err != nil {
+			m.Reason = err.Error()
+		} else if clean {
+			m.State = MergeClean
+		} else {
+			m.State, m.Files = MergeConflicts, files
+		}
+		m.CheckedAt = s.now().UTC()
+		bc.Mergeable = m
+		return nil, nil
+	})
+	if errors.Is(err, storage.ErrNoSuchRef) {
+		return bc, invalid("the branch %s does not exist in the fork", head)
+	}
+	return bc, err
 }

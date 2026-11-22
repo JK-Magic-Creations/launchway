@@ -60,17 +60,6 @@ func exitCode(err error) int {
 	return -1
 }
 
-func (g runner) isAncestor(ctx context.Context, anc, desc string) (bool, error) {
-	_, err := gitexec.Run(ctx, g.spec("merge-base", "--is-ancestor", anc, desc))
-	switch {
-	case err == nil:
-		return true, nil
-	case exitCode(err) == 1:
-		return false, nil
-	}
-	return false, gitErr([]string{"merge-base"}, err)
-}
-
 // counts says how many commits the head has that the base lacks (ahead) and
 // the base has that the head lacks (behind).
 func (g runner) counts(ctx context.Context, base, head string) (ahead, behind int, err error) {

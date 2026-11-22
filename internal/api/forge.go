@@ -228,12 +228,12 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		}
 		changes = append(changes, "archived")
 	}
-	if c, err := s.applyForkSettings(r, path, in); err != nil {
+	forkChanges, err := s.applyForkSettings(r, path, in)
+	if err != nil {
 		s.failFork(w, err)
 		return
-	} else {
-		changes = append(changes, c...)
 	}
+	changes = append(changes, forkChanges...)
 	if in.Name != nil || in.Owner != nil {
 		owner, name := r.PathValue("owner"), r.PathValue("name")
 		if in.Owner != nil {
