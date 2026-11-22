@@ -3,7 +3,7 @@
 Bring the pipelines a team already has into Launchway in a guided hour, not a rewrite. The importer reads the pipeline files
 of another system, proposes a Launchway pipeline, and tells you, construct by construct, what it carried over exactly, what it
 carried over with a difference, and what it could not carry over and why. It never drops anything silently and never invents
-behaviour: a construct it does not understand stays visible in the proposal and in the report.
+behavior: a construct it does not understand stays visible in the proposal and in the report.
 
 The importer reads the files and nothing else. It does not run them, does not fetch anything they include from elsewhere, and
 does not evaluate expressions or program code in them. It never changes your old files.
@@ -20,7 +20,7 @@ does not evaluate expressions or program code in them. It never changes your old
 
 The last two were chosen for reach: the jobs-and-workflows format is the most widely used among teams that host their pipelines
 as a service, and the tasks-and-stages format is the one most enterprises on a large vendor's suite use. They are read to the depth
-of jobs, steps, images, caches and triggers. A scripted Groovy pipeline is program code: the importer says so and lists the stages it recognised
+of jobs, steps, images, caches and triggers. A scripted Groovy pipeline is program code: the importer says so and lists the stages it recognized
 so that a person can write the steps.
 
 ## Move over in six steps
@@ -124,7 +124,7 @@ Where it lives: a file with a pipeline { ... } block at the top (its name usuall
 
 | In the old file | What the importer does | What you do |
 |---|---|---|
-| A scripted pipeline (node { ... }) | This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognised are: … | Write a step for each stage by hand, or rewrite the file in the declarative form first and import it again |
+| A scripted pipeline (node { ... }) | This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognized are: … | Write a step for each stage by hand, or rewrite the file in the declarative form first and import it again |
 | @Library and shared library calls | The file uses a shared library (…), whose code is not in this file | Copy what the library does into steps or a template (see libraries) |
 | agent { dockerfile } or kubernetes | The agent … is not carried | Build the image with an image step, or name a ready image for the step |
 | disableConcurrentBuilds | Runs that must not overlap are not carried | Set supersede: true to cancel older runs, or add a lane to make runs take turns |

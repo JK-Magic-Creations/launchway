@@ -27,7 +27,7 @@ type ImportRequest struct {
 	// Root imports only this file (its path) when several were sent.
 	Root string `json:"root,omitempty" jsonschema:"import only this file, named by its path in the files sent"`
 	// Dry marks every step that delivers as not yet enabled, behind the input enable_delivery.
-	Dry          bool              `json:"dry,omitempty" jsonschema:"switch off steps that push, release or deploy until the input enable_delivery is true"`
+	Dry          bool              `json:"dry,omitempty" jsonschema:"switch off steps that push, release or launch until the input enable_delivery is true"`
 	Name         string            `json:"name,omitempty" jsonschema:"the pipeline's name; default from the file"`
 	SecretStore  string            `json:"secret_store,omitempty" jsonschema:"the Station secret store the written secret references name; default vault"`
 	DefaultImage string            `json:"default_image,omitempty" jsonschema:"the image for jobs that name none"`

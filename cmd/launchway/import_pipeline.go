@@ -44,7 +44,7 @@ Options:
   --file PATH     import only this file (a path relative to --dir)
   --write         save the proposal; --force replaces an existing .launchway/pipeline.yaml
   --report FILE   save the findings as a report (Markdown, or JSON when the name ends in .json)
-  --dry           switch off every step that pushes, releases or deploys until the input enable_delivery is true,
+  --dry           switch off every step that pushes, releases or launches until the input enable_delivery is true,
                   so the new pipeline can run beside the old one and results can be compared first
   --json          print the whole result as JSON
   --verbose       list the constructs that converted exactly too

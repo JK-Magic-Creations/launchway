@@ -9,7 +9,7 @@ var groovyTable = Table{
 	{Code: "groovy.stage", Name: "stage with steps", Class: Exact,
 		Note: "The stage became a step that needs the stage before it"},
 	{Code: "groovy.scripted", Name: "A scripted pipeline (node { ... })", Class: Manual,
-		Note: "This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognised are: %s",
+		Note: "This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognized are: %s",
 		Next: "Write a step for each stage by hand, or rewrite the file in the declarative form first and import it again"},
 	{Code: "groovy.library", Name: "@Library and shared library calls", Class: Manual,
 		Note: "The file uses a shared library (%s), whose code is not in this file",

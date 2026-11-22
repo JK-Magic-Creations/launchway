@@ -5,7 +5,7 @@
 // A reader is a pure function from files to the model; it never runs, fetches
 // or evaluates anything in the files. Every construct a reader meets is
 // classified (see Class) in the reader's own table and reported as a Finding:
-// nothing is dropped silently and no behaviour is invented. A writer then turns
+// nothing is dropped silently and no behavior is invented. A writer then turns
 // the model into .launchway/pipeline.yaml, using the built-in templates where a
 // job plainly is the standard job for a language.
 package importer

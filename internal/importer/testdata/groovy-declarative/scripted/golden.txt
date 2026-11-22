@@ -1,5 +1,5 @@
 === Jenkinsfile (groovy-declarative)
 
 --- findings
-manual    groovy.scripted              Jenkinsfile:1 This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognised are: Checkout, Test -> Write a step for each stage by hand, or rewrite the file in the declarative form first and import it again
+manual    groovy.scripted              Jenkinsfile:1 This file is a scripted pipeline: it is program code, which is not read or run here. The stages that could be recognized are: Checkout, Test -> Write a step for each stage by hand, or rewrite the file in the declarative form first and import it again
 manual    write.error                  Jenkinsfile:0 nothing was found to run: the files hold no jobs the importer could read -> Write this pipeline by hand, or fix the findings above
