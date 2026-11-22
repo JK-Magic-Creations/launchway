@@ -411,6 +411,10 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `repository.create` | `POST /api/v1/repositories`; the target is the repository's path, the detail its visibility |
 | `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |
 | `repository.delete` | `DELETE /api/v1/repositories/{owner}/{name}`; the repository moves to the trash |
+| `repository.fork` | `POST /api/v1/repositories/{owner}/{name}/forks`; the target is the parent, the detail the fork's path and visibility |
+| `repository.sync` | `POST /api/v1/repositories/{owner}/{name}/sync`; the detail: the branch, the parent's branch and what happened |
+| `repository.from_template` | `POST /api/v1/repositories/{owner}/{name}/generate`; the target is the template, the detail the new repository |
+| `owner.fork_settings` | `PUT /api/v1/owners/{owner}/fork-settings`; the target is the owner, the detail the new switch |
 | `mirror.create` | `POST /api/v1/repositories/{owner}/{name}/mirrors` (also `launchway repos mirror add`); the detail says the direction, the address and where the credential is read from, never the credential |
 | `mirror.update` | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}`: paused, resumed, a new interval or prune setting, or a push mirror's `publish_releases` turned on or off |
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |
@@ -458,6 +462,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `pull.review_unrequest` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}`; the detail: pull request #N and the person taken off the list |
 | `pull.queue` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/queue`; the detail: pull request #N, who queued it and its state |
 | `pull.dequeue` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/queue`; the detail: pull request #N |
+| `pull.resolve_conflicts` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/conflicts/resolve`; the detail: pull request #N, the files, where the branch is and its new head |
+| `pull.maintainer_edits` | `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/maintainer-edits`; the detail: whether maintainers may edit |
+| `pull.approve_run` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/approve-run`; the detail: the head approved to run |
 | `pull.update_branch` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/update-branch`; the detail: pull request #N and the new head |
 | `pull.owners_check` | `POST /api/v1/repositories/{owner}/{name}/owners/check`; checks the text of an owners file and stores nothing |
 | `repository.pull_settings` | `PUT /api/v1/repositories/{owner}/{name}/pull-settings`; the detail: the allowed methods and the default |

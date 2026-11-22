@@ -172,11 +172,11 @@ func TestResolvingAMovedBranchChangesNothing(t *testing.T) {
 
 func TestMarkerDetectionIgnoresUnderlines(t *testing.T) {
 	for text, want := range map[string]bool{
-		"Title\n=======\nBody\n":                       false,
+		"Title\n=======\nBody\n":                        false,
 		"<<<<<<< ours\nx\n=======\ny\n>>>>>>> theirs\n": true,
-		"<<<<<<<\nx\n>>>>>>>\n":                        true,
-		"a << b\n":                                     false,
-		"<<<<<<< only an opening\n":                    false,
+		"<<<<<<<\nx\n>>>>>>>\n":                         true,
+		"a << b\n":                                      false,
+		"<<<<<<< only an opening\n":                     false,
 	} {
 		if got := hasMarkers(text); got != want {
 			t.Errorf("%q: %v", text, got)

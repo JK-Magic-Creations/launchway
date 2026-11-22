@@ -73,6 +73,18 @@ func cmdRepos(args []string) error {
 			return cl.reposUpdate(args[1:])
 		case "delete":
 			return cl.reposDelete(args[1:])
+		case "fork":
+			return cl.reposFork(args[1:])
+		case "forks":
+			return cl.reposForks(args[1:])
+		case "fork-status":
+			return cl.reposForkStatus(args[1:])
+		case "sync":
+			return cl.reposSync(args[1:])
+		case "template":
+			return cl.reposTemplate(args[1:])
+		case "fork-settings":
+			return cl.reposForkSettings(args[1:])
 		case "deploy-keys":
 			return cl.deployKeys(args[1:])
 		case "hooks":

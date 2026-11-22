@@ -232,3 +232,51 @@ func (s *Service) IsFork(ctx context.Context, repoID string, number int) (bool, 
 	}
 	return p.SourceRepo != "", nil
 }
+
+// updateForkBranch brings the target into a pull request's branch in the fork:
+// a merge commit made in the fork, which takes the target's commits it lacks
+// (the caller checked that the fork may hold them). A rebase of a fork's branch
+// is not offered: it rewrites history the fork's owner keeps.
+func (s *Service) updateForkBranch(ctx context.Context, repoID string, p PullRequest, method, by string) (string, error) {
+	if method != "" && method != "merge" {
+		return "", invalid("a branch in a fork is updated by a merge; a rebase rewrites the history its owner keeps")
+	}
+	sref, tref := branchRef(p.SourceBranch), branchRef(p.TargetBranch)
+	var made string
+	_, err := s.Git.Transfer(ctx, p.SourceRepo, repoID, []string{tref}, func(ctx context.Context, scratch string, dst, tips map[string]string) ([]storage.RefUpdate, error) {
+		head, tip := dst[sref], tips[tref]
+		if head == "" || tip == "" {
+			return nil, conflict("the branch %s or %s no longer exists", p.SourceBranch, p.TargetBranch)
+		}
+		if head != p.HeadSHA {
+			return nil, conflict("the fork's branch %s moved since the pull request last looked; refresh and try again", p.SourceBranch)
+		}
+		g := s.runner(scratch, true)
+		if up, err := g.isAncestor(ctx, tip, head); err != nil {
+			return nil, err
+		} else if up {
+			return nil, conflict("%s already contains everything in %s", p.SourceBranch, p.TargetBranch)
+		}
+		tree, files, clean, err := g.trial(ctx, head, tip)
+		if err != nil {
+			return nil, err
+		}
+		if !clean {
+			return nil, conflict("merging %s into %s conflicts in %s; resolve the conflicts", p.TargetBranch, p.SourceBranch, strings.Join(files, ", "))
+		}
+		made, err = s.commitMerge(ctx, g, by, tree, head, tip, fmt.Sprintf("Merge branch '%s' into %s", p.TargetBranch, p.SourceBranch))
+		if err != nil {
+			return nil, err
+		}
+		return []storage.RefUpdate{{Name: sref, Old: head, New: made}}, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	ups := []RefUpdate{{Name: sref, Old: p.HeadSHA, New: made}}
+	s.Pushed(ctx, p.SourceRepo, by, ups)
+	if s.AfterBranchMoved != nil {
+		s.AfterBranchMoved(ctx, p.SourceRepo, by, ups)
+	}
+	return made, nil
+}

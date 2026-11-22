@@ -158,6 +158,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
 | `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
+| `GET /api/v1/owners/{owner}/fork-settings` | `fork_settings` | `repos fork-settings` | — | equal |
+| `PUT /api/v1/owners/{owner}/fork-settings` | `fork_settings` | `repos fork-settings` | — | equal |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
@@ -350,6 +352,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/files` | `read_repository_file` | `repos files` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/files` | `upload_repository_files` | `repos upload` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/files` | `write_repository_file` | `repos put-file` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/fork` | `get_fork_status` | `repos fork-status` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/forks` | `list_forks` | `repos forks` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/forks` | `fork_repository` | `repos fork` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/generate` | `use_template` | `repos template` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/graph/refresh` | `refresh_graph` | `graph refresh` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
@@ -374,15 +380,20 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/repositories/{owner}/{name}/pull-settings` | `set_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls` | `list_pull_requests` | `pr list` | `planned: launchway_pull_request` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls` | `create_pull_request` | `pr create` | `planned: launchway_pull_request` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/from-fork` | `create_pull_request` | `pr create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}` | `update_pull_request` | `pr edit` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/approve-run` | `approve_pull_run` | `pr approve-run` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments` | `comment_on_pull_request` | `pr comment` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}/apply` | `update_pull_comment` | `pr apply` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/commits` | `get_pull_request` | `pr view` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/conflicts` | `list_pull_conflicts` | `pr conflicts` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/conflicts/resolve` | `resolve_pull_conflicts` | `pr resolve` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/conversation` | `get_pull_request` | `pr view` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/files` | `get_pull_request` | `pr diff` | — | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/maintainer-edits` | `set_maintainer_edits` | `pr maintainer-edits` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge` | `merge_pull_request` | `pr merge` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/owners` | `get_pull_owners` | `pr owners` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/patch` | `get_pull_request` | `pr diff` | — | equal |
@@ -402,9 +413,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/sync` | `sync_fork` | `repos sync` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/tags` | `delete_repository_tag` | `repos tags delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/tags` | `create_repository_tag` | `repos tags create` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/template` | `get_template` | `repos template` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
 | `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |

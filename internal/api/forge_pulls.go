@@ -226,7 +226,9 @@ func (s *Server) viewPull(r *http.Request, repo forge.Repository, p pulls.PullRe
 		return pullView{}, err
 	}
 	qe, _ := s.Forge.Pulls.Store.QueueEntryOf(r.Context(), p.ID)
-	return pullView{PullRequest: p, Readiness: rd, Actions: s.pullActions(id, repo, p, rd, qe), Queue: qe, FetchRef: pulls.PullRef(p.Number), YourRole: role}, nil
+	v := pullView{PullRequest: p, Readiness: rd, Actions: s.pullActions(id, repo, p, rd, qe), Queue: qe, FetchRef: pulls.PullRef(p.Number), YourRole: role}
+	v.SourceRepo = s.forkPath(r.Context(), p.SourceRepo) // a fork is named by its path, not its ID
+	return v, nil
 }
 
 func (s *Server) getPull(w http.ResponseWriter, r *http.Request) {

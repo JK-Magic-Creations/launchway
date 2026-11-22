@@ -19,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	mirroregress "github.com/jk-magic-creations/launchway/internal/forge/egress"
+	"github.com/jk-magic-creations/launchway/internal/forge/forks"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
@@ -94,6 +95,8 @@ type Hosting struct {
 	Hooks *webhooks.Service
 	// Pulls is pull requests and code review.
 	Pulls *pulls.Service
+	// Forks is forks and template repositories.
+	Forks *forks.Service
 	o     Options
 	log   *slog.Logger
 }
@@ -166,6 +169,8 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	pullSvc := pulls.NewService(pulls.NewStore(o.Engine.Database()), sto, o.Log)
 	po.Pulls = pullSvc // the provider answers for proposals with the pull-request service
 	prov := launchway.New(conn, fs, sto, po)
+	fk := &forks.Service{Repos: prov.Repositories(), ByID: fs.Repository, Git: sto, DB: o.Engine.Database(), Log: o.Log}
+	pullSvc.SameNetwork = fk.SameNetwork
 	ms.SetCreator(prov.Repositories())
 	db := o.Engine.Database()
 	hk := o.Hooks
@@ -181,7 +186,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 		hk.Client = g.HTTPClient(10 * time.Second)
 	}
 	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt,
-		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pullSvc, o: o, log: o.Log}, nil
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pullSvc, Forks: fk, o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.

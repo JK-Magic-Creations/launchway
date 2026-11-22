@@ -206,3 +206,8 @@ func (s *Service) SameNetwork(ctx context.Context, a, b string) (bool, error) {
 	}
 	return SameNetwork(ia, ib), nil
 }
+
+// OwnerSwitch reads an owner's switch: set is false when the owner has none.
+func (s *Service) OwnerSwitch(ctx context.Context, owner string) (allow, set bool, err error) {
+	return store.OwnerAllowForks(ctx, s.DB, owner)
+}
