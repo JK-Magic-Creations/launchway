@@ -26,6 +26,9 @@ type Facts struct {
 	PublicExposure Tri
 	// SecondFactor: every built-in administrator has a second factor.
 	SecondFactor Tri
+	// ProxyNamed: forwarding headers are believed only from the proxies named in server.trusted_proxies
+	// (Yes), or from any peer because only the older trust_proxy is set (No); Unknown when no proxy is in use.
+	ProxyNamed Tri
 	// Kubernetes says the installation runs in a cluster (cluster-only items are skipped otherwise).
 	Kubernetes bool
 }
@@ -93,6 +96,10 @@ func Check(f Facts) []Item {
 			"The address is plain http. Passwords and sessions cross the network unprotected: use it only on a private network you trust, and add TLS (a certificate or a proxy) before anyone else uses it.",
 			"Could not tell whether the address is https.")
 	}
+	add("proxy-addresses", f.ProxyNamed, "Client addresses come only from named proxies",
+		"The client address and scheme are believed only from the proxies named in server.trusted_proxies.",
+		"Client addresses are believed from any peer: server.trust_proxy is on without server.trusted_proxies, so anyone who reaches the server directly can forge theirs (and slip past a token's source-address limit). Set server.trusted_proxies to the address ranges of your proxies (Helm: server.trustedProxies).",
+		"")
 	add("encryption", f.Encrypted, "Stored secrets are encrypted",
 		"Secrets in the database are sealed under a root key kept outside it, so a copy of the database alone reveals none.",
 		"Secrets are stored without encryption at rest. Turn on encryption (the guide Encryption at rest) before storing real credentials.",

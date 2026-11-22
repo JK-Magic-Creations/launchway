@@ -239,6 +239,8 @@ number can run against the same database.
 <!-- keys: helm -->
 | Value | Type | Default | Description |
 |---|---|---|---|
+| `server.trustedProxies` | list of strings | `[]` | The address ranges (CIDR) of the proxies in front of the servers. Their `X-Forwarded-For` and `X-Forwarded-Proto` are believed; those of any other peer are ignored. Written as `server.trusted_proxies`. Set it behind an Ingress or a Gateway |
+| `server.clientAddressHeader` | string or null | unset | The header holding the one client address your edge sets (such as `X-Real-IP`), believed only from a trusted proxy. Written as `server.client_address_header` |
 | `server.replicas` | integer | `2` | Number of servers. Two or more for high availability |
 | `server.strategy.rollingUpdate.maxUnavailable` | integer or string | `0` | Keeps every server serving until its replacement is ready |
 | `server.strategy.rollingUpdate.maxSurge` | integer or string | `1` | |

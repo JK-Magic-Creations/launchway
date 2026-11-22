@@ -370,6 +370,8 @@
       "type": "object",
       "properties": {
         "replicas": { "type": "integer", "minimum": 0 },
+        "trustedProxies": { "type": "array", "items": { "type": "string" } },
+        "clientAddressHeader": { "type": ["string", "null"] },
         "strategy": {
           "type": "object",
           "properties": {

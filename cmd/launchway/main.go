@@ -983,7 +983,7 @@ func setProxy(srv *api.Server, cfg *config.Config, log *slog.Logger) error {
 		return err
 	}
 	if cfg.Server.TrustProxy && len(ranges) == 0 {
-		log.Warn("server.trust_proxy is on without server.trusted_proxies: the forwarding headers are believed from every address that reaches this server; list your proxies in server.trusted_proxies so that only they are believed")
+		log.Warn("server.trust_proxy is on without server.trusted_proxies, so the forwarding headers (and with them the client address that token source-address limits and the Logbook use) are believed from every address that reaches this server. Set server.trusted_proxies to the address ranges of your proxies, for example `server: {trusted_proxies: [10.0.0.0/8]}` (Helm: server.trustedProxies); the older trust_proxy then no longer widens it")
 	}
 	srv.TrustedProxies, srv.ClientAddrHeader = ranges, cfg.Server.ClientAddressHeader
 	srv.AdminTokenMakesServiceTokens = cfg.Auth.Tokens.ServiceAccountsFromTokens

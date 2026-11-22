@@ -40,6 +40,12 @@ func factsFromInstall(ctx context.Context, in installer.DoctorInput) securityche
 	case "no":
 		f.TLS = securitycheck.No
 	}
+	switch in.Facts["proxy"] {
+	case "named":
+		f.ProxyNamed = securitycheck.Yes
+	case "any-peer":
+		f.ProxyNamed = securitycheck.No
+	}
 	if in.Facts["loopback"] == "yes" || in.Facts["tls"] == "loopback" {
 		f.Loopback = securitycheck.Yes
 		f.PublicExposure = securitycheck.Yes
@@ -93,6 +99,11 @@ func doctorSecurity(args []string) error {
 		cfg.ApplyAuthDefault(cfg.Listen)
 		if config.IsLoopback(cfg.Listen) {
 			in.Facts["loopback"] = "yes"
+		}
+		if r, _ := cfg.Server.TrustedProxyPrefixes(); len(r) > 0 {
+			in.Facts["proxy"] = "named"
+		} else if cfg.Server.TrustProxy {
+			in.Facts["proxy"] = "any-peer"
 		}
 		switch cfg.Auth.Mode {
 		case config.AuthNone:

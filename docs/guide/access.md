@@ -164,7 +164,7 @@ client wrote before them is never read); with `client_address_header`, the heade
 address, or it is ignored. Without `trusted_proxies` nothing is believed, unless the older
 `server.trust_proxy: true` is set: that believes the headers from every peer (the server logs a warning
 at start), which is right only if clients cannot reach Launchway except through the proxy. Prefer
-`trusted_proxies`. The client address is what the Logbook, the failed-sign-in limit and a token's
+`trusted_proxies` (Helm: `server.trustedProxies` and `server.clientAddressHeader`); `launchway doctor security` reports "client addresses are believed from any peer" until you do. The client address is what the Logbook, the failed-sign-in limit and a token's
 source-address limit use. The proxy must pass the `Host` header through unchanged, and must not buffer
 `/api/v1/stream`. Cookies are also `Secure` whenever `redirect_url` starts with `https://`.
 

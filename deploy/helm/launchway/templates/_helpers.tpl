@@ -326,6 +326,8 @@ owns may not appear in it.
 {{- if and (or .Values.ingress.enabled .Values.httpRoute.enabled) (not (hasKey (get $extra "server" | default dict) "trust_proxy")) -}}
 {{- $_ := set $config "server" (dict "trust_proxy" true) -}}
 {{- end -}}
+{{- with .Values.server.trustedProxies }}{{ $srv := get $config "server" | default dict }}{{ $_ := set $srv "trusted_proxies" . }}{{ $_ := set $config "server" $srv }}{{ end -}}
+{{- with .Values.server.clientAddressHeader }}{{ $srv := get $config "server" | default dict }}{{ $_ := set $srv "client_address_header" . }}{{ $_ := set $config "server" $srv }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- /* The model registry (schema 19): only when set. */ -}}
 {{- $ai := .Values.ai | default dict -}}
