@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SignatureBadge, useSignatures } from "../../components/Signature";
 import { browseApi, codeHref, commitHref, commitsHref, type CommitEntry, type RunBrief } from "../../browseApi";
 import { Link } from "../../components/ui";
 import { Status, stateOf } from "../../kit/Status";
@@ -10,6 +11,7 @@ import type { RunStatus } from "../../api";
 /** One commit: its message, who made it, its parents, the runs started for it and the files it changed. */
 export function CommitPage({ path, sha }: { path: string; sha: string }) {
   const [c, setC] = useState<CommitEntry | null>(null);
+  const sigs = useSignatures(path, c ? [c.sha] : []);
   const [runs, setRuns] = useState<RunBrief[]>([]);
   const [diff, setDiff] = useState<{ files: FileChange[]; total: number; additions: number; deletions: number; truncated: boolean } | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -33,6 +35,7 @@ export function CommitPage({ path, sha }: { path: string; sha: string }) {
           {body && <pre className="commit-body">{body}</pre>}
           <dl className="kvlist">
             <dt>Commit</dt><dd><span className="mono">{c.sha}</span> <CopyButton text={c.sha} what="the commit name" /></dd>
+            <dt>Signature</dt><dd>{sigs[c.sha] ? <SignatureBadge result={sigs[c.sha]} /> : <span className="faint">not known</span>}</dd>
             <dt>Author</dt><dd>{c.author}, <time dateTime={c.authored_at}>{new Date(c.authored_at).toUTCString()}</time></dd>
             {c.committer !== c.author && <><dt>Committed by</dt><dd>{c.committer}, <time dateTime={c.committed_at}>{new Date(c.committed_at).toUTCString()}</time></dd></>}
             <dt>{c.parent_shas.length > 1 ? "Parents" : "Parent"}</dt>

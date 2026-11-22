@@ -1,3 +1,4 @@
+import { SignatureBadge, useSignatures } from "../../components/Signature";
 import { useCallback, useEffect, useState } from "react";
 import { useUrlState } from "../../urlState";
 import { canChange, useMe } from "../../auth";
@@ -132,6 +133,7 @@ export function TagsPage({ path }: { path: string }) {
   const [asking, setAsking] = useState<RefInfo | null>(null);
   const [notice, setNotice] = useState<{ name: string; was: string } | null>(null);
   const [def, setDef] = useState("");
+  const sigs = useSignatures(path, (items ?? []).map((t) => t.sha));
   const load = useCallback(() => browseApi.tags(path, q, 100).then((r) => { setItems(r.items); setTotal(r.total); setError(null); }).catch(setError), [path, q]);
   useEffect(() => {
     const t = setTimeout(load, q ? 150 : 0);
@@ -172,7 +174,7 @@ export function TagsPage({ path }: { path: string }) {
             <tbody>
               {items.map((t) => (
                 <tr key={t.name}>
-                  <td><Link href={codeHref(path, t.name)} className="mono">{t.name}</Link> {t.annotated && <Chip>annotated</Chip>}</td>
+                  <td><Link href={codeHref(path, t.name)} className="mono">{t.name}</Link> {t.annotated && <Chip>annotated</Chip>}<SignatureBadge result={sigs[t.sha]} quiet /></td>
                   <td>{t.annotated ? <span className="tag-msg">{t.message || t.subject}</span> : <span className="faint">{t.subject}</span>}{t.tagger && <div className="faint small">tagged by {t.tagger}</div>}</td>
                   <td><Link href={commitHref(path, t.commit)} className="mono">{t.commit.slice(0, 8)}</Link></td>
                   <td className="faint small">{when(t.committed_at)}</td>

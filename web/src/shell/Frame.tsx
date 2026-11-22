@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { InboxLink } from "./InboxLink";
 import { api, type Approval, type Me } from "../api";
 import { attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
@@ -153,6 +154,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <Route ctx={ctx} on={area} needs={badN + warnN} />
           <DoBarButton onOpen={() => setLayer("do")} />
           <div className="top-r">
+            <InboxLink current={path === "/inbox"} />
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
             <a className={"btn btn-sm" + (isLearn(path) ? " on" : "")} href="/learn" onClick={onLink} aria-label={`${terms().label("learn")}: the documentation of this release`} aria-current={isLearn(path) ? "page" : undefined} data-act="learn"><Icon name="book" size="s" /><span className="hide-s">{terms().say("{Learn}")}</span></a>
             <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")} data-act="guide"><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>

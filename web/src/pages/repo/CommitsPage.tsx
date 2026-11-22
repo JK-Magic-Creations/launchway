@@ -3,6 +3,7 @@ import { browseApi, codeHref, commitHref, commitsHref, type CommitEntry } from "
 import { Link } from "../../components/ui";
 import { EmptyState } from "../../kit/layout";
 import { navigate } from "../../router";
+import { SignatureBadge, useSignatures } from "../../components/Signature";
 import { Breadcrumb, CopyButton, IconAction, MsgLink, RefSwitcher, RepoFrame, useQuery, useRepo, when } from "./common";
 
 /** The commits of a branch, tag or commit, or only those that changed one path (a file's history follows renames). */
@@ -20,6 +21,7 @@ export function CommitsPage({ path }: { path: string }) {
     browseApi.commits(path, ref, p || undefined, limit).then((r) => { if (alive) { setItems(r.items); setShownRef(r.ref); setError(null); } }).catch((e) => alive && setError(e));
     return () => { alive = false; };
   }, [path, ref, p, limit]);
+  const sigs = useSignatures(path, (items ?? []).map((c) => c.sha));
   const current = shownRef || repo?.default_branch || "main";
   return (
     <RepoFrame path={path} tab="commits" title={p ? `History of ${p.split("/").pop()}` : "Commits"} error={error}
@@ -32,7 +34,7 @@ export function CommitsPage({ path }: { path: string }) {
           <ul className="commit-list">
             {items.map((c) => (
               <li key={c.sha}>
-                <MsgLink href={commitHref(path, c.sha)} text={c.subject || "(no message)"} />
+                <span><MsgLink href={commitHref(path, c.sha)} text={c.subject || "(no message)"} /><SignatureBadge result={sigs[c.sha]} quiet /></span>
                 <span className="commit-who faint small">{c.author}{c.committer !== c.author ? ` (committed by ${c.committer})` : ""}</span>
                 <time className="commit-when faint small" dateTime={c.authored_at}>{when(c.authored_at)}{c.parents > 1 ? ", a merge" : ""}</time>
                 <span className="commit-side">
