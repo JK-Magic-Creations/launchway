@@ -58,7 +58,7 @@ func TestKubePodRestrictedByDefault(t *testing.T) {
 
 	ps := pod.Spec.SecurityContext
 	if ps == nil || ps.RunAsNonRoot == nil || !*ps.RunAsNonRoot || *ps.RunAsUser != 1000 || *ps.RunAsGroup != 1000 ||
-		*ps.FSGroup != 1000 || ps.SeccompProfile == nil || ps.SeccompProfile.Type != corev1.SeccompProfileTypeRuntimeDefault {
+		ps.FSGroup != nil || ps.SeccompProfile == nil || ps.SeccompProfile.Type != corev1.SeccompProfileTypeRuntimeDefault {
 		t.Fatalf("pod security context %+v", ps)
 	}
 
@@ -127,7 +127,7 @@ func TestKubePodOtherUser(t *testing.T) {
 	k := testKube(t, KubernetesOptions{RunAsUser: ptr(int64(2000)), RunAsGroup: ptr(int64(0))})
 	pod, _ := k.podSpec("p", "run_1", podTestSpecs)
 	ps := pod.Spec.SecurityContext
-	if *ps.RunAsUser != 2000 || *ps.RunAsGroup != 0 || *ps.FSGroup != 0 || !*ps.RunAsNonRoot {
+	if *ps.RunAsUser != 2000 || *ps.RunAsGroup != 0 || ps.FSGroup != nil || !*ps.RunAsNonRoot {
 		t.Fatalf("pod security context %+v", ps)
 	}
 }

@@ -374,7 +374,7 @@ Kubernetes API.
 | `runner.kubernetes.startTimeout` | string | `""` (`10m`) | How long to wait for a step pod's images and containers |
 | `runner.kubernetes.restricted` | boolean | `true` | Step containers run as `runAsUser`, without privileges, meeting Pod Security `restricted`; see [`kubernetes.restricted`](runner-config.md#kubernetes). Pipelines cannot change it |
 | `runner.kubernetes.runAsUser` | integer or null | unset (1000) | Not 0 |
-| `runner.kubernetes.runAsGroup` | integer or null | unset (1000) | Also owns the pod's volumes |
+| `runner.kubernetes.runAsGroup` | integer or null | unset (1000) | The group step containers run as when restricted |
 | `runner.healthPort` | integer | `8081` | The port runners serve `/healthz` and `/readyz` on, for the probes. Not exposed outside the pod |
 | `runner.livenessProbe` | object | `GET /healthz`, every 10s | |
 | `runner.readinessProbe` | object | `GET /readyz`, every 10s | A runner that cannot reach the servers is not ready, which holds back a rollout that would replace working runners |

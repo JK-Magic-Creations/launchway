@@ -80,7 +80,7 @@ type KubernetesOptions struct {
 	// changes a pod's security context.
 	Restricted *bool  `yaml:"restricted"`
 	RunAsUser  *int64 `yaml:"run_as_user"`  // default 1000; never 0
-	RunAsGroup *int64 `yaml:"run_as_group"` // default 1000; also owns the pod's volumes (fsGroup)
+	RunAsGroup *int64 `yaml:"run_as_group"` // default 1000
 	// UserEntry, true unless set to false, gives the step's user an entry in /etc/passwd and /etc/group of
 	// every step container (see kubernetes_user.go), so that tools that look their user up, such as the ssh
 	// client, work. Set it to false for images that already handle a numeric user. Applies when restricted.
@@ -601,10 +601,13 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 	var podSecurity *corev1.PodSecurityContext
 	if restricted {
 		podSecurity = &corev1.PodSecurityContext{
-			RunAsNonRoot:   ptr(true),
-			RunAsUser:      ptr(*k.o.RunAsUser),
-			RunAsGroup:     ptr(*k.o.RunAsGroup),
-			FSGroup:        ptr(*k.o.RunAsGroup),
+			RunAsNonRoot: ptr(true),
+			RunAsUser:    ptr(*k.o.RunAsUser),
+			RunAsGroup:   ptr(*k.o.RunAsGroup),
+			// No FSGroup: with one, Kubernetes puts the set-group-id bit on every volume's root, and every directory a
+			// step makes under it inherits that bit, so a test that asserts the exact mode 0700 fails here and passes on
+			// an ordinary machine. An emptyDir is writable by every user without it, and what a step makes is owned
+			// by the step's own user and group (the pod's RunAsUser and RunAsGroup).
 			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 		}
 		for i := range cs {

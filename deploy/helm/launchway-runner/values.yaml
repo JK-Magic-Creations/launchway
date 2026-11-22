@@ -159,7 +159,7 @@ runner:
     # -- The user step containers run as when restricted. Not 0 (root).
     # Unset: the built-in default, 1000.
     runAsUser:
-    # -- The group step containers run as when restricted; it also owns the pod's volumes.
+    # -- The group step containers run as when restricted.
     # Unset: the built-in default, 1000.
     runAsGroup:
   # -- The port Stations serve /healthz (process up) and /readyz (the server answered within two
