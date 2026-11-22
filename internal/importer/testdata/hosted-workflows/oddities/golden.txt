@@ -38,6 +38,13 @@ steps:
     image: docker.io/library/ubuntu:24.04
     run: |
       echo conditional
+  extra:
+    image: docker.io/library/ubuntu:24.04
+    needs: lint
+    for_each:
+      py: ["3.11", "3.12"]
+    run: |
+      echo ${REGION} ${LAUNCHWAY_EACH_PY}
 
 --- findings
 exact     hosted.on.push               .github/workflows/odd.yml:2 The push trigger carries over, with its branch, tag and path filters
@@ -65,7 +72,7 @@ manual    hosted.expr.unknown          .github/workflows/odd.yml:28 The expressi
 exact     hosted.step.run              .github/workflows/odd.yml:28 Commands carry over
 manual    hosted.job.runs_on_os        .github/workflows/odd.yml:30 The job asks for windows-latest, and Launchway steps run in Linux container images -> Run it on a Station with that operating system, or drop it from the pipeline
 exact     hosted.job                   .github/workflows/odd.yml:30 The job became a step; its commands run in order in one script
-different write.image.default          .github/workflows/odd.yml:30 The steps win, reuse, dyn, cond name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+different write.image.default          .github/workflows/odd.yml:30 The steps win, reuse, dyn, cond, extra name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
 exact     hosted.step.run              .github/workflows/odd.yml:32 Commands carry over
 manual    hosted.job.reusable          .github/workflows/odd.yml:34 The job calls the workflow ./.github/workflows/shared.yml, which holds the real steps -> Import that workflow file as well and copy its steps here, or write a template (see libraries)
 exact     hosted.job                   .github/workflows/odd.yml:38 The job became a step; its commands run in order in one script
@@ -74,3 +81,11 @@ exact     hosted.step.run              .github/workflows/odd.yml:42 Commands car
 exact     hosted.job                   .github/workflows/odd.yml:44 The job became a step; its commands run in order in one script
 manual    hosted.job.if_expr           .github/workflows/odd.yml:45 The condition `contains(github.event.head_commit.message, '[ci]')` is an expression, and Launchway has no expression language, so the job now always runs -> Express it as a when: filter (branch, tag, event, changed, input) or move the test into the script
 exact     hosted.step.run              .github/workflows/odd.yml:47 Commands carry over
+exact     hosted.job                   .github/workflows/odd.yml:49 The job became a step; its commands run in order in one script
+exact     hosted.job.needs             .github/workflows/odd.yml:50 Dependencies between jobs carry over
+manual    hosted.concurrency.queue     .github/workflows/odd.yml:51 The old file made runs wait for each other; the pipeline file was written without a rule for that -> Add a lane to the pipeline (see the pipeline reference, Lane) if runs must not overlap
+exact     hosted.job.matrix            .github/workflows/odd.yml:53 The matrix became for_each, with exclude and add entries
+manual    hosted.job.matrix_extra      .github/workflows/odd.yml:56 An include entry adds the values experimental to existing combinations, which Launchway cannot express -> Write the extra values into the commands, or add the combination as a whole entry with every key
+different hosted.var                   .github/workflows/odd.yml:59 The variable REGION is set in the old system, not in the file; here it is read from an environment variable of the same name -> Create a variable with that name for the Flight (names only; see the variables guide)
+different hosted.expr                  .github/workflows/odd.yml:59 Expressions were replaced by shell variables where the value is known: matrix.py -> Nothing, unless the new value reads differently
+exact     hosted.step.run              .github/workflows/odd.yml:59 Commands carry over

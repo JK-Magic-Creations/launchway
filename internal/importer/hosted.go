@@ -167,7 +167,7 @@ func (h *hostedReader) triggers(t *N) {
 		case "pull_request_target":
 			h.rp.note("hosted.on.pr_target", ln)
 		case "schedule":
-			for _, s := range cfg.Items {
+			for _, s := range cfg.List() {
 				if c := s.Get("cron").Str(); c != "" {
 					tr.Schedules = append(tr.Schedules, Schedule{Cron: c, Zone: s.Get("timezone").Str()})
 				}
@@ -381,7 +381,7 @@ func (h *hostedReader) job(id string, n *N) {
 	dir := h.defDir
 	steps := n.Get("steps")
 	var cmds strings.Builder
-	for _, s := range steps.Items {
+	for _, s := range steps.List() {
 		h.step(hj, s, dir)
 	}
 	for _, s := range j.Steps {
@@ -458,18 +458,18 @@ func (h *hostedReader) matrix(hj *hostedJob, st *N) {
 		}
 		key := loopKey(k)
 		mx.Keys = append(mx.Keys, key)
-		for _, it := range v.Items {
+		for _, it := range v.List() {
 			mx.Values[key] = append(mx.Values[key], it.Val)
 		}
 	}
-	for _, e := range m.Get("exclude").Items {
+	for _, e := range m.Get("exclude").List() {
 		em := map[string]string{}
 		for i, k := range e.Keys {
 			em[loopKey(k)] = e.Vals[i].Val
 		}
 		mx.Exclude = append(mx.Exclude, em)
 	}
-	for _, e := range m.Get("include").Items {
+	for _, e := range m.Get("include").List() {
 		em := map[string]string{}
 		extra := []string{}
 		for i, k := range e.Keys {

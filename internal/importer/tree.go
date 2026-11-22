@@ -235,3 +235,21 @@ func hasLaterKey(y *yaml.Node, from int, key string) bool {
 	}
 	return false
 }
+
+// List is the items of a list, or nil; safe on nil.
+func (n *N) List() []*N {
+	if n == nil {
+		return nil
+	}
+	return n.Items
+}
+
+// Pairs calls f for each entry of a mapping; safe on nil.
+func (n *N) Pairs(f func(key string, v *N, line int)) {
+	if n == nil || n.Kind != kMap {
+		return
+	}
+	for i, k := range n.Keys {
+		f(k, n.Vals[i], n.KeyLine[i])
+	}
+}
