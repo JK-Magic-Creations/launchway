@@ -287,15 +287,15 @@ function AssetsSheet({ v, onChanged }: { v: ReleaseView; onChanged: () => void }
   };
   return (
     <Sheet title="Cargo and images">
-      {r.latest && <p className="rel-hint" style={{ padding: "14px 16px 0" }}>This is the latest release. Its address stays the same for the next one: use <span className="mono">{releasesApi.downloadUrl(r.project, "latest", "FILE")}</span> to get a file by name.</p>}
+      {r.latest && <p className="rel-hint" style={{ padding: "14px 16px 0" }}>This is the latest release. Its address stays the same for the next one: use <span className="mono" style={{ overflowWrap: "anywhere" }}>{releasesApi.downloadUrl(r.project, "latest", "FILE")}</span> to get a file by name.</p>}
       {assets.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No files or images are attached.</p> : (
         <div className="rel-table-wrap"><table className="rel-table rel-assets">
           <caption className="visually-hidden">Files and images of this release, with where each came from</caption>
-          <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size</th><th scope="col" className="n">Downloads</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
+          <thead><tr><th scope="col">Name</th><th scope="col" className="hide-narrow">Kind</th><th scope="col" className="n">Size and downloads</th><th scope="col">SHA-256 or digest</th><th scope="col" className="hide-narrow">Where it came from</th><th scope="col">Get it</th></tr></thead>
           <tbody>{assets.map((a: ReleaseAsset) => (
             <tr key={a.id}>
               <td>{a.kind === "file" ? <a href={releasesApi.downloadUrl(r.project, r.version, a.name)} download>{a.name}</a> : a.name}</td>
-              <td className="hide-narrow">{a.kind}</td><td className="n">{a.kind === "file" ? size(a.size) : ""}</td><td className="n">{a.kind === "file" ? (a.downloads ?? 0) : ""}</td>
+              <td className="hide-narrow">{a.kind}</td><td className="n">{a.kind === "file" ? <>{size(a.size)}<br /><span className="faint small">{a.downloads ?? 0} {a.downloads === 1 ? "download" : "downloads"}</span></> : ""}</td>
               <td className="rel-sha">{a.sha256 ?? a.digest ?? ""}{a.detail ? <span className="faint"> · {a.detail}</span> : null}</td>
               <td className="hide-narrow">{a.run_id ? <>Sortie #{a.run_number} at {a.source_sha?.slice(0, 8)}, added by {a.added_by}</> : <>uploaded by {a.added_by}</>}</td>
               <td>

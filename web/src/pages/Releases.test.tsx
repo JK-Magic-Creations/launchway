@@ -31,8 +31,7 @@ describe("releases", () => {
     expect(screen.getByText("Latest")).toBeTruthy();
     expect(screen.getByText(/This is the latest release/)).toBeTruthy();
     const row = screen.getByRole("link", { name: "shop-api-linux-amd64" }).closest("tr") as HTMLElement;
-    expect(within(row).getByText("42")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Downloads" })).toBeTruthy();
+    expect(within(row).getByText("42 downloads")).toBeTruthy();
   }, 20000);
 
   it("shows a published release as fixed: no editing, its Cargo with checksums and where each came from", async () => {

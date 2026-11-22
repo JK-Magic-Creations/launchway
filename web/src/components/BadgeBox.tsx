@@ -26,8 +26,8 @@ export function BadgeBox({ project, canSwitch }: { project: string; canSwitch: b
       {(["status", "release"] as const).map((k) => (
         <div key={k} className="field">
           <label htmlFor={`badge-${k}`}><span>{k === "status" ? "Status of the last Sortie on a branch" : "Latest release"}</span></label>
-          <div className="row">
-            <input id={`badge-${k}`} readOnly className="mono grow" value={b.markdown[k]} onFocus={(e) => e.currentTarget.select()} />
+          <div className="row wrap">
+            <input id={`badge-${k}`} readOnly className="mono grow" style={{ minWidth: 0, flex: "1 1 12rem", maxWidth: "100%" }} value={b.markdown[k]} onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="btn btn-sm" onClick={() => copy(k, b.markdown[k])}>Copy badge<span className="visually-hidden"> for {k}</span></button>
           </div>
         </div>

@@ -141,12 +141,16 @@ export function CodePage({ path }: { path: string }) {
             <Breadcrumb repo={path} refName={current} path={p} />
             <span className="grow" />
             <Link href={commitsHref(path, current, p || undefined)} className="btn btn-sm">History</Link>
-            <a href={archiveUrl(path, current, "tar.gz")} className="btn btn-sm" download>Download tar.gz<span className="visually-hidden"> of {current}</span></a>
-            <a href={archiveUrl(path, current, "zip")} className="btn btn-sm" download>Download zip<span className="visually-hidden"> of {current}</span></a>
             {current !== repo?.default_branch && repo?.default_branch && <Link href={compareHref(path, current, repo.default_branch)} className="btn btn-sm">Compare with {repo.default_branch}</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { new: "1" })} className="btn btn-sm">New file</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { upload: "1" })} className="btn btn-sm">Upload files</Link>}
           </div>
+          {item.type === "dir" && (
+            <div className="row wrap" role="group" aria-label={`Download ${current}`} style={{ marginBottom: 8 }}>
+              <a href={archiveUrl(path, current, "tar.gz")} className="btn btn-sm" download>Download tar.gz</a>
+              <a href={archiveUrl(path, current, "zip")} className="btn btn-sm" download>Download zip</a>
+            </div>
+          )}
           {item.type === "dir" ? (
             <>
               <section className="card tree" aria-label="Files">
