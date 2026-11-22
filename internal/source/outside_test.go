@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cgi"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,5 +146,46 @@ func TestAnOutsideSourceThatFailsStopsTheFetchInsteadOfFallingBack(t *testing.T)
 	m.SetOutsideSource(fakeOutside{err: io.ErrUnexpectedEOF})
 	if _, err := m.Refs(context.Background(), "app"); err == nil {
 		t.Fatal("fetched with no credential")
+	}
+}
+
+// git honours the pin: a name no resolver knows is reached through
+// http.curloptResolve, so git never asks DNS (and could not be led elsewhere
+// by a changed answer).
+func TestOutsideFetchConnectsToThePinnedAddressAndDoesNotResolveAgain(t *testing.T) {
+	root := t.TempDir()
+	work, bare := filepath.Join(root, "work"), filepath.Join(root, "srv", "app.git")
+	os.MkdirAll(work, 0o755)
+	run(t, work, "git", "init", "-q", "-b", "main")
+	commit(t, work, pl, "pinned change")
+	run(t, root, "git", "clone", "-q", "--bare", work, bare)
+	srv, _ := privateHost(t, bare, "x-access-token", "tok")
+	u, _ := url.Parse(srv.URL)
+	name := "pinned-host.invalid"
+	eng, _ := engine.Open(engine.Options{Database: testdb.New(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	defer eng.Close()
+	m, _ := NewManager(eng, filepath.Join(root, "data"), []Project{{Name: "app", URL: "https://elsewhere.invalid/acme/app"}}, nil)
+	cred := OutsideCredential{URL: "http://" + name + ":" + u.Port() + "/app.git", Username: "x-access-token", Secret: "tok"}
+
+	m.SetOutsideSource(fakeOutside{on: true, cred: cred}) // no pin: the name does not resolve
+	if _, err := m.Refs(context.Background(), "app"); err == nil {
+		t.Fatal("an unresolvable name was fetched without a pin")
+	}
+	cred.Resolve = []string{name + ":" + u.Port() + ":127.0.0.1"}
+	m.SetOutsideSource(fakeOutside{on: true, cred: cred})
+	refs, err := m.Refs(context.Background(), "app")
+	if err != nil || len(refs) == 0 || refs[0].Subject != "pinned change" {
+		t.Fatalf("refs = %+v, %v", refs, err)
+	}
+}
+
+func TestOutsideEnvCarriesOnePinPerOrigin(t *testing.T) {
+	env, err := outsideEnv(OutsideCredential{URL: "https://git.example.com/a/b.git", Username: "u", Secret: "p", Resolve: []string{"git.example.com:443:93.184.216.34"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	j := strings.Join(env, "\n")
+	if !strings.Contains(j, "=http.curloptResolve\nGIT_CONFIG_VALUE_2=git.example.com:443:93.184.216.34") || !strings.Contains(j, "GIT_CONFIG_COUNT=3") {
+		t.Fatalf("env = %s", j)
 	}
 }

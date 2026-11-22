@@ -500,6 +500,9 @@ type OutsideAuth struct {
 	URL      string `json:"url"`
 	Username string `json:"username"`
 	Secret   string `json:"secret"`
+	// Resolve pins git to the addresses the server's egress check saw, as
+	// http.curloptResolve entries (HOST:PORT:ADDRESS[,ADDRESS]).
+	Resolve []string `json:"resolve,omitempty"`
 }
 
 // LibrarySource is where a runner gets one library's files.

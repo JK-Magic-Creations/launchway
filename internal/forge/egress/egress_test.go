@@ -87,3 +87,43 @@ func TestBadAllowListEntries(t *testing.T) {
 		}
 	}
 }
+
+func TestPinGivesGitTheCheckedAddressesAndSurvivesAChangingResolver(t *testing.T) {
+	g, _ := New(nil)
+	calls := 0
+	g.Lookup = func(context.Context, string) ([]netip.Addr, error) {
+		calls++
+		if calls == 1 {
+			return []netip.Addr{netip.MustParseAddr("93.184.216.34"), netip.MustParseAddr("2606:2800:220:1::1")}, nil
+		}
+		return []netip.Addr{netip.MustParseAddr("169.254.169.254")}, nil // the answer git would get when it asks again
+	}
+	pin, err := g.Pin(context.Background(), "https://git.example.org/a/b.git")
+	if err != nil || len(pin) != 1 || pin[0] != "git.example.org:443:93.184.216.34,[2606:2800:220:1::1]" {
+		t.Fatalf("pin = %v, %v", pin, err)
+	}
+	// Asking again shows the resolver has changed: the check now refuses, and
+	// a pin made before is unaffected (it is a value, not a name).
+	if _, err := g.Pin(context.Background(), "https://git.example.org/a/b.git"); !errors.Is(err, ErrRefused) {
+		t.Fatalf("second answer not refused: %v", err)
+	}
+	if pin[0] != "git.example.org:443:93.184.216.34,[2606:2800:220:1::1]" {
+		t.Fatal("pin changed")
+	}
+}
+
+func TestPinPortsLiteralsAndAllowedNames(t *testing.T) {
+	g, _ := New([]string{"git.corp.example"})
+	g.Lookup = lookup(map[string][]string{"git.corp.example": {"10.20.0.7"}, "h.example": {"93.184.216.34"}})
+	for url, want := range map[string][]string{
+		"http://h.example:3000/x.git":    {"h.example:3000:93.184.216.34"},
+		"http://93.184.216.34/x.git":     nil, // a literal needs no pin
+		"https://git.corp.example/x.git": {"git.corp.example:443:10.20.0.7"},
+		"http://h.example/x.git":         {"h.example:80:93.184.216.34"},
+	} {
+		got, err := g.Pin(context.Background(), url)
+		if err != nil || strings.Join(got, "|") != strings.Join(want, "|") {
+			t.Errorf("%s: %v %v want %v", url, got, err, want)
+		}
+	}
+}

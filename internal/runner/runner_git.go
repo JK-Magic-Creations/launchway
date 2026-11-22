@@ -67,8 +67,15 @@ func outsideClone(a *engine.OutsideAuth) (string, []string) {
 			fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", i, os.Getenv(fmt.Sprintf("GIT_CONFIG_VALUE_%d", i))))
 	}
 	basic := base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Secret))
-	env = append(env, fmt.Sprintf("GIT_CONFIG_COUNT=%d", n+1),
-		fmt.Sprintf("GIT_CONFIG_KEY_%d=http.%s/.extraHeader", n, origin),
+	env = append(env, fmt.Sprintf("GIT_CONFIG_KEY_%d=http.%s/.extraHeader", n, origin),
 		fmt.Sprintf("GIT_CONFIG_VALUE_%d=Authorization: Basic %s", n, basic))
+	n++
+	// The addresses the server's egress check saw (git's http.curloptResolve,
+	// HOST:PORT:ADDRESS[,ADDRESS]): git connects there and does not resolve again.
+	for _, r := range a.Resolve {
+		env = append(env, fmt.Sprintf("GIT_CONFIG_KEY_%d=http.curloptResolve", n), fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", n, r))
+		n++
+	}
+	env = append(env, fmt.Sprintf("GIT_CONFIG_COUNT=%d", n))
 	return a.URL, env
 }

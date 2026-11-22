@@ -114,29 +114,51 @@ func refusal(host string, a netip.Addr) error {
 // are accepted, with no user name or password in them. The host's addresses
 // are looked up here, and every one must be public or allowed.
 func (g *Guard) Check(ctx context.Context, raw string) error {
+	_, err := g.check(ctx, raw, false)
+	return err
+}
+
+// Pin is Check, and it returns the addresses it checked as git's
+// http.curloptResolve entries, so that git connects to those addresses and
+// does not resolve the name a second time (a name whose answer changes
+// between the check and the fetch cannot then lead git to an internal
+// address). A literal address needs no pin; the list is then empty.
+//
+// Format, from git's documentation of http.curloptResolve
+// (https://git-scm.com/docs/git-config): [+]HOST:PORT:ADDRESS[,ADDRESS]. A
+// host that is on the allow-list by name is resolved here too, so that it is
+// pinned like any other (an allowed internal name is then reached at the
+// addresses seen now).
+func (g *Guard) Pin(ctx context.Context, raw string) ([]string, error) {
+	return g.check(ctx, raw, true)
+}
+
+func (g *Guard) check(ctx context.Context, raw string, pin bool) ([]string, error) {
 	if g.AllowFiles && (strings.HasPrefix(raw, "file://") || strings.HasPrefix(raw, "/")) {
-		return nil
+		return nil, nil
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
-		return fmt.Errorf("%w: %q is not an http or https address", ErrRefused, redactURL(raw))
+		return nil, fmt.Errorf("%w: %q is not an http or https address", ErrRefused, redactURL(raw))
 	}
 	if u.Scheme != "https" && u.Scheme != "http" {
-		return fmt.Errorf("%w: only https and http addresses can be mirrored, not %q", ErrRefused, u.Scheme+"://")
+		return nil, fmt.Errorf("%w: only https and http addresses can be mirrored, not %q", ErrRefused, u.Scheme+"://")
 	}
 	if u.User != nil {
-		return fmt.Errorf("%w: the address must not contain a user name or password; give the credential as a reference", ErrRefused)
+		return nil, fmt.Errorf("%w: the address must not contain a user name or password; give the credential as a reference", ErrRefused)
 	}
 	if u.RawQuery != "" || u.Fragment != "" {
-		return fmt.Errorf("%w: the address must not contain a query or fragment", ErrRefused)
+		return nil, fmt.Errorf("%w: the address must not contain a query or fragment", ErrRefused)
 	}
 	host := u.Hostname()
-	if g.hostAllowed(host) {
-		return nil
+	allowedName := g.hostAllowed(host)
+	if allowedName && !pin {
+		return nil, nil
 	}
 	var addrs []netip.Addr
+	literal := false
 	if a, err := netip.ParseAddr(host); err == nil {
-		addrs = []netip.Addr{a}
+		addrs, literal = []netip.Addr{a}, true
 	} else {
 		lookup := g.Lookup
 		if lookup == nil {
@@ -145,15 +167,33 @@ func (g *Guard) Check(ctx context.Context, raw string) error {
 			}
 		}
 		if addrs, err = lookup(ctx, host); err != nil || len(addrs) == 0 {
-			return fmt.Errorf("the host %s cannot be resolved from this server", host)
+			return nil, fmt.Errorf("the host %s cannot be resolved from this server", host)
 		}
 	}
+	if !allowedName {
+		for _, a := range addrs {
+			if Internal(a) && !g.addrAllowed(a) {
+				return nil, refusal(host, a.Unmap())
+			}
+		}
+	}
+	if !pin || literal {
+		return nil, nil
+	}
+	port := u.Port()
+	if port == "" {
+		port = map[string]string{"https": "443", "http": "80"}[u.Scheme]
+	}
+	parts := make([]string, 0, len(addrs))
 	for _, a := range addrs {
-		if Internal(a) && !g.addrAllowed(a) {
-			return refusal(host, a.Unmap())
+		a = a.Unmap()
+		if a.Is6() {
+			parts = append(parts, "["+a.String()+"]")
+		} else {
+			parts = append(parts, a.String())
 		}
 	}
-	return nil
+	return []string{host + ":" + port + ":" + strings.Join(parts, ",")}, nil
 }
 
 func redactURL(s string) string {

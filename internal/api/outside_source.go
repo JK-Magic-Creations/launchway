@@ -21,7 +21,7 @@ func (s *Server) Credential(ctx context.Context, project string) (source.Outside
 	if err != nil || !ok {
 		return source.OutsideCredential{}, false, err
 	}
-	return source.OutsideCredential{URL: ca.URL, Username: ca.Username, Secret: ca.Secret}, true, nil
+	return source.OutsideCredential{URL: ca.URL, Username: ca.Username, Secret: ca.Secret, Resolve: ca.Resolve}, true, nil
 }
 
 // PullRequest is what the host says about one pull request of an attached

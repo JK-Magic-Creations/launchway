@@ -22,3 +22,11 @@ func TestOutsideCloneKeepsTheCredentialInTheEnvironmentOfOneProcess(t *testing.T
 		t.Fatalf("env: %v", env)
 	}
 }
+
+func TestOutsideCloneCarriesThePinnedAddresses(t *testing.T) {
+	_, env := outsideClone(&engine.OutsideAuth{URL: "https://git.example.com/acme/app.git", Username: "u", Secret: "s", Resolve: []string{"git.example.com:443:93.184.216.34"}})
+	j := strings.Join(env, "\n")
+	if !strings.Contains(j, "http.curloptResolve") || !strings.Contains(j, "=git.example.com:443:93.184.216.34") || !strings.Contains(j, "GIT_CONFIG_COUNT=2") {
+		t.Fatalf("env = %s", j)
+	}
+}

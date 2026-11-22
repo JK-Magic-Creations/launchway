@@ -19,6 +19,9 @@ type CloneAuth struct {
 	URL      string
 	Username string
 	Secret   string
+	// Resolve pins git to the addresses the egress check saw
+	// (http.curloptResolve entries); set by CheckedClone.
+	Resolve []string
 }
 
 // Clone derives the checkout credential of a Flight from its connection (a
@@ -301,9 +304,11 @@ func (s *Service) CheckedClone(ctx context.Context, project string) (CloneAuth, 
 	if err != nil {
 		return CloneAuth{}, false, err
 	}
-	if err := s.guard.Check(ctx, ca.URL); err != nil {
+	pin, err := s.guard.Pin(ctx, ca.URL)
+	if err != nil {
 		return CloneAuth{}, false, err
 	}
+	ca.Resolve = pin
 	return ca, true, nil
 }
 

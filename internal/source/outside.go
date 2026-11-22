@@ -17,6 +17,8 @@ type OutsideCredential struct {
 	URL      string
 	Username string
 	Secret   string
+	// Resolve pins git to the addresses the egress check saw (http.curloptResolve entries).
+	Resolve []string
 }
 
 // OutsideSource gives a Flight that is attached to a repository on an outside
@@ -164,8 +166,16 @@ func outsideEnv(c OutsideCredential) ([]string, error) {
 	basic := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Secret))
 	env = append(env,
 		"GIT_CONFIG_KEY_"+strconv.Itoa(n)+"=http.followRedirects", "GIT_CONFIG_VALUE_"+strconv.Itoa(n)+"=false",
-		"GIT_CONFIG_KEY_"+strconv.Itoa(n+1)+"=http."+origin+"/.extraHeader", "GIT_CONFIG_VALUE_"+strconv.Itoa(n+1)+"=Authorization: Basic "+basic,
-		"GIT_CONFIG_COUNT="+strconv.Itoa(n+2))
+		"GIT_CONFIG_KEY_"+strconv.Itoa(n+1)+"=http."+origin+"/.extraHeader", "GIT_CONFIG_VALUE_"+strconv.Itoa(n+1)+"=Authorization: Basic "+basic)
+	n += 2
+	// Pin git to the addresses the egress check saw: http.curloptResolve
+	// (HOST:PORT:ADDRESS[,ADDRESS], per git's documentation) is keyed by
+	// host and port, so each pin is for one origin.
+	for _, r := range c.Resolve {
+		env = append(env, "GIT_CONFIG_KEY_"+strconv.Itoa(n)+"=http.curloptResolve", "GIT_CONFIG_VALUE_"+strconv.Itoa(n)+"="+r)
+		n++
+	}
+	env = append(env, "GIT_CONFIG_COUNT="+strconv.Itoa(n))
 	return env, nil
 }
 
