@@ -17,6 +17,7 @@ import { setUrl, useViewTitle } from "../urlState";
 import { CopyLink } from "../components/CopyLink";
 import { ProjectHead } from "./PipelineChrome";
 import { terms } from "../terms";
+import { onLink } from "../router";
 
 type View = "live" | "text" | "draw" | "history";
 const VIEWS: View[] = ["live", "text", "draw", "history"];
@@ -67,7 +68,7 @@ export function PipelineViewPage({ name }: { name: string }) {
           <Tabs label="Ways to look at the pipeline" on={view} onChange={setView}
             tabs={[{ id: "live", label: "Live" }, { id: "text", label: "Text" }, { id: "history", label: "History" }, { id: "draw", label: "Draw", soon: true }]} />
           {!file && !loaded.error && <div className="loading">Loading…</div>}
-          {file && <FileFacts file={file} />}
+          {file && <FileFacts file={file} name={name} />}
           <div role="tabpanel" aria-labelledby={`tab-${view}`} className="stack">
             {file && view === "live" && <PipelinePreview res={res} error={checkError} />}
             {file && view === "text" && <TextView file={file} />}
@@ -84,12 +85,12 @@ export function PipelineViewPage({ name }: { name: string }) {
   );
 }
 
-function FileFacts({ file }: { file: PipelineFile }) {
+function FileFacts({ file, name }: { file: PipelineFile; name: string }) {
   return (
     <p className="faint small" style={{ margin: 0 }}>
       {file.exists ? <>Kept in the repository as <Mono>{file.path}</Mono> on <Mono>{file.ref}</Mono>, at commit <Mono>{shortSha(file.sha)}</Mono> ({ago(file.committed_at)}{file.author ? `, by ${file.author}` : ""}).</>
         : file.configured ? <>The repository has no pipeline file, so the pipeline configured on the server runs instead. Editing it saves a new file to the repository.</>
-        : <>The repository has no pipeline yet. Open the editor to write the first one; it is saved to Git as a commit.</>}
+        : <>The repository has no pipeline yet. Open the editor to write the first one; it is saved to Git as a commit. Or <a href={`/projects/${encodeURIComponent(name)}/import`} onClick={onLink}>import an existing pipeline</a> from another system's files.</>}
     </p>
   );
 }
