@@ -19,13 +19,13 @@ type MailRow struct {
 	Attempts                                  int
 }
 
-// EnqueueMail stores a message, unless max messages already wait.
-func EnqueueMail(ctx context.Context, db CtxDB, m MailRow, nextAt, now int64, max int) error {
+// EnqueueMail stores a message, unless limit messages already wait.
+func EnqueueMail(ctx context.Context, db CtxDB, m MailRow, nextAt, now int64, limit int) error {
 	var n int
 	if err := db.QueryRow(ctx, `SELECT count(*) FROM mail_queue WHERE state = 'pending'`).Scan(&n); err != nil {
 		return err
 	}
-	if n >= max {
+	if n >= limit {
 		return ErrMailQueueFull
 	}
 	_, err := db.Exec(ctx, `INSERT INTO mail_queue(id, recipient, to_addr, kind, subject, text_body, html_body, state, attempts, next_at, created_at) VALUES(?,?,?,?,?,?,?,'pending',0,?,?)`,

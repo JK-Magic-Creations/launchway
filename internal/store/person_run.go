@@ -16,6 +16,7 @@ func RunActor(q Queryer, runID string) (actor string) {
 	if rows.Next() {
 		_ = rows.Scan(&actor)
 	}
+	_ = rows.Err()
 	return
 }
 
@@ -53,6 +54,7 @@ func RunApprovers(q Queryer, runID string) []string {
 			}
 		}
 	}
+	_ = rows.Err()
 	return out
 }
 
@@ -67,5 +69,6 @@ func PriorRunStatus(q Queryer, project, branch string, number int) (status strin
 	if rows.Next() {
 		_ = rows.Scan(&status)
 	}
+	_ = rows.Err()
 	return
 }

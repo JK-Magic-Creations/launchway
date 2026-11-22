@@ -7,6 +7,7 @@ package smtptest
 
 import (
 	"bufio"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -66,14 +67,16 @@ func New() (*Server, error) {
 	leaf, _ := x509.ParseCertificate(der)
 	pool := x509.NewCertPool()
 	pool.AddCert(leaf)
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
 	s := &Server{RequireTLS: true, ln: ln, cert: tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, pool: pool}
 	s.Addr = ln.Addr().String()
 	s.Host, _, _ = net.SplitHostPort(s.Addr)
-	fmt.Sscan(strings.TrimPrefix(s.Addr, s.Host+":"), &s.Port)
+	if _, err := fmt.Sscan(strings.TrimPrefix(s.Addr, s.Host+":"), &s.Port); err != nil {
+		return nil, err
+	}
 	go s.serve()
 	return s, nil
 }
@@ -113,7 +116,7 @@ func (s *Server) serve() {
 	}
 }
 
-func (s *Server) handle(c net.Conn) {
+func (s *Server) handle(c net.Conn) { //nolint:gocyclo // one switch over the SMTP commands, as simple as the protocol
 	defer c.Close()
 	_ = c.SetDeadline(time.Now().Add(20 * time.Second))
 	secure := false

@@ -19,9 +19,9 @@ type PushObject struct {
 // repository does not have yet), each with its raw bytes, for a push policy
 // that judges signatures. It is given to the policy through its context
 // (NewObjectsFrom) because the objects are still in quarantine when the
-// policy runs. more is true when the push brings more than max commits; the
-// first max are returned.
-type NewObjects func(updates []RefUpdate, max int) (objs []PushObject, more bool, err error)
+// policy runs. more is true when the push brings more than limit commits; the
+// first limit are returned.
+type NewObjects func(updates []RefUpdate, limit int) (objs []PushObject, more bool, err error)
 
 type newObjectsKey struct{}
 
@@ -33,7 +33,7 @@ func NewObjectsFrom(ctx context.Context) NewObjects {
 }
 
 func (st *pushState) withNewObjects(ctx context.Context, quarantine string) context.Context {
-	return context.WithValue(ctx, newObjectsKey{}, NewObjects(func(updates []RefUpdate, max int) ([]PushObject, bool, error) {
+	return context.WithValue(ctx, newObjectsKey{}, NewObjects(func(updates []RefUpdate, limit int) ([]PushObject, bool, error) {
 		if quarantine == "" {
 			return nil, false, errors.New("the pushed objects are not available to read")
 		}
@@ -68,9 +68,9 @@ func (st *pushState) withNewObjects(ctx context.Context, quarantine string) cont
 			if kind != "commit" && kind != "tag" {
 				continue
 			}
-			args := []string{"rev-list", "--max-count=" + fmt.Sprint(max+1), u.New, "--not", "--all"}
+			args := []string{"rev-list", "--limit-count=" + fmt.Sprint(limit+1), u.New, "--not", "--all"}
 			if strings.Trim(u.Old, "0") != "" && validObjectName(u.Old) {
-				args = []string{"rev-list", "--max-count=" + fmt.Sprint(max+1), u.New, "^" + u.Old}
+				args = []string{"rev-list", "--limit-count=" + fmt.Sprint(limit+1), u.New, "^" + u.Old}
 			}
 			list, err := st.store.gitWith(ctx, dir, env, args...)
 			if err != nil {
@@ -80,7 +80,7 @@ func (st *pushState) withNewObjects(ctx context.Context, quarantine string) cont
 				if seen[sha] {
 					continue
 				}
-				if len(out) >= max {
+				if len(out) >= limit {
 					more = true
 					break
 				}
@@ -99,7 +99,7 @@ func validObjectName(s string) bool {
 		return false
 	}
 	for _, r := range s {
-		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
 			return false
 		}
 	}

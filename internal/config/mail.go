@@ -81,3 +81,11 @@ func (m MailConfig) Check() error {
 	}
 	return nil
 }
+
+// checkTelling checks what tells people: the notification channels and the mail.
+func (c *Config) checkTelling() error {
+	if err := c.Notifications.Check(); err != nil {
+		return err
+	}
+	return c.Mail.Check()
+}

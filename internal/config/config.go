@@ -746,10 +746,7 @@ func readConfig(path string, bootstrap bool) (*Config, error) {
 // any change to it is stored, so both are held to exactly the same rules.
 // path names where it came from in messages.
 func (c *Config) Validate(path string) error {
-	if err := c.Notifications.Check(); err != nil {
-		return fmt.Errorf("%s: %w", path, err)
-	}
-	if err := c.Mail.Check(); err != nil {
+	if err := c.checkTelling(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.Auth.check(); err != nil {

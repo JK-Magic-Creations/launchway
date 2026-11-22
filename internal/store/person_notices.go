@@ -189,8 +189,8 @@ func NoticeWatches(ctx context.Context, db CtxDB, person string) ([]WatchRow, er
 }
 
 // SetNoticeWatch replaces a person's level on a scope; an empty level
-// removes the watch. At most max watches are kept for a person.
-func SetNoticeWatch(ctx context.Context, db CtxDB, person, scope, level string, max int) error {
+// removes the watch. At most limit watches are kept for a person.
+func SetNoticeWatch(ctx context.Context, db CtxDB, person, scope, level string, limit int) error {
 	if _, err := db.Exec(ctx, `DELETE FROM notice_watch WHERE person = ? AND scope = ?`, person, scope); err != nil || level == "" {
 		return err
 	}
@@ -198,7 +198,7 @@ func SetNoticeWatch(ctx context.Context, db CtxDB, person, scope, level string, 
 	if err := db.QueryRow(ctx, `SELECT count(*) FROM notice_watch WHERE person = ?`, person).Scan(&n); err != nil {
 		return err
 	}
-	if n >= max {
+	if n >= limit {
 		return ErrTooManyWatches
 	}
 	_, err := db.Exec(ctx, `INSERT INTO notice_watch(person, scope, level) VALUES(?,?,?)`, person, scope, level)
@@ -306,22 +306,23 @@ type ExpiringCredential struct {
 
 // ExpiringCredentials lists the SSH keys and signing keys of people that end between two times (Unix ms).
 func ExpiringCredentials(ctx context.Context, db CtxDB, from, to int64) []ExpiringCredential {
-	var out []ExpiringCredential
-	for _, q := range []struct{ what, sql string }{
-		{"SSH key", `SELECT owner, name, expires_at FROM ssh_keys WHERE kind = 'user' AND expires_at > ? AND expires_at < ?`},
-		{"signing key", `SELECT owner, name, expires_at FROM signing_keys WHERE expires_at > ? AND expires_at < ? AND revoked_at = 0`},
-	} {
-		rows, err := db.Query(ctx, q.sql, from, to)
-		if err != nil {
-			continue
-		}
-		for rows.Next() {
-			c := ExpiringCredential{What: q.what}
-			if rows.Scan(&c.Owner, &c.Name, &c.At) == nil {
-				out = append(out, c)
-			}
-		}
-		rows.Close()
+	out := expiring(ctx, db, "SSH key", `SELECT owner, name, expires_at FROM ssh_keys WHERE kind = 'user' AND expires_at > ? AND expires_at < ?`, from, to)
+	return append(out, expiring(ctx, db, "signing key", `SELECT owner, name, expires_at FROM signing_keys WHERE expires_at > ? AND expires_at < ? AND revoked_at = 0`, from, to)...)
+}
+
+func expiring(ctx context.Context, db CtxDB, what, q string, from, to int64) []ExpiringCredential {
+	rows, err := db.Query(ctx, q, from, to)
+	if err != nil {
+		return nil
 	}
+	defer rows.Close()
+	var out []ExpiringCredential
+	for rows.Next() {
+		c := ExpiringCredential{What: what}
+		if rows.Scan(&c.Owner, &c.Name, &c.At) == nil {
+			out = append(out, c)
+		}
+	}
+	_ = rows.Err()
 	return out
 }

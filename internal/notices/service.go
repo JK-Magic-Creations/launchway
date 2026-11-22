@@ -202,8 +202,8 @@ func (s *Service) queue(ctx context.Context, person string, n Notice) error {
 func (s *Service) bodies(ctx context.Context, person string, ns []Notice, digest bool) (string, string, error) {
 	var t, h strings.Builder
 	if digest {
-		t.WriteString(fmt.Sprintf("%d things since your last digest:\n\n", len(ns)))
-		h.WriteString(fmt.Sprintf("<p>%d things since your last digest:</p>\n<ul>\n", len(ns)))
+		fmt.Fprintf(&t, "%d things since your last digest:\n\n", len(ns))
+		fmt.Fprintf(&h, "<p>%d things since your last digest:</p>\n<ul>\n", len(ns))
 	}
 	for _, n := range ns {
 		line := phraseCap(n.Kind)
@@ -240,7 +240,7 @@ func (s *Service) bodies(ctx context.Context, person string, ns []Notice, digest
 		}
 		if link != "" {
 			t.WriteString("  " + link + "\n")
-			h.WriteString(fmt.Sprintf(` <a href="%s">Open it</a>`, html.EscapeString(link)))
+			fmt.Fprintf(&h, ` <a href="%s">Open it</a>`, html.EscapeString(link))
 		}
 		if digest {
 			h.WriteString("</li>\n")
@@ -260,11 +260,11 @@ func (s *Service) bodies(ctx context.Context, person string, ns []Notice, digest
 	h.WriteString("<hr><p>You get this because of your notification choices.")
 	if prefs != "" {
 		t.WriteString("\nChange them: " + prefs)
-		h.WriteString(fmt.Sprintf(` <a href="%s">Change them</a>.`, html.EscapeString(prefs)))
+		fmt.Fprintf(&h, ` <a href="%s">Change them</a>.`, html.EscapeString(prefs))
 	}
 	if mute != "" {
 		t.WriteString("\nMute this kind of message: " + mute)
-		h.WriteString(fmt.Sprintf(` <a href="%s">Mute this kind of message</a>.`, html.EscapeString(mute)))
+		fmt.Fprintf(&h, ` <a href="%s">Mute this kind of message</a>.`, html.EscapeString(mute))
 	}
 	t.WriteString("\n")
 	h.WriteString("</p>\n")

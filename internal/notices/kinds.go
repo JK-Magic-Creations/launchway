@@ -14,7 +14,7 @@ const (
 	DeployFinished     = "deploy_finished"
 	DeployRolledBack   = "deploy_rolled_back"
 	ReleasePublished   = "release_published"
-	CredentialExpiring = "credential_expiring"
+	CredentialExpiring = "credential_expiring" //nolint:gosec // a name of a kind of notice, not a credential
 )
 
 // Channels a person may choose per kind.

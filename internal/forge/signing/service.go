@@ -81,7 +81,7 @@ func (s *Service) VerifyRaw(ctx context.Context, objs []storage.PushObject, push
 // is reported as an error for that name.
 func (s *Service) VerifyRepo(ctx context.Context, repoID string, shas []string) ([]Result, error) {
 	if s.Git == nil {
-		return nil, errors.New("Git hosting is off")
+		return nil, errors.New("git hosting is off")
 	}
 	if len(shas) > MaxVerify {
 		return nil, fmt.Errorf("ask about at most %d objects at a time", MaxVerify)
@@ -120,7 +120,7 @@ func validName(s string) bool {
 		return false
 	}
 	for _, r := range s {
-		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
 			return false
 		}
 	}
