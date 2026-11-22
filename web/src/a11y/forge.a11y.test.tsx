@@ -27,7 +27,7 @@ describe.each(["light", "dark"])("Git hosting views, %s theme", (theme) => {
     fireEvent.click(await screen.findByRole("tab", { name: "SSH" }, { timeout: 8000 }));
     await expectClean("SSH clone address");
   }, 20000);
-  it.each([["Deploy keys"], ["Webhooks"], ["Protected branches"]])("the %s tab", async (tab) => {
+  it.each([["Deploy keys"], ["Webhooks"], ["Branches and tags"]])("the %s tab", async (tab) => {
     await open("/repositories/acme/shop/settings");
     fireEvent.click(await screen.findByRole("tab", { name: tab }, { timeout: 8000 }));
     await screen.findByRole("tabpanel", {}, { timeout: 100 }).catch(() => {});

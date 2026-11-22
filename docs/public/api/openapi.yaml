@@ -11204,6 +11204,79 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.protect
+    /api/v1/repositories/{owner}/{name}/protected-tags:
+        get:
+            description: '{"rules": [...]}: the tag patterns that are protected, each with who may make a matching tag (create_role: admin or operator), who may move or delete one (change_role: empty for nobody, or admin) and the Flights (pipelines) whose own credential may make one.'
+            operationId: get_api_v1_repositories_owner_name_protected_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"rules": [...]}: the tag patterns that are protected, each with who may make a matching tag (create_role: admin or operator), who may move or delete one (change_role: empty for nobody, or admin) and the Flights (pipelines) whose own credential may make one.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        put:
+            description: 'Replaces the rules: {"rules": [{"pattern": "v*", "create_role": "admin", "change_role": "", "pipelines": []}]}; * matches anything but a slash; an empty list removes the protection. A push over HTTPS or SSH, the tag routes and a release that would make, move or delete a matching tag the caller may not are refused in plain words.'
+            operationId: put_api_v1_repositories_owner_name_protected_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Replaces the rules: {"rules": [{"pattern": "v*", "create_role": "admin", "change_role": "", "pipelines": []}]}; * matches anything but a slash; an empty list removes the protection.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: repository.protect_tags
     /api/v1/repositories/{owner}/{name}/pull-settings:
         get:
             description: 'The repository''s merge settings: which methods are allowed, the default, delete the branch after a merge, dismiss stale approvals, the message templates.'

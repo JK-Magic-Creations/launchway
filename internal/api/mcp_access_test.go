@@ -118,6 +118,8 @@ var mcpPermissionTable = map[string]mcpRow{
 	"import_archive":             {map[string]any{"owner": "o", "name": "x", "document": map[string]any{"issues": []any{}}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"get_protected_branches":     {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"set_protected_branches":     {map[string]any{"owner": "o", "name": "x", "patterns": []string{"main"}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"get_protected_tags":         {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"set_protected_tags":         {map[string]any{"owner": "o", "name": "x", "rules": []any{}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	// Work tracking: the tools call the routes of the permission table.
 	"list_work_items":        {map[string]any{"scope": "project:pay-api"}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"create_work_item":       {map[string]any{"scope": "project:pay-api", "title": "x"}, false, [5]string{mUnlisted, mUnlisted, mOK, mRefused, mOK}},

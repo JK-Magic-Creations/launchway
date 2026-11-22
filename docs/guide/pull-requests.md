@@ -161,6 +161,25 @@ sentence instead of a button that would not work:
 
 > it is 3 commits behind main and must be up to date; update the branch
 
+## Protected tags
+
+A version tag that people have seen is a promise. A repository's administrators protect tags by pattern, next to the
+protected branches, in the repository's **Branches and tags** settings, with `launchway repos protected-tags`, through
+the HTTP API (`PUT /api/v1/repositories/{owner}/{name}/protected-tags`) or the `set_protected_tags` tool.
+
+| Setting | Meaning |
+|---|---|
+| Pattern | The tags covered: `v*`, `release-*`; `*` matches anything but a slash |
+| Who may make one | An administrator of the repository (the default) or anyone who may push |
+| Who may move or delete one | Nobody (the default) or an administrator |
+| Flights | Flights whose own credential may make a matching tag; they can never move or delete one |
+
+The rules hold on every way in: Git over HTTPS, Git over SSH, the tag routes of the API and the tag that **Cut a
+release** makes when it publishes. A refusal says why, in the same words on every door, for example: "the tag v1.2.0
+is protected (pattern v*) and cannot be deleted: no one may, until an administrator changes the rule; make a new tag
+instead". Each change of the rules is in the Logbook as `repository.protect_tags`. A repository with no rule
+behaves as before.
+
 ## The merge queue
 
 A branch whose rule says **merge queue** takes pull requests only through the merge queue, so what lands has been tested on

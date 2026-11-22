@@ -361,6 +361,8 @@ var rows = []Row{
 	{Route: "GET /api/v1/repositories/{owner}/{name}/archive/issues/{number}", MCP: "get_archived_issue", CLI: "repos archive show", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/protected-branches", MCP: "get_protected_branches", CLI: "repos protected-branches", Terraform: "planned: launchway_branch_protection", Status: Equal, Reason: ""},
 	{Route: "PUT /api/v1/repositories/{owner}/{name}/protected-branches", MCP: "set_protected_branches", CLI: "repos protected-branches", Terraform: "planned: launchway_branch_protection", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/protected-tags", MCP: "get_protected_tags", CLI: "repos protected-tags", Status: Equal},
+	{Route: "PUT /api/v1/repositories/{owner}/{name}/protected-tags", MCP: "set_protected_tags", CLI: "repos protected-tags", Status: Equal},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/pulls", MCP: "list_pull_requests", CLI: "pr list", Terraform: "planned: launchway_pull_request", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/pulls", MCP: "create_pull_request", CLI: "pr create", Terraform: "planned: launchway_pull_request", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/pulls/{number}", MCP: "get_pull_request", CLI: "pr view", Terraform: "", Status: Equal, Reason: ""},

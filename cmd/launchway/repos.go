@@ -79,6 +79,8 @@ func cmdRepos(args []string) error {
 			return cl.hooks(args[1:])
 		case "protected-branches":
 			return cl.protectedBranches(args[1:])
+		case "protected-tags":
+			return cl.protectedTags(args[1:])
 		case "tree", "cat", "log", "blame", "show", "compare", "search", "branches", "tags":
 			return cl.reposBrowse(args[0], args[1:])
 		}

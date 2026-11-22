@@ -136,6 +136,7 @@ export function forgeFixtures(): Record<string, unknown> {
       comments: [{ id: "77", author: "ada", body: "Fixed in the next release.", created_at: "2024-01-03T01:00:00Z" }] },
     "/api/v1/repositories/acme/shop/deploy-keys": { items: [{ ...key, id: "key_2", kind: "deploy", name: "build server", can_write: false }] },
     "/api/v1/repositories/acme/shop/protected-branches": { patterns: ["main", "release/*"] },
+    "/api/v1/repositories/acme/shop/protected-tags": { rules: [{ pattern: "v*", create_role: "admin", change_role: "", pipelines: [] }] },
     "/api/v1/repositories/acme/shop/hooks": hooks,
     "/api/v1/repositories/acme/shop/hooks/hook_1/deliveries": deliveries,
     "/api/v1/owners/acme/hooks": { items: [{ ...hook, scope: "owner", owner: "acme", repository: undefined }], events: hooks.events },

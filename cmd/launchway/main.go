@@ -101,7 +101,7 @@ Usage:
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
   launchway doctor   [database|ssh|security]             would this installation survive losing its database? is Git over SSH reachable?
-  launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
+  launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches|protected-tags   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|import-all|verify|mirror  bring repositories in from other servers, keep them in step
   launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
   launchway fleet    probe|run                  deliver a deploy step's fleet: block to hosts over SSH, from a Station

@@ -438,6 +438,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deploy_key.add` | `POST /api/v1/repositories/{owner}/{name}/deploy-keys`; the detail is the key's name, fingerprint and whether it may push |
 | `deploy_key.delete` | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` |
 | `repository.protect` | `PUT /api/v1/repositories/{owner}/{name}/protected-branches`; the detail lists the patterns |
+| `repository.protect_tags` | `PUT /api/v1/repositories/{owner}/{name}/protected-tags`; the detail lists the patterns, who may make, move or delete a tag, and how many Flights are named |
 | `pull.create` | `POST /api/v1/repositories/{owner}/{name}/pulls`; the detail: pull request #N from a branch into another |
 | `pull.update` | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}`; the detail: pull request #N and what changed |
 | `pull.merge` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge`; the detail: pull request #N, the method, the new commit |
