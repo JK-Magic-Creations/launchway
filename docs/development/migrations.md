@@ -588,3 +588,17 @@ schema 26 or older leaves the run alone (`TestOlderServerLeavesFetchFromLoopRuns
 look for a step named after the loop. It follows the real schemas 25 (caches) and 26 (forges), and
 its file, `schema27.go`, is named so that its migration is appended after theirs. The startup check
 covers the new columns (`schemaMarkersParity2`).
+
+## Numbers held for other branches, and walling a table
+
+Migrations 40 to 69 are empty stand-ins (`internal/engine/schema40.go` to `schema69.go`), held
+for the feature branches that have not merged; a branch replaces its file when it lands, as
+schema 28 once was. Migration 70 (the wall between Bases) comes after them. A database that has
+recorded 70 can never receive a held number later, because a migration is never slipped in behind
+a recorded version: merge the queued branches before a real database runs schema 70, or let a
+late branch take the next free number.
+
+A new table also needs a line in the registry of tables and an owner: see
+[every table has an owner](the-wall.md). Changing a key from "the name alone" to "base_id first"
+is the one change that cannot be additive; the wall does it as a separate, deliberate step when
+several Bases are turned on, not in a migration.

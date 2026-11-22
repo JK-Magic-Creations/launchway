@@ -117,6 +117,7 @@ var commands = map[string]func([]string) error{
 	"variables":      cmdVariables,
 	"doctor":         cmdDoctor,
 	"users":          cmdUsers,
+	"bases":          cmdBases,
 	"install":        cmdInstall,
 }
 

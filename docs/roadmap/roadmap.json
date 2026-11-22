@@ -3778,10 +3778,10 @@
           "blurb": "On the hosted product every customer has its own complete Base. The service operator sees the service, never your work, and you choose what to send when you need help.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Every customer has its own Base",
               "value": "A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name.",
-              "detail": "Inside it the usual levels apply.",
+              "detail": "Inside it the usual levels apply. Started: an installation now has a default Base, and people, sessions and tokens belong to a Base (off by default; see the contributor page \"Every table has an owner\"). The run engine, repositories, settings, runners and storage follow stage by stage.",
               "area": "hosted-service"
             },
             {
@@ -3792,17 +3792,17 @@
               "area": "hosted-service"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Nothing crosses between Bases",
               "value": "No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
-              "detail": "Identifiers cannot be listed or guessed.",
+              "detail": "Identifiers cannot be listed or guessed. Built so far: accounts, memberships, sessions and tokens, with a second lock in the database on PostgreSQL. Everything else is still one Base.",
               "area": "hosted-service"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Proven by tests that gate every release",
               "value": "A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data.",
-              "detail": "No outside customer is admitted until it passes.",
+              "detail": "No outside customer is admitted until it passes. The first slice exists (people, sessions and tokens, on SQLite and PostgreSQL, with a test that every table has an owner); the full suite and the release gate come with the later stages.",
               "area": "hosted-service"
             },
             {

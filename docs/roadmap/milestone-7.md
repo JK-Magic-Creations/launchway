@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 2 in progress · 66 planned · 68 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 5 in progress · 63 planned · 68 capabilities</p>
 
 Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.
 
@@ -56,7 +56,7 @@ flowchart TD
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
 | [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 2 | 5 |
-| [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 0 | 12 |
+| [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 3 | 9 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
 
@@ -625,9 +625,9 @@ On the hosted product every customer has its own complete Base. The service oper
 
 #### Every customer has its own Base {#every-customer-has-its-own-base}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. Inside it the usual levels apply.
+A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. Inside it the usual levels apply. Started: an installation now has a default Base, and people, sessions and tokens belong to a Base (off by default; see the contributor page "Every table has an owner"). The run engine, repositories, settings, runners and storage follow stage by stage.
 
 [Area page](hosted-service.md)
 
@@ -641,17 +641,17 @@ The service operator’s own Base is a separate Base that no customer or demonst
 
 #### Nothing crosses between Bases {#nothing-crosses-between-bases}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Identifiers cannot be listed or guessed.
+No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Identifiers cannot be listed or guessed. Built so far: accounts, memberships, sessions and tokens, with a second lock in the database on PostgreSQL. Everything else is still one Base.
 
 [Area page](hosted-service.md)
 
 #### Proven by tests that gate every release {#proven-by-tests-that-gate-every-release}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. No outside customer is admitted until it passes.
+A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. No outside customer is admitted until it passes. The first slice exists (people, sessions and tokens, on SQLite and PostgreSQL, with a test that every table has an owner); the full suite and the release gate come with the later stages.
 
 [Area page](hosted-service.md)
 

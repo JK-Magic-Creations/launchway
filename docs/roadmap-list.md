@@ -756,10 +756,10 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Every customer has its own Base](roadmap/milestone-7.md#every-customer-has-its-own-base) | Planned | A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. |
+| [Every customer has its own Base](roadmap/milestone-7.md#every-customer-has-its-own-base) | In progress | A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. |
 | [The operator’s own Base is walled off](roadmap/milestone-7.md#the-operator-s-own-base-is-walled-off) | Planned | The service operator’s own Base is a separate Base that no customer or demonstration visitor can see, list, search or guess. |
-| [Nothing crosses between Bases](roadmap/milestone-7.md#nothing-crosses-between-bases) | Planned | No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. |
-| [Proven by tests that gate every release](roadmap/milestone-7.md#proven-by-tests-that-gate-every-release) | Planned | A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. |
+| [Nothing crosses between Bases](roadmap/milestone-7.md#nothing-crosses-between-bases) | In progress | No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. |
+| [Proven by tests that gate every release](roadmap/milestone-7.md#proven-by-tests-that-gate-every-release) | In progress | A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. |
 | [A vendor console, separate from any Base](roadmap/milestone-7.md#a-vendor-console-separate-from-any-base) | Planned | The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, run logs, secrets, findings or traffic. |
 | [A separate sign-in for the vendor](roadmap/milestone-7.md#a-separate-sign-in-for-the-vendor) | Planned | Vendor access is a different identity entered on purpose, with strong authentication, a stated reason and a session that ends by itself. |
 | [Everything the vendor does shows in your Logbook](roadmap/milestone-7.md#everything-the-vendor-does-shows-in-your-logbook) | Planned | Every vendor action that touches your Base appears in your Base’s own Logbook, with who, why and when. |
