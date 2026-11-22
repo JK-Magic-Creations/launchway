@@ -281,65 +281,9 @@ func (h *hostedReader) job(id string, n *N) {
 		j.Steps = []Step{{Run: "echo 'NEEDS A PERSON: this job called a reusable workflow: " + oneLine(u.Str(), 100) + "'; exit 1", Line: n.LineOf("uses")}}
 		return
 	}
-	// runs-on
-	ro := n.Get("runs-on")
-	if ro != nil {
-		lbl := strings.Join(ro.Strings(), ", ")
-		if g := ro.Get("labels"); g != nil {
-			lbl = strings.Join(g.Strings(), ", ")
-		}
-		if windowsMac.MatchString(lbl) {
-			h.rp.note("hosted.job.runs_on_os", n.LineOf("runs-on"), lbl)
-			j.NoteLines = append(j.NoteLines, " NEEDS A PERSON: this job ran on "+oneLine(lbl, 60)+" and now runs in a Linux image")
-		} else if lbl != "" && !strings.Contains(lbl, "${{") && !h.seenRunsOn[lbl] {
-			h.seenRunsOn[lbl] = true
-			h.rp.note("hosted.job.runs_on", n.LineOf("runs-on"), lbl)
-		}
-	}
-	if ct := n.Get("container"); ct != nil {
-		img := ct.Str()
-		if ct.IsMap() {
-			img = ct.Get("image").Str()
-			var skipped []string
-			for _, k := range []string{"options", "volumes", "ports", "credentials"} {
-				if ct.Has(k) {
-					skipped = append(skipped, k)
-				}
-			}
-			if len(skipped) > 0 {
-				h.rp.note("hosted.job.container_options", ct.LineOf(skipped[0]), strings.Join(skipped, ", "))
-			}
-			for i, k := range ct.Get("env").Keys {
-				j.Env = append(j.Env, KV{k, h.xlate(hj, ct.Get("env").Vals[i].Str(), ct.Line)})
-			}
-		}
-		j.Image = h.xlate(hj, img, ct.Line)
-		h.rp.note("hosted.job.container", n.LineOf("container"))
-	}
-	if sv := n.Get("services"); sv.IsMap() {
-		for i, name := range sv.Keys {
-			s := sv.Vals[i]
-			svc := Service{Name: name, Image: h.xlate(hj, s.Get("image").Str(), s.Line)}
-			if svc.Image == "" {
-				continue
-			}
-			for k, ek := range s.Get("env").Keys {
-				svc.Env = append(svc.Env, KV{ek, h.xlate(hj, s.Get("env").Vals[k].Str(), s.Line)})
-			}
-			if c := s.Get("command").Str(); c != "" {
-				svc.Command = strings.Fields(c)
-			}
-			if ports := s.Get("ports").Strings(); len(ports) > 0 {
-				pp := ports[0]
-				if k := strings.LastIndex(pp, ":"); k >= 0 {
-					pp = pp[k+1:]
-				}
-				svc.Port = strings.Split(pp, "/")[0]
-			}
-			j.Services = append(j.Services, svc)
-			h.rp.note("hosted.job.services", sv.LineOf(name), name)
-		}
-	}
+	h.jobRunsOn(j, n)
+	h.jobContainer(hj, n)
+	h.jobServices(hj, n)
 	if st := n.Get("strategy"); st != nil {
 		h.matrix(hj, st)
 	}
@@ -379,40 +323,7 @@ func (h *hostedReader) job(id string, n *N) {
 	if c := n.Get("if"); c != nil {
 		h.condition(j, c.Str(), n.LineOf("if"))
 	}
-	dir := h.defDir
-	steps := n.Get("steps")
-	var cmds strings.Builder
-	for _, s := range steps.List() {
-		h.step(hj, s, dir)
-	}
-	for _, s := range j.Steps {
-		cmds.WriteString(s.Run + "\n")
-	}
-	if len(j.Steps) == 0 && len(j.Artifacts)+len(j.Caches) == 0 {
-		j.Steps = []Step{{Run: "true"}}
-	}
-	j.Delivers, j.DeliverWhy = delivers(id, cmds.String(), env != "")
-	if j.Image2 != nil && j.Image2.Push {
-		j.Delivers, j.DeliverWhy = true, "it pushes an image"
-	}
-	for _, s := range j.Steps {
-		if strings.Contains(s.Run, "${{") {
-			j.NoteLines = append(j.NoteLines, " NEEDS A PERSON: some ${{ }} expressions below are left as written")
-			break
-		}
-	}
-	h.rp.note("hosted.job", n.Line).Step = id
-	if hj.setupIm != "" && j.Image == "" {
-		j.Image = hj.setupIm
-	}
-	if len(j.Steps) > 0 && j.Image2 != nil {
-		// build-push has its own step; remaining commands stay with the job only if they exist
-		if allEmpty(j.Steps) {
-			j.Steps = nil
-		}
-	}
-	j.Image = betterJavaImage(j)
-	detectTemplate(j)
+	h.jobSteps(hj, n, id, env)
 }
 
 func allEmpty(s []Step) bool {
@@ -636,8 +547,7 @@ func (h *hostedReader) condition(j *Job, text string, line int) {
 	}
 	var c Cond
 	ok := true
-	atoms := strings.Split(e, "&&")
-	for _, a := range atoms {
+	for _, a := range strings.Split(e, "&&") {
 		a = strings.TrimSpace(a)
 		if strings.HasPrefix(a, "(") && strings.HasSuffix(a, ")") {
 			a = strings.TrimSpace(a[1 : len(a)-1])
@@ -645,55 +555,11 @@ func (h *hostedReader) condition(j *Job, text string, line int) {
 		alts := strings.Split(a, "||")
 		var br, tg, ev []string
 		for _, alt := range alts {
-			alt = strings.TrimSpace(alt)
-			switch {
-			case alt == "always()":
-				c.Upstream = "always"
-			case alt == "failure()":
-				c.Upstream = "failed"
-			case alt == "success()":
-			case startsRe.MatchString(alt):
-				pre := startsRe.FindStringSubmatch(alt)[1]
-				if strings.HasPrefix(pre, "refs/tags/") {
-					tg = append(tg, strings.TrimPrefix(pre, "refs/tags/")+"*")
-				} else if strings.HasPrefix(pre, "refs/heads/") {
-					br = append(br, strings.TrimPrefix(pre, "refs/heads/")+"*")
-				} else {
-					ok = false
-				}
-			case eqRe.MatchString(alt):
-				m := eqRe.FindStringSubmatch(alt)
-				switch {
-				case m[1] == "github.ref" && m[2] == "==" && strings.HasPrefix(m[3], "refs/heads/"):
-					br = append(br, strings.TrimPrefix(m[3], "refs/heads/"))
-				case m[1] == "github.ref" && m[2] == "==" && strings.HasPrefix(m[3], "refs/tags/"):
-					tg = append(tg, strings.TrimPrefix(m[3], "refs/tags/"))
-				case m[1] == "github.ref_name" && m[2] == "==":
-					br = append(br, m[3])
-				case m[1] == "github.event_name" && m[2] == "==" && eventMap[m[3]] != "":
-					ev = append(ev, eventMap[m[3]])
-				case m[1] == "github.event_name" && m[2] == "!=" && m[3] == "pull_request":
-					ev = append(ev, "push", "manual", "schedule", "webhook")
-				default:
-					ok = false
-				}
-			default:
+			if !condAlt(strings.TrimSpace(alt), &c, &br, &tg, &ev) {
 				ok = false
 			}
 		}
-		if len(br) > 0 && len(c.Branch) == 0 {
-			c.Branch = br
-		} else if len(br) > 0 {
-			ok = false
-		}
-		if len(tg) > 0 && len(c.Tag) == 0 {
-			c.Tag = tg
-		} else if len(tg) > 0 {
-			ok = false
-		}
-		if len(ev) > 0 && len(c.Event) == 0 {
-			c.Event = ev
-		} else if len(ev) > 0 {
+		if !mergeAtom(&c, br, tg, ev) {
 			ok = false
 		}
 		if len(alts) > 1 && (len(br) > 0 && len(tg)+len(ev) > 0) {
@@ -706,6 +572,71 @@ func (h *hostedReader) condition(j *Job, text string, line int) {
 	}
 	j.When = c
 	h.rp.note("hosted.job.if", line)
+}
+
+// mergeAtom adds one && term's branches, tags and events to c; it reports false when a
+// field was already set by an earlier term.
+func mergeAtom(c *Cond, br, tg, ev []string) bool {
+	ok := true
+	if len(br) > 0 && len(c.Branch) == 0 {
+		c.Branch = br
+	} else if len(br) > 0 {
+		ok = false
+	}
+	if len(tg) > 0 && len(c.Tag) == 0 {
+		c.Tag = tg
+	} else if len(tg) > 0 {
+		ok = false
+	}
+	if len(ev) > 0 && len(c.Event) == 0 {
+		c.Event = ev
+	} else if len(ev) > 0 {
+		ok = false
+	}
+	return ok
+}
+
+// condAlt reads one || alternative; it reports false when the expression is not understood.
+func condAlt(alt string, c *Cond, br, tg, ev *[]string) bool {
+	switch {
+	case alt == "always()":
+		c.Upstream = "always"
+	case alt == "failure()":
+		c.Upstream = "failed"
+	case alt == "success()":
+	case startsRe.MatchString(alt):
+		pre := startsRe.FindStringSubmatch(alt)[1]
+		if strings.HasPrefix(pre, "refs/tags/") {
+			*tg = append(*tg, strings.TrimPrefix(pre, "refs/tags/")+"*")
+		} else if strings.HasPrefix(pre, "refs/heads/") {
+			*br = append(*br, strings.TrimPrefix(pre, "refs/heads/")+"*")
+		} else {
+			return false
+		}
+	case eqRe.MatchString(alt):
+		return condEq(eqRe.FindStringSubmatch(alt), br, tg, ev)
+	default:
+		return false
+	}
+	return true
+}
+
+func condEq(m []string, br, tg, ev *[]string) bool {
+	switch {
+	case m[1] == "github.ref" && m[2] == "==" && strings.HasPrefix(m[3], "refs/heads/"):
+		*br = append(*br, strings.TrimPrefix(m[3], "refs/heads/"))
+	case m[1] == "github.ref" && m[2] == "==" && strings.HasPrefix(m[3], "refs/tags/"):
+		*tg = append(*tg, strings.TrimPrefix(m[3], "refs/tags/"))
+	case m[1] == "github.ref_name" && m[2] == "==":
+		*br = append(*br, m[3])
+	case m[1] == "github.event_name" && m[2] == "==" && eventMap[m[3]] != "":
+		*ev = append(*ev, eventMap[m[3]])
+	case m[1] == "github.event_name" && m[2] == "!=" && m[3] == "pull_request":
+		*ev = append(*ev, "push", "manual", "schedule", "webhook")
+	default:
+		return false
+	}
+	return true
 }
 
 func (h *hostedReader) step(hj *hostedJob, s *N, defDir string) {

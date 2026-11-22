@@ -57,62 +57,11 @@ func (h *hostedReader) uses(hj *hostedJob, s *N, ref, cond string) {
 			h.rp.note("hosted.uses.checkout", line)
 		}
 	case setups[act].imageFmt != "":
-		sk := setups[act]
-		ver := wv(sk.versionKey)
-		if ver == "" && with.Has(sk.fileKey) {
-			h.rp.note("hosted.uses.setup_file", line, "the version file "+with.Get(sk.fileKey).Str())
-			ver = "latest"
-			if act == "actions/setup-go" {
-				ver = "1"
-			}
-		}
-		if ver == "" {
-			ver = "latest"
-			if act == "actions/setup-go" {
-				ver = "latest"
-			}
-		}
-		// Ranges and x versions are written as the nearest tag.
-		if strings.ContainsAny(ver, "<>=~^") || strings.HasSuffix(ver, ".x") {
-			ver = strings.TrimSuffix(strings.Trim(ver, "<>=~^ "), ".x")
-			h.rp.note("hosted.uses.setup_file", line, "the range was written as "+ver)
-		}
-		img := strings.Replace(sk.imageFmt, "%s", ver, 1)
-		if hj.setupIm != "" {
-			h.rp.note("hosted.uses.setup_second", line, act)
-			return
-		}
-		hj.setupIm = img
-		hj.setups++
-		if with.Get(sk.versionKey).Str() != "" || ver != "latest" {
-			h.rp.note("hosted.uses.setup", line, img)
-		}
-		if c := with.Get("cache").Str(); c != "" {
-			h.addToolCache(hj, c, line)
-		}
+		h.setupAction(hj, with, line, act, wv)
 	case act == "actions/cache" || act == "actions/cache/restore" || act == "actions/cache/save":
 		h.cacheStep(hj, with, line, act)
 	case act == "actions/upload-artifact":
-		name := wv("name")
-		if name == "" {
-			name = "artifact"
-		}
-		a := Artifact{Name: sanitizeArtifact(name), When: "success"}
-		for _, p := range strings.Split(wv("path"), "\n") {
-			if p = strings.TrimSpace(p); p != "" {
-				a.Paths = append(a.Paths, strings.TrimPrefix(p, "./"))
-			}
-		}
-		if d := wv("retention-days"); d != "" {
-			a.Retain = d + "d"
-		}
-		if cond == "always()" || strings.Contains(cond, "always()") {
-			a.When = "always"
-		} else if strings.Contains(cond, "failure()") {
-			a.When = "failure"
-		}
-		j.Artifacts = append(j.Artifacts, a)
-		h.rp.note("hosted.uses.upload", line)
+		h.uploadArtifact(hj, line, cond, wv)
 	case act == "actions/download-artifact":
 		f := Fetch{Name: sanitizeArtifact(wv("name")), Into: strings.TrimPrefix(wv("path"), "./")}
 		if wv("name") == "" {
@@ -141,6 +90,65 @@ func (h *hostedReader) uses(hj *hostedJob, s *N, ref, cond string) {
 		h.rp.note("hosted.uses.third", line, ref).Step = j.ID
 		j.Steps = append(j.Steps, Step{Name: ref, Run: "echo 'NEEDS A PERSON: a third-party action ran here: " + strings.ReplaceAll(oneLine(ref, 100), "'", "") + "'; exit 1", Line: line})
 	}
+}
+
+// setupAction reads a setup-<tool> action: its version becomes the job's image.
+func (h *hostedReader) setupAction(hj *hostedJob, with *N, line int, act string, wv func(string) string) {
+	sk := setups[act]
+	ver := wv(sk.versionKey)
+	if ver == "" && with.Has(sk.fileKey) {
+		h.rp.note("hosted.uses.setup_file", line, "the version file "+with.Get(sk.fileKey).Str())
+		ver = "latest"
+		if act == "actions/setup-go" {
+			ver = "1"
+		}
+	}
+	if ver == "" {
+		ver = "latest"
+	}
+	// Ranges and x versions are written as the nearest tag.
+	if strings.ContainsAny(ver, "<>=~^") || strings.HasSuffix(ver, ".x") {
+		ver = strings.TrimSuffix(strings.Trim(ver, "<>=~^ "), ".x")
+		h.rp.note("hosted.uses.setup_file", line, "the range was written as "+ver)
+	}
+	img := strings.Replace(sk.imageFmt, "%s", ver, 1)
+	if hj.setupIm != "" {
+		h.rp.note("hosted.uses.setup_second", line, act)
+		return
+	}
+	hj.setupIm = img
+	hj.setups++
+	if with.Get(sk.versionKey).Str() != "" || ver != "latest" {
+		h.rp.note("hosted.uses.setup", line, img)
+	}
+	if c := with.Get("cache").Str(); c != "" {
+		h.addToolCache(hj, c, line)
+	}
+}
+
+// uploadArtifact reads an upload-artifact step into an artifact of the job.
+func (h *hostedReader) uploadArtifact(hj *hostedJob, line int, cond string, wv func(string) string) {
+	j := hj.j
+	name := wv("name")
+	if name == "" {
+		name = "artifact"
+	}
+	a := Artifact{Name: sanitizeArtifact(name), When: "success"}
+	for _, p := range strings.Split(wv("path"), "\n") {
+		if p = strings.TrimSpace(p); p != "" {
+			a.Paths = append(a.Paths, strings.TrimPrefix(p, "./"))
+		}
+	}
+	if d := wv("retention-days"); d != "" {
+		a.Retain = d + "d"
+	}
+	if cond == "always()" || strings.Contains(cond, "always()") {
+		a.When = "always"
+	} else if strings.Contains(cond, "failure()") {
+		a.When = "failure"
+	}
+	j.Artifacts = append(j.Artifacts, a)
+	h.rp.note("hosted.uses.upload", line)
 }
 
 func sanitizeArtifact(s string) string {
