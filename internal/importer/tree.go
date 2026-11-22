@@ -38,6 +38,8 @@ type N struct {
 	Kind    kind
 	Val     string // scalars
 	Quoted  bool   // a quoted scalar is text, never a number or boolean
+	Ref     bool   // a list tagged !reference: a pointer into the same file
+	Src     string // the file the value was read from, when it is not the one named in the request
 	Line    int
 	Keys    []string
 	KeyLine []int
@@ -123,6 +125,7 @@ func (n *N) LineOf(key string) int {
 type conv struct {
 	lim   Limits
 	nodes int
+	src   string
 }
 
 // ErrTooLarge and friends are the refusals a hostile or oversized file gets.
@@ -133,7 +136,10 @@ var (
 )
 
 // ParseTree reads the first YAML document of data into a tree under limits.
-func ParseTree(data []byte, lim Limits) (*N, error) {
+func ParseTree(data []byte, lim Limits) (*N, error) { return ParseTreeFile("", data, lim) }
+
+// ParseTreeFile is ParseTree for a file with a name; every value remembers it.
+func ParseTreeFile(name string, data []byte, lim Limits) (*N, error) {
 	if lim.MaxBytes == 0 {
 		lim = DefaultLimits
 	}
@@ -147,7 +153,7 @@ func ParseTree(data []byte, lim Limits) (*N, error) {
 	if doc.Kind == 0 || len(doc.Content) == 0 {
 		return &N{Kind: kNull, Line: 1}, nil
 	}
-	c := &conv{lim: lim}
+	c := &conv{lim: lim, src: name}
 	return c.node(doc.Content[0], 0)
 }
 
@@ -164,11 +170,11 @@ func (c *conv) node(y *yaml.Node, depth int) (*N, error) {
 		return c.node(y.Alias, depth) // counted again, so a bomb runs out of budget
 	case yaml.ScalarNode:
 		if y.Tag == "!!null" {
-			return &N{Kind: kNull, Line: y.Line}, nil
+			return &N{Kind: kNull, Line: y.Line, Src: c.src}, nil
 		}
-		return &N{Kind: kScalar, Val: y.Value, Quoted: y.Style&(yaml.DoubleQuotedStyle|yaml.SingleQuotedStyle) != 0, Line: y.Line}, nil
+		return &N{Kind: kScalar, Src: c.src, Val: y.Value, Quoted: y.Style&(yaml.DoubleQuotedStyle|yaml.SingleQuotedStyle) != 0, Line: y.Line}, nil
 	case yaml.SequenceNode:
-		n := &N{Kind: kSeq, Line: y.Line}
+		n := &N{Kind: kSeq, Src: c.src, Line: y.Line, Ref: y.Tag == "!reference"}
 		for _, it := range y.Content {
 			v, err := c.node(it, depth+1)
 			if err != nil {
@@ -178,7 +184,7 @@ func (c *conv) node(y *yaml.Node, depth int) (*N, error) {
 		}
 		return n, nil
 	case yaml.MappingNode:
-		n := &N{Kind: kMap, Line: y.Line}
+		n := &N{Kind: kMap, Src: c.src, Line: y.Line}
 		for i := 0; i+1 < len(y.Content); i += 2 {
 			k, v := y.Content[i], y.Content[i+1]
 			if k.Kind == yaml.ScalarNode && k.Value == "<<" && k.Tag == "!!merge" {

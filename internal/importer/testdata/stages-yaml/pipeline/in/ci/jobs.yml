@@ -1,0 +1,8 @@
+lint:
+  stage: test
+  script: golangci-lint run
+  only:
+    - main
+    - merge_requests
+  when: on_failure
+  timeout: 20 minutes

@@ -1,0 +1,45 @@
+=== .gitlab-ci.yml (stages-yaml)
+# Imported from .gitlab-ci.yml by launchway import pipeline. The old files are untouched.
+# Read the findings it printed: lines marked NEEDS A PERSON below are not converted.
+pipeline: ci
+on:
+  push: {branches: ['*'], tags: ['*']}
+steps:
+  slow:
+    image: docker.io/library/ubuntu:24.04
+    retry: 2
+    run: |
+      sleep 1
+  child:
+    image: docker.io/library/ubuntu:24.04
+    needs: slow
+    run: |
+      echo 'NEEDS A PERSON: this job started another pipeline'; exit 1
+  stop:
+    image: docker.io/library/ubuntu:24.04
+    needs: slow
+    when: {upstream: always}
+    run: |
+      echo stop
+
+--- findings
+exact     stages.stages                .gitlab-ci.yml:1 Each job waits for the jobs of the stage before its own; jobs of one stage run together
+manual    stages.trigger               .gitlab-ci.yml:4 The job starts another pipeline, which has no equivalent in a pipeline file -> Import the other pipeline, or start it with a webhook
+exact     stages.job                   .gitlab-ci.yml:7 The job became a step; before_script, script and after_script run in that order in one script
+manual    stages.rules.complex         .gitlab-ci.yml:7 The condition `except: tags` cannot be written as a when: filter, so the job now always runs -> Write the test as a when: filter (branch, tag, event, changed, input), or in the script
+different write.image.default          .gitlab-ci.yml:7 The steps slow, child, stop name no container image, so they run in docker.io/library/ubuntu:24.04 instead of a hosted runner's machine image, which has many tools installed -> Name an image that has the tools the commands need (set image: on the step), or install them in the script
+manual    stages.when.delayed          .gitlab-ci.yml:9 A delayed start is not carried -> Put a sleep in the script, or start the pipeline from a schedule
+manual    stages.other                 .gitlab-ci.yml:10 The keyword start_in is not carried -> Check what it did in the old file and write it by hand
+manual    stages.timeout.text          .gitlab-ci.yml:11 The timeout `sometime later` could not be read as a duration -> Write it as a duration such as 90m on the step
+different stages.retry.when            .gitlab-ci.yml:13 The job retries after any failure, not only the listed reasons -> Check that retrying every failure is acceptable
+exact     stages.retry                 .gitlab-ci.yml:13 Failed attempts are tried again as often as written (at most 10)
+manual    stages.allow_failure.codes   .gitlab-ci.yml:15 Allowing only certain exit codes is not carried; the job is not allowed to fail -> Handle the exit code in the script and exit 0
+manual    stages.resource_group        .gitlab-ci.yml:17 Jobs that must not run at the same time (lock) are not carried -> Add a lane to the pipeline if whole runs must take turns
+manual    stages.secrets               .gitlab-ci.yml:19 The job reads secrets TOKEN from a vault by a provider block, which Launchway does not run -> Create the secrets in the Station's store and name them under the step's secrets
+manual    stages.other                 .gitlab-ci.yml:21 The keyword something_new is not carried -> Check what it did in the old file and write it by hand
+exact     stages.job                   .gitlab-ci.yml:25 The job became a step; before_script, script and after_script run in that order in one script
+manual    stages.rules.complex         .gitlab-ci.yml:25 The condition `$CI_COMMIT_BRANCH != "main"` cannot be written as a when: filter, so the job now always runs -> Write the test as a when: filter (branch, tag, event, changed, input), or in the script
+manual    stages.environment.stop      .gitlab-ci.yml:28 A job that stops an environment has no equivalent step kind -> Use a Return to base step, or run the clean-up by hand
+different stages.environment           .gitlab-ci.yml:28 The job deploys to the environment review, so it is marked as delivering; protection and review rules of the old environment were not read -> Add an approval, or protect the Airfield
+exact     stages.when                  .gitlab-ci.yml:30 The job runs after the jobs before it, as the old value said (upstream: always or failed)
+manual    stages.parallel.multi        .gitlab-ci.yml:34 Several matrix entries each make their own combinations, which one loop cannot hold -> Write one step for each entry

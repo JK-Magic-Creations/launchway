@@ -573,7 +573,7 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 			cm := ymap()
 			cm.Style = yaml.FlowStyle
 			yadd(cm, "name", ystr(stepName(c.Name)))
-			yadd(cm, "paths", ystrs(c.Paths))
+			yadd(cm, "paths", ystrs(trimSlashes(c.Paths)))
 			k := ymap()
 			k.Style = yaml.FlowStyle
 			if len(c.KeyFiles) > 0 {
@@ -610,7 +610,7 @@ func (w *writer) explicit(m, steps *yaml.Node, j *Job, name, needsPrev string, g
 			am := ymap()
 			am.Style = yaml.FlowStyle
 			yadd(am, "name", ystr(a.Name))
-			yadd(am, "paths", ystrs(a.Paths))
+			yadd(am, "paths", ystrs(trimSlashes(a.Paths)))
 			if a.Retain != "" {
 				yadd(am, "retain", ystr(a.Retain))
 			}
@@ -938,4 +938,17 @@ func (w *writer) finishImage(m *yaml.Node, j *Job, needsPrev string, gate bool) 
 	if j.Timeout != "" {
 		yadd(m, "timeout", ystr(j.Timeout))
 	}
+}
+
+// trimSlashes drops the slash that ends a directory: Launchway keeps a
+// directory whole when it is named without it.
+func trimSlashes(l []string) []string {
+	out := make([]string, len(l))
+	for i, s := range l {
+		out[i] = strings.TrimRight(s, "/")
+		if out[i] == "" {
+			out[i] = "."
+		}
+	}
+	return out
 }

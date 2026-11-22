@@ -1,0 +1,36 @@
+stages: [test, ops]
+child:
+  stage: ops
+  trigger:
+    include: child.yml
+slow:
+  stage: test
+  script: [sleep 1]
+  when: delayed
+  start_in: 5 minutes
+  timeout: sometime later
+  retry:
+    max: 2
+    when: [runner_system_failure]
+  allow_failure:
+    exit_codes: 137
+  resource_group: lock
+  secrets:
+    TOKEN:
+      vault: ops/token@kv
+  something_new: 1
+  except:
+    - tags
+stop:
+  stage: ops
+  script: echo stop
+  environment:
+    name: review
+    action: stop
+  when: always
+  rules:
+    - if: $CI_COMMIT_BRANCH != "main"
+  parallel:
+    matrix:
+      - A: [1]
+      - A: [2]
