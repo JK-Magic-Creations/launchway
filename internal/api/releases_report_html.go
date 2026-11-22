@@ -16,7 +16,6 @@ import (
 // followed by the table it is drawn from.
 func renderReportHTML(r *engine.ReleaseReport) string {
 	var b strings.Builder
-	e := html.EscapeString
 	day := func(ms int64) string { return time.UnixMilli(ms).UTC().Format("2006-01-02") }
 	b.WriteString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release report</title><style>
 :root{color-scheme:light dark;--bg:#fff;--fg:#1b1f24;--mut:#57606a;--line:#d0d7de;--bar:#1f6feb;--bad:#cf222e}
@@ -29,7 +28,7 @@ svg{max-width:100%;height:auto}.mut{color:var(--mut)}</style></head><body>`)
 	if r.Project != "" {
 		scope = r.Project
 	}
-	fmt.Fprintf(&b, "<h1>Release report: %s</h1><p class=\"mut\">%s to %s (UTC)</p>", e(scope), day(r.From), day(r.To))
+	fmt.Fprintf(&b, "<h1>Release report: %s</h1><p class=\"mut\">%s to %s (UTC)</p>", html.EscapeString(scope), day(r.From), day(r.To))
 	m := r.Measures
 	b.WriteString("<h2>The four delivery measures</h2><table><thead><tr><th>Measure</th><th class=\"n\">Value</th></tr></thead><tbody>")
 	fmt.Fprintf(&b, "<tr><td>Launches</td><td class=\"n\">%d</td></tr>", m.Launches)
@@ -70,10 +69,10 @@ svg{max-width:100%;height:auto}.mut{color:var(--mut)}</style></head><body>`)
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
-		fmt.Fprintf(&b, "<h2>%s</h2><table><thead><tr><th>Name</th><th class=\"n\">Launches</th><th class=\"n\">Failed</th><th class=\"n\">Failure rate</th><th class=\"n\">Median lead time</th><th class=\"n\">Median time to restore</th></tr></thead><tbody>", e(title))
+		fmt.Fprintf(&b, "<h2>%s</h2><table><thead><tr><th>Name</th><th class=\"n\">Launches</th><th class=\"n\">Failed</th><th class=\"n\">Failure rate</th><th class=\"n\">Median lead time</th><th class=\"n\">Median time to restore</th></tr></thead><tbody>", html.EscapeString(title))
 		for _, k := range keys {
 			x := by[k]
-			fmt.Fprintf(&b, "<tr><td>%s</td><td class=\"n\">%d</td><td class=\"n\">%d</td><td class=\"n\">%.0f%%</td><td class=\"n\">%s</td><td class=\"n\">%s</td></tr>", e(k), x.Launches, x.Failures, x.ChangeFailureRate*100, spanText(x.LeadTimeMedianSec), spanText(x.RestoreMedianSec))
+			fmt.Fprintf(&b, "<tr><td>%s</td><td class=\"n\">%d</td><td class=\"n\">%d</td><td class=\"n\">%.0f%%</td><td class=\"n\">%s</td><td class=\"n\">%s</td></tr>", html.EscapeString(k), x.Launches, x.Failures, x.ChangeFailureRate*100, spanText(x.LeadTimeMedianSec), spanText(x.RestoreMedianSec))
 		}
 		b.WriteString("</tbody></table>")
 	}
@@ -93,7 +92,7 @@ svg{max-width:100%;height:auto}.mut{color:var(--mut)}</style></head><body>`)
 				}
 				reached = append(reached, s)
 			}
-			fmt.Fprintf(&b, "<tr><td>%s %s</td><td>%s by %s</td><td>%s</td><td class=\"n\">%d</td><td class=\"n\">%d</td></tr>", e(row.Release.Project), e(row.Release.Version), day(row.Release.PublishedAt), e(row.Release.PublishedBy), e(strings.Join(reached, "; ")), row.Failures, row.Returns)
+			fmt.Fprintf(&b, "<tr><td>%s %s</td><td>%s by %s</td><td>%s</td><td class=\"n\">%d</td><td class=\"n\">%d</td></tr>", html.EscapeString(row.Release.Project), html.EscapeString(row.Release.Version), day(row.Release.PublishedAt), html.EscapeString(row.Release.PublishedBy), html.EscapeString(strings.Join(reached, "; ")), row.Failures, row.Returns)
 		}
 		b.WriteString("</tbody></table>")
 	}
