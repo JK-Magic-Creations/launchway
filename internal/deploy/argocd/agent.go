@@ -66,7 +66,7 @@ type Agent struct {
 	seenCmp  map[string]time.Time
 	cleared  map[string]string
 	clusters map[string]*Cluster
-	repos    map[string]*sync.Mutex
+	repos    map[string]chan struct{}
 }
 
 // ErrUnavailable wraps failures to reach something the action needs (a
@@ -116,22 +116,36 @@ func (a *Agent) repo(ctx context.Context, project, name, branch string, log func
 		}
 		auth = &gitops.Auth{Username: rc.Username, Password: v}
 	}
-	sum := sha256.Sum256([]byte(rc.URL + "\x00" + branch))
-	dir := filepath.Join(a.DataDir, "deploy-repos", name+"-"+hex.EncodeToString(sum[:6]))
+	dir := a.repoDir(rc, name, branch)
 	a.mu.Lock()
 	if a.repos == nil {
-		a.repos = map[string]*sync.Mutex{}
+		a.repos = map[string]chan struct{}{}
 	}
 	l := a.repos[dir]
 	if l == nil {
-		l = &sync.Mutex{}
+		l = make(chan struct{}, 1)
 		a.repos[dir] = l
 	}
 	a.mu.Unlock()
-	l.Lock()
+	// The clone is used by one step at a time. The wait ends with ctx: an
+	// action or an observation that waits for a clone another one holds must
+	// never wait for longer than its own deadline.
+	select {
+	case l <- struct{}{}:
+	case <-ctx.Done():
+		return nil, rc, nil, fmt.Errorf("waiting for the working copy of repository %s (another step holds it): %w", name, ctx.Err())
+	}
+	var once sync.Once
+	unlock := func() { once.Do(func() { <-l }) }
 	r := &gitops.Repo{URL: rc.URL, Branch: branch, Dir: dir, Auth: auth,
 		Author: gitops.Author{Name: rc.Author.Name, Email: rc.Author.Email}, Log: log}
-	return r, rc, l.Unlock, nil
+	return r, rc, unlock, nil
+}
+
+// repoDir is the directory of the working clone of a repository's branch.
+func (a *Agent) repoDir(rc Repo, name, branch string) string {
+	sum := sha256.Sum256([]byte(rc.URL + "\x00" + branch))
+	return filepath.Join(a.DataDir, "deploy-repos", name+"-"+hex.EncodeToString(sum[:6]))
 }
 
 // repoWrite opens the clone for a deploy action that writes: with the step's

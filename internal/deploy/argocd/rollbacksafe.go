@@ -116,7 +116,11 @@ func walkSchema(sc map[string]any, vals map[string]any, at string, out map[strin
 
 // chartSchema finds the values schema of a chart source at a revision, from a
 // Git repository the runner is configured for; nil when it cannot see it.
-func (a *Agent) chartSchema(ctx context.Context, job *engine.Job, src map[string]any) ([]byte, error) {
+//
+// held is the clone the caller already holds (the rollback's own): a chart in
+// that same repository and branch is read from it, never by opening it a
+// second time, which would wait for the caller itself.
+func (a *Agent) chartSchema(ctx context.Context, job *engine.Job, held *gitops.Repo, src map[string]any) ([]byte, error) {
 	if a.ChartSchema != nil {
 		return a.ChartSchema(ctx, src)
 	}
@@ -130,6 +134,9 @@ func (a *Agent) chartSchema(ctx context.Context, job *engine.Job, src map[string
 	for name, rc := range a.Config.Repos {
 		if norm(rc.URL) != norm(url) && norm(rc.ArgoCDURL) != norm(url) || !rc.AllowsProject(job.Project) {
 			continue
+		}
+		if held != nil && held.Dir == a.repoDir(rc, name, "main") {
+			return held.ReadAtRevision(ctx, rev, path.Join(dir, "values.schema.json"))
 		}
 		repo, _, unlock, err := a.repo(ctx, job.Project, name, "main", func(string, ...any) {})
 		if err != nil {
@@ -170,7 +177,7 @@ func (a *Agent) preflightPin(ctx context.Context, repo *gitops.Repo, job *engine
 			continue
 		}
 		for _, src := range appSources(old, d.Application) {
-			schema, err := a.chartSchema(ctx, job, src)
+			schema, err := a.chartSchema(ctx, job, repo, src)
 			if err != nil || schema == nil {
 				log("Before reverting the chart pin: could not read the old chart's values schema (%s at %v); not checked", firstOf(fmt.Sprint(src["chart"]), fmt.Sprint(src["path"])), src["targetRevision"])
 				continue

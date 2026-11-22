@@ -37,6 +37,12 @@ spec:
 // pairRepo seeds a GitOps repository with the child's manifest and its values.
 func pairRepo(t *testing.T) (bare string) {
 	t.Helper()
+	return pairRepoWith(t, childManifest)
+}
+
+// pairRepoWith is pairRepo for a manifest of the application given.
+func pairRepoWith(t *testing.T, manifest string) (bare string) {
+	t.Helper()
 	dir := t.TempDir()
 	run := func(d string, args ...string) string {
 		cmd := exec.Command("git", args...)
@@ -54,7 +60,7 @@ func pairRepo(t *testing.T) (bare string) {
 	run(dir, "clone", bare, work)
 	os.MkdirAll(filepath.Join(work, "apps"), 0o755)
 	os.MkdirAll(filepath.Join(work, "values"), 0o755)
-	os.WriteFile(filepath.Join(work, "apps", "shop.yaml"), []byte(strings.ReplaceAll(childManifest, "GITOPS", bare)), 0o644)
+	os.WriteFile(filepath.Join(work, "apps", "shop.yaml"), []byte(strings.ReplaceAll(manifest, "GITOPS", bare)), 0o644)
 	os.WriteFile(filepath.Join(work, "values", "shop.yaml"), []byte("image:\n  tag: \"1\"\n"), 0o644)
 	run(work, "add", "-A")
 	run(work, "commit", "-m", "seed")
