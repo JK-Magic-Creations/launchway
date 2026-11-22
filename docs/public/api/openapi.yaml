@@ -81,6 +81,26 @@ info:
     version: v1
 openapi: 3.1.0
 paths:
+    /.well-known/launchway/signing-key.pub:
+        get:
+            description: The same public key as plain text, unauthenticated by design so that anyone can check a merge commit; a public key discloses nothing secret. 404 when there is none.
+            operationId: get_.well_known_launchway_signing_key.pub
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: The same public key as plain text, unauthenticated by design so that anyone can check a merge commit; a public key discloses nothing secret.
+            tags:
+                - .well-known
+            x-launchway-access: public
     /.well-known/oauth-protected-resource/mcp:
         get:
             description: OAuth 2.0 Protected Resource Metadata (RFC 9728) for /mcp. 404 unless mcp.oauth.resource is set.
@@ -3420,6 +3440,102 @@ paths:
                 - imports
             x-launchway-access: admin
             x-launchway-audit: repository.verify
+    /api/v1/inbox:
+        get:
+            description: The caller's inbox of notifications, newest first (?unread=true, ?kind=, paging), with the unread count.
+            operationId: get_api_v1_inbox
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The caller's inbox of notifications, newest first (?unread=true, ?kind=, paging), with the unread count.
+            tags:
+                - inbox
+            x-launchway-access: signed-in
+    /api/v1/inbox/count:
+        get:
+            description: The caller's unread count only, cheap enough for a badge.
+            operationId: get_api_v1_inbox_count
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The caller's unread count only, cheap enough for a badge.
+            tags:
+                - inbox
+            x-launchway-access: signed-in
+    /api/v1/inbox/done:
+        put:
+            description: Marks inbox entries done (taken out of the list) by id.
+            operationId: put_api_v1_inbox_done
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Marks inbox entries done (taken out of the list) by id.
+            tags:
+                - inbox
+            x-launchway-access: signed-in
+    /api/v1/inbox/read:
+        put:
+            description: 'Marks inbox entries read by id, or all of them: {"ids": [...]} or {"all": true}.'
+            operationId: put_api_v1_inbox_read
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Marks inbox entries read by id, or all of them: {"ids": [...]} or {"all": true}.'
+            tags:
+                - inbox
+            x-launchway-access: signed-in
     /api/v1/info:
         get:
             description: The server's version and schema, and whether sign-in is on.
@@ -3661,6 +3777,55 @@ paths:
             tags:
                 - libraries
             x-launchway-access: any-viewer
+    /api/v1/mail:
+        get:
+            description: Whether the installation's mail sender is configured and working, the queue length and the last error; with no sender configured it says so and nothing is queued.
+            operationId: get_api_v1_mail
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Whether the installation's mail sender is configured and working, the queue length and the last error; with no sender configured it says so and nothing is queued.
+            tags:
+                - mail
+            x-launchway-access: admin
+    /api/v1/mail/test:
+        post:
+            description: Sends one test message to the caller's address through the configured sender; 409 when mail is off.
+            operationId: post_api_v1_mail_test
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sends one test message to the caller's address through the configured sender; 409 when mail is off.
+            tags:
+                - mail
+            x-launchway-access: admin
+            x-launchway-audit: mail.test
     /api/v1/me:
         get:
             description: Who the caller is and what they may do.
@@ -3823,6 +3988,53 @@ paths:
             summary: Every mirror of the repositories the caller may read; ?behind=true lists only those that have fallen behind.
             tags:
                 - mirrors
+            x-launchway-access: signed-in
+    /api/v1/notices/preferences:
+        get:
+            description: 'The caller''s notification preferences: for each kind, whether it lands in the inbox and whether it is mailed, and the mute list.'
+            operationId: get_api_v1_notices_preferences
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s notification preferences: for each kind, whether it lands in the inbox and whether it is mailed, and the mute list.'
+            tags:
+                - notices
+            x-launchway-access: signed-in
+        put:
+            description: Replaces the caller's notification preferences. A kind can be switched off for the inbox or for mail; mail is only ever sent when the installation has a mail sender.
+            operationId: put_api_v1_notices_preferences
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replaces the caller's notification preferences.
+            tags:
+                - notices
             x-launchway-access: signed-in
     /api/v1/notifications:
         get:
@@ -12752,6 +12964,42 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/signatures:
+        get:
+            description: 'The verification result for commits and tags named in ?objects= (up to 100 names): signed by whom, with which key, and the state (verified, unknown key, revoked, expired, bad signature, not signed, not checked).'
+            operationId: get_api_v1_repositories_owner_name_signatures
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The verification result for commits and tags named in ?objects= (up to 100 names): signed by whom, with which key, and the state (verified, unknown key, revoked, expired, bad signature, not signed, not checked).'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/stop-mirroring:
         post:
             description: 'Makes the repository the primary: the pull mirror is deleted and pushes are accepted. {"final_sync": true} runs the mirror once more first, and changes nothing if that fails. 409 when it is not a mirror.'
@@ -15361,6 +15609,29 @@ paths:
                 - signin
             x-launchway-access: admin
             x-launchway-audit: signin.test_begin
+    /api/v1/signing/installation-key:
+        get:
+            description: The public half of the installation's own signing key, which signs the merge commits Launchway makes; 404 when no root key exists or the feature is off.
+            operationId: get_api_v1_signing_installation_key
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The public half of the installation's own signing key, which signs the merge commits Launchway makes; 404 when no root key exists or the feature is off.
+            tags:
+                - signing
+            x-launchway-access: signed-in
     /api/v1/ssh:
         get:
             description: '{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}: whether Git over SSH is on, the address clone addresses name, and the server''s host keys to verify.'
@@ -16026,6 +16297,120 @@ paths:
                 - user
             x-launchway-access: admin
             x-launchway-audit: repository.create
+    /api/v1/user/signing-keys:
+        get:
+            description: 'The caller''s registered signing keys, with their fingerprints, state (active, revoked, expired) and when each was added: {"items": [...]}. 404 feature_off while verified commits are off.'
+            operationId: get_api_v1_user_signing_keys
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The caller''s registered signing keys, with their fingerprints, state (active, revoked, expired) and when each was added: {"items": [...]}.'
+            tags:
+                - user
+            x-launchway-access: signed-in
+        post:
+            description: 'Registers one public key for signing commits and tags: {"name", "public_key"}. A fingerprint is unique across the installation (409 when taken); a private key or an unsupported kind is a 400 that says why.'
+            operationId: post_api_v1_user_signing_keys
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Registers one public key for signing commits and tags: {"name", "public_key"}.'
+            tags:
+                - user
+            x-launchway-access: signed-in
+            x-launchway-audit: signing_key.add
+    /api/v1/user/signing-keys/{id}:
+        delete:
+            description: Deletes the caller's signing key. Signatures made with it show as not verified from then on.
+            operationId: delete_api_v1_user_signing_keys_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes the caller's signing key.
+            tags:
+                - user
+            x-launchway-access: signed-in
+            x-launchway-audit: signing_key.delete
+    /api/v1/user/signing-keys/{id}/revoke:
+        post:
+            description: 'Marks the caller''s signing key revoked: commits and tags it signed before the revocation keep their history but show as made with a revoked key.'
+            operationId: post_api_v1_user_signing_keys_id_revoke
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Marks the caller''s signing key revoked: commits and tags it signed before the revocation keep their history but show as made with a revoked key.'
+            tags:
+                - user
+            x-launchway-access: signed-in
+            x-launchway-audit: signing_key.revoke
     /api/v1/user/ssh-keys:
         get:
             description: 'The caller''s keys: {"items": [...]}.'
@@ -18879,6 +19264,46 @@ paths:
             tags:
                 - mcp
             x-launchway-access: public
+    /notices/unsubscribe:
+        get:
+            description: 'The page behind the mute link in a message: a signed token (not a session) names the person and the kind; it shows what will be muted and asks for a confirmation.'
+            operationId: get_notices_unsubscribe
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'The page behind the mute link in a message: a signed token (not a session) names the person and the kind; it shows what will be muted and asks for a confirmation.'
+            tags:
+                - notices
+            x-launchway-access: public
+        post:
+            description: Mutes one kind of mail for the person the signed token was made for (also what a mail program's one-click unsubscribe sends). Unauthenticated by design; the signature is the only thing it accepts.
+            operationId: post_notices_unsubscribe
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Mutes one kind of mail for the person the signed token was made for (also what a mail program's one-click unsubscribe sends).
+            tags:
+                - notices
+            x-launchway-access: public
+            x-launchway-audit: notices.mute
     /public/badges/{name}/release.svg:
         get:
             description: An SVG badge with the version of the Flight's latest release (the newest published one that is not a pre-release), or none. The same three rules as the status badge.

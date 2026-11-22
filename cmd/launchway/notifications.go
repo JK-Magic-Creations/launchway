@@ -20,6 +20,11 @@ func startNotifications(ctx context.Context, eng *engine.Engine, srv *api.Server
 	if srv.AISecrets != nil {
 		n.Secrets = srv.AISecrets
 	}
+	// People are told too (internal/notices): the inbox always, e-mail when the mail section names a server.
+	m := cfg.Mail
+	srv.EnableNotices(api.NoticeOptions{Mail: m.Sender(), Secrets: srv.AISecrets, Dial: egress.Default.Dialer(30 * time.Second), RatePerMinute: m.RatePerMinute, RatePerHour: m.RatePerHour,
+		MaxAttempts: m.MaxAttempts, PublicURL: m.PublicURL, IncludePrivateDetails: m.IncludePrivateDetails})
+	go srv.RunNotices(ctx)
 	go eng.RunNotifications(ctx, n)
 	go srv.RunReleaseWork(ctx)
 }

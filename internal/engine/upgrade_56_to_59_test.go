@@ -10,7 +10,7 @@ import (
 )
 
 // The build of schema 56 (the outside-host release) is installed first and writes a repository, a release with a
-// file and a mirror; the next build must be a pure upgrade from it: one start applies exactly the stand-in 57 and 58
+// file and a mirror; the next build must be a pure upgrade from it: one start (stopped at schema 59, the first half of the 56 to 61 upgrade) applies exactly the empty 57 (reserved for the outside-hosts branch), 58
 // and 59 (protected tags, download counts, Flight badges, old repository addresses, hosting settings), keeps every
 // row and leaves the new tables empty. The build of schema 56 still starts against the upgraded database. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.

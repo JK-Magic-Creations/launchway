@@ -53,9 +53,13 @@ type Rule struct {
 	RequireResolved bool `json:"require_resolved_threads"`
 	// NoSelfApproval keeps the author's own approval from counting.
 	NoSelfApproval bool `json:"no_self_approval"`
-	// RequireSigned is reserved: signed commits are not checked yet, so a rule
-	// that asks for them is refused instead of pretending.
+	// RequireSigned asks that the commits a merge brings are verified (signed
+	// by a registered key, see internal/forge/signing); the merge commit
+	// Launchway makes is signed by the installation's own key.
 	RequireSigned bool `json:"require_signed_commits"`
+	// VerifiedOnlyPush refuses a push to these branches that brings a commit
+	// that is not verified (HTTPS and SSH alike; administrators too).
+	VerifiedOnlyPush bool `json:"require_verified_push"`
 	// BypassAdmins lets an administrator of the repository merge anyway, saying
 	// why; the reason and what was bypassed are recorded.
 	BypassAdmins bool `json:"allow_admin_bypass"`
@@ -93,17 +97,18 @@ type ruleExtra struct {
 	FreshApproval bool        `json:"fresh_approval,omitempty"`
 	PathChecks    []PathCheck `json:"path_checks,omitempty"`
 	Queue         bool        `json:"queue,omitempty"`
+	VerifiedPush  bool        `json:"verified_push,omitempty"`
 }
 
 func (r Rule) extra() string {
-	b, _ := json.Marshal(ruleExtra{r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue})
+	b, _ := json.Marshal(ruleExtra{r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue, r.VerifiedOnlyPush})
 	return string(b)
 }
 
 func (r *Rule) setExtra(s string) {
 	var e ruleExtra
 	_ = json.Unmarshal([]byte(s), &e)
-	r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue = e.OwnerApproval, e.DismissStale, e.FreshApproval, e.PathChecks, e.Queue
+	r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue, r.VerifiedOnlyPush = e.OwnerApproval, e.DismissStale, e.FreshApproval, e.PathChecks, e.Queue, e.VerifiedPush
 	if r.PathChecks == nil {
 		r.PathChecks = []PathCheck{}
 	}
@@ -126,9 +131,6 @@ func (r *Rule) Validate() error {
 	}
 	if r.ApprovalRole != RoleOperator && r.ApprovalRole != RoleAdmin {
 		return invalid("approvals come from the operator or the admin role")
-	}
-	if r.RequireSigned {
-		return invalid("signed commits are not checked yet, so a rule cannot ask for them; leave it off")
 	}
 	checks := []string{}
 	seen := map[string]bool{}
@@ -210,8 +212,8 @@ func (s *Store) SetRule(ctx context.Context, repoID string, r Rule, by string) e
 	}
 	checks, _ := json.Marshal(r.RequiredChecks)
 	res, err := s.db.Exec(ctx, `UPDATE branch_rules SET required_approvals = ?, approval_role = ?, required_checks = ?, require_up_to_date = ?, require_resolved = ?,
-		no_self_approval = ?, require_signed = 0, bypass_admins = ?, extra = ? WHERE repo_id = ? AND pattern = ?`,
-		r.RequiredApprovals, r.ApprovalRole, string(checks), b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins), r.extra(), repoID, r.Pattern)
+		no_self_approval = ?, require_signed = ?, bypass_admins = ?, extra = ? WHERE repo_id = ? AND pattern = ?`,
+		r.RequiredApprovals, r.ApprovalRole, string(checks), b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.RequireSigned), b2i(r.BypassAdmins), r.extra(), repoID, r.Pattern)
 	if err != nil {
 		return err
 	}
@@ -219,9 +221,9 @@ func (s *Store) SetRule(ctx context.Context, repoID string, r Rule, by string) e
 		return nil
 	}
 	_, err = s.db.Exec(ctx, `INSERT INTO branch_rules(id, repo_id, pattern, push_role, created_at, created_by, required_approvals, approval_role, required_checks,
-		require_up_to_date, require_resolved, no_self_approval, bypass_admins, extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		require_up_to_date, require_resolved, no_self_approval, require_signed, bypass_admins, extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ids.New("rul"), repoID, r.Pattern, "admin", ms(s.now()), by, r.RequiredApprovals, r.ApprovalRole, string(checks),
-		b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins), r.extra())
+		b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.RequireSigned), b2i(r.BypassAdmins), r.extra())
 	return err
 }
 
@@ -255,6 +257,8 @@ func RuleFor(rules []Rule, branch string) (Rule, bool) {
 		out.DismissStale = out.DismissStale || r.DismissStale
 		out.RequireFreshApproval = out.RequireFreshApproval || r.RequireFreshApproval
 		out.MergeQueue = out.MergeQueue || r.MergeQueue
+		out.RequireSigned = out.RequireSigned || r.RequireSigned
+		out.VerifiedOnlyPush = out.VerifiedOnlyPush || r.VerifiedOnlyPush
 		out.PathChecks = append(out.PathChecks, r.PathChecks...)
 		out.BypassAdmins = out.BypassAdmins && r.BypassAdmins // every covering rule must allow it
 	}

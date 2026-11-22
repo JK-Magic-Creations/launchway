@@ -809,6 +809,23 @@ The browser's walk-through after the first administrator. It asks the server wha
 | `GET /api/v1/user/ssh-keys` | `signed-in` | — | The caller's keys: `{"items": [...]}`. |
 | `POST /api/v1/user/ssh-keys` | `signed-in` | `ssh_key.add` | Adds one: `{"name", "public_key", "expires_at"}`; the expiry is RFC 3339 and optional, the name defaults to the key's comment. `400` says why a key is refused (DSA, RSA under 3072 bits, a private key, options, a certificate, an expiry in the past), `409` for a key in use. |
 | `DELETE /api/v1/user/ssh-keys/{id}` | `signed-in` | `ssh_key.delete` | Deletes the caller's key; it stops working at once. |
+| `GET /api/v1/user/signing-keys` | `signed-in` | — | The caller's registered signing keys, with their fingerprints, state (active, revoked, expired) and when each was added: `{"items": [...]}`. `404 feature_off` while verified commits are off. |
+| `POST /api/v1/user/signing-keys` | `signed-in` | `signing_key.add` | Registers one public key for signing commits and tags: `{"name", "public_key"}`. A fingerprint is unique across the installation (`409` when taken); a private key or an unsupported kind is a `400` that says why. |
+| `DELETE /api/v1/user/signing-keys/{id}` | `signed-in` | `signing_key.delete` | Deletes the caller's signing key. Signatures made with it show as not verified from then on. |
+| `POST /api/v1/user/signing-keys/{id}/revoke` | `signed-in` | `signing_key.revoke` | Marks the caller's signing key revoked: commits and tags it signed before the revocation keep their history but show as made with a revoked key. |
+| `GET /api/v1/repositories/{owner}/{name}/signatures` | `repo-viewer` | — | The verification result for commits and tags named in `?objects=` (up to 100 names): signed by whom, with which key, and the state (verified, unknown key, revoked, expired, bad signature, not signed, not checked). |
+| `GET /api/v1/signing/installation-key` | `signed-in` | — | The public half of the installation's own signing key, which signs the merge commits Launchway makes; `404` when no root key exists or the feature is off. |
+| `GET /.well-known/launchway/signing-key.pub` | `public` | — | The same public key as plain text, unauthenticated by design so that anyone can check a merge commit; a public key discloses nothing secret. `404` when there is none. |
+| `GET /api/v1/inbox` | `signed-in` | — | The caller's inbox of notifications, newest first (`?unread=true`, `?kind=`, paging), with the unread count. |
+| `GET /api/v1/inbox/count` | `signed-in` | — | The caller's unread count only, cheap enough for a badge. |
+| `PUT /api/v1/inbox/read` | `signed-in` | — | Marks inbox entries read by id, or all of them: `{"ids": [...]}` or `{"all": true}`. |
+| `PUT /api/v1/inbox/done` | `signed-in` | — | Marks inbox entries done (taken out of the list) by id. |
+| `GET /api/v1/notices/preferences` | `signed-in` | — | The caller's notification preferences: for each kind, whether it lands in the inbox and whether it is mailed, and the mute list. |
+| `PUT /api/v1/notices/preferences` | `signed-in` | — | Replaces the caller's notification preferences. A kind can be switched off for the inbox or for mail; mail is only ever sent when the installation has a mail sender. |
+| `GET /api/v1/mail` | `admin` | — | Whether the installation's mail sender is configured and working, the number of messages waiting and the last error; with no sender configured it says so and nothing waits to be sent. |
+| `POST /api/v1/mail/test` | `admin` | `mail.test` | Sends one test message to the caller's address through the configured sender; `409` when mail is off. |
+| `GET /notices/unsubscribe` | `public` | — | The page behind the mute link in a message: a signed token (not a session) names the person and the kind; it shows what will be muted and asks for a confirmation. |
+| `POST /notices/unsubscribe` | `public` | `notices.mute` | Mutes one kind of mail for the person the signed token was made for (also what a mail program's one-click unsubscribe sends). Unauthenticated by design; the signature is the only thing it accepts. |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `repo-admin` | — | The repository's deploy keys: `{"items": [...]}`. |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `repo-admin` | `deploy_key.add` | Adds one: `{"name", "public_key", "write", "expires_at"}`. Read-only unless `write` is true. |
 | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `repo-admin` | `deploy_key.delete` | Deletes a deploy key. |

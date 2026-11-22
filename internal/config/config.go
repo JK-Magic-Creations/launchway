@@ -122,6 +122,8 @@ type Config struct {
 	// Notifications are the channels and rules that tell people an approval
 	// waits or something went wrong (schema 38); see internal/notify.
 	Notifications notify.Config `yaml:"notifications"`
+	// Mail is the e-mail sent to people (an installation setting, mail.go).
+	Mail MailConfig `yaml:"mail"`
 	// AI lists the models steps may ask (schema 19). Unset: no model, and
 	// nothing is ever sent to one; every other feature works.
 	AI AIConfig `yaml:"ai"`
@@ -744,7 +746,7 @@ func readConfig(path string, bootstrap bool) (*Config, error) {
 // any change to it is stored, so both are held to exactly the same rules.
 // path names where it came from in messages.
 func (c *Config) Validate(path string) error {
-	if err := c.Notifications.Check(); err != nil {
+	if err := c.checkTelling(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.Auth.check(); err != nil {

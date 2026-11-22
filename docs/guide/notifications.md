@@ -87,6 +87,6 @@ about it.
 
 ## Not here yet
 
-Email (Launchway has no mail sender yet; the setting would be a channel of kind `email` with an SMTP server,
-and is the next kind to add), per-person subscribe and mute, and the other chat services' own formats beyond
-the incoming-webhook presets above.
+The other chat services' own formats beyond the incoming-webhook presets above.
+
+E-mail and per-person choices are a separate thing: [Notifications for people](notifications-for-people.md).

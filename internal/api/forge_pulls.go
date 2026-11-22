@@ -494,6 +494,7 @@ func (s *Server) pullEvent(ctx context.Context, e pulls.Event) {
 		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: e.Actor, Action: "pull." + e.Action, Target: repo.Path, Outcome: "ok", Detail: fmt.Sprintf("#%d", e.Pull.Number)})
 	}
 	s.notifyPull(ctx, repo.Path, e)
+	s.noticePull(ctx, repo, e)
 	switch e.Action {
 	case "opened", "synchronize", "reopened":
 		// The pull ref moved: the projects that watch the repository look at it now and run what asks for pull requests.

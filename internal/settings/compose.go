@@ -304,6 +304,7 @@ func applyInstallation(c *config.Config, s *Installation) {
 	c.Auth.Tokens = s.Tokens
 	c.Forge = s.Forge
 	c.Notifications = s.Notifications
+	c.Mail = s.Mail
 }
 
 // Bootstrap returns a copy of a configuration with only what the file keeps
@@ -330,6 +331,7 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.Schedules = config.SchedulesConfig{}
 	c.Environments = nil
 	c.Notifications = notify.Config{}
+	c.Mail = config.MailConfig{}
 	c.RunnerPools = nil
 	c.RunnerAdmin = ""
 	c.Policy = nil
@@ -475,7 +477,7 @@ func installationOf(c *config.Config) Installation {
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
 			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
 			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
-		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History, Forge: c.Forge, Notifications: c.Notifications}
+		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History, Forge: c.Forge, Notifications: c.Notifications, Mail: c.Mail}
 	s.Reports.Origin = ""
 	if c.Policy != nil {
 		s.PolicyWaivers = c.Policy.Waivers
@@ -515,6 +517,7 @@ func movedKeys(c *config.Config) []string {
 	set(c.Schedules != (config.SchedulesConfig{}), "schedules")
 	set(len(c.Environments) > 0, "environments")
 	set(len(c.Notifications.Channels) > 0 || len(c.Notifications.Rules) > 0, "notifications")
+	set(c.Mail != (config.MailConfig{}), "mail")
 	set(len(c.RunnerPools) > 0, "runner_pools")
 	set(c.RunnerAdmin != "", "runner_admin")
 	set(c.Policy != nil, "policy")

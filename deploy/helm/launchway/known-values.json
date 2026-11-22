@@ -50,6 +50,28 @@
     "loops": {
       "maxMembers": true
     },
+    "mail": {
+      "allowPlain": true,
+      "from": true,
+      "host": true,
+      "includePrivateDetails": true,
+      "maxAttempts": true,
+      "password": {
+        "field": true,
+        "key": true,
+        "store": true
+      },
+      "port": true,
+      "publicUrl": true,
+      "ratePerHour": true,
+      "ratePerMinute": true,
+      "security": true,
+      "username": {
+        "field": true,
+        "key": true,
+        "store": true
+      }
+    },
     "mcp": {
       "allowedOrigins": true,
       "concurrent": true,
@@ -322,17 +344,17 @@
       "helperImage": true,
       "imagePullSecrets": true,
       "keepFailed": true,
-      "pod": true,
-      "maxWorkspace": true,
-      "maxWorkspaces": true,
       "maxCpu": true,
       "maxMemory": true,
       "maxPodAge": true,
+      "maxWorkspace": true,
+      "maxWorkspaces": true,
       "memory": true,
       "memoryLimit": true,
       "namespace": true,
       "namespaceLabels": true,
       "nodeSelector": true,
+      "pod": true,
       "priorityClassName": true,
       "restricted": true,
       "runAsGroup": true,
@@ -382,9 +404,8 @@
   },
   "securityContext": true,
   "server": {
-    "trustedProxies": true,
-    "clientAddressHeader": true,
     "affinity": true,
+    "clientAddressHeader": true,
     "dataVolume": {
       "sizeLimit": true
     },
@@ -422,7 +443,8 @@
     },
     "terminationGracePeriodSeconds": true,
     "tolerations": true,
-    "topologySpreadConstraints": true
+    "topologySpreadConstraints": true,
+    "trustedProxies": true
   },
   "service": {
     "annotations": true,

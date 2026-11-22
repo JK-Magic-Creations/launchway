@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTab } from "../components/PageTabs";
+import { SignatureBadge, useSignatures } from "../components/Signature";
 import { int, oneOf, useUrlState } from "../urlState";
 import { ago } from "../format";
 import { navigate } from "../router";
@@ -175,6 +176,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   const [conv, setConv] = useState<Conversation | null>(null);
   const [files, setFiles] = useState<FileChange[] | null>(null);
   const [commits, setCommits] = useState<{ sha: string; author: string; subject: string }[] | null>(null);
+  const sigs = useSignatures(path, (commits ?? []).map((c) => c.sha));
   // The tab, the diff layout and the revision compared against are in the address, so a review can be linked: ?tab=files&mode=split&since=2
   const [tab, setTab] = useTab(["conversation", "commits", "files"], "conversation");
   const [mode, setModeU] = useUrlState("mode", "unified", oneOf<"unified" | "split">("unified", "split"));
@@ -359,7 +361,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             {tab === "commits" && (
               <Sheet title="Commits">
                 {commits && commits.length === 0 && <Empty title="No commits" />}
-                {commits && commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}</span><span className="faint small"><Mono>{c.sha.slice(0, 10)}</Mono> {c.author}</span></div>)}
+                {commits && commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}<SignatureBadge result={sigs[c.sha]} quiet /></span><span className="faint small"><Mono>{c.sha.slice(0, 10)}</Mono> {c.author}</span></div>)}
               </Sheet>
             )}
             {tab === "files" && (

@@ -353,7 +353,7 @@ func (s *Server) workInbox(w http.ResponseWriter, r *http.Request) {
 		s.failWork(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"entries": es, "unread": unread, "email": "not available: Launchway has no mail sender; entries appear here and on the Tower, and notification channels carry them elsewhere"})
+	writeJSON(w, http.StatusOK, map[string]any{"entries": es, "unread": unread, "email": "mentions and comments are in your notices (the inbox at /api/v1/inbox), which can come by e-mail per your choices; other entries appear here and on the Tower"})
 }
 
 func (s *Server) workInboxRead(w http.ResponseWriter, r *http.Request) {

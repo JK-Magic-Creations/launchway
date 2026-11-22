@@ -164,3 +164,11 @@ table.blame tr.sel td { background: var(--warn-wash); }
 .code-page .bl-line2 a.msg-link { display: block; padding: 4px 0; line-height: 16px; }
 .code-page .bl-prev { padding: 4px 0; min-height: 24px; box-sizing: border-box; }
 @media (max-width: 640px) { .branch-table .row-actions { white-space: normal; } .branch-table .row-actions .btn { margin: 0 0 6px 6px; } }
+
+/* The mark of a verified, unsigned or doubtful commit or tag, with a plain explanation on a click. */
+.sig { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-left: 6px; }
+.sig-badge { font: inherit; font-size: var(--fs-small); padding: 0 8px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; }
+.sig-ok { background: var(--ok-soft); color: var(--ok-ink); }
+.sig-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.sig-bad { background: var(--bad-soft); color: var(--bad-ink); }
+.sig-why { flex-basis: 100%; max-width: 60ch; }

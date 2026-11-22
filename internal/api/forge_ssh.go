@@ -140,7 +140,10 @@ func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Con
 		if err := refrules.Check(pats, us, isAdmin); err != nil {
 			return err
 		}
-		return refrules.CheckTags(tagRules, us, refrules.TagActor{Admin: isAdmin})
+		if err := refrules.CheckTags(tagRules, us, refrules.TagActor{Admin: isAdmin}); err != nil {
+			return err
+		}
+		return s.verifiedPush(ctx, c, repo, ups)
 	}
 }
 

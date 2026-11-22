@@ -12,8 +12,9 @@ Pages that go with this one: [boards and sprints](boards-and-sprints.md) for pla
 the [query reference](../reference/work-queries.md).
 
 > [!NOTE]
-> Email is not available. Launchway has no mail sender. What would be an email elsewhere is an entry in
-> your [inbox](#the-inbox) and on Home, and, for other systems, the `work_item`
+> E-mail follows your choices: mentions and comments on work items are notices in your inbox that can come
+> by e-mail ([Notifications for people](notifications-for-people.md)). Other entries are in your
+> [inbox](#the-inbox) and on Home, and, for other systems, the `work_item`
 > [webhook event](../reference/events.md#work-item-events).
 
 ## From the command line

@@ -18,6 +18,7 @@ func (s *Server) WirePulls() {
 	if s.Forge == nil || s.Forge.Pulls == nil {
 		return
 	}
+	s.EnableSigning()
 	p := s.Forge.Pulls
 	p.OnEvent = s.pullEvent
 	p.Runs = pullRuns{s}

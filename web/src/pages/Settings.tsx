@@ -17,8 +17,12 @@ export function AccessPage() {
         {me.auth_mode === "oidc" && (
           <li><Link href="/settings/access/keys" className="guided-tile guided-tile-block"><strong>Keys for scripts</strong><span className="faint">A key lets a script or the command line act as you, for as long as you choose.</span></Link></li>
         )}
+        <li><Link href="/settings/notifications" className="guided-tile guided-tile-block"><strong>Notifications</strong><span className="faint">What you are told of, by e-mail or in your inbox, and when.</span></Link></li>
         {hosting === "on" && (
           <li><Link href="/settings/access/ssh-keys" className="guided-tile guided-tile-block"><strong>SSH keys</strong><span className="faint">Keys that let you clone and push over SSH, and the server's fingerprints to check.</span></Link></li>
+        )}
+        {hosting === "on" && (
+          <li><Link href="/settings/access/signing-keys" className="guided-tile guided-tile-block"><strong>Signing keys</strong><span className="faint">The keys you sign commits and tags with, so they show as verified.</span></Link></li>
         )}
         {me.mcp?.enabled !== false && (
           <li><Link href="/settings/access/agents" className="guided-tile guided-tile-block"><strong>Connect an agent</strong><span className="faint">{terms().say("Let an AI assistant read your {runs} and, if you allow it, act on them.")}</span></Link></li>

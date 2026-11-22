@@ -10,6 +10,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 
 | Operation | MCP tool | CLI command | Terraform | Status |
 |---|---|---|---|---|
+| `GET /.well-known/launchway/signing-key.pub` | `get_signing_installation_key` | `signing installation-key` | — | exempt: the same public key as a plain file at a fixed address, for allowed-signers files and anyone verifying without signing in |
 | `GET /.well-known/oauth-protected-resource/mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v1/artifacts/begin` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `PUT /api/runner/v1/artifacts/chunk` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -138,6 +139,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
+| `GET /api/v1/inbox` | `get_inbox` | `inbox list` | `not needed by terraform` | equal |
+| `GET /api/v1/inbox/count` | `get_inbox` | `inbox count` | `not needed by terraform` | equal |
+| `PUT /api/v1/inbox/done` | `mark_inbox` | `inbox done` | `not needed by terraform` | equal |
+| `PUT /api/v1/inbox/read` | `mark_inbox` | `inbox read` | `not needed by terraform` | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
 | `GET /api/v1/layouts-export` | `organize` | `organize` | — | equal |
@@ -147,12 +152,16 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/layouts/{page}` | `organize` | `organize` | — | equal |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
+| `GET /api/v1/mail` | `get_mail_status` | `notices mail` | `the mail section of launchway_installation` | equal |
+| `POST /api/v1/mail/test` | `send_test_mail` | `notices mail-test` | `not needed by terraform` | equal |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
 | `POST /api/v1/me/favorites` | — | — | — | exempt: a person's own favorites; a token or agent has no pages |
 | `DELETE /api/v1/me/layouts` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `DELETE /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `PUT /api/v1/me/layouts/{page}` | — | — | — | exempt: a person's own arrangement of the pages they look at; a token or agent has no pages |
 | `GET /api/v1/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
+| `GET /api/v1/notices/preferences` | `get_notice_preferences` | `notices prefs` | `not needed by terraform` | equal |
+| `PUT /api/v1/notices/preferences` | `set_notice_preferences` | `notices set`, `notices watch`, `notices quiet`, `notices digest` | `not needed by terraform` | equal |
 | `GET /api/v1/notifications` | `list_notifications` | `notifications` | — | equal |
 | `DELETE /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
 | `PATCH /api/v1/organize/folders/{id}` | `organize` | `organize` | — | equal |
@@ -409,6 +418,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/signatures` | `verify_signatures` | `signing verify` | `not needed by terraform` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/tags` | `delete_repository_tag` | `repos tags delete` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
@@ -491,6 +501,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/setup/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `GET /api/v1/signin/test` | — | — | — | exempt: the result of a provider test a person is doing in the browser; the same record is in the audit trail, which every interface reads |
 | `POST /api/v1/signin/test` | — | — | — | exempt: testing an identity provider means a person completing the provider's own sign-in page in a second browser window; an API token or agent cannot and must not do that |
+| `GET /api/v1/signing/installation-key` | `get_signing_installation_key` | `signing installation-key` | `not needed by terraform` | equal |
 | `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
 | `GET /api/v1/standards/coverage` | `get_standards_coverage` | `standards coverage` | `not needed by terraform` | equal |
 | `GET /api/v1/standards/profile` | `get_standards_profile` | `standards profile` | `not needed by terraform` | equal |
@@ -517,6 +528,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/units/{name}/projects` | `create_project_in_unit` | `squadrons add-flight` | `launchway_project with unit (the same object; no change)` | equal |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/user/signing-keys` | `list_signing_keys` | `signing keys list` | `not needed by terraform` | equal |
+| `POST /api/v1/user/signing-keys` | `add_signing_key` | `signing keys add` | `not needed by terraform` | equal |
+| `DELETE /api/v1/user/signing-keys/{id}` | `delete_signing_key` | `signing keys delete` | `not needed by terraform` | equal |
+| `POST /api/v1/user/signing-keys/{id}/revoke` | `revoke_signing_key` | `signing keys revoke` | `not needed by terraform` | equal |
 | `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |
 | `POST /api/v1/user/ssh-keys` | `add_ssh_key` | `keys add` | — | equal |
 | `DELETE /api/v1/user/ssh-keys/{id}` | `delete_ssh_key` | `keys delete` | — | equal |
@@ -620,6 +635,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /notices/unsubscribe` | `set_notice_preferences` | `notices set` | — | exempt: the page behind the mute link in a message: for a person who is not signed in, signed so that it can only mute one kind of mail for the person it was made for; signed in, the preferences do the same and more |
+| `POST /notices/unsubscribe` | `set_notice_preferences` | `notices set` | — | exempt: the mute link in a message (also what a mail program's one-click unsubscribe sends): signed, for a person who is not signed in |
 | `GET /public/badges/{name}/release.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same version is in list_releases |
 | `GET /public/badges/{name}/status.svg` | — | — | — | exempt: the badge is an image for a README, served without sign-in only for a public repository or a Flight whose badges are on; the same status is in list_runs |
 | `GET /public/releases/{name}/{version}` | — | — | — | exempt: the public page of a release, for installations that allow public content: unauthenticated by design and a subset of what get_release returns; everything else is a not found |

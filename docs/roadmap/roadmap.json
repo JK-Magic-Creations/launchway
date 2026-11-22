@@ -563,12 +563,13 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Verified commits and tags",
               "value": "Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits.",
-              "detail": "A verified state is a fact a branch rule or a deployment policy can ask for, so an unsigned change cannot reach production if you say so.",
+              "detail": "A verified state is a fact a branch rule or a deployment policy can ask for, so an unsigned change cannot reach production if you say so. Built: SSH signing keys, the verdict on commits and annotated tags (verified, unknown key, bad signature, unsigned, key revoked or expired), shown on commit lists, the commit page, tags and pull requests, the merge rule and a push rule, and a signing key of the installation's own for the commits Launchway makes. Not built: OpenPGP and X.509 signatures, signing of commits made by editing in the web page.",
               "needs": "Branches, tags and rules.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/verified-commits"
             },
             {
               "status": "planned",
@@ -659,12 +660,13 @@
               "link": "guide/webhooks"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Notifications and email",
               "value": "An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email.",
-              "detail": "Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events.",
+              "detail": "One inbox with read and done marks; e-mail with encryption required, a retry queue and a rate limit; per-person choices per kind, watch levels per repository and Flight, quiet hours and a daily digest; mail that carries only names and links for repositories that are not public; mute links that need no sign-in. Not built: replying by e-mail.",
               "needs": "Built-in Git hosting.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/notifications-for-people"
             }
           ]
         },
@@ -692,7 +694,7 @@
               "status": "in-progress",
               "title": "Branch rules and protected tags",
               "value": "Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move.",
-              "detail": "Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Not built: protected tags, linear history, and rules that ask for signed commits (refused, not ignored).",
+              "detail": "Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Rules that ask for verified commits, at merge and at push, are built (see Verified commits and tags). Not built: protected tags, linear history.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },

@@ -39,7 +39,7 @@ export interface BranchComparison {
 
 export interface MergeRule {
   pattern: string; required_approvals: number; approval_role: string; required_checks: string[]; require_up_to_date: boolean;
-  require_resolved_threads: boolean; no_self_approval: boolean; require_signed_commits: boolean; allow_admin_bypass: boolean;
+  require_resolved_threads: boolean; no_self_approval: boolean; require_signed_commits: boolean; require_verified_push?: boolean; allow_admin_bypass: boolean;
   require_owner_approval?: boolean; dismiss_stale_approvals?: boolean; require_latest_push_approved_by_other?: boolean; merge_queue?: boolean;
   required_checks_by_path?: { paths: string[]; check: string }[];
 }

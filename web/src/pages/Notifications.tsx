@@ -1,0 +1,172 @@
+import { useCallback, useEffect, useState } from "react";
+import { ago, clock } from "../format";
+import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { PageHead, Sheet } from "../kit/layout";
+import { announce } from "../kit/announce";
+import { noticesApi, type Inbox, type MailStatus, type Preferences, type Watch } from "../noticesApi";
+
+const STATES: [string, string][] = [["open", "Open"], ["unread", "Unread"], ["done", "Done"], ["all", "All"]];
+const SOURCES: [string, string][] = [["", "Everything"], ["notice", "Notices"], ["work", "Work"], ["pull", "Waiting on you"]];
+
+/** One inbox: the notices, the work entries and the pull requests that wait on the person, with read and done marks and filters. */
+export function InboxPage() {
+  const [state, setState] = useState("open");
+  const [source, setSource] = useState("");
+  const [data, setData] = useState<Inbox | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [now] = useState(() => Date.now());
+  const load = useCallback(() => noticesApi.inbox(state, source, "").then((d) => { setData(d); setError(null); }).catch(setError), [state, source]);
+  useEffect(() => { void load(); }, [load]);
+  const mark = async (what: "read" | "done", ids: string[], value: boolean) => {
+    try {
+      await (what === "read" ? noticesApi.read(ids, value) : noticesApi.done(ids, value));
+      announce(what === "read" ? (value ? "Marked read" : "Marked unread") : value ? "Marked done" : "Opened again");
+      await load();
+    } catch (e) { setError(e); }
+  };
+  const marks = (data?.items ?? []).filter((i) => i.source !== "pull");
+  const unreadIds = marks.filter((i) => !i.read).map((i) => i.id);
+  return (
+    <div className="page">
+      <PageHead eyebrow="Inbox" title="Inbox" sentence={<>What concerns you, in one place. <Link href="/settings/notifications">Choose what you are told and how</Link>.</>} />
+      <ErrorBox error={error} />
+      <div className="code-bar">
+        <label className="field"><span>Show</span>
+          <select value={state} onChange={(e) => setState(e.target.value)}>{STATES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <label className="field"><span>From</span>
+          <select value={source} onChange={(e) => setSource(e.target.value)}>{SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        {unreadIds.length > 0 && <button type="button" className="btn btn-sm" onClick={() => mark("read", unreadIds.slice(0, 200), true)}>Mark all read</button>}
+      </div>
+      {data && <p className="sub" role="status">{data.unread} unread, {data.waiting} waiting on you.</p>}
+      {data && data.items.length === 0 && <Empty title="Nothing here">{state === "open" ? "You are caught up." : "Nothing matches."}</Empty>}
+      {data && data.items.length > 0 && (
+        <Sheet title="Entries">
+          <ul className="inbox-list">
+            {data.items.map((i) => (
+              <li key={i.id} className={"inbox-item" + (i.read || i.waiting_on_you ? "" : " unread")}>
+                <div>
+                  {i.link ? <Link href={i.link}>{i.title}</Link> : i.title}
+                  {i.waiting_on_you && <span className="chip"> waiting on you</span>}
+                  {!i.read && !i.waiting_on_you && <span className="visually-hidden"> (unread)</span>}
+                  <div className="faint small">{i.repository && <><Mono>{i.repository}</Mono>{" "}</>}{i.actor && <>by {i.actor}{" "}</>}<span title={clock(Date.parse(i.at))}>{ago(Date.parse(i.at), now)}</span>{i.detail ? ` · ${i.detail}` : ""}</div>
+                </div>
+                {i.source !== "pull" && (
+                  <div className="row-actions">
+                    <button type="button" className="btn btn-sm" onClick={() => mark("read", [i.id], !i.read)}>{i.read ? "Mark unread" : "Mark read"}<span className="visually-hidden">: {i.title}</span></button>
+                    {i.source === "notice" && <button type="button" className="btn btn-sm" onClick={() => mark("done", [i.id], !i.done)}>{i.done ? "Open again" : "Done"}<span className="visually-hidden">: {i.title}</span></button>}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+const CHANNELS: [string, string][] = [["in_app", "In the inbox"], ["email", "Inbox and e-mail"], ["off", "Off"]];
+const LEVELS: [string, string][] = [["all", "Everything"], ["participating", "What I take part in"], ["none", "Nothing"]];
+const toMinutes = (v: string) => { const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+const fromMinutes = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+
+/** What a person is told of and how: per kind, per repository or Flight, quiet hours and the daily digest. */
+export function NotificationSettingsPage() {
+  const [p, setP] = useState<Preferences | null>(null);
+  const [mail, setMail] = useState<MailStatus | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [scope, setScope] = useState("");
+  const [level, setLevel] = useState<Watch["level"]>("all");
+  const [testing, setTesting] = useState(false);
+  const [tested, setTested] = useState("");
+  useEffect(() => {
+    noticesApi.preferences().then(setP).catch(setError);
+    noticesApi.mail().then(setMail).catch(() => {}); // only administrators may read it
+  }, []);
+  const save = async (b: Parameters<typeof noticesApi.save>[0], said: string) => {
+    setError(null);
+    try { setP(await noticesApi.save(b)); announce(said); } catch (e) { setError(e); }
+  };
+  if (!p) return <div className="page"><PageHead eyebrow="Settings" title="Notifications" /><ErrorBox error={error} /></div>;
+  const quiet = p.settings.quiet_start >= 0;
+  return (
+    <div className="page">
+      <PageHead eyebrow="Settings" title="Notifications" sentence={<>Choose what you are told and how. Everything also lands in your <Link href="/inbox">inbox</Link>.</>} />
+      <ErrorBox error={error} />
+      {!p.mail_on && <div className="callout callout-allowed" role="status"><strong>This installation sends no e-mail.</strong> Your choices still decide what lands in your inbox. An administrator turns mail on with the <Mono>mail</Mono> installation setting.</div>}
+      {p.mail_on && !p.address_known && <div className="callout callout-allowed" role="status"><strong>No address is known for you.</strong> E-mail goes to the address in your profile as of your last sign-in; sign in once with one.</div>}
+
+      <Sheet title="What you are told" pad>
+        <table className="table">
+          <caption className="sr-only">Each kind of notice and how it reaches you</caption>
+          <thead><tr><th scope="col">When</th><th scope="col">How</th></tr></thead>
+          <tbody>
+            {p.kinds.map((k) => (
+              <tr key={k.kind}>
+                <th scope="row" className="plain-th">{k.title}{k.waiting_on_you && <span className="faint small"> (waits on you)</span>}</th>
+                <td><select aria-label={`How you are told: ${k.title}`} value={k.channel} onChange={(e) => save({ kinds: { [k.kind]: e.target.value } }, `Saved: ${k.title}`)}>
+                  {CHANNELS.map(([v, l]) => <option key={v} value={v} disabled={v === "email" && !p.mail_on}>{l}</option>)}</select></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="sub">Mail of a repository that is not public carries only its name and a link, never a title or a comment: mail leaves the installation, so what it holds is limited. Every message has a link that stops that kind without signing in.</p>
+      </Sheet>
+
+      <Sheet title="Repositories and Flights you watch" pad>
+        <p className="sub">Without a choice you are told of what you take part in. <strong>Everything</strong> adds all activity there; <strong>Nothing</strong> mutes it.</p>
+        {p.watches.length === 0 && <p className="faint">No choices yet.</p>}
+        <ul className="plain-list">
+          {p.watches.map((w) => (
+            <li key={w.scope}>
+              <Mono>{w.scope}</Mono>{" "}
+              <select aria-label={`Level for ${w.scope}`} value={w.level} onChange={(e) => save({ watches: [{ scope: w.scope, level: e.target.value as Watch["level"] }] }, `Saved: ${w.scope}`)}>
+                {LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>{" "}
+              <button type="button" className="btn btn-sm" onClick={() => save({ watches: [{ scope: w.scope, level: "participating" }] }, `Removed: ${w.scope}`)}>Remove<span className="visually-hidden"> {w.scope}</span></button>
+            </li>
+          ))}
+        </ul>
+        <form className="inputs-form" aria-label="Watch a repository or Flight" onSubmit={(e) => { e.preventDefault(); void save({ watches: [{ scope: scope.trim(), level }] }, `Saved: ${scope}`).then(() => setScope("")); }}>
+          <label className="field"><span>Repository or Flight</span><input value={scope} placeholder="repo:acme/shop or flight:shop-api" onChange={(e) => setScope(e.target.value)} /></label>
+          <label className="field"><span>Level</span><select value={level} onChange={(e) => setLevel(e.target.value as Watch["level"])}>{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          <div><button type="submit" className="btn" disabled={!scope.trim()}>Save choice</button></div>
+        </form>
+      </Sheet>
+
+      <Sheet title="Quiet hours and digest" pad>
+        <form className="inputs-form" aria-label="Quiet hours and digest" onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          const on = f.get("quiet") === "on";
+          void save({ settings: { quiet_start: on ? toMinutes(String(f.get("from"))) : -1, quiet_end: on ? toMinutes(String(f.get("to"))) : -1, zone: String(f.get("zone")), digest: f.get("digest") === "on", digest_hour: Number(f.get("hour")) } }, "Saved");
+        }}>
+          <label className="check"><input type="checkbox" name="quiet" defaultChecked={quiet} /> Hold e-mail during quiet hours (it is sent when they end; the inbox is not held)</label>
+          <div className="tokenform-grid">
+            <label className="field"><span>From</span><input type="time" name="from" defaultValue={fromMinutes(quiet ? p.settings.quiet_start : 22 * 60)} /></label>
+            <label className="field"><span>To</span><input type="time" name="to" defaultValue={fromMinutes(quiet ? p.settings.quiet_end : 7 * 60)} /></label>
+            <label className="field"><span>Time zone</span><input name="zone" defaultValue={p.settings.zone} placeholder="Europe/Berlin" /></label>
+          </div>
+          <label className="check"><input type="checkbox" name="digest" defaultChecked={p.settings.digest} /> Send one e-mail a day instead of one for each notice</label>
+          <label className="field"><span>Digest hour (0 to 23)</span><input type="number" name="hour" min={0} max={23} defaultValue={p.settings.digest_hour} /></label>
+          <div><button type="submit" className="btn btn-primary">Save</button></div>
+        </form>
+      </Sheet>
+
+      {mail && (
+        <Sheet title="Mail server (administrators)" pad>
+          {!mail.enabled ? <p>No mail server is set. Set the <Mono>mail</Mono> section of the installation settings (host, from, public_url, credentials as references).</p> : (
+            <>
+              <p><Mono>{mail.host}:{mail.port}</Mono> over {mail.security}, from <Mono>{mail.from}</Mono>. {mail.pending} waiting, {mail.sent} sent ({mail.sent_last_hour} in the last hour), {mail.failed} failed. Limit {mail.rate_per_minute} a minute, {mail.rate_per_hour} an hour.</p>
+              {!mail.public_url && <p role="note">No <Mono>mail.public_url</Mono> is set, so messages carry no links.</p>}
+              <button type="button" className="btn" disabled={testing} onClick={async () => {
+                setTesting(true); setTested("");
+                try { const r = await noticesApi.testMail(); setTested(`Sent a test message to ${r.to}.`); } catch (e) { setError(e); } finally { setTesting(false); }
+              }}>{testing ? "Sending…" : "Send a test message to me"}</button>
+              {tested && <p role="status">{tested}</p>}
+            </>
+          )}
+        </Sheet>
+      )}
+    </div>
+  );
+}

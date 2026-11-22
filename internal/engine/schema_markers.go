@@ -65,6 +65,8 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersOutside,
 	schemaMarkersTagRules,
 	schemaMarkersBadges,
+	schemaMarkersNotices,
+	schemaMarkersSigning,
 }
 
 type schemaMarker struct {

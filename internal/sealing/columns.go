@@ -95,6 +95,11 @@ var (
 		Writers: []string{"internal/cac/tfstate/store.go"},
 		Why:     "Terraform and OpenTofu state: it holds generated passwords, provider credentials and private keys in clear text by design of its format",
 	}
+	signingColumn = Column{
+		Table: "signing_installation", Column: "sealed", Key: "id", Purpose: keyring.PurposeSecrets,
+		Writers: []string{"internal/store/person_signing.go"},
+		Why:     "the private signing key of the installation, with which Launchway signs the merge and suggestion commits it makes: with it, a commit could be made that looks like the product's",
+	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
 		Writers: []string{"internal/forge/webhooks/store.go"},
@@ -121,7 +126,7 @@ var (
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
 // ExplainedColumns.
-var Registry = []Column{webhooksColumn, webhookURLColumn, eventSourcesColumn, totpColumn, hostKeysColumn, metaColumn, stateColumn}
+var Registry = []Column{webhooksColumn, webhookURLColumn, eventSourcesColumn, totpColumn, hostKeysColumn, metaColumn, stateColumn, signingColumn}
 
 // ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random
@@ -254,6 +259,10 @@ func (b *HookBox) SealURL(ctx context.Context, row string, plain []byte) (string
 func (b *HookBox) OpenURL(ctx context.Context, row, stored string) ([]byte, error) {
 	return b.urls.Open(ctx, row, stored)
 }
+
+// InstallationSigning is the box of the installation's signing key
+// (signing_installation.sealed).
+func (s *Service) InstallationSigning() *Box { return &Box{s, signingColumn} }
 
 // EventSources is the box of event sources' signing secrets.
 func (s *Service) EventSources() *Box { return &Box{s, eventSourcesColumn} }

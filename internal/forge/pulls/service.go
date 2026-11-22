@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/forge/signing"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
 )
 
@@ -50,10 +52,18 @@ type Service struct {
 	// before the rules are read; work tracking uses it for the rules about
 	// agents. actor is who merges.
 	MergeCheck func(ctx context.Context, repoID string, p PullRequest, actor string) error
-	Log        *slog.Logger
+	// Sign, when set, signs the commits the service makes (merge, squash,
+	// rebase, revert, applied suggestions) and Verify judges commits for the
+	// rule that a merge brings only verified ones. Both are the signing
+	// service's (internal/forge/signing); nil: commits are not signed, and a
+	// rule that asks for verified commits refuses every merge.
+	Sign   func(ctx context.Context, payload []byte) ([]byte, error)
+	Verify func(ctx context.Context, objs []storage.PushObject) []signing.Result
+	Log    *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time
 
+	signErr      atomic.Value // the last error from signing a commit, a string
 	beforeCommit func()
 	sem          chan struct{}
 	wg           sync.WaitGroup
@@ -100,7 +110,7 @@ func (s *Service) emit(ctx context.Context, action, repoID string, p PullRequest
 }
 
 func (s *Service) runner(dir string, scratch bool) gitRunner {
-	return gitRunner{dir: dir, limits: s.Git.Limits(), scratch: scratch}
+	return gitRunner{dir: dir, limits: s.Git.Limits(), scratch: scratch, sign: s.Sign, note: s.noteSignError}
 }
 
 // read runs fn with git in the server's cache of the repository.

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 57 available · 15 in progress · 56 planned · 128 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 59 available · 15 in progress · 54 planned · 128 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,7 +48,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 22 | 8 | 0 | 14 |
+| [Host your code](#g-host-your-code) | 22 | 10 | 0 | 12 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 5 | 1 | 4 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 5 | 2 | 4 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 8 | 0 | 1 | 7 |
@@ -156,13 +156,13 @@ Edit, add or delete one file from the web page; every save is a real commit, on 
 
 #### Verified commits and tags {#verified-commits-and-tags}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. A verified state is a fact a branch rule or a deployment policy can ask for, so an unsigned change cannot reach production if you say so.
+Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. A verified state is a fact a branch rule or a deployment policy can ask for, so an unsigned change cannot reach production if you say so. Built: SSH signing keys, the verdict on commits and annotated tags (verified, unknown key, bad signature, unsigned, key revoked or expired), shown on commit lists, the commit page, tags and pull requests, the merge rule and a push rule, and a signing key of the installation's own for the commits Launchway makes. Not built: OpenPGP and X.509 signatures, signing of commits made by editing in the web page.
 
 **Depends on:** Branches, tags and rules.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/verified-commits.md) · [Area page](git-hosting.md)
 
 #### Repository maintenance and health {#repository-maintenance-and-health}
 
@@ -274,13 +274,13 @@ Send repository events to chat tools and any web address, with a delivery log, r
 
 #### Notifications and email {#notifications-and-email}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events.
+An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. One inbox with read and done marks; e-mail with encryption required, a retry queue and a rate limit; per-person choices per kind, watch levels per repository and Flight, quiet hours and a daily digest; mail that carries only names and links for repositories that are not public; mute links that need no sign-in. Not built: replying by e-mail.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/notifications-for-people.md) · [Area page](git-hosting.md)
 
 ### Review and merge changes {#g-review-and-merge-changes}
 
@@ -310,7 +310,7 @@ Comment on lines and ranges, suggest a change the author can apply in one click,
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Not built: protected tags, linear history, and rules that ask for signed commits (refused, not ignored).
+Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. Built: protected branches, required approvals (and from whom), required checks, up to date, resolved threads, no self-approval, stale-approval dismissal and an audited administrator bypass, set in the repository's Merge rules tab, the API, MCP and the CLI. The page says in plain words why a change cannot land yet. Rules that ask for verified commits, at merge and at push, are built (see Verified commits and tags). Not built: protected tags, linear history.
 
 **Depends on:** Pull requests on the built-in host.
 

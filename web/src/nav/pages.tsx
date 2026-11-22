@@ -11,6 +11,9 @@ const lz = (load: () => Promise<Record<string, unknown>>, name: string) =>
   lazy(() => load().then((m) => ({ default: m[name] as AnyPage })));
 
 const SshKeysPage = lz(() => import("../pages/SshKeys"), "SshKeysPage");
+const SigningKeysPage = lz(() => import("../pages/SigningKeys"), "SigningKeysPage");
+const InboxPage = lz(() => import("../pages/Notifications"), "InboxPage");
+const NotificationSettingsPage = lz(() => import("../pages/Notifications"), "NotificationSettingsPage");
 const RepositoriesPage = lz(() => import("../pages/Repositories"), "RepositoriesPage");
 const OwnerPage = lz(() => import("../pages/Repositories"), "OwnerPage");
 const HomePage = lz(() => import("../pages/Home"), "HomePage");
@@ -158,6 +161,9 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/access": return <AccessPage />;
     case "/settings/access/keys": return <TokensPage />;
     case "/settings/access/ssh-keys": return <SshKeysPage />;
+    case "/settings/access/signing-keys": return <SigningKeysPage />;
+    case "/settings/notifications": return <NotificationSettingsPage />;
+    case "/inbox": return <InboxPage />;
     case "/settings/access/agents": return <AgentsPage />;
     case "/repositories": return <RepositoriesPage />;
     case "/owners/:owner": return <OwnerPage key={p.owner} owner={p.owner} />;

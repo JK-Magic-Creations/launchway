@@ -127,3 +127,15 @@ type ChangedFiles = storage.ChangedFiles
 // ChangedFilesFrom returns the function a push policy uses to list the files
 // the push changes, or nil outside a push.
 func ChangedFilesFrom(ctx context.Context) ChangedFiles { return storage.ChangedFilesFrom(ctx) }
+
+// NewObjects is what a push policy uses to read the commits and annotated
+// tags a push brings (storage.NewObjects), for the rule that only verified
+// commits may be pushed.
+type NewObjects = storage.NewObjects
+
+// PushObject is one of them.
+type PushObject = storage.PushObject
+
+// NewObjectsFrom returns the function a push policy uses to read the objects
+// of the push, or nil outside a push.
+func NewObjectsFrom(ctx context.Context) NewObjects { return storage.NewObjectsFrom(ctx) }

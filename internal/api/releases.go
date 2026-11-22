@@ -710,6 +710,7 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 		return s.refusal(err)
 	}
 	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
+	s.noticeRelease(context.WithoutCancel(r.Context()), got.Project, got.Version, identityFrom(r).User)
 	s.queueOutside(context.WithoutCancel(r.Context()), got)
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
 	return got, http.StatusOK, ""

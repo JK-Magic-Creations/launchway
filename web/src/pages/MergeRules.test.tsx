@@ -7,9 +7,10 @@ import { pullFixtures } from "../test/mockApi";
 
 const rules = "/api/v1/repositories/acme/shop/merge-rules";
 
-function serve(editable: boolean) {
+function serve(editable: boolean, verified = false) {
   const fx = pullFixtures() as Record<string, { actions?: { name: string; available: boolean; reason?: string }[] }>;
-  if (!editable) fx[rules].actions = fx[rules].actions!.map((a) => (a.name === "require_signed_commits" ? a : { ...a, available: false, reason: "you need the admin role on acme/shop" }));
+  if (verified) fx[rules].actions = fx[rules].actions!.map((a) => (a.name.startsWith("require_") ? { name: a.name, available: true } : a));
+  if (!editable) fx[rules].actions = fx[rules].actions!.map((a) => (a.name.startsWith("require_") ? a : { ...a, available: false, reason: "you need the admin role on acme/shop" }));
   const calls: { method: string; url: string; body?: string }[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ method: init?.method ?? "GET", url, body: init?.body as string | undefined });
@@ -34,11 +35,22 @@ describe("merge rules and pull request settings", () => {
     const put = calls.find((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))!;
     expect(JSON.parse(put.body!).rules[0]).toMatchObject({ pattern: "main", require_resolved_threads: true, require_up_to_date: true });
   });
-  it("offers no switch for signed commits and says why", async () => {
+  it("offers no switch for verified commits where the server has them off, and says why", async () => {
     serve(true);
     render(<MergeRulesPanel path="acme/shop" />);
-    expect(await screen.findByText(/Signed commits cannot be required yet/)).toBeTruthy();
-    expect(screen.queryByLabelText(/signed/i)).toBeNull();
+    expect(await screen.findByText(/Verified commits cannot be required here/)).toBeTruthy();
+    expect(screen.queryByLabelText(/must be verified/i)).toBeNull();
+    expect(screen.queryByLabelText(/Only verified commits may be pushed/i)).toBeNull();
+  });
+  it("offers both rules about verified commits where the server has them on, and saves them", async () => {
+    const calls = serve(true, true);
+    render(<MergeRulesPanel path="acme/shop" />);
+    const form = await screen.findByRole("form", { name: "Merge rule for main" });
+    await userEvent.click(within(form).getByLabelText(/Every commit a merge brings must be verified/));
+    await userEvent.click(within(form).getByLabelText(/Only verified commits may be pushed/));
+    await userEvent.click(within(form).getByRole("button", { name: /Save the rule for main/ }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))).toBe(true));
+    expect(JSON.parse(calls.find((c) => c.method === "PUT" && c.url.endsWith("/merge-rules"))!.body!).rules[0]).toMatchObject({ require_signed_commits: true, require_verified_push: true });
   });
   it("only reads when the server says the person may not edit, with the reason and no save buttons", async () => {
     serve(false);

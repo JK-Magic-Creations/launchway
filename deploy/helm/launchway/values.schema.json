@@ -256,6 +256,24 @@
           "type": ["object", "null"],
           "properties": { "untrusted": { "enum": ["", "restrict", "allow", null] } }
         },
+        "mail": {
+          "type": ["object", "null"],
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },
+            "security": { "enum": ["", "starttls", "tls", "none", null] },
+            "allowPlain": { "type": ["boolean", "null"] },
+            "username": { "$ref": "#/definitions/secretRef" },
+            "password": { "$ref": "#/definitions/secretRef" },
+            "from": { "type": "string" },
+            "publicUrl": { "type": "string" },
+            "ratePerMinute": { "type": ["integer", "null"], "minimum": 0 },
+            "ratePerHour": { "type": ["integer", "null"], "minimum": 0 },
+            "maxAttempts": { "type": ["integer", "null"], "minimum": 0, "maximum": 20 },
+            "includePrivateDetails": { "type": ["boolean", "null"] }
+          },
+          "additionalProperties": false
+        },
         "notifications": {
           "type": ["object", "null"],
           "properties": {
