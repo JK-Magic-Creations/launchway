@@ -392,8 +392,13 @@ image-inputs:
 
 # Runs the image's web stage itself: npm ci and `npm run build` (the type check included) on exactly what the
 # Dockerfile copies. Needs a container tool (CONTAINER=podman or docker) and the network for its base image.
+# Builds the web stage, then the shipped image itself and runs its server binary's self-check for reading a hosted
+# repository from the server's own storage inside it. The image has no shell: a need for one, or a program the image
+# lacks, fails here and not in production (it once did: every poll of a hosted repository failed).
 image-build-check:
 	$(CONTAINER) build --target web -t launchway-web-check -f Dockerfile .
+	$(CONTAINER) build -t launchway-image-check -f Dockerfile .
+	$(CONTAINER) run --rm --network none launchway-image-check self-check hosted-read
 
 ratchet:
 	go test -count=1 -run TestSizeRatchet ./internal/archtest/

@@ -215,6 +215,8 @@ func main() {
 		err = cmdDeps(args)
 	case "updates":
 		err = cmdUpdates(args)
+	case "self-check": // not listed in the help: the image check runs it
+		err = cmdSelfCheck(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

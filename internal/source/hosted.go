@@ -78,3 +78,40 @@ func localRemote(gitDir string) string {
 	esc := strings.NewReplacer("%", "%%", " ", "% ").Replace(gitDir)
 	return "ext::git-upload-pack " + esc
 }
+
+// SelfCheckHostedRead proves, inside whatever environment it runs in, that a repository kept in this server's own
+// storage can be read the way a hosted Flight or library is: it makes a bare repository (in a directory whose name
+// has a space and a percent sign), pushes a commit to it and brings the commit into a mirror through the shell-free
+// remote that fetchHosted uses. The shipped image has no shell, and this once failed there ("cannot exec
+// git-upload-pack") although every test on a developer machine passed; `launchway self-check hosted-read` runs it in
+// the image, so a need for a shell or a missing program fails the image check. dir must be writable.
+func SelfCheckHostedRead(ctx context.Context, dir string) error {
+	root, err := os.MkdirTemp(dir, "selfcheck-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(root)
+	src := filepath.Join(root, "a b", "100%.git")
+	if err := os.MkdirAll(filepath.Dir(src), 0o750); err != nil {
+		return err
+	}
+	work, mirror := filepath.Join(root, "work"), filepath.Join(root, "mirror.git")
+	steps := [][]string{
+		{"init", "--quiet", "--bare", src},
+		{"init", "--quiet", work},
+		{"-C", work, "-c", "user.name=self-check", "-c", "user.email=self-check@example.com", "commit", "--quiet", "--allow-empty", "-m", "one"},
+		{"-C", work, "push", "--quiet", src, "HEAD:refs/heads/main"},
+		{"-c", "protocol.ext.allow=always", "clone", "--mirror", "--quiet", localRemote(src), mirror},
+		{"-C", mirror, "-c", "protocol.ext.allow=always", "fetch", "--quiet", "--prune", localRemote(src), "+refs/heads/*:refs/heads/*"},
+	}
+	for _, c := range steps {
+		if _, err := gitRun(ctx, "", nil, "", c...); err != nil {
+			return fmt.Errorf("git %s: %w", c[0], err)
+		}
+	}
+	out, err := gitRun(ctx, mirror, nil, "", "for-each-ref", "--format=%(refname)")
+	if err != nil || !strings.Contains(out, "refs/heads/main") {
+		return fmt.Errorf("the commit did not arrive in the mirror: %q %v", out, err)
+	}
+	return nil
+}
