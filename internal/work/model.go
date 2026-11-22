@@ -186,6 +186,8 @@ type Item struct {
 	UpdatedAt    string         `json:"updated_at"`
 	ClosedAt     string         `json:"closed_at,omitempty"`
 	Comments     int            `json:"comment_count,omitempty"`
+	// Reactions are the counts of each reaction and whether the caller made it (filled for the API).
+	Reactions []ReactionCount `json:"reactions,omitempty"`
 }
 
 // Limits.

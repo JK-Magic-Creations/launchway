@@ -17564,6 +17564,81 @@ paths:
             tags:
                 - work
             x-launchway-access: signed-in
+    /api/v1/work/comments/{id}/reactions/{reaction}:
+        delete:
+            description: Takes your reaction to a comment back.
+            operationId: delete_api_v1_work_comments_id_reactions_reaction
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: reaction
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Takes your reaction to a comment back.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.react
+        put:
+            description: The same for a comment. Comments carry reactions in their list.
+            operationId: put_api_v1_work_comments_id_reactions_reaction
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: reaction
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The same for a comment.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.react
     /api/v1/work/health:
         post:
             description: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
@@ -17716,7 +17791,7 @@ paths:
             x-launchway-audit: work.inbox_read
     /api/v1/work/items:
         get:
-            description: Lists items you may see. ?scope=, ?q= (the [query language](work-queries.md)), ?sort=, ?desc=true, ?limit=, ?offset=, ?parent=. Answers {items, total, limit, offset}.
+            description: Lists items you may see. ?scope=, ?q= (the [query language](work-queries.md)), ?sort=, ?desc=true, ?limit=, ?offset=, ?parent=, ?repository=OWNER/NAME (the repository's own work and the work tied to its code; the query term repo:OWNER/NAME does the same). Answers {items, total, limit, offset}; each item has reactions ([{reaction, count, mine}]).
             operationId: get_api_v1_work_items
             responses:
                 "200":
@@ -18205,6 +18280,81 @@ paths:
                 - work
             x-launchway-access: signed-in
             x-launchway-audit: work.rank
+    /api/v1/work/items/{ref}/reactions/{reaction}:
+        delete:
+            description: Takes your reaction back.
+            operationId: delete_api_v1_work_items_ref_reactions_reaction
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: reaction
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Takes your reaction back.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.react
+        put:
+            description: 'Makes your reaction to an item; {reaction} is thumbs_up, thumbs_down, laugh, hooray, confused, heart, rocket or eyes. One of each per person; again is no change. Anyone who can see the item may; an agent may not. Answers {reactions: [{reaction, count, mine}]}.'
+            operationId: put_api_v1_work_items_ref_reactions_reaction
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: reaction
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Makes your reaction to an item; {reaction} is thumbs_up, thumbs_down, laugh, hooray, confused, heart, rocket or eyes.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.react
     /api/v1/work/items/{ref}/take-over:
         post:
             description: 'A person takes the item from an agent: the lease ends, the person is the assignee, the agent''s branch stays.'

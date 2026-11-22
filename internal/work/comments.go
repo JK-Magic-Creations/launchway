@@ -11,14 +11,15 @@ import (
 
 // Comment is a comment on an item.
 type Comment struct {
-	ID         string `json:"id"`
-	ItemRef    string `json:"item,omitempty"`
-	Author     string `json:"author"`
-	AuthorKind string `json:"author_kind"`
-	Body       string `json:"body"`
-	CreatedAt  string `json:"created_at"`
-	EditedAt   string `json:"edited_at,omitempty"`
-	Edits      int    `json:"edits,omitempty"`
+	ID         string          `json:"id"`
+	ItemRef    string          `json:"item,omitempty"`
+	Author     string          `json:"author"`
+	AuthorKind string          `json:"author_kind"`
+	Body       string          `json:"body"`
+	CreatedAt  string          `json:"created_at"`
+	EditedAt   string          `json:"edited_at,omitempty"`
+	Edits      int             `json:"edits,omitempty"`
+	Reactions  []ReactionCount `json:"reactions,omitempty"`
 }
 
 var mention = regexp.MustCompile(`(^|[\s(])@([A-Za-z0-9][A-Za-z0-9._-]{0,60})`)
@@ -187,7 +188,11 @@ func (s *Store) Comments(ctx context.Context, c Caller, ref string) ([]Comment, 
 		cm.CreatedAt, cm.EditedAt, cm.ItemRef = iso(cr), iso(ed), it.Ref
 		out = append(out, cm)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	return out, s.fillCommentReactions(ctx, c, out)
 }
 
 // CommentEdits lists the earlier texts of a comment, oldest first.

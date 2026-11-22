@@ -90,6 +90,7 @@ var Tables = []Table{
 	{Name: "repo_trash", Class: Pending, Stage: "S3", Why: "repo_id"},
 	{Name: "repo_languages", Class: Pending, Stage: "S3", Why: "repo_id"},
 	{Name: "repo_contributors", Class: Pending, Stage: "S3", Why: "repo_id"},
+	{Name: "work_reactions", Class: Pending, Stage: "S4", Why: "work item or comment"},
 	{Name: "hosting_settings", Class: Global, Why: "the operator's hosting settings"},
 	{Name: "lane_holders", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_waiting", Class: Pending, Stage: "S2", Why: "run"},

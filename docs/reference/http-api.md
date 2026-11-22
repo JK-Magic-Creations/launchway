@@ -1047,7 +1047,7 @@ token is offered the item routes only for the work it holds). The guides are [tr
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/work/items` | `signed-in` | — | Lists items you may see. `?scope=`, `?q=` (the [query language](work-queries.md)), `?sort=`, `?desc=true`, `?limit=`, `?offset=`, `?parent=`. Answers `{items, total, limit, offset}`. |
+| `GET /api/v1/work/items` | `signed-in` | — | Lists items you may see. `?scope=`, `?q=` (the [query language](work-queries.md)), `?sort=`, `?desc=true`, `?limit=`, `?offset=`, `?parent=`, `?repository=OWNER/NAME` (the repository's own work and the work tied to its code; the query term `repo:OWNER/NAME` does the same). Answers `{items, total, limit, offset}`; each item has `reactions` (`[{reaction, count, mine}]`). |
 | `POST /api/v1/work/items` | `signed-in` | `work.create` | Creates an item: `{scope, type, title, body, state, priority, estimate, labels, assignees, parent, milestone, sprint, criteria, custom, confidential, …}`..  `201`. |
 | `GET /api/v1/work/items/{ref}` | `signed-in` | — | One item with its comments count, links, code, criteria, claim and, once merged, [where the fix is running](../guide/work-and-code.md#where-the-fix-is-running). `{ref}` is `PAY-12`. `404` for one you may not see. |
 | `PATCH /api/v1/work/items/{ref}` | `signed-in` | `work.update` | Changes fields, labels, assignees, criteria, state, parent, milestone, sprint, or watching. `expected_version` makes it fail with `409` if the item changed. The workflow and the agent rules apply. |
@@ -1057,6 +1057,10 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `GET /api/v1/work/items/{ref}/history` | `signed-in` | — | The item's history, oldest first: who (person, agent or system), how, what changed. |
 | `GET /api/v1/work/items/{ref}/comments` | `signed-in` | — | Comments, oldest first. |
 | `POST /api/v1/work/items/{ref}/comments` | `signed-in` | `work.comment` | Adds a comment (`{body}`, up to 64 KiB); `@name` tells that person. |
+| `PUT /api/v1/work/items/{ref}/reactions/{reaction}` | `signed-in` | `work.react` | Makes your reaction to an item; `{reaction}` is `thumbs_up`, `thumbs_down`, `laugh`, `hooray`, `confused`, `heart`, `rocket` or `eyes`. One of each per person; again is no change. Anyone who can see the item may; an agent may not. Answers `{reactions: [{reaction, count, mine}]}`. |
+| `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` | `signed-in` | `work.react` | Takes your reaction back. |
+| `PUT /api/v1/work/comments/{id}/reactions/{reaction}` | `signed-in` | `work.react` | The same for a comment. Comments carry `reactions` in their list. |
+| `DELETE /api/v1/work/comments/{id}/reactions/{reaction}` | `signed-in` | `work.react` | Takes your reaction to a comment back. |
 | `PATCH /api/v1/work/comments/{id}` | `signed-in` | `work.comment_edit` | The author edits a comment; the earlier text is kept. |
 | `GET /api/v1/work/comments/{id}/edits` | `signed-in` | — | The earlier texts of a comment, oldest first. |
 | `GET /api/v1/work/items/{ref}/links` | `signed-in` | — | Links to other items (blocks, relates, duplicates), both directions, hiding items you may not see. |

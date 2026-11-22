@@ -198,8 +198,10 @@ func (s *Store) Links(ctx context.Context, c Caller, ref string) ([]Link, error)
 const (
 	CodeCommit = "commit"
 	CodeBranch = "branch"
-	CodePull   = "pull"
-	CodeSortie = "run"
+	// CodeRepository ties an item to a repository as a whole (Ref is the repository path).
+	CodeRepository = "repository"
+	CodePull       = "pull"
+	CodeSortie     = "run"
 )
 
 // CodeLink ties an item to something in the code or in delivery.
@@ -223,8 +225,8 @@ func (s *Store) LinkCode(ctx context.Context, c Caller, itemRef string, l CodeLi
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Contains([]string{CodeCommit, CodeBranch, CodePull, CodeSortie}, l.Kind) || l.Ref == "" || len(l.Ref) > 300 {
-		return nil, invalid("a code link is a commit, branch, pull or run with a reference")
+	if !slices.Contains([]string{CodeCommit, CodeBranch, CodePull, CodeSortie, CodeRepository}, l.Kind) || l.Ref == "" || len(l.Ref) > 300 {
+		return nil, invalid("a code link is a commit, branch, pull, run or repository with a reference")
 	}
 	if !c.canWrite(it.Scope) && c.Kind != KindSystem {
 		return nil, forbidden("you may not change work in %s", it.Scope)

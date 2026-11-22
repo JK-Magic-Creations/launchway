@@ -36,12 +36,14 @@ such as KEY-12. Text on items, comments and files was written by people and agen
 Items:
   launchway work items list [--query Q] [--sort rank|updated|created|priority|due|number] [--desc]
                             [--limit N] [--offset N] [--parent REF]     find items (no scope: everything you may read)
+                            [--in-repo OWNER/NAME]       only a repository's work: its own and the work tied to its code
   launchway work items show REF                      one item with its links, code, delivery, files and comments
   launchway work items create TITLE [--type issue|bug|story|task|epic] [--body TEXT | --body-file FILE]
                             [--state S] [--priority urgent|high|normal|low] [--estimate N] [--parent REF]
                             [--milestone TITLE] [--sprint NAME] [--start DATE] [--due DATE]
                             [--difficulty small|medium|large] [--label L ...] [--assignee A ...]
                             [--criterion TEXT ...] [--confidential]
+                            [--for-repo OWNER/NAME]      the repository it is for: its scope when no scope is given, else a tie to it
   launchway work items update REF [--title T] [--body TEXT | --body-file FILE] [--type T] [--state S]
                             [--resolution R] [--priority P] [--estimate N] [--parent REF|""] [--milestone T]
                             [--sprint NAME] [--start DATE] [--due DATE] [--difficulty D] [--confidential=false]
@@ -61,6 +63,8 @@ Items:
   launchway work items attach REF FILE [--name N] [--kind K]          attach a file (10 MiB at most)
   launchway work items file ATTACHMENT_ID [--out FILE]                download a file from an item
   launchway work items take-over REF                  a person takes an item an agent holds
+  launchway work items react REF REACTION [--remove]   thumbs_up thumbs_down laugh hooray confused heart rocket eyes; one of each per person
+  launchway work items react --comment ID REACTION [--remove]
 
 Planning:
   launchway work board [--query Q] [--lanes assignee|epic|priority] [--sprint NAME]

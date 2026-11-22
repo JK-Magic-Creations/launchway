@@ -153,6 +153,14 @@ You may edit your own comment. **The earlier text is kept**: a comment that has 
 its earlier versions are listed oldest first, with when each was written. Nobody edits another person's
 comment. An agent comments only on the work it holds.
 
+## Reactions
+
+You may react to an item and to a comment with one of eight: `thumbs_up`, `thumbs_down`, `laugh`, `hooray`,
+`confused`, `heart`, `rocket` and `eyes`. Anyone who can see the item may react, one of each kind per person
+(reacting again changes nothing), and an agent does not. Every item and comment the API returns carries the
+count of each reaction and whether it is yours (`launchway work items react REF heart`, the `react_to_work`
+tool). Taking a reaction back removes only yours.
+
 ## Attachments
 
 A file may be attached to an item. Each file is up to 10 MB and an item holds at most 50. Files are kept in
@@ -178,6 +186,12 @@ updated:<7d`. The language is in the [query reference](../reference/work-queries
 A query can be saved as a **view**. A view is private to you, or **shared** with everyone who reads the
 scope (sharing needs the right to change work there). Views are listed on the work page, and are a name
 and a query, nothing more: opening one runs the query again with what you may see now.
+
+**Work of a repository.** `repo:acme/shop` in a query, `?repository=acme/shop` on the list route,
+`--in-repo acme/shop` on the command line and `repository` on the tool find the repository's own work and the
+work tied to its code (a branch, pull request, commit, run, or the repository itself). An item made with
+`repository` and no scope lives in the repository's own scope (`launchway work items create --for-repo
+acme/shop`); with another scope it is tied to the repository so that the repository's list finds it.
 
 Lists are paged, sorted by backlog order unless you sort by update time, creation time, priority, due date
 or number, and show only what you may see.

@@ -60,6 +60,8 @@ type listWorkIn struct {
 	Limit  int    `json:"limit,omitempty" jsonschema:"how many, at most 200"`
 	Offset int    `json:"offset,omitempty" jsonschema:"how many to skip"`
 	Parent string `json:"parent,omitempty" jsonschema:"only the children of this item (a reference)"`
+	// Repository keeps the items of one repository: in its own scope, or tied to its code.
+	Repository string `json:"repository,omitempty" jsonschema:"only the items of this repository (owner/name): its own work and work tied to its code"`
 }
 
 func scopedWorkList(in listWorkIn) (string, error) {
@@ -73,6 +75,7 @@ func scopedWorkList(in listWorkIn) (string, error) {
 	setS(q, "q", in.Query)
 	setS(q, "sort", in.Sort)
 	setS(q, "parent", in.Parent)
+	setS(q, "repository", in.Repository)
 	if in.Desc {
 		q.Set("desc", "true")
 	}
@@ -137,6 +140,7 @@ type createWorkIn struct {
 	Custom       map[string]any `json:"custom,omitempty" jsonschema:"custom fields, by name"`
 	Confidential bool           `json:"confidential,omitempty" jsonschema:"only those who may change work here see it"`
 	Difficulty   string         `json:"difficulty,omitempty" jsonschema:"small, medium or large"`
+	Repository   string         `json:"repository,omitempty" jsonschema:"owner/name of the repository the item is for; when the scope is another one, the item is tied to the repository"`
 }
 
 // updateWorkIn is a change to one item: a field left out keeps its value.

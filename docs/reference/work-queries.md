@@ -25,6 +25,7 @@ whatever the query says.
 | `milestone:"Launch"` | In the milestone with that title |
 | `sprint:"Sprint 4"`, `sprint:none` | In the sprint with that name; or in none |
 | `parent:PAY-3`, `epic:PAY-3` | Children of the item, and their children |
+| `repo:acme/shop` | Work of a repository: in its own scope, or tied to its code (a branch, pull request, commit, run, or the repository itself) |
 | `ref:PAY-12` | The item with that reference |
 | `key:S01-01` | The item imported with that key |
 | `is:open`, `is:closed` | Not finished; finished (done or won't do) |

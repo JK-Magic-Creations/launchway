@@ -60,7 +60,7 @@ var languageByExt = map[string]string{
 	".nix": "Nix", ".zig": "Zig", ".m": "Objective-C", ".vb": "Visual Basic",
 }
 
-var languageByName = map[string]string{"Dockerfile": "Dockerfile", "Makefile": "Makefile", "GNUmakefile": "Makefile", "Jenkinsfile": "Groovy"}
+var languageByName = map[string]string{"Dockerfile": "Dockerfile", "Makefile": "Makefile", "GNUmakefile": "Makefile"}
 
 // Short rule sets: whole directories of other people's code, and files a tool wrote.
 var vendoredDirs = []string{"vendor", "node_modules", "third_party", "third-party", "bower_components", "Pods", ".yarn", "__pycache__", "site-packages"}

@@ -42,12 +42,16 @@ func (s *Server) workItemRoutes() []route {
 		{"POST /api/v1/work/views", signedIn, "work.view_save", s.workSaveView},
 		{"DELETE /api/v1/work/views/{id}", signedIn, "work.view_delete", s.workDeleteView},
 		{"GET /api/v1/work/by-code", signedIn, "", s.workByCode},
+		{"PUT " + b + "/{ref}/reactions/{reaction}", signedIn, "work.react", s.workReactItem},
+		{"DELETE " + b + "/{ref}/reactions/{reaction}", signedIn, "work.react", s.workReactItem},
+		{"PUT /api/v1/work/comments/{id}/reactions/{reaction}", signedIn, "work.react", s.workReactComment},
+		{"DELETE /api/v1/work/comments/{id}/reactions/{reaction}", signedIn, "work.react", s.workReactComment},
 	}
 }
 
 func (s *Server) workList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	o := work.ListOptions{Query: q.Get("q"), Sort: q.Get("sort"), Desc: q.Get("desc") == "true", Parent: q.Get("parent")}
+	o := work.ListOptions{Query: q.Get("q"), Sort: q.Get("sort"), Desc: q.Get("desc") == "true", Parent: q.Get("parent"), Repository: q.Get("repository")}
 	o.Limit, _ = strconv.Atoi(q.Get("limit"))
 	o.Offset, _ = strconv.Atoi(q.Get("offset"))
 	if v := q.Get("scope"); v != "" {
@@ -71,6 +75,9 @@ func (s *Server) workCreate(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
+	if in.Scope.Kind == "" && in.Repository != "" && r.URL.Query().Get("scope") == "" {
+		in.Scope = work.Scope{Kind: work.ScopeProject, ID: in.Repository}
+	}
 	if in.Scope.Kind == "" {
 		sc, err := parseWorkScope(r.URL.Query().Get("scope"))
 		if err != nil {
@@ -85,6 +92,13 @@ func (s *Server) workCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, it.Ref, it.Title)
+	if in.Repository != "" && !(it.Scope.Kind == work.ScopeProject && it.Scope.ID == in.Repository) {
+		// The item lives elsewhere: tie it to the repository so the repository's list finds it.
+		if _, err := s.work().LinkCode(r.Context(), s.workCaller(r), it.Ref, work.CodeLink{Kind: work.CodeRepository, Repo: in.Repository, Ref: in.Repository, Title: in.Repository, Source: "manual"}); err != nil {
+			s.failWork(w, err)
+			return
+		}
+	}
 	writeJSON(w, http.StatusCreated, it)
 }
 
@@ -456,3 +470,24 @@ func (s *Server) workByCode(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ = time.Second
+
+// workReactItem adds (PUT) or removes (DELETE) the caller's reaction to an item.
+func (s *Server) workReactItem(w http.ResponseWriter, r *http.Request) {
+	out, err := s.work().React(r.Context(), s.workCaller(r), false, r.PathValue("ref"), r.PathValue("reaction"), r.Method == http.MethodPut)
+	if err != nil {
+		s.failWork(w, err)
+		return
+	}
+	setAudit(r, r.PathValue("ref"), r.PathValue("reaction"))
+	writeJSON(w, http.StatusOK, map[string]any{"reactions": out})
+}
+
+func (s *Server) workReactComment(w http.ResponseWriter, r *http.Request) {
+	out, err := s.work().React(r.Context(), s.workCaller(r), true, r.PathValue("id"), r.PathValue("reaction"), r.Method == http.MethodPut)
+	if err != nil {
+		s.failWork(w, err)
+		return
+	}
+	setAudit(r, r.PathValue("id"), r.PathValue("reaction"))
+	writeJSON(w, http.StatusOK, map[string]any{"reactions": out})
+}

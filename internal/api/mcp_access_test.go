@@ -146,6 +146,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"get_work_history":       {map[string]any{"item": "PAY-1"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"comment_on_work_item":   {map[string]any{"body": "x", "item": "PAY-1"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"edit_work_comment":      {map[string]any{"body": "x", "id": "wc_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"react_to_work":          {map[string]any{"item": "PAY-1", "reaction": "heart"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"get_work_comment_edits": {map[string]any{"id": "wc_nope"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"link_work_items":        {map[string]any{"item": "PAY-1", "kind": "relates", "to": "PAY-2"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"unlink_work_items":      {map[string]any{"id": "wl_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},

@@ -8,12 +8,15 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // The query language is a line of terms separated by spaces:
 //
 //	state:in_progress  type:bug  label:ui  -label:wontfix  assignee:me
 //	is:open  is:closed  is:blocked  is:unassigned  is:claimed  is:confidential
+//	repo:acme/shop
 //	milestone:"Q1"  sprint:"Sprint 4"  priority:high  parent:PAY-3  reporter:ada
 //	updated:>2026-01-01  updated:<7d  created:>30d  due:<today
 //	"words in quotes"  any other word  (searched in titles and bodies)
@@ -70,7 +73,7 @@ func ParseQuery(raw string) (*Query, error) {
 	return q, nil
 }
 
-var queryKeys = []string{"state", "type", "label", "assignee", "is", "milestone", "sprint", "priority", "parent", "epic", "reporter", "updated", "created", "due", "closed", "ref", "agent", "key"}
+var queryKeys = []string{"state", "type", "label", "assignee", "is", "milestone", "sprint", "priority", "parent", "epic", "reporter", "updated", "created", "due", "closed", "ref", "agent", "key", "repo"}
 
 func tokenize(s string) []string {
 	var out []string
@@ -125,6 +128,8 @@ type ListOptions struct {
 	Limit  int
 	Offset int
 	Parent string // only the children of this item (a ref)
+	// Repository keeps the items of a repository: in its own scope, or tied to its code.
+	Repository string
 }
 
 // Page is one page of a list.
@@ -289,6 +294,9 @@ var termBuilders = map[string]termBuilder{
 		}
 		return `i.number = ? AND EXISTS (SELECT 1 FROM work_scopes sc WHERE sc.scope_kind = i.scope_kind AND sc.scope_id = i.scope_id AND sc.prefix = ?)`, []any{n, prefix}
 	},
+	"repo": func(_ *termEnv, t term) (string, []any) {
+		return store.WorkInRepositorySQL, []any{t.val, t.val}
+	},
 	"updated": dateTerm("i.updated_at"),
 	"created": dateTerm("i.created_at"),
 	"due":     dateTerm("i.due_at"),
@@ -419,6 +427,9 @@ func (s *Store) List(ctx context.Context, c Caller, o ListOptions) (*Page, error
 		}
 		conds, args = append(conds, `i.parent_id = ?`), append(args, id)
 	}
+	if o.Repository != "" {
+		conds, args = append(conds, store.WorkInRepositorySQL), append(args, o.Repository, o.Repository)
+	}
 	where := strings.Join(conds, " AND ")
 	var total int
 	if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM work_items i WHERE `+where, args...).Scan(&total); err != nil {
@@ -459,6 +470,9 @@ func (s *Store) List(ctx context.Context, c Caller, o ListOptions) (*Page, error
 	}
 	if items == nil {
 		items = []*Item{}
+	}
+	if err := s.fillItemReactions(ctx, c, items); err != nil {
+		return nil, err
 	}
 	return &Page{Items: items, Total: total, Limit: o.Limit, Offset: o.Offset}, nil
 }

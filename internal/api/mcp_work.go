@@ -185,6 +185,7 @@ func addWorkTools(srv *mcp.Server, c *mcpCall) {
 	addWorkPlanReadTools(srv, c)
 	addWorkAgentReadTools(srv, c)
 	addWorkProposalReadTools(srv, c)
+	addWorkReactTool(srv, c)
 	if c.mayOperate {
 		addWorkChangeTools(srv, c)
 		addWorkPlanChangeTools(srv, c)

@@ -569,6 +569,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/charts/velocity` | `get_work_chart` | `work charts velocity` | — | equal |
 | `PATCH /api/v1/work/comments/{id}` | `edit_work_comment` | `work items comment` | — | equal |
 | `GET /api/v1/work/comments/{id}/edits` | `get_work_comment_edits` | `work items history` | — | equal |
+| `DELETE /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `PUT /api/v1/work/comments/{id}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `POST /api/v1/work/health` | `run_repository_health` | `work health` | — | equal |
 | `GET /api/v1/work/home` | `get_work_home` | `work home` | — | equal |
 | `POST /api/v1/work/import/archive` | `promote_archive` | `work import --format archive` | — | equal |
@@ -591,6 +593,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/work/items/{ref}/links` | `link_work_items` | `work items link` | — | equal |
 | `POST /api/v1/work/items/{ref}/move` | `move_work_item` | `work items move` | — | equal |
 | `POST /api/v1/work/items/{ref}/rank` | `rank_work_item` | `work items rank` | — | equal |
+| `DELETE /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
+| `PUT /api/v1/work/items/{ref}/reactions/{reaction}` | `react_to_work` | `work items react` | — | equal |
 | `POST /api/v1/work/items/{ref}/take-over` | `take_over_work_item` | `work items take-over` | — | equal |
 | `DELETE /api/v1/work/links/{id}` | `unlink_work_items` | `work items unlink` | — | equal |
 | `GET /api/v1/work/milestones` | `list_work_milestones` | `work milestones list` | — | equal |

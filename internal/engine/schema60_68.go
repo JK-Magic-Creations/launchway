@@ -8,7 +8,7 @@ package engine
 // migration merges, replace its number here: delete that number from the
 // loop's range (keep the others) and add the real file; when all nine are
 // real, delete this file and the allowance in migrations_order_test.go and
-// upgrade_33_final_test.go (standInSchema).
+// upgrade_33_final_test.go (standInSchema). Schema 71 (schema71.go) is held the same way.
 
 const (
 	schemaStandInFirst = 60
@@ -16,7 +16,9 @@ const (
 )
 
 // standInSchema reports whether a schema number is held for an unmerged branch.
-func standInSchema(n int) bool { return n >= schemaStandInFirst && n <= schemaStandInLast }
+func standInSchema(n int) bool {
+	return n >= schemaStandInFirst && n <= schemaStandInLast || n == schemaStandIn71
+}
 
 func init() {
 	if len(migrations) != schemaStandInFirst-1 {

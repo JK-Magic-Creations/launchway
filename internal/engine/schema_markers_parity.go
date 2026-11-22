@@ -20,3 +20,8 @@ var schemaMarkersOverview = schemaMarker{
 	schema: schemaOverview, feature: "repository Overview: languages and contributors",
 	tables: []string{"repo_languages", "repo_contributors"},
 }
+
+var schemaMarkersWorkExtras = schemaMarker{
+	schema: schemaWorkExtras, feature: "reactions, time entries, deployment addresses and decision records on work",
+	tables: []string{"work_reactions"},
+}
