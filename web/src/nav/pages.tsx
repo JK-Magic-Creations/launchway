@@ -103,13 +103,13 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/toggles/:toggle": return <ToggleDetailPage key={p.name + "/" + p.toggle} project={p.name} toggle={p.toggle} />;
     case "/projects/:name/toggle-settings": return <ToggleSettingsPage key={p.name} name={p.name} />;
     case "/repositories/import": return <ImportRepositoriesPage />;
-    case "/repositories/:owner/:name": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
+    case "/repositories/:owner/:name": return <RepoCodeRoute key={p.owner + "/" + p.name + "@"} view="overview" path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/:view": case "/repositories/:owner/:name/commit/:sha":
       return <RepoCodeRoute key={p.owner + "/" + p.name + "@" + (p.sha ?? "")} view={p.view ?? "commit"} path={p.owner + "/" + p.name} sha={p.sha} />;
     case "/repositories/:owner/:name/pulls": return <PullRequestsPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/pulls/new": return <NewPullRequestPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/pulls/:number": return <PullRequestPage key={p.owner + "/" + p.name + "#" + p.number} path={p.owner + "/" + p.name} number={Number(p.number)} />;
-    case "/repositories/:owner/:name/settings": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
+    case "/repositories/:owner/:name/settings": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="settings" />;
     case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
     case "/repositories/:owner/:name/dependencies": return <DependenciesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/graph": return <RepositoryGraphPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
