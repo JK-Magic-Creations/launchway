@@ -9,6 +9,8 @@ params:
   install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
   test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
   test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage: { type: boolean, default: true, description: "Collect test coverage (a Cobertura report for the Coverage tab) in addition to the test results; adds some time to the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
 containers:
   node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
 steps:
@@ -23,4 +25,5 @@ steps:
     env: { PHASES: "setup test" }
     run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
     reports:
-      tests: ["**/reports/**/junit.xml"]
+      tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
+      coverage: { paths: [{ param: working_directory, format: "%s/reports/**/coverage.xml" }], fail_under: { param: coverage_minimum } }

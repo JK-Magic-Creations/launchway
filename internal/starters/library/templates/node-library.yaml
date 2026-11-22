@@ -14,6 +14,8 @@ params:
   lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
   test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
   test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage: { type: boolean, default: true, description: "Collect test coverage (a Cobertura report for the Coverage tab) in addition to the test results; adds some time to the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
   build: { type: boolean, default: true, description: "Run the package's build script" }
   secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
   test_versions: { type: list, default: ["22"], description: "The Node versions the tests run on, one step for each" }
@@ -44,7 +46,8 @@ steps:
     image: { each: node, format: "docker.io/library/node:%s" }
     run: "$LAUNCHWAY_LIB/scripts/node/test.sh"
     reports:
-      tests: ["**/reports/**/junit.xml"]
+      tests: [{ param: working_directory, format: "%s/reports/**/junit.xml" }]
+      coverage: { paths: [{ param: working_directory, format: "%s/reports/**/coverage.xml" }], fail_under: { param: coverage_minimum } }
   build:
     description: Run the package's build script
     if: { param: build }
