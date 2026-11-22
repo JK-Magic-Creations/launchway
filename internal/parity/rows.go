@@ -394,6 +394,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/repositories/{owner}/{name}/compare", MCP: "compare_branches", CLI: "repos compare", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}", MCP: "review_pull_request", CLI: "pr review", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/pulls/{number}/suggestions/apply", MCP: "update_pull_comment", CLI: "pr apply", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/pulls/{number}/checks", MCP: "get_pull_checks", CLI: "pr checks", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/pulls/{number}/queue", MCP: "get_pull_queue", CLI: "pr queue", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/pulls/{number}/queue", MCP: "queue_pull_request", CLI: "pr queue", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/queue", MCP: "queue_pull_request", CLI: "pr queue", Terraform: "", Status: Equal, Reason: ""},

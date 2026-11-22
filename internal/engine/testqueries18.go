@@ -175,6 +175,17 @@ const maxCompare = 200
 // CompareTests compares a run's results with the previous run of the same
 // ref that has results.
 func (e *Engine) CompareTests(runID string) (*TestComparison, error) {
+	return e.compareTests(runID, "")
+}
+
+// CompareTestsWith compares a run's results with another run's (the last run
+// of a pull request's target branch, say) instead of the previous run of the
+// same ref. A base run with no results gives an empty comparison.
+func (e *Engine) CompareTestsWith(runID, baseRun string) (*TestComparison, error) {
+	return e.compareTests(runID, baseRun)
+}
+
+func (e *Engine) compareTests(runID, baseRun string) (*TestComparison, error) {
 	out := &TestComparison{NewFailures: []CompareCase{}, Fixed: []CompareCase{}, StillFailing: []CompareCase{}, Counts: map[string]int{}}
 	st, err := e.runState(runID)
 	if err != nil {
@@ -191,7 +202,12 @@ func (e *Engine) CompareTests(runID string) (*TestComparison, error) {
 	if len(ts) == 0 {
 		return out, nil
 	}
-	prev, err := e.previousWithTests(st)
+	var prev *previousRun
+	if baseRun != "" {
+		prev, err = e.explicitPrevious(baseRun)
+	} else {
+		prev, err = e.previousWithTests(st)
+	}
 	if err != nil || prev == nil {
 		return out, err
 	}
@@ -264,4 +280,20 @@ func (e *Engine) statusByKey(ts []triple) (map[string]CompareCase, error) {
 		out[c.Key] = c
 	}
 	return out, rows.Err()
+}
+
+// explicitPrevious is a named run taken as the one to compare with: nil when it kept no test results.
+func (e *Engine) explicitPrevious(runID string) (*previousRun, error) {
+	st, err := e.runState(runID)
+	if err != nil {
+		return nil, err
+	}
+	ef, err := e.effectiveReports([]string{runID})
+	if err != nil {
+		return nil, err
+	}
+	if t := ef.totals(runID); t == nil || t.Total == 0 {
+		return nil, nil
+	}
+	return &previousRun{run: runID, number: st.Number, triples: ef.triples(runID)}, nil
 }

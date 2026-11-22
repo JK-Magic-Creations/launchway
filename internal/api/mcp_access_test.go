@@ -195,6 +195,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"compare_branches":        {map[string]any{"owner": "o", "name": "x", "head": "f"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"get_pull_settings":       {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"get_pull_owners":         {map[string]any{"owner": "o", "name": "x", "number": 1}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_pull_checks":         {map[string]any{"owner": "o", "name": "x", "number": 1}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"get_pull_queue":          {map[string]any{"owner": "o", "name": "x", "number": 1}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"get_pull_inbox":          {map[string]any{}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"check_owners_file":       {map[string]any{"owner": "o", "name": "x", "text": ""}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},

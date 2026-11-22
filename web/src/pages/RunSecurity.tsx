@@ -7,8 +7,7 @@ import { terms } from "../terms";
 import { InspectionPanel } from "../components/Inspection";
 import {
   CopyValue, FindingStatusBadge, FindingsHowTo, LockIcon, SEVERITIES, SeverityBadge, SeverityBar, SeverityLegend,
-  artifactFileURL, bytes, safeURL, serious, severityLabel, where,
-} from "../components/Security";
+  artifactFileURL, bytes, safeURL, serious, severityLabel, where, SearchIcon, CaretIcon } from "../components/Security";
 
 const PAGE = 100;
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
@@ -139,7 +138,7 @@ function SecurityReports({ run, version }: { run: RunDetail; version: string }) 
             <div className="ttools-right">
               <label className="search">
                 <span className="visually-hidden">Search findings</span>
-                <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
+                <SearchIcon />
                 <input type="search" placeholder="Search rules, messages, files" value={search} onChange={(e) => setSearch(e.target.value)} />
               </label>
               {data.previous && (
@@ -293,7 +292,7 @@ export function FindingRow({ f, run, multiStep, open: openFirst, extra }: {
           </span>
         </span>
         <span className="tcase-badges"><FindingStatusBadge s={f.status} /></span>
-        <svg className="tcase-caret" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 6l3 3 3-3" fill="none" /></svg>
+        <CaretIcon />
       </button>
       {open && (
         <div className="tcase-detail" id={detailId}>

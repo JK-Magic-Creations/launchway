@@ -10,7 +10,7 @@ import { LaunchLine, type LineStation } from "../kit/LaunchLine";
 import { Tabs } from "../kit/Tabs";
 import { Markdown } from "../markdown";
 import { parsePatch, type Row } from "../components/DiffTable";
-import { pullsApi, type Comment, type Conversation, type FileChange, type Patch, type Pull, type Thread } from "../pullsApi";
+import { pullsApi, type Comment, type Conversation, type FileChange, type Patch, type Pull, type PullChecks as Checks, type PullNote, type Thread } from "../pullsApi";
 import { pullHref, stateChip } from "./PullRequests";
 import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
@@ -18,6 +18,7 @@ import { terms } from "../terms";
 
 // What agents said about the change: its own chunk, fetched only when this tab is open.
 const AgentReviews = lazy(() => import("../work/AgentReviews"));
+const PullChecks = lazy(() => import("./PullChecks"));
 
 /** The pull request as a change on the launch line: opened, checked, reviewed, merged. */
 function stations(p: Pull): LineStation[] {
@@ -36,7 +37,7 @@ function stations(p: Pull): LineStation[] {
 
 export { parsePatch };
 
-function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread; path: string; n: number; me: string; canApply: boolean; onChange: () => void; onError: (e: unknown) => void }) {
+function ThreadView({ t, path, n, canApply, onChange, onError }: { t: Thread; path: string; n: number; canApply: boolean; onChange: () => void; onError: (e: unknown) => void }) {
   const [reply, setReply] = useState("");
   const [open, setOpen] = useState(false);
   const act = async (f: () => Promise<unknown>) => { try { await f(); onChange(); } catch (e) { onError(e); } };
@@ -61,7 +62,6 @@ function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread
       <div className="pr-actions pr-note">
         <button type="button" className="btn btn-sm" onClick={() => setOpen(!open)} aria-expanded={open}>Reply</button>
         <button type="button" className="btn btn-sm" onClick={() => act(() => pullsApi.updateComment(path, n, t.comments[0].id, { resolved: !t.resolved }))}>{t.resolved ? "Open again" : "Resolve"}</button>
-        {me === "" && null}
       </div>
       {open && (
         <form className="pr-note" onSubmit={(e) => { e.preventDefault(); act(async () => { await pullsApi.comment(path, n, { body: reply, reply_to: t.comments[0].id }); setReply(""); setOpen(false); }); }}>
@@ -73,10 +73,11 @@ function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread
   );
 }
 
-function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError, startOpen, owners, viewed, onViewed }: {
-  f: FileChange; path: string; n: number; conv: Conversation | null; mode: "unified" | "split"; since?: number; me: string; canApply: boolean; reload: () => void; onError: (e: unknown) => void; startOpen: boolean;
-  owners?: string[]; viewed: boolean; onViewed: (on: boolean) => void;
+function FileView({ f, path, n, conv, mode, since, canApply, reload, onError, startOpen, owners, viewed, onViewed, notes }: {
+  f: FileChange; path: string; n: number; conv: Conversation | null; mode: "unified" | "split"; since?: number; canApply: boolean; reload: () => void; onError: (e: unknown) => void; startOpen: boolean;
+  owners?: string[]; viewed: boolean; onViewed: (on: boolean) => void; notes?: PullNote[];
 }) {
+  const [shown, setShown] = useState<number | null>(null);
   const [open, setOpen] = useState(startOpen && !viewed);
   const [patch, setPatch] = useState<Patch | null>(null);
   const [comment, setComment] = useState<{ line: number; text: string } | null>(null);
@@ -91,6 +92,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
     if (!comment) return;
     try { await pullsApi.comment(path, n, { body: comment.text, path: f.path, line: comment.line }); setComment(null); reload(); } catch (err) { onError(err); }
   };
+  const note = (r: Row) => (r.kind === "del" ? undefined : notes?.find((x) => x.line === r.neu));
   const lineRow = (r: Row, i: number) => (
     <tbody key={i}>
       <tr className={r.kind}>
@@ -98,9 +100,10 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
         <td className="sign" aria-hidden="true">{r.kind === "add" ? "+" : r.kind === "del" ? "-" : ""}</td>
         <td>{r.text}{r.neu !== undefined && r.kind !== "del" && (
           <button type="button" className="btn btn-sm cbtn" aria-label={`Comment on ${f.path} line ${r.neu}`} onClick={() => setComment({ line: r.neu!, text: "" })}>Comment</button>
-        )}</td>
+        )}{note(r) && <button type="button" className="btn btn-sm" aria-expanded={shown === r.neu} aria-label={`Finding on line ${r.neu}`} onClick={() => setShown(shown === r.neu ? null : r.neu!)}>{note(r)!.severity ?? "Result"}</button>}</td>
       </tr>
-      {at(r.neu).map((t) => <tr key={t.id} className="thread-row"><td colSpan={4}><ThreadView t={t} path={path} n={n} me={me} canApply={canApply} onChange={reload} onError={onError} /></td></tr>)}
+      {shown === r.neu && <tr className="thread-row"><td colSpan={4} className="pr-note" role="note">{note(r)!.tool && `${note(r)!.tool}: `}{note(r)!.message}</td></tr>}
+      {at(r.neu).map((t) => <tr key={t.id} className="thread-row"><td colSpan={4}><ThreadView t={t} path={path} n={n} canApply={canApply} onChange={reload} onError={onError} /></td></tr>)}
       {comment && r.neu === comment.line && r.kind !== "del" && (
         <tr className="thread-row"><td colSpan={4}>
           <form className="pr-note" onSubmit={submit} aria-label={`Comment on line ${comment.line}`}>
@@ -111,17 +114,15 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
       )}
     </tbody>
   );
+  const bad = { background: "var(--bad-wash)" }, ok = { background: "var(--ok-wash)" };
   const split = () => {
     const out: ReactElement[] = [];
+    const row = (i: number, o?: number, l?: string, n?: number, r?: string, ls?: object, rs?: object) => out.push(<tbody key={i}><tr><td className="num">{o}</td><td className="half" style={ls}>{l}</td><td className="num">{n}</td><td className="half" style={rs}>{r}</td></tr></tbody>);
     for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      if (r.kind === "hunk") { out.push(<tbody key={i}><tr className="hunk"><td colSpan={4}>{r.text}</td></tr></tbody>); continue; }
-      if (r.kind === "del" && rows[i + 1]?.kind === "add") {
-        const a = rows[i + 1];
-        out.push(<tbody key={i}><tr><td className="num">{r.old}</td><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><td className="num">{a.neu}</td><td className="half" style={{ background: "var(--ok-wash)" }}>{a.text}</td></tr></tbody>);
-        i++;
-      } else if (r.kind === "del") out.push(<tbody key={i}><tr><td className="num">{r.old}</td><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><td className="num" /><td className="half" /></tr></tbody>);
-      else out.push(<tbody key={i}><tr><td className="num">{r.old ?? ""}</td><td className="half" style={r.kind === "add" ? undefined : undefined}>{r.kind === "add" ? "" : r.text}</td><td className="num">{r.neu ?? ""}</td><td className="half" style={r.kind === "add" ? { background: "var(--ok-wash)" } : undefined}>{r.text}</td></tr></tbody>);
+      const r = rows[i], a = rows[i + 1];
+      if (r.kind === "hunk") out.push(<tbody key={i}><tr className="hunk"><td colSpan={4}>{r.text}</td></tr></tbody>);
+      else if (r.kind === "del") { const pair = a?.kind === "add"; row(i, r.old, r.text, pair ? a.neu : undefined, pair ? a.text : undefined, bad, pair ? ok : undefined); if (pair) i++; }
+      else row(i, r.old, r.kind === "add" ? "" : r.text, r.neu, r.text, undefined, r.kind === "add" ? ok : undefined);
     }
     return out;
   };
@@ -147,7 +148,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
           {patch.truncated && <p className="pr-note faint">The patch was cut at the size limit.</p>}
         </>
       )}
-      {open && outdated.map((t) => <ThreadView key={t.id} t={t} path={path} n={n} me={me} canApply={false} onChange={reload} onError={onError} />)}
+      {open && outdated.map((t) => <ThreadView key={t.id} t={t} path={path} n={n} canApply={false} onChange={reload} onError={onError} />)}
     </section>
   );
 }
@@ -193,9 +194,11 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   const [ownerNote, setOwnerNote] = useState("");
   const [viewed, setViewed] = useState<string[]>([]);
   const [keys, setKeys] = useState(false);
+  const [checks, setChecks] = useState<Checks | null>(null);
   const load = useCallback(() => {
     pullsApi.get(path, number).then((p) => { setPull(p); setError(null); }).catch(setError);
     pullsApi.conversation(path, number).then(setConv).catch(setError);
+    pullsApi.checks(path, number).then(setChecks).catch(() => setChecks(null));
   }, [path, number]);
   useEffect(load, [load]);
   // The judgement of mergeability is made in the background: look again until it is made.
@@ -249,6 +252,16 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   if (!pull) return <div className="page"><PageHead title={`Pull request #${number}`} /><ErrorBox error={error} /></div>;
   const rd = pull.readiness;
   const method = picked || rd?.default_method || "merge";
+  const upd = (b: Record<string, unknown>) => () => pullsApi.update(path, number, b);
+  const autoOk = pull.state === "open" && !(rd?.queue && pull.queue && pull.queue.state !== "removed");
+  const acts: [string, string, string, () => Promise<unknown>][] = [
+    ["queue", "queue", "Add to the merge queue", () => pullsApi.enqueue(path, number, method)], ["dequeue", "queue", "Take out of the merge queue", () => pullsApi.dequeue(path, number)],
+    ["update_branch", "update", "Update the branch", () => pullsApi.updateBranch(path, number)], ["mark_ready", "ready", "Mark ready for review", upd({ draft: false })],
+    ["mark_draft", "draft", "Convert to draft", upd({ draft: true })], ["auto_merge", "auto", "Merge when the rules pass", upd({ auto_merge: method || "merge" })],
+    ["cancel_auto_merge", "auto", "Turn off auto-merge", upd({ auto_merge: "" })], ["close", "close", "Close", upd({ state: "closed" })], ["reopen", "reopen", "Reopen", upd({ state: "open" })],
+    ["revert", "revert", "Revert", async () => { const r = await pullsApi.revert(path, number); navigate(pullHref(path, r.number)); }],
+  ];
+  if (!autoOk) acts.splice(5, 1);
   const send = (e: React.FormEvent) => {
     e.preventDefault();
     run("review", async () => { if (verdict === "comment" && !text.trim()) throw new Error("Write something to send a comment."); await pullsApi.review(path, number, { verdict, body: text }); setText(""); });
@@ -264,6 +277,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
       </div>
       <LaunchLine stations={stations(pull)} label={`Where pull request #${pull.number} is on the launch line`} />
       <PullRunLine runId={pull.linked_runs[pull.linked_runs.length - 1]} head={pull.head_sha} />
+      {checks && <Suspense fallback={null}><PullChecks data={checks} /></Suspense>}
       <ErrorBox error={error} />
       <div className="pr-grid">
         <div>
@@ -302,16 +316,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             )}
             {pull.state === "open" && rd?.queue && <QueueBox pull={pull} />}
             <div className="pr-actions" style={{ marginTop: 10 }}>
-              {can("queue") && <Button sm kind="pri" onClick={() => run("queue", () => pullsApi.enqueue(path, number, method))}>Add to the merge queue</Button>}
-              {can("dequeue") && <Button sm onClick={() => run("queue", () => pullsApi.dequeue(path, number))}>Take out of the merge queue</Button>}
-              {can("update_branch") && <Button sm onClick={() => run("update", () => pullsApi.updateBranch(path, number))}>Update the branch</Button>}
-              {can("mark_ready") && <Button sm onClick={() => run("ready", () => pullsApi.update(path, number, { draft: false }))}>Mark ready for review</Button>}
-              {can("mark_draft") && <Button sm onClick={() => run("draft", () => pullsApi.update(path, number, { draft: true }))}>Convert to draft</Button>}
-              {can("auto_merge") && pull.state === "open" && !(rd?.queue && pull.queue && pull.queue.state !== "removed") && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: method || "merge" }))}>Merge when the rules pass</Button>}
-              {can("cancel_auto_merge") && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: "" }))}>Turn off auto-merge</Button>}
-              {can("close") && <Button sm onClick={() => run("close", () => pullsApi.update(path, number, { state: "closed" }))}>Close</Button>}
-              {can("reopen") && <Button sm onClick={() => run("reopen", () => pullsApi.update(path, number, { state: "open" }))}>Reopen</Button>}
-              {can("revert") && <Button sm onClick={() => run("revert", async () => { const r = await pullsApi.revert(path, number); navigate(pullHref(path, r.number)); })}>Revert</Button>}
+              {acts.filter(([n]) => can(n)).map(([n, k, l, f]) => <Button key={n} sm kind={n === "queue" ? "pri" : undefined} onClick={() => run(k, f)}>{l}</Button>)}
             </div>
             {pull.auto_merge && <p className="faint small">It merges by {pull.auto_merge} as soon as the rules pass.</p>}
           </section>
@@ -334,7 +339,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                   <div key={c.id} className="pr-comment"><header><strong>{c.author}</strong><span className="faint">{ago(Date.parse(c.created_at))}</span></header><div>{c.deleted ? <em>Deleted.</em> : <Markdown text={c.body} />}</div></div>
                 ))}
                 {conv && conv.threads.length > 0 && <Sheet title="Threads on the code">
-                  {conv.threads.map((t) => <div key={t.id} className="pr-note"><div className="small"><Mono>{t.path}</Mono>:{t.line}</div><ThreadView t={t} path={path} n={number} me="" canApply={can("merge")} onChange={load} onError={setError} /></div>)}
+                  {conv.threads.map((t) => <div key={t.id} className="pr-note"><div className="small"><Mono>{t.path}</Mono>:{t.line}</div><ThreadView t={t} path={path} n={number} canApply={can("merge")} onChange={load} onError={setError} /></div>)}
                 </Sheet>}
                 {conv && conv.revisions.length > 1 && (
                   <Sheet title="Revisions">
@@ -365,8 +370,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             {tab === "files" && (
               <>
                 <div className="seg" role="group" aria-label="How to show the changes">
-                  <button type="button" className={"btn btn-sm" + (mode === "unified" ? " btn-on" : "")} aria-pressed={mode === "unified"} onClick={() => setMode("unified")}>Unified</button>
-                  <button type="button" className={"btn btn-sm" + (mode === "split" ? " btn-on" : "")} aria-pressed={mode === "split"} onClick={() => setMode("split")}>Side by side</button>
+                  {(["unified", "split"] as const).map((m) => <button key={m} type="button" className={"btn btn-sm" + (mode === m ? " btn-on" : "")} aria-pressed={mode === m} onClick={() => setMode(m)}>{m === "split" ? "Side by side" : "Unified"}</button>)}
                   {pull.revisions > 1 && (
                     <label className="field"><span className="sr-only">Compare with</span>
                       <select aria-label="Show changes since" value={since ?? ""} onChange={(e) => setSince(e.target.value ? Number(e.target.value) : undefined)}>
@@ -382,7 +386,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                 {ownerNote && <p className="pr-note" role="note">{ownerNote}</p>}
                 {files && files.length > 0 && <p className="faint small" aria-live="polite">{files.filter((f) => viewed.includes(f.path)).length} of {files.length} files viewed.</p>}
                 {files && files.length === 0 && <Empty title="No changes">{since ? "Nothing changed since that revision." : "The branches hold the same files."}</Empty>}
-                {files && files.map((f, i) => <FileView key={f.path + (since ?? "")} f={f} path={path} n={number} conv={conv} mode={mode} since={since} me="" canApply={can("merge")} reload={load} onError={setError} startOpen={i < 5 && !f.too_large} owners={owners[f.path]} viewed={viewed.includes(f.path)} onViewed={(on) => markViewed(f.path, on)} />)}
+                {files && files.map((f, i) => <FileView key={f.path + (since ?? "")} f={f} path={path} n={number} conv={conv} mode={mode} since={since} canApply={can("merge")} reload={load} onError={setError} startOpen={i < 5 && !f.too_large} owners={owners[f.path]} viewed={viewed.includes(f.path)} onViewed={(on) => markViewed(f.path, on)} notes={checks?.annotations?.filter((x) => x.file === f.path && x.line)} />)}
               </>
             )}
           </div>

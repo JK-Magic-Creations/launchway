@@ -384,6 +384,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/pulls` | `create_pull_request` | `pr create` | `planned: launchway_pull_request` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}` | `get_pull_request` | `pr view` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}` | `update_pull_request` | `pr edit` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/checks` | `get_pull_checks` | `pr checks` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments` | `comment_on_pull_request` | `pr comment` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}` | `update_pull_comment` | `pr comment` | — | equal |

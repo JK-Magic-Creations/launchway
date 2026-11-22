@@ -11690,6 +11690,47 @@ paths:
                 - repositories
             x-launchway-access: repo-viewer
             x-launchway-audit: pull.update
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/checks:
+        get:
+            description: 'What each pipeline said about the head commit, in the words of the run page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}. A check has sentence, tests (totals, tests newly failing against the target branch''s last run), coverage and its change, findings (counts, the new ones apart) and policy_verdict; annotations are findings and failed tests that name a file (and line). A pipeline of a project the caller may not read shows only its status and sentence (detail false).'
+            operationId: get_api_v1_repositories_owner_name_pulls_number_checks
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What each pipeline said about the head commit, in the words of the run page: {"head", "target_branch", "checks", "policy_verdict", "deployments", "annotations"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/pulls/{number}/comments:
         post:
             description: 'Comments: {"body"} for the conversation, or with {"path", "line", "start_line", "side", "commit"} on a line or range, or {"reply_to"} in a thread. A suggestion block is a suggested change. Markdown, kept as written.'

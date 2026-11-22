@@ -3,7 +3,7 @@ import { api, type ArtifactView, type RunArtifacts, type RunDetail } from "../ap
 import { ago, clock } from "../format";
 import { canOperate, useMe } from "../auth";
 import { Empty, ErrorBox, Link } from "../components/ui";
-import { ArtifactsHowTo, BoxIcon, CopyValue, artifactArchiveURL, artifactFileURL, bytes } from "../components/Security";
+import { ArtifactsHowTo, BoxIcon, CopyValue, artifactArchiveURL, artifactFileURL, bytes, CaretIcon } from "../components/Security";
 import { terms } from "../terms";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
@@ -109,7 +109,7 @@ function ArtifactRow({ a, run, onChange, open: openFirst }: { a: ArtifactView; r
           {a.reused && <span className="badge-reused" title="The re-run reused this step and its files">Reused from #{a.run_number}</span>}
           <ArtifactStatus a={a} />
         </span>
-        <svg className="tcase-caret" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 6l3 3 3-3" fill="none" /></svg>
+        <CaretIcon />
       </button>
       {open && (
         <div className="tcase-detail art-detail" id={detailId}>
