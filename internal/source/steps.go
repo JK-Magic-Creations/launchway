@@ -299,7 +299,7 @@ func versionLess(a, b string) bool {
 		switch {
 		case pa[i].num && pb[i].num && pa[i].n != pb[i].n:
 			return pa[i].n < pb[i].n
-		case !(pa[i].num && pb[i].num) && pa[i].s != pb[i].s:
+		case (!pa[i].num || !pb[i].num) && pa[i].s != pb[i].s:
 			return pa[i].s < pb[i].s
 		}
 	}

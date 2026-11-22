@@ -288,7 +288,8 @@ func clip(s string, n int) string {
 // not the contract directory), by relative path, to find what a step changed.
 func snapshot(ws, skip string) map[string]string {
 	out := map[string]string{}
-	_ = filepath.WalkDir(ws, func(p string, d fs.DirEntry, err error) error {
+	// It only reads, in the developer's own checkout, to find what a step changed.
+	_ = filepath.WalkDir(ws, func(p string, d fs.DirEntry, err error) error { //nolint:gosec // G122: a snapshot for comparison; nothing is written or followed out of the workspace
 		if err != nil {
 			return nil
 		}

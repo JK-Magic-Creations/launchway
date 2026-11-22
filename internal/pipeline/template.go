@@ -208,9 +208,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		withOK = false
 	}
 	t.Values = scope.values
-	if t.Custom != nil && !checkCustomValues(t.Custom, t.Values, withLines, usesLine, withProblem) {
-		withOK = false
-	}
+	withOK = checkCustomValues(t.Custom, t.Values, withLines, usesLine, withProblem, withOK)
 	if !withOK || len(ps.problems) > 0 {
 		// Reading the steps with missing values would only report the same
 		// problem again in other words.
@@ -233,12 +231,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 	}
 	ps.checkArtifacts(p)
 	t.Containers, t.Steps = p.Containers, p.Steps
-	if t.Custom != nil {
-		for _, s := range t.Steps {
-			s.Custom = customOf(t.Custom)
-			s.Custom.Values = stepValues(t.Custom, t.Values)
-		}
-	}
+	t.stampCustom()
 	if v := nodes["outputs"]; v != nil {
 		t.Outputs = ps.parseOutputs(v, p)
 	}

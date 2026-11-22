@@ -48,10 +48,11 @@ func PrepareIO(workspace, rel, inside, name string, inputTypes, values, secretEn
 	}
 	for _, d := range []string{"", ArtifactsDir, ReportsDir} {
 		p := filepath.Join(host, d)
-		if err := os.MkdirAll(p, 0o777); err != nil {
+		// The step may run as another user than the Station, so the files it writes are open to it.
+		if err := os.MkdirAll(p, 0o777); err != nil { //nolint:gosec // G301: see above
 			return nil, err
 		}
-		_ = os.Chmod(p, 0o777)
+		_ = os.Chmod(p, 0o777) //nolint:gosec // G302: see above
 	}
 	m := &Manifest{Name: name}
 	for _, k := range SortedKeys(inputTypes) {
@@ -61,15 +62,15 @@ func PrepareIO(workspace, rel, inside, name string, inputTypes, values, secretEn
 	if err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(host, InputsFile), doc, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(host, InputsFile), doc, 0o644); err != nil { //nolint:gosec // G306: the inputs are not secret: secrets are references
 		return nil, err
 	}
 	for _, f := range []string{OutputsFile, ResultsFile} {
 		p := filepath.Join(host, f)
-		if err := os.WriteFile(p, nil, 0o666); err != nil {
+		if err := os.WriteFile(p, nil, 0o666); err != nil { //nolint:gosec // G306: the step may run as another user and must be able to write its outputs
 			return nil, err
 		}
-		_ = os.Chmod(p, 0o666)
+		_ = os.Chmod(p, 0o666) //nolint:gosec // G302: see above
 	}
 	return &IO{Rel: rel, Host: host, Inside: inside}, nil
 }

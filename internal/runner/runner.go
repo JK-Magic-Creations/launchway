@@ -625,14 +625,8 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		}
 	}
 	spec.Exclude = job.WorkspaceExclude
-	if cust != nil {
-		spec.Sandbox = cust.sandbox()
-	}
 	caches := r.newCacheRun(job, spec, sys)
-	collect := r.collector(job, spec, sys, caches)
-	if cust != nil {
-		collect = withCustom(collect, cust)
-	}
+	collect := cust.arm(&spec, r.collector(job, spec, sys, caches))
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
 		return *failed, nil
 	}

@@ -232,3 +232,13 @@ func verifyManifest(ws string, c *pipeline.CustomStep) error {
 	}
 	return nil
 }
+
+// arm gives a custom step's spec its sandbox, and its collector the findings and test results the step wrote
+// through the contract. For any other step (cr nil) the collector is returned as it is.
+func (cr *customRun) arm(spec *executor.Spec, collect func(string) collected) func(string) collected {
+	if cr == nil {
+		return collect
+	}
+	spec.Sandbox = cr.sandbox()
+	return withCustom(collect, cr)
+}

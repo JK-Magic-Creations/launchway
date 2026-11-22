@@ -94,15 +94,15 @@ func ParseResults(r io.Reader) *Results {
 	return out
 }
 
-// readLine reads one line of at most max bytes; a longer one is skipped to
+// readLine reads one line of at most limit bytes; a longer one is skipped to
 // its end and reported.
-func readLine(br *bufio.Reader, max int) (line []byte, tooLong bool, err error) {
+func readLine(br *bufio.Reader, limit int) (line []byte, tooLong bool, err error) {
 	for {
 		chunk, isPrefix, e := br.ReadLine()
 		if e != nil {
 			return line, tooLong, e
 		}
-		if !tooLong && len(line)+len(chunk) > max {
+		if !tooLong && len(line)+len(chunk) > limit {
 			tooLong, line = true, nil
 		}
 		if !tooLong {
@@ -129,64 +129,8 @@ func parseResult(line []byte) (Result, string) {
 			return res, "a value is not text"
 		}
 	}
-	switch res.Kind {
-	case KindSummary:
-		if strings.TrimSpace(res.Markdown) == "" {
-			return res, "a summary needs markdown"
-		}
-		if len(res.Markdown) > MaxSummaryBytes {
-			return res, fmt.Sprintf("a summary is at most %d KiB", MaxSummaryBytes>>10)
-		}
-	case KindAnnotation, KindFinding:
-		if res.File != "" {
-			if msg := CheckWorkspacePath(res.File); msg != "" || res.File == "." {
-				return res, "the file must be a path inside the workspace"
-			}
-		}
-		if res.Line < 0 || res.EndLine < 0 || res.Line > 1e7 || res.EndLine > 1e7 || (res.Line == 0 && res.File != "" && res.EndLine != 0) {
-			return res, "the line is not a line number"
-		}
-		if strings.TrimSpace(res.Message) == "" || len(res.Message) > 2000 {
-			return res, "a message is 1 to 2000 bytes"
-		}
-		if res.Kind == KindAnnotation {
-			if res.Level == "" {
-				res.Level = "note"
-			}
-			if !contains(annotationLevels, res.Level) {
-				return res, "the level is note, warning or error"
-			}
-			if res.File == "" {
-				return res, "an annotation is anchored to a file; use a summary for a note about the whole step"
-			}
-		} else {
-			if !contains(severities, res.Severity) {
-				return res, "the severity is critical, high, medium or low"
-			}
-			if res.Rule == "" || len(res.Rule) > 120 {
-				return res, "a finding needs a rule of 1 to 120 bytes"
-			}
-		}
-	case KindTest:
-		if res.Name == "" || len(res.Name) > 300 || len(res.Suite) > 300 {
-			return res, "a test needs a name of 1 to 300 bytes"
-		}
-		if !contains(testStatuses, res.Status) {
-			return res, "the status is passed, failed or skipped"
-		}
-		if res.Millis < 0 || res.Millis > 1e10 || len(res.Message) > 2000 {
-			return res, "the duration or message is out of range"
-		}
-	case KindMask:
-		if len(res.Value) < 4 || len(res.Value) > 4096 {
-			return res, "a value to mask is 4 to 4096 bytes"
-		}
-	case KindNeedsPerson:
-		if strings.TrimSpace(res.Message) == "" || len(res.Message) > 1000 {
-			return res, "say what a person is needed for, in 1 to 1000 bytes"
-		}
-	default:
-		return res, fmt.Sprintf("the kind %q is not known (the kinds are summary, annotation, finding, test, mask, needs_person)", clip(res.Kind, 30))
+	if why := checkResult(&res); why != "" {
+		return res, why
 	}
 	return res, ""
 }
@@ -221,4 +165,83 @@ func (r *Results) Of(kind string) []Result {
 		}
 	}
 	return out
+}
+
+// checkResult checks the fields of a result of its kind, and fills in the defaults; it returns why the line is unusable, or "".
+func checkResult(res *Result) string {
+	switch res.Kind {
+	case KindSummary:
+		return checkSummary(res)
+	case KindAnnotation, KindFinding:
+		return checkLocated(res)
+	case KindTest:
+		return checkTest(res)
+	case KindMask:
+		if len(res.Value) < 4 || len(res.Value) > 4096 {
+			return "a value to mask is 4 to 4096 bytes"
+		}
+	case KindNeedsPerson:
+		if strings.TrimSpace(res.Message) == "" || len(res.Message) > 1000 {
+			return "say what a person is needed for, in 1 to 1000 bytes"
+		}
+	default:
+		return fmt.Sprintf("the kind %q is not known (the kinds are summary, annotation, finding, test, mask, needs_person)", clip(res.Kind, 30))
+	}
+	return ""
+}
+
+func checkSummary(res *Result) string {
+	switch {
+	case strings.TrimSpace(res.Markdown) == "":
+		return "a summary needs markdown"
+	case len(res.Markdown) > MaxSummaryBytes:
+		return fmt.Sprintf("a summary is at most %d KiB", MaxSummaryBytes>>10)
+	}
+	return ""
+}
+
+// checkLocated checks an annotation or a finding: where it is, what it says, and its level or severity.
+func checkLocated(res *Result) string {
+	if res.File != "" {
+		if msg := CheckWorkspacePath(res.File); msg != "" || res.File == "." {
+			return "the file must be a path inside the workspace"
+		}
+	}
+	if res.Line < 0 || res.EndLine < 0 || res.Line > 1e7 || res.EndLine > 1e7 || (res.Line == 0 && res.File != "" && res.EndLine != 0) {
+		return "the line is not a line number"
+	}
+	if strings.TrimSpace(res.Message) == "" || len(res.Message) > 2000 {
+		return "a message is 1 to 2000 bytes"
+	}
+	if res.Kind == KindFinding {
+		switch {
+		case !contains(severities, res.Severity):
+			return "the severity is critical, high, medium or low"
+		case res.Rule == "" || len(res.Rule) > 120:
+			return "a finding needs a rule of 1 to 120 bytes"
+		}
+		return ""
+	}
+	if res.Level == "" {
+		res.Level = "note"
+	}
+	switch {
+	case !contains(annotationLevels, res.Level):
+		return "the level is note, warning or error"
+	case res.File == "":
+		return "an annotation is anchored to a file; use a summary for a note about the whole step"
+	}
+	return ""
+}
+
+func checkTest(res *Result) string {
+	switch {
+	case res.Name == "" || len(res.Name) > 300 || len(res.Suite) > 300:
+		return "a test needs a name of 1 to 300 bytes"
+	case !contains(testStatuses, res.Status):
+		return "the status is passed, failed or skipped"
+	case res.Millis < 0 || res.Millis > 1e10 || len(res.Message) > 2000:
+		return "the duration or message is out of range"
+	}
+	return ""
 }

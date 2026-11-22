@@ -54,10 +54,11 @@ func (c *Container) sandboxArgs(s Spec, out Sink) (containerSandbox, error) {
 		if err != nil {
 			return containerSandbox{}, cannotStart("the custom step %s lists %q as writable: %v", sb.Name, d, err)
 		}
-		if err := os.MkdirAll(host, 0o777); err != nil {
+		// The step may run as another user than the Station, so its own directories are open to it (the workspace itself is read-only).
+		if err := os.MkdirAll(host, 0o777); err != nil { //nolint:gosec // G301: see above
 			return containerSandbox{}, cannotStart("the custom step %s: preparing %s: %v", sb.Name, d, err)
 		}
-		_ = os.Chmod(host, 0o777)
+		_ = os.Chmod(host, 0o777) //nolint:gosec // G302: see above
 		// Checked again once it exists: a path that turned into a link is refused.
 		if _, err := stepkit.SafeJoin(s.Workspace, d); err != nil {
 			return containerSandbox{}, cannotStart("the custom step %s lists %q as writable: %v", sb.Name, d, err)

@@ -86,12 +86,14 @@ func (ps *parser) readCustom(n *yaml.Node) *stepkit.Manifest {
 	return m
 }
 
-// checkCustomValues checks what a use gives a custom step against its inputs:
+// checkCustomValues checks what a use gives a custom step against its inputs (ok says nothing was wrong before):
 // the limits (length, range, pattern, entries) and the types that a
 // template's parameters do not know (records).
 func checkCustomValues(m *stepkit.Manifest, values map[string]string, withLines map[string]*yamlPos, usesLine int,
-	withProblem func(line, col int, path, msg string)) bool {
-	ok := true
+	withProblem func(line, col int, path, msg string), ok bool) bool {
+	if m == nil {
+		return ok
+	}
 	for _, in := range m.Inputs {
 		v, set := values[in.Name]
 		if !set || in.Type == stepkit.TypeSecret {
@@ -107,6 +109,17 @@ func checkCustomValues(m *stepkit.Manifest, values map[string]string, withLines 
 		}
 	}
 	return ok
+}
+
+// stampCustom gives the steps of a template made from a custom step what the step is and may do.
+func (t *Template) stampCustom() {
+	if t.Custom == nil {
+		return
+	}
+	for _, s := range t.Steps {
+		s.Custom = customOf(t.Custom)
+		s.Custom.Values = stepValues(t.Custom, t.Values)
+	}
 }
 
 // stepValues are the values of a custom step's inputs that are not secrets.

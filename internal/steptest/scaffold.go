@@ -56,7 +56,7 @@ func Scaffold(root, name, language string) (string, error) {
 	data := struct{ Name, Lang, Toolchain, Command, Kit string }{name, language, l.toolchain, l.command, l.kitName}
 	write := func(rel, text string, raw bool) error {
 		path := filepath.Join(dir, rel)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // G301: source files of a repository, meant to be read by the team
 			return err
 		}
 		if !raw {
@@ -74,7 +74,7 @@ func Scaffold(root, name, language string) (string, error) {
 		if strings.HasSuffix(rel, ".sh") {
 			mode = 0o755
 		}
-		return os.WriteFile(path, []byte(text), mode)
+		return os.WriteFile(path, []byte(text), mode) //nolint:gosec // G306,G703: source files of a repository, in the directory the person named
 	}
 	if err := write("step.yaml", manifestText, false); err != nil {
 		return "", err

@@ -59,5 +59,8 @@ func LastCustomStepRun(q Queryer, library, name, project, commit string) string 
 	if rows.Next() {
 		_ = rows.Scan(&id)
 	}
+	if rows.Err() != nil {
+		return ""
+	}
 	return id
 }

@@ -100,3 +100,13 @@ func (c *cmd) stepNotes(step string, in []StepNote) []StepNote {
 	}
 	return keepNotes(in)
 }
+
+// attachCustom puts on a step's view what a custom step is and what it wrote.
+func attachCustom(v *StepView, st *RunState) {
+	if s := st.Steps[v.ID]; s != nil && s.Evidence != nil {
+		v.Notes = s.Evidence.Notes
+	}
+	if def := st.Pipeline.Step(v.ID); def != nil {
+		v.Custom = def.Custom
+	}
+}

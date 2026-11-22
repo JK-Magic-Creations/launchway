@@ -5,6 +5,7 @@ package main
 // and what they change in the step's inputs, outputs and permissions.
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +17,7 @@ import (
 )
 
 func gitLines(dir string, args ...string) []string {
-	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", append([]string{"-C", dir}, args...)...).Output() //nolint:gosec // G204: git with fixed subcommands, in a library directory the person gave
 	if err != nil {
 		return nil
 	}
@@ -34,9 +35,9 @@ func manifestIn(dir, ref, name string) *stepkit.Manifest {
 	var data []byte
 	var err error
 	if ref == "" {
-		data, err = os.ReadFile(filepath.Join(dir, filepath.FromSlash(stepkit.ManifestPath(name))))
+		data, err = os.ReadFile(filepath.Join(dir, filepath.FromSlash(stepkit.ManifestPath(name)))) //nolint:gosec // G703: a library directory the person gave on the command line
 	} else {
-		data, err = exec.Command("git", "-C", dir, "show", ref+":"+stepkit.ManifestPath(name)).Output()
+		data, err = exec.CommandContext(context.Background(), "git", "-C", dir, "show", ref+":"+stepkit.ManifestPath(name)).Output() //nolint:gosec // G204: git show of a tag of a library directory the person gave
 	}
 	if err != nil {
 		return nil

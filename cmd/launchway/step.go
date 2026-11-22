@@ -280,7 +280,7 @@ func manifestAt(dir, ref string) (*stepkit.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	top, err := exec.Command("git", "-C", abs, "rev-parse", "--show-toplevel").Output()
+	top, err := exec.CommandContext(context.Background(), "git", "-C", abs, "rev-parse", "--show-toplevel").Output() //nolint:gosec // G204: git with fixed arguments, in the directory the person named
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func manifestAt(dir, ref string) (*stepkit.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := exec.Command("git", "-C", abs, "show", ref+":"+filepath.ToSlash(rel)+"/step.yaml").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", abs, "show", ref+":"+filepath.ToSlash(rel)+"/step.yaml").Output() //nolint:gosec // G204: git show of a ref the person named, in their own repository
 	if err != nil {
 		return nil, err
 	}

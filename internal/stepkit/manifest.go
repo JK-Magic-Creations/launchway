@@ -230,13 +230,13 @@ func (r *reader) str(n *yaml.Node, path string) string {
 	return n.Value
 }
 
-func (r *reader) strList(n *yaml.Node, path string, max int) []string {
+func (r *reader) strList(n *yaml.Node, path string, limit int) []string {
 	if n.Kind != yaml.SequenceNode {
 		r.add(n, path, "expected a list here")
 		return nil
 	}
-	if len(n.Content) > max {
-		r.add(n, path, "at most %d entries are allowed here", max)
+	if len(n.Content) > limit {
+		r.add(n, path, "at most %d entries are allowed here", limit)
 		return nil
 	}
 	var out []string
@@ -270,63 +270,14 @@ func ParseManifest(data []byte) (*Manifest, Problems) {
 	sum := sha256.Sum256(data)
 	m := &Manifest{Digest: hex.EncodeToString(sum[:]), Source: string(data)}
 	var inputsN, outputsN *yaml.Node
-	r.keys(root, "", []string{"step", "contract", "description", "image", "toolchain", "command", "inputs", "outputs", "resources", "timeout", "permissions"}, func(k, v *yaml.Node) {
+	r.keys(root, "", manifestKeys, func(k, v *yaml.Node) {
 		switch k.Value {
-		case "step":
-			m.Name = r.str(v, "step")
-			if !StepNameRe.MatchString(m.Name) {
-				r.add(v, "step", "%q is not a step name: use lower-case letters, digits and - (at most 63), starting with a letter or digit", clip(m.Name, 40))
-			}
-		case "contract":
-			n, err := strconv.Atoi(r.str(v, "contract"))
-			if err != nil || n < 1 {
-				r.add(v, "contract", "contract is a whole number, the version of the step contract the step was written for (now %d)", ContractVersion)
-			}
-			m.Contract = n
-		case "description":
-			m.Description = strings.TrimSpace(r.str(v, "description"))
-			if strings.ContainsAny(m.Description, "\r\n") || utf8.RuneCountInString(m.Description) > MaxDescription {
-				r.add(v, "description", "a description is one line of at most %d characters", MaxDescription)
-			}
-		case "image":
-			m.Image = r.str(v, "image")
-			if !imageRe.MatchString(m.Image) {
-				r.add(v, "image", "%q is not an image reference", clip(m.Image, 60))
-			}
-		case "toolchain":
-			m.Toolchain = r.str(v, "toolchain")
-		case "command":
-			switch v.Kind {
-			case yaml.ScalarNode:
-				m.Command, m.Shell = []string{r.str(v, "command")}, true
-			case yaml.SequenceNode:
-				m.Command = r.strList(v, "command", 50)
-			default:
-				r.add(v, "command", "command is one line for the shell, or a list of arguments")
-			}
 		case "inputs":
 			inputsN = v
 		case "outputs":
 			outputsN = v
-		case "resources":
-			r.keys(v, "resources", []string{"cpu", "memory"}, func(k2, v2 *yaml.Node) {
-				val := r.str(v2, "resources."+k2.Value)
-				if !quantityRe.MatchString(val) {
-					r.add(v2, "resources."+k2.Value, "%q is not an amount such as 500m, 2, 512Mi or 2Gi", clip(val, 20))
-				}
-				if k2.Value == "cpu" {
-					m.CPU = val
-				} else {
-					m.Memory = val
-				}
-			})
-		case "timeout":
-			m.Timeout = r.str(v, "timeout")
-			if !durationRe.MatchString(m.Timeout) {
-				r.add(v, "timeout", "%q is not a duration such as 90s, 10m or 1h", clip(m.Timeout, 20))
-			}
-		case "permissions":
-			r.permissions(v, m)
+		default:
+			r.manifestKey(m, k, v)
 		}
 	})
 	if root.Kind != yaml.MappingNode {
@@ -358,6 +309,62 @@ func ParseManifest(data []byte) (*Manifest, Problems) {
 		return nil, r.ps
 	}
 	return m, nil
+}
+
+var manifestKeys = []string{"step", "contract", "description", "image", "toolchain", "command", "inputs", "outputs", "resources", "timeout", "permissions"}
+
+// manifestKey reads one of the manifest's top-level keys other than inputs and outputs.
+func (r *reader) manifestKey(m *Manifest, k, v *yaml.Node) {
+	switch k.Value {
+	case "step":
+		m.Name = r.str(v, "step")
+		if !StepNameRe.MatchString(m.Name) {
+			r.add(v, "step", "%q is not a step name: use lower-case letters, digits and - (at most 63), starting with a letter or digit", clip(m.Name, 40))
+		}
+	case "contract":
+		n, err := strconv.Atoi(r.str(v, "contract"))
+		if err != nil || n < 1 {
+			r.add(v, "contract", "contract is a whole number, the version of the step contract the step was written for (now %d)", ContractVersion)
+		}
+		m.Contract = n
+	case "description":
+		m.Description = r.oneLine(v, "description")
+	case "image":
+		m.Image = r.str(v, "image")
+		if !imageRe.MatchString(m.Image) {
+			r.add(v, "image", "%q is not an image reference", clip(m.Image, 60))
+		}
+	case "toolchain":
+		m.Toolchain = r.str(v, "toolchain")
+	case "command":
+		switch v.Kind {
+		case yaml.ScalarNode:
+			m.Command, m.Shell = []string{r.str(v, "command")}, true
+		case yaml.SequenceNode:
+			m.Command = r.strList(v, "command", 50)
+		default:
+			r.add(v, "command", "command is one line for the shell, or a list of arguments")
+		}
+	case "resources":
+		r.keys(v, "resources", []string{"cpu", "memory"}, func(k2, v2 *yaml.Node) {
+			val := r.str(v2, "resources."+k2.Value)
+			if !quantityRe.MatchString(val) {
+				r.add(v2, "resources."+k2.Value, "%q is not an amount such as 500m, 2, 512Mi or 2Gi", clip(val, 20))
+			}
+			if k2.Value == "cpu" {
+				m.CPU = val
+			} else {
+				m.Memory = val
+			}
+		})
+	case "timeout":
+		m.Timeout = r.str(v, "timeout")
+		if !durationRe.MatchString(m.Timeout) {
+			r.add(v, "timeout", "%q is not a duration such as 90s, 10m or 1h", clip(m.Timeout, 20))
+		}
+	case "permissions":
+		r.permissions(v, m)
+	}
 }
 
 func (r *reader) image(root *yaml.Node, m *Manifest) {
@@ -510,109 +517,135 @@ func (r *reader) inputs(n *yaml.Node) []*Input {
 	seen := map[string]bool{}
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		k, v := n.Content[i], n.Content[i+1]
-		at := "inputs." + k.Value
 		if seen[k.Value] {
-			r.add(k, at, "input %q is written twice", k.Value)
+			r.add(k, "inputs."+k.Value, "input %q is written twice", k.Value)
 			continue
 		}
 		seen[k.Value] = true
-		if !fieldNameRe.MatchString(k.Value) {
-			r.add(k, at, "%q is not an input name: use lower-case letters, digits and _, starting with a letter (at most 40)", clip(k.Value, 40))
-		}
-		in := &Input{Name: k.Value, Type: TypeString, Line: k.Line}
-		var defN, optN *yaml.Node
-		requiredSet, optionalRequired := false, false
-		r.keys(v, at, []string{"type", "description", "required", "default", "options", "pattern", "min", "max"}, func(k2, v2 *yaml.Node) {
-			w := at + "." + k2.Value
-			switch k2.Value {
-			case "type":
-				in.Type = r.str(v2, w)
-				if !contains(Types, in.Type) {
-					r.add(v2, w, "the type is one of %s", strings.Join(Types, ", "))
-					in.Type = TypeString
-				}
-			case "description":
-				in.Description = strings.TrimSpace(r.str(v2, w))
-				if strings.ContainsAny(in.Description, "\r\n") || utf8.RuneCountInString(in.Description) > MaxDescription {
-					r.add(v2, w, "a description is one line of at most %d characters", MaxDescription)
-				}
-			case "required":
-				requiredSet = true
-				switch r.str(v2, w) {
-				case "true":
-					optionalRequired = true
-				case "false":
-				default:
-					r.add(v2, w, "required is true or false")
-				}
-			case "default":
-				defN = v2
-			case "options":
-				optN = v2
-				in.Options = r.strList(v2, w, MaxOptions)
-			case "pattern":
-				in.Pattern = r.str(v2, w)
-				if len(in.Pattern) > 200 {
-					r.add(v2, w, "a pattern is at most 200 characters")
-				} else if re, err := regexp.Compile(in.Pattern); err != nil {
-					r.add(v2, w, "the pattern is not a valid regular expression: %s", clip(err.Error(), 120))
-				} else {
-					in.pattern = re
-				}
-			case "min", "max":
-				f, err := strconv.ParseFloat(r.str(v2, w), 64)
-				if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
-					r.add(v2, w, "%s is a number", k2.Value)
-					return
-				}
-				if k2.Value == "min" {
-					in.Min = &f
-				} else {
-					in.Max = &f
-				}
-			}
-		})
-		if in.Type == TypeSecret && (defN != nil || optN != nil || in.Pattern != "" || in.Min != nil || in.Max != nil) {
-			r.add(v, at, "a secret is given by reference: it has no default, options, pattern, min or max")
-			defN, optN = nil, nil
-		}
-		if optN != nil && (in.Type == TypeBoolean || in.Type == TypeList || in.Type == TypeRecord) {
-			r.add(optN, at+".options", "options are for strings and numbers")
-		}
-		if defN != nil {
-			text, msg := defaultText(in.Type, defN)
-			if msg != "" {
-				r.add(defN, at+".default", "the default does not fit: %s", msg)
-			} else {
-				in.Default = &text
-			}
-		}
-		in.Required = in.Default == nil
-		if requiredSet && !optionalRequired && in.Type != TypeSecret {
-			in.Required = false // optional: absent when not given
-		}
-		if requiredSet && !optionalRequired && in.Type == TypeSecret {
-			r.add(v, at+".required", "a secret input is always required: a step that can work without it takes no secret")
-		}
-		if optionalRequired && in.Default != nil {
-			r.add(v, at+".required", "an input with a default is never required: remove the default or required")
-		}
-		if in.Default != nil {
-			if msg := in.Check(*in.Default); msg != "" {
-				r.add(defN, at+".default", "the default does not fit: %s", msg)
-			}
-		}
-		for _, o := range in.Options {
-			saved := in.Options
-			in.Options = nil
-			if msg := in.Check(o); msg != "" {
-				r.add(optN, at+".options", "%s", msg)
-			}
-			in.Options = saved
-		}
-		out = append(out, in)
+		out = append(out, r.input(k, v))
 	}
 	return out
+}
+
+// input reads one input.
+func (r *reader) input(k, v *yaml.Node) *Input {
+	at := "inputs." + k.Value
+	if !fieldNameRe.MatchString(k.Value) {
+		r.add(k, at, "%q is not an input name: use lower-case letters, digits and _, starting with a letter (at most 40)", clip(k.Value, 40))
+	}
+	in := &Input{Name: k.Value, Type: TypeString, Line: k.Line}
+	var defN, optN *yaml.Node
+	requiredSet, requiredTrue := false, false
+	r.keys(v, at, []string{"type", "description", "required", "default", "options", "pattern", "min", "max"}, func(k2, v2 *yaml.Node) {
+		w := at + "." + k2.Value
+		switch k2.Value {
+		case "type":
+			in.Type = r.str(v2, w)
+			if !contains(Types, in.Type) {
+				r.add(v2, w, "the type is one of %s", strings.Join(Types, ", "))
+				in.Type = TypeString
+			}
+		case "description":
+			in.Description = r.oneLine(v2, w)
+		case "required":
+			requiredSet = true
+			switch r.str(v2, w) {
+			case "true":
+				requiredTrue = true
+			case "false":
+			default:
+				r.add(v2, w, "required is true or false")
+			}
+		case "default":
+			defN = v2
+		case "options":
+			optN = v2
+			in.Options = r.strList(v2, w, MaxOptions)
+		case "pattern":
+			r.pattern(in, v2, w)
+		case "min", "max":
+			r.bound(in, k2.Value, v2, w)
+		}
+	})
+	if in.Type == TypeSecret && (defN != nil || optN != nil || in.Pattern != "" || in.Min != nil || in.Max != nil) {
+		r.add(v, at, "a secret is given by reference: it has no default, options, pattern, min or max")
+		defN, optN = nil, nil
+	}
+	if optN != nil && (in.Type == TypeBoolean || in.Type == TypeList || in.Type == TypeRecord) {
+		r.add(optN, at+".options", "options are for strings and numbers")
+	}
+	if defN != nil {
+		if text, msg := defaultText(in.Type, defN); msg != "" {
+			r.add(defN, at+".default", "the default does not fit: %s", msg)
+		} else {
+			in.Default = &text
+		}
+	}
+	r.requiredness(in, v, at, requiredSet, requiredTrue)
+	if in.Default != nil {
+		if msg := in.Check(*in.Default); msg != "" {
+			r.add(defN, at+".default", "the default does not fit: %s", msg)
+		}
+	}
+	saved := in.Options
+	in.Options = nil
+	for _, o := range saved {
+		if msg := in.Check(o); msg != "" {
+			r.add(optN, at+".options", "%s", msg)
+		}
+	}
+	in.Options = saved
+	return in
+}
+
+// oneLine reads a description: one line of at most MaxDescription characters.
+func (r *reader) oneLine(n *yaml.Node, path string) string {
+	d := strings.TrimSpace(r.str(n, path))
+	if strings.ContainsAny(d, "\r\n") || utf8.RuneCountInString(d) > MaxDescription {
+		r.add(n, path, "a description is one line of at most %d characters", MaxDescription)
+	}
+	return d
+}
+
+func (r *reader) pattern(in *Input, n *yaml.Node, path string) {
+	in.Pattern = r.str(n, path)
+	if len(in.Pattern) > 200 {
+		r.add(n, path, "a pattern is at most 200 characters")
+		return
+	}
+	re, err := regexp.Compile(in.Pattern)
+	if err != nil {
+		r.add(n, path, "the pattern is not a valid regular expression: %s", clip(err.Error(), 120))
+		return
+	}
+	in.pattern = re
+}
+
+func (r *reader) bound(in *Input, which string, n *yaml.Node, path string) {
+	f, err := strconv.ParseFloat(r.str(n, path), 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		r.add(n, path, "%s is a number", which)
+		return
+	}
+	if which == "min" {
+		in.Min = &f
+	} else {
+		in.Max = &f
+	}
+}
+
+// requiredness says whether an input must be given: when it has no default, unless it says
+// required: false; a secret is always required.
+func (r *reader) requiredness(in *Input, v *yaml.Node, at string, requiredSet, requiredTrue bool) {
+	in.Required = in.Default == nil
+	switch {
+	case requiredSet && !requiredTrue && in.Type == TypeSecret:
+		r.add(v, at+".required", "a secret input is always required: a step that can work without it takes no secret")
+	case requiredSet && !requiredTrue:
+		in.Required = false // optional: absent when not given
+	case requiredTrue && in.Default != nil:
+		r.add(v, at+".required", "an input with a default is never required: remove the default or required")
+	}
 }
 
 func (r *reader) outputs(n *yaml.Node) []*Output {
@@ -648,10 +681,7 @@ func (r *reader) outputs(n *yaml.Node) []*Output {
 				}
 				return
 			}
-			o.Description = strings.TrimSpace(r.str(v2, w))
-			if strings.ContainsAny(o.Description, "\r\n") || utf8.RuneCountInString(o.Description) > MaxDescription {
-				r.add(v2, w, "a description is one line of at most %d characters", MaxDescription)
-			}
+			o.Description = r.oneLine(v2, w)
 		})
 		out = append(out, o)
 	}
@@ -699,79 +729,99 @@ func defaultText(typ string, n *yaml.Node) (string, string) {
 // Check says why v (as a `with` value is written: text) is not a value of
 // the input, or "".
 func (in *Input) Check(v string) string {
+	var msg string
 	switch in.Type {
 	case TypeNumber:
-		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
-		if err != nil || math.IsInf(f, 0) || math.IsNaN(f) {
-			return fmt.Sprintf("%s is a number; %q is not one", in.Name, clip(v, 40))
-		}
-		if in.Min != nil && f < *in.Min {
-			return fmt.Sprintf("%s is at least %s; %s is less", in.Name, fmtNum(*in.Min), fmtNum(f))
-		}
-		if in.Max != nil && f > *in.Max {
-			return fmt.Sprintf("%s is at most %s; %s is more", in.Name, fmtNum(*in.Max), fmtNum(f))
-		}
+		msg = in.checkNumber(v)
 	case TypeBoolean:
 		if v != "true" && v != "false" {
-			return fmt.Sprintf("%s is true or false; %q is neither", in.Name, clip(v, 40))
+			msg = fmt.Sprintf("%s is true or false; %q is neither", in.Name, clip(v, 40))
 		}
 	case TypeList:
-		items, err := ParseJSONList(v)
-		if err != nil {
-			return fmt.Sprintf("%s is a list of text: %s", in.Name, err)
-		}
-		if in.Min != nil && float64(len(items)) < *in.Min {
-			return fmt.Sprintf("%s has at least %s entries; it has %d", in.Name, fmtNum(*in.Min), len(items))
-		}
-		if in.Max != nil && float64(len(items)) > *in.Max {
-			return fmt.Sprintf("%s has at most %s entries; it has %d", in.Name, fmtNum(*in.Max), len(items))
-		}
+		msg = in.checkList(v)
 	case TypeRecord:
-		if len(v) > 4096 {
-			return fmt.Sprintf("%s is longer than 4096 bytes", in.Name)
-		}
-		if _, err := ParseJSONRecord(v); err != nil {
-			return fmt.Sprintf("%s is a record, written as JSON such as {\"a\": 1}: %s", in.Name, err)
-		}
+		msg = in.checkRecord(v)
 	case TypeSecret:
 		return ""
 	default:
-		switch {
-		case len(v) > 4096:
-			return fmt.Sprintf("the value of %s is longer than 4096 bytes", in.Name)
-		case !utf8.ValidString(v) || strings.ContainsRune(v, 0):
-			return fmt.Sprintf("the value of %s is not text", in.Name)
-		}
-		n := float64(utf8.RuneCountInString(v))
-		if in.Min != nil && n < *in.Min {
-			return fmt.Sprintf("%s has at least %s characters; it has %d", in.Name, fmtNum(*in.Min), int(n))
-		}
-		if in.Max != nil && n > *in.Max {
-			return fmt.Sprintf("%s has at most %s characters; it has %d", in.Name, fmtNum(*in.Max), int(n))
-		}
-		if in.pattern != nil && !in.pattern.MatchString(v) {
-			return fmt.Sprintf("%s must match %s; %q does not", in.Name, in.Pattern, clip(v, 40))
-		}
+		msg = in.checkText(v)
 	}
-	if len(in.Options) > 0 {
-		for _, o := range in.Options {
-			if in.Type == TypeNumber {
-				a, e1 := strconv.ParseFloat(strings.TrimSpace(o), 64)
-				b, e2 := strconv.ParseFloat(strings.TrimSpace(v), 64)
-				if e1 == nil && e2 == nil && a == b {
-					return ""
-				}
-			} else if o == v {
-				return ""
-			}
-		}
-		quoted := make([]string, len(in.Options))
-		for i, o := range in.Options {
-			quoted[i] = strconv.Quote(o)
-		}
-		return fmt.Sprintf("%s must be one of %s; %q is not", in.Name, strings.Join(quoted, ", "), clip(v, 40))
+	if msg != "" || len(in.Options) == 0 {
+		return msg
+	}
+	return in.checkOptions(v)
+}
+
+func (in *Input) checkNumber(v string) string {
+	f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+	switch {
+	case err != nil || math.IsInf(f, 0) || math.IsNaN(f):
+		return fmt.Sprintf("%s is a number; %q is not one", in.Name, clip(v, 40))
+	case in.Min != nil && f < *in.Min:
+		return fmt.Sprintf("%s is at least %s; %s is less", in.Name, fmtNum(*in.Min), fmtNum(f))
+	case in.Max != nil && f > *in.Max:
+		return fmt.Sprintf("%s is at most %s; %s is more", in.Name, fmtNum(*in.Max), fmtNum(f))
 	}
 	return ""
+}
+
+func (in *Input) checkList(v string) string {
+	items, err := ParseJSONList(v)
+	switch {
+	case err != nil:
+		return fmt.Sprintf("%s is a list of text: %s", in.Name, err)
+	case in.Min != nil && float64(len(items)) < *in.Min:
+		return fmt.Sprintf("%s has at least %s entries; it has %d", in.Name, fmtNum(*in.Min), len(items))
+	case in.Max != nil && float64(len(items)) > *in.Max:
+		return fmt.Sprintf("%s has at most %s entries; it has %d", in.Name, fmtNum(*in.Max), len(items))
+	}
+	return ""
+}
+
+func (in *Input) checkRecord(v string) string {
+	if len(v) > 4096 {
+		return fmt.Sprintf("%s is longer than 4096 bytes", in.Name)
+	}
+	if _, err := ParseJSONRecord(v); err != nil {
+		return fmt.Sprintf("%s is a record, written as JSON such as {\"a\": 1}: %s", in.Name, err)
+	}
+	return ""
+}
+
+func (in *Input) checkText(v string) string {
+	n := float64(utf8.RuneCountInString(v))
+	switch {
+	case len(v) > 4096:
+		return fmt.Sprintf("the value of %s is longer than 4096 bytes", in.Name)
+	case !utf8.ValidString(v) || strings.ContainsRune(v, 0):
+		return fmt.Sprintf("the value of %s is not text", in.Name)
+	case in.Min != nil && n < *in.Min:
+		return fmt.Sprintf("%s has at least %s characters; it has %d", in.Name, fmtNum(*in.Min), int(n))
+	case in.Max != nil && n > *in.Max:
+		return fmt.Sprintf("%s has at most %s characters; it has %d", in.Name, fmtNum(*in.Max), int(n))
+	case in.pattern != nil && !in.pattern.MatchString(v):
+		return fmt.Sprintf("%s must match %s; %q does not", in.Name, in.Pattern, clip(v, 40))
+	}
+	return ""
+}
+
+func (in *Input) checkOptions(v string) string {
+	for _, o := range in.Options {
+		if in.Type == TypeNumber {
+			a, e1 := strconv.ParseFloat(strings.TrimSpace(o), 64)
+			b, e2 := strconv.ParseFloat(strings.TrimSpace(v), 64)
+			if e1 == nil && e2 == nil && a == b {
+				return ""
+			}
+		} else if o == v {
+			return ""
+		}
+	}
+	quoted := make([]string, len(in.Options))
+	for i, o := range in.Options {
+		quoted[i] = strconv.Quote(o)
+	}
+	return fmt.Sprintf("%s must be one of %s; %q is not", in.Name, strings.Join(quoted, ", "), clip(v, 40))
 }
 
 func fmtNum(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

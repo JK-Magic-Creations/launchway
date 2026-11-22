@@ -56,7 +56,7 @@ func Open() (*Step, error) {
 	if path == "" {
 		return nil, errors.New("LAUNCHWAY_STEP_INPUTS is not set: run this step with `launchway step test`, or in a pipeline")
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // G703: the path the Station gave this step
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func Open() (*Step, error) {
 	}
 	s := &Step{inputs: doc.Inputs, outputs: map[string]any{}, outPath: os.Getenv("LAUNCHWAY_STEP_OUTPUTS")}
 	if p := os.Getenv("LAUNCHWAY_STEP_RESULTS"); p != "" {
-		if s.results, err = os.OpenFile(p, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o666); err != nil {
+		if s.results, err = os.OpenFile(p, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o666); err != nil { //nolint:gosec // G302,G703: the path the Station gave this step; its file is open to the step
 			return nil, err
 		}
 	}
@@ -220,7 +220,7 @@ func (s *Step) WriteOutputs() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.outPath, b, 0o666)
+	return os.WriteFile(s.outPath, b, 0o666) //nolint:gosec // G306,G703: the path the Station gave this step
 }
 
 func (s *Step) result(m map[string]any) {

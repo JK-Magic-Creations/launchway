@@ -435,8 +435,8 @@ func (lib *project) resolveVersion(ctx context.Context, version string, fresh ti
 }
 
 // fileAt reads a file of the library's mirror at a commit, or pipeline.ErrNoTemplate.
-func (lib *project) showAt(ctx context.Context, sha, path string) ([]byte, error) {
-	data, err := gitOut(ctx, lib.dir, "show", sha+":"+path)
+func (p *project) showAt(ctx context.Context, sha, path string) ([]byte, error) {
+	data, err := gitOut(ctx, p.dir, "show", sha+":"+path)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") || strings.Contains(err.Error(), "exists on disk, but not in") {
 			return nil, pipeline.ErrNoTemplate

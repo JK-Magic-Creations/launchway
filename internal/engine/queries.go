@@ -726,12 +726,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
 			v.Caches = s.Evidence.Caches
 		}
-		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Notes) > 0 {
-			v.Notes = s.Evidence.Notes
-		}
-		if def := st.Pipeline.Step(v.ID); def != nil && def.Custom != nil {
-			v.Custom = def.Custom
-		}
+		attachCustom(v, st)
 		d.StepList = append(d.StepList, *v)
 	}
 	if err := rows.Err(); err != nil {

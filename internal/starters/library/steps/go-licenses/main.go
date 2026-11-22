@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ func say(format string, a ...any) { fmt.Printf("launchway: "+format+"\n", a...) 
 // variables that let a program write results.
 func run(dir, command string) error {
 	fmt.Println("+ " + command)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(context.Background(), "sh", "-c", command) //nolint:gosec // G204: the commands are written in this file, as the starters' scripts run them
 	cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Env = dir, os.Stdout, os.Stderr, Environ()
 	return cmd.Run()
 }
@@ -31,7 +32,7 @@ func main() {
 			return fmt.Errorf("working_directory must be a directory inside the repository, not %s", wd)
 		}
 		dir := filepath.Join(ws, wd)
-		if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+		if st, err := os.Stat(dir); err != nil || !st.IsDir() { //nolint:gosec // G703: working_directory was checked to be inside the workspace
 			return fmt.Errorf("working_directory %s does not exist in this repository", wd)
 		}
 		deny := strings.Join(s.List("license_deny"), ",")
@@ -42,7 +43,7 @@ func main() {
 		_ = env
 		gobin := os.Getenv("GOBIN")
 		if gobin == "" {
-			out, _ := exec.Command("go", "env", "GOPATH").Output()
+			out, _ := exec.CommandContext(context.Background(), "go", "env", "GOPATH").Output()
 			gobin = filepath.Join(strings.TrimSpace(string(out)), "bin")
 		}
 		os.Setenv("GOBIN", gobin)

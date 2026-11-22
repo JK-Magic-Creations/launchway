@@ -181,16 +181,16 @@ func offlineVariables(list []string) pipeline.Variables {
 // step of its own repository (uses: ./steps/NAME) or a starter, which can be
 // expanded here from the files of the repository, with no server.
 func usesOwnSteps(p *pipeline.Pipeline) bool {
-	any := false
+	found := false
 	for _, s := range p.Steps {
 		if !s.IsUse() {
 			continue
 		}
 		if _, _, self := pipeline.SplitUses(s.Uses); self {
-			any = true
+			found = true
 		} else if !strings.HasPrefix(s.Uses, "launchway/") {
 			return false
 		}
 	}
-	return any
+	return found
 }
