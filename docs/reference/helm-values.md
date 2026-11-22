@@ -187,6 +187,7 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.reports.maxCoverageFilesPerProject` | integer or null | unset (2000000) | Written as `reports.max_coverage_files_per_project` |
 | `config.reports.origin` | string or null | unset | A separate origin that alone serves hosted HTML reports, such as `https://reports.ci.example.com`: a host name of its own routed to the same servers (add it to the ingress). Unset, reports are served from Launchway's own origin, sandboxed. Written as `reports.origin` |
 | `config.queues.maxWait` | string or null | unset (60m) | The longest a step waits for room in the step namespace before it fails with the reason, such as `30m`, or `off` to wait for ever. See [Queues and limits](../guide/queues.md) |
+| `config.queues.deployPickupWait` | string or null | unset (15m) | The longest a deploy or rollback step waits for a deploy Station to take it, such as `30m`, or `off` to wait for ever. The step's own time limit starts when a Station takes it. See [Queues and limits](../guide/queues.md) |
 | `config.queues.runs` | integer or null | unset (10) | Runs of a project at once; 0 is no limit. Pushes to protected branches are never held |
 | `config.queues.pipelineRuns` | integer or null | unset (no limit) | Runs of one pipeline at once |
 | `config.queues.pullRequestRuns` | integer or null | unset (4) | Pull-request runs of a project at once |

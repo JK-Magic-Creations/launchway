@@ -11,6 +11,11 @@ type QueueSettings struct {
 	// quota, nodes with space) before it fails with the reason; the default is
 	// DefaultMaxCapacityWait. A negative value means no limit.
 	MaxWait time.Duration
+	// DeployPickupWait is the longest a deploy or rollback step waits for a
+	// deploy runner to take it before it fails saying so; the step's own
+	// time limit starts when a runner takes it, not before. The default is
+	// DefaultDeployPickupWait. A negative value means no limit.
+	DeployPickupWait time.Duration
 	// ProjectRuns, PipelineRuns and the per-kind numbers are how many runs may
 	// go at the same time in a project, of one pipeline, and of each kind;
 	// AutomationRuns is how many runs started by automation accounts. A run
@@ -35,6 +40,25 @@ const (
 	DefaultAutomationRuns  = 2
 )
 
+// DefaultDeployPickupWait is how long a deploy step waits for a deploy runner to
+// take it when queues.deploy_pickup_wait is not set.
+const DefaultDeployPickupWait = 15 * time.Minute
+
+// deployPickupDeadline is when a deploy action queued now fails because no
+// deploy runner took it (Unix ms). The step's own time limit does not run until
+// a runner takes the step. No limit ("off") is a deadline ten years away rather
+// than none, so a deadline an earlier action left behind never applies.
+func (c *cmd) deployPickupDeadline() int64 {
+	w := c.e.queueSettings(c.st.Project).DeployPickupWait
+	switch {
+	case w < 0:
+		w = 10 * 365 * 24 * time.Hour
+	case w == 0:
+		w = DefaultDeployPickupWait
+	}
+	return c.now + w.Milliseconds()
+}
+
 // queueSettings is the settings in force for a project: its own, over the
 // installation's, with the defaults filled in.
 func (e *Engine) queueSettings(project string) QueueSettings {
@@ -52,6 +76,7 @@ func (e *Engine) queueSettings(project string) QueueSettings {
 		ScheduleRuns: pick(p.ScheduleRuns, q.ScheduleRuns), ManualRuns: pick(p.ManualRuns, q.ManualRuns),
 		AutomationRuns: pick(p.AutomationRuns, q.AutomationRuns), SupersedePullRequests: q.SupersedePullRequests}
 	out.MaxWait = time.Duration(pick(int(p.MaxWait), int(q.MaxWait)))
+	out.DeployPickupWait = time.Duration(pick(int(p.DeployPickupWait), int(q.DeployPickupWait)))
 	if p.SupersedePullRequests != nil {
 		out.SupersedePullRequests = p.SupersedePullRequests
 	}

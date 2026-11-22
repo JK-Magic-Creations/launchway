@@ -411,8 +411,13 @@ The Sortie (run) is refused with `422` before it starts. Add the Flight to the A
 if it should deploy there.
 
 ```text
-no deploy runner serving target prod-cluster took the step within 1m
+no deploy runner serving target prod-cluster took the step within 15m
 ```
+
+The wait for a Station is its own: `queues.deploy_pickup_wait` (default 15 minutes, `off` waits for
+ever). The step's time limit starts when a Station takes it, so a step that waited a long time still
+has all of its time. While it waits, the Sortie page and `runs show` say which pool serves the target
+and when a Station of it last asked for work.
 
 No deploy Station of a pool serving that target is connected. Start one with the pool's token and a
 `deploy:` section listing the target; see [Deploy with approval](../tutorials/deploy-with-approval.md).

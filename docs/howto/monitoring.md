@@ -168,7 +168,8 @@ The trail is kept until you delete old rows from the `audit` table yourself. See
 
 Runs that wait for a Station that never comes show a hint on the Sortie (`runner_hint` in the API),
 such as for image steps when no Station can build images. A deploy step fails with
-`no deploy runner serving target <target> took the step within <timeout>`.
+`no deploy runner serving target <target> took the step within <wait>` (the wait is
+`queues.deploy_pickup_wait`, 15 minutes by default).
 
 ## What next
 

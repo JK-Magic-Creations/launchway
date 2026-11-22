@@ -363,6 +363,8 @@ config:
   queues:
     # -- The longest a step waits for room in the step namespace, such as 30m, or off. Default 60m.
     maxWait:
+    # -- The longest a deploy or rollback step waits for a deploy Station to take it, such as 30m, or off. Default 15m. The step's own time limit starts when a Station takes it.
+    deployPickupWait:
     # -- Runs of a Flight at once. Default 10.
     runs:
     # -- Runs of one pipeline at once. Default: no limit.

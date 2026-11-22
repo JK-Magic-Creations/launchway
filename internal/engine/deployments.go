@@ -403,7 +403,9 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		c.dbFail(err)
 		return
 	}
-	deadline := c.now + def.Timeout.D().Milliseconds()
+	// The step's time limit starts when a deploy runner takes it (applyLeased); until then it can only wait as long as
+	// queues.deploy_pickup_wait.
+	deadline := c.deployPickupDeadline()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
 		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionApply}})
@@ -759,6 +761,9 @@ func (c *cmd) deployFinished(ev Event, s *StepState) error {
 
 // ---- deadlines ----
 
+// noDeployRunnerPrefix starts the reason of a deploy step that no deploy runner took in time (cause.go reads it).
+const noDeployRunnerPrefix = "no deploy runner serving target"
+
 // expireDeploy fails a deploy or rollback step whose deadline has passed
 // while it was queued or waiting for runners to observe it, saying what was
 // last observed.
@@ -771,7 +776,16 @@ func (c *cmd) expireDeploy(id string, def *pipeline.Step) error {
 		if s.Dep != nil {
 			target = s.Dep.Target
 		}
-		reason = fmt.Sprintf("no deploy runner serving target %s took the step within %s", target, def.Timeout.Short())
+		if s.Dep != nil && s.Dep.TakenAt > 0 {
+			reason = fmt.Sprintf("the step's %s ran out while it waited for a deploy runner serving target %s to take it again", def.Timeout.Short(), target)
+			break
+		}
+		wait := c.e.queueSettings(c.st.Project).DeployPickupWait
+		if wait <= 0 {
+			wait = DefaultDeployPickupWait
+		}
+		reason = fmt.Sprintf("%s %s took the step within %s. Start a runner of the pool serving it, or change queues.deploy_pickup_wait",
+			noDeployRunnerPrefix, target, pipeline.Duration(wait).Short())
 	case s.Status == StepWaitingS && s.WaitKind == WaitObserve:
 		var phase, detail, by string
 		var at int64

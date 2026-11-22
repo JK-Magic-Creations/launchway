@@ -102,6 +102,7 @@
     "queues": {
       "automationRuns": true,
       "manualRuns": true,
+      "deployPickupWait": true,
       "maxWait": true,
       "pipelineRuns": true,
       "pullRequestRuns": true,

@@ -50,7 +50,7 @@ func (c *cmd) advanceRollback(id string, def *pipeline.Step) bool {
 	default:
 		s := st.Steps[id]
 		c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Reason: "rolling back because " + bad,
-			Deploy: &DeployEvent{ID: d.Dep.ID, Action: ActionRevert, Deadline: c.now + def.Timeout.D().Milliseconds()}})
+			Deploy: &DeployEvent{ID: d.Dep.ID, Action: ActionRevert, Deadline: c.deployPickupDeadline()}})
 		c.after(c.e.kickDeploys)
 	}
 	return true

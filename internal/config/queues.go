@@ -16,6 +16,10 @@ type QueuesConfig struct {
 	// MaxWait is the longest a step waits for room before it fails with the
 	// reason, such as "30m". Default 60m; "off" waits for ever.
 	MaxWait string `yaml:"max_wait"`
+	// DeployPickupWait is the longest a deploy or rollback step waits for a
+	// deploy runner to take it, such as "30m". Default 15m; "off" waits for
+	// ever. The step's time limit starts when a runner takes the step.
+	DeployPickupWait string `yaml:"deploy_pickup_wait"`
 	// Runs is how many runs of a project go at once (default 10); PipelineRuns
 	// how many of one pipeline (no limit); PullRequestRuns, PushRuns,
 	// ScheduleRuns and ManualRuns how many of each kind (pull requests 4, the
@@ -33,17 +37,17 @@ type QueuesConfig struct {
 	SupersedePullRequests *bool `yaml:"supersede_pull_requests"`
 }
 
-// queuesWait reads max_wait.
-func queuesWait(q QueuesConfig, where string) (time.Duration, error) {
-	switch q.MaxWait {
+// queuesWait reads a wait setting (max_wait or deploy_pickup_wait).
+func queuesWait(value, key, where string) (time.Duration, error) {
+	switch value {
 	case "":
 		return 0, nil
 	case "off":
 		return -1, nil
 	}
-	d, err := time.ParseDuration(q.MaxWait)
+	d, err := time.ParseDuration(value)
 	if err != nil || d <= 0 {
-		return 0, fmt.Errorf("%s: max_wait must be a duration such as 30m, or off", where)
+		return 0, fmt.Errorf("%s: %s must be a duration such as 30m, or off", where, key)
 	}
 	return d, nil
 }
@@ -52,7 +56,10 @@ func queuesWait(q QueuesConfig, where string) (time.Duration, error) {
 func engineQueues(q QueuesConfig, where string) (engine.QueueSettings, error) {
 	var out engine.QueueSettings
 	var err error
-	if out.MaxWait, err = queuesWait(q, where); err != nil {
+	if out.MaxWait, err = queuesWait(q.MaxWait, "max_wait", where); err != nil {
+		return out, err
+	}
+	if out.DeployPickupWait, err = queuesWait(q.DeployPickupWait, "deploy_pickup_wait", where); err != nil {
 		return out, err
 	}
 	num := func(key string, p *int) (int, error) {
