@@ -43,9 +43,18 @@ type Config struct {
 	OSVURL, OSVDir string
 	// Offline: only the addresses above are used, never a public default.
 	Offline bool
+	// LookupsOff: maintenance.lookups is off; the server makes no lookup at all (no registry, no advisory service).
+	LookupsOff bool
 	// CacheTTL is how long answers of registries are kept (default 1 hour); a
 	// negative value keeps nothing.
 	CacheTTL time.Duration
+}
+
+// WithLookups applies the installation's maintenance.lookups setting ("server" or empty: the server looks things up;
+// "off": it makes no lookup).
+func (c Config) WithLookups(mode string) Config {
+	c.LookupsOff = mode == "off"
+	return c
 }
 
 // FromEnv reads the configuration from environment variables
@@ -76,7 +85,7 @@ func FromEnv(getenv func(string) string) Config {
 
 // Sources builds the version sources. client is the egress guard's client.
 func (c Config) Sources(client *http.Client, cache source.Cache) map[string]source.Source {
-	f := &source.Fetcher{Client: client, Cache: cache, Offline: c.Offline, TTL: c.CacheTTL}
+	f := &source.Fetcher{Client: source.Hosts.Wrap(client), Cache: cache, Offline: c.Offline, Off: c.LookupsOff, TTL: c.CacheTTL}
 	if c.CacheTTL < 0 {
 		f.Cache = nil
 	}
@@ -92,7 +101,10 @@ func (c Config) Sources(client *http.Client, cache source.Cache) map[string]sour
 // Vulnerabilities builds the OSV index, or nil when none is configured and
 // the installation is offline.
 func (c Config) Vulnerabilities(client *http.Client) osv.Index {
+	client = source.Hosts.Wrap(client)
 	switch {
+	case c.LookupsOff:
+		return nil
 	case c.OSVDir != "":
 		return &osv.DirIndex{FS: os.DirFS(c.OSVDir)}
 	case c.OSVURL != "":

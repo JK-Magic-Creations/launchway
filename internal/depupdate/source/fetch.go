@@ -67,6 +67,9 @@ type Fetcher struct {
 	// Offline: never contact an address the installation did not name. A
 	// source whose BaseURL is empty then answers ErrOffline.
 	Offline bool
+	// Off: the installation switched its lookups off (maintenance.lookups: off): nothing is requested, and every
+	// source answers ErrLookupsOff.
+	Off bool
 	// Requests counts the network requests made (cache hits are not counted).
 	mu       sync.Mutex
 	Requests int
@@ -102,6 +105,9 @@ func (f *Fetcher) Head(ctx context.Context, url string, header http.Header) (htt
 }
 
 func (f *Fetcher) do(ctx context.Context, method, url string, header http.Header) ([]byte, http.Header, error) {
+	if f.Off {
+		return nil, nil, ErrLookupsOff
+	}
 	key := method + " " + url + " " + header.Get("Accept")
 	if f.Cache != nil && method == http.MethodGet {
 		if b, ok := f.Cache.Get(key); ok {

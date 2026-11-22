@@ -393,6 +393,15 @@ Limits on what the server keeps of the Debriefs (test reports) steps declare. `0
 | `tests.max_cases_per_project` | whole number | `1000000` | Individual results a Flight keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
 | `tests.max_age_days` | whole number | `180` | How long individual test results and a test's statistics (its typical duration, first and last appearance) are kept. Older results are removed whatever the count; each Sortie's totals stay. At most 3650 |
 
+## Maintenance lookups {#maintenance}
+
+The server itself looks up newer versions at package registries (Maintenance) and advisories at the advisory service (the software graph). When the network refuses those connections or they time out, the server leaves that host alone for one hour and writes one log line saying which host and what it limits; this setting switches the lookups off altogether. With the chart, set it with `config.extraConfig.maintenance.lookups`.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `maintenance.lookups` | `server` or `off` | `server` | `server`: the server makes the lookups (and pauses a host for an hour after a refused or timed-out connection). `off`: it makes none; Maintenance proposes nothing new and the graph shows no advisories. Moving the lookups to a Station is described in `docs/development/lookups-on-a-station.md` and is not built |
+
 ## Reports
 
 Limits on test attachments, coverage and hosted HTML reports, and where hosted reports are served

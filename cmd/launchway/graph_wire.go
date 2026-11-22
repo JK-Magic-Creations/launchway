@@ -90,7 +90,7 @@ func startGraph(ctx context.Context, cfg *config.Config, eng *engine.Engine, log
 	}}
 	watch := &graph.Watcher{Runner: runner, DB: db, Log: log}
 	svc := &api.GraphService{Store: store, Runner: runner, Watch: watch, ProjectRepos: projectRepos}
-	if idx := depservice.FromEnv(os.Getenv).Vulnerabilities(egress.Default.HTTPClient(30 * time.Second)); idx != nil {
+	if idx := depservice.FromEnv(os.Getenv).WithLookups(cfg.Maintenance.Lookups).Vulnerabilities(egress.Default.HTTPClient(30 * time.Second)); idx != nil {
 		svc.Advisories = graph.OSVAdvisories{Index: idx}
 	}
 	srv.Graph = svc

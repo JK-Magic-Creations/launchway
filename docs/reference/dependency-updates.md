@@ -79,6 +79,8 @@ Name globs are case-insensitive and `*` matches any run of characters, including
 | `LAUNCHWAY_UPDATES_CACHE_TTL` | How long Depot (registry) answers are kept (default `1h`; `0s` keeps none) |
 | `LAUNCHWAY_UPDATES_ENV_<NAME>` | On a Station (runner): passed to the lock step as `<NAME>` (for example `GOSUMDB`) |
 
+The server pauses a package host or the advisory service for one hour after a refused or timed-out connection, with one log line that names the host and what it limits. To make no lookups at all, set `maintenance.lookups: off` in the server configuration (see [Maintenance lookups](./server-config.md#maintenance)).
+
 ## Interfaces
 
 | What | HTTP | MCP | Command line |

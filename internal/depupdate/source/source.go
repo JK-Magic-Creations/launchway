@@ -13,6 +13,7 @@ package source
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -41,6 +42,8 @@ type Source interface {
 var (
 	// ErrOffline: offline mode is on and no mirror is configured for this source.
 	ErrOffline = errors.New("offline mode: no mirror is configured for this source")
+	// ErrLookupsOff: the installation switched its lookups off (maintenance.lookups: off). It is an offline answer.
+	ErrLookupsOff = fmt.Errorf("%w: lookups from the server are switched off (maintenance.lookups: off)", ErrOffline)
 	// ErrNotFound: the source does not know the package.
 	ErrNotFound = errors.New("the source does not know this package")
 )

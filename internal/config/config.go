@@ -68,6 +68,8 @@ type Config struct {
 	Queues QueuesConfig `yaml:"queues"`
 	// Automation names the automation accounts (dependency bots).
 	Automation AutomationConfig `yaml:"automation"`
+	// Maintenance says whether the server makes the lookups its upkeep needs.
+	Maintenance MaintenanceConfig `yaml:"maintenance"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
 	// Artifacts: where step files are kept; Findings: what is kept of findings; Forge: Git hosting.
@@ -777,6 +779,9 @@ func (c *Config) Validate(path string) error {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.checkQueuesAndTrust(); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	if err := c.Maintenance.Check(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.MCP.Check(); err != nil {

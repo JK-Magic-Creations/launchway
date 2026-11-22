@@ -76,7 +76,7 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 	srv.Forge = &api.ForgeHosting{Provider: h.Provider, Mirrors: h.Mirrors, RunTokens: h.RunTokens, AllowInsecureHTTP: f.AllowInsecureHTTP,
 		Git:  githttp.New(githttp.Options{Backend: h.Store, MaxPushBytes: int64(f.MaxPushMiB) << 20, MaxConcurrent: f.MaxConcurrent, Log: log}),
 		Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks, Pulls: h.Pulls, RepoByID: h.Forge.Repository, Local: h.Store,
-		Updates: depservice.New(h.Store, h.Pulls, depservice.FromEnv(os.Getenv), egress.Default.HTTPClient(30*time.Second))}
+		Updates: depservice.New(h.Store, h.Pulls, depservice.FromEnv(os.Getenv).WithLookups(cfg.Maintenance.Lookups), egress.Default.HTTPClient(30*time.Second))}
 	srv.WirePulls()
 	if srv.Projects != nil {
 		// A project whose repository is hosted here is read from this server's storage.
