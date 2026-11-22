@@ -12,6 +12,7 @@ import { Link } from "../../components/ui";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
 import { prose } from "../../prose";
+import { SpanFaint, SpanMono } from "../../kit/bits";
 const P = await prose("pages.wizards.ConnectRepo");
 
 type Source = "template" | "file" | "sample";
@@ -171,9 +172,9 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
         )}
         <details className="cf-explain" open={check.result?.ok === false}>
           <summary>{P.t10}</summary>
-          <p>{P.t11}<strong>server's own Git access</strong>, exactly as <span className="mono">git clone</span> {terms().say(P.t12)} <span className="mono">GIT_CONFIG_COUNT=1</span>,{" "}
-            <span className="mono">{P.t13}</span> and{" "}
-            <span className="mono">{P.t14}</span>{P.t15}{proj}{P.t16}</p>
+          <p>{P.t11}<strong>server's own Git access</strong>, exactly as <SpanMono>git clone</SpanMono> {terms().say(P.t12)} <SpanMono>GIT_CONFIG_COUNT=1</SpanMono>,{" "}
+            <SpanMono>{P.t13}</SpanMono> and{" "}
+            <SpanMono>{P.t14}</SpanMono>{P.t15}{proj}{P.t16}</p>
         </details>
         <div className="cf-row">
           <button type="button" className="btn" disabled={!repo.trim() || check.state === "checking"} onClick={() => runCheck(branch || undefined)}>
@@ -225,7 +226,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     render: (by) => (
       <>
         <Choices legend={P.t23} value={source} onChange={(v) => setSource(v as Source)}
-          help={<>{P.t24}<span className="mono">.launchway/pipeline.yaml</span> {P.t25}</>}
+          help={<>{P.t24}<SpanMono>.launchway/pipeline.yaml</SpanMono> {P.t25}</>}
           options={[
             { value: "template", label: P.t26, disabled: !libs?.length,
               help: libs?.length ? terms().say(P.t27)
@@ -308,7 +309,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
             help={terms().say(P.t43)} />}
         </div>
         {source === "template" && <p className="cf-help">{P.t44}{proj} {P.t45}</p>}
-        {source !== "template" && <p className="cf-help">{P.t46}<span className="mono">on:</span> {P.t47}</p>}
+        {source !== "template" && <p className="cf-help">{P.t46}<SpanMono>on:</SpanMono> {P.t47}</p>}
         <Choices legend={P.t48} value={poll} onChange={setPoll} problems={by.poll} options={POLLS}
           help={P.t49} />
       </>
@@ -320,7 +321,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
 
 function RepoCheckLine({ check, repo }: { check: { state: string; result?: RepoCheck; error?: string; repo?: string; branch?: string }; repo: string }) {
   let body = null;
-  if (check.state === "unavailable") body = <span className="faint">{P.t50}{""}project.</span>;
+  if (check.state === "unavailable") body = <SpanFaint>{P.t50}{""}project.</SpanFaint>;
   else if (check.state === "error") body = <span className="cf-problem">The check failed: {check.error}</span>;
   else if (check.result && check.repo === repo) {
     body = check.result.ok
@@ -343,7 +344,7 @@ function PipelineFileState({ check, branch }: { check: RepoCheck; branch: string
         : check.problems?.length ? (
           <span className="cf-problem">It has {check.problems.length === 1 ? "a problem" : `${check.problems.length} problems`}:
             <ul className="cf-fileprobs">{check.problems.map((p, i) => (
-              <li key={i}><span className="mono">{p.file}{p.line ? `:${p.line}` : ""}{p.column ? `:${p.column}` : ""}</span>{p.commit ? ` (${short(p.commit)})` : ""}: {p.message}</li>
+              <li key={i}><SpanMono>{p.file}{p.line ? `:${p.line}` : ""}{p.column ? `:${p.column}` : ""}</SpanMono>{p.commit ? ` (${short(p.commit)})` : ""}: {p.message}</li>
             ))}</ul>
           </span>
         ) : null}
@@ -357,10 +358,10 @@ export function PipelineToCommit({ flow }: { flow: RepoFlow }) {
   if (flow.source === "file") {
     const on = flow.pipelineText.split("\nsteps:")[0];
     return <CopyBlock title={P.t52} text={on.trim() + "\n"}
-      note={<>{P.t53}<span className="mono">{flow.branch}</span> branch).</>} />;
+      note={<>{P.t53}<SpanMono>{flow.branch}</SpanMono> branch).</>} />;
   }
   return <CopyBlock title=".launchway/pipeline.yaml" text={flow.pipelineText}
-    note={<>Commit this file to the <span className="mono">{flow.branch}</span> {terms().say(P.t54)}</>} />;
+    note={<>Commit this file to the <SpanMono>{flow.branch}</SpanMono> {terms().say(P.t54)}</>} />;
 }
 
 export function RunItNow({ name, branch }: { name: string; branch: string }) {

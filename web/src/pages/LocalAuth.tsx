@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { call, ApiError } from "../api";
 import { QrCode } from "../kit/QrCode";
 import { prose } from "../prose";
+import { LabelField, PSub } from "../kit/bits";
 const P = await prose("pages.LocalAuth");
 
 // Built-in accounts: sign-in with a second step, first-run setup with the one-time code, and the page a
@@ -20,7 +21,7 @@ function Shell({ title, sub, children }: { title: string; sub: string; children:
           <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2563eb" /><path d="M8 22l8-12 8 12" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <h1>{title}</h1>
         </div>
-        <p className="sub">{sub}</p>
+        <PSub>{sub}</PSub>
         {children}
       </div>
     </main>
@@ -62,14 +63,14 @@ export function LocalSignIn({ next }: { next: string }) {
       <Err error={error} />
       {!ticket ? (
         <>
-          <label className="field"><span>User name</span>
-            <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" required /></label>
-          <label className="field"><span>Password</span>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
+          <LabelField><span>User name</span>
+            <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" required /></LabelField>
+          <LabelField><span>Password</span>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></LabelField>
         </>
       ) : (
-        <label className="field"><span>{recovery ? "Recovery code" : P.t2}</span>
-          <input value={code} onChange={(e) => setCode(e.target.value)} inputMode={recovery ? "text" : "numeric"} autoComplete="one-time-code" required /></label>
+        <LabelField><span>{recovery ? "Recovery code" : P.t2}</span>
+          <input value={code} onChange={(e) => setCode(e.target.value)} inputMode={recovery ? "text" : "numeric"} autoComplete="one-time-code" required /></LabelField>
       )}
       <button className="btn btn-primary btn-wide" disabled={busy}>{ticket ? "Verify" : "Sign in"}</button>
       {ticket && <button type="button" className="btn btn-wide" onClick={() => { setRecovery(!recovery); setCode(""); }}>{recovery ? P.t3 : "Use a recovery code instead"}</button>}
@@ -120,8 +121,8 @@ function Enroll({ begin, extra, complete, after = "/" }: { begin: string; extra:
         <div className="qr-box"><QrCode text={step.totp_uri} label={P.t6} /></div>
         <p><code aria-label="Setup key">{step.totp_secret}</code></p>
         <p className="hint">{P.t7}<a href={step.totp_uri}>this address</a>.</p>
-        <label className="field"><span>{P.t8}</span>
-          <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required /></label>
+        <LabelField><span>{P.t8}</span>
+          <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required /></LabelField>
         <button className="btn btn-primary btn-wide" disabled={busy}>Finish</button>
       </form>
     );
@@ -130,17 +131,17 @@ function Enroll({ begin, extra, complete, after = "/" }: { begin: string; extra:
     <form onSubmit={first} className="stack">
       <Err error={error} />
       {"code" in extra({}) && (
-        <label className="field"><span>Setup code</span>
-          <input value={form.code ?? ""} onChange={set("code")} autoComplete="off" autoCapitalize="characters" required /></label>
+        <LabelField><span>Setup code</span>
+          <input value={form.code ?? ""} onChange={set("code")} autoComplete="off" autoCapitalize="characters" required /></LabelField>
       )}
       {"username" in extra({}) && (
         <>
-          <label className="field"><span>Your name</span><input value={form.display_name ?? ""} onChange={set("display_name")} autoComplete="name" /></label>
-          <label className="field"><span>User name</span><input value={form.username ?? ""} onChange={set("username")} autoComplete="username" required /></label>
+          <LabelField><span>Your name</span><input value={form.display_name ?? ""} onChange={set("display_name")} autoComplete="name" /></LabelField>
+          <LabelField><span>User name</span><input value={form.username ?? ""} onChange={set("username")} autoComplete="username" required /></LabelField>
         </>
       )}
-      <label className="field"><span>Password</span>
-        <input type="password" value={form.password ?? ""} onChange={set("password")} autoComplete="new-password" required aria-describedby="pw-hint" /></label>
+      <LabelField><span>Password</span>
+        <input type="password" value={form.password ?? ""} onChange={set("password")} autoComplete="new-password" required aria-describedby="pw-hint" /></LabelField>
       <p id="pw-hint" className="hint">{P.t9}</p>
       <button className="btn btn-primary btn-wide" disabled={busy}>Continue</button>
     </form>

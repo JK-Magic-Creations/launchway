@@ -6,6 +6,7 @@ import { RepositorySettings } from "./Repositories";
 import { terms } from "../terms";
 import { RepoTabs } from "../components/RepoTabs";
 import { prose } from "../prose";
+import { BtnPrimary, DivLoading, DivPage, LabelField, PSub } from "../kit/bits";
 const P = await prose("pages.Repository");
 
 // The imported history is a chunk of its own: it loads when its tab is opened.
@@ -27,19 +28,19 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "settings" | 
   const load = useCallback(() => { mirrorsApi.repository(path).then((r) => { setRepo(r); setError(null); }).catch(setError); }, [path]);
   useEffect(load, [load]);
   return (
-    <div className="page">
+    <DivPage>
       <header className="page-head">
         <div>
           <h1>{path}</h1>
-          {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? P.t0 : ""}{repo.archived ? ", archived" : ""}.</p>}
+          {repo && <PSub>{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? P.t0 : ""}{repo.archived ? ", archived" : ""}.</PSub>}
         </div>
       </header>
       <RepoTabs path={path} on={tab} />
       <ErrorBox error={error} />
       {tab === "settings" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
       {repo && tab === "mirrors" && <MirrorsTab repo={repo} reload={load} />}
-      {repo && tab === "history" && <Suspense fallback={<div className="loading">Loading…</div>}><ImportedHistory path={path} /></Suspense>}
-    </div>
+      {repo && tab === "history" && <Suspense fallback={<DivLoading>Loading…</DivLoading>}><ImportedHistory path={path} /></Suspense>}
+    </DivPage>
   );
 }
 
@@ -75,14 +76,14 @@ function MirrorsTab({ repo, reload }: { repo: Repository; reload: () => void }) 
       {list && list.map((m) => (
         <section key={m.id} className="card mirror" aria-label={`${m.direction} mirror`}>
           <h2 className="h-sm">{m.direction === "pull" ? "Pull mirror of" : "Push mirror to"} <Mono>{m.url}</Mono></h2>
-          <p className="sub">
+          <PSub>
             {!m.enabled ? "Paused. " : m.running ? "Running now. " : ""}
             {m.state === "ok" && <>Last synced {m.last_success ? ago(Date.parse(m.last_success)) : "never"}, {m.refs} refs. </>}
             {m.state === "pending" && "Not run yet. "}
             {m.direction === "push" ? "Behind by " : "Since the last sync: "}{span(m.lag_seconds)}.
             {m.behind && <strong> It has fallen behind.</strong>}
             {m.credential ? <> Credential read from <Mono>{m.credential}</Mono>.</> : " No credential."}
-          </p>
+          </PSub>
           {m.last_error && <div className="callout callout-err" role="alert">{terms().say("Last {run} failed (")}{m.failures} in a row): {m.last_error}</div>}
           <div className="actions">
             <button type="button" className="btn" disabled={!!busy} onClick={() => act(m.id, "sync", () => mirrorsApi.sync(repo.path, m.id))}>{busy === m.id + "sync" ? "Syncing…" : "Sync now"}</button>
@@ -119,31 +120,31 @@ function AddMirror({ repo, hasPull, onAdded }: { repo: Repository; hasPull: bool
     <section className="card">
       <h2 className="h-sm">Add a mirror</h2>
       <form onSubmit={submit} className="inputs-form" aria-label="Add a mirror">
-        <label className="field"><span>Direction</span>
+        <LabelField><span>Direction</span>
           <select value={direction} onChange={(e) => setDirection(e.target.value as "pull" | "push")}>
             <option value="pull" disabled={hasPull}>{P.t4}</option>
             <option value="push">{P.t5}</option>
-          </select></label>
-        <label className="field"><span>Address</span>
-          <input value={url} required placeholder={P.t6} onChange={(e) => setUrl(e.target.value)} /></label>
-        <label className="field"><span>{P.t7}</span>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-        <label className="field"><span>{P.t8}</span>
+          </select></LabelField>
+        <LabelField><span>Address</span>
+          <input value={url} required placeholder={P.t6} onChange={(e) => setUrl(e.target.value)} /></LabelField>
+        <LabelField><span>{P.t7}</span>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} /></LabelField>
+        <LabelField><span>{P.t8}</span>
           <select value={credKind} onChange={(e) => setCredKind(e.target.value as "env" | "file" | "")}>
             <option value="">{P.t9}</option>
             <option value="env">{P.t10}</option>
             <option value="file">A file on the server</option>
-          </select></label>
+          </select></LabelField>
         {credKind && (
-          <label className="field"><span>{credKind === "env" ? "Variable name" : "File path"}</span>
+          <LabelField><span>{credKind === "env" ? "Variable name" : "File path"}</span>
             <input value={cred} placeholder={credKind === "env" ? "GITEA_TOKEN" : "/run/secrets/gitea-token"} onChange={(e) => setCred(e.target.value)} />
-            <small>{P.t11}</small></label>
+            <small>{P.t11}</small></LabelField>
         )}
-        <p className="sub">{P.t12}<Mono>forge.mirror_allow</Mono>.{direction === "pull" && P.t13}</p>
+        <PSub>{P.t12}<Mono>forge.mirror_allow</Mono>.{direction === "pull" && P.t13}</PSub>
         <ErrorBox error={error} />
-        <div><button type="submit" className="btn btn-primary" disabled={busy || !url.trim()}>{busy ? "Adding…" : "Add mirror"}</button></div>
+        <div><BtnPrimary disabled={busy || !url.trim()}>{busy ? "Adding…" : "Add mirror"}</BtnPrimary></div>
       </form>
-      <p className="sub"><Link href="/projects">{terms().say("{Projects}")}</Link> {P.t14}</p>
+      <PSub><Link href="/projects">{terms().say("{Projects}")}</Link> {P.t14}</PSub>
     </section>
   );
 }

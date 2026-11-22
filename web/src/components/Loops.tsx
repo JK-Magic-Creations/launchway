@@ -4,6 +4,7 @@ import { StatusIcon, statusLabel, tone } from "./ui";
 import type { Loop, LoopMember, RunWithTriggers } from "../triggers";
 import "../triggers.css";
 import { terms } from "../terms";
+import { ThCol, ThRow } from "../kit/bits";
 
 const loopsOf = (run: RunDetail): Loop[] => (run as RunWithTriggers).graph.loops ?? [];
 
@@ -119,9 +120,9 @@ export function LoopPanel({ run, loop, selected, onSelect }: { run: RunDetail; l
     const find = (r: string, c: string) => base.find((m) => m.each[rk] === r && m.each[ck] === c);
     grid = (
       <table className="loop-grid">
-        <thead><tr><th scope="col">{rk} \ {ck}</th>{values(ck).map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
+        <thead><tr><ThCol>{rk} \ {ck}</ThCol>{values(ck).map((c) => <ThCol key={c}>{c}</ThCol>)}</tr></thead>
         <tbody>{values(rk).map((r) => (
-          <tr key={r}><th scope="row">{r}</th>{values(ck).map((c) => <td key={c}>{cell(find(r, c), statusLabel(find(r, c) ? memberStatus(run, find(r, c)!) : "pending"))}</td>)}</tr>
+          <tr key={r}><ThRow>{r}</ThRow>{values(ck).map((c) => <td key={c}>{cell(find(r, c), statusLabel(find(r, c) ? memberStatus(run, find(r, c)!) : "pending"))}</td>)}</tr>
         ))}</tbody>
       </table>
     );

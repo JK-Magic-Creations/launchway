@@ -8,6 +8,7 @@ import { Blank, ErrorPanel, itemHref, Loading, money, scopeLabel, useLoad, when,
 import { workApi, type Agent, type AgentLogEntry, type SpendRow } from "./workApi";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivFaintSmall, PSub, SpanFaint, SpanFaintSmall, TdNum, ThCol, ThRow } from "../kit/bits";
 const P = await prose("work.Agents");
 
 // The agent registry: who may work on items without a person, how much each may spend, a switch that stops one at once, and
@@ -43,15 +44,15 @@ export default function Agents() {
         <div className="sheet tablewrap">
           <table className="table wk-table">
             <caption className="visually-hidden">Registered agents</caption>
-            <thead><tr><th scope="col">Agent</th><th scope="col">State</th><th scope="col">Queue</th><th scope="col">Active</th><th scope="col">Today</th><th scope="col">In review</th><th scope="col">Spent today</th></tr></thead>
+            <thead><tr><ThCol>Agent</ThCol><ThCol>State</ThCol><ThCol>Queue</ThCol><ThCol>Active</ThCol><ThCol>Today</ThCol><ThCol>In review</ThCol><ThCol>Spent today</ThCol></tr></thead>
             <tbody>
               {list.map((a) => (
                 <tr key={a.id} className={picked === a.name ? "on" : ""}>
-                  <th scope="row"><button type="button" className="wk-textbtn strong" aria-pressed={picked === a.name} onClick={() => setPicked(picked === a.name ? null : a.name)}>{a.name}</button>
-                    <div className="faint small">{a.model || "model not set"}{a.class ? `, ${a.class} jobs` : ""}</div></th>
+                  <ThRow><button type="button" className="wk-textbtn strong" aria-pressed={picked === a.name} onClick={() => setPicked(picked === a.name ? null : a.name)}>{a.name}</button>
+                    <DivFaintSmall>{a.model || "model not set"}{a.class ? `, ${a.class} jobs` : ""}</DivFaintSmall></ThRow>
                   <td>{a.disabled ? <Chip tone="bad">Switched off</Chip> : <Chip tone="ok">On</Chip>}</td>
-                  <td className="num">{a.queued}</td><td className="num">{a.active}</td><td className="num">{a.today}</td><td className="num">{a.in_review}</td>
-                  <td className="num">{money(a.used_cents_day)}{a.budget_cents_day ? ` of ${money(a.budget_cents_day)}` : " (no limit)"}</td>
+                  <TdNum>{a.queued}</TdNum><TdNum>{a.active}</TdNum><TdNum>{a.today}</TdNum><TdNum>{a.in_review}</TdNum>
+                  <TdNum>{money(a.used_cents_day)}{a.budget_cents_day ? ` of ${money(a.budget_cents_day)}` : " (no limit)"}</TdNum>
                 </tr>
               ))}
             </tbody>
@@ -60,21 +61,21 @@ export default function Agents() {
       )}
       {current && <AgentPanel key={current.name} a={current} onChanged={refresh} onToken={(t) => setToken({ agent: current.name, token: t, rotated: true })} onError={setError} />}
       <Sheet title="Spend" pad>
-        <p className="sub">{spend.data?.note ? spend.data.note[0].toUpperCase() + spend.data.note.slice(1) + "." : ""}</p>
+        <PSub>{spend.data?.note ? spend.data.note[0].toUpperCase() + spend.data.note.slice(1) + "." : ""}</PSub>
         <ErrorPanel error={spend.error} onRetry={spend.reload} />
         {spend.data && spend.data.rows.length === 0 && <p className="faint">Nothing has been spent yet.</p>}
         {spend.data && spend.data.rows.length > 0 && (
           <div className="tablewrap"><table className="table wk-table">
             <caption className="visually-hidden">{terms().say(P.t2)}</caption>
-            <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Budget</th><th scope="col">Spent</th><th scope="col">Remaining</th><th scope="col">Tokens</th></tr></thead>
+            <thead><tr><ThCol>Name</ThCol><ThCol>Kind</ThCol><ThCol>Budget</ThCol><ThCol>Spent</ThCol><ThCol>Remaining</ThCol><ThCol>Tokens</ThCol></tr></thead>
             <tbody>{spend.data.rows.map((r, i) => (
               <tr key={r.kind + r.name + i}>
-                <th scope="row">{r.kind === "item" ? <Link href={itemHref(r.name)}>{r.name}</Link> : r.name}</th>
+                <ThRow>{r.kind === "item" ? <Link href={itemHref(r.name)}>{r.name}</Link> : r.name}</ThRow>
                 <td>{r.kind}</td>
-                <td className="num">{r.budget_cents ? money(r.budget_cents) : <span className="faint">No limit</span>}</td>
-                <td className="num">{money(r.spent_cents)}</td>
-                <td className="num">{r.budget_cents ? money(r.remaining_cents ?? 0) : <span className="faint">Not limited</span>}</td>
-                <td className="num">{r.spent_tokens.toLocaleString("en-US")}</td>
+                <TdNum>{r.budget_cents ? money(r.budget_cents) : <SpanFaint>No limit</SpanFaint>}</TdNum>
+                <TdNum>{money(r.spent_cents)}</TdNum>
+                <TdNum>{r.budget_cents ? money(r.remaining_cents ?? 0) : <SpanFaint>Not limited</SpanFaint>}</TdNum>
+                <TdNum>{r.spent_tokens.toLocaleString("en-US")}</TdNum>
               </tr>
             ))}</tbody>
           </table></div>
@@ -157,7 +158,7 @@ function AgentPanel({ a, onChanged, onToken, onError }: { a: Agent; onChanged: (
   };
   return (
     <Sheet title={a.name} pad actions={a.disabled ? <Chip tone="bad">Switched off</Chip> : <Chip tone="ok">On</Chip>}>
-      <p className="sub">{a.description || "No description."} Registered at {scopeLabel(scopeText(a))} by {a.owner}. {a.last_seen ? `Last seen ${when(a.last_seen)}.` : "Never seen yet."} Token {a.token_hint ? `ends ${a.token_hint}` : "hidden"}.</p>
+      <PSub>{a.description || "No description."} Registered at {scopeLabel(scopeText(a))} by {a.owner}. {a.last_seen ? `Last seen ${when(a.last_seen)}.` : "Never seen yet."} Token {a.token_hint ? `ends ${a.token_hint}` : "hidden"}.</PSub>
       <div className="acts wk-agent-acts">
         <Button kind={a.disabled ? "ok" : "bad"} onClick={() => setConfirm("off")}>{a.disabled ? "Switch on" : "Switch off"}</Button>
         <Button onClick={() => setConfirm("rotate")}>Rotate token</Button>
@@ -188,7 +189,7 @@ function AgentPanel({ a, onChanged, onToken, onError }: { a: Agent; onChanged: (
       <ErrorPanel error={acts.error} onRetry={acts.reload} />
       {acts.data && acts.data.length === 0 && <p className="faint">{P.t9}</p>}
       {acts.data && acts.data.length > 0 && (
-        <ol className="wk-timeline">{acts.data.slice(0, 20).map((x, i) => <li key={i}><strong>{x.action.replace(/_/g, " ")}</strong>{x.item && <> <Link href={itemHref(x.item)}>{x.item}</Link></>}{x.detail && <> {x.detail}</>} <span className="faint small">{when(x.at)}</span></li>)}</ol>
+        <ol className="wk-timeline">{acts.data.slice(0, 20).map((x, i) => <li key={i}><strong>{x.action.replace(/_/g, " ")}</strong>{x.item && <> <Link href={itemHref(x.item)}>{x.item}</Link></>}{x.detail && <> {x.detail}</>} <SpanFaintSmall>{when(x.at)}</SpanFaintSmall></li>)}</ol>
       )}
     </Sheet>
   );

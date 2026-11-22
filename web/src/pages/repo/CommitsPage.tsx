@@ -5,6 +5,7 @@ import { EmptyState } from "../../kit/layout";
 import { navigate } from "../../router";
 import { SignatureBadge, useSignatures } from "../../components/Signature";
 import { Breadcrumb, CopyButton, IconAction, MsgLink, RefSwitcher, RepoFrame, useQuery, useRepo, when } from "./common";
+import { BtnSm, DivLoading, SpanMono } from "../../kit/bits";
 
 /** The commits of a branch, tag or commit, or only those that changed one path (a file's history follows renames). */
 export function CommitsPage({ path }: { path: string }) {
@@ -25,7 +26,7 @@ export function CommitsPage({ path }: { path: string }) {
   const current = shownRef || repo?.default_branch || "main";
   return (
     <RepoFrame path={path} tab="commits" title={p ? `History of ${p.split("/").pop()}` : "Commits"} error={error}
-      sentence={p ? <>The commits that changed <span className="mono">{p}</span>{" "}on <span className="mono">{current}</span>.</> : <>The newest commits on <span className="mono">{current}</span>.</>}
+      sentence={p ? <>The commits that changed <SpanMono>{p}</SpanMono>{" "}on <SpanMono>{current}</SpanMono>.</> : <>The newest commits on <SpanMono>{current}</SpanMono>.</>}
       actions={<RefSwitcher repo={path} current={current} onPick={(r) => navigate(commitsHref(path, r, p || undefined))} />}>
       {p && <div className="code-bar"><Breadcrumb repo={path} refName={current} path={p} /></div>}
       {items && items.length === 0 && <EmptyState title="No commits here">{p ? `Nothing named ${p} has been changed on ${current}.` : "This branch has no commits yet."}</EmptyState>}
@@ -45,11 +46,11 @@ export function CommitsPage({ path }: { path: string }) {
               </li>
             ))}
           </ul>
-          {items.length >= limit && limit < 200 && <p className="code-more"><button type="button" className="btn btn-sm" onClick={() => setLimit(Math.min(limit * 2, 200))}>Show older commits</button></p>}
+          {items.length >= limit && limit < 200 && <p className="code-more"><BtnSm onClick={() => setLimit(Math.min(limit * 2, 200))}>Show older commits</BtnSm></p>}
           {items.length >= 200 && <p className="faint small code-note">The newest 200 commits are shown. To go further back, clone the repository or open an older commit and look there.</p>}
         </section>
       )}
-      {!items && !error && <div className="loading">Loading…</div>}
+      {!items && !error && <DivLoading>Loading…</DivLoading>}
     </RepoFrame>
   );
 }

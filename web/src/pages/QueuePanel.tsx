@@ -4,6 +4,7 @@ import { ErrorBox } from "../components/ui";
 import { useLoad } from "../guided/useLoad";
 import { Sheet } from "../kit/layout";
 import { terms } from "../terms";
+import { SpanFaintSmall } from "../kit/bits";
 
 interface Action { name: string; available: boolean; reason?: string }
 interface Entry { run: string; number: number; project: string; position: number; code: string; reason: string; actions: Action[] }
@@ -18,7 +19,7 @@ export default function QueuePanel({ project }: { project: string }) {
   const act = (run: string, action: string) => call("POST", `/api/v1/runs/${run}/queue`, { action }).then(() => { setErr(null); q.reload(); }).catch(setErr);
   if (!Array.isArray(q.data) || q.data.length === 0) return null;
   return (
-    <Sheet title="Waiting for room" actions={<span className="faint small">{terms().say("In the order they will go. A limit holds a {run} back; running steps are never stopped for it.")}</span>}>
+    <Sheet title="Waiting for room" actions={<SpanFaintSmall>{terms().say("In the order they will go. A limit holds a {run} back; running steps are never stopped for it.")}</SpanFaintSmall>}>
       <ErrorBox error={err} />
       <ol className="sh-b">
         {q.data.map((e) => (

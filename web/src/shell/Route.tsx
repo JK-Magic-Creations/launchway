@@ -1,6 +1,7 @@
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
 import { visibleSections, type Ctx, type SectionId } from "../nav/model";
+import { SpanHidden } from "../kit/bits";
 
 export type PulseState = "quiet" | "running" | "waiting" | "failing";
 
@@ -28,7 +29,7 @@ export function Route({ ctx, on, needs }: { ctx: Ctx; on: SectionId | null; need
             {s.label}
             {s.id === "home" && needs > 0 && <span className="badge" aria-label={`${needs} ${needs === 1 ? "thing needs" : "things need"} you`}>{needs}</span>}
           </a>
-          <span id={`tip-${s.id}`} className="visually-hidden">{s.promise}</span>
+          <SpanHidden id={`tip-${s.id}`}>{s.promise}</SpanHidden>
         </span>
       ))}
     </nav>

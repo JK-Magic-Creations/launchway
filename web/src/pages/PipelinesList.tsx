@@ -13,6 +13,7 @@ import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
 import { terms } from "../terms";
 import { AddButtons } from "./squadrons/shared";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 // The grouped, searchable view loads after the first paint; the flat list below is what shows meanwhile (and keeps the page height).
 const PipelinesExplorer = lazy(() => import("../explorer/PipelinesExplorer"));
@@ -48,13 +49,13 @@ export function PipelinesPage() {
     for (const r of all ?? []) m.set(r.project, [...(m.get(r.project) ?? []), r]);
     return m;
   }, [all]);
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const rows = inst.projects;
   const flat = flatList(rows, byProject, starts, now);
   const failing = rows.filter((p) => p.last_run?.status === "failed").length;
   const running = rows.filter((p) => p.last_run?.status === "running" || p.last_run?.status === "queued").length;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Pipelines" title="Pipelines"
         sentence={rows.length === 0 ? "A pipeline is a set of steps that runs when something happens. None exists yet." :
           failing > 0 ? <><b>{failing} {failing === 1 ? "pipeline stopped" : "pipelines stopped"}</b> {terms().say("on its last {run}. The others are fine.")}</> : "Every pipeline's last run is fine or still going."}
@@ -73,7 +74,7 @@ export function PipelinesPage() {
       ) : (
         <Suspense fallback={flat}><PipelinesExplorer projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -93,7 +94,7 @@ function flatList(rows: Project[], byProject: Map<string, RunSummary[]>, starts:
                   </div>
                   <div className="cell" style={{ minWidth: 200 }}>
                     {r ? <><Status state={stateOf(r.status)} /><span><EntityLink kind="run" name={`#${r.number}`} id={r.id} /> {r.status === "failed" ? "failed" : r.status === "succeeded" ? "passed" : r.status}, {ago(r.created_at, now)}<br />
-                      <span className="faint small">{elapsed(r.started_at || r.created_at, r.finished_at, now) ? `took ${elapsed(r.started_at || r.created_at, r.finished_at, now)}` : ""}</span></span></> : <span className="faint">Not run yet</span>}
+                      <SpanFaintSmall>{elapsed(r.started_at || r.created_at, r.finished_at, now) ? `took ${elapsed(r.started_at || r.created_at, r.finished_at, now)}` : ""}</SpanFaintSmall></span></> : <SpanFaint>Not run yet</SpanFaint>}
                   </div>
                   <div className="cell" style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}><TrendStrip trend={t} label={`The last runs of ${p.name}`} /><RateText trend={t} /></div>
                   <LinkButton href={`/projects/${encodeURIComponent(p.name)}/pipeline`} sm>Open</LinkButton>

@@ -12,6 +12,7 @@ import {
 import { terms } from "../terms";
 import "../standards.css";
 import { prose } from "../prose";
+import { BtnSm, DivFaintSmall, DivLoading, SpanFaint, SpanFaintSmall, SpanHidden, SpanMono, TdNum, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Standards");
 
 type ProjectStandings = ProjectStandards;
@@ -55,26 +56,26 @@ function Chain({ v, w }: { v: Value<unknown>; w: Record<string, string> }) {
 function CheckRow({ c, w }: { c: EffectiveCheck; w: Record<string, string> }) {
   return (
     <tr className={c.active ? "" : "st-dim"}>
-      <th scope="row">
+      <ThRow>
         <span className="st-ct">{c.title}</span>
         <span className="st-why">{c.why}</span>
-        <span className="faint small">Tool {c.tool} ({c.license}); up to {Math.round(c.budget_seconds / 60)} minutes{c.network ? "; " + c.network : "; needs no network"}</span>
-      </th>
+        <SpanFaintSmall>Tool {c.tool} ({c.license}); up to {Math.round(c.budget_seconds / 60)} minutes{c.network ? "; " + c.network : "; needs no network"}</SpanFaintSmall>
+      </ThRow>
       {c.unavailable ? (
         // An unavailable check has no state to show and nothing to set: only the plain fact.
-        <><td><span className="faint">Not available yet</span></td><td><span className="faint">–</span></td></>
+        <><td><SpanFaint>Not available yet</SpanFaint></td><td><SpanFaint>–</SpanFaint></td></>
       ) : (
         <>
           <td>
             <span className={"st-state st-state-" + c.state.value}>{STATE_WORD[c.state.value]}</span>
-            {c.gates && c.state.value !== "block" && c.applies ? <span className="faint small"> can block</span> : null}
+            {c.gates && c.state.value !== "block" && c.applies ? <SpanFaintSmall> can block</SpanFaintSmall> : null}
             <LockNote v={c.state} w={w} />
             <Chain v={c.state} w={w} />
           </td>
           <td>{sourceText(c.state.from, w)}</td>
         </>
       )}
-      <td>{c.active ? <span className="st-on">{terms().say("Runs on every {run}")}</span> : <span className="faint">{c.reason}</span>}{c.applies && <div className="faint small">Because {c.because}</div>}</td>
+      <td>{c.active ? <span className="st-on">{terms().say("Runs on every {run}")}</span> : <SpanFaint>{c.reason}</SpanFaint>}{c.applies && <DivFaintSmall>Because {c.because}</DivFaintSmall>}</td>
     </tr>
   );
 }
@@ -91,11 +92,11 @@ function Gate({ e, w }: { e: Effective; w: Record<string, string> }) {
   return (
     <table className="table st-gate">
       <caption className="visually-hidden">{P.t9}</caption>
-      <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
+      <thead><tr><ThCol>Setting</ThCol><ThCol>Value</ThCol><ThCol>From</ThCol></tr></thead>
       <tbody>
         {rows.map((r) => (
           <tr key={r.label}>
-            <th scope="row">{r.label}<span className="faint small st-hint">{r.hint}</span></th>
+            <ThRow>{r.label}<span className="faint small st-hint">{r.hint}</span></ThRow>
             <td><strong>{r.text}</strong><LockNote v={r.v} w={w} /><Chain v={r.v} w={w} /></td>
             <td>{sourceText(r.v.from, w)}</td>
           </tr>
@@ -130,8 +131,8 @@ function History({ s }: { s: Series }) {
       <details>
         <summary>The same as a table</summary>
         <div className="table-scroll"><table className="table">
-          <thead><tr><th scope="col">Day</th><th scope="col" className="num">Open</th><th scope="col" className="num">Critical</th><th scope="col" className="num">High</th><th scope="col" className="num">Medium</th><th scope="col" className="num">Low</th></tr></thead>
-          <tbody>{[...pts].reverse().slice(0, 30).map((p) => <tr key={p.day}><th scope="row">{p.day}</th><td className="num">{p.total}</td><td className="num">{p.critical}</td><td className="num">{p.high}</td><td className="num">{p.medium}</td><td className="num">{p.low}</td></tr>)}</tbody>
+          <thead><tr><ThCol>Day</ThCol><ThCol className="num">Open</ThCol><ThCol className="num">Critical</ThCol><ThCol className="num">High</ThCol><ThCol className="num">Medium</ThCol><ThCol className="num">Low</ThCol></tr></thead>
+          <tbody>{[...pts].reverse().slice(0, 30).map((p) => <tr key={p.day}><ThRow>{p.day}</ThRow><TdNum>{p.total}</TdNum><TdNum>{p.critical}</TdNum><TdNum>{p.high}</TdNum><TdNum>{p.medium}</TdNum><TdNum>{p.low}</TdNum></tr>)}</tbody>
         </table></div>
       </details>
     </figure>
@@ -160,7 +161,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
       <ProjectHead name={name} on="standards" title={<>{terms().say("{Standards}")} of {name}</>}
         sentence={<>{P.t11}<strong>{name}</strong>{P.t12}</>} />
       <ErrorBox error={error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {e && e.off.value && (
         <div className="callout callout-draft st-off" role="status">
           <strong>{terms().say("{Standards}")} are switched off</strong> by {sourceText(e.off.from, w)}{e.off_reason ? <>: “{e.off_reason}”</> : null}{P.t13}{" "}{P.t14}<Link href="/settings/standards">Settings, {terms().say("{Standards}")}</Link>.
@@ -178,7 +179,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
         <>
           <section className="card" aria-labelledby="st-found">
             <h2 id="st-found" className="h-sm">{P.t16}</h2>
-            <ul className="chips st-eco">{e.detected.map((d) => <li key={d.ecosystem} className="chip">{d.title}<span className="visually-hidden"> ({d.because})</span></li>)}</ul>
+            <ul className="chips st-eco">{e.detected.map((d) => <li key={d.ecosystem} className="chip">{d.title}<SpanHidden> ({d.because})</SpanHidden></li>)}</ul>
             <p className="faint small">The profile (version {e.profile_version}{P.t17}</p>
           </section>
 
@@ -187,7 +188,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
             <div className="card card-flush table-scroll">
               <table className="table st-table">
                 <caption className="visually-hidden">{P.t18}</caption>
-                <thead><tr><th scope="col">Check</th><th scope="col">State</th><th scope="col">Set by</th><th scope="col">On this repository</th></tr></thead>
+                <thead><tr><ThCol>Check</ThCol><ThCol>State</ThCol><ThCol>Set by</ThCol><ThCol>On this repository</ThCol></tr></thead>
                 {[...checksByEco.entries()].map(([eco, cs]) => (
                   <tbody key={eco} className="st-group">
                     <tr><th colSpan={4} scope="colgroup" className="st-eco-h">{profile?.ecosystems.find((x) => x.id === eco)?.title ?? eco}</th></tr>
@@ -208,7 +209,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
                   {e.exemptions.map((x, i) => (
                     <li key={i} className={x.expired ? "st-ignored" : ""}>
                       <strong>{[x.check && "check " + x.check, x.rule && "rule " + x.rule, x.package && "package " + x.package, x.path && x.path].filter(Boolean).join(", ")}</strong> until {x.expires}{x.expired ? " (ended)" : ""} — {x.reason}
-                      <span className="faint small"> From {sourceText(x.from, w)}.</span>
+                      <SpanFaintSmall> From {sourceText(x.from, w)}.</SpanFaintSmall>
                     </li>
                   ))}
                 </ul>
@@ -219,13 +220,13 @@ export function ProjectStandardsPage({ name }: { name: string }) {
           <section className="card" aria-labelledby="st-file">
             <h2 id="st-file" className="h-sm">The repository’s own settings</h2>
             <p>
-              {data?.file ? <>The repository has <span className="mono">.launchway/standards.yaml</span>{P.t19}</>
-                : <>The repository has no <span className="mono">.launchway/standards.yaml</span>{P.t20}</>}
+              {data?.file ? <>The repository has <SpanMono>.launchway/standards.yaml</SpanMono>{P.t19}</>
+                : <>The repository has no <SpanMono>.launchway/standards.yaml</SpanMono>{P.t20}</>}
             </p>
             {data?.file_problems && data.file_problems.length > 0 && (
               <div className="callout callout-draft" role="alert"><strong>The file has problems</strong>{P.t21}<ul>{data.file_problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>{terms().say(P.t22)}</button>
+            <BtnSm onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>{terms().say(P.t22)}</BtnSm>
             {file && <textarea className="code st-file" readOnly rows={Math.min(24, file.from_settings.split("\n").length + 1)} aria-label={terms().say(P.t23)} value={file.from_settings} />}
           </section>
         </>
@@ -367,18 +368,18 @@ export function SettingsStandardsPage() {
             <div className="card card-flush table-scroll">
               <table className="table st-cov">
                 <caption className="visually-hidden">{P.t39}</caption>
-                <thead><tr><th scope="col">Repository</th>{(profile?.checks ?? []).filter((c) => c.available).map((c) => <th key={c.id} scope="col" className="st-covh"><span title={c.title}>{c.id}</span></th>)}<th scope="col">Open findings</th></tr></thead>
+                <thead><tr><ThCol>Repository</ThCol>{(profile?.checks ?? []).filter((c) => c.available).map((c) => <ThCol key={c.id} className="st-covh"><span title={c.title}>{c.id}</span></ThCol>)}<ThCol>Open findings</ThCol></tr></thead>
                 <tbody>
                   {cov.projects.map((p) => (
                     <tr key={p.project}>
-                      <th scope="row"><Link href={`/projects/${encodeURIComponent(p.project)}/standards`}>{p.project}</Link>{p.unit ? <span className="faint small"> · {p.unit}</span> : null}</th>
+                      <ThRow><Link href={`/projects/${encodeURIComponent(p.project)}/standards`}>{p.project}</Link>{p.unit ? <SpanFaintSmall> · {p.unit}</SpanFaintSmall> : null}</ThRow>
                       {(profile?.checks ?? []).filter((c) => c.available).map((c) => {
                         const cell = p.checks[c.id];
                         if (p.off) return <td key={c.id} className="st-c st-c-off">off</td>;
-                        if (!cell) return <td key={c.id} className="st-c st-c-na"><span className="visually-hidden">does not apply</span>–</td>;
+                        if (!cell) return <td key={c.id} className="st-c st-c-na"><SpanHidden>does not apply</SpanHidden>–</td>;
                         return <td key={c.id} className={"st-c st-c-" + (cell.active ? cell.state : "off")}>{cell.active ? (cell.state === "block" ? "blocks" : "advises") : "off"}{cell.locked ? <span aria-label="locked"> 🔒</span> : null}</td>;
                       })}
-                      <td>{p.off ? <span className="faint">not recorded</span> : <>{p.open["critical"] ?? 0} critical, {p.open["high"] ?? 0} high, {p.open["medium"] ?? 0} medium</>}</td>
+                      <td>{p.off ? <SpanFaint>not recorded</SpanFaint> : <>{p.open["critical"] ?? 0} critical, {p.open["high"] ?? 0} high, {p.open["medium"] ?? 0} medium</>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -406,17 +407,17 @@ export function SettingsStandardsPage() {
           <fieldset>
             <legend>Checks</legend>
             <table className="table st-edit-table">
-              <thead><tr><th scope="col">Check</th><th scope="col">State</th><th scope="col">Lock</th></tr></thead>
+              <thead><tr><ThCol>Check</ThCol><ThCol>State</ThCol><ThCol>Lock</ThCol></tr></thead>
               <tbody>
                 {profile.checks.filter((c) => c.available).map((c) => (
                   <tr key={c.id}>
-                    <th scope="row">{c.title}<span className="faint small st-hint">{c.id}, by default {c.default}</span></th>
+                    <ThRow>{c.title}<span className="faint small st-hint">{c.id}, by default {c.default}</span></ThRow>
                     <td>
                       <select aria-label={`State of ${c.title}`} value={draft.checks?.[c.id] ?? ""} onChange={(e) => set((s) => { s.checks = { ...(s.checks ?? {}) }; if (e.target.value) s.checks[c.id] = e.target.value as State; else delete s.checks[c.id]; return s; })}>
                         <option value="">inherit</option>{STATE_OPTIONS.filter((o) => o !== "block" || c.gates).map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </td>
-                    <td><label><input type="checkbox" checked={lockOf("check." + c.id)} onChange={(e) => lock("check." + c.id, e.target.checked)} /> <span className="visually-hidden">Lock {c.title}</span>lock</label></td>
+                    <td><label><input type="checkbox" checked={lockOf("check." + c.id)} onChange={(e) => lock("check." + c.id, e.target.checked)} /> <SpanHidden>Lock {c.title}</SpanHidden>lock</label></td>
                   </tr>
                 ))}
               </tbody>
@@ -449,7 +450,7 @@ export function SettingsStandardsPage() {
             {(draft.ignore ?? []).length === 0 ? <p className="faint">None.</p> : (
               <ul className="st-ex">{(draft.ignore ?? []).map((x, i) => (
                 <li key={i}><strong>{[x.check && "check " + x.check, x.rule && "rule " + x.rule, x.package && "package " + x.package, x.path].filter(Boolean).join(", ")}</strong> until {x.expires} — {x.reason}{" "}
-                  <button type="button" className="btn btn-sm" onClick={() => set((s) => { s.ignore = (s.ignore ?? []).filter((_, j) => j !== i); return s; })}>Remove</button></li>
+                  <BtnSm onClick={() => set((s) => { s.ignore = (s.ignore ?? []).filter((_, j) => j !== i); return s; })}>Remove</BtnSm></li>
               ))}</ul>
             )}
             <label className="st-lockl"><input type="checkbox" checked={lockOf("ignore")} onChange={(e) => lock("ignore", e.target.checked)} /> {P.t45}</label>

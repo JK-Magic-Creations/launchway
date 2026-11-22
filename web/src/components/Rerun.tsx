@@ -7,6 +7,7 @@ import { ErrorBox, Mono } from "./ui";
 import { RerunInputsNote } from "./RunTrigger";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, DivActions, DivLoading, LabelField, PSub, SpanFaint } from "../kit/bits";
 const P = await prose("components.Rerun");
 
 // RerunButton offers a new run of a finished run from the step shown, with
@@ -40,16 +41,16 @@ export function RerunPicker({ run }: { run: RunDetail }) {
         <dialog className="dialog" ref={(d) => { if (d && !d.open) d.showModal(); }} onClose={() => setChoosing(false)} aria-labelledby="rerun-pick-title">
           <form method="dialog" onSubmit={(e) => { e.preventDefault(); setFrom({ from: [pick] }); }}>
             <h2 id="rerun-pick-title">Re-run #{run.number} from which step?</h2>
-            <p className="sub">{P.t1}</p>
-            <label className="field"><span>Start again from</span>
+            <PSub>{P.t1}</PSub>
+            <LabelField><span>Start again from</span>
               <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Step to re-run from">
                 {run.step_list.map((s) => <option key={s.id} value={s.id}>{s.id} ({s.status})</option>)}
               </select>
-            </label>
-            <div className="dialog-actions">
+            </LabelField>
+            <DivActions>
               <button type="button" className="btn" onClick={() => setChoosing(false)}>Cancel</button>
-              <button type="submit" className="btn btn-primary">Show what would run</button>
-            </div>
+              <BtnPrimary>Show what would run</BtnPrimary>
+            </DivActions>
           </form>
         </dialog>
       )}
@@ -101,24 +102,24 @@ function RerunDialog({ run, from, onClose }: { run: RunDetail; from: RerunFrom; 
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="rerun-title">
       <form method="dialog" onSubmit={(e) => { e.preventDefault(); go(); }}>
         <h2 id="rerun-title">Re-run #{run.number} from {label}</h2>
-        <p className="sub">A new run of {run.project} at the same commit, <Mono>{shortSha(run.sha)}</Mono>, with the same pipeline{run.graph.libraries?.length ? " and library commits" : ""}{run.draft ? P.t3 : ""}.</p>
+        <PSub>A new run of {run.project} at the same commit, <Mono>{shortSha(run.sha)}</Mono>, with the same pipeline{run.graph.libraries?.length ? " and library commits" : ""}{run.draft ? P.t3 : ""}.</PSub>
         <div className="callout callout-draft">{P.t4}</div>
-        {refusal ? <ErrorBox error={refusal} /> : !plan ? <div className="loading">Working out what runs…</div> : (
+        {refusal ? <ErrorBox error={refusal} /> : !plan ? <DivLoading>Working out what runs…</DivLoading> : (
           <div className="rerun-plan">
             <div><h3 className="h-sm">Will run</h3><ul>{plan.run.map((id) => <li key={id}><Mono>{id}</Mono></li>)}</ul></div>
             <div><h3 className="h-sm">Will be reused from #{run.number}</h3>
-              {plan.reuse.length ? <ul>{plan.reuse.map((id) => <ReusedItem key={id} id={id} plan={plan} run={run} />)}</ul> : <p className="sub">{P.t5}</p>}
+              {plan.reuse.length ? <ul>{plan.reuse.map((id) => <ReusedItem key={id} id={id} plan={plan} run={run} />)}</ul> : <PSub>{P.t5}</PSub>}
             </div>
           </div>
         )}
         {plan && <PlanFacts plan={plan} run={run} />}
         <RerunInputsNote run={run} />
-        <p className="sub"><strong>Resume</strong> {terms().say(P.t6)} <strong>re-run</strong> {terms().say(P.t7)}</p>
+        <PSub><strong>Resume</strong> {terms().say(P.t6)} <strong>re-run</strong> {terms().say(P.t7)}</PSub>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={!plan || busy}>{busy ? "Starting…" : "Re-run"}</button>
-        </div>
+          <BtnPrimary disabled={!plan || busy}>{busy ? "Starting…" : "Re-run"}</BtnPrimary>
+        </DivActions>
       </form>
     </dialog>
   );
@@ -136,9 +137,9 @@ function ReusedItem({ id, plan, run }: { id: string; plan: RerunPlan; run: RunDe
   return (
     <li><Mono>{id}</Mono>
       {s?.kind === "approval" && who
-        ? <span className="faint"> approved by {who}{at ? ` at ${clock(at)}` : ""} {P.t8}</span>
-        : s?.status === "skipped" ? <span className="faint"> (skipped)</span> : null}
-      {info?.outputs?.digest && <span className="faint"> image digest <Mono>{shortDigest(info.outputs.digest)}</Mono>, the same one</span>}
+        ? <SpanFaint> approved by {who}{at ? ` at ${clock(at)}` : ""} {P.t8}</SpanFaint>
+        : s?.status === "skipped" ? <SpanFaint> (skipped)</SpanFaint> : null}
+      {info?.outputs?.digest && <SpanFaint> image digest <Mono>{shortDigest(info.outputs.digest)}</Mono>, the same one</SpanFaint>}
     </li>
   );
 }

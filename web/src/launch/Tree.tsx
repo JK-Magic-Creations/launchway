@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { LNode } from "../launchApi";
 import { buildItems, flatten, HEALTH, parents, type TreeItem } from "./model";
+import { SpanHidden } from "../kit/bits";
 
 /** Health as a glyph and a word: never color alone. */
 export function HealthTag({ h, label }: { h: LNode["health"]; label?: string }) {
@@ -78,7 +79,7 @@ export function ObjectTree({ nodes, selected, onSelect, showLeftovers }: { nodes
                   <span className="lw-kind">{n.kind}</span>{" "}
                   <span className="lw-name">{n.name}</span>{" "}
                   {n.role && <><span className={`lw-role lw-role-${n.role}`}>{n.role}</span>{" "}</>}
-                  {n.replicas && <><span className="lw-reps" title="ready of wanted">{n.replicas.ready}/{n.replicas.desired}</span><span className="visually-hidden"> ready</span>{" "}</>}
+                  {n.replicas && <><span className="lw-reps" title="ready of wanted">{n.replicas.ready}/{n.replicas.desired}</span><SpanHidden> ready</SpanHidden>{" "}</>}
                   {n.change && n.change !== "unchanged" && <><ChangeTag c={n.change} />{" "}</>}
                   <HealthTag h={n.health} />
                 </>

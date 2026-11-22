@@ -7,6 +7,7 @@ import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo, SEVERITIES, SeverityLegend, serious, seriousLabel, severityLabel, severityRank } from "../components/Security";
 import { FindingRow } from "./RunSecurity";
 import { terms } from "../terms";
+import { DivLoading, SpanFaintSmall, SpanHidden } from "../kit/bits";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -54,7 +55,7 @@ export function ProjectSecurityPage({ name }: { name: string }) {
         )} />
 
       <ErrorBox error={error instanceof ApiError && error.status === 404 ? terms().say(`There is no {project} called ${name}, or you may not see it.`) : error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {data && withFindings.length === 0 && (
         <Empty title={data.ref ? `No findings on ${refName(data.ref)} yet` : "No findings yet"}>
           {data.refs.length > 0 && <p>Other branches have some: choose one above.</p>}
@@ -128,7 +129,7 @@ function OpenFindings({ data }: { data: ProjectSecurity }) {
     <section className="secopen" aria-label="Open findings">
       <div className="card-head">
         <h2 className="h-sm">Open findings in #{data.latest?.number}</h2>
-        {data.open_matched > data.open.length && <span className="faint small">The {data.open.length} most severe of {data.open_matched} are listed.</span>}
+        {data.open_matched > data.open.length && <SpanFaintSmall>The {data.open.length} most severe of {data.open_matched} are listed.</SpanFaintSmall>}
       </div>
       <div className="toolbar ttools">
         <div className="chips" role="group" aria-label="Severity">
@@ -140,13 +141,13 @@ function OpenFindings({ data }: { data: ProjectSecurity }) {
         </div>
         <div className="ttools-right">
           <label className="search">
-            <span className="visually-hidden">Search open findings</span>
+            <SpanHidden>Search open findings</SpanHidden>
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
             <input type="search" placeholder="Search rules, messages, files" value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
           {tools.length > 1 && (
             <label className="select">
-              <span className="visually-hidden">Tool</span>
+              <SpanHidden>Tool</SpanHidden>
               <select value={tool} onChange={(e) => setTool(e.target.value)}>
                 <option value="">Every tool</option>
                 {tools.map((t) => <option key={t} value={t}>{t}</option>)}

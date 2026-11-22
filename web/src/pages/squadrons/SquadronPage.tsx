@@ -19,6 +19,7 @@ import { addFlightHref, SQUADRONS, WhyNot } from "./shared";
 import "../../squadrons.css";
 import "../../config.css";
 import { prose } from "../../prose";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall } from "../../kit/bits";
 const P = await prose("pages.squadrons.SquadronPage");
 
 const TABS = ["flights", "people", "operations"] as const;
@@ -42,7 +43,7 @@ export function SquadronViewPage({ name }: { name: string }) {
     }
     return <div className="page sq-page"><ErrorBox error={error} /></div>;
   }
-  if (!data) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!data) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
 
   const flights = data.flights ?? [];
   const needs = data.needs ?? [];
@@ -71,7 +72,7 @@ export function SquadronViewPage({ name }: { name: string }) {
             <div key={n.key} className={`need ${n.tone}`}>
               <div className={`ico-tile ${n.tone}`}><Icon name={n.kind === "failed" ? "x" : n.kind === "decision" ? "gate" : n.kind === "deployment" ? "alert" : "server"} /></div>
               <div className="tx">
-                <div className="ti"><a href={n.href} onClick={onLink}>{n.title}</a> <span className="faint small">{ago(n.since, now)}</span></div>
+                <div className="ti"><a href={n.href} onClick={onLink}>{n.title}</a> <SpanFaintSmall>{ago(n.since, now)}</SpanFaintSmall></div>
                 <div className="ds"><b>Why it is here:</b> {n.why}</div>
                 <div className="ds"><b>What to do:</b> {n.do}</div>
               </div>
@@ -139,10 +140,10 @@ function OperationsTab({ data, now }: { data: SquadronPage; now: number }) {
           {ops.map((o) => (
             <li key={o.flight + "/" + o.pipeline}>
               <div className="main">
-                <div className="nm"><EntityLink kind="pipeline" name={o.pipeline} id={o.flight} /> <span className="faint small">in {o.flight}</span></div>
+                <div className="nm"><EntityLink kind="pipeline" name={o.pipeline} id={o.flight} /> <SpanFaintSmall>in {o.flight}</SpanFaintSmall></div>
               </div>
               <div className="cell">
-                {o.last ? <><Status state={stateOf(o.last as never)} /><span>{o.last_id ? <EntityLink kind="run" name={`#${o.last_number}`} id={o.last_id} /> : null} {o.last_at ? ago(o.last_at, now) : ""}</span></> : <span className="faint">Never started</span>}
+                {o.last ? <><Status state={stateOf(o.last as never)} /><span>{o.last_id ? <EntityLink kind="run" name={`#${o.last_number}`} id={o.last_id} /> : null} {o.last_at ? ago(o.last_at, now) : ""}</span></> : <SpanFaint>Never started</SpanFaint>}
               </div>
             </li>
           ))}

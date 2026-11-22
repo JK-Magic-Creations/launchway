@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, type RunDetail } from "../api";
 import { ErrorBox, Mono } from "./ui";
+import { BtnLink, BtnSm, SpanFaint } from "../kit/bits";
 
 /** The notice for a run of a repository with no pipeline file: which starter ran and why, and a way to
  * make it the repository's own file, as a pull request. */
@@ -27,12 +28,12 @@ export function NoPipelineFile({ run, onSee }: { run: RunDetail; onSee: () => vo
     <div className="callout callout-info" role="status">
       <div>
         <strong>No pipeline file:</strong> using <Mono>{d.flight}</Mono> because {d.because}.{" "}
-        <button type="button" className="linkbtn" onClick={onSee}>See what it runs</button>
+        <BtnLink onClick={onSee}>See what it runs</BtnLink>
       </div>
       {url === null ? (
         <div>
-          <button type="button" className="btn btn-sm" disabled={busy} onClick={add}>{busy ? "Adding…" : "Add this file to the repository"}</button>
-          <span className="faint"> as a pull request, so you can change it and own it</span>
+          <BtnSm disabled={busy} onClick={add}>{busy ? "Adding…" : "Add this file to the repository"}</BtnSm>
+          <SpanFaint> as a pull request, so you can change it and own it</SpanFaint>
         </div>
       ) : (
         <div>

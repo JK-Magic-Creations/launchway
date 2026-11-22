@@ -3,6 +3,7 @@ import { call } from "../api";
 import { announce } from "../kit/announce";
 import { Sheet } from "../kit/layout";
 import { ErrorBox } from "./ui";
+import { BtnSm, PSub, SpanHidden } from "../kit/bits";
 
 interface Badges { enabled: boolean; public_repository: boolean; shown: boolean; markdown: Record<string, string>; links: Record<string, string> }
 
@@ -20,21 +21,21 @@ export function BadgeBox({ project, canSwitch }: { project: string; canSwitch: b
   const flip = async () => { setError(null); try { setB(await call<Badges>("PUT", path, { enabled: !b.enabled })); } catch (e) { setError(e); } };
   return (
     <Sheet title="Badges" pad>
-      <p className="sub">{b.shown
+      <PSub>{b.shown
         ? (b.public_repository ? "Anyone can see these: the repository is public." : "Anyone can see these: they are switched on for this Flight.")
-        : "These are off: until they are switched on they answer not found, so nothing about this Flight is shown."} A badge holds only a status word or a version.</p>
+        : "These are off: until they are switched on they answer not found, so nothing about this Flight is shown."} A badge holds only a status word or a version.</PSub>
       {(["status", "release"] as const).map((k) => (
         <div key={k} className="field">
           <label htmlFor={`badge-${k}`}><span>{k === "status" ? "Status of the last Sortie on a branch" : "Latest release"}</span></label>
           <div className="row wrap">
             <input id={`badge-${k}`} readOnly className="mono grow" style={{ minWidth: 0, flex: "1 1 12rem", maxWidth: "100%" }} value={b.markdown[k]} onFocus={(e) => e.currentTarget.select()} />
-            <button type="button" className="btn btn-sm" onClick={() => copy(k, b.markdown[k])}>Copy badge<span className="visually-hidden"> for {k}</span></button>
+            <BtnSm onClick={() => copy(k, b.markdown[k])}>Copy badge<SpanHidden> for {k}</SpanHidden></BtnSm>
           </div>
         </div>
       ))}
       <ErrorBox error={error} />
       {canSwitch && !b.public_repository && (
-        <div><button type="button" className="btn btn-sm" onClick={() => void flip()}>{b.enabled ? "Hide the badges" : "Show the badges to anyone"}</button></div>
+        <div><BtnSm onClick={() => void flip()}>{b.enabled ? "Hide the badges" : "Show the badges to anyone"}</BtnSm></div>
       )}
     </Sheet>
   );

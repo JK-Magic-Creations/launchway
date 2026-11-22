@@ -7,6 +7,7 @@ import { buildNodes, foldableChains, groupStatus, nodeHolding, nodeName, stageSe
 import { GraphMinimap } from "./GraphMinimap";
 import { GraphNode, nodeLabel, stepSub } from "./GraphNode";
 import { tone, statusLabel } from "./ui";
+import { SpanFaint, SpanHidden } from "../kit/bits";
 
 export { groupStatus };
 
@@ -118,13 +119,13 @@ export function Graph({ steps, groups, selected, onSelect, now, compact, describ
           {groupList.map((g) => (
             <button key={g.id} type="button" className="pg-tool" aria-expanded={!folded.has(g.id)} onClick={() => setFolded(flip(folded, g.id))}
               title={g.description ?? `Steps from the template ${g.uses}`}>
-              <span aria-hidden="true">{folded.has(g.id) ? "▸" : "▾"}</span> {g.id} <span className="faint">· template {g.uses} · {g.steps.length} steps</span>
+              <span aria-hidden="true">{folded.has(g.id) ? "▸" : "▾"}</span> {g.id} <SpanFaint>· template {g.uses} · {g.steps.length} steps</SpanFaint>
             </button>
           ))}
           {chainList.map(([firstId, members]) => (
             <button key={firstId} type="button" className="pg-tool" aria-expanded={!foldedChains.has(firstId)}
               onClick={() => setOpened(flip(opened, firstId))}>
-              <span aria-hidden="true">{foldedChains.has(firstId) ? "▸" : "▾"}</span> {members.length} steps in a row <span className="faint">· {firstId} to {members[members.length - 1]}</span>
+              <span aria-hidden="true">{foldedChains.has(firstId) ? "▸" : "▾"}</span> {members.length} steps in a row <SpanFaint>· {firstId} to {members[members.length - 1]}</SpanFaint>
             </button>
           ))}
         </div>
@@ -156,7 +157,7 @@ export function Graph({ steps, groups, selected, onSelect, now, compact, describ
                 <li key={c.col} className={"pg-stage" + (together ? " pg-together" : "")}>
                   <div className="pg-stage-h" style={{ "--x": `${c.x}px` } as React.CSSProperties}>
                     <span aria-hidden="true"><b>Stage {c.col + 1}</b>{head ? ` · ${head}` : ""}</span>
-                    <span className="visually-hidden">{sentences[c.col]}</span>
+                    <SpanHidden>{sentences[c.col]}</SpanHidden>
                   </div>
                   <ol className="pg-nodes" aria-label={`Stage ${c.col + 1}`}>
                     {c.ids.map((id) => {

@@ -15,6 +15,7 @@ import { flightNameFrom, flightNameProblem, SQUADRONS, squadronHref, WhyNot } fr
 import "../../squadrons.css";
 import "../../config.css";
 import { prose } from "../../prose";
+import { DivLoading, DivPage, SpanFaint } from "../../kit/bits";
 const P = await prose("pages.squadrons.AddFlight");
 
 // Add a Flight: find a repository (hosted ones without a Flight first), say what to call it, and see what pipeline it runs.
@@ -40,7 +41,7 @@ export function AddFlightPage({ unit }: { unit: string }) {
     }
     return <div className="page sq-page"><ErrorBox error={error} /></div>;
   }
-  if (!data) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!data) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const title = data.display_name || data.name;
   const head = <PageHead eyebrow={<a href={squadronHref(unit)} onClick={onLink}>{title}</a>} title={t.say("Add a {project}")}
     sentence={t.say(P.t0) + title + "."} />;
@@ -168,7 +169,7 @@ function Confirm({ unit, onAdded }: { unit: string; onAdded: (r: AddedFlight) =>
   return (
     <Sheet title="Check and add" pad>
       <form className="sq-form" onSubmit={submit} noValidate aria-label={t.say("Add a {project}")}>
-        <p className="sq-pick"><span className="faint">Repository</span> <b className="mono">{pick}</b> <a href={here(unit, {})} onClick={onLink}>Choose another</a></p>
+        <p className="sq-pick"><SpanFaint>Repository</SpanFaint> <b className="mono">{pick}</b> <a href={here(unit, {})} onClick={onLink}>Choose another</a></p>
         <TextInput label={t.say("Name of the {project}")} required focusOnMount mono value={name} onChange={setName} problems={problem ? [problem] : undefined} help={P.t8} />
         <TextInput label="Branch (optional)" mono value={branch} onChange={setBranch} placeholder={P.t9} help={P.t10} />
         <ErrorBox error={error} />

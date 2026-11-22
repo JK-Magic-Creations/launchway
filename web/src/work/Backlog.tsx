@@ -5,6 +5,7 @@ import { announce } from "../kit/announce";
 import { ActionMenu, Blank, ErrorPanel, itemHref, Labels, Loading, Prio, scopeHref, scopeLabel, useLoad, WorkPage } from "./common";
 import { workApi, type Item, type Page, type Sprint } from "./workApi";
 import { navigate } from "../router";
+import { SpanFaint, SpanHidden } from "../kit/bits";
 
 // The backlog: open work in the order it will be done. Each row has a menu to move it to the top, the bottom, up, down or
 // before another item, and a control to put it in a sprint. All of it works with the keyboard alone.
@@ -39,13 +40,13 @@ export default function Backlog({ scope }: { scope: string }) {
               <div className="wk-bl-row">
                 <span className="pos num" aria-label={`Position ${i + 1}`}>{i + 1}</span>
                 <div className="what">
-                  <div className="wk-title"><span className="mono ref">{it.ref}</span> <span className="faint">{it.type}</span> {it.blocked && <span className="wk-flag">blocked</span>}</div>
+                  <div className="wk-title"><span className="mono ref">{it.ref}</span> <SpanFaint>{it.type}</SpanFaint> {it.blocked && <span className="wk-flag">blocked</span>}</div>
                   <Link href={itemHref(it.ref)} className="wk-link">{it.title}</Link>
                   <Labels list={it.labels} />
                 </div>
                 <Prio p={it.priority} />
                 <span className="num est" title="Estimate">{it.estimate || ""}</span>
-                <label className="wk-f sprintpick"><span className="visually-hidden">Sprint for {it.ref}</span>
+                <label className="wk-f sprintpick"><SpanHidden>Sprint for {it.ref}</SpanHidden>
                   <select value={it.sprint ?? ""} onChange={(e) => void toSprint(it, e.target.value)}>
                     <option value="">No sprint</option>
                     {open.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}

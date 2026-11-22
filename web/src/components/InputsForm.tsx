@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import { checkValue, type InputValue, type RunInput } from "../triggers";
 import "../triggers.css";
+import { SpanMono } from "../kit/bits";
 
 interface Props {
   inputs: RunInput[];
@@ -89,7 +90,7 @@ function InputField({ input: i, value, onChange, error, onBlur }: {
   return (
     <div className="input-field">
       <label className="input-label" htmlFor={id}>
-        <span className="mono">{i.name}</span>
+        <SpanMono>{i.name}</SpanMono>
         {i.required && <span className="input-req" aria-hidden="true" title="required">required</span>}
         <span className="input-type">{typeLabel(i)}</span>
       </label>

@@ -15,6 +15,7 @@ import { ProjectHead } from "./PipelineChrome";
 import "../toggles.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, DivActions, DivLoading, DivPage, PSub, SpanFaintSmall, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Toggles");
 
 const enc = encodeURIComponent;
@@ -56,29 +57,29 @@ export function ProjectTogglesPage({ name }: { name: string }) {
   const envs = data?.environments ?? [];
   const stale = (data?.toggles ?? []).filter((t) => t.stale.length > 0);
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="toggles" title={terms().say(`{Toggles} of ${name}`)}
         sentence={P.t0}
         actions={<>{can && <Button kind="pri" icon="plus" onClick={() => setMaking(true)}>New toggle</Button>}<LinkButton href={`/projects/${enc(name)}/toggle-settings`} icon="settings">Keys and safeguards</LinkButton></>} />
       <ErrorBox error={list.error} />
       {(data?.waiting?.length ?? 0) > 0 && <Waiting project={name} changes={data!.waiting} onChanged={list.reload} />}
       <Sheet title={terms().say("{Toggles}")}>
-        {!data ? <div className="loading">Loading…</div> : data.toggles.length === 0 ? (
+        {!data ? <DivLoading>Loading…</DivLoading> : data.toggles.length === 0 ? (
           <EmptyState title="No toggles yet" action={can ? <Button kind="pri" onClick={() => setMaking(true)}>Make the first toggle</Button> : undefined}>
             {terms().say(P.t1)}
           </EmptyState>
         ) : (
           <table className="tg-table">
             <caption className="sr-only">Toggles of {name} {terms().say(P.t2)}</caption>
-            <thead><tr><th scope="col">{terms().say("{Toggle}")}</th>{envs.map((e) => <th scope="col" key={e}>{e}</th>)}</tr></thead>
+            <thead><tr><ThCol>{terms().say("{Toggle}")}</ThCol>{envs.map((e) => <ThCol key={e}>{e}</ThCol>)}</tr></thead>
             <tbody>
               {data.toggles.map((t) => (
                 <tr key={t.key}>
-                  <th scope="row">
+                  <ThRow>
                     <a className="tg-key" href={`/projects/${enc(name)}/toggles/${enc(t.key)}`} onClick={onLink}>{t.key}</a>
                     <span className="tg-meta">{t.type} · {t.kind}{t.owner ? ` · ${t.owner}` : ""}{t.inherited ? ` · shared from the ${t.level} level` : ""}</span>
                     {t.stale.length > 0 && <span className="tg-note">{P.t3}</span>}
-                  </th>
+                  </ThRow>
                   {envs.map((e) => { const v = t.environments.find((x) => x.environment === e); return <td key={e}>{v ? <Mode e={v} /> : <span className="tg-meta">off</span>}</td>; })}
                 </tr>
               ))}
@@ -91,7 +92,7 @@ export function ProjectTogglesPage({ name }: { name: string }) {
       )}
       {can && <FilePanel project={name} onApplied={list.reload} />}
       {making && <NewToggle project={name} onClose={() => setMaking(false)} onDone={() => { setMaking(false); list.reload(); }} />}
-    </div>
+    </DivPage>
   );
 }
 
@@ -128,7 +129,7 @@ function NewToggle({ project, onClose, onDone }: { project: string; onClose: () 
         <label>Expected removal date <input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
         <label>Why <input value={reason} onChange={(e) => setReason(e.target.value)} required /></label>
         <ErrorBox error={error} />
-        <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make the toggle"}</button></div>
+        <DivActions><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary disabled={busy}>{busy ? "Making…" : "Make the toggle"}</BtnPrimary></DivActions>
       </form>
     </Dialog>
   );
@@ -150,7 +151,7 @@ function Waiting({ project, changes, onChanged }: { project: string; changes: Ch
         {changes.map((c) => (
           <li key={c.id}>
             <span><b>{sentence(c)}</b> by {c.actor} {ago(c.at, now)}: {c.reason}</span>
-            <span className="faint small">{c.approvals.by.length} of {c.approvals.need} approval{c.approvals.need === 1 ? "" : "s"}</span>
+            <SpanFaintSmall>{c.approvals.by.length} of {c.approvals.need} approval{c.approvals.need === 1 ? "" : "s"}</SpanFaintSmall>
             {c.actor === me?.user
               ? <Button sm onClick={() => decide(c.id, "withdraw")}>Withdraw</Button>
               : <><Button sm kind="ok" onClick={() => decide(c.id, "approve")}>Approve</Button><Button sm onClick={() => decide(c.id, "reject")}>Reject</Button></>}
@@ -171,7 +172,7 @@ function Why({ title, label, onClose, onGo, busy, error, children, ok }: { title
         {children}
         <label>{label} <input value={reason} onChange={(e) => setReason(e.target.value)} required data-autofocus /></label>
         <ErrorBox error={error} />
-        <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary" disabled={busy || reason.trim() === ""}>{busy ? "Working…" : ok}</button></div>
+        <DivActions><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary disabled={busy || reason.trim() === ""}>{busy ? "Working…" : ok}</BtnPrimary></DivActions>
       </form>
     </Dialog>
   );
@@ -197,9 +198,9 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
   const tg = t.data;
   const others = useMemo(() => (all.data?.toggles ?? []).filter((x) => x.key !== key).map((x) => x.key), [all.data, key]);
   const reload = () => { t.reload(); hist.reload(); };
-  if (!tg) return <div className="page"><ProjectHead name={project} on="toggles" title={key} /><ErrorBox error={t.error} />{t.loading && <div className="loading">Loading…</div>}</div>;
+  if (!tg) return <DivPage><ProjectHead name={project} on="toggles" title={key} /><ErrorBox error={t.error} />{t.loading && <DivLoading>Loading…</DivLoading>}</DivPage>;
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={project} on="toggles" title={tg.key}
         sentence={tg.description || "No description yet."}
         actions={<LinkButton href={`/projects/${enc(project)}/toggles`} icon="arrow">All toggles</LinkButton>} />
@@ -213,7 +214,7 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
       </div>
       {tg.stale.map((n) => <p className="tg-callout" key={n.reason}><b>A note, not an action.</b> {n.detail}</p>)}
       <ErrorBox error={t.error} />
-      {tg.environments.length === 0 && <Sheet title={terms().say("{Environments}")}><p className="sub">{terms().say(P.t7)}</p></Sheet>}
+      {tg.environments.length === 0 && <Sheet title={terms().say("{Environments}")}><PSub>{terms().say(P.t7)}</PSub></Sheet>}
       {tg.environments.map((e) => (
         <Sheet key={e.environment} title={e.environment} actions={can && editing !== e.environment && !(tg.inherited && !me?.admin) ? <>{tg.kind === "kill" && tg.safe_value !== null && <Button sm kind="bad" onClick={() => setKilling(e.environment)}>Switch to the safe value now</Button>}<Button sm onClick={() => setEditing(e.environment)}>Edit</Button></> : undefined}>
           <div className="tg-env">
@@ -228,13 +229,13 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
       ))}
       <Sheet title="Where it is evaluated">
         {usage.data?.usage?.length ? (
-          <ul className="tg-timeline">{usage.data.usage.map((u) => <li key={u.environment}><b>{u.environment}</b> <span>{u.evaluations.toLocaleString()} {P.t8}{u.last_evaluated}</span><span className="faint small">{Object.entries(u.variations).map(([v, n]) => `${v}: ${n}`).join(" · ")}</span></li>)}</ul>
-        ) : <p className="sub">{P.t9}</p>}
+          <ul className="tg-timeline">{usage.data.usage.map((u) => <li key={u.environment}><b>{u.environment}</b> <span>{u.evaluations.toLocaleString()} {P.t8}{u.last_evaluated}</span><SpanFaintSmall>{Object.entries(u.variations).map(([v, n]) => `${v}: ${n}`).join(" · ")}</SpanFaintSmall></li>)}</ul>
+        ) : <PSub>{P.t9}</PSub>}
         <p className="tg-callout">{usage.data?.privacy ?? P.t10}</p>
       </Sheet>
       <Sheet title="History">
         <ErrorBox error={hist.error} />
-        {(hist.data?.changes ?? []).length === 0 ? <p className="sub">Nothing yet.</p> : (
+        {(hist.data?.changes ?? []).length === 0 ? <PSub>Nothing yet.</PSub> : (
           <ol className="tg-history">
             {hist.data!.changes.map((c) => (
               <li key={c.id}>
@@ -246,11 +247,11 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
           </ol>
         )}
       </Sheet>
-      {can && !tg.inherited && <Sheet title="Remove this toggle"><p className="sub">{P.t11}</p><Button kind="bad" onClick={() => setRemoving(true)}>Remove {tg.key}…</Button></Sheet>}
+      {can && !tg.inherited && <Sheet title="Remove this toggle"><PSub>{P.t11}</PSub><Button kind="bad" onClick={() => setRemoving(true)}>Remove {tg.key}…</Button></Sheet>}
       {killing && <Killer project={project} toggle={tg} env={killing} onClose={() => setKilling(null)} onDone={() => { setKilling(null); reload(); }} />}
       {reverting && <Reverter project={project} change={reverting} onClose={() => setReverting(null)} onDone={() => { setReverting(null); reload(); }} />}
       {removing && <Remover project={project} toggle={tg.key} onClose={() => setRemoving(false)} />}
-    </div>
+    </DivPage>
   );
 }
 
@@ -324,7 +325,7 @@ function EnvEditor({ project, toggle, env, others, onClose, onDone }: { project:
       <ErrorBox error={error} />
       {said && <p className="tg-callout" role="status">{said}</p>}
       <div className="row" style={{ gap: 8 }}>
-        <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : at ? "Schedule the change" : "Save the change"}</button>
+        <BtnPrimary disabled={busy}>{busy ? "Saving…" : at ? "Schedule the change" : "Save the change"}</BtnPrimary>
         <button type="button" className="btn" onClick={said ? onDone : onClose}>{said ? "Close" : "Cancel"}</button>
       </div>
     </form>
@@ -351,7 +352,7 @@ function FilePanel({ project, onApplied }: { project: string; onApplied: () => v
   const base = `/api/v1/projects/${enc(project)}`;
   return (
     <Sheet title="The toggles file">
-      <p className="sub">{P.t16}<code>.launchway/toggles.yaml</code>{P.t17}</p>
+      <PSub>{P.t16}<code>.launchway/toggles.yaml</code>{P.t17}</PSub>
       <ErrorBox error={error} />
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <Button sm onClick={() => run(async () => { const r = await call<{ file: string }>("GET", `${base}/toggle-file`); setText(r.file); setDrift(null); })}>{P.t18}</Button>

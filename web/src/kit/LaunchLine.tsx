@@ -1,6 +1,7 @@
 import { Icon } from "./Icon";
 import { stateOfStation, type State } from "./Status";
 import { terms } from "../terms";
+import { SpanHidden } from "./bits";
 
 /** One station: a place a change has to pass. state is the design's state; unknown states are drawn as not started. */
 export interface LineStation { key: string; label: string; state: State; detail?: string; parallel?: Parallel }
@@ -46,7 +47,7 @@ export function LaunchLine({ stations, big, compact, selected, onSelect, label }
             <span className="t" aria-hidden="true">{s.label}</span>
             <span className="u" title={s.detail} aria-hidden="true">{s.detail ?? ""}</span>
             {s.parallel && <Stack p={s.parallel} />}
-            <span className="visually-hidden">{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${s.parallel ? ". " + parallelText(s.parallel) : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</span>
+            <SpanHidden>{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${s.parallel ? ". " + parallelText(s.parallel) : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</SpanHidden>
           </>
         );
         const c = `ls ${s.state === "hold" ? "idle hold" : s.state}${i === stations.length - 1 && s.state === "ok" ? " last" : ""}`;

@@ -4,6 +4,7 @@ import { ErrorBox } from "../../components/ui";
 import { announce } from "../../kit/announce";
 import { navigate } from "../../router";
 import { Mono } from "../../components/ui";
+import { LabelField, SpanFaintSmall } from "../../kit/bits";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "change";
 
@@ -51,22 +52,22 @@ export function Editor({ repo, item, mode, refName, protectedNames, dir }: { rep
   return (
     <form className="card editor" onSubmit={submit} aria-label={removing ? "Delete a file" : mode === "new" ? "Add a file" : "Edit a file"}>
       {mode === "new" && (
-        <label className="field"><span>File name, with its folders</span>
+        <LabelField><span>File name, with its folders</span>
           <input value={path} required onChange={(e) => setPath(e.target.value)} aria-describedby="ed-path-help" placeholder="docs/guide.md" />
-          <small id="ed-path-help">A slash makes a folder. The file is added to <Mono>{refName}</Mono> or to a new branch from it.</small></label>
+          <small id="ed-path-help">A slash makes a folder. The file is added to <Mono>{refName}</Mono> or to a new branch from it.</small></LabelField>
       )}
       {removing ? <p className="code-note" role="note">This removes <Mono>{item.path}</Mono> in one commit. It stays in the history, so it can be brought back.</p> : (
-        <label className="field"><span>{mode === "new" ? "Contents" : `Contents of ${item.path}`}</span>
+        <LabelField><span>{mode === "new" ? "Contents" : `Contents of ${item.path}`}</span>
           <textarea className="editor-text mono" value={text} onChange={(e) => setText(e.target.value)} rows={24} spellCheck={false} wrap="off" aria-describedby="ed-text-help" />
-          <small id="ed-text-help">Plain text, saved exactly as typed, with the file's line endings. {text.split("\n").length} lines.</small></label>
+          <small id="ed-text-help">Plain text, saved exactly as typed, with the file's line endings. {text.split("\n").length} lines.</small></LabelField>
       )}
-      <label className="field"><span>Commit message</span>
-        <input value={message} onChange={(e) => setMessage(e.target.value)} placeholder={`${verb} ${path}`} maxLength={200} /></label>
+      <LabelField><span>Commit message</span>
+        <input value={message} onChange={(e) => setMessage(e.target.value)} placeholder={`${verb} ${path}`} maxLength={200} /></LabelField>
       <fieldset className="field">
         <legend>Where the commit goes</legend>
-        <label className="radio"><input type="radio" name="target" checked={target === "direct"} onChange={() => setTarget("direct")} /> Commit directly to <Mono>{refName}</Mono>{locked && <span className="faint small"> (a protected branch: only its administrators may; others are refused)</span>}</label>
+        <label className="radio"><input type="radio" name="target" checked={target === "direct"} onChange={() => setTarget("direct")} /> Commit directly to <Mono>{refName}</Mono>{locked && <SpanFaintSmall> (a protected branch: only its administrators may; others are refused)</SpanFaintSmall>}</label>
         <label className="radio"><input type="radio" name="target" checked={target === "branch"} onChange={() => setTarget("branch")} /> Commit to a new branch and open a pull request</label>
-        {target === "branch" && <label className="field"><span>New branch name</span><input value={branch} required onChange={(e) => setBranch(e.target.value)} /></label>}
+        {target === "branch" && <LabelField><span>New branch name</span><input value={branch} required onChange={(e) => setBranch(e.target.value)} /></LabelField>}
       </fieldset>
       <ErrorBox error={error} />
       <div className="actions">

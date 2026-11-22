@@ -10,6 +10,7 @@ import { releasesApi, type NextAnswer } from "../releasesApi";
 import { terms } from "../terms";
 import { ErrorBox } from "./ui";
 import { prose } from "../prose";
+import { BtnPrimary, DivActions, LabelField } from "../kit/bits";
 const P = await prose("components.CutRelease");
 
 const PATTERNS: Record<string, { re: RegExp; say: string }> = {
@@ -91,9 +92,9 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (!problem && version.trim() && next?.can_tag) cut(); }}>
         <h2>Cut a release of {project}</h2>
         {loading && <p className="rel-hint" role="status">{P.t3}</p>}
-        <label className="field"><span>Version</span>
+        <LabelField><span>Version</span>
           <input type="text" value={version} onChange={(e) => setVersion(e.target.value)} required placeholder="1.4.0" data-autofocus
-            aria-invalid={problem ? true : undefined} aria-describedby="cut-version-help" autoComplete="off" autoCapitalize="none" spellCheck={false} /></label>
+            aria-invalid={problem ? true : undefined} aria-describedby="cut-version-help" autoComplete="off" autoCapitalize="none" spellCheck={false} /></LabelField>
         <p id="cut-version-help" className={problem ? "" : "rel-hint"} role={problem ? "alert" : undefined}>
           {problem || (next?.proposal.summary ?? P.t4)}
           {!problem && next?.highest ? ` The highest so far is ${next.highest}.` : ""}
@@ -122,10 +123,10 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
         </div>
         <p className="rel-hint">{P.t9}</p>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={busy || loading || !version.trim() || !!problem || !next?.can_tag}>{busy ? "Cutting…" : `Cut ${version.trim() || "the release"}`}</button>
-        </div>
+          <BtnPrimary disabled={busy || loading || !version.trim() || !!problem || !next?.can_tag}>{busy ? "Cutting…" : `Cut ${version.trim() || "the release"}`}</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );

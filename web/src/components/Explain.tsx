@@ -7,6 +7,7 @@ import { WizardButton } from "./WizardButton";
 import { costText, usageText } from "./usageText";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { PSub, SpanFaint, SpanFaintSmall } from "../kit/bits";
 const P = await prose("components.Explain");
 
 // Models: asking one to explain a failed step, what an ai step's model
@@ -114,7 +115,7 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
             <li key={x.id}>
               {i === 0 ? <ModelAnswer x={x} /> : (
                 <details>
-                  <summary>Earlier: {x.model}, asked by {x.actor} <span className="faint" title={clock(x.created_at)}>{ago(x.created_at)}</span></summary>
+                  <summary>Earlier: {x.model}, asked by {x.actor} <SpanFaint title={clock(x.created_at)}>{ago(x.created_at)}</SpanFaint></summary>
                   <ModelAnswer x={x} />
                 </details>
               )}
@@ -169,7 +170,7 @@ export function AIStepResult({ run, step }: { run: RunDetail; step: StepView }) 
     <section className="card dep" aria-label="What the model was asked">
       <div className="dep-head">
         <h3 className="h-sm">Asks model {def.model}</h3>
-        {(usage?.model_id || o.model) && <span className="faint small">answered by <Mono>{usage?.model_id || o.model}</Mono>{usage?.provider ? ` (${usage.provider})` : ""}</span>}
+        {(usage?.model_id || o.model) && <SpanFaintSmall>answered by <Mono>{usage?.model_id || o.model}</Mono>{usage?.provider ? ` (${usage.provider})` : ""}</SpanFaintSmall>}
       </div>
       <details className="vreadings">
         <summary>The prompt</summary>
@@ -186,7 +187,7 @@ export function AIStepResult({ run, step }: { run: RunDetail; step: StepView }) 
         <div className="vexpl-usage">
           {inTok !== undefined && <span>{inTok.toLocaleString()} tokens in</span>}
           {outTok !== undefined && <span>{outTok.toLocaleString()} out</span>}
-          {usage?.usage.cost_usd ? <span>about {costText(usage.usage.cost_usd)}</span> : usage ? <span className="faint">no price known for this model</span> : <span className="faint">the cost is in the step's log</span>}
+          {usage?.usage.cost_usd ? <span>about {costText(usage.usage.cost_usd)}</span> : usage ? <SpanFaint>no price known for this model</SpanFaint> : <SpanFaint>the cost is in the step's log</SpanFaint>}
           {usage?.stop_reason && usage.stop_reason !== "end_turn" && <span className="tfile-warn">stopped: {usage.stop_reason.replace(/_/g, " ")}</span>}
         </div>
       )}
@@ -200,10 +201,10 @@ export function ModelsSection() {
   return (
     <section className="card">
       <h2 className="h-sm">AI models</h2>
-      <p className="sub">
-        {P.t8}</p>
+      <PSub>
+        {P.t8}</PSub>
       <ErrorBox error={error} />
-      {models && models.models.length === 0 && <p className="sub"><strong>No AI model is set up.</strong></p>}
+      {models && models.models.length === 0 && <PSub><strong>No AI model is set up.</strong></PSub>}
       <div><WizardButton wizard="add-model" label="Add an AI model" primary={!models?.models.length} small /></div>
       {models && models.models.length > 0 && (
         <div className="table-scroll models-wrap">
@@ -230,7 +231,7 @@ function ModelRow({ m }: { m: ModelView }) {
     <tr>
       <td data-label="Model"><strong>{m.name}</strong><div className="faint small mono">{m.model}</div></td>
       <td data-label="Where">{m.local ? "local, no key" : <>remote, {m.provider}</>}</td>
-      <td data-label={terms().say("{Projects}")}>{m.projects?.length ? m.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">none</span>}</td>
+      <td data-label={terms().say("{Projects}")}>{m.projects?.length ? m.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <SpanFaint>none</SpanFaint>}</td>
       <td data-label="Limits" className="small">
         <div>{m.max_tokens.toLocaleString()} tokens out per call</div>
         <div>{Math.round(m.max_input_bytes / 1024).toLocaleString()} KiB in per call</div>
@@ -238,7 +239,7 @@ function ModelRow({ m }: { m: ModelView }) {
         <div>{m.tokens_per_day ? terms().say(`${m.tokens_per_day.toLocaleString()} tokens a day per {project}`) : "no daily limit"}</div>
       </td>
       <td data-label="Used today" className="small">
-        {used.length === 0 ? <span className="faint">nothing yet</span> : (
+        {used.length === 0 ? <SpanFaint>nothing yet</SpanFaint> : (
           <>
             <div>{used.reduce((n, u) => n + u.calls, 0)} calls, {tokens.toLocaleString()} tokens{cost ? `, about ${costText(cost)}` : ""}</div>
             {used.map((u) => (
@@ -262,11 +263,11 @@ export function HealthSourcesSection() {
   return (
     <section className="card">
       <h2 className="h-sm">Health sources</h2>
-      <p className="sub">{terms().say(P.t10)}</p>
-      {list.length === 0 ? <p className="sub"><strong>None yet</strong>: verify steps are refused.</p> : (
+      <PSub>{terms().say(P.t10)}</PSub>
+      {list.length === 0 ? <PSub><strong>None yet</strong>: verify steps are refused.</PSub> : (
         <ul className="hsources">
           {list.map((h) => (
-            <li key={h.name}><strong className="mono">{h.name}</strong> <span className="faint">{h.type}</span> <span className="small">for {h.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>)}</span></li>
+            <li key={h.name}><strong className="mono">{h.name}</strong> <SpanFaint>{h.type}</SpanFaint> <span className="small">for {h.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>)}</span></li>
           ))}
         </ul>
       )}

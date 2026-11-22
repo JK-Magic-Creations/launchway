@@ -10,6 +10,7 @@ import { terms } from "../../terms";
 import { FORMATS, importApi, type Finding, type ImportResult, type Plan } from "../../importApi";
 import "../../styles/import.css";
 import { prose } from "../../prose";
+import { DivLoading, DivPage, SpanFaintSmall } from "../../kit/bits";
 const P = await prose("pages.import.ImportWizard");
 
 // Import an existing pipeline: pick the pipeline files of another system (found in the Flight's repository, or pasted),
@@ -46,7 +47,7 @@ export default function ImportPipelinePage({ name }: { name: string }) {
   const head = <PageHead eyebrow={<a href={`/projects/${encodeURIComponent(name)}/pipeline`}>{name}</a>} title="Import an existing pipeline"
     sentence={t.say(P.t0)} />;
   if (error && !project) return <div className="page imp-page">{head}<ErrorBox error={error} /></div>;
-  if (!project) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!project) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
 
   const pick = (src: Source[]) => { setFiles(src); setFixes({ templates: {}, secretKeys: {}, defaultImage: "" }); void run(src, dry, { templates: {}, secretKeys: {}, defaultImage: "" }, format); };
   return (
@@ -111,7 +112,7 @@ function Chooser({ repoPath, branch, onPick, busy, format, setFormat }: { repoPa
       <div role="group" aria-label="Where the files are" className="imp-tabs">
         <Button kind={mode === "repo" ? "pri" : undefined} sm onClick={() => setMode("repo")} disabled={!repoPath} aria-pressed={mode === "repo"}>From the repository</Button>
         <Button kind={mode === "paste" ? "pri" : undefined} sm onClick={() => setMode("paste")} aria-pressed={mode === "paste"}>Paste</Button>
-        {!repoPath && <span className="faint small"> {P.t1}</span>}
+        {!repoPath && <SpanFaintSmall> {P.t1}</SpanFaintSmall>}
       </div>
       {mode === "repo" && (found === null ? <p className="faint">Looking for pipeline files…</p> : found.length === 0 ? <p>{P.t2}<code>{branch}</code>. Paste one instead.</p> : (
         <fieldset className="imp-files"><legend>Pipeline files found on <code>{branch}</code></legend>

@@ -20,6 +20,7 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, DivPage, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 const P = await prose("pages.ApplicationView");
 
 const TONE: Record<string, Tone | undefined> = { ok: "ok", warn: "warn", bad: "bad", run: "run", idle: undefined };
@@ -36,16 +37,16 @@ export function ApplicationViewPage({ name }: { name: string }) {
     for (const e of inst.environments) for (const u of e.services) if (u.last?.application === name) return u;
     return undefined;
   }, [inst.environments, name]);
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   if (!app || !unit) {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Deployments · Applications" title={name} />
         <Sheet><EmptyState title={P.t0} action={<LinkButton href="/deployments/applications" icon="arrow">See the applications</LinkButton>}>
           {terms().say(P.t1)}
           {" "}<OpenInArgo application={name} sm />
         </EmptyState></Sheet>
-      </div>
+      </DivPage>
     );
   }
   return <Loaded app={app} unit={unit} now={now} />;
@@ -69,15 +70,15 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
   const current = hist.data?.find((x) => x.id === unit.current?.deployment);
   const prev = hist.data?.find((x) => x.id !== current?.id && x.version !== current?.version && x.opened_at < (current?.opened_at ?? Infinity));
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={<>Deployments · Applications · <EntityLink kind="environment" name={app.environment} /></>} title={app.name}
-        sentence={<>{dg.headline} <span className="faint">Service {unit.service} of <EntityLink kind="project" name={unit.project} />.</span></>}
+        sentence={<>{dg.headline} <SpanFaint>Service {unit.service} of <EntityLink kind="project" name={unit.project} />.</SpanFaint></>}
         actions={<OpenInArgo application={app.name} kind="primary" />} />
 
       <Diagnose dg={dg} d={d} run={run.data} app={app.name} />
 
       {unit.rollback && (
-        <Sheet title={terms().say("{Rollback:do}")} actions={<span className="faint small">after a deployment succeeded</span>}>
+        <Sheet title={terms().say("{Rollback:do}")} actions={<SpanFaintSmall>after a deployment succeeded</SpanFaintSmall>}>
           <div className="sh-b"><RollbackControl action={unit.rollback} unit={{ project: unit.project, service: unit.service, environment: app.environment }} /></div>
         </Sheet>
       )}
@@ -87,7 +88,7 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
           <Icon name="deploy" />
           <div className="grow">
             <b>Argo CD application <Mono>{app.name}</Mono></b>
-            <div className="faint small">{P.t2}</div>
+            <DivFaintSmall>{P.t2}</DivFaintSmall>
           </div>
           <Chip tone={TONE[sync.tone]} icon={sync.tone === "ok" ? "check" : undefined}>{sync.label}</Chip>
           <Chip tone={TONE[health.tone]}>{health.label}</Chip>
@@ -113,12 +114,12 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
         <Sheet title="Before"><DeployFacts d={prev} unit={unit} now={now} empty={d?.previous_version ? `The previous version was ${d.previous_version}; its deployment is not in the history.` : "What ran before is not known."} /></Sheet>
       </div>
 
-      <Sheet title="Parts" actions={<span className="faint small">{resources.length} {resources.length === 1 ? "resource" : "resources"} Argo CD manages</span>}>
+      <Sheet title="Parts" actions={<SpanFaintSmall>{resources.length} {resources.length === 1 ? "resource" : "resources"} Argo CD manages</SpanFaintSmall>}>
         {resources.length === 0 ? <p className="sh-b faint">{terms().say(P.t4)}</p> : (
           <ul className="rowlist">
             {resources.map((r) => (
               <li key={`${r.kind}/${r.namespace}/${r.name}`} className={!r.found || (r.health && r.health !== "Healthy") ? "warn" : ""}>
-                <div className="main"><div className="nm"><span className="mono">{r.kind}</span> {r.name}</div><div className="sb">{r.namespace ?? ""}{r.message ? ` · ${r.message}` : ""}</div></div>
+                <div className="main"><div className="nm"><SpanMono>{r.kind}</SpanMono> {r.name}</div><div className="sb">{r.namespace ?? ""}{r.message ? ` · ${r.message}` : ""}</div></div>
                 <div className="cell">{r.found ? [r.sync, r.health].filter(Boolean).join(", ") || "no state reported" : "not found"}</div>
                 <OpenInArgo application={app.name} resource={{ kind: r.kind, name: r.name, namespace: r.namespace, group: r.group }} sm />
               </li>
@@ -127,7 +128,7 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
         )}
       </Sheet>
 
-      <Sheet title="History" actions={<span className="faint small">deployments of {unit.service} to {app.environment}, newest first</span>}>
+      <Sheet title="History" actions={<SpanFaintSmall>deployments of {unit.service} to {app.environment}, newest first</SpanFaintSmall>}>
         <ErrorBox error={hist.error} />
         {hist.data && hist.data.length === 0 && <p className="sh-b faint">No deployments yet.</p>}
         {hist.data && hist.data.length > 0 && (
@@ -137,13 +138,13 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
                 <div className="main"><div className="nm mono">{x.version}</div>
                   <div className="sb"><EntityLink kind="run" name={terms().say(`{run} #${x.run_number}`)} id={x.run_id} />{x.commit ? ` · ${shortSha(x.commit)}` : ""} · {x.environment}{x.detail ? ` · ${x.detail}` : ""}</div><HistoryNote d={x} /></div>
                 <DeployStatePill d={x} now={now} />
-                <span className="faint small" title={clock(x.opened_at)}>{ago(x.opened_at, now)}</span>
+                <SpanFaintSmall title={clock(x.opened_at)}>{ago(x.opened_at, now)}</SpanFaintSmall>
               </li>
             ))}
           </ul>
         )}
       </Sheet>
-    </div>
+    </DivPage>
   );
 }
 

@@ -5,6 +5,7 @@ import { PageHead, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { noticesApi, type Inbox, type MailStatus, type Preferences, type Watch } from "../noticesApi";
 import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivPage, LabelField, PSub, SpanFaintSmall, SpanHidden, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Notifications");
 
 const STATES: [string, string][] = [["open", "Open"], ["unread", "Unread"], ["done", "Done"], ["all", "All"]];
@@ -29,17 +30,17 @@ export function InboxPage() {
   const marks = (data?.items ?? []).filter((i) => i.source !== "pull");
   const unreadIds = marks.filter((i) => !i.read).map((i) => i.id);
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Inbox" title="Inbox" sentence={<>{P.t0}<Link href="/settings/notifications">{P.t1}</Link>.</>} />
       <ErrorBox error={error} />
       <div className="code-bar">
-        <label className="field"><span>Show</span>
-          <select value={state} onChange={(e) => setState(e.target.value)}>{STATES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-        <label className="field"><span>From</span>
-          <select value={source} onChange={(e) => setSource(e.target.value)}>{SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-        {unreadIds.length > 0 && <button type="button" className="btn btn-sm" onClick={() => mark("read", unreadIds.slice(0, 200), true)}>Mark all read</button>}
+        <LabelField><span>Show</span>
+          <select value={state} onChange={(e) => setState(e.target.value)}>{STATES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></LabelField>
+        <LabelField><span>From</span>
+          <select value={source} onChange={(e) => setSource(e.target.value)}>{SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></LabelField>
+        {unreadIds.length > 0 && <BtnSm onClick={() => mark("read", unreadIds.slice(0, 200), true)}>Mark all read</BtnSm>}
       </div>
-      {data && <p className="sub" role="status">{data.unread} unread, {data.waiting} waiting on you.</p>}
+      {data && <PSub role="status">{data.unread} unread, {data.waiting} waiting on you.</PSub>}
       {data && data.items.length === 0 && <Empty title="Nothing here">{state === "open" ? "You are caught up." : "Nothing matches."}</Empty>}
       {data && data.items.length > 0 && (
         <Sheet title="Entries">
@@ -49,13 +50,13 @@ export function InboxPage() {
                 <div>
                   {i.link ? <Link href={i.link}>{i.title}</Link> : i.title}
                   {i.waiting_on_you && <span className="chip"> waiting on you</span>}
-                  {!i.read && !i.waiting_on_you && <span className="visually-hidden"> (unread)</span>}
-                  <div className="faint small">{i.repository && <><Mono>{i.repository}</Mono>{" "}</>}{i.actor && <>by {i.actor}{" "}</>}<span title={clock(Date.parse(i.at))}>{ago(Date.parse(i.at), now)}</span>{i.detail ? ` · ${i.detail}` : ""}</div>
+                  {!i.read && !i.waiting_on_you && <SpanHidden> (unread)</SpanHidden>}
+                  <DivFaintSmall>{i.repository && <><Mono>{i.repository}</Mono>{" "}</>}{i.actor && <>by {i.actor}{" "}</>}<span title={clock(Date.parse(i.at))}>{ago(Date.parse(i.at), now)}</span>{i.detail ? ` · ${i.detail}` : ""}</DivFaintSmall>
                 </div>
                 {i.source !== "pull" && (
                   <div className="row-actions">
-                    <button type="button" className="btn btn-sm" onClick={() => mark("read", [i.id], !i.read)}>{i.read ? "Mark unread" : "Mark read"}<span className="visually-hidden">: {i.title}</span></button>
-                    {i.source === "notice" && <button type="button" className="btn btn-sm" onClick={() => mark("done", [i.id], !i.done)}>{i.done ? "Open again" : "Done"}<span className="visually-hidden">: {i.title}</span></button>}
+                    <BtnSm onClick={() => mark("read", [i.id], !i.read)}>{i.read ? "Mark unread" : "Mark read"}<SpanHidden>: {i.title}</SpanHidden></BtnSm>
+                    {i.source === "notice" && <BtnSm onClick={() => mark("done", [i.id], !i.done)}>{i.done ? "Open again" : "Done"}<SpanHidden>: {i.title}</SpanHidden></BtnSm>}
                   </div>
                 )}
               </li>
@@ -63,7 +64,7 @@ export function InboxPage() {
           </ul>
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -89,10 +90,10 @@ export function NotificationSettingsPage() {
     setError(null);
     try { setP(await noticesApi.save(b)); announce(said); } catch (e) { setError(e); }
   };
-  if (!p) return <div className="page"><PageHead eyebrow="Settings" title="Notifications" /><ErrorBox error={error} /></div>;
+  if (!p) return <DivPage><PageHead eyebrow="Settings" title="Notifications" /><ErrorBox error={error} /></DivPage>;
   const quiet = p.settings.quiet_start >= 0;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Notifications" sentence={<>{P.t2}<Link href="/inbox">inbox</Link>.</>} />
       <ErrorBox error={error} />
       {!p.mail_on && <div className="callout callout-allowed" role="status"><strong>{P.t3}</strong> {P.t4}<Mono>mail</Mono> installation setting.</div>}
@@ -101,22 +102,22 @@ export function NotificationSettingsPage() {
       <Sheet title="What you are told" pad>
         <table className="table">
           <caption className="sr-only">{P.t6}</caption>
-          <thead><tr><th scope="col">When</th><th scope="col">How</th></tr></thead>
+          <thead><tr><ThCol>When</ThCol><ThCol>How</ThCol></tr></thead>
           <tbody>
             {p.kinds.map((k) => (
               <tr key={k.kind}>
-                <th scope="row" className="plain-th">{k.title}{k.waiting_on_you && <span className="faint small"> (waits on you)</span>}</th>
+                <ThRow className="plain-th">{k.title}{k.waiting_on_you && <SpanFaintSmall> (waits on you)</SpanFaintSmall>}</ThRow>
                 <td><select aria-label={`How you are told: ${k.title}`} value={k.channel} onChange={(e) => save({ kinds: { [k.kind]: e.target.value } }, `Saved: ${k.title}`)}>
                   {CHANNELS.map(([v, l]) => <option key={v} value={v} disabled={v === "email" && !p.mail_on}>{l}</option>)}</select></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="sub">{P.t7}</p>
+        <PSub>{P.t7}</PSub>
       </Sheet>
 
       <Sheet title={P.t8} pad>
-        <p className="sub">{P.t9}<strong>Everything</strong> adds all activity there; <strong>Nothing</strong> mutes it.</p>
+        <PSub>{P.t9}<strong>Everything</strong> adds all activity there; <strong>Nothing</strong> mutes it.</PSub>
         {p.watches.length === 0 && <p className="faint">No choices yet.</p>}
         <ul className="plain-list">
           {p.watches.map((w) => (
@@ -124,13 +125,13 @@ export function NotificationSettingsPage() {
               <Mono>{w.scope}</Mono>{" "}
               <select aria-label={`Level for ${w.scope}`} value={w.level} onChange={(e) => save({ watches: [{ scope: w.scope, level: e.target.value as Watch["level"] }] }, `Saved: ${w.scope}`)}>
                 {LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>{" "}
-              <button type="button" className="btn btn-sm" onClick={() => save({ watches: [{ scope: w.scope, level: "participating" }] }, `Removed: ${w.scope}`)}>Remove<span className="visually-hidden"> {w.scope}</span></button>
+              <BtnSm onClick={() => save({ watches: [{ scope: w.scope, level: "participating" }] }, `Removed: ${w.scope}`)}>Remove<SpanHidden> {w.scope}</SpanHidden></BtnSm>
             </li>
           ))}
         </ul>
         <form className="inputs-form" aria-label="Watch a repository or Flight" onSubmit={(e) => { e.preventDefault(); void save({ watches: [{ scope: scope.trim(), level }] }, `Saved: ${scope}`).then(() => setScope("")); }}>
-          <label className="field"><span>Repository or Flight</span><input value={scope} placeholder={P.t10} onChange={(e) => setScope(e.target.value)} /></label>
-          <label className="field"><span>Level</span><select value={level} onChange={(e) => setLevel(e.target.value as Watch["level"])}>{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          <LabelField><span>Repository or Flight</span><input value={scope} placeholder={P.t10} onChange={(e) => setScope(e.target.value)} /></LabelField>
+          <LabelField><span>Level</span><select value={level} onChange={(e) => setLevel(e.target.value as Watch["level"])}>{LEVELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></LabelField>
           <div><button type="submit" className="btn" disabled={!scope.trim()}>Save choice</button></div>
         </form>
       </Sheet>
@@ -144,13 +145,13 @@ export function NotificationSettingsPage() {
         }}>
           <label className="check"><input type="checkbox" name="quiet" defaultChecked={quiet} /> {P.t11}</label>
           <div className="tokenform-grid">
-            <label className="field"><span>From</span><input type="time" name="from" defaultValue={fromMinutes(quiet ? p.settings.quiet_start : 22 * 60)} /></label>
-            <label className="field"><span>To</span><input type="time" name="to" defaultValue={fromMinutes(quiet ? p.settings.quiet_end : 7 * 60)} /></label>
-            <label className="field"><span>Time zone</span><input name="zone" defaultValue={p.settings.zone} placeholder="Europe/Berlin" /></label>
+            <LabelField><span>From</span><input type="time" name="from" defaultValue={fromMinutes(quiet ? p.settings.quiet_start : 22 * 60)} /></LabelField>
+            <LabelField><span>To</span><input type="time" name="to" defaultValue={fromMinutes(quiet ? p.settings.quiet_end : 7 * 60)} /></LabelField>
+            <LabelField><span>Time zone</span><input name="zone" defaultValue={p.settings.zone} placeholder="Europe/Berlin" /></LabelField>
           </div>
           <label className="check"><input type="checkbox" name="digest" defaultChecked={p.settings.digest} /> {P.t12}</label>
-          <label className="field"><span>Digest hour (0 to 23)</span><input type="number" name="hour" min={0} max={23} defaultValue={p.settings.digest_hour} /></label>
-          <div><button type="submit" className="btn btn-primary">Save</button></div>
+          <LabelField><span>Digest hour (0 to 23)</span><input type="number" name="hour" min={0} max={23} defaultValue={p.settings.digest_hour} /></LabelField>
+          <div><BtnPrimary>Save</BtnPrimary></div>
         </form>
       </Sheet>
 
@@ -169,6 +170,6 @@ export function NotificationSettingsPage() {
           )}
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }

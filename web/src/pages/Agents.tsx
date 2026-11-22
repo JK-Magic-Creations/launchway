@@ -9,6 +9,7 @@ import { triggersApi, type TokenLimits } from "../triggers";
 import "../triggers.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, DivPage, LabelField, PSub, SpanFaint } from "../kit/bits";
 const P = await prose("pages.Agents");
 
 const ROLES: Role[] = ["viewer", "operator", "admin"];
@@ -47,10 +48,10 @@ export function AgentsPage() {
   const endpoint = location.origin + (me.mcp?.path ?? "/mcp");
   if (me.mcp && !me.mcp.enabled) {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Settings" title={<>Connect an agent</>} />
         <Empty title={P.t0}>{P.t1}<Mono>mcp.enabled: false</Mono>).</Empty>
-      </div>
+      </DivPage>
     );
   }
 
@@ -89,23 +90,23 @@ export function AgentsPage() {
         <h2 id="agents-1" className="h-sm"><span className="agents-num" aria-hidden="true">1</span>Make a token for the agent</h2>
         {signIn ? (
           <form onSubmit={make} className="inputs-form" aria-label="Make a token for an agent">
-            <p className="sub">{P.t6}<strong>viewer</strong> {P.t7}{terms().lower("clearance")} {P.t8}<Link href="/settings/access/keys">API tokens</Link> page.</p>
+            <PSub>{P.t6}<strong>viewer</strong> {P.t7}{terms().lower("clearance")} {P.t8}<Link href="/settings/access/keys">API tokens</Link> page.</PSub>
             <div className="tokenform-grid">
-              <label className="field"><span>Name</span>
-                <input value={name} maxLength={100} required onChange={(e) => setName(e.target.value)} /></label>
-              <label className="field"><span>Role</span>
+              <LabelField><span>Name</span>
+                <input value={name} maxLength={100} required onChange={(e) => setName(e.target.value)} /></LabelField>
+              <LabelField><span>Role</span>
                 <select value={role} onChange={(e) => setRole(e.target.value as Role | "")}>
                   <option value="">Same as mine{limits?.your_role ? ` (${limits.your_role})` : ""}</option>
                   {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
-                </select></label>
-              <label className="field"><span>{terms().say("{Projects}")}</span>
-                <input value={projects} placeholder={terms().say(P.t9)} onChange={(e) => setProjects(e.target.value)} /></label>
-              <label className="field"><span>Expires after</span>
+                </select></LabelField>
+              <LabelField><span>{terms().say("{Projects}")}</span>
+                <input value={projects} placeholder={terms().say(P.t9)} onChange={(e) => setProjects(e.target.value)} /></LabelField>
+              <LabelField><span>Expires after</span>
                 <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
                   {[1, 7, 30, 90].filter((d) => d <= maxDays).map((d) => <option key={d} value={d}>{d} days</option>)}
-                </select></label>
+                </select></LabelField>
             </div>
-            <div><button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>{busy ? "Making…" : "Make token"}</button></div>
+            <div><BtnPrimary disabled={busy || !name.trim()}>{busy ? "Making…" : "Make token"}</BtnPrimary></div>
             {token && (
               <div className="callout callout-ok" role="status">
                 <strong>{P.t10}</strong>
@@ -114,13 +115,13 @@ export function AgentsPage() {
             <ErrorBox error={error} />
           </form>
         ) : (
-          <p className="sub">{P.t11}</p>
+          <PSub>{P.t11}</PSub>
         )}
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-2">
         <h2 id="agents-2" className="h-sm"><span className="agents-num" aria-hidden="true">2</span>Add Launchway to the agent</h2>
-        <p className="sub">{P.t12}<Mono>launchway</Mono> command on that machine).</p>
+        <PSub>{P.t12}<Mono>launchway</Mono> command on that machine).</PSub>
         <dl className="agents-facts">
           <dt>Address</dt><dd className="mono">{endpoint}</dd>
           {signIn && <><dt>Header</dt><dd className="mono">Authorization: Bearer {token ? "lw_…" : "<the token>"}</dd></>}
@@ -131,15 +132,15 @@ export function AgentsPage() {
           <CopyBlock label="As a command" text={stdioConfig} />
         </div>
         {me.mcp?.oauth_resource && (
-          <p className="sub">{P.t13}{" "}
-            <Mono>{me.mcp.oauth_resource}</Mono>{P.t14}</p>
+          <PSub>{P.t13}{" "}
+            <Mono>{me.mcp.oauth_resource}</Mono>{P.t14}</PSub>
         )}
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-3">
         <h2 id="agents-3" className="h-sm"><span className="agents-num" aria-hidden="true">3</span>Check that it answers</h2>
         <CopyBlock label="From a terminal" text={check} />
-        <p className="sub">{terms().say(P.t15)}</p>
+        <PSub>{terms().say(P.t15)}</PSub>
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-4">
@@ -150,11 +151,11 @@ export function AgentsPage() {
             <ul className="list-items">{READ_TOOLS.map((t) => <li key={t} className="list-item">{t}</li>)}</ul>
           </div>
           <div>
-            <h3 className="agents-h3">Change things <span className="faint">(operator tokens only)</span></h3>
+            <h3 className="agents-h3">Change things <SpanFaint>(operator tokens only)</SpanFaint></h3>
             <ul className="list-items">{CHANGE_TOOLS.map((t) => <li key={t} className="list-item">{t}</li>)}</ul>
           </div>
         </div>
-        <p className="sub">{P.t16}{terms().pluralLower("clearance")} for people.</p>
+        <PSub>{P.t16}{terms().pluralLower("clearance")} for people.</PSub>
       </section>
     </div>
   );

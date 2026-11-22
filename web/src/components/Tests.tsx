@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { HistoryResult, TestStatus, TestTotals } from "../api";
 import { Link } from "./ui";
 import { prose } from "../prose";
+import { PSub, SpanFaint, SpanHidden } from "../kit/bits";
 const P = await prose("components.Tests");
 
 // Pieces shared by the run's Tests tab, the run list and a project's tests.
@@ -65,9 +66,9 @@ export function TestCounts({ t }: { t: TestTotals }) {
   const bad = failing(t);
   return (
     <span className="tcounts" title={`Tests: ${t.passed} passed, ${t.failed} failed, ${t.errored} errors, ${t.skipped} skipped`}>
-      {bad > 0 && <span className="tcount tcount-bad"><TestIcon status="failed" size={13} />{bad}<span className="visually-hidden"> failed</span></span>}
-      <span className="tcount tcount-ok"><TestIcon status="passed" size={13} />{t.passed}<span className="visually-hidden"> passed</span></span>
-      {t.skipped > 0 && <span className="tcount tcount-idle"><TestIcon status="skipped" size={13} />{t.skipped}<span className="visually-hidden"> skipped</span></span>}
+      {bad > 0 && <span className="tcount tcount-bad"><TestIcon status="failed" size={13} />{bad}<SpanHidden> failed</SpanHidden></span>}
+      <span className="tcount tcount-ok"><TestIcon status="passed" size={13} />{t.passed}<SpanHidden> passed</SpanHidden></span>
+      {t.skipped > 0 && <span className="tcount tcount-idle"><TestIcon status="skipped" size={13} />{t.skipped}<SpanHidden> skipped</SpanHidden></span>}
     </span>
   );
 }
@@ -115,7 +116,7 @@ export function HistoryStrip({ results, current }: { results: HistoryResult[]; c
         <li key={r.run_id + r.step}>
           <Link href={`/runs/${r.run_id}?tab=tests`} className={"hcell hcell-" + r.status + (r.flaky ? " hcell-flaky" : "") + (r.run_id === current ? " hcell-current" : "")}>
             <TestIcon status={r.status} size={12} />
-            <span className="visually-hidden">#{r.number} {testStatusLabel(r.status)}{r.flaky ? ", flaky" : ""}</span>
+            <SpanHidden>#{r.number} {testStatusLabel(r.status)}{r.flaky ? ", flaky" : ""}</SpanHidden>
             <span className="hcell-tip" aria-hidden="true">#{r.number} · {testStatusLabel(r.status)} · {testDuration(r.duration_ms)}{r.flaky ? " · passed on retry" : ""}</span>
           </Link>
         </li>
@@ -130,10 +131,10 @@ export function ReportsHowTo({ compact }: { compact?: boolean }) {
     <div className="howto">
       {!compact && <p>{P.t0}</p>}
       <pre className="code">{P.t1}</pre>
-      <p className="sub">{P.t2}{READ_FORMATS}.</p>
+      <PSub>{P.t2}{READ_FORMATS}.</PSub>
       {!compact && (
         <>
-          <p className="sub">{P.t3}</p>
+          <PSub>{P.t3}</PSub>
           <pre className="code">{P.t4}</pre>
         </>
       )}
@@ -163,7 +164,7 @@ export function TagPills({ tags, max = 4 }: { tags?: string[]; max?: number }) {
   const shown = tags.slice(0, max);
   return (
     <span className="ttags">
-      <span className="visually-hidden">Tags: </span>
+      <SpanHidden>Tags: </SpanHidden>
       {shown.map((t) => <span key={t} className="ttag">{t.replace(/^@/, "")}</span>)}
       {tags.length > max && <span className="ttag ttag-more" title={tags.slice(max).join(", ")}>+{tags.length - max}</span>}
     </span>
@@ -184,7 +185,7 @@ export function VariantPill({ variant }: { variant?: string }) {
   return (
     <span className="tvariant" title={isBrowser(variant) ? `Browser: ${variant}` : `Variant: ${variant}`}>
       {isBrowser(variant) ? <BrowserIcon /> : <LayersIcon />}
-      <span className="visually-hidden">{isBrowser(variant) ? "Browser " : "Variant "}</span>
+      <SpanHidden>{isBrowser(variant) ? "Browser " : "Variant "}</SpanHidden>
       {variant}
     </span>
   );
@@ -228,7 +229,7 @@ export function Sparkline({ values, width = 160, height = 36, label, format }: {
         <path d={d} className="spark-line" />
         <circle cx={x(values.length - 1)} cy={y(last)} r="3" className="spark-dot" />
       </svg>
-      <span className="spark-text"><strong>{format(last)}</strong> <span className="faint">last · {format(max)} max</span></span>
+      <span className="spark-text"><strong>{format(last)}</strong> <SpanFaint>last · {format(max)} max</SpanFaint></span>
     </span>
   );
 }

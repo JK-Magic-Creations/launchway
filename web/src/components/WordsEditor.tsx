@@ -8,6 +8,7 @@ import { Button, Decision } from "../kit/layout";
 import { Icon, type IconName } from "../kit/Icon";
 import { SETS, isSetId, makeTerms, termProblem, vocabulary, vocabularyGroups, type SetId, type Terms } from "../terms";
 import { prose } from "../prose";
+import { SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 const P = await prose("components.WordsEditor");
 
 export interface WordsValue { set: SetId; overrides: Record<string, string> }
@@ -37,7 +38,7 @@ export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: 
           <section key={g.ID} className="words-group" aria-labelledby={"wg-" + g.ID}>
             <h3 id={"wg-" + g.ID}>{g.Title}</h3>
             <table className="table words-table">
-              <thead><tr><th>What it is</th><th>In this set</th><th>Plain word</th>{g.ID !== "statuses" && <><th>Your word</th><th className="words-pl">Several</th><th><span className="visually-hidden">Actions</span></th></>}</tr></thead>
+              <thead><tr><th>What it is</th><th>In this set</th><th>Plain word</th>{g.ID !== "statuses" && <><th>Your word</th><th className="words-pl">Several</th><th><SpanHidden>Actions</SpanHidden></th></>}</tr></thead>
               <tbody>
                 {vocabulary().filter((m) => m.group === g.ID).map((m) => {
                   const own = value.overrides[m.key] ?? "";
@@ -71,7 +72,7 @@ export function WordsEditor({ value, onChange }: { value: WordsValue; onChange: 
         ))}
         <div className="cf-row">
           <Button disabled={renamed === 0 && value.set === "aviation"} onClick={() => onChange({ set: "aviation", overrides: {} })}>Reset to the defaults</Button>
-          <span className="faint small">{renamed === 0 ? "No word is renamed." : `${renamed} ${renamed === 1 ? "word is" : "words are"} renamed.`}</span>
+          <SpanFaintSmall>{renamed === 0 ? "No word is renamed." : `${renamed} ${renamed === 1 ? "word is" : "words are"} renamed.`}</SpanFaintSmall>
         </div>
       </fieldset>
     </div>
@@ -115,7 +116,7 @@ export function WordsPreview({ t }: { t: Terms }) {
         </nav>
         <div className="wp-page">
           <ol className="wp-crumbs" aria-label="Trail preview">
-            {["installation", "organization", "unit", "project"].map((k) => <li key={k}><span className="faint">{t.label(k)}</span></li>)}
+            {["installation", "organization", "unit", "project"].map((k) => <li key={k}><SpanFaint>{t.label(k)}</SpanFaint></li>)}
           </ol>
           <Decision tone="warn" title={`Release 2.4 needs ${t.lower("clearance")}`}
             children={`The ${t.lower("payload")} is one change to the checkout service. The ${t.lower("preflight")} passed; ${t.lower("hold")} windows do not apply today.`}

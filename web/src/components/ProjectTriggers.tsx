@@ -4,6 +4,7 @@ import { Link, Mono } from "./ui";
 import { triggersApi, type ScheduleView, type SchedulesView } from "../triggers";
 import "../triggers.css";
 import { terms } from "../terms";
+import { DivFaintSmall, PSub, SpanFaint } from "../kit/bits";
 
 // ProjectTriggers shows what starts a project's runs besides pushes: the
 // schedules of its default branch's pipeline, with when each fires next
@@ -27,8 +28,8 @@ export function ProjectTriggers({ project }: { project: string }) {
         {!v.enabled && v.schedules.length > 0 && <span className="sched-off"> · turned off on this server</span>}
         {errors > 0 && <span className="bad-ink"> · {errors} recent firing{errors > 1 ? "s" : ""} failed</span>}
       </summary>
-      <p className="sub">Read from the pipeline on <Mono>{v.branch}</Mono>{v.sha ? <> at <Mono>{v.sha.slice(0, 8)}</Mono></> : null}. A schedule never fires for a time
-        before it first appeared; if no server was running when it should have fired, it fires once, for the latest time missed.</p>
+      <PSub>Read from the pipeline on <Mono>{v.branch}</Mono>{v.sha ? <> at <Mono>{v.sha.slice(0, 8)}</Mono></> : null}. A schedule never fires for a time
+        before it first appeared; if no server was running when it should have fired, it fires once, for the latest time missed.</PSub>
       {v.problem && <div className="callout callout-bad">{v.problem}</div>}
       {!v.enabled && v.schedules.length > 0 && (
         <div className="callout callout-draft">{terms().say("Schedules are turned off for this {project} in its settings (or the")} {terms().lower("installation")}'s): their firings are recorded as skipped and start nothing.</div>
@@ -63,11 +64,11 @@ function ScheduleRow({ s, now }: { s: ScheduleView; now: number }) {
   const inputs = s.inputs ? Object.entries(s.inputs) : [];
   return (
     <tr>
-      <td><Mono>{s.cron}</Mono><div className="faint small">{s.timezone}</div></td>
+      <td><Mono>{s.cron}</Mono><DivFaintSmall>{s.timezone}</DivFaintSmall></td>
       <td><Mono>{s.ref}</Mono>{inputs.length > 0 && <div className="faint small mono">{inputs.map(([k, v]) => `${k}=${v}`).join(" ")}</div>}</td>
-      <td>{s.next ? <span title={new Date(s.next).toISOString()}>{clock(s.next)}<div className="faint small">in {duration(s.next - now)}</div></span> : "—"}</td>
+      <td>{s.next ? <span title={new Date(s.next).toISOString()}>{clock(s.next)}<DivFaintSmall>in {duration(s.next - now)}</DivFaintSmall></span> : "—"}</td>
       <td>
-        {!s.last ? <span className="faint">not yet</span> : (
+        {!s.last ? <SpanFaint>not yet</SpanFaint> : (
           <>
             <span className={s.last.outcome === "error" ? "bad-ink" : s.last.outcome === "skipped" ? "sched-off" : ""}>{s.last.outcome}</span>
             {" "}for {clock(s.last.fire_at)}

@@ -10,6 +10,7 @@ import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivPage, LabelField, PSub, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 const P = await prose("pages.Runners");
 
 // Where Launchway's releases are published (see packaging/README.md): every release holds
@@ -78,7 +79,7 @@ export function RunnersPage() {
 
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say(P.t2)}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
       <ErrorBox error={error} />
 
@@ -97,7 +98,7 @@ export function RunnersPage() {
       {runners && runners.length > 0 && (
         <div className={P.t7}>
           <table className="table rn-table">
-            <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><span className="visually-hidden">Actions</span></th>}</tr></thead>
+            <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><SpanHidden>Actions</SpanHidden></th>}</tr></thead>
             <tbody>
               {runners.map((r) => {
                 const revoked = !!r.identity?.revoked_at;
@@ -106,21 +107,21 @@ export function RunnersPage() {
                     <td>
                       <span className={"online " + (r.online ? "online-on" : "")} role="img" aria-label={r.online ? "online" : "offline"} />{r.name}
                       <div className="faint small mono">{r.id}</div>
-                      <div className="faint small">
+                      <DivFaintSmall>
                         {r.executor === "deploy" ? terms().say("{deploy:do} {runner}") : r.executor}{r.version && <> · <Mono>{r.version}</Mono></>}
                         {r.os && <> · {r.os}/{r.arch}</>}{r.images && <> · builds images</>}
-                      </div>
+                      </DivFaintSmall>
                       {(r.labels?.length ?? 0) > 0 && <div className="rn-labels">{r.labels!.map((l) => <span key={l} className="rn-label">{l}</span>)}</div>}
                     </td>
                     <td>
                       <Mono>{r.pool || "default"}</Mono>
-                      {r.targets?.length ? <div className="faint small">serves {r.targets.join(", ")}</div> : null}
+                      {r.targets?.length ? <DivFaintSmall>serves {r.targets.join(", ")}</DivFaintSmall> : null}
                     </td>
                     <td><IdentityCell r={r} now={now} /></td>
                     <td className="rn-accept">{acceptSummary(r.accept)}</td>
                     <td>
-                      {(r.work?.length ?? 0) === 0 ? <span className="faint">nothing</span> : r.work!.map((w) => (
-                        <div key={w.run + w.step}><Link href={`/runs/${w.run}`}>{w.project} #{w.number}</Link> <span className="faint">{w.step}</span></div>
+                      {(r.work?.length ?? 0) === 0 ? <SpanFaint>nothing</SpanFaint> : r.work!.map((w) => (
+                        <div key={w.run + w.step}><Link href={`/runs/${w.run}`}>{w.project} #{w.number}</Link> <SpanFaint>{w.step}</SpanFaint></div>
                       ))}
                     </td>
                     <td>{revoked ? "revoked" : r.online ? "connected" : `offline, last seen ${ago(r.last_seen, now)}`}</td>
@@ -128,8 +129,8 @@ export function RunnersPage() {
                       <td className="td-actions">
                         {r.identity && !revoked && (
                           <div className="rn-actions">
-                            <button type="button" className="btn btn-sm" onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
-                              title={terms().say(P.t8)}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
+                            <BtnSm onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
+                              title={terms().say(P.t8)}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</BtnSm>
                             <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => revoke(r)}>Revoke</button>
                           </div>
                         )}
@@ -152,14 +153,14 @@ export function RunnersPage() {
       {pools && !manage && (
         <section className="card">
           <h2 className="h-sm">{terms().say(P.t9)}</h2>
-          <p className="sub">{terms().say(P.t10)} <Mono>runner_admin</Mono> {terms().say(P.t11)}</p>
+          <PSub>{terms().say(P.t10)} <Mono>runner_admin</Mono> {terms().say(P.t11)}</PSub>
           <pre className="code">{`launchway runner --server ${location.origin} --join <join token>`}</pre>
         </section>
       )}
       <StoreCard />
       <ModelsSection />
       <HealthSourcesSection />
-    </div>
+    </DivPage>
   );
 }
 
@@ -190,9 +191,9 @@ function StoreCard() {
           : <span className="pill pill-bad">Not kept on this server</span>}
       </div>
       {!st.available && st.problem && <div className="callout callout-bad">{st.problem}</div>}
-      {st.available && st.why && <p className="sub">{st.why}</p>}
+      {st.available && st.why && <PSub>{st.why}</PSub>}
       {st.available && st.store === "database" && !st.why && (
-        <p className="sub">{terms().say(P.t12)}</p>
+        <PSub>{terms().say(P.t12)}</PSub>
       )}
       {u && (
         <div className="store-usage">
@@ -201,15 +202,15 @@ function StoreCard() {
           </div>
           <div className="store-figures">
             <span><b>{bytes(u.used_bytes)}</b> of {bytes(u.limit_bytes)} used</span>
-            <span className="faint">{u.objects} {u.objects === 1 ? "object" : "objects"}</span>
-            {u.open_uploads > 0 && <span className="faint">{u.open_uploads} uploading</span>}
-            {u.collect_bytes > 0 && <span className="faint">{bytes(u.collect_bytes)} being freed</span>}
-            <span className="faint">files up to {bytes(u.max_object_bytes)}</span>
+            <SpanFaint>{u.objects} {u.objects === 1 ? "object" : "objects"}</SpanFaint>
+            {u.open_uploads > 0 && <SpanFaint>{u.open_uploads} uploading</SpanFaint>}
+            {u.collect_bytes > 0 && <SpanFaint>{bytes(u.collect_bytes)} being freed</SpanFaint>}
+            <SpanFaint>files up to {bytes(u.max_object_bytes)}</SpanFaint>
           </div>
         </div>
       )}
       {!u && st.available && (
-        <p className="sub">{st.kept.files} {st.kept.files === 1 ? "file" : "files"} kept, {bytes(st.kept.bytes)}.</p>
+        <PSub>{st.kept.files} {st.kept.files === 1 ? "file" : "files"} kept, {bytes(st.kept.bytes)}.</PSub>
       )}
       {st.advice.map((a) => <div key={a} className={P.t14}>{a}</div>)}
     </section>
@@ -222,16 +223,16 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-bad">revoked</span>
-        <div className="faint small">by {id.revoked_by || "?"} {ago(id.revoked_at, now)}{id.revoke_reason && <>: {id.revoke_reason}</>}</div>
+        <DivFaintSmall>by {id.revoked_by || "?"} {ago(id.revoked_at, now)}{id.revoke_reason && <>: {id.revoke_reason}</>}</DivFaintSmall>
       </div>
     );
   }
   if (id) {
     return (
       <div>
-        <span className="pill pill-ok">enrolled</span>{id.ephemeral && <span className="faint small"> ephemeral</span>}
+        <span className="pill pill-ok">enrolled</span>{id.ephemeral && <SpanFaintSmall> ephemeral</SpanFaintSmall>}
         <div className="faint small mono" title={terms().say(P.t15)}>{id.key_fingerprint}</div>
-        <div className="faint small" title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</div>
+        <DivFaintSmall title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</DivFaintSmall>
       </div>
     );
   }
@@ -240,20 +241,20 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>
-        <div className="faint small">{terms().say(P.t16)}</div>
+        <DivFaintSmall>{terms().say(P.t16)}</DivFaintSmall>
       </div>
     );
   }
   return (
     <div>
       <span className="pill pill-warn">{r.auth === "pool" ? "pool token" : "shared token"}</span>
-      <div className="faint small">no identity of its own</div>
+      <DivFaintSmall>no identity of its own</DivFaintSmall>
     </div>
   );
 }
 
 function acceptSummary(a?: RunnerAccept) {
-  if (!a) return <span className="faint">anything its pool serves</span>;
+  if (!a) return <SpanFaint>anything its pool serves</SpanFaint>;
   const parts: string[] = [];
   const list = (name: string, l?: string[]) => { if (l?.length) parts.push(`${name} ${l.join(", ")}`); };
   list("projects", a.projects);
@@ -281,16 +282,16 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
               const online = runners.filter((r) => r.online && (r.pool || "default") === p.name && !r.identity?.revoked_at).length;
               return (
                 <tr key={p.name}>
-                  <td><Mono>{p.name}</Mono><div className="faint small">{p.kind === "build" ? "build" : "deploy"} pool{!p.configured && ", not configured"}</div></td>
+                  <td><Mono>{p.name}</Mono><DivFaintSmall>{p.kind === "build" ? "build" : "deploy"} pool{!p.configured && ", not configured"}</DivFaintSmall></td>
                   <td>
                     {p.kind === "deploy" ? <>targets {p.targets.join(", ")}</>
                       : p.projects.length ? <>projects {p.projects.join(", ")}</>
                       : <>{terms().say(P.t17)}</>}
-                    {p.events.length > 0 && <div className="faint small">only runs started by {p.events.join(", ")}</div>}
+                    {p.events.length > 0 && <DivFaintSmall>only runs started by {p.events.join(", ")}</DivFaintSmall>}
                   </td>
                   <td>
                     {p.require_identity ? <span className="pill pill-ok">{terms().say("enrolled {runners} only")}</span>
-                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><div className="faint small">{P.t18}</div></>
+                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><DivFaintSmall>{P.t18}</DivFaintSmall></>
                       : terms().say("enrolled {runners}")}
                   </td>
                   <td>{online}</td>
@@ -338,37 +339,37 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
   return (
     <section className="card rn-add">
       <h2 className="h-sm">{terms().say("Add a {runner}")}</h2>
-      <p className="sub">{terms().say(P.t19)}</p>
+      <PSub>{terms().say(P.t19)}</PSub>
       <form onSubmit={create} className="inputs-form" aria-label="Make a join token">
         <div className="rn-form">
-          <label className="field">
+          <LabelField>
             <span>Pool</span>
             <select value={pool} onChange={(e) => setPool(e.target.value)}>
               {pools.map((x) => <option key={x.name} value={x.name}>{x.name} ({x.kind})</option>)}
             </select>
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>{terms().say("{Runners} it may enroll")}</span>
             <input type="number" min={1} max={10000} value={uses} onChange={(e) => setUses(Math.max(1, Number(e.target.value) || 1))} />
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Valid for</span>
             <select value={ttl} onChange={(e) => setTTL(e.target.value)}>{TTLS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Labels</span>
             <input value={labels} placeholder="for example: arm64, gpu" onChange={(e) => setLabels(e.target.value)} />
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Description</span>
             <input value={description} maxLength={200} placeholder="what or where it is for" onChange={(e) => setDescription(e.target.value)} />
-          </label>
+          </LabelField>
         </div>
         <label className="rn-check">
           <input type="checkbox" checked={ephemeral} onChange={(e) => setEphemeral(e.target.checked)} />
           <span>{terms().say(P.t20)}</span>
         </label>
-        <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make join token"}</button></div>
+        <div><BtnPrimary disabled={busy}>{busy ? "Making…" : "Make join token"}</BtnPrimary></div>
       </form>
 
       {made && commands && (
@@ -386,7 +387,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
           {commands[tab].map((c) => (
             <div key={c.title} className="rn-cmd">
               <div className="rn-cmd-head"><span>{c.title}</span>
-                <button type="button" className="btn btn-sm" onClick={() => copy(c.title, c.text)}>{copied === c.title ? "Copied" : "Copy"}</button></div>
+                <BtnSm onClick={() => copy(c.title, c.text)}>{copied === c.title ? "Copied" : "Copy"}</BtnSm></div>
               <pre className="code">{c.text}</pre>
             </div>
           ))}
@@ -439,17 +440,17 @@ function JoinTokens({ tokens, now, onRevoke }: { tokens: JoinToken[]; now: numbe
       <h2 className="h-sm rn-h">Join tokens</h2>
       <div className={P.t7}>
         <table className="table">
-          <thead><tr><th>Token</th><th>Pool</th><th>Used</th><th>State</th><th>Made</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+          <thead><tr><th>Token</th><th>Pool</th><th>Used</th><th>State</th><th>Made</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
           <tbody>
             {tokens.map((t) => (
               <tr key={t.id}>
-                <td><span className="mono small">{t.id}</span>{t.description && <div className="faint small">{t.description}</div>}
+                <td><span className="mono small">{t.id}</span>{t.description && <DivFaintSmall>{t.description}</DivFaintSmall>}
                   {t.labels.length > 0 && <div className="rn-labels">{t.labels.map((l) => <span key={l} className="rn-label">{l}</span>)}</div>}</td>
-                <td><Mono>{t.pool}</Mono>{t.ephemeral && <div className="faint small">ephemeral</div>}</td>
+                <td><Mono>{t.pool}</Mono>{t.ephemeral && <DivFaintSmall>ephemeral</DivFaintSmall>}</td>
                 <td>{t.uses} of {t.max_uses}</td>
                 <td>
                   <span className={"pill " + (t.state === "active" ? "pill-ok" : t.state === "revoked" ? "pill-bad" : "pill-idle")}>{t.state}</span>
-                  <div className="faint small">{t.state === "active" ? `until ${clock(t.expires_at)}` : t.revoked_at ? `by ${t.revoked_by}` : ""}</div>
+                  <DivFaintSmall>{t.state === "active" ? `until ${clock(t.expires_at)}` : t.revoked_at ? `by ${t.revoked_by}` : ""}</DivFaintSmall>
                 </td>
                 <td title={clock(t.created_at)}>{ago(t.created_at, now)} by {t.created_by}</td>
                 <td className="td-actions">{t.state === "active" && <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => onRevoke(t)}>Revoke</button>}</td>

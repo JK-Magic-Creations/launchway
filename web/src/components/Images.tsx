@@ -2,6 +2,7 @@ import type { ArtifactView, FindingCounts, ImageBuild, ImageScan, ImageValue, Sc
 import { Mono } from "./ui";
 import { artifactArchiveURL, artifactFileURL } from "./Security";
 import { terms } from "../terms";
+import { SpanFaint } from "../kit/bits";
 
 // Pieces shared by the run's Images tab, an image step's panel, the graph
 // and the image search.
@@ -39,7 +40,7 @@ export function ImageValueText({ v }: { v: ImageValue }) {
   if (v.output) return <span className="imgval">output <Mono>{v.output.key}</Mono> of {v.output.step}</span>;
   if (v.run) return <span className="imgval">{RUN_FACT[v.run] ?? v.run}</span>;
   if (v.input !== undefined) return <span className="imgval">input <Mono>{v.input}</Mono></span>;
-  return <span className="faint">empty</span>;
+  return <SpanFaint>empty</SpanFaint>;
 }
 
 /** "critical", "high or worse". */
@@ -88,7 +89,7 @@ export function ImageBuildFacts({ b }: { b: ImageBuild }) {
     <>
       <dt>Context</dt><dd><Mono>{b.context || "."}</Mono></dd>
       <dt>Dockerfile</dt><dd><Mono>{b.file || "Dockerfile"}</Mono>{b.target && <> · target <Mono>{b.target}</Mono></>}</dd>
-      <dt>Platforms</dt><dd>{b.platforms?.length ? b.platforms.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <span className="faint">{terms().say("the {runner}'s own")}</span>}</dd>
+      <dt>Platforms</dt><dd>{b.platforms?.length ? b.platforms.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>) : <SpanFaint>{terms().say("the {runner}'s own")}</SpanFaint>}</dd>
       {args.length > 0 && (
         <><dt>Build args</dt><dd>{args.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <ImageValueText v={v} /></div>)}</dd></>
       )}
@@ -96,7 +97,7 @@ export function ImageBuildFacts({ b }: { b: ImageBuild }) {
       <dd>
         {b.tags.length ? b.tags.map((t, i) => (
           <div key={i}><Mono>{t.registry}/{t.repository}:</Mono>{t.tag.literal !== undefined ? <Mono>{t.tag.literal}</Mono> : <> <ImageValueText v={t.tag} /></>}</div>
-        )) : <span className="faint">none</span>}
+        )) : <SpanFaint>none</SpanFaint>}
       </dd>
       <dt>Push</dt><dd>{push ? "yes, except in pull-request runs" : "no: built and checked only"}</dd>
       {b.cache && <><dt>Cache</dt><dd><Mono>{b.cache.registry}/{b.cache.repository}</Mono></dd></>}

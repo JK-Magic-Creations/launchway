@@ -4,6 +4,7 @@ import { Link } from "../../components/ui";
 import type { Run } from "../../highlight";
 import { parseRange } from "./FileView";
 import { Breadcrumb, MsgLink, RepoFrame, useFetched, useQuery, when } from "./common";
+import { BtnSm, DivLoading, SpanMono, ThCol } from "../../kit/bits";
 
 /** Who last changed each line of a file. A long file is read a range at a time; the lines of one commit are
  * grouped, and "Blame before this change" opens the file as it was just before that commit. */
@@ -57,17 +58,17 @@ export function BlamePage({ path }: { path: string }) {
   }, [b]);
   const shown = ref.length === 40 ? ref.slice(0, 10) : ref;
   return (
-    <RepoFrame path={path} tab="code" title={`Blame of ${file.split("/").pop()}`} sentence={<>Who last changed each line of <span className="mono">{file}</span> at <span className="mono">{shown}</span>.</>} error={error}>
+    <RepoFrame path={path} tab="code" title={`Blame of ${file.split("/").pop()}`} sentence={<>Who last changed each line of <SpanMono>{file}</SpanMono> at <SpanMono>{shown}</SpanMono>.</>} error={error}>
       <div className="code-bar">
         <Breadcrumb repo={path} refName={ref} path={file} />
         <span className="grow" />
         <Link href={codeHref(path, ref, file)} className="btn btn-sm">Normal view</Link>
       </div>
-      {!b && !error && <div className="loading">Loading…</div>}
+      {!b && !error && <DivLoading>Loading…</DivLoading>}
       {b && (
         <section className="card code-file" aria-label="Blame">
           <table className="lines blame" aria-label={`Who changed each line of ${file}`}>
-            <thead className="sr-only"><tr><th scope="col">Last changed by</th><th scope="col">Line</th><th scope="col">Code</th></tr></thead>
+            <thead className="sr-only"><tr><ThCol>Last changed by</ThCol><ThCol>Line</ThCol><ThCol>Code</ThCol></tr></thead>
             <tbody>
               {rows.map(({ l, first, size, odd, age }, i) => {
                 const c = b.commits[l.sha];
@@ -90,7 +91,7 @@ export function BlamePage({ path }: { path: string }) {
               })}
             </tbody>
           </table>
-          {b.next ? <p className="code-more"><button type="button" className="btn btn-sm" disabled={more} onClick={loadMore}>{more ? "Loading…" : `Blame the next lines (${b.to} of ${b.total} so far)`}</button></p> : <p className="faint small code-note">{b.total} lines.</p>}
+          {b.next ? <p className="code-more"><BtnSm disabled={more} onClick={loadMore}>{more ? "Loading…" : `Blame the next lines (${b.to} of ${b.total} so far)`}</BtnSm></p> : <p className="faint small code-note">{b.total} lines.</p>}
         </section>
       )}
     </RepoFrame>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ThCol } from "./kit/bits";
 
 // A small Markdown renderer for descriptions and comments. It builds React elements from the text, so nothing
 // the author wrote is ever interpreted as HTML: a <script> tag in a description is shown as text. Links are
@@ -114,7 +115,7 @@ export function Markdown({ text, ctx }: { text: string; ctx?: Context }) {
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region must be reachable with the keyboard
         <div key={k++} className="md-table" role="region" aria-label={`Table: ${head.filter(Boolean).join(", ") || "rows"}`} tabIndex={0}>
           <table>
-            <thead><tr>{head.map((h, c) => <th key={c} scope="col" className={align[c]}>{inline(h, ctx)}</th>)}</tr></thead>
+            <thead><tr>{head.map((h, c) => <ThCol key={c} className={align[c]}>{inline(h, ctx)}</ThCol>)}</tr></thead>
             <tbody>{rows.map((r, ri) => <tr key={ri}>{head.map((_, c) => <td key={c} className={align[c]}>{inline(r[c] ?? "", ctx)}</td>)}</tr>)}</tbody>
           </table>
         </div>);

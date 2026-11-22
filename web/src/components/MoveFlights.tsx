@@ -4,6 +4,7 @@ import { Dialog } from "../kit/Dialog";
 import { squadronsApi, type MovePlan, type MovePreview, type MoveResult, type SquadronList } from "../squadronsApi";
 import { terms } from "../terms";
 import "../moveflights.css";
+import { BtnSm, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 // Moving Flights between Squadrons. Three parts that work together:
 //   useFlightSelection(names)  the ticked Flights among those in view (a ticked Flight that is not in view is not moved);
@@ -87,11 +88,11 @@ export function MoveFlightsBar({ selection, onMoved }: { selection: FlightSelect
       <div role="toolbar" aria-label={say("Selected {projects}")} className="mv-tools">
         <SelectAllFlights selection={selection} />
         <span className="small faint" role="status">{n === 0 ? say("No {projects} selected.") : say(`${plural(n, "{project}", "{projects}")} selected.`)}</span>
-        <button ref={opener} type="button" className="btn btn-sm" disabled={n === 0} onClick={() => setOpen(true)}>{say("Move to {Unit}…")}</button>
+        <BtnSm ref={opener} disabled={n === 0} onClick={() => setOpen(true)}>{say("Move to {Unit}…")}</BtnSm>
       </div>
       {done && (
         <p className="mv-done" role="status">
-          {done.text} <button type="button" className="btn btn-sm" onClick={() => void undo()}>Undo</button>
+          {done.text} <BtnSm onClick={() => void undo()}>Undo</BtnSm>
           {undoErr && <span className="err" role="alert"> {undoErr}</span>}
         </p>
       )}
@@ -153,9 +154,9 @@ export function MoveFlightsDialog({ flights, onClose, onApplied }: { flights: st
               {!list && !err && <p className="faint" role="status">Loading…</p>}
               {list && (
                 <>
-                  <label className="mv-opt"><input type="radio" name="mv-to" data-autofocus checked={to === ""} onChange={() => setTo("")} /> <span>Unfiled <span className="faint small">(in no {say("{unit}")})</span></span></label>
+                  <label className="mv-opt"><input type="radio" name="mv-to" data-autofocus checked={to === ""} onChange={() => setTo("")} /> <span>Unfiled <SpanFaintSmall>(in no {say("{unit}")})</SpanFaintSmall></span></label>
                   {list.squadrons.map((s) => (
-                    <label key={s.name} className="mv-opt"><input type="radio" name="mv-to" checked={to === s.name} onChange={() => setTo(s.name)} /> <span>{s.display_name || s.name} <span className="faint small">({plural(s.flights, say("{project}"), say("{projects}"))})</span></span></label>
+                    <label key={s.name} className="mv-opt"><input type="radio" name="mv-to" checked={to === s.name} onChange={() => setTo(s.name)} /> <span>{s.display_name || s.name} <SpanFaintSmall>({plural(s.flights, say("{project}"), say("{projects}"))})</SpanFaintSmall></span></label>
                   ))}
                   {list.squadrons.length === 0 && <p className="faint small">{say("There is no {unit} yet. Make one first, or use Organize.")}</p>}
                 </>
@@ -211,7 +212,7 @@ function PlanView({ plan, toLabel, skipped, onSkip }: { plan: MovePlan; toLabel:
           <input type="checkbox" checked={!plan.blocked && !plan.unchanged && !skipped} disabled={plan.blocked || !!plan.unchanged} onChange={onSkip} aria-describedby={`${id}-s`} />
           <span>{plan.flight}</span>
         </label>
-        <span className="faint small"> {place(plan.from)} → {toLabel}</span>
+        <SpanFaintSmall> {place(plan.from)} → {toLabel}</SpanFaintSmall>
       </h3>
       <p id={`${id}-s`} className="small mv-state">
         {plan.blocked ? "Blocked: it cannot move." : plan.unchanged ? `Already in ${toLabel}: nothing to do.` : skipped ? "Left out: it will stay where it is." : "Ready to move."}
@@ -225,8 +226,8 @@ function PlanView({ plan, toLabel, skipped, onSkip }: { plan: MovePlan; toLabel:
       {!plan.unchanged && (
         <dl className="mv-effects">
           {plan.references_from === "assumed" && <><dt>Secrets</dt><dd>The pipeline file could not be read, so the secret references below are assumed.</dd></>}
-          {(plan.stops?.length ?? 0) > 0 && <><dt>Stop applying</dt><dd><ul>{plan.stops.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
-          {(plan.starts?.length ?? 0) > 0 && <><dt>Start applying</dt><dd><ul>{plan.starts.map((e, i) => <li key={i}>{e.kind} {e.name} <span className="faint">from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</span></li>)}</ul></dd></>}
+          {(plan.stops?.length ?? 0) > 0 && <><dt>Stop applying</dt><dd><ul>{plan.stops.map((e, i) => <li key={i}>{e.kind} {e.name} <SpanFaint>from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</SpanFaint></li>)}</ul></dd></>}
+          {(plan.starts?.length ?? 0) > 0 && <><dt>Start applying</dt><dd><ul>{plan.starts.map((e, i) => <li key={i}>{e.kind} {e.name} <SpanFaint>from the {definedAt(e.from)}{e.note ? `, ${e.note}` : ""}</SpanFaint></li>)}</ul></dd></>}
           {(plan.variables?.length ?? 0) > 0 && <><dt>Variables that change value</dt><dd><ul>{plan.variables.map((v) => <li key={v.name}><code>{v.name}</code>: {v.before || "(not set)"} becomes {v.after || "(not set)"}</li>)}</ul></dd></>}
           {(plan.access?.length ?? 0) > 0 && <><dt>Who can start runs</dt><dd><ul>{plan.access.map((a, i) => <li key={i}>{a.who} {a.effect === "gains" ? "gains" : "loses"} the ability to start runs ({a.before || "no role"} becomes {a.after || "no role"})</li>)}</ul></dd></>}
           {(plan.secrets?.length ?? 0) > 0 && <><dt>Secret references</dt><dd><ul>{plan.secrets.map((s, i) => <li key={i}><b>{s.result}</b>: {s.store} {SECRET[s.result]}</li>)}</ul></dd></>}

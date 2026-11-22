@@ -3,6 +3,7 @@ import { ApiError } from "../../api";
 import { actionOf, guideApi, type GuideStep, type RootKeyCopyStatus } from "../../guideApi";
 import { Unavailable, Wingman } from "./Frame";
 import { prose } from "../../prose";
+import { BtnPrimary, LabelField } from "../../kit/bits";
 const P = await prose("pages.guide.EncryptionStep");
 
 function download(name: string, data: unknown) {
@@ -57,13 +58,13 @@ export function EncryptionStep({ step, onChange }: { step: GuideStep; onChange: 
       {take?.available && open && (
         <form className="gd-form" onSubmit={submit} aria-label={P.t6}>
           <p className="faint">{P.t7}</p>
-          <label className="field"><span>Your password</span><input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="current-password" required /></label>
-          <label className="field"><span>{P.t8}</span><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} inputMode="numeric" autoComplete="one-time-code" required /></label>
-          <label className="field"><span>{P.t9}</span><input type="password" value={f.pass} onChange={(e) => setF({ ...f, pass: e.target.value })} autoComplete="new-password" minLength={12} required /></label>
-          <label className="field"><span>The passphrase again</span><input type="password" value={f.pass2} onChange={(e) => setF({ ...f, pass2: e.target.value })} autoComplete="new-password" required aria-invalid={mismatch} aria-describedby={mismatch ? "gd-pp-err" : undefined} /></label>
+          <LabelField><span>Your password</span><input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="current-password" required /></LabelField>
+          <LabelField><span>{P.t8}</span><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} inputMode="numeric" autoComplete="one-time-code" required /></LabelField>
+          <LabelField><span>{P.t9}</span><input type="password" value={f.pass} onChange={(e) => setF({ ...f, pass: e.target.value })} autoComplete="new-password" minLength={12} required /></LabelField>
+          <LabelField><span>The passphrase again</span><input type="password" value={f.pass2} onChange={(e) => setF({ ...f, pass2: e.target.value })} autoComplete="new-password" required aria-invalid={mismatch} aria-describedby={mismatch ? "gd-pp-err" : undefined} /></LabelField>
           {mismatch && <p id="gd-pp-err" className="cf-problem" role="alert">{P.t10}</p>}
           {err && <div className="callout callout-bad" role="alert">{err}</div>}
-          <div className="gd-choices"><button type="submit" className="btn btn-primary" disabled={busy || mismatch}>{busy ? "Making the copy…" : "Download the copy"}</button>
+          <div className="gd-choices"><BtnPrimary disabled={busy || mismatch}>{busy ? "Making the copy…" : "Download the copy"}</BtnPrimary>
             <button type="button" className="btn" onClick={() => setOpen(false)}>Cancel</button></div>
         </form>
       )}

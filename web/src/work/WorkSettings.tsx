@@ -4,6 +4,7 @@ import { announce } from "../kit/announce";
 import { csv, ErrorPanel, Loading, scopeLabel, useLoad, WorkPage } from "./common";
 import { workApi, type Autonomy, type FieldDef, type ReviewPolicy, type Settings, type SettingsAnswer, type StateDef, type TypeDef } from "./workApi";
 import { prose } from "../prose";
+import { PSub, SpanFaint, SpanFaintSmall, SpanHidden, ThCol } from "../kit/bits";
 const P = await prose("work.WorkSettings");
 
 // How work is set up in a project: the workflow, who may move work, types, fields, the close rule, and the rules for agents,
@@ -103,10 +104,10 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
           </Sheet>
 
           <Sheet title="Workflow" pad>
-            <p className="sub">{P.t10}</p>
+            <PSub>{P.t10}</PSub>
             <div className="tablewrap"><table className="table wk-table">
               <caption className="visually-hidden">Workflow states</caption>
-              <thead><tr><th scope="col">Key</th><th scope="col">Name</th><th scope="col">Meaning</th><th scope="col">Limit</th><th scope="col">Who may move work here</th><th scope="col"><span className="visually-hidden">Remove</span></th></tr></thead>
+              <thead><tr><ThCol>Key</ThCol><ThCol>Name</ThCol><ThCol>Meaning</ThCol><ThCol>Limit</ThCol><ThCol>Who may move work here</ThCol><ThCol><SpanHidden>Remove</SpanHidden></ThCol></tr></thead>
               <tbody>
                 {states.map((s, i) => (
                   <tr key={i}>
@@ -126,7 +127,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
           <Sheet title="Types" pad>
             <div className="tablewrap"><table className="table wk-table">
               <caption className="visually-hidden">Item types</caption>
-              <thead><tr><th scope="col">Key</th><th scope="col">Name</th><th scope="col">Starting text</th><th scope="col">Off</th></tr></thead>
+              <thead><tr><ThCol>Key</ThCol><ThCol>Name</ThCol><ThCol>Starting text</ThCol><ThCol>Off</ThCol></tr></thead>
               <tbody>{types.map((t, i) => (
                 <tr key={i}>
                   <td><input aria-label={`Key of type ${i + 1}`} value={t.key} onChange={(e) => { setTypes(types.map((x, j) => (j === i ? { ...x, key: e.target.value } : x))); setTypesDirty(true); }} /></td>
@@ -163,7 +164,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
                 </select></div>
               <div className="wk-f"><label htmlFor="cl-st">State it moves to</label>
                 <select id="cl-st" value={close.state} onChange={(e) => { setClose({ ...close, state: e.target.value }); setCloseDirty(true); }}>{states.map((s) => <option key={s.key} value={s.key}>{s.name || s.key}</option>)}</select></div>
-              <div className="wk-f span"><label htmlFor="cl-v">Words that close an item</label><input id="cl-v" value={close.verbs} onChange={(e) => { setClose({ ...close, verbs: e.target.value }); setCloseDirty(true); }} /><span className="faint small">{P.t15}</span></div>
+              <div className="wk-f span"><label htmlFor="cl-v">Words that close an item</label><input id="cl-v" value={close.verbs} onChange={(e) => { setClose({ ...close, verbs: e.target.value }); setCloseDirty(true); }} /><SpanFaintSmall>{P.t15}</SpanFaintSmall></div>
             </div>
           </Sheet>
 
@@ -180,7 +181,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
           <ReviewSection rev={rev} setRev={setRev} />
 
           <Sheet title="Difficulty and agent classes" pad>
-            <p className="sub">{P.t21}</p>
+            <PSub>{P.t21}</PSub>
             {CLASSES.map((d) => (
               <fieldset key={d} className="wk-radios inline"><legend>{d[0]!.toUpperCase() + d.slice(1)} items may be taken by</legend>
                 {CLASSES.map((c) => (
@@ -201,7 +202,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
 
 function TextField({ label, value, onChange, hint, required, type }: { label: string; value: string; onChange: (v: string) => void; hint?: string; required?: boolean; type?: string }) {
   const id = useId();
-  return <div className="wk-f"><label htmlFor={id}>{label}</label><input id={id} type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} />{hint && <span className="faint small">{hint}</span>}</div>;
+  return <div className="wk-f"><label htmlFor={id}>{label}</label><input id={id} type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} />{hint && <SpanFaintSmall>{hint}</SpanFaintSmall>}</div>;
 }
 
 function AutonomySection({ scope, a, level, aut, setAut, editable, onResumed }: {
@@ -242,7 +243,7 @@ function AutonomySection({ scope, a, level, aut, setAut, editable, onResumed }: 
           return (
             <label key={l.level} className={"wk-radio" + (off ? " off" : "")}>
               <input type="radio" name="autonomy-level" value={l.level} checked={level === l.level} disabled={off} onChange={() => patch({ level: l.level })} />
-              <span><strong>Level {l.level}{off ? "" : `: ${l.name}`}</strong>{off ? <span className="faint"> Not yet available</span> : <span className="faint small block">{l.text}</span>}</span>
+              <span><strong>Level {l.level}{off ? "" : `: ${l.name}`}</strong>{off ? <SpanFaint> Not yet available</SpanFaint> : <span className="faint small block">{l.text}</span>}</span>
             </label>
           );
         })}

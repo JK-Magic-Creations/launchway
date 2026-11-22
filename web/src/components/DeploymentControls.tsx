@@ -6,6 +6,7 @@ import { terms } from "../terms";
 import { freshness } from "./Deployment";
 import { RolloutOverview } from "./RolloutOverview";
 import { prose } from "../prose";
+import { BtnSm, LabelField, SpanFaint } from "../kit/bits";
 const P = await prose("components.DeploymentControls");
 
 // Controlling a deployment's Argo Rollouts rollout: Promote, Promote full,
@@ -177,11 +178,11 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
         </p>
       )}
       {anyEnabled && (
-        <label className="field">
-          <span>Comment <span className="faint">{P.t5}</span></span>
+        <LabelField>
+          <span>Comment <SpanFaint>{P.t5}</SpanFaint></span>
           <textarea className="dctl-comment" aria-label="Comment on the command" value={comment} maxLength={2000} rows={2}
             onChange={(e) => setComment(e.target.value)} />
-        </label>
+        </LabelField>
       )}
       <ErrorBox error={error} />
       {latest && latest.state !== "withdrawn" && (() => {
@@ -292,11 +293,11 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
               <div className="dcmd-head">
                 <strong>{actionLabel(c.action)}</strong>
                 <span>by {whoGave(c)}</span>
-                <span className="faint" title={clock(c.at)}>{ago(c.at, now)}</span>
+                <SpanFaint title={clock(c.at)}>{ago(c.at, now)}</SpanFaint>
                 <span className={`dpill dpill-${st.tone}`}>{c.state === "done" ? (c.result ?? "done").replace(/_/g, " ") : c.state}</span>
               </div>
               {c.comment && <blockquote className="approval-comment">{c.comment}</blockquote>}
-              <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <span className="faint">, {clock(c.done_at)}</span> : null}.</div>
+              <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <SpanFaint>, {clock(c.done_at)}</SpanFaint> : null}.</div>
               <div className="dep-notes">
                 <span>for the rollout {c.expect.step !== undefined ? <>{terms().say("at {canary} step")} {c.expect.step + 1}{c.expect.paused ? ", paused" : ""}</> : c.expect.paused ? "paused" : "as it was"}</span>
                 {c.expect.pod_hash && <span>pod template <Mono>{c.expect.pod_hash}</Mono></span>}
@@ -304,7 +305,7 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
               </div>
               {c.state === "pending" && controls?.withdraw && (
                 <div>
-                  <button type="button" className="btn btn-sm" disabled={busy === c.id} onClick={() => withdraw(c)}>Withdraw</button>
+                  <BtnSm disabled={busy === c.id} onClick={() => withdraw(c)}>Withdraw</BtnSm>
                 </div>
               )}
               {error?.id === c.id && <ErrorBox error={error.e} />}

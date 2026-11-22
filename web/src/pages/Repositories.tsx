@@ -13,14 +13,15 @@ import { PageTabs, useTab } from "../components/PageTabs";
 import { useHosting } from "./SshKeys";
 import "../styles/forge.css";
 import { prose } from "../prose";
+import { BtnPrimary, DivLoading, DivPage, LabelField, PSub, SpanFaint, SpanHidden } from "../kit/bits";
 const P = await prose("pages.Repositories");
 
 function Off() {
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Code" title="Repositories" />
       <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>{P.t2}</Empty>
-    </div>
+    </DivPage>
   );
 }
 
@@ -50,7 +51,7 @@ export function RepositoriesPage() {
     </Sheet>
   );
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Code" title="Repositories"
         sentence={repos && repos.length === 0 ? P.t4 : `${repos?.length ?? 0} hosted by Launchway.`}
         actions={<><Link href="/graph" className="btn btn-sm">Graph</Link> <Link href="/settings/access/ssh-keys" className="btn btn-sm">SSH keys</Link></>} />
@@ -63,7 +64,7 @@ export function RepositoriesPage() {
           <ul className="rowlist">{owners.map((o) => <li key={o}><div className="main"><div className="nm"><Link href={`/owners/${encodeURIComponent(o)}`}>{o}</Link></div><div className="sb faint">{P.t5}</div></div></li>)}</ul>
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -83,14 +84,14 @@ export function CloneBox({ repo }: { repo: HostedRepo }) {
         </div>
       )}
       {!addr
-        ? <p className="sub" role="status">{P.t6}<Mono>forge.public_url</Mono> {P.t7}</p>
+        ? <PSub role="status">{P.t6}<Mono>forge.public_url</Mono> {P.t7}</PSub>
         : <div className="tokenvalue">
           <input readOnly value={addr} aria-label="Clone address" onFocus={(e) => e.currentTarget.select()} className="mono" />
           <button type="button" className="btn" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
         </div>}
       {addr && how === "https"
-        ? <p className="sub">Sign in with an <Link href="/settings/access/keys">API token</Link> as the password.</p>
-        : addr && <p className="sub">Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href={P.t8}>{P.t9}</Link> the first time.</p>}
+        ? <PSub>Sign in with an <Link href="/settings/access/keys">API token</Link> as the password.</PSub>
+        : addr && <PSub>Add your public key under <Link href="/settings/access/ssh-keys">SSH keys</Link>; <Link href={P.t8}>{P.t9}</Link> the first time.</PSub>}
     </Sheet>
   );
 }
@@ -112,12 +113,12 @@ function DeployKeys({ repo }: { repo: HostedRepo }) {
   return (
     <>
       <Sheet title="Add a deploy key" pad>
-        <p className="sub">{P.t10}</p>
+        <PSub>{P.t10}</PSub>
         <form onSubmit={add} className="inputs-form" aria-label="Add a deploy key">
-          <label className="field"><span>Name</span><input value={name} maxLength={100} placeholder="for example: build server" onChange={(e) => setName(e.target.value)} /></label>
-          <label className="field"><span>Public key</span><textarea value={pub} rows={3} required className="mono" placeholder="ssh-ed25519 AAAA…" onChange={(e) => setPub(e.target.value)} /></label>
+          <LabelField><span>Name</span><input value={name} maxLength={100} placeholder="for example: build server" onChange={(e) => setName(e.target.value)} /></LabelField>
+          <LabelField><span>Public key</span><textarea value={pub} rows={3} required className="mono" placeholder="ssh-ed25519 AAAA…" onChange={(e) => setPub(e.target.value)} /></LabelField>
           <label className="check"><input type="checkbox" checked={write} onChange={(e) => setWrite(e.target.checked)} /> Allow this key to push</label>
-          <div><button type="submit" className="btn btn-primary" disabled={!pub.trim()}>Add deploy key</button></div>
+          <div><BtnPrimary disabled={!pub.trim()}>Add deploy key</BtnPrimary></div>
         </form>
       </Sheet>
       <ErrorBox error={error} />
@@ -125,7 +126,7 @@ function DeployKeys({ repo }: { repo: HostedRepo }) {
         {keys && keys.length === 0 && <Empty title="No deploy keys" />}
         {keys && keys.length > 0 && (
           <table className="table">
-            <thead><tr><th>Name</th><th>Fingerprint</th><th>Access</th><th>Last used</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+            <thead><tr><th>Name</th><th>Fingerprint</th><th>Access</th><th>Last used</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
             <tbody>{keys.map((k) => (
               <tr key={k.id}><td>{k.name}</td><td className="mono small">{k.fingerprint}</td><td>{k.can_write ? <Chip tone="warn">read and write</Chip> : <Chip>read only</Chip>}</td>
                 <td>{k.last_used_at ? `${clock(Date.parse(k.last_used_at))} from ${k.last_used_from}` : "never"}</td>
@@ -152,11 +153,11 @@ function Protected({ repo }: { repo: HostedRepo }) {
   };
   return (
     <Sheet title="Protected branches" pad>
-      <p className="sub">{P.t11}<Mono>main, release/*</Mono>.</p>
+      <PSub>{P.t11}<Mono>main, release/*</Mono>.</PSub>
       <form onSubmit={save} className="inputs-form" aria-label="Protected branches">
-        <label className="field"><span>Branches</span><input value={text} placeholder="main, release/*" onChange={(e) => { setText(e.target.value); setSaved(false); }} /></label>
+        <LabelField><span>Branches</span><input value={text} placeholder="main, release/*" onChange={(e) => { setText(e.target.value); setSaved(false); }} /></LabelField>
         <ErrorBox error={error} />
-        <div><button type="submit" className="btn btn-primary">Save</button>{saved && <span className="faint"> Saved.</span>}</div>
+        <div><BtnPrimary>Save</BtnPrimary>{saved && <SpanFaint> Saved.</SpanFaint>}</div>
       </form>
     </Sheet>
   );
@@ -175,7 +176,7 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
     forgeApi.deployKeys(owner, name).then(() => setAdmin(true), () => setAdmin(false));
   }, [owner, name]);
   if (error) return <ErrorBox error={error} />;
-  if (!repo) return <div className="loading" role="status">{P.t12}</div>;
+  if (!repo) return <DivLoading role="status">{P.t12}</DivLoading>;
   return (
     <>
       <CloneBox repo={repo} />
@@ -201,9 +202,9 @@ export function OwnerPage({ owner }: { owner: string }) {
   if (hosting === null) return null;
   if (hosting === "off") return <Off />;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={<Link href="/repositories">Repositories</Link>} title={owner} sentence={P.t13} />
       <HooksPanel scope={{ owner }} who={`events of every repository of ${owner}`} />
-    </div>
+    </DivPage>
   );
 }

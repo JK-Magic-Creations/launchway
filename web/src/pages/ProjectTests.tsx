@@ -7,6 +7,7 @@ import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
 import { CoverageTrendChart, Delta, MEASURES, measureLabel, pct, ratio } from "../components/Coverage";
 import { Badge, HistoryStrip, ReportsHowTo, TestCounts, TestIcon, failing, passRate, testDuration, testStatusLabel, VariantPill } from "../components/Tests";
 import { terms } from "../terms";
+import { BtnSm, DivLoading, PSub, SpanFaint } from "../kit/bits";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -64,7 +65,7 @@ function ProjectResultsPage({ name }: { name: string }) {
 
       <ErrorBox error={error instanceof ApiError && error.status === 404 ? terms().say(`There is no {project} called ${name}, or you may not see it.`) : error} />
       {test && <HistoryPanel project={name} testKey={test} gref={data?.ref ?? ""} onClose={() => go({ test: "" })} />}
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {data && withTests.length === 0 && (
         <Empty title={data.ref ? `No test results on ${refName(data.ref)} yet` : "No test results yet"}>
           {data.refs.length > 0 && <p>Other branches have some: choose one above.</p>}
@@ -172,7 +173,7 @@ function StatList({ title, empty, stats, detail, name, go, tone }: {
   return (
     <section className="card pstat" aria-label={title}>
       <h2 className="h-sm">{title}</h2>
-      {stats.length === 0 ? <p className="sub">{empty}</p> : (
+      {stats.length === 0 ? <PSub>{empty}</PSub> : (
         <ol className="pstat-list">
           {shown.map((s) => (
             <li key={s.key}>
@@ -386,12 +387,12 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
               Every branch
             </label>
           )}
-          <button type="button" className="btn btn-sm" onClick={onClose}>Close</button>
+          <BtnSm onClick={onClose}>Close</BtnSm>
         </div>
       </div>
       {error ? <ErrorBox error={error instanceof ApiError && error.status === 404
         ? (everyRef || !gref ? terms().say("This test has no results in the {runs} kept.") : `This test has no results on ${refName(gref)}; try every branch.`) : error} />
-        : !h ? <div className="loading">Loading…</div> : (
+        : !h ? <DivLoading>Loading…</DivLoading> : (
           <>
             <HistoryStrip results={h.results} />
             <p className="sub small">
@@ -406,10 +407,10 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
                   <TestIcon status={r.status} size={14} />
                   <Link href={`/runs/${r.run_id}?tab=tests`}>#{r.number}</Link>
                   <span className="mono faint">{shortSha(r.sha)}</span>
-                  {!h.ref && <span className="faint">{refName(r.ref)}</span>}
+                  {!h.ref && <SpanFaint>{refName(r.ref)}</SpanFaint>}
                   <span>{testStatusLabel(r.status)}</span>
                   {r.flaky && <Badge kind="flaky" title="Failed on an earlier attempt of the step">Passed on retry</Badge>}
-                  <span className="faint">{testDuration(r.duration_ms)}</span>
+                  <SpanFaint>{testDuration(r.duration_ms)}</SpanFaint>
                   {r.message && (r.status === "failed" || r.status === "errored") && <span className="phist-msg">{r.message.split("\n")[0]}</span>}
                   <span className="faint phist-ago">{ago(r.created_at)}</span>
                 </li>
@@ -432,7 +433,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
     return () => window.removeEventListener("popstate", on);
   }, []);
   if (view === "flaky") {
-    return <Suspense fallback={<div className="loading">Loading…</div>}><ProjectFlaky name={name} /></Suspense>;
+    return <Suspense fallback={<DivLoading>Loading…</DivLoading>}><ProjectFlaky name={name} /></Suspense>;
   }
   return <ProjectResultsPage name={name} />;
 }

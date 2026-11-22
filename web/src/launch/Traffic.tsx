@@ -6,6 +6,7 @@ import type { LMetric, TreeView } from "../launchApi";
 import { HealthTag } from "./Tree";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnSm, SpanFaint, ThCol, ThRow } from "../kit/bits";
 const P = await prose("launch.Traffic");
 
 function Proof({ m }: { m: LMetric }) {
@@ -19,11 +20,11 @@ function Proof({ m }: { m: LMetric }) {
       {m.points && m.points.length > 0 ? (
         <table className="lw-table">
           <caption className="visually-hidden">Measurements of {m.name}, oldest first</caption>
-          <thead><tr><th scope="col">When</th><th scope="col">Measured</th><th scope="col">Against the threshold</th></tr></thead>
+          <thead><tr><ThCol>When</ThCol><ThCol>Measured</ThCol><ThCol>Against the threshold</ThCol></tr></thead>
           <tbody>
             {m.points.map((p, i) => (
               <tr key={i}><td>{p.at ? clock(p.at) : "-"}</td><td><Mono>{p.value || "-"}</Mono></td>
-                <td><span className={`lw-ph lw-ph-${p.phase.toLowerCase()}`}>{p.phase === "Successful" ? "✓ pass" : p.phase === "Failed" ? "✕ fail" : p.phase}</span>{p.note ? <span className="faint"> · {p.note}</span> : null}</td></tr>
+                <td><span className={`lw-ph lw-ph-${p.phase.toLowerCase()}`}>{p.phase === "Successful" ? "✓ pass" : p.phase === "Failed" ? "✕ fail" : p.phase}</span>{p.note ? <SpanFaint> · {p.note}</SpanFaint> : null}</td></tr>
             ))}
           </tbody>
         </table>
@@ -51,9 +52,9 @@ export function TrafficTab({ v, run, onOpen }: { v: TreeView; run: RunDetail; on
         )}
         {routes.map((r) => (
           <table className="lw-table" key={r.id}>
-            <caption><button type="button" className="linkish" onClick={() => onOpen(r.id)}>{r.kind} {r.name}</button> {r.message ? <span className="faint">({r.message})</span> : null}</caption>
-            <thead><tr><th scope="col">Backend</th><th scope="col">Weight</th><th scope="col">Only when</th></tr></thead>
-            <tbody>{r.weights!.map((w, i) => <tr key={i}><th scope="row"><Mono>{w.backend}</Mono></th><td>{w.weight}</td><td>{w.match || "always"}</td></tr>)}</tbody>
+            <caption><button type="button" className="linkish" onClick={() => onOpen(r.id)}>{r.kind} {r.name}</button> {r.message ? <SpanFaint>({r.message})</SpanFaint> : null}</caption>
+            <thead><tr><ThCol>Backend</ThCol><ThCol>Weight</ThCol><ThCol>Only when</ThCol></tr></thead>
+            <tbody>{r.weights!.map((w, i) => <tr key={i}><ThRow><Mono>{w.backend}</Mono></ThRow><td>{w.weight}</td><td>{w.match || "always"}</td></tr>)}</tbody>
           </table>
         ))}
         {ro && ro.actual_weight >= 0 && <p className="faint lw-small">{P.t3}{ro.actual_weight}% ({ro.actual_source}).</p>}
@@ -91,11 +92,11 @@ export function TrafficTab({ v, run, onOpen }: { v: TreeView; run: RunDetail; on
         {jobs.length === 0 ? <p className="faint">{P.t8}</p> : (
           <table className="lw-table">
             <caption className="visually-hidden">Test jobs of this delivery</caption>
-            <thead><tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">What it sent and got back</th></tr></thead>
+            <thead><tr><ThCol>Job</ThCol><ThCol>State</ThCol><ThCol>What it sent and got back</ThCol></tr></thead>
             <tbody>
               {jobs.map((j) => (
-                <tr key={j.id}><th scope="row"><button type="button" className="linkish" onClick={() => onOpen(j.id)}>{j.name}</button></th><td><HealthTag h={j.health} /></td>
-                  <td>{v.can_logs ? <button type="button" className="btn btn-sm" onClick={() => onOpen("logs:job:" + j.id)}>Read its output</button> : <span className="faint">needs the operator role</span>}</td></tr>
+                <tr key={j.id}><ThRow><button type="button" className="linkish" onClick={() => onOpen(j.id)}>{j.name}</button></ThRow><td><HealthTag h={j.health} /></td>
+                  <td>{v.can_logs ? <BtnSm onClick={() => onOpen("logs:job:" + j.id)}>Read its output</BtnSm> : <SpanFaint>needs the operator role</SpanFaint>}</td></tr>
               ))}
             </tbody>
           </table>

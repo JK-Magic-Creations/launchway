@@ -13,6 +13,7 @@ export { costText, usageText };
 import { useNow } from "../live";
 import { ErrorBox, Link, Mono } from "./ui";
 import { terms } from "../terms";
+import { BtnLink, DivFaintSmall, DivLoading, LabelField, PSub, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 
 // A verify step's verification: how it stands, why, what it read, and the
 // way for a person to mark it passed or failed. The verdict comes from the
@@ -122,13 +123,13 @@ function NoVerification({ run, step, loading }: { run: RunDetail; step: StepView
   const g = graphVerify(run, step.id);
   const env = step.environment || run.step_list.find((s) => s.id === step.deployment)?.environment || terms().say("its {environment}");
   let body;
-  if (loading && step.attempt > 0) body = <div className="loading">Loading…</div>;
+  if (loading && step.attempt > 0) body = <DivLoading>Loading…</DivLoading>;
   else if (step.status === "pending") {
-    body = <p className="sub">Watches {env} {g ? `for ${g.duration}, in intervals of ${g.interval},` : ""} once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>;
-  } else if (step.status === "skipped") body = <p className="sub">{step.error || "Skipped"}. Nothing was watched.</p>;
-  else if (step.status === "canceled") body = <p className="sub">{P.t4}</p>;
-  else if (step.status === "failed") body = <p className="sub">{P.t5}{step.error ? `: ${step.error}` : "."}</p>;
-  else body = <p className="sub">{P.t6}</p>;
+    body = <PSub>Watches {env} {g ? `for ${g.duration}, in intervals of ${g.interval},` : ""} once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</PSub>;
+  } else if (step.status === "skipped") body = <PSub>{step.error || "Skipped"}. Nothing was watched.</PSub>;
+  else if (step.status === "canceled") body = <PSub>{P.t4}</PSub>;
+  else if (step.status === "failed") body = <PSub>{P.t5}{step.error ? `: ${step.error}` : "."}</PSub>;
+  else body = <PSub>{P.t6}</PSub>;
   return (
     <section className="card dep" aria-label="Verification">
       <div className="dep-head"><h3 className="h-sm">Verifying {env}</h3></div>
@@ -150,10 +151,10 @@ function Verification({ run, step, v, now, reload }: { run: RunDetail; step: Ste
       </div>
 
       <div className="vfacts">
-        <span><span className="faint">version</span> <Mono>{v.version || "?"}</Mono></span>
-        <span><span className="faint">on target</span> <Mono>{v.target}</Mono></span>
-        <span title={SENSITIVITY_TEXT[v.sensitivity] ?? v.sensitivity}><span className="faint">sensitivity</span> {v.sensitivity} <span className="faint">({k} standard deviations)</span></span>
-        {v.deployment && <span><span className="faint">watches the deployment of</span> {step.deployment || v.deployment}</span>}
+        <span><SpanFaint>version</SpanFaint> <Mono>{v.version || "?"}</Mono></span>
+        <span><SpanFaint>on target</SpanFaint> <Mono>{v.target}</Mono></span>
+        <span title={SENSITIVITY_TEXT[v.sensitivity] ?? v.sensitivity}><SpanFaint>sensitivity</SpanFaint> {v.sensitivity} <SpanFaint>({k} standard deviations)</SpanFaint></span>
+        {v.deployment && <span><SpanFaint>watches the deployment of</SpanFaint> {step.deployment || v.deployment}</span>}
       </div>
       <Progress v={v} now={now} />
       <BaselineLine run={run} v={v} g={g} />
@@ -233,7 +234,7 @@ function BaselineLine({ run, v, g }: { run: RunDetail; v: VerificationView; g?: 
             <Link href={`/runs/${b.run}?step=${encodeURIComponent(b.step)}`}>#{b.number}</Link>
           </span>
         ))}
-        <span className="faint">: earlier verifications of {v.service} in {v.environment} that passed.</span>
+        <SpanFaint>: earlier verifications of {v.service} in {v.environment} that passed.</SpanFaint>
       </p>
     );
   }
@@ -394,7 +395,7 @@ function MetricBlock({ v, m, g }: { v: VerificationView; m: MetricVerdict; g?: G
       <div className="vmetric-head">
         <strong className="mono">{m.name}</strong>
         <OutcomePill o={m.outcome} decided={v.decided || !!v.override} />
-        {def?.direction && def.direction !== "higher-is-worse" && <span className="faint small">{def.direction === "either" ? "either way is worse" : "lower is worse"}</span>}
+        {def?.direction && def.direction !== "higher-is-worse" && <SpanFaintSmall>{def.direction === "either" ? "either way is worse" : "lower is worse"}</SpanFaintSmall>}
       </div>
       {m.reason && <p className="vmetric-reason">{m.reason}</p>}
       <MetricChart v={v} m={m} baseline={baseline} max={def?.max} min={def?.min} />
@@ -412,7 +413,7 @@ function MetricBlock({ v, m, g }: { v: VerificationView; m: MetricVerdict; g?: G
                     <td data-label="Mean" className="mono">{c.outcome === "no_data" ? "–" : num(c.value)}</td>
                     <td data-label="Versus stable">{c.stable_z !== undefined ? zText(c.stable_z) : "–"}</td>
                     <td data-label="Versus baseline">{c.baseline_z !== undefined ? zText(c.baseline_z) : "–"}</td>
-                    <td data-label="Result">{c.outcome === "no_data" ? "no data" : c.outcome}{c.reason ? <span className="faint">: {c.reason}</span> : null}</td>
+                    <td data-label="Result">{c.outcome === "no_data" ? "no data" : c.outcome}{c.reason ? <SpanFaint>: {c.reason}</SpanFaint> : null}</td>
                   </tr>
                 ))}
               </tbody>
@@ -597,14 +598,14 @@ function LogBlock({ l, v }: { l: LogVerdict; v: VerificationView }) {
       <div className="vmetric-head">
         <strong className="mono">{l.name}</strong>
         <OutcomePill o={l.outcome} decided={v.decided || !!v.override} />
-        <span className="faint small">{l.lines.toLocaleString()} lines read, {clusters.length} pattern{clusters.length === 1 ? "" : "s"}</span>
+        <SpanFaintSmall>{l.lines.toLocaleString()} lines read, {clusters.length} pattern{clusters.length === 1 ? "" : "s"}</SpanFaintSmall>
       </div>
       {l.reason && <p className="vmetric-reason">{l.reason}</p>}
       {truncated && <p className="sub small">{P.t20}<Mono>max_lines</Mono>); the rest were not read.</p>}
       {errors.length > 0 && (
         <details className="vreadings">
           <summary className="tfile-warn">Could not be read in {errors.length} interval{errors.length === 1 ? "" : "s"}</summary>
-          <ul className="vlog-errors">{errors.map((x) => <li key={x.i}>Interval {x.i + 1}: <span className="mono">{x.e}</span></li>)}</ul>
+          <ul className="vlog-errors">{errors.map((x) => <li key={x.i}>Interval {x.i + 1}: <SpanMono>{x.e}</SpanMono></li>)}</ul>
         </details>
       )}
       {clusters.length > 0 && (
@@ -634,12 +635,12 @@ function ClusterRow({ c }: { c: ClusterVerdict }) {
           <span className={`dpill dpill-${tone}`} title={CLASS_TITLE[c.class] ?? c.class}>{CLASS_LABEL[c.class] ?? c.class.replace(/_/g, " ")}</span>
           {c.failing && <span className="vfailing">failing</span>}
         </td>
-        <td data-label="Error">{c.error ? <strong className="bad-ink">error</strong> : <span className="faint">no</span>}</td>
+        <td data-label="Error">{c.error ? <strong className="bad-ink">error</strong> : <SpanFaint>no</SpanFaint>}</td>
         <td data-label="Count" className="vnum">{c.count.toLocaleString()}</td>
-        <td data-label="Before" className="vnum">{c.reference !== undefined ? c.reference.toLocaleString() : <span className="faint">0</span>}</td>
-        <td data-label="Rate" className="vnum">{c.rate_ratio ? `${num(c.rate_ratio)}×` : <span className="faint">–</span>}</td>
+        <td data-label="Before" className="vnum">{c.reference !== undefined ? c.reference.toLocaleString() : <SpanFaint>0</SpanFaint>}</td>
+        <td data-label="Rate" className="vnum">{c.rate_ratio ? `${num(c.rate_ratio)}×` : <SpanFaint>–</SpanFaint>}</td>
         <td data-label="Pattern" className="vlog-template">
-          <span className="mono">{c.template}</span>
+          <SpanMono>{c.template}</SpanMono>
           {samples.length > 0 && (
             <button type="button" className="linkbtn vlog-more" aria-expanded={open} onClick={() => setOpen(!open)}>
               {open ? "Hide" : "Show"} {samples.length} sample{samples.length === 1 ? "" : "s"}
@@ -698,10 +699,10 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
         {aborts ? <> (<Mono>on_fail: {v.on_fail}</Mono>{P.t24}</> : null}.
         {" "}{P.t25}</p>
       {(pass?.available || fail?.available) && (
-        <label className="field">
-          <span>Reason <span className="faint">{P.t26}</span></span>
+        <LabelField>
+          <span>Reason <SpanFaint>{P.t26}</SpanFaint></span>
           <textarea value={reason} maxLength={2000} rows={2} required aria-describedby={hintId} onChange={(e) => setReason(e.target.value)} />
-        </label>
+        </LabelField>
       )}
       <ErrorBox error={error} />
       <div className="approval-actions">
@@ -744,9 +745,9 @@ function WhatWasRead({ v }: { v: VerificationView }) {
       <ul className="vqueries">
         {v.queries.map((q) => (
           <li key={q.name}>
-            <div className="vq-head"><strong className="mono">{q.name}</strong> <span className="faint">from</span> <Mono>{q.source}</Mono>{q.index && <> <span className="faint">index</span> <Mono>{q.index}</Mono></>}</div>
+            <div className="vq-head"><strong className="mono">{q.name}</strong> <SpanFaint>from</SpanFaint> <Mono>{q.source}</Mono>{q.index && <> <SpanFaint>index</SpanFaint> <Mono>{q.index}</Mono></>}</div>
             {q.query && <pre className="code vq-code" aria-label={`Query of ${q.name}`}>{q.query}</pre>}
-            {q.stable_query && <><div className="faint small">the stable version's</div><pre className="code vq-code">{q.stable_query}</pre></>}
+            {q.stable_query && <><DivFaintSmall>the stable version's</DivFaintSmall><pre className="code vq-code">{q.stable_query}</pre></>}
             {q.statement && <div className="small">the statement <Mono>{q.statement}</Mono>{P.t31}</div>}
           </li>
         ))}
@@ -796,7 +797,7 @@ export function VerificationsTab({ run, list, error, reload, onStep }: {
       </p>
       {steps.map((s) => (
         <div key={s.id} className="vtab-step">
-          <h3 className="imgcard-title"><button type="button" className="linkbtn" onClick={() => onStep(s.id)}>{s.id}</button></h3>
+          <h3 className="imgcard-title"><BtnLink onClick={() => onStep(s.id)}>{s.id}</BtnLink></h3>
           <VerificationPanel run={run} step={s} list={list} reload={reload} />
         </div>
       ))}

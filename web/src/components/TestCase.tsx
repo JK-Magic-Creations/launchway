@@ -4,6 +4,7 @@ import { ErrorBox, Link } from "./ui";
 import { bytes } from "./Security";
 import { Badge, CopyBlock, HistoryStrip, Sparkline, TagPills, TestIcon, VariantPill, testDuration, testStatusLabel } from "./Tests";
 import { terms } from "../terms";
+import { BtnSm, DivLoading, PSub, SpanFaint, SpanFaintSmall, SpanHidden, ThRow } from "../kit/bits";
 
 // The whole of one test result: what it is, why it failed, the steps it
 // took (with the HTTP calls an API test made), what it attached, its
@@ -35,7 +36,7 @@ export function CaseDetail({ c, run, full, error, permalink }: {
           <span className={"tstatus tstatus-" + x.status}><TestIcon status={x.status} size={14} />{testStatusLabel(x.status)}</span>
           {x.flaky && <Badge kind="flaky" title="Failed, then passed when run again">Flaky</Badge>}
           {x.new_failure && <Badge kind="new" title="Passed in the previous run of the same branch">New failure</Badge>}
-          <span className="faint">{testDuration(x.duration_ms)}</span>
+          <SpanFaint>{testDuration(x.duration_ms)}</SpanFaint>
         </dd>
         {x.suite && <><dt>Suite</dt><dd className="mono">{x.suite}</dd></>}
         {x.file && <><dt>File</dt><dd className="mono">{x.file}</dd></>}
@@ -50,7 +51,7 @@ export function CaseDetail({ c, run, full, error, permalink }: {
 
       {x.message && <CopyBlock label={x.status === "skipped" ? "Reason" : "Message"} text={x.message} tone={bad ? "bad" : undefined} />}
       <ErrorBox error={error} />
-      {loading && <div className="loading">Loading…</div>}
+      {loading && <DivLoading>Loading…</DivLoading>}
       {full?.details && full.details.trim() !== (full.message ?? "").trim() && <CopyBlock label="Stack trace" text={full.details} />}
 
       {full?.attempts && full.attempts.length > 0 && <Attempts attempts={full.attempts} final={x} />}
@@ -61,13 +62,13 @@ export function CaseDetail({ c, run, full, error, permalink }: {
 
       {full && loose.length > 0 && (
         <section className="tcd-section" aria-label="Attachments">
-          <h4 className="tcd-h">Attachments <span className="faint">{loose.length}</span></h4>
+          <h4 className="tcd-h">Attachments <SpanFaint>{loose.length}</SpanFaint></h4>
           <Attachments items={loose} run={run} caseId={c.id} />
         </section>
       )}
 
       {full?.output && <CopyBlock label="Captured output" text={full.output} />}
-      {!x.message && !c.has_details && <p className="sub">Nothing more was recorded for this test.</p>}
+      {!x.message && !c.has_details && <PSub>Nothing more was recorded for this test.</PSub>}
 
       <CaseHistory run={run} c={x} />
 
@@ -84,7 +85,7 @@ export function CaseDetail({ c, run, full, error, permalink }: {
 function Properties({ props }: { props: { name: string; value: string }[] }) {
   return (
     <details className="tcd-props" open={props.length <= 6}>
-      <summary>Properties <span className="faint">{props.length}</span></summary>
+      <summary>Properties <SpanFaint>{props.length}</SpanFaint></summary>
       <dl className="tcase-facts tcd-props-list">
         {props.map((p, i) => <PropRow key={p.name + i} name={p.name} value={p.value} />)}
       </dl>
@@ -102,7 +103,7 @@ function Attempts({ attempts, final }: { attempts: { status: TestCase["status"];
   const all = [...attempts, { status: final.status, duration_ms: final.duration_ms, message: undefined, last: true }];
   return (
     <section className="tcd-section" aria-label="Tries">
-      <h4 className="tcd-h">Tries <span className="faint">{all.length}</span></h4>
+      <h4 className="tcd-h">Tries <SpanFaint>{all.length}</SpanFaint></h4>
       <ol className="tcd-tries">
         {all.map((a, i) => (
           <li key={i} className={"tcd-try tcd-try-" + a.status}>
@@ -110,7 +111,7 @@ function Attempts({ attempts, final }: { attempts: { status: TestCase["status"];
               <TestIcon status={a.status} size={14} />
               <strong>Try {i + 1}</strong>
               <span>{testStatusLabel(a.status)}{"last" in a ? " (the result)" : ""}</span>
-              <span className="faint">{testDuration(a.duration_ms)}</span>
+              <SpanFaint>{testDuration(a.duration_ms)}</SpanFaint>
             </div>
             {a.message && (
               <details className="tcd-more">
@@ -139,7 +140,7 @@ function Steps({ steps, cut, attachments, run, caseId }: {
   if (failedAt >= 0) for (let i = failedAt; i >= 0; i--) if (steps[i].http) { openHTTP = i; break; }
   return (
     <section className="tcd-section" aria-label="Steps">
-      <h4 className="tcd-h">Steps <span className="faint">{steps.length}{http ? `, ${http} HTTP call${http > 1 ? "s" : ""}` : ""}</span></h4>
+      <h4 className="tcd-h">Steps <SpanFaint>{steps.length}{http ? `, ${http} HTTP call${http > 1 ? "s" : ""}` : ""}</SpanFaint></h4>
       <ol className="tsteps">
         {shown.map((s, i) => (
           <li key={i} className={"tstep tstep-" + s.status} style={{ ["--depth" as string]: Math.min(s.depth ?? 0, 8) }}>
@@ -148,7 +149,7 @@ function Steps({ steps, cut, attachments, run, caseId }: {
               <span className="tstep-text">
                 {s.keyword && <strong className="tstep-kw">{s.keyword}</strong>}{" "}
                 <span className="tstep-name">{s.name}</span>
-                <span className="visually-hidden">, {testStatusLabel(s.status)}</span>
+                <SpanHidden>, {testStatusLabel(s.status)}</SpanHidden>
               </span>
               {s.duration_ms !== undefined && s.duration_ms > 0 && <span className="tstep-time">{testDuration(s.duration_ms)}</span>}
             </div>
@@ -228,11 +229,11 @@ function HTTPPart({ title, headers, body }: { title: string; headers?: TestHeade
       <h5 className="http-h">{title}</h5>
       {headers && headers.length > 0 ? (
         <details className="http-headers">
-          <summary>Headers <span className="faint">{headers.length}</span></summary>
+          <summary>Headers <SpanFaint>{headers.length}</SpanFaint></summary>
           <div className="table-scroll">
             <table className="inputs-table http-table">
               <tbody>
-                {headers.map((h, i) => <tr key={h.name + i}><th scope="row" className="mono">{h.name}</th><td className="mono">{h.value}</td></tr>)}
+                {headers.map((h, i) => <tr key={h.name + i}><ThRow className="mono">{h.name}</ThRow><td className="mono">{h.value}</td></tr>)}
               </tbody>
             </table>
           </div>
@@ -311,7 +312,7 @@ function Attachment({ a, n, run, caseId, onOpen }: { a: TestAttachment; n: numbe
           <button type="button" className="att-thumb" onClick={onOpen} aria-label={`Open ${a.name} larger`}>
             <img src={url} alt={a.name} loading="lazy" />
           </button>
-          <figcaption><span className="att-name">{a.name}</span> <span className="faint">{size}</span> <a href={dl} className="att-dl">Download</a></figcaption>
+          <figcaption><span className="att-name">{a.name}</span> <SpanFaint>{size}</SpanFaint> <a href={dl} className="att-dl">Download</a></figcaption>
         </figure>
       );
     case "video":
@@ -320,7 +321,7 @@ function Attachment({ a, n, run, caseId, onOpen }: { a: TestAttachment; n: numbe
           <video controls preload="metadata" src={url} aria-label={a.name}>
             <a href={dl}>Download {a.name}</a>
           </video>
-          <figcaption><span className="att-name">{a.name}</span> <span className="faint">{size}</span> <a href={dl} className="att-dl">Download</a></figcaption>
+          <figcaption><span className="att-name">{a.name}</span> <SpanFaint>{size}</SpanFaint> <a href={dl} className="att-dl">Download</a></figcaption>
         </figure>
       );
     case "text":
@@ -330,8 +331,8 @@ function Attachment({ a, n, run, caseId, onOpen }: { a: TestAttachment; n: numbe
         <div className="att-card">
           <AttIcon kind="trace" />
           <div className="att-meta">
-            <span className="att-name">{a.name} <span className="faint">{size}</span></span>
-            <span className="faint small">Open with <code className="mono">npx playwright show-trace {file}</code></span>
+            <span className="att-name">{a.name} <SpanFaint>{size}</SpanFaint></span>
+            <SpanFaintSmall>Open with <code className="mono">npx playwright show-trace {file}</code></SpanFaintSmall>
           </div>
           <a href={dl} className="btn btn-sm" download>Download trace</a>
         </div>
@@ -341,8 +342,8 @@ function Attachment({ a, n, run, caseId, onOpen }: { a: TestAttachment; n: numbe
         <div className="att-card">
           <AttIcon kind={a.kind} />
           <div className="att-meta">
-            <span className="att-name">{a.name} <span className="faint">{size}</span></span>
-            <span className="faint small">{a.kind === "html" ? "An HTML file: downloaded, never shown here." : a.content_type || "A file"}</span>
+            <span className="att-name">{a.name} <SpanFaint>{size}</SpanFaint></span>
+            <SpanFaintSmall>{a.kind === "html" ? "An HTML file: downloaded, never shown here." : a.content_type || "A file"}</SpanFaintSmall>
           </div>
           <a href={dl} className="btn btn-sm" download>Download</a>
         </div>
@@ -373,10 +374,10 @@ function TextAttachment({ a, url, dl }: { a: TestAttachment; url: string; dl: st
       <summary>
         <AttIcon kind="text" />
         <span className="att-name">{a.name}</span>
-        <span className="faint">{a.size ? bytes(a.size) : ""}{a.content_type ? ` · ${a.content_type}` : ""}</span>
+        <SpanFaint>{a.size ? bytes(a.size) : ""}{a.content_type ? ` · ${a.content_type}` : ""}</SpanFaint>
         <a href={dl} className="att-dl" onClick={(e) => e.stopPropagation()}>Download</a>
       </summary>
-      {err ? <ErrorBox error={err} /> : text === null ? <div className="loading">Loading…</div> : (
+      {err ? <ErrorBox error={err} /> : text === null ? <DivLoading>Loading…</DivLoading> : (
         <>
           <pre className="tcd-pre">{text}</pre>
           {cut && <p className="faint small">Showing the first {bytes(TEXT_MAX)} of {bytes(a.size ?? 0)}; download it for the rest.</p>}
@@ -429,12 +430,12 @@ function Lightbox({ images, at, run, caseId, onMove, onClose }: {
       onCancel={(e) => { e.preventDefault(); onClose(); }} onKeyDown={key}
       onClick={(e) => { if (e.target === ref.current) onClose(); }}>
       <div className="lightbox-bar">
-        <span className="lightbox-title">{a.name}{many && <span className="faint"> · {at + 1} of {images.length}</span>}</span>
+        <span className="lightbox-title">{a.name}{many && <SpanFaint> · {at + 1} of {images.length}</SpanFaint>}</span>
         <span className="lightbox-actions">
-          {many && <button type="button" className="btn btn-sm" onClick={() => onMove((at - 1 + images.length) % images.length)} aria-label="Previous image">←</button>}
-          {many && <button type="button" className="btn btn-sm" onClick={() => onMove((at + 1) % images.length)} aria-label="Next image">→</button>}
+          {many && <BtnSm onClick={() => onMove((at - 1 + images.length) % images.length)} aria-label="Previous image">←</BtnSm>}
+          {many && <BtnSm onClick={() => onMove((at + 1) % images.length)} aria-label="Next image">→</BtnSm>}
           <a className="btn btn-sm" href={attachmentURL(run.id, caseId, n, true)}>Download</a>
-          <button type="button" className="btn btn-sm" onClick={onClose} autoFocus>Close</button>
+          <BtnSm onClick={onClose} autoFocus>Close</BtnSm>
         </span>
       </div>
       <div className="lightbox-img">
@@ -462,7 +463,7 @@ function CaseHistory({ run, c }: { run: RunDetail; c: TestCase }) {
   const fails = h.results.filter((r) => r.status === "failed" || r.status === "errored").length;
   return (
     <section className="tcd-section tcd-history" aria-label="History on this branch">
-      <h4 className="tcd-h">On {run.branch || run.tag || "this branch"} <span className="faint">the last {h.results.length} runs, {fails} failed</span></h4>
+      <h4 className="tcd-h">On {run.branch || run.tag || "this branch"} <SpanFaint>the last {h.results.length} runs, {fails} failed</SpanFaint></h4>
       <div className="tcd-history-row">
         <HistoryStrip results={h.results} current={run.id} />
         <Sparkline values={durations} label="Time this test took" format={testDuration} />

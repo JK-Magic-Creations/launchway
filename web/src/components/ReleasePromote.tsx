@@ -6,6 +6,7 @@ import { terms } from "../terms";
 import { ErrorBox } from "./ui";
 import "../releases.css";
 import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivActions, DivLoading, LabelField, SpanFaint } from "../kit/bits";
 const P = await prose("components.ReleasePromote");
 
 const MARK: Record<ChecklistItem["status"], string> = { pass: "✓", fail: "✗", waiting: "…", skipped: "–" };
@@ -18,7 +19,7 @@ export function ChecklistView({ items }: { items: ChecklistItem[] }) {
       {items.map((i) => (
         <li key={i.id} className={i.status}>
           <span className="mark" aria-hidden="true">{MARK[i.status]}</span>
-          <span><b>{i.label}</b> <span className="faint">({WORD[i.status]})</span>{i.detail && <span className="d">{i.detail}</span>}</span>
+          <span><b>{i.label}</b> <SpanFaint>({WORD[i.status]})</SpanFaint>{i.detail && <span className="d">{i.detail}</span>}</span>
         </li>
       ))}
     </ul>
@@ -56,7 +57,7 @@ export function PromoteDialog({ project, version, airfield, onClose, onDone }: {
     <Dialog label={label} onClose={onClose}>
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (mayStart && !busy) run(); }}>
         <h2>{label}</h2>
-        {!ck && !error && <div className="loading">Checking the {terms().lower("checklist")}…</div>}
+        {!ck && !error && <DivLoading>Checking the {terms().lower("checklist")}…</DivLoading>}
         {ck && (
           <>
             <p className="rel-hint">{P.t0}</p>
@@ -64,14 +65,14 @@ export function PromoteDialog({ project, version, airfield, onClose, onDone }: {
             {ck.already_there && <div className="callout callout-wait">This release already runs in {airfield} and is healthy.</div>}
             {ans?.environment_refusal && <div className="callout callout-wait">{ans.environment_refusal}.</div>}
             {needsClearance && ans?.may_promote && (
-              <label className="field"><span>Give your {terms().lower("clearance")} for {airfield} {P.t1}</span>
+              <LabelField><span>Give your {terms().lower("clearance")} for {airfield} {P.t1}</span>
                 <input type="text" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} />
-                <span><button type="button" className="btn btn-sm" onClick={clear} disabled={busy}>Give {terms().lower("clearance")}</button></span>
-              </label>
+                <span><BtnSm onClick={clear} disabled={busy}>Give {terms().lower("clearance")}</BtnSm></span>
+              </LabelField>
             )}
             {!ck.ready && !ck.already_there && ck.can_override && ans?.may_override && (
-              <label className="field"><span>{P.t2}{terms().lower("logbook")})</span>
-                <textarea value={override} onChange={(e) => setOverride(e.target.value)} maxLength={500} placeholder={P.t3} /></label>
+              <LabelField><span>{P.t2}{terms().lower("logbook")})</span>
+                <textarea value={override} onChange={(e) => setOverride(e.target.value)} maxLength={500} placeholder={P.t3} /></LabelField>
             )}
             {!ck.ready && !ck.already_there && !(ck.can_override && ans?.may_override) && (
               <p className="rel-hint">{ck.can_override ? terms().say(P.t4) : P.t5}</p>
@@ -79,10 +80,10 @@ export function PromoteDialog({ project, version, airfield, onClose, onDone }: {
           </>
         )}
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          {ck && <button type="submit" className="btn btn-primary" disabled={busy || !mayStart} title={!mayStart ? "The checklist is not met yet" : undefined}>{busy ? "Starting…" : `Promote to ${airfield}`}</button>}
-        </div>
+          {ck && <BtnPrimary disabled={busy || !mayStart} title={!mayStart ? "The checklist is not met yet" : undefined}>{busy ? "Starting…" : `Promote to ${airfield}`}</BtnPrimary>}
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -103,12 +104,12 @@ export function ReturnDialog({ project, airfield, version, onClose, onDone }: { 
       <form className="rel-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) go(); }}>
         <h2>{label}</h2>
         <p className="rel-hint">{version ? `${airfield} runs ${version}. ` : ""}{terms().say(P.t6)}</p>
-        <label className="field"><span>Why? (required)</span><textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} required data-autofocus /></label>
+        <LabelField><span>Why? (required)</span><textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} required data-autofocus /></LabelField>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-danger-outline" disabled={busy || !reason.trim()}>{busy ? "Starting…" : "Return to base"}</button>
-        </div>
+        </DivActions>
       </form>
     </Dialog>
   );

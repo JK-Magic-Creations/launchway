@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ArtifactView, FindingCounts, FindingStatus, Severity } from "../api";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { PSub, SpanHidden, SpanMono } from "../kit/bits";
 const P = await prose("components.Security");
 
 // Pieces shared by the run's Security and Artifacts tabs, the run lists, a
@@ -79,13 +80,13 @@ export function FindingCountBadge({ c }: { c: FindingCounts }) {
   const title = `Security findings: ${SEVERITIES.filter((s) => c[s] > 0).map((s) => `${c[s]} ${s}`).join(", ") || "none"}`;
   return n > 0
     ? <span className="fcount fcount-bad" title={title}><ShieldIcon />{seriousLabel(c)}</span>
-    : <span className="fcount" title={title}><ShieldIcon />{c.total}<span className="visually-hidden"> findings</span></span>;
+    : <span className="fcount" title={title}><ShieldIcon />{c.total}<SpanHidden> findings</SpanHidden></span>;
 }
 
 export function ArtifactCount({ n }: { n: number }) {
   return (
     <span className="fcount" title={`${n} artifact${n === 1 ? "" : "s"} kept`}>
-      <BoxIcon />{n}<span className="visually-hidden"> artifact{n === 1 ? "" : "s"}</span>
+      <BoxIcon />{n}<SpanHidden> artifact{n === 1 ? "" : "s"}</SpanHidden>
     </span>
   );
 }
@@ -180,7 +181,7 @@ export function CopyValue({ value, label, keep = 12 }: { value: string; label: s
   };
   return (
     <span className="copyval">
-      <span className="mono" title={value}>{value.length > keep ? value.slice(0, keep) + "…" : value}</span>
+      <SpanMono title={value}>{value.length > keep ? value.slice(0, keep) + "…" : value}</SpanMono>
       <button type="button" className="linkbtn copyval-btn" onClick={copy} aria-label={`Copy ${label}`}>{copied ? "Copied" : "Copy"}</button>
     </span>
   );
@@ -192,7 +193,7 @@ export function FindingsHowTo({ compact }: { compact?: boolean }) {
     <div className="howto">
       {!compact && <p>{P.t5}</p>}
       <pre className="code">{P.t6}</pre>
-      <p className="sub">{terms().say(P.t7)}</p>
+      <PSub>{terms().say(P.t7)}</PSub>
     </div>
   );
 }

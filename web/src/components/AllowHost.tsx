@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { configApi, type Spec } from "../configApi";
+import { SpanMono } from "../kit/bits";
 
 /**
  * AllowHost explains why the server refused an address (it is inside the
@@ -27,10 +28,10 @@ export function AllowHost({ host, onAllowed }: { host: string; onAllowed?: () =>
   };
   return (
     <div className="callout callout-info" role="note">
-      <p><strong>The server does not contact addresses inside its own network</strong> (this stops anyone who can reach it from using it to probe that network). <span className="mono">{host}</span> is one.
+      <p><strong>The server does not contact addresses inside its own network</strong> (this stops anyone who can reach it from using it to probe that network). <SpanMono>{host}</SpanMono> is one.
         If it is your own server, you can allow it: the server may then contact exactly that host.</p>
       {state === "done"
-        ? <p className="cf-ok">Added <span className="mono">{host}</span> to the allowed hosts. Check again.</p>
+        ? <p className="cf-ok">Added <SpanMono>{host}</SpanMono> to the allowed hosts. Check again.</p>
         : <button type="button" className="btn" disabled={state === "busy"} onClick={add}>{state === "busy" ? "Adding…" : `Add ${host} to the allowed hosts`}</button>}
       {state === "error" && <p className="cf-problem">That did not work: {error}</p>}
     </div>

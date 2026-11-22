@@ -8,6 +8,7 @@ import { ErrorBox, Link } from "./ui";
 import "../standards.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnSm, SpanMono, TdNum, ThCol, ThRow } from "../kit/bits";
 const P = await prose("components.Inspection");
 
 const STANDING_LABEL: Record<Standing, string> = {
@@ -86,8 +87,8 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
         <div className="sf-body">
           <dl className="sf-dl">
             <div><dt>What</dt><dd>{f.title}</dd></div>
-            {(f.file || f.package) && <div><dt>Where</dt><dd>{f.package ? <>{f.package}{f.version ? " " + f.version : ""}{f.file ? <> in <span className="mono">{f.file}</span></> : null}</> : <span className="mono">{whereOf(f)}</span>}</dd></div>}
-            <div><dt>Found by</dt><dd>{f.tool}{check ? <> for the check “{check.title}”</> : null}, rule <span className="mono">{f.rule}</span>{help && <> · <a href={help} target="_blank" rel="noreferrer noopener">the tool’s description</a></>}</dd></div>
+            {(f.file || f.package) && <div><dt>Where</dt><dd>{f.package ? <>{f.package}{f.version ? " " + f.version : ""}{f.file ? <> in <SpanMono>{f.file}</SpanMono></> : null}</> : <SpanMono>{whereOf(f)}</SpanMono>}</dd></div>}
+            <div><dt>Found by</dt><dd>{f.tool}{check ? <> for the check “{check.title}”</> : null}, rule <SpanMono>{f.rule}</SpanMono>{help && <> · <a href={help} target="_blank" rel="noreferrer noopener">the tool’s description</a></>}</dd></div>
             {check && <div><dt>Why it matters</dt><dd>{check.why}</dd></div>}
             {(f.fix || f.fixed_in) && (
               <div><dt>How to fix</dt><dd>{f.fix || `Update to ${f.fixed_in} or later.`}{f.package && f.fixed_in && (
@@ -103,7 +104,7 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
             )}
           </dl>
           <ErrorBox error={error} />
-          {may && accepted && <button type="button" className="btn btn-sm" disabled={busy} onClick={reopen}>End this decision</button>}
+          {may && accepted && <BtnSm disabled={busy} onClick={reopen}>End this decision</BtnSm>}
           {may && !accepted && f.status !== "fixed" && (
             <form className="sf-accept" onSubmit={(e) => { e.preventDefault(); accept(); }} aria-label={`Accept the risk of ${f.rule}`}>
               <h4 className="h-xs">Accept the risk</h4>
@@ -114,7 +115,7 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
                 <label htmlFor={id + "-d"}>Until</label>
                 <input id={id + "-d"} type="date" value={expires} min={inDays(1)} max={inDays(365)} onChange={(e) => setExpires(e.target.value)} required />
                 <label className="sf-check"><input type="checkbox" checked={falsePositive} onChange={(e) => setFalsePositive(e.target.checked)} /> {P.t3}</label>
-                {place && <label className="sf-check"><input type="checkbox" checked={whole} onChange={(e) => setWhole(e.target.checked)} /> {P.t4}<span className="mono">{place}</span> {P.t5}</label>}
+                {place && <label className="sf-check"><input type="checkbox" checked={whole} onChange={(e) => setWhole(e.target.checked)} /> {P.t4}<SpanMono>{place}</SpanMono> {P.t5}</label>}
                 <button type="submit" className="btn btn-sm" disabled={busy || reason.trim().length < 10}>Record the decision</button>
               </div>
             </form>
@@ -179,15 +180,15 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
         <div className="table-scroll">
           <table className="table insp-checks">
             <caption className="visually-hidden">The checks of this Inspection</caption>
-            <thead><tr><th scope="col">Check</th><th scope="col">What it does</th><th scope="col">Ran</th><th scope="col" className="num">New</th><th scope="col" className="num">Findings</th></tr></thead>
+            <thead><tr><ThCol>Check</ThCol><ThCol>What it does</ThCol><ThCol>Ran</ThCol><ThCol className="num">New</ThCol><ThCol className="num">Findings</ThCol></tr></thead>
             <tbody>
               {data.checks.map((c) => (
                 <tr key={c.id}>
-                  <th scope="row">{c.title}</th>
+                  <ThRow>{c.title}</ThRow>
                   <td>{c.state === "block" ? P.t8 : "Advises"}</td>
                   <td>{c.ran ? "yes" : <strong className="sec-bad">did not run</strong>}</td>
-                  <td className="num">{c.new}</td>
-                  <td className="num">{c.total}</td>
+                  <TdNum>{c.new}</TdNum>
+                  <TdNum>{c.total}</TdNum>
                 </tr>
               ))}
             </tbody>

@@ -7,6 +7,7 @@ import { Icon } from "../kit/Icon";
 import { PageHead, Sheet } from "../kit/layout";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivPage } from "../kit/bits";
 const P = await prose("pages.SettingsHome");
 
 const BLURB: Record<string, string> = {
@@ -33,7 +34,7 @@ export function SettingsHomePage() {
     return null;
   };
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Set up once, then rarely" sentence={P.t8} />
       <Sheet>
         <ul className="rowlist">
@@ -53,6 +54,6 @@ export function SettingsHomePage() {
           ))}
         </ul>
       </Sheet>
-    </div>
+    </DivPage>
   );
 }

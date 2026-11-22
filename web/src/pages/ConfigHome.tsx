@@ -11,6 +11,7 @@ import { levelWords } from "../configKinds";
 import "../config.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage, PSub, SpanFaint, SpanHidden } from "../kit/bits";
 const P = await prose("pages.ConfigHome");
 
 // ConfigHomePage is where an administrator starts: what is configured, the
@@ -31,19 +32,19 @@ export function ConfigHomePage() {
     configApi.allHistory(8).then((h) => setRecent(h.changes), () => setRecent([]));
   }, [overview]);
 
-  if (error) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!overview) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   if (!overview.available) {
     return (
-      <div className="page">
+      <DivPage>
         <h1>Configuration</h1>
         <Empty title={P.t0}>
           {P.t1}</Empty>
-      </div>
+      </DivPage>
     );
   }
   if (!overview.admin) {
-    return <div className="page"><h1>Configuration</h1><Empty title={P.t2}>{P.t3}</Empty></div>;
+    return <DivPage><h1>Configuration</h1><Empty title={P.t2}>{P.t3}</Empty></DivPage>;
   }
   return (
     <div className="page cf-page">
@@ -80,7 +81,7 @@ export function ConfigHomePage() {
 
       <section aria-labelledby="cf-wiz-h">
         <h2 id="cf-wiz-h" className="cf-h">Guided set-ups</h2>
-        <p className="sub">{P.t12}</p>
+        <PSub>{P.t12}</PSub>
         <ul className="cf-wizgrid">
           {WIZARDS.map((w) => (
             <li key={w.id}>
@@ -126,7 +127,7 @@ export function ConfigHomePage() {
                     <li key={c.id}>
                       <span className={`cf-action cf-action-${c.action}`}>{c.action}</span>{" "}
                       {k ? <Link href={`/config/${k.path}/${encodeURIComponent(c.name)}`}><Mono>{c.name}</Mono></Link> : <Mono>{c.name}</Mono>}
-                      <span className="faint"> {k ? kindLabel(overview, k, false).toLowerCase() : c.kind} · {c.actor || "someone"} · {ago(c.at, now)}</span>
+                      <SpanFaint> {k ? kindLabel(overview, k, false).toLowerCase() : c.kind} · {c.actor || "someone"} · {ago(c.at, now)}</SpanFaint>
                     </li>
                   );
                 })}
@@ -164,13 +165,13 @@ function Checklist({ overview, counts }: { overview: ConfigOverview; counts: Rec
     <section className={"card cf-checklist" + (all ? " cf-checklist-done" : "")} aria-labelledby="cf-check-h">
       <details open={!all}>
         <summary><h2 id="cf-check-h" className="cf-h">Set up {overview.organisation?.display_name || "Launchway"}</h2>
-          <span className="faint">{all ? "All done." : left ? `${left} of ${items.length} to do` : "Checking…"}</span></summary>
+          <SpanFaint>{all ? "All done." : left ? `${left} of ${items.length} to do` : "Checking…"}</SpanFaint></summary>
         <ol className="cf-checkitems">
           {items.map((i, n) => (
             <li key={i.title} className={i.done ? "cf-check-on" : ""}>
               <span className="cf-checkmark" aria-hidden="true">{i.done ? "✓" : n + 1}</span>
               <span className="cf-checktext">
-                <Link href={i.href}>{i.title}</Link><span className="visually-hidden">{i.done ? " (done)" : i.done === false ? " (to do)" : ""}</span>
+                <Link href={i.href}>{i.title}</Link><SpanHidden>{i.done ? " (done)" : i.done === false ? " (to do)" : ""}</SpanHidden>
                 <span className="cf-help">{i.text}</span>
               </span>
             </li>

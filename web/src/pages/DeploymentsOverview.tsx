@@ -13,6 +13,7 @@ import { Band, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useNow } from "../live";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage } from "../kit/bits";
 const P = await prose("pages.DeploymentsOverview");
 
 const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", quiet: "skip" };
@@ -27,7 +28,7 @@ export function DeploymentsOverviewPage() {
   const reviewFn = useCallback((bg: boolean) => rollbackApi.reviews(bg), []);
   const reviews = useLoad<ReviewItem[]>(reviewFn, 15000);
   const rows = useMemo<Row[]>(() => inst.environments.flatMap((env) => env.services.map((unit) => ({ env, unit, dg: diagnose(unit.last, unit.live, undefined, now) }))), [inst.environments, now]);
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const trouble = rows.filter((r) => r.dg.tone === "bad" || r.dg.tone === "wait").sort((a, b) => (a.dg.tone === "bad" ? 0 : 1) - (b.dg.tone === "bad" ? 0 : 1));
   const moving = rows.filter((r) => r.dg.tone === "run").length;
   const envs = inst.environments;
@@ -35,7 +36,7 @@ export function DeploymentsOverviewPage() {
     : rows.length === 0 ? terms().say(P.t1)
     : trouble.length === 0 ? terms().say(P.t2) : <><b>{trouble.length} {trouble.length === 1 ? "service needs" : "services need"} a look.</b> The rest is fine.</>;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={terms().say("{Deploys}")} title="What is running, and where" sentence={sentence}
         actions={envs.length > 0 ? <WizardButton wizard="add-environment" label={terms().say("Add an {environment}")} /> : undefined} />
       {envs.length === 0 ? (
@@ -87,6 +88,6 @@ export function DeploymentsOverviewPage() {
           {rows.length === 0 && <Sheet><EmptyState title={terms().say(P.t4)}>{terms().say(P.t5)}</EmptyState></Sheet>}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

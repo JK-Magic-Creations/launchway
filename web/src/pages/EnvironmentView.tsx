@@ -18,6 +18,7 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 const P = await prose("pages.EnvironmentView");
 
 const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", quiet: "skip" };
@@ -33,13 +34,13 @@ export function EnvironmentViewPage({ name }: { name: string }) {
   const reviewFn = useCallback((bg: boolean) => rollbackApi.reviews(bg), []);
   const reviews = useLoad<ReviewItem[]>(reviewFn, 15000);
   const env = inst.environments.find((e) => e.name === name);
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!env) return <div className="page"><PageHead eyebrow={terms().say("Deployments · {Environments}")} title={name} /><Sheet><EmptyState title={terms().say(`There is no {environment} called ${name}`)} action={<LinkButton href="/deployments/environments" icon="arrow">{terms().say("See the {environments}")}</LinkButton>}>{P.t0}</EmptyState></Sheet></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  if (!env) return <DivPage><PageHead eyebrow={terms().say("Deployments · {Environments}")} title={name} /><Sheet><EmptyState title={terms().say(`There is no {environment} called ${name}`)} action={<LinkButton href="/deployments/environments" icon="arrow">{terms().say("See the {environments}")}</LinkButton>}>{P.t0}</EmptyState></Sheet></DivPage>;
   const watched = !!env.observer && (!env.observer_expires || env.observer_expires > now);
   const rows = env.services.map((unit) => ({ unit, dg: diagnose(unit.last, unit.live, undefined, now) }));
   const trouble = rows.filter((r) => r.dg.tone === "bad" || r.dg.tone === "wait").length;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={terms().say("Deployments · {Environments}")} title={env.name}
         sentence={rows.length === 0 ? terms().say(P.t1) : trouble > 0 ? <><b>{trouble} of {rows.length} {rows.length === 1 ? "service needs" : "services need"} a look.</b></> : terms().say(P.t2)}
         actions={<>{me?.admin && <LinkButton href={`/config/environments/${encodeURIComponent(env.name)}`} icon="edit">Change it</LinkButton>}<LinkButton href="/deployments/environments" icon="list">{terms().say(P.t3)}</LinkButton></>} />
@@ -50,10 +51,10 @@ export function EnvironmentViewPage({ name }: { name: string }) {
             {rows.map(({ unit: u, dg }) => (
               <li key={u.project + "/" + u.service} className={dg.tone === "bad" ? "bad" : dg.tone === "wait" ? "warn" : ""}>
                 <div className="main">
-                  <div className="nm">{u.last?.application ? <EntityLink kind="application" name={u.last.application}>{u.service}</EntityLink> : u.service} <span className="faint">of</span> <EntityLink kind="project" name={u.project} /></div>
+                  <div className="nm">{u.last?.application ? <EntityLink kind="application" name={u.last.application}>{u.service}</EntityLink> : u.service} <SpanFaint>of</SpanFaint> <EntityLink kind="project" name={u.project} /></div>
                   <div className="sb">{dg.headline}</div>
                 </div>
-                <div className="cell"><Status state={STATE[dg.tone]} /><span className="mono">{u.current?.version ?? "not yet"}</span></div>
+                <div className="cell"><Status state={STATE[dg.tone]} /><SpanMono>{u.current?.version ?? "not yet"}</SpanMono></div>
                 <div className="cell faint">{u.current ? <><EntityLink kind="run" name={`#${u.current.run_number}`} id={u.current.run} /> {ago(u.current.since, now)}</> : ""}</div>
                 {u.rollback && <div className="cell"><RollbackControl action={u.rollback} unit={{ project: u.project, service: u.service, environment: env.name }} compact /></div>}
                 {(u.lock || u.waiting.length > 0) && <div className="cell small">{u.lock && <>lock held by <EntityLink kind="run" name={`#${u.lock.number}`} id={u.lock.run} /></>}{u.waiting.length > 0 && <>, {u.waiting.length} waiting</>}</div>}
@@ -70,23 +71,23 @@ export function EnvironmentViewPage({ name }: { name: string }) {
           <dt>Queue</dt><dd>{env.queue === "all" ? terms().say(P.t8) : terms().say(P.t9)}</dd>
         </dl>
       </Sheet>
-      <Sheet title={terms().say("{Deploys}")} actions={<span className="faint small">newest first</span>}>
+      <Sheet title={terms().say("{Deploys}")} actions={<SpanFaintSmall>newest first</SpanFaintSmall>}>
         <ErrorBox error={hist.error} />
         {hist.data && hist.data.length === 0 && <p className="sh-b faint">No deployments to {env.name} yet.</p>}
         {hist.data && hist.data.length > 0 && (
           <ul className="rowlist">
             {hist.data.map((d) => (
               <li key={d.id}>
-                <div className="main"><div className="nm">{d.application ? <EntityLink kind="application" name={d.application}>{d.service}</EntityLink> : d.service} <span className="mono">{d.version}</span></div>
+                <div className="main"><div className="nm">{d.application ? <EntityLink kind="application" name={d.application}>{d.service}</EntityLink> : d.service} <SpanMono>{d.version}</SpanMono></div>
                   <div className="sb"><EntityLink kind="run" name={terms().say(`{run} #${d.run_number}`)} id={d.run_id} /> of <EntityLink kind="project" name={d.project} />{d.detail ? ` · ${d.detail}` : ""}</div><HistoryNote d={d} /></div>
                 <DeployStatePill d={d} now={now} />
-                <span className="faint small" title={clock(d.opened_at)}>{ago(d.opened_at, now)}</span>
+                <SpanFaintSmall title={clock(d.opened_at)}>{ago(d.opened_at, now)}</SpanFaintSmall>
               </li>
             ))}
           </ul>
         )}
       </Sheet>
       <EnvironmentChanges environment={env.name} projects={env.projects} deployments={hist.data ?? []} />
-    </div>
+    </DivPage>
   );
 }

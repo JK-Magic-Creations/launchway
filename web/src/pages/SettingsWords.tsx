@@ -7,6 +7,7 @@ import { WordsEditor, wordsProblems, type WordsValue } from "../components/Words
 import { Button, PageHead, Sheet } from "../kit/layout";
 import { Icon } from "../kit/Icon";
 import { isSetId, terms, type TermsConfig } from "../terms";
+import { DivPage } from "../kit/bits";
 
 /** The words held in an installation's settings, with the names an older installation gave its levels carried over. */
 export function wordsOf(spec: Record<string, unknown> | undefined): WordsValue {
@@ -61,7 +62,7 @@ export function SettingsWordsPage() {
   };
 
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Words"
         sentence="Launchway's own words for its levels and parts. Choose a set, or rename any word. They are labels only: addresses, commands and pipeline files keep their plain names." />
       {admin ? (
@@ -77,6 +78,6 @@ export function SettingsWordsPage() {
       ) : (
         <Sheet pad><div className="note"><Icon name="lock" />Only an administrator can change the words. Currently: the {terms().set === "business" ? "plain business" : "aviation"} set.</div></Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }

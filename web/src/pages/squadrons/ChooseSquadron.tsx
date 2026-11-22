@@ -8,6 +8,7 @@ import { terms } from "../../terms";
 import { str, useUrlState } from "../../urlState";
 import { ADD_SQUADRON, addFlightHref, WhyNot } from "./shared";
 import "../../squadrons.css";
+import { DivLoading, DivPage, SpanFaintSmall } from "../../kit/bits";
 
 /** Where every "Add a Flight" button leads: a Flight lives in a Squadron, so the person picks one (or makes one) and goes on. */
 export function ChooseSquadronPage() {
@@ -16,8 +17,8 @@ export function ChooseSquadronPage() {
   const rows = data?.squadrons ?? [];
   const [chosen, setChosen] = useUrlState("unit", rows.length === 1 ? rows[0].name : "", str);
   const t = terms();
-  if (error && !data) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!data) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error && !data) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!data) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const head = <PageHead eyebrow={t.say("{Projects}")} title={t.say("Add a {project}")}
     sentence={t.say("A {project} is one repository and its pipelines, and it lives in a {unit}. Choose the {unit} it belongs to.")} />;
   if (!data.may_manage) return <div className="page sq-page">{head}<Sheet><WhyNot why={data.why ?? ""} /></Sheet></div>;
@@ -41,7 +42,7 @@ export function ChooseSquadronPage() {
               <label key={s.name} className="sq-choice">
                 <input type="radio" name="unit" value={s.name} checked={on === s.name} onChange={() => setChosen(s.name)} />
                 <span><b>{s.display_name || s.name}</b>{s.display_name && s.display_name !== s.name ? <span className="faint mono"> {s.name}</span> : null}
-                  <span className="faint small"> · {s.flights} {s.flights === 1 ? t.lower("project") : t.pluralLower("project")}{s.description ? ` · ${s.description}` : ""}</span></span>
+                  <SpanFaintSmall> · {s.flights} {s.flights === 1 ? t.lower("project") : t.pluralLower("project")}{s.description ? ` · ${s.description}` : ""}</SpanFaintSmall></span>
               </label>
             ))}
           </fieldset>

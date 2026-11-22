@@ -13,6 +13,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../config.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaint, ThCol } from "../kit/bits";
 const P = await prose("pages.ConfigObject");
 
 // ConfigObjectPage shows one configuration object: a form for its settings
@@ -23,9 +24,9 @@ export function ConfigObjectPage({ kind, name }: { kind: string; name: string })
   const path = usePath();
   const { overview, error: ovError } = useOverview();
   const k = kindOf(overview, kind);
-  if (ovError) return <div className="page"><ErrorBox error={ovError} /></div>;
-  if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!k) return <div className="page"><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration"><Link href="/config">Back to configuration</Link></Empty></div>;
+  if (ovError) return <DivPage><ErrorBox error={ovError} /></DivPage>;
+  if (!overview) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  if (!k) return <DivPage><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration"><Link href="/config">Back to configuration</Link></Empty></DivPage>;
   return <Editor key={k.name + "/" + name} k={k} name={name} overview={overview} path={path} />;
 }
 
@@ -136,14 +137,14 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
     catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (loaded.state === "loading") return <div className="page"><ConfigNav overview={overview} path={path} /><div className="loading">Loading…</div></div>;
+  if (loaded.state === "loading") return <DivPage><ConfigNav overview={overview} path={path} /><DivLoading>Loading…</DivLoading></DivPage>;
   if (loaded.state === "error") {
     return (
-      <div className="page"><ConfigNav overview={overview} path={path} />
+      <DivPage><ConfigNav overview={overview} path={path} />
         {loaded.error instanceof ApiError && loaded.error.status === 404
           ? <Empty title={`No ${one.toLowerCase()} ${name}`}>It does not exist. <Link href={`/config/${k.path}`}>See them all</Link>.</Empty>
           : <ErrorBox error={loaded.error} />}
-      </div>
+      </DivPage>
     );
   }
   const wiz = isNew ? wizardFor(k.name) : undefined;
@@ -294,7 +295,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
           <div>
             <h3 className="h-sm">Settings</h3>
             <table className="cf-table">
-              <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
+              <thead><tr><ThCol>Setting</ThCol><ThCol>Value</ThCol><ThCol>From</ThCol></tr></thead>
               <tbody>{ef.settings.map((s) => (
                 <tr key={s.key}><td className="mono">{s.key}</td><td className="mono">{fmt(s.value)}</td><td><span className={`cf-from cf-from-${s.from}`}>{from(s.from)}</span></td></tr>
               ))}</tbody>
@@ -304,7 +305,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
             <h3 className="h-sm">Shared objects that apply</h3>
             {ef.objects.length === 0 ? <p className="faint">None.</p> : (
               <table className="cf-table">
-                <thead><tr><th scope="col">What</th><th scope="col">Name</th><th scope="col">From</th></tr></thead>
+                <thead><tr><ThCol>What</ThCol><ThCol>Name</ThCol><ThCol>From</ThCol></tr></thead>
                 <tbody>{ef.objects.map((o) => {
                   const kk = overview.kinds.find((x) => x.name === o.kind);
                   return (
@@ -343,7 +344,7 @@ function History({ changes, overview }: { changes: ConfigChange[] | null; overvi
                 <span className={`cf-action cf-action-${c.action}`}>{c.action}</span>
                 <strong>version {c.version}</strong>
                 <span>by {c.actor || "someone"}</span>
-                <span className="faint" title={clock(c.at)}>{ago(c.at)}</span>
+                <SpanFaint title={clock(c.at)}>{ago(c.at)}</SpanFaint>
                 {c.managed_by && c.managed_by !== "api" && <span className="cf-pill">{managerLabel(c.managed_by)}</span>}
               </div>
               {c.comment && <div className="cf-hist-comment">“{c.comment}”</div>}

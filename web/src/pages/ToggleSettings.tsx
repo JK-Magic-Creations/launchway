@@ -11,6 +11,7 @@ import { ProjectHead } from "./PipelineChrome";
 import "../toggles.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, DivActions, DivPage, PSub, SpanFaintSmall, SpanMono, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.ToggleSettings");
 
 /** Safeguards, SDK keys and scheduled changes of a project's toggles. */
@@ -29,20 +30,20 @@ export function ToggleSettingsPage({ name }: { name: string }) {
   const act = async (fn: () => Promise<unknown>, then: () => void) => { setError(null); try { await fn(); then(); } catch (e) { setError(e); } };
   const envs = Object.entries(g.data?.environments ?? {});
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="toggles" title={`Keys and safeguards of ${name}'s toggles`}
         sentence={P.t0}
         actions={<LinkButton href={`/projects/${encodeURIComponent(name)}/toggles`} icon="arrow">The toggles</LinkButton>} />
       <ErrorBox error={error} />
       <Sheet title="Safeguards">
-        <p className="sub">{terms().say(P.t1)}</p>
-        {envs.length === 0 ? <p className="sub">{terms().say("No {environments} yet.")}</p> : (
+        <PSub>{terms().say(P.t1)}</PSub>
+        {envs.length === 0 ? <PSub>{terms().say("No {environments} yet.")}</PSub> : (
           <table className="tg-table">
             <caption className="sr-only">{terms().say(P.t2)}</caption>
-            <thead><tr><th scope="col">{terms().say("{Environment}")}</th><th scope="col">Reason required</th><th scope="col">Approval required</th><th scope="col">People</th><th scope="col">Watch after a change</th><th scope="col"><span className="sr-only">Change</span></th></tr></thead>
+            <thead><tr><ThCol>{terms().say("{Environment}")}</ThCol><ThCol>Reason required</ThCol><ThCol>Approval required</ThCol><ThCol>People</ThCol><ThCol>Watch after a change</ThCol><ThCol><span className="sr-only">Change</span></ThCol></tr></thead>
             <tbody>{envs.map(([env, x]) => (
               <tr key={env}>
-                <th scope="row">{env}</th>
+                <ThRow>{env}</ThRow>
                 <td>{x.require_reason ? "Yes" : "No"}<span className="tg-meta">{x.from.require_reason}</span></td>
                 <td>{x.require_approval ? "Yes" : "No"}<span className="tg-meta">{x.from.require_approval}{x.locked_by?.require_approval ? ` · locked by ${x.locked_by.require_approval}` : ""}</span></td>
                 <td>{x.approvals}</td>
@@ -55,13 +56,13 @@ export function ToggleSettingsPage({ name }: { name: string }) {
         {!admin && <p className="tg-callout">{P.t3}{name}.</p>}
       </Sheet>
       <Sheet title="SDK keys" actions={admin ? <Button sm kind="pri" onClick={() => setMaking(true)}>Make a key</Button> : undefined}>
-        <p className="sub">{terms().say(P.t4)}</p>
-        {!can ? <p className="sub">{P.t5}</p> : (k.data?.keys ?? []).length === 0 ? <EmptyState title="No keys yet">{P.t6}</EmptyState> : (
+        <PSub>{terms().say(P.t4)}</PSub>
+        {!can ? <PSub>{P.t5}</PSub> : (k.data?.keys ?? []).length === 0 ? <EmptyState title="No keys yet">{P.t6}</EmptyState> : (
           <ul className="tg-keys">
             {k.data!.keys.map((x: KeyInfo) => (
               <li key={x.id}>
                 <span><b>{x.name || x.id}</b> <span className="tg-kind">{x.kind}</span> in {x.environment}</span>
-                <span className="mono">{x.prefix}</span>
+                <SpanMono>{x.prefix}</SpanMono>
                 <span className="tg-meta">{x.revoked_at ? `revoked ${ago(x.revoked_at, now)}` : x.expires_at ? `valid until ${clock(x.expires_at)} (rotated)` : x.last_used_at ? `last used ${ago(x.last_used_at, now)}` : "never used"}</span>
                 {admin && !x.revoked_at && <>
                   <Button sm onClick={() => act(async () => { const r = await togglesApi.rotateKey(name, x.id); setMade({ key: r.key, note: r.note }); }, k.reload)}>Rotate</Button>
@@ -73,10 +74,10 @@ export function ToggleSettingsPage({ name }: { name: string }) {
         )}
       </Sheet>
       <Sheet title="Scheduled changes">
-        {(s.data?.schedules ?? []).length === 0 ? <p className="sub">{P.t7}</p> : (
+        {(s.data?.schedules ?? []).length === 0 ? <PSub>{P.t7}</PSub> : (
           <ul className="tg-timeline">
             {s.data!.schedules.map((x) => (
-              <li key={x.id}><span><b>{x.toggle.key}</b> in {x.environment} at {clock(x.run_at)}: {x.reason}</span><span className="faint small">by {x.created_by}</span>
+              <li key={x.id}><span><b>{x.toggle.key}</b> in {x.environment} at {clock(x.run_at)}: {x.reason}</span><SpanFaintSmall>by {x.created_by}</SpanFaintSmall>
                 {can && <Button sm onClick={() => act(() => togglesApi.cancelSchedule(name, x.id), s.reload)}>Cancel</Button>}</li>
             ))}
           </ul>
@@ -89,10 +90,10 @@ export function ToggleSettingsPage({ name }: { name: string }) {
           <div className="tg-form"><h2>Your new key</h2>
             <p className="tg-secret" data-testid="the-key">{made.key}</p>
             <p>{made.note}</p>
-            <div className="dialog-actions"><button className="btn btn-primary" onClick={() => setMade(null)}>I have kept it</button></div></div>
+            <DivActions><button className="btn btn-primary" onClick={() => setMade(null)}>I have kept it</button></DivActions></div>
         </Dialog>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -117,7 +118,7 @@ function MakeKey({ project, onClose, onMade }: { project: string; onClose: () =>
         <label>Name <input value={name} onChange={(e) => setName(e.target.value)} placeholder="what it is for" /></label>
         {kind === "client" && <label>{P.t9}<input value={origins} onChange={(e) => setOrigins(e.target.value)} placeholder="https://shop.example.com" /></label>}
         <ErrorBox error={error} />
-        <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Make the key</button></div>
+        <DivActions><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary>Make the key</BtnPrimary></DivActions>
       </form>
     </Dialog>
   );
@@ -147,7 +148,7 @@ function Guard({ project, env, g, onClose, onDone }: { project: string; env: str
         <label className="tg-check"><input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} /> {P.t13}</label>
         <label>Why {relaxing ? P.t14 : "(optional)"} <input value={reason} onChange={(e) => setReason(e.target.value)} required={relaxing} /></label>
         <ErrorBox error={error} />
-        <div className="dialog-actions"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Save</button></div>
+        <DivActions><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary>Save</BtnPrimary></DivActions>
       </form>
     </Dialog>
   );

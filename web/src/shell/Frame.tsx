@@ -21,6 +21,7 @@ import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
 import { currentViewTitle, onViewTitle } from "../urlState";
+import { DivPage, PSub } from "../kit/bits";
 
 // The table that says which page a path opens is a chunk of its own, with the pages it names: the first screen needs only the shell.
 const PageFor = lazy(() => import("../nav/pages").then((m) => ({ default: m.PageFor })));
@@ -177,7 +178,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           )}
           <div className="frame-head"><Breadcrumbs path={path} label={crumb} /></div>
           <CrumbLabelContext.Provider value={setCrumb}>
-            <Suspense fallback={<div className="page"><p className="sub" role="status">Loading…</p></div>}>
+            <Suspense fallback={<DivPage><PSub role="status">Loading…</PSub></DivPage>}>
               <ErrorBoundary name="This page" resetKey={path}><PageFor path={path} approvals={approvals} /></ErrorBoundary>
             </Suspense>
           </CrumbLabelContext.Provider>

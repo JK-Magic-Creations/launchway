@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type Ref } from "../api";
 import { ago } from "../format";
 import { ErrorBox } from "./ui";
+import { DivLoading, LabelField, SpanFaintSmall } from "../kit/bits";
 
 interface Props {
   project: string;
@@ -40,13 +41,13 @@ export function RefPicker({ project, defaultBranch, chosen, onChoose, branchesOn
 
   return (
     <>
-      <label className="field">
+      <LabelField>
         <span>{branchesOnly ? "Branch" : "Branch or tag"}</span>
         <input type="search" placeholder={branchesOnly ? "Search branches and commit messages" : "Search branches, tags and commit messages"}
           value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
-      </label>
+      </LabelField>
       <ErrorBox error={loadErr} />
-      {refs === null && !loadErr && <div className="loading">Reading the repository…</div>}
+      {refs === null && !loadErr && <DivLoading>Reading the repository…</DivLoading>}
       <div className="reflist" role="listbox" aria-label={branchesOnly ? "Branches" : "Branches and tags"}>
         {shown.map((r) => (
           <button key={r.kind + r.name} type="button" role="option" aria-selected={chosen === r.name}
@@ -54,7 +55,7 @@ export function RefPicker({ project, defaultBranch, chosen, onChoose, branchesOn
             <span className={"refkind refkind-" + r.kind}>{r.kind}</span>
             <span className="refname mono">{r.name}</span>
             <span className="refsubj">{r.subject}</span>
-            <span className="faint small">{r.author} · {ago(r.committed_at)}</span>
+            <SpanFaintSmall>{r.author} · {ago(r.committed_at)}</SpanFaintSmall>
           </button>
         ))}
         {refs && shown.length === 0 && <div className="sub">Nothing matches.</div>}

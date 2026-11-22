@@ -6,6 +6,7 @@ import { navigate } from "../router";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { FindingsHowTo } from "../components/Security";
 import { terms } from "../terms";
+import { BtnPrimary, DivPage, LabelField, SpanFaint, SpanMono } from "../kit/bits";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -49,19 +50,19 @@ export function ComponentsPage() {
   };
 
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which {projects} use it, at which version, on which branch.")} />
 
       <form className="card compform" role="search" onSubmit={submit}>
-        <label className="field">
+        <LabelField>
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="requests" required maxLength={300} autoFocus={!asked.name} />
-        </label>
-        <label className="field">
-          <span>Version <span className="faint">(optional)</span></span>
+        </LabelField>
+        <LabelField>
+          <span>Version <SpanFaint>(optional)</SpanFaint></span>
           <input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="any version" maxLength={200} />
-        </label>
-        <button type="submit" className="btn btn-primary" disabled={!name.trim() || busy}>{busy ? "Searching…" : "Search"}</button>
+        </LabelField>
+        <BtnPrimary disabled={!name.trim() || busy}>{busy ? "Searching…" : "Search"}</BtnPrimary>
         <p className="sub small compform-note">The name must match exactly, ignoring case; newest runs first.</p>
       </form>
 
@@ -85,8 +86,8 @@ export function ComponentsPage() {
               {data.projects.map((p) => (
                 <li key={p.project}>
                   <strong>{p.project}</strong>
-                  <span className="mono">{p.version || "no version"}</span>
-                  <span className="faint">latest in <Link href={`/runs/${p.run_id}?tab=security`}>#{p.run_number}</Link> on {refName(p.ref)}, {ago(p.created_at)}</span>
+                  <SpanMono>{p.version || "no version"}</SpanMono>
+                  <SpanFaint>latest in <Link href={`/runs/${p.run_id}?tab=security`}>#{p.run_number}</Link> on {refName(p.ref)}, {ago(p.created_at)}</SpanFaint>
                 </li>
               ))}
             </ul>
@@ -104,7 +105,7 @@ export function ComponentsPage() {
                       <td>{h.step}</td>
                       <td className="mono" title={h.purl}>{h.name}</td>
                       <td className="mono">{h.version || "—"}</td>
-                      <td>{h.licences || <span className="faint">none given</span>}</td>
+                      <td>{h.licences || <SpanFaint>none given</SpanFaint>}</td>
                       <td title={clock(h.created_at)}>{ago(h.created_at)}</td>
                     </tr>
                   ))}
@@ -115,6 +116,6 @@ export function ComponentsPage() {
           </section>
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

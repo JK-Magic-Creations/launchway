@@ -16,14 +16,15 @@ import { AddPolicyWizard } from "./AddPolicy";
 import { AddHealthSourceWizard, AddModelWizard } from "./AddVerify";
 import "../../config.css";
 import { prose } from "../../prose";
+import { DivLoading, DivPage, SpanFaint, SpanMono } from "../../kit/bits";
 const P = await prose("pages.wizards.Wizards");
 
 export function WizardPage({ id }: { id: string }) {
   const { overview, error } = useOverview();
-  if (error) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!overview.available) return <div className="page"><Empty title={P.t0}>{P.t1}<Link href="/config">Back</Link></Empty></div>;
-  if (!overview.admin) return <div className="page"><Empty title={P.t2}>{P.t3}</Empty></div>;
+  if (error) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!overview) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  if (!overview.available) return <DivPage><Empty title={P.t0}>{P.t1}<Link href="/config">Back</Link></Empty></DivPage>;
+  if (!overview.admin) return <DivPage><Empty title={P.t2}>{P.t3}</Empty></DivPage>;
   switch (id) {
     case "first-run": return <FirstRunWizard overview={overview} />;
     case "connect-repository": return <ConnectRepoWizard overview={overview} />;
@@ -33,7 +34,7 @@ export function WizardPage({ id }: { id: string }) {
     case "add-health-source": return <AddHealthSourceWizard overview={overview} />;
     case "add-model": return <AddModelWizard overview={overview} />;
   }
-  return <div className="page"><Empty title="No such wizard"><Link href="/config">Back to configuration</Link></Empty></div>;
+  return <DivPage><Empty title="No such wizard"><Link href="/config">Back to configuration</Link></Empty></DivPage>;
 }
 
 /** A field of a step: where the server's messages about it go, and its
@@ -170,8 +171,8 @@ export function CreatedList({ objects, overview }: { objects: ConfigObject[]; ov
         return (
           <li key={o.kind + "/" + o.name}>
             <span className="cf-kindtag">{k ? kindLabel(overview, k, false) : o.kind}</span>{" "}
-            {k ? <Link href={`/config/${k.path}/${encodeURIComponent(o.name)}`}><span className="mono">{o.name}</span></Link> : <span className="mono">{o.name}</span>}
-            <span className="faint"> · version {o.version}</span>
+            {k ? <Link href={`/config/${k.path}/${encodeURIComponent(o.name)}`}><SpanMono>{o.name}</SpanMono></Link> : <SpanMono>{o.name}</SpanMono>}
+            <SpanFaint> · version {o.version}</SpanFaint>
           </li>
         );
       })}
@@ -207,7 +208,7 @@ export function PickNames({ legend, help, names, value, onChange, placeholder = 
       {names.length > 0 && (
         <div className="cf-ticks">
           {names.map((n) => (
-            <label key={n} className="cf-tick"><input type="checkbox" checked={value.includes(n)} onChange={(e) => toggle(n, e.target.checked)} /> <span className="mono">{n}</span></label>
+            <label key={n} className="cf-tick"><input type="checkbox" checked={value.includes(n)} onChange={(e) => toggle(n, e.target.checked)} /> <SpanMono>{n}</SpanMono></label>
           ))}
         </div>
       )}

@@ -8,6 +8,7 @@ import { onLink } from "../router";
 import { terms } from "../terms";
 import { useLoad } from "../guided/useLoad";
 import { squadronsApi, type SquadronSummary } from "../squadronsApi";
+import { SpanFaint } from "../kit/bits";
 
 export interface ExploreProps {
   projects: Project[];
@@ -54,7 +55,7 @@ export function Explore(p: ExploreProps) {
   const tiles = exploreTiles({ ...p, squadrons: p.squadrons ?? data?.squadrons ?? null });
   return (
     <section className="explore" aria-labelledby="explore-h">
-      <div className="ex-h"><h2 id="explore-h">Explore</h2><span className="faint">What Launchway holds, with its live count</span></div>
+      <div className="ex-h"><h2 id="explore-h">Explore</h2><SpanFaint>What Launchway holds, with its live count</SpanFaint></div>
       <div className="ex-g">
         {tiles.map((t) => (
           <a key={t.key} className="ex" href={t.href} onClick={onLink}>

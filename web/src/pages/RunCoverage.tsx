@@ -4,6 +4,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { bytes } from "../components/Security";
 import { CoverageHowTo, Delta, MEASURES, Meter, MiniBar, level, measureLabel, pct, ratio, type Measure } from "../components/Coverage";
 import { terms } from "../terms";
+import { BtnSm, DivLoading, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
 const PAGE = 50;
@@ -28,7 +29,7 @@ export function CoverageTab({ run, version }: { run: RunDetail; version: string 
   }, [run.id, version]);
 
   if (error) return <ErrorBox error={error} />;
-  if (!cov) return <div className="loading">Loading…</div>;
+  if (!cov) return <DivLoading>Loading…</DivLoading>;
   if (!cov.totals) {
     if (cov.declared.length > 0) {
       const going = run.step_list.filter((s) => cov.declared.includes(s.id) && !ENDED.includes(s.status));
@@ -52,9 +53,9 @@ function CoverageView({ run, cov, totals, version }: { run: RunDetail; cov: RunC
       <section className="card csum" aria-label="Coverage totals">
         <div className="csum-head">
           <h2 className="h-sm">{terms().say("Coverage of this {run}")}</h2>
-          <span className="faint small">
+          <SpanFaintSmall>
             {cov.steps.reduce((n, s) => n + s.source_files, 0).toLocaleString()} source files from {cov.steps.length} step{cov.steps.length === 1 ? "" : "s"}
-          </span>
+          </SpanFaintSmall>
         </div>
         <div className="cmeters">
           {MEASURES.map((m) => <TotalMeter key={m} m={m} totals={totals} cov={cov} />)}
@@ -96,8 +97,8 @@ function TotalMeter({ m, totals, cov }: { m: Measure; totals: CoverageTotals; co
       </div>
       <Meter c={c} threshold={threshold} label={label} />
       <div className="cmeter-foot">
-        {r === null ? <span className="faint">Not measured by these reports</span>
-          : <span className="faint">{c.covered.toLocaleString()} of {c.total.toLocaleString()} {m === "lines" ? (totals.unit === "statements" ? "statements" : "lines") : m}{threshold ? `, needs ${threshold}%` : ""}</span>}
+        {r === null ? <SpanFaint>Not measured by these reports</SpanFaint>
+          : <SpanFaint>{c.covered.toLocaleString()} of {c.total.toLocaleString()} {m === "lines" ? (totals.unit === "statements" ? "statements" : "lines") : m}{threshold ? `, needs ${threshold}%` : ""}</SpanFaint>}
       </div>
       <div className="cmeter-deltas">
         {cov.previous && <Delta now={r} before={ratio(cov.previous.totals[m])} label={`#${cov.previous.run.number}`} href={`/runs/${cov.previous.run.id}?tab=coverage`} />}
@@ -115,7 +116,7 @@ function StepCoverage({ s, run }: { s: CoverageStep; run: RunDetail }) {
         {s.failed_under && <span className="pill pill-bad"><span aria-hidden="true">✕</span> Below threshold</span>}
         {!s.failed_under && s.threshold && <span className="pill pill-ok"><span aria-hidden="true">✓</span> Meets threshold</span>}
         {s.reused_from && <span className="badge-reused">Reused from <Link href={`/runs/${s.reused_from}?tab=coverage`}>#{s.reused_from_number}</Link></span>}
-        <span className="faint small">{s.source_files.toLocaleString()} file{s.source_files === 1 ? "" : "s"}{s.attempt > 1 ? `, attempt ${s.attempt}` : ""}</span>
+        <SpanFaintSmall>{s.source_files.toLocaleString()} file{s.source_files === 1 ? "" : "s"}{s.attempt > 1 ? `, attempt ${s.attempt}` : ""}</SpanFaintSmall>
       </div>
       <div className="covstep-meters">
         {MEASURES.map((m) => {
@@ -124,7 +125,7 @@ function StepCoverage({ s, run }: { s: CoverageStep; run: RunDetail }) {
             <div key={m} className="covstep-meter">
               <span className="covstep-mlabel">{label}</span>
               <Meter c={s[m]} threshold={s.threshold?.[m]} thin label={`${s.step} ${label}`} />
-              <span className="covstep-pct">{pct(s[m])}{s.threshold?.[m] ? <span className="faint"> / {s.threshold[m]}%</span> : null}</span>
+              <span className="covstep-pct">{pct(s[m])}{s.threshold?.[m] ? <SpanFaint> / {s.threshold[m]}%</SpanFaint> : null}</span>
             </div>
           );
         })}
@@ -135,7 +136,7 @@ function StepCoverage({ s, run }: { s: CoverageStep; run: RunDetail }) {
           <li key={f.path} className={f.error ? "tfile-bad" : undefined}>
             <Mono>{f.path}</Mono>
             {f.error ? <span className="tfile-err">{f.error}</span>
-              : <span className="faint">{FORMAT[f.format ?? ""] ?? f.format ?? "coverage"}, {f.files} file{f.files === 1 ? "" : "s"}, {bytes(f.bytes)}</span>}
+              : <SpanFaint>{FORMAT[f.format ?? ""] ?? f.format ?? "coverage"}, {f.files} file{f.files === 1 ? "" : "s"}, {bytes(f.bytes)}</SpanFaint>}
             {f.warning && <span className="tfile-warn">{f.warning}</span>}
           </li>
         ))}
@@ -175,7 +176,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
       {data && data.packages.length > 1 && (
         <section className="card" aria-label="Coverage by package">
           <details className="cpkgs" open={data.packages.length <= 12}>
-            <summary><h2 className="h-sm cinline">By package or directory</h2> <span className="faint small">{data.packages.length}</span></summary>
+            <summary><h2 className="h-sm cinline">By package or directory</h2> <SpanFaintSmall>{data.packages.length}</SpanFaintSmall></summary>
             <div className="table-scroll">
               <table className="inputs-table ctable">
                 <thead><tr><th>Package</th><th className="cnum">Files</th><th>{lines}</th><th>Branches</th><th>Functions</th></tr></thead>
@@ -200,16 +201,16 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
 
       <section className="card cfiles" aria-label="Coverage by file">
         <div className="cfiles-head">
-          <h2 className="h-sm">Files {data && <span className="faint">{data.matching.toLocaleString()}</span>}</h2>
+          <h2 className="h-sm">Files {data && <SpanFaint>{data.matching.toLocaleString()}</SpanFaint>}</h2>
           <div className="cfiles-tools">
             <label className="search">
-              <span className="visually-hidden">Search files</span>
+              <SpanHidden>Search files</SpanHidden>
               <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
               <input type="search" placeholder="Search paths and packages" value={search} onChange={(e) => setSearch(e.target.value)} />
             </label>
             {many && (
               <label className="select">
-                <span className="visually-hidden">Step</span>
+                <SpanHidden>Step</SpanHidden>
                 <select value={step} onChange={(e) => { setStep(e.target.value); setOffset(0); }}>
                   <option value="">Every step</option>
                   {steps.map((s) => <option key={s.step} value={s.step}>{s.step}</option>)}
@@ -225,7 +226,7 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
           </div>
         </div>
         <ErrorBox error={error} />
-        {!data ? <div className="loading">Loading…</div> : data.files.length === 0 ? (
+        {!data ? <DivLoading>Loading…</DivLoading> : data.files.length === 0 ? (
           <div className="empty empty-sm">{query ? <>No files match <strong>{query}</strong>.</> : terms().say("No per-file coverage was kept for this {run}.")}</div>
         ) : (
           <>
@@ -253,9 +254,9 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
             </div>
             {data.matching > PAGE && (
               <div className="cpager">
-                <button type="button" className="btn btn-sm" disabled={offset === 0} onClick={() => setOffset(Math.max(offset - PAGE, 0))}>Previous</button>
-                <span className="faint small">{(offset + 1).toLocaleString()}–{Math.min(offset + PAGE, data.matching).toLocaleString()} of {data.matching.toLocaleString()}</span>
-                <button type="button" className="btn btn-sm" disabled={offset + PAGE >= data.matching} onClick={() => setOffset(offset + PAGE)}>Next</button>
+                <BtnSm disabled={offset === 0} onClick={() => setOffset(Math.max(offset - PAGE, 0))}>Previous</BtnSm>
+                <SpanFaintSmall>{(offset + 1).toLocaleString()}–{Math.min(offset + PAGE, data.matching).toLocaleString()} of {data.matching.toLocaleString()}</SpanFaintSmall>
+                <BtnSm disabled={offset + PAGE >= data.matching} onClick={() => setOffset(offset + PAGE)}>Next</BtnSm>
               </div>
             )}
           </>
@@ -266,13 +267,13 @@ function FilesTable({ run, steps, unit, version }: { run: RunDetail; steps: Cove
 }
 
 function Change({ v }: { v?: number | null }) {
-  if (v === undefined || v === null) return <span className="faint" title={terms().say("Not in the previous {run}")}>new</span>;
+  if (v === undefined || v === null) return <SpanFaint title={terms().say("Not in the previous {run}")}>new</SpanFaint>;
   const d = Math.round(v * 10) / 10;
-  if (d === 0) return <span className="faint">±0</span>;
+  if (d === 0) return <SpanFaint>±0</SpanFaint>;
   return (
     <span className={"cchange " + (d > 0 ? "cchange-up" : "cchange-down")}>
       <span aria-hidden="true">{d > 0 ? "▲" : "▼"} </span>{d > 0 ? "+" : "−"}{Math.abs(d).toFixed(1)}
-      <span className="visually-hidden"> points</span>
+      <SpanHidden> points</SpanHidden>
     </span>
   );
 }

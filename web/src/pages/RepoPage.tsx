@@ -22,6 +22,7 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 const P = await prose("pages.RepoPage");
 
 /** One repository: where it lives, its branches with the last pipeline result on each, its tags, and what starts
@@ -40,8 +41,8 @@ export function RepoPage({ name }: { name: string }) {
   const refsFn = useCallback(() => api.refs(name), [name]);
   const refs = useLoad<Ref[]>(refsFn);
   const p = project.data;
-  if (project.error && !p) return <div className="page"><ErrorBox error={project.error} /></div>;
-  if (!p) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (project.error && !p) return <DivPage><ErrorBox error={project.error} /></DivPage>;
+  if (!p) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
 
   const enc = encodeURIComponent(p.name);
   const base = hostBase(p.url);
@@ -49,7 +50,7 @@ export function RepoPage({ name }: { name: string }) {
   const trend = trendOf(runs.data ?? []);
   const envs = inst.environments.filter((e) => e.projects.includes(p.name));
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Code" title={<>{p.name} <Chip icon="code">{host ? `on ${host}` : "local repository"}</Chip></>}
         sentence={p.error ? <><b>{P.t0}</b> {p.error}</> : <>{P.t1}<Mono>{p.default_branch}</Mono>. Checked every {p.poll_seconds}s{p.last_fetch > 0 ? `, last ${ago(p.last_fetch, now)}` : ""}.</>}
         actions={<>
@@ -86,9 +87,9 @@ export function RepoPage({ name }: { name: string }) {
                   {p.decisions.map((d, i) => (
                     <li key={i}>
                       <StateChip state={d.outcome === "started" ? "ok" : d.outcome === "error" ? "bad" : d.outcome === "waiting" ? "wait" : "skip"}>{d.outcome === "started" ? "Started" : d.outcome === "ignored" ? "Ignored" : d.outcome === "waiting" ? "Waiting" : "Problem"}</StateChip>
-                      <span className="mono">{refShort(d.ref)}</span><span className="mono faint">{shortSha(d.sha)}</span>
+                      <SpanMono>{refShort(d.ref)}</SpanMono><span className="mono faint">{shortSha(d.sha)}</span>
                       <span className="main">{d.run_id ? <EntityLink kind="run" name={d.detail} id={d.run_id} /> : d.detail}</span>
-                      <span className="faint small">{ago(d.at, now)}</span>
+                      <SpanFaintSmall>{ago(d.at, now)}</SpanFaintSmall>
                     </li>
                   ))}
                 </ul>
@@ -98,7 +99,7 @@ export function RepoPage({ name }: { name: string }) {
         )}
       </div>
       {starting && <StartDialog project={p} onClose={() => setStarting(false)} />}
-    </div>
+    </DivPage>
   );
 }
 
@@ -136,10 +137,10 @@ function Branches({ refs, error, runs, project, now, kind }: { refs: Ref[] | nul
           <li key={r.name}>
             <div className="main">
               <div className="nm mono">{link && kind === "branch" ? <a href={link} target="_blank" rel="noreferrer noopener">{r.name}</a> : r.name}{r.name === project.default_branch && <> <Chip>default</Chip></>}</div>
-              <div className="sb">{r.subject || "no message"} · {r.author}{r.committed_at ? ` · ${ago(r.committed_at, now)}` : ""} · <span className="mono">{shortSha(r.sha)}</span></div>
+              <div className="sb">{r.subject || "no message"} · {r.author}{r.committed_at ? ` · ${ago(r.committed_at, now)}` : ""} · <SpanMono>{shortSha(r.sha)}</SpanMono></div>
             </div>
             <div className="cell" style={{ minWidth: 190 }}>
-              {last ? <><Status state={stateOf(last.status)} /><span><EntityLink kind="run" name={`#${last.number}`} id={last.id} /> {last.status === "succeeded" ? "passed" : last.status}, {ago(last.created_at, now)}</span></> : <span className="faint">no pipeline run yet</span>}
+              {last ? <><Status state={stateOf(last.status)} /><span><EntityLink kind="run" name={`#${last.number}`} id={last.id} /> {last.status === "succeeded" ? "passed" : last.status}, {ago(last.created_at, now)}</span></> : <SpanFaint>no pipeline run yet</SpanFaint>}
             </div>
           </li>
         );

@@ -5,6 +5,7 @@ import { Graph } from "./Graph";
 import { LibraryList, TemplateFacts } from "./Libraries";
 import { ErrorBox, Mono } from "./ui";
 import { terms } from "../terms";
+import { PSub, SpanMono } from "../kit/bits";
 
 interface Props {
   res: ValidateResult | null;
@@ -37,22 +38,22 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
         <>
           <section className="card">
             <h2 className="h-sm ok">Valid: {res.graph.name}, {res.graph.steps.length} steps in {res.levels.length} stages</h2>
-            <p className="sub">
+            <PSub>
               {res.graph.on.push
                 ? <>Starts on pushes to {[...(res.graph.on.push.branches ?? []), ...(res.graph.on.push.tags ?? []).map((t) => "tag " + t)].join(", ")}{res.graph.on.pull_request ? ", on pull requests" : ""}, and by hand.</>
                 : res.graph.on.pull_request ? <>Starts on pull requests, and by hand.</>
                 : <>Starts only by hand: there is no push or pull request trigger.</>}
               {res.graph.supersede && <> A new run of a push or pull request cancels the older ones of the same ref that are still going.</>}
-            </p>
+            </PSub>
             {res.graph.libraries && res.graph.libraries.length > 0 && (
               <p className="sub libs">Libraries: <LibraryList libraries={res.graph.libraries} /></p>
             )}
             {res.expanded && (res.graph.groups?.length ?? 0) > 0 && (
-              <p className="sub">{terms().say("Templates are expanded from the libraries' current versions, as a {run} started now would expand them.")}</p>
+              <PSub>{terms().say("Templates are expanded from the libraries' current versions, as a {run} started now would expand them.")}</PSub>
             )}
             {unexpanded > 0 && (
-              <p className="sub">{unexpanded === 1 ? "One step uses a template; it is" : `${unexpanded} steps use templates; they are`} drawn
-                as one node{unexpanded === 1 ? "" : " each"}{terms().say(", not expanded. Templates come from the server's libraries, which are read when a pipeline is checked for a {project}, or here with Expand templates.")}</p>
+              <PSub>{unexpanded === 1 ? "One step uses a template; it is" : `${unexpanded} steps use templates; they are`} drawn
+                as one node{unexpanded === 1 ? "" : " each"}{terms().say(", not expanded. Templates come from the server's libraries, which are read when a pipeline is checked for a {project}, or here with Expand templates.")}</PSub>
             )}
             {notes}
           </section>
@@ -115,7 +116,7 @@ export function ProblemList({ problems, onJump, title }: { problems: Problem[]; 
             ) : p.line ? (onJump
               ? <button type="button" className="linkbtn mono" onClick={() => onJump(p.line!)}>line {p.line}</button>
               : <span className="mono faint">line {p.line}</span>) : null}{" "}
-            {p.path && <span className="mono">{p.path}</span>} {p.message}
+            {p.path && <SpanMono>{p.path}</SpanMono>} {p.message}
           </li>
         ))}
       </ul>

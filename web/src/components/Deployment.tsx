@@ -8,6 +8,7 @@ import { DeploymentControls } from "./DeploymentControls";
 import { Runway } from "./Runway";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { PSub, SpanFaint } from "../kit/bits";
 const P = await prose("components.Deployment");
 
 // What a deploy step did and what deploy runners last observed of it. This
@@ -179,7 +180,7 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
       <span className="dfresh dfresh-warn" data-case="unserved">
         {compact ? terms().say(`no {deploy:do} {runner} serves target ${d.target}`)
           : <>{terms().say(P.t9)} <Mono>{d.target}</Mono>{P.t10}</>}
-        {f.state === "stale" && <span className="faint"> (last observed {ago(d.observed_at!, now)}{by})</span>}
+        {f.state === "stale" && <SpanFaint> (last observed {ago(d.observed_at!, now)}{by})</SpanFaint>}
       </span>
     );
   }
@@ -193,7 +194,7 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
         : d.observer ? <>Not observed yet; {d.observer} serves target <Mono>{d.target}</Mono>.</>
         : <>{terms().say(P.t11)} <Mono>{d.target}</Mono>?</>}</span>;
     case "error":
-      return <span className="dfresh dfresh-bad">{terms().say(P.t12)} {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
+      return <span className="dfresh dfresh-bad">{terms().say(P.t12)} {f.error} <SpanFaint>({secondsAgo(d.observed_at!, now)}{by})</SpanFaint></span>;
     case "stale":
       return <span className="dfresh dfresh-warn">Last observed {ago(d.observed_at!, now)}{by}{compact ? "" : P.t13}</span>;
     case "fresh":
@@ -259,10 +260,10 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         </div>
       </div>
       {step.kind === "rollback" && step.status === "skipped" && (
-        <p className="sub">Not needed{step.error ? `: ${step.error}` : ""}{P.t14}</p>
+        <PSub>Not needed{step.error ? `: ${step.error}` : ""}{P.t14}</PSub>
       )}
       {step.kind === "rollback" && step.status === "pending" && (
-        <p className="sub">{P.t15}</p>
+        <PSub>{P.t15}</PSub>
       )}
       {d.verdict && d.mode !== "rollback" && (
         <div className={`callout dep-verdict callout-${d.verdict === "deployed" ? "ok" : d.verdict === "rolled_back" ? "draft" : d.verdict === "abandoned" ? "info" : "bad"}`}>
@@ -271,31 +272,31 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         </div>
       )}
       <dl className="kv dep-facts">
-        <dt>{terms().say("{Environment}")}</dt><dd><strong>{d.environment}</strong> <span className="faint">on target</span> <Mono>{d.target}</Mono></dd>
-        <dt>Service</dt><dd>{d.project === d.service ? d.service : <>{d.service} <span className="faint">of {d.project}</span></>}</dd>
-        <dt>Application</dt><dd><Mono>{d.application}</Mono> <span className="faint">in Argo CD</span></dd>
+        <dt>{terms().say("{Environment}")}</dt><dd><strong>{d.environment}</strong> <SpanFaint>on target</SpanFaint> <Mono>{d.target}</Mono></dd>
+        <dt>Service</dt><dd>{d.project === d.service ? d.service : <>{d.service} <SpanFaint>of {d.project}</SpanFaint></>}</dd>
+        <dt>Application</dt><dd><Mono>{d.application}</Mono> <SpanFaint>in Argo CD</SpanFaint></dd>
         <dt>Version</dt>
         <dd>
           <Mono>{d.version}</Mono>
-          {d.previous_version ? <span className="faint"> (it ran <Mono>{d.previous_version}</Mono> before)</span> : <span className="faint"> {P.t16}</span>}
+          {d.previous_version ? <SpanFaint> (it ran <Mono>{d.previous_version}</Mono> before)</SpanFaint> : <SpanFaint> {P.t16}</SpanFaint>}
         </dd>
         {d.commit && (
           <>
             <dt>Commit</dt>
             <dd>
               <Mono><span title={d.commit}>{shortSha(d.commit)}</span></Mono>
-              {d.repo && <> <span className="faint">to</span> <Mono>{d.repo}</Mono></>}
-              {d.branch && <> <span className="faint">on</span> <Mono>{d.branch}</Mono></>}
-              {!d.changed && <span className="faint"> {P.t17}</span>}
+              {d.repo && <> <SpanFaint>to</SpanFaint> <Mono>{d.repo}</Mono></>}
+              {d.branch && <> <SpanFaint>on</SpanFaint> <Mono>{d.branch}</Mono></>}
+              {!d.changed && <SpanFaint> {P.t17}</SpanFaint>}
             </dd>
           </>
         )}
-        {d.revert && <><dt>Reverted by</dt><dd><Mono><span title={d.revert}>{shortSha(d.revert)}</span></Mono> <span className="faint">on</span> <Mono>{d.branch}</Mono></dd></>}
+        {d.revert && <><dt>Reverted by</dt><dd><Mono><span title={d.revert}>{shortSha(d.revert)}</span></Mono> <SpanFaint>on</SpanFaint> <Mono>{d.branch}</Mono></dd></>}
         <dt>Lock</dt>
         <dd>{d.holding ? terms().say(`Holds ${d.environment}'s lock for ${d.service}: other {runs} wait until it is done.`) : `Does not hold ${d.environment}'s lock${d.verdict ? " (released when it ended)" : ""}.`}</dd>
-        <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <span className="faint">, deployed {clock(d.deployed_at)}</span> : null}</dd>
+        <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <SpanFaint>, deployed {clock(d.deployed_at)}</SpanFaint> : null}</dd>
       </dl>
-      <p className="dep-launch"><Link href={`/runs/${run.id}/launch/${d.id}`}>Open this Launch</Link> <span className="faint">{P.t18}</span></p>
+      <p className="dep-launch"><Link href={`/runs/${run.id}/launch/${d.id}`}>Open this Launch</Link> <SpanFaint>{P.t18}</SpanFaint></p>
       <Observed d={d} now={now} />
       <DeploymentControls run={run} d={d} now={now} />
       <DeploymentRollback d={d} />
@@ -366,7 +367,7 @@ function Snapshot({ snap, muted, now }: { snap: DeploySnapshot; muted: boolean; 
                   {!r.found ? <Chip tone={muted ? "idle" : "bad"} label="" value="not found" />
                     : <>{r.sync && <Chip tone={muted ? "idle" : syncTone(r.sync)} label="sync" value={r.sync} />}
                       {r.health && <Chip tone={muted ? "idle" : healthTone(r.health)} label="health" value={r.health} />}</>}
-                  {r.message && <span className="faint">{r.message}</span>}
+                  {r.message && <SpanFaint>{r.message}</SpanFaint>}
                 </li>
               ))}
             </ul>
@@ -379,7 +380,7 @@ function Snapshot({ snap, muted, now }: { snap: DeploySnapshot; muted: boolean; 
 }
 
 export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["rollout"]>; muted: boolean; now: number }) {
-  if (!r.found) return <div className="dep-block"><span className="dep-block-title">Rollout</span> <span className="faint">not found</span></div>;
+  if (!r.found) return <div className="dep-block"><span className="dep-block-title">Rollout</span> <SpanFaint>not found</SpanFaint></div>;
   const tone = muted ? "idle" : r.aborted ? "bad" : r.phase === "Healthy" ? "ok" : r.phase === "Degraded" ? "bad" : r.paused || r.phase === "Paused" ? "wait" : "run";
   const steps = Array.from({ length: r.steps }, (_, i) => r.step_names?.[i] || `step ${i + 1}`);
   return (
@@ -387,7 +388,7 @@ export function RolloutView({ r, muted, now }: { r: NonNullable<DeploySnapshot["
       <div className="dep-chips">
         <span className="dep-block-title">Rollout</span>
         <span className={`dpill dpill-${tone}`}>{r.aborted ? "Aborted" : r.phase || "Unknown"}</span>
-        {r.strategy && <span className="faint">{r.strategy === "blueGreen" ? "blue-green" : r.strategy}</span>}
+        {r.strategy && <SpanFaint>{r.strategy === "blueGreen" ? "blue-green" : r.strategy}</SpanFaint>}
         {r.canary_weight !== undefined && <span className="dep-weight">{r.canary_weight}{P.t23}</span>}
       </div>
       {r.message && <div className="dep-msg">{r.message}</div>}
@@ -434,13 +435,13 @@ function analysisTone(p: string, muted: boolean): string {
 export function Analyses({ list, muted }: { list: NonNullable<DeploySnapshot["analysis"]>; muted: boolean }) {
   return (
     <div className="dep-block">
-      <div className="dep-chips"><span className="dep-block-title">Analysis</span><span className="faint">the rollout's own checks</span></div>
+      <div className="dep-chips"><span className="dep-block-title">Analysis</span><SpanFaint>the rollout's own checks</SpanFaint></div>
       {list.map((a) => (
         <div key={a.name} className="dep-analysis">
           <div className="dep-chips">
             <Mono>{a.name}</Mono>
             <span className={`dpill dpill-${analysisTone(a.phase, muted)}`}>{a.phase}</span>
-            {a.kind && <span className="faint">{a.kind === "Background" ? "runs throughout" : a.step_index !== undefined ? terms().say(`at {canary} step ${a.step_index + 1}`) : a.kind}</span>}
+            {a.kind && <SpanFaint>{a.kind === "Background" ? "runs throughout" : a.step_index !== undefined ? terms().say(`at {canary} step ${a.step_index + 1}`) : a.kind}</SpanFaint>}
           </div>
           {a.message && <div className="dep-msg">{a.message}</div>}
           {a.metrics && a.metrics.length > 0 && (
@@ -508,21 +509,21 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
     );
   } else if (step.status === "skipped") {
     body = (
-      <p className="sub">
+      <PSub>
         {step.skip_kind === "not_needed" ? <>Not needed: {step.error || terms().say(P.t29)}.</>
           : step.skip_kind === "superseded" ? <>{P.t30}{env}{terms().say(P.t31)}{step.error ? ` ${step.error}.` : ""}</>
           : <>{step.error || "Skipped"}{terms().say(". Nothing was {deploy:did}.")}</>}
-      </p>
+      </PSub>
     );
   } else if (step.status === "pending" || step.status === "queued") {
-    body = <p className="sub">{step.kind === "rollback"
+    body = <PSub>{step.kind === "rollback"
       ? P.t32
       : step.kind === "rollout" ? `Acts on the rollout of ${step.deployment || "its deployment"} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
-      : terms().say(`{Deploy:does} to ${env || terms().say("its {environment}")} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`)}</p>;
+      : terms().say(`{Deploy:does} to ${env || terms().say("its {environment}")} once ${step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`)}</PSub>;
   } else if (step.status === "canceled") {
-    body = <p className="sub">{terms().say(P.t33)}</p>;
+    body = <PSub>{terms().say(P.t33)}</PSub>;
   } else {
-    body = <p className="sub">{P.t34}</p>;
+    body = <PSub>{P.t34}</PSub>;
   }
   return (
     <section className="card dep" aria-label="Deployment">

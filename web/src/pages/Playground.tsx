@@ -6,6 +6,7 @@ import { KeyHelp } from "../learn/LearnLink";
 import { useValidation } from "../validation";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { PSub } from "../kit/bits";
 const P = await prose("pages.Playground");
 
 const SAMPLE = P.t0;
@@ -39,7 +40,7 @@ export function PlaygroundPage() {
       <header className="page-head">
         <div>
           <h1>Playground</h1>
-          <p className="sub">{terms().say(P.t1)} <Link href="/projects">{terms().say("{Projects}")}</Link>.</p>
+          <PSub>{terms().say(P.t1)} <Link href="/projects">{terms().say("{Projects}")}</Link>.</PSub>
         </div>
         <div className="run-actions">
           <label className="checkline" title={P.t2}>

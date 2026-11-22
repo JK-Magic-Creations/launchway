@@ -8,6 +8,7 @@ import { navigate } from "../router";
 import { terms } from "../terms";
 import { launchApi, type LAction, type TreeView } from "../launchApi";
 import { prose } from "../prose";
+import { BtnPrimary, LabelField, SpanFaint } from "../kit/bits";
 const P = await prose("launch.Controls");
 
 const WORDS: Record<LAction["action"], { label: string; what: string }> = {
@@ -33,7 +34,7 @@ export function WorkloadControls({ v, reload }: { v: TreeView; reload: () => voi
   const no = v.actions.filter((a) => !a.ok);
   return (
     <div className="lw-controls" role="group" aria-label="Control the workload">
-      <h3 className="h-xs">Control the workload <span className="faint">({object.split("/").pop()})</span></h3>
+      <h3 className="h-xs">Control the workload <SpanFaint>({object.split("/").pop()})</SpanFaint></h3>
       <div className="lw-btns">
         {ok.map((a) => <button key={a.action} type="button" className="btn" title={WORDS[a.action].what} onClick={() => setOpen(a)}>{WORDS[a.action].label}</button>)}
       </div>
@@ -67,14 +68,14 @@ function ControlDialog({ v, action, object, onClose, onDone }: { v: TreeView; ac
         <h2>{w.label} {object.split("/").pop()}?</h2>
         <p>{w.what} {terms().say(P.t4)} {v.target}; kept in the {terms().lower("logbook")} with your reason.</p>
         {action.action === "scale" && (
-          <label className="field"><span>Replicas</span><input type="number" min={1} value={replicas} onChange={(e) => setReplicas(Number(e.target.value))} /></label>
+          <LabelField><span>Replicas</span><input type="number" min={1} value={replicas} onChange={(e) => setReplicas(Number(e.target.value))} /></LabelField>
         )}
-        <label className="field"><span>Why <span className="faint">(required)</span></span>
+        <LabelField><span>Why <SpanFaint>(required)</SpanFaint></span>
           <textarea rows={2} required value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
-        </label>
+        </LabelField>
         <ErrorBox error={error} />
         <div className="lw-btns">
-          <button type="submit" className="btn btn-primary" disabled={busy || !reason.trim()}>{busy ? "Working…" : w.label}</button>
+          <BtnPrimary disabled={busy || !reason.trim()}>{busy ? "Working…" : w.label}</BtnPrimary>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
         </div>
       </form>
@@ -95,7 +96,7 @@ export function EmergencyReturn({ v, d, reload }: { v: TreeView; d: DeploymentVi
   return (
     <div className="lw-emergency">
       <button type="button" className="btn btn-danger" onClick={() => setOpen(true)}>{P.t5}</button>
-      <span className="faint"> {target ? `Goes back to ${target.version}.` : ""}{plan.action.emergency ? terms().say(P.t6) : ""}</span>
+      <SpanFaint> {target ? `Goes back to ${target.version}.` : ""}{plan.action.emergency ? terms().say(P.t6) : ""}</SpanFaint>
       {open && <EmergencyDialog v={v} d={d} plan={plan} onClose={() => setOpen(false)} reload={reload} />}
     </div>
   );
@@ -125,12 +126,12 @@ function EmergencyDialog({ v, d, plan, onClose, reload }: { v: TreeView; d: Depl
       <form className="lw-form" onSubmit={(e) => { e.preventDefault(); if (ok) void go(); }}>
         <h2>Abort and return to {target?.version ?? "the last good release"}</h2>
         <p>{rolling ? P.t7 : ""}Then {plan.service} in {plan.environment} is returned to {target?.version ?? "the previous release"} {P.t8}</p>
-        <label className="field"><span>Why <span className="faint">{P.t9}</span></span>
+        <LabelField><span>Why <SpanFaint>{P.t9}</SpanFaint></span>
           <textarea rows={2} value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
-        </label>
-        <label className="field"><span>Type <strong>{plan.service}</strong> to confirm</span>
+        </LabelField>
+        <LabelField><span>Type <strong>{plan.service}</strong> to confirm</span>
           <input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} />
-        </label>
+        </LabelField>
         <ErrorBox error={error} />
         <div className="lw-btns">
           <button type="submit" className="btn btn-danger" disabled={!ok || busy}>{busy ? "Working…" : "Abort and return"}</button>

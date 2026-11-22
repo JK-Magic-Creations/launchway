@@ -12,6 +12,7 @@ import { EntityLink } from "./EntityLink";
 import { ErrorBox } from "./ui";
 import "../rollback.css";
 import { prose } from "../prose";
+import { DivActions, DivFaintSmall, LabelField, SpanFaint, SpanFaintSmall } from "../kit/bits";
 const P = await prose("components.Rollback");
 
 const RB_NOTE = P.t0;
@@ -50,7 +51,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
         <p className="rb-why"><b>Cannot start yet.</b> {stop(action.reason)}</p>
         <div className="row">
           <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: true })}>{terms().say("Queue the {rollback}")}{holder ? ` behind run #${holder}` : ""}</Button>
-          {action.instead && <span className="faint small">or cancel that run first</span>}
+          {action.instead && <SpanFaintSmall>or cancel that run first</SpanFaintSmall>}
         </div>
         {open && <RollbackDialog action={action} unit={unit} pick={false} queue={open.queue} onClose={() => setOpen(null)} />}
       </div>
@@ -59,7 +60,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
   return (
     <div className="rb-control">
       <Button {...sm} disabled title={action.reason}>{terms().say("{Rollback:do}")}</Button>
-      <p className="rb-why">{terms().say("Cannot {rollback:do}")} {where}: {stop(action.reason).replace(/^./, (c) => c.toLowerCase())}{action.would_help ? <> <span className="faint">To change that: {stop(action.would_help)}</span></> : null}</p>
+      <p className="rb-why">{terms().say("Cannot {rollback:do}")} {where}: {stop(action.reason).replace(/^./, (c) => c.toLowerCase())}{action.would_help ? <> <SpanFaint>To change that: {stop(action.would_help)}</SpanFaint></> : null}</p>
     </div>
   );
 }
@@ -114,7 +115,7 @@ function RollbackDialog({ action, unit, pick, queue, onClose }: { action: Server
           {t.reverts.length > 0 && <ul>{t.reverts.map((r) => <li key={r.deployment}>revert {r.version} from <EntityLink kind="run" name={terms().say(`{run} #${r.run_number}`)} id={r.run} /></li>)}</ul>}
         </p>
         <p className="rb-note">{RB_NOTE} {terms().say(P.t4)} {terms().lower("logbook")}.</p>
-        {(t.suggestions ?? []).length > 0 && <div><div className="faint small">Before you go ahead</div><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
+        {(t.suggestions ?? []).length > 0 && <div><DivFaintSmall>Before you go ahead</DivFaintSmall><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
         {action.emergency && !action.requires_approval && <div className="callout callout-wait">{terms().say(P.t5)}</div>}
         {action.emergency && action.requires_approval && <div className="callout callout-wait">{terms().say(P.t6)}</div>}
         {toggles && toggles.changes.length > 0 && (
@@ -126,13 +127,13 @@ function RollbackDialog({ action, unit, pick, queue, onClose }: { action: Server
           </fieldset>
         )}
         {queue && <div className="callout callout-wait">{terms().say(P.t8)}</div>}
-        <label className="field"><span>{terms().say(P.t9)}</span>
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder={P.t10} /></label>
+        <LabelField><span>{terms().say(P.t9)}</span>
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder={P.t10} /></LabelField>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-danger-outline" disabled={busy || noReason} title={noReason ? "Say why first" : undefined}>{busy ? "Starting…" : terms().say(`{Rollback:do}: ${t.version}`)}</button>
-        </div>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -148,7 +149,7 @@ export function DeploymentRollback({ d }: { d: DeploymentView }) {
   if (!a || d.verdict !== "deployed") return null;
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="faint small" style={{ marginBottom: 4 }}>{terms().say("{Rollback} after success")}</div>
+      <DivFaintSmall style={{ marginBottom: 4 }}>{terms().say("{Rollback} after success")}</DivFaintSmall>
       <RollbackControl action={a} unit={{ project: d.project, service: d.service, environment: d.environment }} compact />
     </div>
   );

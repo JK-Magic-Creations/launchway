@@ -5,6 +5,7 @@ import { PageHead, Sheet } from "../kit/layout";
 import { signingApi, type SigningKey } from "../signingApi";
 import { useHosting } from "./SshKeys";
 import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivPage, LabelField, PSub, SpanHidden } from "../kit/bits";
 const P = await prose("pages.SigningKeys");
 
 /** Signing keys: the SSH keys a person signs commits and tags with, so that what they sign shows as verified. */
@@ -25,10 +26,10 @@ export function SigningKeysPage() {
   if (hosting === null) return null;
   if (hosting === "off") {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Settings" title="Signing keys" />
         <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>.</Empty>
-      </div>
+      </DivPage>
     );
   }
   const add = async (e: React.FormEvent) => {
@@ -48,19 +49,19 @@ export function SigningKeysPage() {
     try { await signingApi.deleteKey(k.id); load(); } catch (err) { setError(err); }
   };
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Signing keys"
         sentence={<>{P.t2}<strong>Verified</strong>{P.t3}<Link href="/settings/access/ssh-keys">SSH keys</Link>.</>} />
       <Sheet title="Add a signing key" pad>
         <form onSubmit={add} className="inputs-form" aria-label="Add a signing key">
           <div className="tokenform-grid">
-            <label className="field"><span>Name</span><input value={name} maxLength={100} placeholder="for example: work laptop" onChange={(e) => setName(e.target.value)} /></label>
-            <label className="field"><span>Stops counting on (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
+            <LabelField><span>Name</span><input value={name} maxLength={100} placeholder="for example: work laptop" onChange={(e) => setName(e.target.value)} /></LabelField>
+            <LabelField><span>Stops counting on (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></LabelField>
           </div>
-          <label className="field"><span>Public key</span>
-            <textarea value={pub} required rows={3} className="mono" placeholder={P.t4} onChange={(e) => setPub(e.target.value)} /></label>
-          <p className="sub">{P.t5}<Mono>git config gpg.format ssh</Mono>, <Mono>{P.t6}</Mono>, <Mono>{P.t7}</Mono>{P.t8}<Mono>gpg --armor --export &lt;id&gt;</Mono>) above.</p>
-          <div><button type="submit" className="btn btn-primary" disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</button></div>
+          <LabelField><span>Public key</span>
+            <textarea value={pub} required rows={3} className="mono" placeholder={P.t4} onChange={(e) => setPub(e.target.value)} /></LabelField>
+          <PSub>{P.t5}<Mono>git config gpg.format ssh</Mono>, <Mono>{P.t6}</Mono>, <Mono>{P.t7}</Mono>{P.t8}<Mono>gpg --armor --export &lt;id&gt;</Mono>) above.</PSub>
+          <div><BtnPrimary disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</BtnPrimary></div>
         </form>
       </Sheet>
       <ErrorBox error={error} />
@@ -68,16 +69,16 @@ export function SigningKeysPage() {
         {keys && keys.length === 0 && <Empty title="You have no signing keys" />}
         {keys && keys.length > 0 && (
           <table className="table">
-            <thead><tr><th>Name</th><th>Fingerprint</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+            <thead><tr><th>Name</th><th>Fingerprint</th><th>Status</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
             <tbody>
               {keys.map((k) => (
                 <tr key={k.id}>
-                  <td>{k.name}<div className="faint small">{k.type}</div></td>
+                  <td>{k.name}<DivFaintSmall>{k.type}</DivFaintSmall></td>
                   <td className="mono small">{k.fingerprint}</td>
                   <td>{k.revoked_at ? <span className="bad-ink">revoked {clock(Date.parse(k.revoked_at))}</span> : k.expires_at ? `until ${clock(Date.parse(k.expires_at))}` : "active"}</td>
                   <td className="td-actions">
-                    {!k.revoked_at && <button type="button" className="btn btn-sm" onClick={() => revoke(k)}>Revoke<span className="visually-hidden"> {k.name}</span></button>}{" "}
-                    <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => remove(k)}>Delete<span className="visually-hidden"> {k.name}</span></button>
+                    {!k.revoked_at && <BtnSm onClick={() => revoke(k)}>Revoke<SpanHidden> {k.name}</SpanHidden></BtnSm>}{" "}
+                    <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => remove(k)}>Delete<SpanHidden> {k.name}</SpanHidden></button>
                   </td>
                 </tr>
               ))}
@@ -87,10 +88,10 @@ export function SigningKeysPage() {
       </Sheet>
       {inst && (
         <Sheet title="The installation's own key" pad>
-          <p className="sub">{P.t9}<Mono>{inst.address}</Mono>.</p>
+          <PSub>{P.t9}<Mono>{inst.address}</Mono>.</PSub>
           <p className="mono small">{inst.fingerprint}</p>
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }

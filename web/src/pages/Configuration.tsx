@@ -6,15 +6,16 @@ import { ProjectHead } from "./PipelineChrome";
 import "../config-code.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Configuration");
 
 function ReportLine({ label, r }: { label: string; r?: ConfigReportRow }) {
-  if (!r) return <div className="cc-row"><span className="label">{label}</span><span className="faint">none yet</span></div>;
+  if (!r) return <div className="cc-row"><span className="label">{label}</span><SpanFaint>none yet</SpanFaint></div>;
   return (
     <div className="cc-row">
       <span className="label">{label}</span>
       <Link href={`/runs/${encodeURIComponent(r.run_id)}/configuration/${encodeURIComponent(r.step)}?kind=${r.kind}`}>{r.recap}</Link>
-      <span className="faint small">{terms().say("{run} #")}{r.run_number ?? "?"}, {ago(r.created_at)}</span>
+      <SpanFaintSmall>{terms().say("{run} #")}{r.run_number ?? "?"}, {ago(r.created_at)}</SpanFaintSmall>
     </div>
   );
 }
@@ -28,11 +29,11 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
   const load = useCallback((bg: boolean) => { configApi.overview(name, bg).then((d) => { setData(d); setError(null); }).catch(setError); }, [name]);
   useEffect(() => { load(false); const t = setInterval(() => load(true), 10000); return () => clearInterval(t); }, [load]);
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="configuration" title={<>Configuration of {name}</>}
         sentence={<>{P.t0}</>} />
       <ErrorBox error={error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {data && data.environments.length === 0 && (
         <Empty title="No configuration runs yet">
           Add a step that uses <Mono>launchway/ansible-playbook</Mono> or <Mono>launchway/infrastructure</Mono>{P.t1}</Empty>
@@ -59,10 +60,10 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
           {data.state.length === 0 ? <p className="faint">{P.t4}</p> : (
             <table className="cc-matrix">
               <caption className="sr-only">State workspaces</caption>
-              <thead><tr><th scope="col">Workspace</th><th scope="col">Version</th><th scope="col">Serial</th><th scope="col">Lock</th></tr></thead>
+              <thead><tr><ThCol>Workspace</ThCol><ThCol>Version</ThCol><ThCol>Serial</ThCol><ThCol>Lock</ThCol></tr></thead>
               <tbody>
                 {data.state.map((w) => (
-                  <tr key={w.name}><th scope="row">{w.name}</th><td>{w.version}</td><td>{w.serial}</td><td>{w.lock ? `locked by ${w.lock.actor}` : "free"}</td></tr>
+                  <tr key={w.name}><ThRow>{w.name}</ThRow><td>{w.version}</td><td>{w.serial}</td><td>{w.lock ? `locked by ${w.lock.actor}` : "free"}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -70,6 +71,6 @@ export function ProjectConfigurationPage({ name }: { name: string }) {
           <p className="faint small">{terms().say(P.t5)} <Mono>launchway state versions {name} WORKSPACE</Mono>.</p>
         </section>
       )}
-    </div>
+    </DivPage>
   );
 }

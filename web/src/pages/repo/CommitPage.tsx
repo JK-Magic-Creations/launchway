@@ -7,6 +7,7 @@ import type { FileChange } from "../../pullsApi";
 import { ChangedFiles } from "./ChangedFiles";
 import { CopyButton, RepoFrame, when } from "./common";
 import type { RunStatus } from "../../api";
+import { DivLoading, SpanFaint, SpanFaintSmall, SpanMono } from "../../kit/bits";
 
 /** One commit: its message, who made it, its parents, the runs started for it and the files it changed. */
 export function CommitPage({ path, sha }: { path: string; sha: string }) {
@@ -34,8 +35,8 @@ export function CommitPage({ path, sha }: { path: string; sha: string }) {
         <section className="card commit-head" aria-label="Commit">
           {body && <pre className="commit-body">{body}</pre>}
           <dl className="kvlist">
-            <dt>Commit</dt><dd><span className="mono">{c.sha}</span> <CopyButton text={c.sha} what="the commit name" /></dd>
-            <dt>Signature</dt><dd>{sigs[c.sha] ? <SignatureBadge result={sigs[c.sha]} /> : <span className="faint">not known</span>}</dd>
+            <dt>Commit</dt><dd><SpanMono>{c.sha}</SpanMono> <CopyButton text={c.sha} what="the commit name" /></dd>
+            <dt>Signature</dt><dd>{sigs[c.sha] ? <SignatureBadge result={sigs[c.sha]} /> : <SpanFaint>not known</SpanFaint>}</dd>
             <dt>Author</dt><dd>{c.author}, <time dateTime={c.authored_at}>{new Date(c.authored_at).toUTCString()}</time></dd>
             {c.committer !== c.author && <><dt>Committed by</dt><dd>{c.committer}, <time dateTime={c.committed_at}>{new Date(c.committed_at).toUTCString()}</time></dd></>}
             <dt>{c.parent_shas.length > 1 ? "Parents" : "Parent"}</dt>
@@ -48,7 +49,7 @@ export function CommitPage({ path, sha }: { path: string; sha: string }) {
           <h2 className="h-sm">Runs for this commit</h2>
           {runs.length === 0 ? <p className="faint small">No run was started for this commit.</p> : (
             <ul className="rowlist">
-              {runs.map((r) => <li key={r.id}><Status state={stateOf(r.status as RunStatus)} /> <Link href={`/runs/${r.id}`}>{r.project} #{r.number}</Link> <span className="faint small">{r.pipeline}, {r.status}</span></li>)}
+              {runs.map((r) => <li key={r.id}><Status state={stateOf(r.status as RunStatus)} /> <Link href={`/runs/${r.id}`}>{r.project} #{r.number}</Link> <SpanFaintSmall>{r.pipeline}, {r.status}</SpanFaintSmall></li>)}
             </ul>
           )}
         </section>
@@ -59,7 +60,7 @@ export function CommitPage({ path, sha }: { path: string; sha: string }) {
           <ChangedFiles repo={path} from={c.parent_shas[0] ?? "root"} to={c.sha} files={diff.files} total={diff.total} truncated={diff.truncated} />
         </>
       )}
-      {!c && !error && <div className="loading">Loading…</div>}
+      {!c && !error && <DivLoading>Loading…</DivLoading>}
     </RepoFrame>
   );
 }

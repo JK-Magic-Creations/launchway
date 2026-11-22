@@ -6,6 +6,7 @@ import { Link } from "../components/ui";
 import { Blank, ErrorPanel, itemHref, Loading, Progress, scopeLabel, useLoad, WorkPage } from "./common";
 import { Gantt } from "./chartParts";
 import { workApi, type Milestone, type RoadmapRow } from "./workApi";
+import { PSub, SpanFaint, SpanFaintSmall, TdNum, ThCol, ThRow } from "../kit/bits";
 
 // The roadmap (epics, milestones and sprints as bars between their dates, with the same rows as a table) and the milestones with progress.
 
@@ -28,14 +29,14 @@ export function Roadmap({ scope }: { scope: string }) {
             : <p className="faint">None of these has a date yet, so there is nothing to draw. The table lists them.</p>}
           <div className="tablewrap"><table className="table wk-table">
             <caption>Roadmap rows with dates and progress</caption>
-            <thead><tr><th scope="col">Kind</th><th scope="col">Title</th><th scope="col">Starts</th><th scope="col">Due</th><th scope="col">Progress</th></tr></thead>
+            <thead><tr><ThCol>Kind</ThCol><ThCol>Title</ThCol><ThCol>Starts</ThCol><ThCol>Due</ThCol><ThCol>Progress</ThCol></tr></thead>
             <tbody>{rows.map((x, i) => (
               <tr key={i}>
                 <td>{KIND[x.kind] ?? x.kind}</td>
-                <th scope="row">{x.ref ? <Link href={itemHref(x.ref)}>{x.title}</Link> : x.title}{x.state && <> <Chip>{x.state}</Chip></>}</th>
-                <td className="num">{x.start_at?.slice(0, 10) ?? <span className="faint">None</span>}</td>
-                <td className="num">{x.due_at?.slice(0, 10) ?? <span className="faint">None</span>}</td>
-                <td className="num">{x.percent}% ({x.done} of {x.total})</td>
+                <ThRow>{x.ref ? <Link href={itemHref(x.ref)}>{x.title}</Link> : x.title}{x.state && <> <Chip>{x.state}</Chip></>}</ThRow>
+                <TdNum>{x.start_at?.slice(0, 10) ?? <SpanFaint>None</SpanFaint>}</TdNum>
+                <TdNum>{x.due_at?.slice(0, 10) ?? <SpanFaint>None</SpanFaint>}</TdNum>
+                <TdNum>{x.percent}% ({x.done} of {x.total})</TdNum>
               </tr>
             ))}</tbody>
           </table></div>
@@ -63,8 +64,8 @@ export function Milestones({ scope }: { scope: string }) {
       <ul className="wk-miles">
         {all.map((m) => (
           <li key={m.id} className="sheet pad">
-            <div className="head"><h2>{m.title}</h2><Chip tone={m.state === "open" ? "run" : "ok"}>{m.state}</Chip>{m.due_at && <span className="faint small">due {m.due_at.slice(0, 10)}</span>}</div>
-            {m.description && <p className="sub">{m.description}</p>}
+            <div className="head"><h2>{m.title}</h2><Chip tone={m.state === "open" ? "run" : "ok"}>{m.state}</Chip>{m.due_at && <SpanFaintSmall>due {m.due_at.slice(0, 10)}</SpanFaintSmall>}</div>
+            {m.description && <PSub>{m.description}</PSub>}
             <Progress done={m.done} total={m.total} label={`Progress of ${m.title}`} />
             <p className="faint small num">{m.points_done} of {m.points} points done.</p>
             <Button sm onClick={() => toggle(m)}>{m.state === "open" ? "Close milestone" : "Reopen milestone"}</Button>

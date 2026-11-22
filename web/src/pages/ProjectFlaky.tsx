@@ -5,6 +5,7 @@ import { ago } from "../format";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { CopyBlock, TestIcon } from "../components/Tests";
 import "../debrief.css";
+import { DivLoading, SpanHidden } from "../kit/bits";
 
 // The flaky tests of a project: tests whose history says they pass and fail
 // without a change that explains it, with how sure that is, where, since
@@ -25,7 +26,7 @@ export function ProjectFlaky({ name }: { name: string }) {
         sentence="Tests that passed and failed without a change that explains it. A flaky test hides real failures, so it is worth fixing or quarantining."
         actions={<Link href={`/projects/${enc}/tests`}>Back to the results</Link>} />
       <ErrorBox error={error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {data && (
         <>
           <p className="flakyrules">{data.rules}</p>
@@ -50,7 +51,7 @@ function FlakyRow({ t, project }: { t: FlakyTest; project: string }) {
   return (
     <article className="flakyrow" aria-label={t.name}>
       <div className="flakyrow-head">
-        <span className="flakyscore" title="The share of the commits it ran on that showed flakiness">{t.score}<span className="visually-hidden"> flake score</span></span>
+        <span className="flakyscore" title="The share of the commits it ran on that showed flakiness">{t.score}<SpanHidden> flake score</SpanHidden></span>
         <div>
           <strong>{t.name}</strong>
           {t.suite && <div className="sub small">{t.suite}</div>}
@@ -61,7 +62,7 @@ function FlakyRow({ t, project }: { t: FlakyTest; project: string }) {
         {t.history.map((h, i) => (
           <li key={i} className={"h-" + h} title={h === "retried" ? "passed on a retry" : h}>
             <TestIcon status={h === "failed" ? "failed" : h === "skipped" ? "skipped" : "passed"} size={13} />
-            <span className="visually-hidden">{h === "retried" ? "passed on retry" : h}</span>
+            <SpanHidden>{h === "retried" ? "passed on retry" : h}</SpanHidden>
           </li>
         ))}
       </ol>

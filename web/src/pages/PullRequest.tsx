@@ -17,6 +17,7 @@ import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivPage, LabelField, SpanFaint, SpanFaintSmall, TdNum } from "../kit/bits";
 const P = await prose("pages.PullRequest");
 
 // What agents said about the change: its own chunk, fetched only when this tab is open.
@@ -53,22 +54,22 @@ function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread
       </header>
       {t.comments.map((c) => (
         <div key={c.id}>
-          <div className="faint small">{c.author}, {ago(Date.parse(c.created_at))}</div>
+          <DivFaintSmall>{c.author}, {ago(Date.parse(c.created_at))}</DivFaintSmall>
           {c.deleted ? <em>Deleted.</em> : <Markdown text={c.body} />}
           {c.has_suggestion && !c.applied_commit && canApply && !t.outdated && (
-            <button type="button" className="btn btn-sm" onClick={() => act(() => pullsApi.applySuggestion(path, n, c.id))}>Apply suggestion as a commit</button>
+            <BtnSm onClick={() => act(() => pullsApi.applySuggestion(path, n, c.id))}>Apply suggestion as a commit</BtnSm>
           )}
           {c.applied_commit && <p className="faint small">Applied in <Mono>{c.applied_commit.slice(0, 10)}</Mono>.</p>}
         </div>
       ))}
       <div className="pr-actions pr-note">
-        <button type="button" className="btn btn-sm" onClick={() => setOpen(!open)} aria-expanded={open}>Reply</button>
-        <button type="button" className="btn btn-sm" onClick={() => act(() => pullsApi.updateComment(path, n, t.comments[0].id, { resolved: !t.resolved }))}>{t.resolved ? "Open again" : "Resolve"}</button>
+        <BtnSm onClick={() => setOpen(!open)} aria-expanded={open}>Reply</BtnSm>
+        <BtnSm onClick={() => act(() => pullsApi.updateComment(path, n, t.comments[0].id, { resolved: !t.resolved }))}>{t.resolved ? "Open again" : "Resolve"}</BtnSm>
         {me === "" && null}
       </div>
       {open && (
         <form className="pr-note" onSubmit={(e) => { e.preventDefault(); act(async () => { await pullsApi.comment(path, n, { body: reply, reply_to: t.comments[0].id }); setReply(""); setOpen(false); }); }}>
-          <label className="field"><span className="sr-only">Reply</span><textarea value={reply} rows={3} aria-label="Reply" onChange={(e) => setReply(e.target.value)} /></label>
+          <LabelField><span className="sr-only">Reply</span><textarea value={reply} rows={3} aria-label="Reply" onChange={(e) => setReply(e.target.value)} /></LabelField>
           <button type="submit" className="btn btn-primary btn-sm" disabled={!reply.trim()}>Send reply</button>
         </form>
       )}
@@ -97,7 +98,7 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
   const lineRow = (r: Row, i: number) => (
     <tbody key={i}>
       <tr className={r.kind}>
-        <td className="num">{r.old ?? ""}</td><td className="num">{r.neu ?? ""}</td>
+        <TdNum>{r.old ?? ""}</TdNum><TdNum>{r.neu ?? ""}</TdNum>
         <td className="sign" aria-hidden="true">{r.kind === "add" ? "+" : r.kind === "del" ? "-" : ""}</td>
         <td>{r.text}{r.neu !== undefined && r.kind !== "del" && (
           <button type="button" className="btn btn-sm cbtn" aria-label={`Comment on ${f.path} line ${r.neu}`} onClick={() => setComment({ line: r.neu!, text: "" })}>Comment</button>
@@ -107,8 +108,8 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
       {comment && r.neu === comment.line && r.kind !== "del" && (
         <tr className="thread-row"><td colSpan={4}>
           <form className="pr-note" onSubmit={submit} aria-label={`Comment on line ${comment.line}`}>
-            <label className="field"><span className="sr-only">Comment</span><textarea ref={(el) => el?.focus()} rows={3} aria-label="Comment" value={comment.text} onChange={(e) => setComment({ line: comment.line, text: e.target.value })} placeholder={P.t0} /></label>
-            <div className="pr-actions"><button type="submit" className="btn btn-primary btn-sm" disabled={!comment.text.trim()}>Comment</button><button type="button" className="btn btn-sm" onClick={() => setComment(null)}>Cancel</button></div>
+            <LabelField><span className="sr-only">Comment</span><textarea ref={(el) => el?.focus()} rows={3} aria-label="Comment" value={comment.text} onChange={(e) => setComment({ line: comment.line, text: e.target.value })} placeholder={P.t0} /></LabelField>
+            <div className="pr-actions"><button type="submit" className="btn btn-primary btn-sm" disabled={!comment.text.trim()}>Comment</button><BtnSm onClick={() => setComment(null)}>Cancel</BtnSm></div>
           </form>
         </td></tr>
       )}
@@ -121,10 +122,10 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
       if (r.kind === "hunk") { out.push(<tbody key={i}><tr className="hunk"><td colSpan={4}>{r.text}</td></tr></tbody>); continue; }
       if (r.kind === "del" && rows[i + 1]?.kind === "add") {
         const a = rows[i + 1];
-        out.push(<tbody key={i}><tr><td className="num">{r.old}</td><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><td className="num">{a.neu}</td><td className="half" style={{ background: "var(--ok-wash)" }}>{a.text}</td></tr></tbody>);
+        out.push(<tbody key={i}><tr><TdNum>{r.old}</TdNum><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><TdNum>{a.neu}</TdNum><td className="half" style={{ background: "var(--ok-wash)" }}>{a.text}</td></tr></tbody>);
         i++;
-      } else if (r.kind === "del") out.push(<tbody key={i}><tr><td className="num">{r.old}</td><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><td className="num" /><td className="half" /></tr></tbody>);
-      else out.push(<tbody key={i}><tr><td className="num">{r.old ?? ""}</td><td className="half" style={r.kind === "add" ? undefined : undefined}>{r.kind === "add" ? "" : r.text}</td><td className="num">{r.neu ?? ""}</td><td className="half" style={r.kind === "add" ? { background: "var(--ok-wash)" } : undefined}>{r.text}</td></tr></tbody>);
+      } else if (r.kind === "del") out.push(<tbody key={i}><tr><TdNum>{r.old}</TdNum><td className="half" style={{ background: "var(--bad-wash)" }}>{r.text}</td><TdNum /><td className="half" /></tr></tbody>);
+      else out.push(<tbody key={i}><tr><TdNum>{r.old ?? ""}</TdNum><td className="half" style={r.kind === "add" ? undefined : undefined}>{r.kind === "add" ? "" : r.text}</td><TdNum>{r.neu ?? ""}</TdNum><td className="half" style={r.kind === "add" ? { background: "var(--ok-wash)" } : undefined}>{r.text}</td></tr></tbody>);
     }
     return out;
   };
@@ -136,10 +137,10 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
         {!f.binary && <span className="small"><span className="pr-add">+{f.additions}</span> <span className="pr-del">-{f.deletions}</span></span>}
         {owners && owners.length > 0 && <span className="small faint" data-owners>Owned by {owners.map((o) => (o.startsWith("group:") ? `group ${o.slice(6)}` : `@${o}`)).join(", ")}</span>}
         <label className="check small"><input type="checkbox" checked={viewed} aria-label={`Viewed ${f.path}`} data-viewed onChange={(e) => { onViewed(e.target.checked); if (e.target.checked) setOpen(false); }} /> Viewed</label>
-        <button type="button" className="btn btn-sm" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}</button>
+        <BtnSm aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}</BtnSm>
       </header>
       {open && f.binary && <p className="pr-note faint">{P.t1}</p>}
-      {open && patch?.held && <p className="pr-note">{P.t2}<button type="button" className="btn btn-sm" onClick={() => load(true)}>Load anyway</button></p>}
+      {open && patch?.held && <p className="pr-note">{P.t2}<BtnSm onClick={() => load(true)}>Load anyway</BtnSm></p>}
       {open && patch && !patch.held && (
         <>
           <table className={"diff" + (mode === "split" ? " diff-split" : "")} aria-label={`Changes to ${f.path}`}>
@@ -250,7 +251,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
 
   const can = (name: string) => pull?.actions?.find((a) => a.name === name)?.available === true;
   const run = async (what: string, f: () => Promise<unknown>) => { setBusy(what); setError(null); try { await f(); load(); } catch (e) { setError(e); load(); } finally { setBusy(""); } };
-  if (!pull) return <div className="page"><PageHead title={`Pull request #${number}`} /><ErrorBox error={error} /></div>;
+  if (!pull) return <DivPage><PageHead title={`Pull request #${number}`} /><ErrorBox error={error} /></DivPage>;
   const rd = pull.readiness;
   const method = picked || rd?.default_method || "merge";
   const send = (e: React.FormEvent) => {
@@ -258,8 +259,8 @@ export function PullRequestPage({ path, number }: { path: string; number: number
     run("review", async () => { if (verdict === "comment" && !text.trim()) throw new Error(P.t7); await pullsApi.review(path, number, { verdict, body: text }); setText(""); });
   };
   return (
-    <div className="page">
-      <PageHead title={<>{pull.title} <span className="faint">#{pull.number}</span></>} sentence={<>{path}</>} />
+    <DivPage>
+      <PageHead title={<>{pull.title} <SpanFaint>#{pull.number}</SpanFaint></>} sentence={<>{path}</>} />
       <div className="pr-head-meta">
         {stateChip(pull)}
         <span><strong>{pull.author}</strong> wants to merge <Mono>{pull.source_branch}</Mono> into <Mono>{pull.target_branch}</Mono></span>
@@ -290,12 +291,12 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                 )}
                 {(can("merge") && rd) && (
                   <div className="pr-actions">
-                    <label className="field"><span className="sr-only">How to merge</span>
+                    <LabelField><span className="sr-only">How to merge</span>
                       <select value={method} aria-label="How to merge" onChange={(e) => setMethod(e.target.value)}>
                         {rd.methods.map((m) => <option key={m} value={m}>{m === "merge" ? "Merge commit" : m === "squash" ? "Squash and merge" : "Rebase and merge"}</option>)}
-                      </select></label>
+                      </select></LabelField>
                     <label className="check"><input type="checkbox" checked={del} onChange={(e) => setDel(e.target.checked)} /> Delete the branch after</label>
-                    {!rd.can_merge && <label className="field"><span className="sr-only">Why you may merge anyway</span><input value={bypass} aria-label="Why you may merge anyway" placeholder={P.t9} onChange={(e) => setBypass(e.target.value)} /></label>}
+                    {!rd.can_merge && <LabelField><span className="sr-only">Why you may merge anyway</span><input value={bypass} aria-label="Why you may merge anyway" placeholder={P.t9} onChange={(e) => setBypass(e.target.value)} /></LabelField>}
                     <button type="button" className={"btn " + (rd.can_merge ? "btn-primary" : "btn-danger-outline")} disabled={busy !== "" || (!rd.can_merge && !bypass.trim())}
                       onClick={() => run("merge", () => pullsApi.merge(path, number, { method, delete_branch: del, expect_head: pull.head_sha, bypass_reason: bypass || undefined }))}>
                       {busy === "merge" ? "Merging…" : rd.can_merge ? "Merge" : "Merge past the rules"}
@@ -330,31 +331,31 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                 {conv && conv.reviews.map((r) => (
                   <div key={r.id} className="pr-comment">
                     <header><strong>{r.author}</strong> {r.verdict === "approve" ? <Chip tone="ok">Approved</Chip> : r.verdict === "request_changes" ? <Chip tone="bad">Asked for changes</Chip> : <Chip>Reviewed</Chip>}
-                      {r.state === "dismissed" && <Chip tone="warn">Dismissed: {r.dismissed_reason}</Chip>}{r.stale && r.state !== "dismissed" && <Chip tone="warn">Of an older version</Chip>}<span className="faint">{ago(Date.parse(r.created_at))}</span></header>
+                      {r.state === "dismissed" && <Chip tone="warn">Dismissed: {r.dismissed_reason}</Chip>}{r.stale && r.state !== "dismissed" && <Chip tone="warn">Of an older version</Chip>}<SpanFaint>{ago(Date.parse(r.created_at))}</SpanFaint></header>
                     {r.body && <div><Markdown text={r.body} /></div>}
                   </div>
                 ))}
                 {conv && conv.comments.map((c: Comment) => (
-                  <div key={c.id} className="pr-comment"><header><strong>{c.author}</strong><span className="faint">{ago(Date.parse(c.created_at))}</span></header><div>{c.deleted ? <em>Deleted.</em> : <Markdown text={c.body} />}</div></div>
+                  <div key={c.id} className="pr-comment"><header><strong>{c.author}</strong><SpanFaint>{ago(Date.parse(c.created_at))}</SpanFaint></header><div>{c.deleted ? <em>Deleted.</em> : <Markdown text={c.body} />}</div></div>
                 ))}
                 {conv && conv.threads.length > 0 && <Sheet title="Threads on the code">
                   {conv.threads.map((t) => <div key={t.id} className="pr-note"><div className="small"><Mono>{t.path}</Mono>:{t.line}</div><ThreadView t={t} path={path} n={number} me="" canApply={can("merge")} onChange={load} onError={setError} /></div>)}
                 </Sheet>}
                 {conv && conv.revisions.length > 1 && (
                   <Sheet title="Revisions">
-                    {conv.revisions.map((r) => <div key={r.seq} className="pr-row"><span>Revision {r.seq}: <Mono>{r.head_sha.slice(0, 10)}</Mono>{r.forced ? " (force-pushed)" : ""}</span><span className="faint small">{ago(Date.parse(r.created_at))}{r.actor ? ` by ${r.actor}` : ""}</span></div>)}
+                    {conv.revisions.map((r) => <div key={r.seq} className="pr-row"><span>Revision {r.seq}: <Mono>{r.head_sha.slice(0, 10)}</Mono>{r.forced ? " (force-pushed)" : ""}</span><SpanFaintSmall>{ago(Date.parse(r.created_at))}{r.actor ? ` by ${r.actor}` : ""}</SpanFaintSmall></div>)}
                   </Sheet>
                 )}
                 {can("review") && (
                   <Sheet title="Review or comment" pad className="pr-reviewbox">
                     <form onSubmit={send} className="inputs-form" aria-label="Submit a review">
-                      <label className="field"><span>Your review (Markdown)</span><textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} /></label>
+                      <LabelField><span>Your review (Markdown)</span><textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} /></LabelField>
                       <fieldset className="events"><legend>Verdict</legend>
                         {[["comment", "Comment"], ["approve", "Approve"], ["request_changes", "Request changes"]].map(([v, l]) => (
                           <label key={v} className="check"><input type="radio" name="verdict" value={v} checked={verdict === v} onChange={() => setVerdict(v)} /> {l}</label>
                         ))}
                       </fieldset>
-                      <div><button type="submit" className="btn btn-primary" disabled={busy !== ""}>Submit review</button></div>
+                      <div><BtnPrimary disabled={busy !== ""}>Submit review</BtnPrimary></div>
                     </form>
                   </Sheet>
                 )}
@@ -363,7 +364,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             {tab === "commits" && (
               <Sheet title="Commits">
                 {commits && commits.length === 0 && <Empty title="No commits" />}
-                {commits && commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}<SignatureBadge result={sigs[c.sha]} quiet /></span><span className="faint small"><Mono>{c.sha.slice(0, 10)}</Mono> {c.author}</span></div>)}
+                {commits && commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}<SignatureBadge result={sigs[c.sha]} quiet /></span><SpanFaintSmall><Mono>{c.sha.slice(0, 10)}</Mono> {c.author}</SpanFaintSmall></div>)}
               </Sheet>
             )}
             {tab === "files" && (
@@ -372,17 +373,17 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                   <button type="button" className={"btn btn-sm" + (mode === "unified" ? " btn-on" : "")} aria-pressed={mode === "unified"} onClick={() => setMode("unified")}>Unified</button>
                   <button type="button" className={"btn btn-sm" + (mode === "split" ? " btn-on" : "")} aria-pressed={mode === "split"} onClick={() => setMode("split")}>Side by side</button>
                   {pull.revisions > 1 && (
-                    <label className="field"><span className="sr-only">Compare with</span>
+                    <LabelField><span className="sr-only">Compare with</span>
                       <select aria-label="Show changes since" value={since ?? ""} onChange={(e) => setSince(e.target.value ? Number(e.target.value) : undefined)}>
                         <option value="">All changes</option>
                         {(conv?.revisions ?? []).slice(0, -1).map((r) => <option key={r.seq} value={r.seq}>Changes since revision {r.seq}</option>)}
-                      </select></label>
+                      </select></LabelField>
                   )}
                 </div>
                 <p className="faint small">{P.t10}</p>
                 {keys && <div role="dialog" aria-label="Keyboard shortcuts" className="pr-note pr-keys"><h3>Keyboard shortcuts</h3>
                   <dl><dt>j, k</dt><dd>next and previous file</dd><dt>n, p</dt><dd>{P.t11}</dd><dt>v</dt><dd>{P.t12}</dd><dt>?</dt><dd>show or hide this list</dd><dt>Escape</dt><dd>close it</dd></dl>
-                  <button type="button" className="btn btn-sm" onClick={() => setKeys(false)}>Close</button></div>}
+                  <BtnSm onClick={() => setKeys(false)}>Close</BtnSm></div>}
                 {ownerNote && <p className="pr-note" role="note">{ownerNote}</p>}
                 {files && files.length > 0 && <p className="faint small" aria-live="polite">{files.filter((f) => viewed.includes(f.path)).length} of {files.length} files viewed.</p>}
                 {files && files.length === 0 && <Empty title="No changes">{since ? P.t13 : P.t14}</Empty>}
@@ -404,6 +405,6 @@ export function PullRequestPage({ path, number }: { path: string; number: number
           <div><h3>Behind the target</h3>{pull.mergeability.behind} commit{pull.mergeability.behind === 1 ? "" : "s"}</div>
         </aside>
       </div>
-    </div>
+    </DivPage>
   );
 }

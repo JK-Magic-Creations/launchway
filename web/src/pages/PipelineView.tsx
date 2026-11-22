@@ -19,6 +19,7 @@ import { ProjectHead } from "./PipelineChrome";
 import { terms } from "../terms";
 import { onLink } from "../router";
 import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaintSmall } from "../kit/bits";
 const P = await prose("pages.PipelineView");
 
 type View = "live" | "text" | "draw" | "history";
@@ -61,7 +62,7 @@ export function PipelineViewPage({ name }: { name: string }) {
   const sentence = view === "history" ? `Every run of ${name}, newest first.`
     : P.t0;
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on={view === "history" ? "history" : "pipeline"} title={view === "history" ? <>Runs of {name}</> : <>Pipeline of {name}</>} sentence={sentence}
         actions={<><CopyLink /><LinkButton href={editHref} kind="pri" icon="edit">Edit the pipeline</LinkButton><LinkButton href="/playground" icon="play">Try it without saving</LinkButton></>} />
       <ErrorBox error={loaded.error} />
@@ -69,7 +70,7 @@ export function PipelineViewPage({ name }: { name: string }) {
         <>
           <Tabs label="Ways to look at the pipeline" on={view} onChange={setView}
             tabs={[{ id: "live", label: "Live" }, { id: "text", label: "Text" }, { id: "history", label: "History" }, { id: "draw", label: "Draw", soon: true }]} />
-          {!file && !loaded.error && <div className="loading">Loading…</div>}
+          {!file && !loaded.error && <DivLoading>Loading…</DivLoading>}
           {file && <FileFacts file={file} name={name} />}
           <div role="tabpanel" aria-labelledby={`tab-${view}`} className="stack">
             {file && view === "live" && <PipelinePreview res={res} error={checkError} />}
@@ -82,7 +83,7 @@ export function PipelineViewPage({ name }: { name: string }) {
         </>
       )}
       {view === "history" && <History name={name} now={now} />}
-    </div>
+    </DivPage>
   );
 }
 
@@ -99,7 +100,7 @@ function FileFacts({ file, name }: { file: PipelineFile; name: string }) {
 function TextView({ file }: { file: PipelineFile }) {
   const lines = file.text.replace(/\n$/, "").split("\n");
   return (
-    <Sheet title={file.exists ? file.path : "Pipeline text"} actions={<span className="faint small">read only</span>}>
+    <Sheet title={file.exists ? file.path : "Pipeline text"} actions={<SpanFaintSmall>read only</SpanFaintSmall>}>
       <div className="sh-b">
         <pre className="textview" aria-label={`The text of ${file.path || "the pipeline"}, ${lines.length} lines`}>
           {lines.map((l, i) => <span key={i} className="ln"><span aria-hidden="true">{i + 1}</span><span>{l || " "}</span></span>)}
@@ -123,7 +124,7 @@ function History({ name, now }: { name: string; now: number }) {
       {runs.data && runs.data.length > 0 && (
         <>
           <Sheet title="How it has been going" actions={<RateText trend={t} />}>
-            <div className="sh-b row wrap"><TrendStrip trend={t} label={`The last ${t.ticks.length} runs of ${name}`} /><span className="faint small">oldest to newest; {t.passed} passed, {t.failed} failed</span></div>
+            <div className="sh-b row wrap"><TrendStrip trend={t} label={`The last ${t.ticks.length} runs of ${name}`} /><SpanFaintSmall>oldest to newest; {t.passed} passed, {t.failed} failed</SpanFaintSmall></div>
           </Sheet>
           <Sheet title={terms().say("{Runs}")}>{runs.data.map((r) => <RunRow key={r.id} r={r} line={by.get(r.id)} now={now} />)}</Sheet>
         </>

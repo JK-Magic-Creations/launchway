@@ -9,6 +9,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../caches.css";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, DivPage, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 const P = await prose("pages.Caches");
 
 type Column = "name" | "scope" | "platform" | "bytes" | "last_used_at" | "hits" | "run_number";
@@ -125,7 +126,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
   const t = list?.totals;
   const share = t && t.quota_bytes > 0 ? t.bytes / t.quota_bytes : 0;
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="caches" title={<>Caches of {name}</>}
         sentence={<>{P.t9}<Mono>cache</Mono> {P.t10}</>} />
       <ErrorBox error={error} />
@@ -139,13 +140,13 @@ export function ProjectCachesPage({ name }: { name: string }) {
         </div>
       )}
 
-      {list === null && !error && <div className="loading">Loading…</div>}
+      {list === null && !error && <DivLoading>Loading…</DivLoading>}
       {list && t && (
         <section className="card" aria-label="Quota">
           <div className="cc-use">
             <span><strong>{bytes(t.bytes)}</strong> of {bytes(t.quota_bytes)}</span>
             <span>{t.entries === 1 ? "1 entry" : `${t.entries} entries`}</span>
-            <span className="faint">An entry may hold {bytes(t.max_entry_bytes)} · ended after {t.idle_days} {t.idle_days === 1 ? "day" : "days"} without being restored</span>
+            <SpanFaint>An entry may hold {bytes(t.max_entry_bytes)} · ended after {t.idle_days} {t.idle_days === 1 ? "day" : "days"} without being restored</SpanFaint>
           </div>
           <div className="store-meter cc-meter" role="meter" aria-label="Cache quota used" aria-valuemin={0} aria-valuemax={t.quota_bytes} aria-valuenow={t.bytes}
             aria-valuetext={`${bytes(t.bytes)} of ${bytes(t.quota_bytes)}`}>
@@ -165,7 +166,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
             <ul className="cc-names">
               {names.map(([n, v]) => (
                 <li key={n}>
-                  <span><span className="cc-name">{n}</span> <span className="faint">{v.entries === 1 ? "1 entry" : `${v.entries} entries`}, {bytes(v.bytes)}</span></span>
+                  <span><span className="cc-name">{n}</span> <SpanFaint>{v.entries === 1 ? "1 entry" : `${v.entries} entries`}, {bytes(v.bytes)}</SpanFaint></span>
                   {mayDelete && (
                     <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => deleteName(n, v.entries)}
                       aria-label={`Delete every entry of the cache ${n}`}>Delete all</button>
@@ -190,26 +191,26 @@ export function ProjectCachesPage({ name }: { name: string }) {
                         {c.label}
                         <span className="cc-arrow" aria-hidden="true">{sort.col === c.col ? (sort.desc ? "▼" : "▲") : ""}</span>
                       </button>
-                      {c.col === "name" && <span className="faint small"> and key</span>}
+                      {c.col === "name" && <SpanFaintSmall> and key</SpanFaintSmall>}
                     </th>
                   ))}
-                  {mayDelete && <th><span className="visually-hidden">Actions</span></th>}
+                  {mayDelete && <th><SpanHidden>Actions</SpanHidden></th>}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((e) => (
                   <tr key={e.id}>
                     <td>
-                      <strong>{e.name}</strong>{e.status === "uploading" && <span className="faint"> (being saved)</span>}
+                      <strong>{e.name}</strong>{e.status === "uploading" && <SpanFaint> (being saved)</SpanFaint>}
                       <div className="cc-key" title={e.key}>{shortKey(e.key)}…{e.generation > 1 ? `, generation ${e.generation}` : ""}</div>
-                      <div className="faint small">{e.pipeline || P.t18}{e.sensitive ? ", sensitive" : ""}</div>
+                      <DivFaintSmall>{e.pipeline || P.t18}{e.sensitive ? ", sensitive" : ""}</DivFaintSmall>
                     </td>
                     <td className="cc-scope">{e.scope}</td>
                     <td>{e.platform}</td>
                     <td className="cc-num" title={`${e.bytes.toLocaleString()} bytes in ${e.files.toLocaleString()} files`}>{bytes(e.bytes)}</td>
                     <td className="cc-num" title={clock(e.last_used_at)}>{ago(e.last_used_at, now)}</td>
                     <td className="cc-num">{e.hits === 1 ? "once" : `${e.hits} times`}</td>
-                    <td className="cc-num">{e.run_id ? <Link href={`/runs/${e.run_id}`}>#{e.run_number || "?"}</Link> : <span className="faint">unknown</span>}</td>
+                    <td className="cc-num">{e.run_id ? <Link href={`/runs/${e.run_id}`}>#{e.run_number || "?"}</Link> : <SpanFaint>unknown</SpanFaint>}</td>
                     {mayDelete && (
                       <td className="td-actions">
                         <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => deleteEntry(e)}
@@ -224,6 +225,6 @@ export function ProjectCachesPage({ name }: { name: string }) {
           {!mayDelete && <p className="faint small">{terms().say(P.t19)}</p>}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

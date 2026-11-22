@@ -8,6 +8,7 @@ import { CopyValue } from "../components/Security";
 import { DIGEST_KEEP, shortDigest } from "../components/Images";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnPrimary, DivPage, PSub, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 const P = await prose("pages.Images");
 
 type By = "digest" | "repository" | "project";
@@ -104,7 +105,7 @@ export function ImagesPage() {
   const latest = asked.by === "repository" && hits && hits.length > 0 ? hits[0] : null;
 
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={terms().say("{Registry}")} title="Images" sentence={terms().say(P.t3)} />
 
       <form className="card compform imgform" role="search" onSubmit={submit} noValidate>
@@ -124,11 +125,11 @@ export function ImagesPage() {
         </label>
         {by === "repository" && (
           <label className="field imgform-tag">
-            <span>Tag <span className="faint">(optional)</span></span>
+            <span>Tag <SpanFaint>(optional)</SpanFaint></span>
             <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="any tag" maxLength={200} spellCheck={false} autoCapitalize="off" autoComplete="off" className="mono" />
           </label>
         )}
-        <button type="submit" className="btn btn-primary" disabled={!value.trim() || busy}>{busy ? "Searching…" : "Search"}</button>
+        <BtnPrimary disabled={!value.trim() || busy}>{busy ? "Searching…" : "Search"}</BtnPrimary>
         {problem && <p className="tfile-err compform-note" id="img-problem" role="alert">{problem}</p>}
         <p className="sub small compform-note">
           {by === "digest" ? P.t4
@@ -157,7 +158,7 @@ export function ImagesPage() {
               <h2 className="h-sm">Latest image of <span className="mono imgref">{latest.repository}{asked.tag ? `:${asked.tag}` : ""}</span></h2>
               <p className="imglatest">
                 <CopyValue value={latest.digest} label="digest" keep={DIGEST_KEEP} />
-                <span className="faint">built by <Link href={runHref(latest)}>{latest.project} #{latest.run_number}</Link> ({latest.step}) on {refName(latest.ref)}, {ago(latest.created_at)}</span>
+                <SpanFaint>built by <Link href={runHref(latest)}>{latest.project} #{latest.run_number}</Link> ({latest.step}) on {refName(latest.ref)}, {ago(latest.created_at)}</SpanFaint>
               </p>
             </section>
           )}
@@ -170,12 +171,12 @@ export function ImagesPage() {
                   {hits.map((h, i) => (
                     <tr key={h.run_id + h.step + h.kind + (h.tag ?? "") + (h.platform ?? "") + i}>
                       <td>{h.project}</td>
-                      <td><Link href={runHref(h)}>#{h.run_number}</Link>{h.attempt > 1 && <span className="faint small"> attempt {h.attempt}</span>}</td>
+                      <td><Link href={runHref(h)}>#{h.run_number}</Link>{h.attempt > 1 && <SpanFaintSmall> attempt {h.attempt}</SpanFaintSmall>}</td>
                       <td>{h.step}</td>
                       <td>{refName(h.ref)}</td>
                       <td className="imgtable-ref">
                         <span className="mono imgref">{h.repository}{h.kind === "tag" && h.tag ? `:${h.tag}` : ""}</span>
-                        {h.kind === "platform" && <span className="faint small"> platform {h.platform}</span>}
+                        {h.kind === "platform" && <SpanFaintSmall> platform {h.platform}</SpanFaintSmall>}
                       </td>
                       <td><CopyValue value={h.digest} label={`digest of #${h.run_number} ${h.step}`} keep={DIGEST_KEEP} /> <Link href={`/depot/digest/${encodeURIComponent(h.digest)}`}>Open</Link></td>
                       <td>
@@ -194,7 +195,7 @@ export function ImagesPage() {
           </section>
         </>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -211,12 +212,12 @@ function DigestSummary({ hits }: { hits: ImageHit[] }) {
     <section className="card" aria-label="Who built it">
       <h2 className="h-sm">
         {runs.length === 1 ? terms().say("Built by one {run}") : `Built by ${runs.length} runs`}
-        {platform ? <>, as the <span className="mono">{platform.platform}</span> part of an image</> : null}
+        {platform ? <>, as the <SpanMono>{platform.platform}</SpanMono> part of an image</> : null}
       </h2>
-      <p className="sub">
+      <PSub>
         First by <Link href={runHref(h)}>{h.project} #{h.run_number}</Link>, step {h.step}, on {refName(h.ref)}, {ago(h.created_at)}
         {runs.length > 1 && <>{P.t13}</>}.
-      </p>
+      </PSub>
     </section>
   );
 }

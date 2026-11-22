@@ -3,6 +3,7 @@ import { browseApi, codeHref, isProtected } from "../../browseApi";
 import { ErrorBox, Mono } from "../../components/ui";
 import { announce } from "../../kit/announce";
 import { navigate } from "../../router";
+import { BtnPrimary, LabelField, SpanFaintSmall } from "../../kit/bits";
 
 const MAX_FILES = 100, MAX_FILE = 1 << 20, MAX_ALL = 8 << 20;
 const slug = () => Math.random().toString(36).slice(2, 6);
@@ -51,30 +52,30 @@ export function Uploader({ repo, refName, protectedNames, dir }: { repo: string;
   };
   return (
     <form className="card editor" onSubmit={submit} aria-label="Upload files">
-      <label className="field"><span>Files</span>
+      <LabelField><span>Files</span>
         <input type="file" multiple onChange={(e) => setPicked([...(e.target.files ?? [])])} aria-describedby="up-help" />
-        <small id="up-help">Up to {MAX_FILES} files, {size(MAX_FILE)} each and {size(MAX_ALL)} in all, in one commit. Larger files go in with git.</small></label>
+        <small id="up-help">Up to {MAX_FILES} files, {size(MAX_FILE)} each and {size(MAX_ALL)} in all, in one commit. Larger files go in with git.</small></LabelField>
       {picked.length > 0 && (
-        <ul className="plain" aria-label="Files to upload">{picked.map((f, i) => <li key={f.name + i}><Mono>{names[i]}</Mono> <span className="faint small">{size(f.size)}</span></li>)}</ul>
+        <ul className="plain" aria-label="Files to upload">{picked.map((f, i) => <li key={f.name + i}><Mono>{names[i]}</Mono> <SpanFaintSmall>{size(f.size)}</SpanFaintSmall></li>)}</ul>
       )}
       {problem && <p className="callout callout-err" role="alert">{problem}</p>}
-      <label className="field"><span>Folder in the repository</span>
+      <LabelField><span>Folder in the repository</span>
         <input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="docs (empty is the top)" />
-        <small>A slash makes a folder inside a folder; one that does not exist is made.</small></label>
+        <small>A slash makes a folder inside a folder; one that does not exist is made.</small></LabelField>
       <label className="radio"><input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} /> Overwrite files that exist (without this, an existing file stops the whole upload and nothing is committed)</label>
-      <label className="field"><span>Commit message</span>
-        <input value={message} onChange={(e) => setMessage(e.target.value)} placeholder={msg} maxLength={200} /></label>
+      <LabelField><span>Commit message</span>
+        <input value={message} onChange={(e) => setMessage(e.target.value)} placeholder={msg} maxLength={200} /></LabelField>
       <fieldset className="field">
         <legend>Where the commit goes</legend>
-        <label className="radio"><input type="radio" name="target" checked={target === "direct"} onChange={() => setTarget("direct")} /> Commit directly to <Mono>{refName}</Mono>{locked && <span className="faint small"> (a protected branch: only its administrators may; others are refused)</span>}</label>
+        <label className="radio"><input type="radio" name="target" checked={target === "direct"} onChange={() => setTarget("direct")} /> Commit directly to <Mono>{refName}</Mono>{locked && <SpanFaintSmall> (a protected branch: only its administrators may; others are refused)</SpanFaintSmall>}</label>
         <label className="radio"><input type="radio" name="target" checked={target === "branch"} onChange={() => setTarget("branch")} /> Commit to a new branch and open a pull request</label>
-        {target === "branch" && <label className="field"><span>New branch name</span><input value={branch} required onChange={(e) => setBranch(e.target.value)} /></label>}
+        {target === "branch" && <LabelField><span>New branch name</span><input value={branch} required onChange={(e) => setBranch(e.target.value)} /></LabelField>}
       </fieldset>
       <ErrorBox error={error} />
       <div className="actions">
-        <button type="submit" className="btn btn-primary" disabled={busy || picked.length === 0 || !!problem || (target === "branch" && !branch.trim())}>
+        <BtnPrimary disabled={busy || picked.length === 0 || !!problem || (target === "branch" && !branch.trim())}>
           {busy ? "Committing…" : target === "branch" ? "Commit and open a pull request" : `Commit ${picked.length || ""} file${picked.length === 1 ? "" : "s"}`.replace("  ", " ")}
-        </button>
+        </BtnPrimary>
         <button type="button" className="btn" onClick={back}>Cancel</button>
       </div>
     </form>

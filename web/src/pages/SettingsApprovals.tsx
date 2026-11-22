@@ -9,6 +9,7 @@ import { Button, PageHead, Sheet } from "../kit/layout";
 import { Icon } from "../kit/Icon";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivPage, SpanFaint } from "../kit/bits";
 const P = await prose("pages.SettingsApprovals");
 
 type Choice = "unset" | "yes" | "no";
@@ -61,7 +62,7 @@ export function SettingsApprovalsPage() {
 
   const s = now.data;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title={terms().plural("clearance")}
         sentence={s === null ? "Loading." : s.allow_self
           ? `The person who starts a run may give ${terms().lower("clearance")} for it themselves.`
@@ -82,7 +83,7 @@ export function SettingsApprovalsPage() {
               {([["unset", "Use the default", P.t6], ["no", "Someone else must give it", terms().say(P.t7)], ["yes", P.t8, P.t9]] as [Choice, string, string][]).map(([v, t, d]) => (
                 <div key={v} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                   <input type="radio" id={`allow-${v}`} name="allow-self" checked={choice === v} onChange={() => { setChoice(v); setSaved(false); }} />
-                  <label htmlFor={`allow-${v}`} style={{ fontWeight: 400, color: "var(--ink)" }}><b>{t}</b> <span className="faint">{d}</span></label>
+                  <label htmlFor={`allow-${v}`} style={{ fontWeight: 400, color: "var(--ink)" }}><b>{t}</b> <SpanFaint>{d}</SpanFaint></label>
                 </div>
               ))}
               <ErrorBox error={error} />
@@ -94,6 +95,6 @@ export function SettingsApprovalsPage() {
           )}
         </div>
       </Sheet>
-    </div>
+    </DivPage>
   );
 }

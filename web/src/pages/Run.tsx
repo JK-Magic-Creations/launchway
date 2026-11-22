@@ -52,6 +52,7 @@ import { Excerpt } from "../components/Excerpt";
 import { terms } from "../terms";
 import { commandOf, deployOf, deployPhases, deployingPhase } from "./runDeploy";
 import { prose } from "../prose";
+import { BtnLink, BtnSm, DivLoading, DivPage, LabelField, PSub, SpanFaint, SpanFaintSmall } from "../kit/bits";
 const P = await prose("pages.Run");
 
 // Stands for the run until it is loaded, so hooks run in the same order.
@@ -80,7 +81,7 @@ function setQuery(changes: Record<string, string>, mode: "push" | "replace" = "p
 function LaunchLink({ run, step }: { run: RunDetail; step: StepView }) {
   const d = step.kind === "verify" ? (run.deployments ?? []).find((x) => x.step === step.deployment) : deploymentOf(run, step);
   if (!d) return null;
-  return <p className="dep-launch"><Link href={`/runs/${run.id}?launch=${d.id}`}>Open this Launch</Link> <span className="faint">{P.t0}</span></p>;
+  return <p className="dep-launch"><Link href={`/runs/${run.id}?launch=${d.id}`}>Open this Launch</Link> <SpanFaint>{P.t0}</SpanFaint></p>;
 }
 
 /** A run's page; with ?launch=DEPLOYMENT in the address, the page of that deployment's Launch instead (see Launch.tsx). */
@@ -234,9 +235,9 @@ function RunBody({ id }: { id: string }) {
 
   useCrumbLabel(run ? terms().say(`{Run} #${run.number} of ${run.project}`) : undefined);
   if (error) {
-    return <div className="page"><ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run does not exist." : error} /><Link href="/activity">Back to runs</Link></div>;
+    return <DivPage><ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run does not exist." : error} /><Link href="/activity">Back to runs</Link></DivPage>;
   }
-  if (!run) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!run) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
 
   const step = run.step_list.find((s) => s.id === selected) ?? null;
   const loopView = collapseLoops(run);
@@ -339,7 +340,7 @@ function RunBody({ id }: { id: string }) {
       {run.draft && (
         <div className="callout callout-draft">
           <strong>Draft run.</strong> {P.t7}{run.branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono>.
-          {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
+          {" "}See it on the <BtnLink onClick={() => setTab("definition")}>Pipeline</BtnLink> tab.
         </div>
       )}
 
@@ -354,7 +355,7 @@ function RunBody({ id }: { id: string }) {
       {run.graph.origin && !run.graph.origin.detected && (
         <div className="callout callout-info">
           The repository has no <Mono>.launchway/pipeline.yaml</Mono> {terms().say(P.t9)} {run.project} on the server.
-          {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
+          {" "}See it on the <BtnLink onClick={() => setTab("definition")}>Pipeline</BtnLink> tab.
         </div>
       )}
 
@@ -378,7 +379,7 @@ function RunBody({ id }: { id: string }) {
       {deploying && selected !== deploying.id && (
         <div className={P.t12}>
           <span><strong>{deploying.id}</strong>: {stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying)).replace(/^./, (c) => c.toLowerCase())}</span>
-          <button type="button" className="btn btn-sm" onClick={() => select(deploying.id)}>View</button>
+          <BtnSm onClick={() => select(deploying.id)}>View</BtnSm>
         </div>
       )}
 
@@ -405,8 +406,8 @@ function RunBody({ id }: { id: string }) {
           {mayRerun && <RerunPicker run={run} />}
           {mayOperate && !run.needs_newer_server && !run.draft && !rerunTarget && <RerunFailedButton run={run} />}
           {mayRerun && run.step_list.length > 1 && <RerunButton run={run} step={run.step_list[0]} label="Re-run everything" />}
-          <button type="button" className="btn btn-sm" onClick={() => { select(firstFailed.id); setTab("graph"); }}>Open the log of {firstFailed.id}</button>
-          {firstFailed.policy_blocked && <button type="button" className="btn btn-sm" onClick={() => setTab("policy")}>See the policy decision</button>}
+          <BtnSm onClick={() => { select(firstFailed.id); setTab("graph"); }}>Open the log of {firstFailed.id}</BtnSm>
+          {firstFailed.policy_blocked && <BtnSm onClick={() => setTab("policy")}>See the policy decision</BtnSm>}
         </>} />
       )}
 
@@ -440,7 +441,7 @@ function RunBody({ id }: { id: string }) {
       {shownTab === "graph" && (
         <>
           <section className="sheet runline-sheet" aria-label={terms().say("The pipeline of this {run}")}>
-            <div className="sh-h"><h2>The pipeline</h2><div className="r"><span className="faint small">{P.t17}</span></div></div>
+            <div className="sh-h"><h2>The pipeline</h2><div className="r"><SpanFaintSmall>{P.t17}</SpanFaintSmall></div></div>
             <div className="sh-b"><Graph steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} /></div>
           </section>
           {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
@@ -580,16 +581,16 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             {step.tests.skipped > 0 && `, ${step.tests.skipped} skipped`}
           </span>
           <TestCounts t={step.tests} />
-          <button type="button" className="btn btn-sm" onClick={() => showTests(step.id)}>
+          <BtnSm onClick={() => showTests(step.id)}>
             {failing(step.tests) > 0 ? "See the failed tests" : "See the tests"}
-          </button>
+          </BtnSm>
         </div>
       )}
       {step.caches && step.caches.length > 0 && <CacheResults project={run.project} caches={step.caches} />}
       {step.policy_blocked && (
         <div className={P.t23}>
           <span><strong>Blocked by policy.</strong> {terms().say(P.t24)}</span>
-          <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
+          <BtnSm onClick={showPolicy}>See the decision</BtnSm>
         </div>
       )}
       {step.status === "failed" && following && !reused && !excerptInPanel && step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other" && (
@@ -659,7 +660,7 @@ function ImageResult({ run, step, showImages }: { run: RunDetail; step: StepView
           : <span>not pushed</span>}
         {signed !== null && <span className={"artst" + (signed ? " artst-kept" : "")}>{signed ? "Signed" : "Not signed"}</span>}
       </div>
-      <button type="button" className="btn btn-sm" onClick={showImages}>See the image</button>
+      <BtnSm onClick={showImages}>See the image</BtnSm>
     </div>
   );
 }
@@ -736,14 +737,14 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         </dl>
 
         {waiting && !mayDecide && (
-          <p className="sub">{P.t27}{run.project} must decide this.</p>
+          <PSub>{P.t27}{run.project} must decide this.</PSub>
         )}
         {waiting && mayDecide && (
           <form className="approval-form" onSubmit={(e) => e.preventDefault()}>
-            <label className="field">
-              <span>Comment <span className="faint">{P.t28}</span></span>
+            <LabelField>
+              <span>Comment <SpanFaint>{P.t28}</SpanFaint></span>
               <textarea value={comment} maxLength={2000} rows={3} onChange={(e) => setComment(e.target.value)} />
-            </label>
+            </LabelField>
             <ErrorBox error={error} />
             <div className="approval-actions">
               <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={terms().say(`${terms().label("go")}: ${terms().lower("clearance")} is given and the {run} goes on`)}>{terms().label("go")}</button>
@@ -766,10 +767,10 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             {run.status === "failed" && <div>{terms().say(P.t30)}</div>}
           </div>
         )}
-        {step.status === "canceled" && <p className="sub">{P.t31}</p>}
-        {step.status === "skipped" && <p className="sub">{step.error || "Skipped."} Nobody was asked.</p>}
+        {step.status === "canceled" && <PSub>{P.t31}</PSub>}
+        {step.status === "skipped" && <PSub>{step.error || "Skipped."} Nobody was asked.</PSub>}
         {step.status === "pending" && (
-          <p className="sub">Asks once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>
+          <PSub>Asks once {step.needs?.length ? step.needs.join(", ") : terms().say("the {run}")} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</PSub>
         )}
       </div>
       {guarded && <DeploymentPanel run={run} step={step} />}
@@ -846,7 +847,7 @@ function EventsTab({ id, version }: { id: string; version: string }) {
   useEffect(() => { api.events(id).then(setEvents).catch(setError); }, [id, version]);
   return (
     <section className="card">
-      <p className="sub">{terms().say(P.t33)}</p>
+      <PSub>{terms().say(P.t33)}</PSub>
       <ErrorBox error={error} />
       {events && (
         <ol className="events">
@@ -894,7 +895,7 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
     return (
       <section className="inputs">
         <h3 className="h-sm">Inputs</h3>
-        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? terms().say(P.t35) : P.t36}</p>
+        <PSub>{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? terms().say(P.t35) : P.t36}</PSub>
       </section>
     );
   }
@@ -904,18 +905,18 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
   const row = (v: InputVar) => (
     <tr key={v.name}>
       <td className="mono">{v.name}</td>
-      <td className="mono inputs-value">{v.value}{v.truncated && <span className="faint"> …(shortened in this record)</span>}</td>
+      <td className="mono inputs-value">{v.value}{v.truncated && <SpanFaint> …(shortened in this record)</SpanFaint>}</td>
       <td className="inputs-from">{fromLabel(v, inp.container)}</td>
     </tr>
   );
   return (
     <section className="inputs" aria-label={`Inputs of attempt ${inputs.attempt}`}>
-      <h3 className="h-sm">Inputs <span className="faint">· attempt {inputs.attempt}</span></h3>
+      <h3 className="h-sm">Inputs <SpanFaint>· attempt {inputs.attempt}</SpanFaint></h3>
       <dl className="kv">
         {inp.image && <><dt>Image</dt><dd className="mono">{inp.image}{inp.container && !inp.container.startsWith("image-") ? ` (container ${inp.container})` : ""}</dd></>}
         {inp.library && <><dt>Library</dt><dd><Mono>{inp.library.name}</Mono> at <Mono>{shortSha(inp.library.commit)}</Mono></dd></>}
         {inp.secrets && inp.secrets.length > 0 && (
-          <><dt>Secrets</dt><dd>{inp.secrets.map((x) => <div key={x.name}><Mono>{x.name}</Mono> ← <Mono>{x.ref}</Mono> <span className="faint">(the value is never recorded)</span></div>)}</dd></>
+          <><dt>Secrets</dt><dd>{inp.secrets.map((x) => <div key={x.name}><Mono>{x.name}</Mono> ← <Mono>{x.ref}</Mono> <SpanFaint>(the value is never recorded)</SpanFaint></div>)}</dd></>
         )}
       </dl>
       {(custom.length > 0 || (inp.params?.length ?? 0) > 0) && (
@@ -965,20 +966,20 @@ function DefinitionTab({ run }: { run: RunDetail }) {
               : `.launchway/pipeline.yaml at ${shortSha(run.sha) || terms().say("this {run}")}`}
           </h2>
           {run.source.kind === "git" && branch && (file?.draft
-            ? <button type="button" className="btn btn-sm" onClick={() => openInEditor(run.project, branch, run.sha, file.text)}>Edit this draft</button>
+            ? <BtnSm onClick={() => openInEditor(run.project, branch, run.sha, file.text)}>Edit this draft</BtnSm>
             : <Link href={editHref} className="btn btn-sm">Edit this pipeline</Link>)}
         </div>
         {file?.origin === "server" && (
-          <p className="sub">{P.t37}<Mono>{shortSha(run.sha)}</Mono>{terms().say(P.t38)} <Mono>.launchway/pipeline.yaml</Mono> {P.t39}</p>
+          <PSub>{P.t37}<Mono>{shortSha(run.sha)}</Mono>{terms().say(P.t38)} <Mono>.launchway/pipeline.yaml</Mono> {P.t39}</PSub>
         )}
         {file?.draft && (
-          <p className="sub">{terms().say(P.t40)} <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
+          <PSub>{terms().say(P.t40)} <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</PSub>
         )}
-        {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">{terms().say(P.t41)}</p> : <div className="loading">Loading…</div>}
+        {file !== null ? <pre className="code">{file.text}</pre> : failed ? <PSub>{terms().say(P.t41)}</PSub> : <DivLoading>Loading…</DivLoading>}
       </section>
       <section className="card">
         <h2 className="h-sm">The graph it produced</h2>
-        <p className="sub">{terms().say(P.t42)}</p>
+        <PSub>{terms().say(P.t42)}</PSub>
         <pre className="code">{graph}</pre>
       </section>
     </div>

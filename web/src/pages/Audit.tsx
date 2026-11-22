@@ -5,6 +5,7 @@ import { clock } from "../format";
 import { useMe } from "../auth";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { terms } from "../terms";
+import { BtnPrimary, DivLoading, DivPage, LabelField, SpanFaint } from "../kit/bits";
 
 const ACTIONS = [
   "auth.sign_in", "auth.sign_out", "run.start", "run.cancel", "run.resume",
@@ -44,7 +45,7 @@ export function AuditPage() {
   useEffect(() => { if (me?.admin) load(0); }, [load, me?.admin]);
 
   if (!me?.admin) {
-    return <div className="page"><Empty title={`Only admins can see the ${terms().lower("logbook")}`} /></div>;
+    return <DivPage><Empty title={`Only admins can see the ${terms().lower("logbook")}`} /></DivPage>;
   }
   const set = (k: keyof Filters) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setDraft({ ...draft, [k]: e.target.value });
 
@@ -52,23 +53,23 @@ export function AuditPage() {
     <div className="page page-wide">
       <PageHead eyebrow="Settings" title={<>{terms().label("logbook")}</>} sentence={<>Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</>} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
-        <label className="field"><span>User</span><input value={draft.user} onChange={set("user")} /></label>
-        <label className="field"><span>{terms().say("{Project}")}</span><input value={draft.project} onChange={set("project")} /></label>
-        <label className="field"><span>Action</span>
+        <LabelField><span>User</span><input value={draft.user} onChange={set("user")} /></LabelField>
+        <LabelField><span>{terms().say("{Project}")}</span><input value={draft.project} onChange={set("project")} /></LabelField>
+        <LabelField><span>Action</span>
           <select value={draft.action} onChange={set("action")}>
             <option value="">Any</option>
             {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
-        </label>
-        <label className="field"><span>From</span><input type="date" value={draft.from} onChange={set("from")} /></label>
-        <label className="field"><span>To</span><input type="date" value={draft.to} onChange={set("to")} /></label>
+        </LabelField>
+        <LabelField><span>From</span><input type="date" value={draft.from} onChange={set("from")} /></LabelField>
+        <LabelField><span>To</span><input type="date" value={draft.to} onChange={set("to")} /></LabelField>
         <div className="auditfilters-actions">
-          <button type="submit" className="btn btn-primary">Show</button>
+          <BtnPrimary>Show</BtnPrimary>
           <button type="button" className="btn" onClick={() => { setDraft(EMPTY); setFilters(EMPTY); }}>Clear</button>
         </div>
       </form>
       <ErrorBox error={error} />
-      {entries === null && !error && <div className="loading">Loading…</div>}
+      {entries === null && !error && <DivLoading>Loading…</DivLoading>}
       {entries && entries.length === 0 && <Empty title="Nothing matches" />}
       {entries && entries.length > 0 && (
         <div className="card card-flush tablewrap">
@@ -78,7 +79,7 @@ export function AuditPage() {
               {entries.map((a) => (
                 <tr key={a.id}>
                   <td className="nowrap">{clock(a.at)}</td>
-                  <td>{a.user || <span className="faint">unknown</span>}<div className="faint small mono" title="Address">{a.source}</div></td>
+                  <td>{a.user || <SpanFaint>unknown</SpanFaint>}<div className="faint small mono" title="Address">{a.source}</div></td>
                   <td className="audit-action"><Mono>{a.action}</Mono><div><span className={`outcome outcome-${a.outcome}`}>{a.outcome}</span></div></td>
                   <td className="audit-on">
                     {a.project && <div>{a.project}</div>}

@@ -4,6 +4,7 @@ import { Button } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { Blank, ErrorPanel, itemHref, Loading, useLoad, when, WorkPage } from "./common";
 import { workApi } from "./workApi";
+import { DivFaintSmall, SpanHidden } from "../kit/bits";
 
 // What happened to work you follow: assigned to you, mentioned, moved by an agent. Email is not available, and the page says so.
 
@@ -31,8 +32,8 @@ export default function Inbox() {
             <li key={e.id} className={e.read ? "read" : "unread"}>
               <span className={"dot" + (e.read ? "" : " on")} aria-hidden="true" />
               <div className="what">
-                <div>{!e.read && <span className="visually-hidden">Unread: </span>}{e.text}</div>
-                <div className="faint small">{e.kind.replace(/[._]/g, " ")}, {when(e.at)}{e.ref && <> · <Link href={itemHref(e.ref)}>{e.ref}{e.title ? " " + e.title : ""}</Link></>}</div>
+                <div>{!e.read && <SpanHidden>Unread: </SpanHidden>}{e.text}</div>
+                <DivFaintSmall>{e.kind.replace(/[._]/g, " ")}, {when(e.at)}{e.ref && <> · <Link href={itemHref(e.ref)}>{e.ref}{e.title ? " " + e.title : ""}</Link></>}</DivFaintSmall>
               </div>
               {!e.read && <Button sm kind="ghost" aria-label={`Mark as read: ${e.text}`} onClick={() => readOne(e.id)}>Mark read</Button>}
             </li>

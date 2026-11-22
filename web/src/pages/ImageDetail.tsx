@@ -11,6 +11,7 @@ import { EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useCrumbLabel } from "../nav/crumbs";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { DivLoading, DivPage, SpanFaint, SpanMono } from "../kit/bits";
 
 const LEVELS: { key: "critical" | "high" | "medium" | "low" | "unknown"; label: string }[] = [
   { key: "critical", label: "Critical" }, { key: "high", label: "High" }, { key: "medium", label: "Medium" }, { key: "low", label: "Low" }, { key: "unknown", label: "Unknown" },
@@ -32,17 +33,17 @@ export function ImageDetailPage({ digest }: { digest: string }) {
   const tagNames = tags.map((t) => t.slice(t.lastIndexOf(":") + 1));
   const where = inst.environments.flatMap((e) => e.services.filter((u) => u.current && (tagNames.includes(u.current.version) || u.current.version === digest)).map((u) => ({ env: e.name, u })));
 
-  if (hits.loading) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (hits.loading) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   if (!first) {
-    return <div className="page"><PageHead eyebrow={terms().say("{Registry}")} title="Image" /><ErrorBox error={hits.error} />
-      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or {project}.")}</EmptyState></Sheet></div>;
+    return <DivPage><PageHead eyebrow={terms().say("{Registry}")} title="Image" /><ErrorBox error={hits.error} />
+      <Sheet><EmptyState title={terms().say("No {run} built this digest")} action={<LinkButton href="/depot" icon="arrow">Look for another image</LinkButton>}>{terms().say("Launchway knows an image when one of its {runs} built it. Check the digest, or search by repository or {project}.")}</EmptyState></Sheet></DivPage>;
   }
   const scan = iv?.scan;
   const worst = scan ? Math.max(scan.critical + scan.high, 0) : 0;
   const total = scan ? scan.critical + scan.high + scan.medium + scan.low + scan.unknown : 0;
   return (
-    <div className="page">
-      <PageHead eyebrow={<>Images · {first.repository}</>} title={<span className="mono" style={{ fontSize: "0.72em" }}>{digest.slice(0, 19)}…</span>}
+    <DivPage>
+      <PageHead eyebrow={<>Images · {first.repository}</>} title={<SpanMono style={{ fontSize: "0.72em" }}>{digest.slice(0, 19)}…</SpanMono>}
         sentence={<>Built by <EntityLink kind="project" name={first.project} /> <EntityLink kind="run" name={terms().say(`{run} #${first.run_number}`)} id={first.run_id} />, step {first.step}, {ago(first.created_at)}. {scan ? (worst > 0 ? <b>{worst} critical or high findings.</b> : total > 0 ? "No critical or high findings." : "The scan found nothing.") : "No scan reported for it."}</>}
         actions={<LinkButton href={`/runs/${first.run_id}?tab=images&step=${encodeURIComponent(first.step)}`} icon="arrow">{terms().say("Open the {run}")}</LinkButton>} />
       <div className="grid g2">
@@ -50,16 +51,16 @@ export function ImageDetailPage({ digest }: { digest: string }) {
           <dl className="kvlist">
             <dt>Digest</dt><dd><CopyValue value={digest} label="digest" keep={22} /></dd>
             <dt>Built by</dt><dd><EntityLink kind="run" name={`${first.project} #${first.run_number}`} id={first.run_id} /> on {first.ref.replace(/^refs\/(heads|tags)\//, "")}</dd>
-            <dt>Commit</dt><dd>{project?.last_run?.id === first.run_id && project.last_run.sha ? <Mono>{shortSha(project.last_run.sha)}</Mono> : <span className="faint">{terms().say("see the {run}")}</span>}</dd>
+            <dt>Commit</dt><dd>{project?.last_run?.id === first.run_id && project.last_run.sha ? <Mono>{shortSha(project.last_run.sha)}</Mono> : <SpanFaint>{terms().say("see the {run}")}</SpanFaint>}</dd>
             <dt>When</dt><dd title={clock(first.created_at)}>{ago(first.created_at)}</dd>
-            <dt>Tags</dt><dd>{tags.length ? tags.map((t) => <div key={t} className="mono">{t}</div>) : <span className="faint">none recorded</span>}</dd>
+            <dt>Tags</dt><dd>{tags.length ? tags.map((t) => <div key={t} className="mono">{t}</div>) : <SpanFaint>none recorded</SpanFaint>}</dd>
             <dt>Built again by</dt><dd>{new Set(hits.data!.hits.map((h) => h.run_id)).size - 1} later runs</dd>
           </dl>
         </Sheet>
         <Sheet title="What protects it">
           <dl className="kvlist">
             <dt>Pushed</dt><dd>{first.pushed ? <StateChip state="ok">{terms().say("Pushed to the {registry}")}</StateChip> : <StateChip state="skip">Not pushed{iv?.not_pushed ? `: ${iv.not_pushed}` : ""}</StateChip>}</dd>
-            <dt>Signature</dt><dd>{iv ? (iv.signed ? <StateChip state="ok">Signed{iv.key_source ? ` (${iv.key_source})` : ""}</StateChip> : <StateChip state="warn">Not signed</StateChip>) : <span className="faint">not known</span>}</dd>
+            <dt>Signature</dt><dd>{iv ? (iv.signed ? <StateChip state="ok">Signed{iv.key_source ? ` (${iv.key_source})` : ""}</StateChip> : <StateChip state="warn">Not signed</StateChip>) : <SpanFaint>not known</SpanFaint>}</dd>
             <dt>Provenance</dt><dd>{iv?.provenance === "attached" ? "Attached to the image" : iv?.provenance === "stored" ? terms().say("Kept as an {artifact}") : "None"}</dd>
             <dt>SBOM</dt><dd>{iv?.sbom ? <>Yes{iv.sbom_artifact ? <>, kept as <Mono>{iv.sbom_artifact}</Mono></> : null}. <a href="/depot/components" onClick={onLink}>Search components</a></> : "No bill of materials was made."}</dd>
           </dl>
@@ -80,6 +81,6 @@ export function ImageDetailPage({ digest }: { digest: string }) {
           <ul className="rowlist">{where.map(({ env, u }) => <li key={env + u.service}><div className="main"><div className="nm"><EntityLink kind="environment" name={env} /></div><div className="sb">{u.service} of <EntityLink kind="project" name={u.project} /> runs {u.current?.version}</div></div></li>)}</ul>
         )}
       </Sheet>
-    </div>
+    </DivPage>
   );
 }

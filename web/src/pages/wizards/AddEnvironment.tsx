@@ -10,6 +10,7 @@ import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, useObjects, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
 import { prose } from "../../prose";
+import { SpanMono } from "../../kit/bits";
 const P = await prose("pages.wizards.AddEnvironment");
 
 export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview }) {
@@ -87,7 +88,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
               { value: "all", label: terms().say(P.t6), help: terms().say(P.t7) },
             ]} />
           <div className="callout callout-info">
-            <strong>{terms().label("clearance")} and {terms().lower("preflight")}.</strong> To have someone give {terms().lower("clearance")} {P.t8}<span className="mono">approval</span>{P.t9}<Link href="/config/wizard/add-policy">add a policy</Link> with the <span className="mono">approvals</span> {terms().say(P.t10)} {terms().lower("preflight")}.
+            <strong>{terms().label("clearance")} and {terms().lower("preflight")}.</strong> To have someone give {terms().lower("clearance")} {P.t8}<SpanMono>approval</SpanMono>{P.t9}<Link href="/config/wizard/add-policy">add a policy</Link> with the <SpanMono>approvals</SpanMono> {terms().say(P.t10)} {terms().lower("preflight")}.
           </div>
         </>
       ),
@@ -97,7 +98,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
       fields: [{ path: "pool", match: ["runner_pools", "pool"], value: poolChoice === "new" ? poolName : "" }],
       render: (by) => (
         <>
-          <p>{terms().say(P.t11)} <span className="mono">{target || "…"}</span>{terms().say(P.t12)}</p>
+          <p>{terms().say(P.t11)} <SpanMono>{target || "…"}</SpanMono>{terms().say(P.t12)}</p>
           <Choices legend={terms().say(P.t13)} value={poolChoice} onChange={(v) => setPoolPick(v as "existing" | "new" | "later")}
             options={[
               ...(serving.length ? [{ value: "existing", label: `The pool that already serves ${target}: ${serving.map((p) => p.name).join(", ")}`, help: terms().say(P.t14) }] : []),
@@ -126,7 +127,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
           <ul className="cf-next">
             {poolChoice === "new" && <li><Link href={`/config/wizard/add-runner?pool=${encodeURIComponent(poolName.trim())}`}>{terms().say("Add a {runner} to pool")} {poolName.trim()}</Link></li>}
             <li><Link href="/environments">{terms().say("See the {environments}")}</Link></li>
-            <li>{terms().say(P.t20)} <span className="mono">kind: deploy</span> and <span className="mono">environment: {name.trim()}</span></li>
+            <li>{terms().say(P.t20)} <SpanMono>kind: deploy</SpanMono> and <SpanMono>environment: {name.trim()}</SpanMono></li>
           </ul>
         </>
       )} />

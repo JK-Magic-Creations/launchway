@@ -10,6 +10,7 @@ import { ErrorBox, Mono } from "./ui";
 import { onLink } from "../router";
 import "../variables.css";
 import { prose } from "../prose";
+import { BtnPrimary, DivActions, PSub } from "../kit/bits";
 const P = await prose("components.Variables");
 
 /** The words for a level, in this installation's terms: "Wing", "Squadron payments", "Project cart-api". */
@@ -133,14 +134,14 @@ export function VariablesPanel({ level, scope, environment, compact, names, onCh
   };
 
   if (error && !view) return <ErrorBox error={error} />;
-  if (!view) return <p className="sub">Loading variables…</p>;
+  if (!view) return <PSub>Loading variables…</PSub>;
   return (
     <div className={"vr" + (compact ? " vr-compact" : "")}>
       {!compact && <RuleNote rule={view.rule} />}
       <ErrorBox error={error} />
       {said && <p className="vr-said" role="status">{said}</p>}
       {shown.length === 0 && (compact
-        ? <p className="sub">No variables in effect{names ? " for this pipeline" : ""}. {level === "project" && <a href={`/projects/${encodeURIComponent(scope ?? "")}/variables`} onClick={onLink}>Add one</a>}</p>
+        ? <PSub>No variables in effect{names ? " for this pipeline" : ""}. {level === "project" && <a href={`/projects/${encodeURIComponent(scope ?? "")}/variables`} onClick={onLink}>Add one</a>}</PSub>
         : <FirstUse level={level} scope={scope} />)}
       <ul className="vr-list">
         {shown.map((e) => (
@@ -204,7 +205,7 @@ function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLeve
     <Dialog label={base ? `Set ${base.name}` : "Add a variable"} onClose={onClose}>
       <form className="vr-form" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <h2>{base ? (base.set_here ? `Change ${base.name}` : `Override ${base.name}`) : "Add a variable"} at {levelWord(level, scope)}</h2>
-        {base && !base.set_here && <p className="sub">Now it is {base.display} from {sourceWord(base.from)}{P.t7}</p>}
+        {base && !base.set_here && <PSub>Now it is {base.display} from {sourceWord(base.from)}{P.t7}</PSub>}
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} disabled={!!base} placeholder="registry" pattern="[a-z][a-z0-9_]{0,39}" required data-autofocus /></label>
         <label>Type
           <select value={type} onChange={(e) => setType(e.target.value as VarType)} disabled={typeLocked}>
@@ -217,14 +218,14 @@ function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLeve
             ? <select value={text || "true"} onChange={(e) => setText(e.target.value)}><option value="true">Yes</option><option value="false">No</option></select>
             : <input value={text} onChange={(e) => setText(e.target.value)} placeholder={type === "secret" ? "vault:apps/registry#token" : ""} required />}
         </label>
-        {type === "secret" && <p className="sub">{terms().say(P.t8)}</p>}
+        {type === "secret" && <PSub>{terms().say(P.t8)}</PSub>}
         <label>{terms().say(P.t9)}<input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="production" /></label>
         <label>What it is for (optional)<input value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={200} /></label>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
-        </div>
+          <BtnPrimary disabled={busy}>{busy ? "Saving…" : "Save"}</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -240,12 +241,12 @@ function LockDialog({ entry, onClose, onLock }: { entry: VarEntry; onClose: () =
     <Dialog label={`Lock ${entry.name}`} onClose={onClose}>
       <form className="vr-form" onSubmit={(e) => { e.preventDefault(); onLock(reason); }}>
         <h2>Lock {entry.name}</h2>
-        <p className="sub">{terms().say(P.t10)}</p>
+        <PSub>{terms().say(P.t10)}</PSub>
         <label>{P.t11}<input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} required data-autofocus /></label>
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary">Lock</button>
-        </div>
+          <BtnPrimary>Lock</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -265,8 +266,8 @@ export function RunVariables({ runId }: { runId: string }) {
   return (
     <section className="card vr vr-compact" aria-labelledby="runvars-title">
       <h2 id="runvars-title">Variables in effect</h2>
-      <p className="sub">{terms().say(P.t12)}</p>
-      {rec.rerun_of && <p className="sub">{P.t13}</p>}
+      <PSub>{terms().say(P.t12)}</PSub>
+      {rec.rerun_of && <PSub>{P.t13}</PSub>}
       <ul className="vr-list">
         {shown.map((e) => (
           <li key={e.name + (e.environment ?? "")} className="vr-item">

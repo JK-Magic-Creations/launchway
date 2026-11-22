@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { api } from "../api";
+import { PSub } from "../kit/bits";
 
 const LocalSignIn = lazy(() => import("./LocalAuth").then((m) => ({ default: m.LocalSignIn })));
 
@@ -31,7 +32,7 @@ export function SignInPage({ next }: { next: string }) {
           <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2563eb" /><path d="M8 22l8-12 8 12" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <h1>Launchway</h1>
         </div>
-        <p className="sub">Sign in with your account to see and run pipelines.</p>
+        <PSub>Sign in with your account to see and run pipelines.</PSub>
         {error && <div className="errorbox" role="alert">{ERRORS[error] ?? "The sign-in did not work. Please try again."}</div>}
         {modes.local && <Suspense fallback={<p className="loading">Loading…</p>}><LocalSignIn next={next} /></Suspense>}
         {modes.sso && <a className={modes.local ? "btn btn-wide" : "btn btn-primary btn-wide"} href={href}>Sign in with single sign-on</a>}

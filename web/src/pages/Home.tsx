@@ -22,6 +22,7 @@ import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
 import { AddButtons } from "./squadrons/shared";
 import { terms } from "../terms";
+import { DivLoading, DivPage, PSub, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 // Loaded after the first paint: Home draws without it.
 const HomeWork = lazy(() => import("../work/HomeWork"));
@@ -38,7 +39,7 @@ export function HomePage() {
   const images = useImageCount(inst.projects);
   const pullInbox = usePullInbox();
   if (!me) return null;
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   return <Home me={me} projects={inst.projects} runs={inst.runs} runners={inst.runners} environments={inst.environments}
     applications={inst.applications} approvals={inst.approvals} now={now} lines={lines ?? []} images={images} pullInbox={pullInbox} />;
 }
@@ -90,7 +91,7 @@ export function Home({ me, projects, runs, runners, environments, applications, 
 
       {items.length > 0 && next.item && <ErrorBoundary name="The checklist"><Checklist items={items} done={next.done} /></ErrorBoundary>}
       {!me.admin && projects.length === 0 && (
-        <div className="card"><h2 className="h-sm">Nothing to show yet</h2><p className="sub">{terms().say("No {project} has been added. An administrator adds the first one.")}</p></div>
+        <div className="card"><h2 className="h-sm">Nothing to show yet</h2><PSub>{terms().say("No {project} has been added. An administrator adds the first one.")}</PSub></div>
       )}
 
       <ErrorBoundary name="The Explore strip"><Explore projects={projects} applications={applications} environments={environments} approvals={approvals} images={images} /></ErrorBoundary>
@@ -106,7 +107,7 @@ export function HostedWithoutPipelines({ projects, admin }: { projects: number; 
   return (
     <section className="card" aria-labelledby="hosted-h">
       <h2 id="hosted-h" className="h-sm">{n} {n === 1 ? "repository" : "repositories"}, none has a pipeline yet</h2>
-      <p className="sub">Launchway hosts {n === 1 ? "this repository" : "these repositories"}, and you can browse {n === 1 ? "it" : "them"} {terms().say("now. Add a {project} to read a pipeline from one and run it on each push.")}</p>
+      <PSub>Launchway hosts {n === 1 ? "this repository" : "these repositories"}, and you can browse {n === 1 ? "it" : "them"} {terms().say("now. Add a {project} to read a pipeline from one and run it on each push.")}</PSub>
       <div className="guided-next-actions">
         {admin && <Link href="/projects/new" className="btn btn-primary">Add a pipeline</Link>}
         <Link href="/projects" className="btn">Browse the code</Link>
@@ -123,7 +124,7 @@ export function NextStepCard({ item, done, total }: { item: CheckItem; done: num
       <p className="guided-next-why">{item.why}</p>
       <div className="guided-next-actions">
         <Link href={item.href} className="btn btn-primary">{item.button}</Link>
-        <span className="faint">{done} of {total} essentials done</span>
+        <SpanFaint>{done} of {total} essentials done</SpanFaint>
       </div>
       <div className="guided-bar" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Setup progress"><i style={{ width: `${(done / Math.max(total, 1)) * 100}%` }} /></div>
     </section>
@@ -136,7 +137,7 @@ export function Checklist({ items, done }: { items: CheckItem[]; done: number })
   const finished = items.filter((i) => i.done);
   return (
     <section className="card" aria-labelledby="check-h">
-      <h2 id="check-h" className="h-sm">{terms().say("Setup {checklist}")} <span className="faint">({done} of {items.length} done)</span></h2>
+      <h2 id="check-h" className="h-sm">{terms().say("Setup {checklist}")} <SpanFaint>({done} of {items.length} done)</SpanFaint></h2>
       {finished.length > 0 && <p className="faint guided-doneline">Done: {finished.map((i) => i.title).join(", ")}.</p>}
       <ol className="guided-check">
         {left.map((i) => (
@@ -144,7 +145,7 @@ export function Checklist({ items, done }: { items: CheckItem[]; done: number })
             <span className="guided-dot" aria-hidden="true">{items.indexOf(i) + 1}</span>
             <span className="guided-check-text">
               <Link href={i.href}>{i.title}</Link>
-              <span className="faint">{i.why}</span>
+              <SpanFaint>{i.why}</SpanFaint>
             </span>
           </li>
         ))}
@@ -179,7 +180,7 @@ const TONE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: 
 export function ChangesOnTheirWay({ lines, runs, now }: { lines: LaunchLineView[]; runs: RunSummary[]; now: number }): ReactNode {
   if (lines.length === 0) return <LatestRuns runs={runs} now={now} />;
   return (
-    <Sheet title="Changes on their way" actions={<span className="faint small">Each dot is a place a change has to pass</span>}>
+    <Sheet title="Changes on their way" actions={<SpanFaintSmall>Each dot is a place a change has to pass</SpanFaintSmall>}>
       {lines.map((l) => (
         <a key={l.run} href={`/runs/${l.run}`} onClick={onLink} className={`brow ${l.tone === "bad" ? "bad" : l.tone === "wait" ? "wait" : ""}`}>
           <div className="ct"><b>{l.message || terms().say(`{Run} #${l.number}`)}</b><span>{l.project} · run #{l.number}{l.actor ? ` · ${l.actor}` : ""} · {ago(l.created_at, now)}</span></div>
@@ -206,7 +207,7 @@ export function LatestRuns({ runs, now }: { runs: RunSummary[]; now: number }): 
             <EntityLink kind="project" name={r.project} />
             <EntityLink kind="run" name={`#${r.number}`} id={r.id} />
             <span className="guided-grow faint">{r.message || r.pipeline}</span>
-            <span className="faint">{ago(r.created_at, now)}</span>
+            <SpanFaint>{ago(r.created_at, now)}</SpanFaint>
           </li>
         ))}
       </ul>

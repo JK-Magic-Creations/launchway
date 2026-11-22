@@ -7,6 +7,7 @@ import { depsApi, type DependencyReport, type DepUpdate, type Decision } from ".
 import { terms } from "../terms";
 import { RepoTabs } from "../components/RepoTabs";
 import { prose } from "../prose";
+import { BtnSm, LabelField, PSub, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Dependencies");
 
 const STATUS_WORDS: Record<string, string> = {
@@ -74,18 +75,18 @@ export function DependenciesPage({ path }: { path: string }) {
       {!report && !error && <p className="faint" role="status">Reading the repository…</p>}
       {report && (
         <>
-          <p className="sub" role="status">
+          <PSub role="status">
             {report.updates.filter((u) => u.dep.direct).length} direct dependencies in {report.files.length} files of <Mono>{report.branch}</Mono> at <Mono>{report.commit.slice(0, 7)}</Mono>:{" "}
             {behind} behind, {vulnerable} with a known vulnerability.
-          </p>
+          </PSub>
           {report.vulnerability_error && <p className="errorbox" role="alert">{P.t3}{report.vulnerability_error}</p>}
           <Sheet title="Filter" pad>
             <form className="deps-filter" aria-label="Filter dependencies" onSubmit={(e) => e.preventDefault()}>
-              <label className="field"><span>Name contains</span><input value={text} onChange={(e) => setText(e.target.value)} /></label>
-              <label className="field"><span>Ecosystem</span>
-                <select value={eco} onChange={(e) => setEco(e.target.value)}><option value="">All</option>{ecosystems.map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
-              <label className="field"><span>Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All</option>{Object.entries(STATUS_WORDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+              <LabelField><span>Name contains</span><input value={text} onChange={(e) => setText(e.target.value)} /></LabelField>
+              <LabelField><span>Ecosystem</span>
+                <select value={eco} onChange={(e) => setEco(e.target.value)}><option value="">All</option>{ecosystems.map((x) => <option key={x} value={x}>{x}</option>)}</select></LabelField>
+              <LabelField><span>Status</span>
+                <select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All</option>{Object.entries(STATUS_WORDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></LabelField>
               <label className="check"><input type="checkbox" checked={direct} onChange={(e) => setDirect(e.target.checked)} /> {P.t4}</label>
               <label className="check"><input type="checkbox" checked={justVulnerable} onChange={(e) => setJustVulnerable(e.target.checked)} /> {P.t5}</label>
             </form>
@@ -94,7 +95,7 @@ export function DependenciesPage({ path }: { path: string }) {
             {rows.length === 0 ? <p className="faint pad">{P.t6}</p> : (
               <div className="deps-scroll"><table className="table deps-table">
                 <caption className="sr-only">Dependencies of {path}</caption>
-                <thead><tr><th scope="col">Dependency</th><th scope="col">Ecosystem</th><th scope="col">In use</th><th scope="col">Newest</th><th scope="col">Proposed</th><th scope="col">Age of proposed</th><th scope="col">Known vulnerabilities</th><th scope="col">Pull request</th><th scope="col">Status</th></tr></thead>
+                <thead><tr><ThCol>Dependency</ThCol><ThCol>Ecosystem</ThCol><ThCol>In use</ThCol><ThCol>Newest</ThCol><ThCol>Proposed</ThCol><ThCol>Age of proposed</ThCol><ThCol>Known vulnerabilities</ThCol><ThCol>Pull request</ThCol><ThCol>Status</ThCol></tr></thead>
                 <tbody>{rows.map((u) => <Row key={u.dep.ecosystem + u.dep.file + u.dep.name} u={u} path={path} pr={prOf.get(u.dep.ecosystem + "|" + u.dep.name)} />)}</tbody>
               </table></div>
             )}
@@ -102,7 +103,7 @@ export function DependenciesPage({ path }: { path: string }) {
           {report.notes && report.notes.length > 0 && (
             <Sheet title="Found, not updated" pad><ul>{report.notes.map((n) => <li key={n.file + n.message}><Mono>{n.file}</Mono>: {n.message}</li>)}</ul></Sheet>
           )}
-          <p className="sub">Coming, not available yet: {report.coming.join(", ")}.</p>
+          <PSub>Coming, not available yet: {report.coming.join(", ")}.</PSub>
         </>
       )}
     </div>
@@ -112,7 +113,7 @@ export function DependenciesPage({ path }: { path: string }) {
 function Row({ u, path, pr }: { u: DepUpdate; path: string; pr?: number[] }) {
   return (
     <tr>
-      <th scope="row"><Mono>{u.dep.name}</Mono><br /><small className="faint">{u.dep.file}{u.dep.line ? `:${u.dep.line}` : ""}{u.dep.group ? `, ${u.dep.group}` : ""}</small></th>
+      <ThRow><Mono>{u.dep.name}</Mono><br /><small className="faint">{u.dep.file}{u.dep.line ? `:${u.dep.line}` : ""}{u.dep.group ? `, ${u.dep.group}` : ""}</small></ThRow>
       <td>{u.dep.ecosystem}</td>
       <td><Mono>{u.dep.current || u.dep.constraint || "unknown"}</Mono></td>
       <td>{u.latest ? <Mono>{u.latest}</Mono> : "unknown"}</td>
@@ -138,7 +139,7 @@ export function UpdatesPage({ path }: { path: string }) {
       {report && p && (
         <>
           <Sheet title="Settings that apply" pad>
-            <p className="sub">{P.t8}<Mono>.launchway/updates.yaml</Mono> {P.t9}</p>
+            <PSub>{P.t8}<Mono>.launchway/updates.yaml</Mono> {P.t9}</PSub>
             <dl className="kv">
               <dt>Updates</dt><dd>{p.enabled ? "on" : "off"}; security updates {p.security ? "on" : "off"}; routine updates {p.routine ? "on" : "off"}</dd>
               <dt>Schedule</dt><dd>{p.schedule.interval}{p.schedule.day ? ` on ${p.schedule.day}` : ""} at {String(p.schedule.hour).padStart(2, "0")}:00 {p.schedule.timezone ?? "UTC"}{P.t10}</dd>
@@ -151,12 +152,12 @@ export function UpdatesPage({ path }: { path: string }) {
             {report.settings_file_error && <p className="errorbox" role="alert">{P.t13}{report.settings_file_error}</p>}
             {p.ignored && p.ignored.length > 0 && <ul>{p.ignored.map((i) => <li key={i}>Not applied: {i}</li>)}</ul>}
           </Sheet>
-          <Sheet title="What would be opened" actions={<button type="button" className="btn btn-sm" onClick={() => setPreview(true)} disabled={preview}>{preview ? "Showing the preview" : "Preview what would be opened"}</button>} pad={report.decisions.length === 0}>
+          <Sheet title="What would be opened" actions={<BtnSm onClick={() => setPreview(true)} disabled={preview}>{preview ? "Showing the preview" : "Preview what would be opened"}</BtnSm>} pad={report.decisions.length === 0}>
             {!preview && <p className="sub pad">{P.t14}</p>}
             {preview && report.decisions.length === 0 && <p className="faint">{P.t15}</p>}
             {preview && report.decisions.length > 0 && <Decisions decisions={report.decisions} />}
           </Sheet>
-          <p className="sub">{terms().say(P.t16)}<Mono>launchway updates run</Mono>{P.t17}</p>
+          <PSub>{terms().say(P.t16)}<Mono>launchway updates run</Mono>{P.t17}</PSub>
         </>
       )}
     </div>
@@ -167,10 +168,10 @@ function Decisions({ decisions }: { decisions: Decision[] }) {
   return (
     <div className="deps-scroll"><table className="table deps-table">
       <caption className="sr-only">What the updater would do</caption>
-      <thead><tr><th scope="col">Pull request</th><th scope="col">What</th><th scope="col">Updates</th><th scope="col">Why</th></tr></thead>
+      <thead><tr><ThCol>Pull request</ThCol><ThCol>What</ThCol><ThCol>Updates</ThCol><ThCol>Why</ThCol></tr></thead>
       <tbody>{decisions.map((d) => (
         <tr key={d.key}>
-          <th scope="row">{d.title || d.key}{d.security && <> <strong>security</strong></>}{d.number ? ` (#${d.number})` : ""}</th>
+          <ThRow>{d.title || d.key}{d.security && <> <strong>security</strong></>}{d.number ? ` (#${d.number})` : ""}</ThRow>
           <td>{ACTION_WORDS[d.action] ?? d.action}</td>
           <td>{d.updates.map((u) => `${u.dep.name} ${u.dep.current || ""} → ${u.target ?? "?"}`).join("; ")}</td>
           <td>{d.why}</td>

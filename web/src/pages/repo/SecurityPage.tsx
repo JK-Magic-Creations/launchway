@@ -9,6 +9,7 @@ import { terms } from "../../terms";
 import { FindingsBacklog } from "../Standards";
 import { RepoFrame } from "./common";
 import { prose } from "../../prose";
+import { DivLoading, PSub, SpanFaintSmall } from "../../kit/bits";
 const P = await prose("pages.repo.SecurityPage");
 
 /** What is wrong with a repository's code, and a button to look now: the Inspection (the same checks every run gets)
@@ -31,10 +32,10 @@ export function SecurityPage({ path }: { path: string }) {
     <RepoFrame path={path} tab="security" title="Security"
       sentence={<>{P.t0}{terms().say(P.t1)}</>}>
       <ErrorBox error={error} />
-      {!st && !error && <div className="loading">Loading…</div>}
+      {!st && !error && <DivLoading>Loading…</DivLoading>}
       {st && (
         <Sheet title="Inspect now" pad>
-          <p className="sub">{P.t2}<Mono>{st.branch || "the default branch"}</Mono>{P.t3}</p>
+          <PSub>{P.t2}<Mono>{st.branch || "the default branch"}</Mono>{P.t3}</PSub>
           <div className="actions">
             <Button kind="pri" disabled={busy || !st.available} onClick={go}>{busy ? "Starting…" : "Inspect now"}</Button>
             {st.project && <Link href={`/projects/${encodeURIComponent(st.project)}/standards`}>Which checks apply</Link>}
@@ -44,7 +45,7 @@ export function SecurityPage({ path }: { path: string }) {
           {(st.runs ?? []).length > 0 && (
             <ul className="plain" aria-label="Latest Inspections">
               {(st.runs ?? []).map((r) => (
-                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>{terms().say("{Run}")} {r.number}</Link> <Chip>{r.status}</Chip> <span className="faint small">at {r.sha.slice(0, 8)}, {ago(r.created_at)}</span></li>
+                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>{terms().say("{Run}")} {r.number}</Link> <Chip>{r.status}</Chip> <SpanFaintSmall>at {r.sha.slice(0, 8)}, {ago(r.created_at)}</SpanFaintSmall></li>
               ))}
             </ul>
           )}

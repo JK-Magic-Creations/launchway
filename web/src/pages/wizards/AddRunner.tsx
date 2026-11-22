@@ -10,6 +10,7 @@ import { Link } from "../../components/ui";
 import { PickNames, WizardRunner, useNames, useObjects, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
 import { prose } from "../../prose";
+import { SpanMono } from "../../kit/bits";
 const P = await prose("pages.wizards.AddRunner");
 
 type Place = "vm" | "container" | "kubernetes";
@@ -121,7 +122,7 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
       intro={terms().say(P.t22)}
       steps={[poolStep, placeStep]} changes={changes}
       createLabel={isNew ? P.t23 : "Make the join token"}
-      summaryExtra={<p>{isNew ? "Then" : "Create"} makes a join token for pool <span className="mono">{poolName}</span>: for {uses === 1 ? terms().say("one {runner}") : `${uses} runners`}, valid for {TTLS.find((t) => t.value === ttl)?.label}{labels.length ? `, with labels ${labels.join(", ")}` : ""}{place === "kubernetes" ? P.t24 : ""}. It is shown once.</p>}
+      summaryExtra={<p>{isNew ? "Then" : "Create"} makes a join token for pool <SpanMono>{poolName}</SpanMono>: for {uses === 1 ? terms().say("one {runner}") : `${uses} runners`}, valid for {TTLS.find((t) => t.value === ttl)?.label}{labels.length ? `, with labels ${labels.join(", ")}` : ""}{place === "kubernetes" ? P.t24 : ""}. It is shown once.</p>}
       done={() => <JoinAndWait pool={poolName} kind={poolKind} uses={uses} ttl={ttl} labels={labels} place={place} ephemeral={place === "kubernetes"} isNew={isNew} />}  />
   );
 }
@@ -170,12 +171,12 @@ function JoinAndWait({ pool, kind, uses, ttl, labels, place, ephemeral, isNew }:
   const cmds = commands(origin, made.token, place, kind, labels);
   return (
     <div className="cf-joinwait">
-      <div className="callout callout-draft" role="note"><strong>{P.t26}</strong> {P.t27}{made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`} join pool <span className="mono">{pool}</span> until {new Date(made.t.expires_at).toLocaleString()}.</div>
+      <div className="callout callout-draft" role="note"><strong>{P.t26}</strong> {P.t27}{made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`} join pool <SpanMono>{pool}</SpanMono> until {new Date(made.t.expires_at).toLocaleString()}.</div>
       <CopyBlock title="The join token" text={made.token} />
       {cmds.map((c) => <CopyBlock key={c.title} title={c.title} text={c.text} note={c.note} />)}
       <div className={"cf-waiting" + (runner ? " cf-waiting-ok" : "")} role="status" aria-live="polite">
         {runner ? (
-          <><span className="online online-on" aria-hidden="true" /><span><strong>{terms().say("{Runner} connected:")}</strong> <span className="mono">{runner.name}</span> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">{terms().say("See it on the {Runners} page")}</Link>.</span></>
+          <><span className="online online-on" aria-hidden="true" /><span><strong>{terms().say("{Runner} connected:")}</strong> <SpanMono>{runner.name}</SpanMono> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">{terms().say("See it on the {Runners} page")}</Link>.</span></>
         ) : (
           <><span className="cf-spinner" aria-hidden="true" /><span>{terms().say(P.t28)}</span></>
         )}

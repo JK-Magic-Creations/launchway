@@ -9,6 +9,7 @@ import { VerifyPill } from "../components/Verification";
 import { PageHead } from "../kit/layout";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, PSub, SpanFaint, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Environments");
 
 // EnvironmentsPage shows, for every service of every project, what each
@@ -41,7 +42,7 @@ export function EnvironmentsPage() {
         sentence={terms().say(P.t0)}
         actions={envs && envs.length > 0 ? <WizardButton wizard="add-environment" label={terms().say("Add an {environment}")} /> : undefined} />
       <ErrorBox error={error} />
-      {envs === null && !error && <div className="loading">Loading…</div>}
+      {envs === null && !error && <DivLoading>Loading…</DivLoading>}
       {envs && envs.length === 0 && <NoEnvironments />}
       {envs && envs.length > 0 && (
         <>
@@ -64,31 +65,31 @@ export function EnvironmentsPage() {
                   <tr>
                     <th className="envgrid-corner">Service</th>
                     {envs.map((e) => (
-                      <th key={e.name} scope="col">
+                      <ThCol key={e.name}>
                         <div className="envgrid-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>}</div>
                         <div className="envgrid-target">target <Mono>{e.target}</Mono></div>
                         <ObserverLine env={e} now={now} />
-                      </th>
+                      </ThCol>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.project + "/" + r.service}>
-                      <th scope="row" className="envgrid-svc">
+                      <ThRow className="envgrid-svc">
                         <span className="envgrid-svc-name">{r.service}</span>
-                        {r.project !== r.service && <span className="faint"> of {r.project}</span>}
+                        {r.project !== r.service && <SpanFaint> of {r.project}</SpanFaint>}
                         {r.project === r.service && <span className="faint envgrid-svc-proj">project {r.project}</span>}
-                      </th>
+                      </ThRow>
                       {envs.map((e) => {
                         const u = e.services.find((x) => x.project === r.project && x.service === r.service);
                         const vs = verifs.filter((v) => v.environment === e.name && v.project === r.project && v.service === r.service);
                         return (
                           <td key={e.name} data-env={e.name}>
-                            <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <span className="faint">· {e.target}</span></span>
+                            <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <SpanFaint>· {e.target}</SpanFaint></span>
                             {u ? <UnitCell env={e} unit={u} now={now} tick={tick} />
-                              : allows(e, r.project) ? <span className="faint">{terms().say(P.t5)}</span>
-                              : vs.length === 0 ? <span className="faint">{r.project} {terms().say("may not {deploy:do} here.")}</span> : null}
+                              : allows(e, r.project) ? <SpanFaint>{terms().say(P.t5)}</SpanFaint>
+                              : vs.length === 0 ? <SpanFaint>{r.project} {terms().say("may not {deploy:do} here.")}</SpanFaint> : null}
                             {vs.length > 0 && <Verifications list={vs} now={now} />}
                           </td>
                         );
@@ -181,14 +182,14 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
           <span className="unit-since" title={clock(cur.since)}>since {ago(cur.since, now)}, by <Link href={`/runs/${cur.run}`}>{terms().say("{run} #")}{cur.run_number}</Link></span>
         </div>
       ) : (
-        <div className="unit-current"><span className="faint">{terms().say(P.t13)}</span></div>
+        <div className="unit-current"><SpanFaint>{terms().say(P.t13)}</SpanFaint></div>
       )}
       {last && (
         <div className="unit-last">
           {showLast && (
             <div className="unit-line">
               <Link href={`/runs/${last.run_id}?step=${encodeURIComponent(last.verdict === "rolled_back" || last.verdict === "rollback_failed" ? (last.rollback_step ?? last.step) : last.step)}`}>#{last.run_number}</Link>
-              {!last.verdict && <span className="faint">deploying</span>}
+              {!last.verdict && <SpanFaint>deploying</SpanFaint>}
               <Mono>{last.version}</Mono>
               <DeployStatePill d={last} now={now} />
             </div>
@@ -238,8 +239,8 @@ function History({ env, project, service, tick, now }: { env: string; project: s
     <details className="unit-history" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary>History</summary>
       <ErrorBox error={error} />
-      {open && list === null && !error && <div className="faint small">Loading…</div>}
-      {list && list.length === 0 && <div className="faint small">No deployments.</div>}
+      {open && list === null && !error && <DivFaintSmall>Loading…</DivFaintSmall>}
+      {list && list.length === 0 && <DivFaintSmall>No deployments.</DivFaintSmall>}
       {list && list.length > 0 && (
         <ol className="unit-history-list">
           {list.map((d) => (
@@ -247,7 +248,7 @@ function History({ env, project, service, tick, now }: { env: string; project: s
               <Link href={`/runs/${d.run_id}?step=${encodeURIComponent(d.step)}`}>#{d.run_number}</Link>
               <Mono>{d.version}</Mono>
               <DeployStatePill d={d} now={now} />
-              <span className="faint" title={clock(d.opened_at)}>{ago(d.opened_at, now)}</span>
+              <SpanFaint title={clock(d.opened_at)}>{ago(d.opened_at, now)}</SpanFaint>
             </li>
           ))}
         </ol>
@@ -265,7 +266,7 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
       <Link href={`/runs/${v.run_id}?step=${encodeURIComponent(v.step)}`}>#{v.run_number}</Link>
       <VerifyPill v={{ outcome: v.outcome, override: v.overridden_by ? v.outcome : undefined, status: v.status || (v.outcome === "running" ? "running" : undefined) }} now={now} />
       {v.version && <Mono>{v.version}</Mono>}
-      <span className="faint" title={clock(v.started_at)}>{ago(v.decided_at || v.started_at, now)}</span>
+      <SpanFaint title={clock(v.started_at)}>{ago(v.decided_at || v.started_at, now)}</SpanFaint>
     </>
   );
   return (
@@ -274,7 +275,7 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
       <div className="unit-line">{row(latest)}</div>
       <div className="unit-verif-summary">
         {latest.outcome === "running" && !latest.summary ? `interval ${Math.min(latest.intervals + 1, latest.total)} of ${latest.total}` : latest.summary}
-        {latest.overridden_by && <span className="faint"> (marked by {latest.overridden_by})</span>}
+        {latest.overridden_by && <SpanFaint> (marked by {latest.overridden_by})</SpanFaint>}
       </div>
       {rest.length > 0 && (
         <details className="unit-history">
@@ -300,7 +301,7 @@ function NoEnvironments() {
         text={terms().say(P.t15)} />
       <details className="card">
         <summary className="h-sm">{terms().say(P.t16)}</summary>
-        <p className="sub">{terms().say(P.t17)} <Mono>kind: deploy</Mono>{P.t18}</p>
+        <PSub>{terms().say(P.t17)} <Mono>kind: deploy</Mono>{P.t18}</PSub>
         <Example />
       </details>
     </>
@@ -310,7 +311,7 @@ function NoEnvironments() {
 function Example() {
   return (
     <div className="howto">
-      <p className="sub">{terms().say("In a {project}'s")} <Mono>.launchway/pipeline.yaml</Mono>:</p>
+      <PSub>{terms().say("In a {project}'s")} <Mono>.launchway/pipeline.yaml</Mono>:</PSub>
       <pre className="code">{terms().say(P.t19)}</pre>
     </div>
   );

@@ -6,6 +6,7 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { ArtifactsHowTo, BoxIcon, CopyValue, artifactArchiveURL, artifactFileURL, bytes } from "../components/Security";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivActions, DivLoading, PSub, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 const P = await prose("pages.RunArtifacts");
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
@@ -24,7 +25,7 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
   const reload = useCallback(() => setAgain((n) => n + 1), []);
 
   if (error) return <ErrorBox error={error} />;
-  if (!data) return <div className="loading">Loading…</div>;
+  if (!data) return <DivLoading>Loading…</DivLoading>;
   if (!data.available) {
     return (
       <Empty title={terms().say(P.t0)}>
@@ -68,7 +69,7 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
         const st = run.step_list.find((s) => s.id === step);
         return (
           <section key={step} className="artstep" aria-label={terms().say(`{Artifacts} of ${step}`)}>
-            <h3 className="tgroup-head"><span>{step}</span><span className="faint">{list.length ? terms().say(`${list.length} {artifact}${list.length > 1 ? "s" : ""}`) : ""}</span></h3>
+            <h3 className="tgroup-head"><span>{step}</span><SpanFaint>{list.length ? terms().say(`${list.length} {artifact}${list.length > 1 ? "s" : ""}`) : ""}</SpanFaint></h3>
             {list.length === 0 ? (
               <div className="empty empty-sm">
                 {st && !ENDED.includes(st.status)
@@ -115,16 +116,16 @@ function ArtifactRow({ a, run, onChange, open: openFirst }: { a: ArtifactView; r
       {open && (
         <div className="tcase-detail art-detail" id={detailId}>
           {a.note && <p className={a.status === "failed" ? "tfile-err" : "sub"}>{a.note}</p>}
-          {a.status === "deleted" && <p className="sub">Deleted{a.ended_by ? ` by ${a.ended_by}` : ""}{a.ended_at ? `, ${ago(a.ended_at)}` : ""}{P.t10}</p>}
-          {a.status === "expired" && <p className="sub">Its time ran out{a.ended_at ? ` ${ago(a.ended_at)}` : ""}{P.t11}</p>}
-          {a.reused && <p className="sub">Kept by <Link href={`/runs/${a.run_id}?tab=artifacts`}>{terms().say("{run} #")}{a.run_number}</Link>{P.t12}</p>}
+          {a.status === "deleted" && <PSub>Deleted{a.ended_by ? ` by ${a.ended_by}` : ""}{a.ended_at ? `, ${ago(a.ended_at)}` : ""}{P.t10}</PSub>}
+          {a.status === "expired" && <PSub>Its time ran out{a.ended_at ? ` ${ago(a.ended_at)}` : ""}{P.t11}</PSub>}
+          {a.reused && <PSub>Kept by <Link href={`/runs/${a.run_id}?tab=artifacts`}>{terms().say("{run} #")}{a.run_number}</Link>{P.t12}</PSub>}
           <div className="table-scroll">
             <table className="inputs-table art-files">
-              <thead><tr><th>File</th><th>Size</th><th>SHA-256</th>{kept && <th><span className="visually-hidden">Download</span></th>}</tr></thead>
+              <thead><tr><th>File</th><th>Size</th><th>SHA-256</th>{kept && <th><SpanHidden>Download</SpanHidden></th>}</tr></thead>
               <tbody>
                 {a.files.map((f) => (
                   <tr key={f.path}>
-                    <td className="mono art-path">{f.path}{(f.mode & 0o111) !== 0 && <span className="faint small" title={P.t13}> (executable)</span>}</td>
+                    <td className="mono art-path">{f.path}{(f.mode & 0o111) !== 0 && <SpanFaintSmall title={P.t13}> (executable)</SpanFaintSmall>}</td>
                     <td className="art-size">{bytes(f.size)}</td>
                     <td><CopyValue value={f.sha256} label={`SHA-256 of ${f.path}`} /></td>
                     {kept && <td className="art-dl"><a href={artifactFileURL(a, f.path)} download aria-label={`Download ${f.path}`}>Download</a></td>}
@@ -191,15 +192,15 @@ function DeleteArtifact({ a, onDone }: { a: ArtifactView; onDone: () => void }) 
         <dialog ref={dialog} className="dialog" onClose={() => setAsking(false)} aria-labelledby={`del-${a.id}`}>
           <form method="dialog" onSubmit={(e) => { e.preventDefault(); remove(); }}>
             <h2 id={`del-${a.id}`}>Delete {name}?</h2>
-            <p className="sub">
+            <PSub>
               Its {a.file_count} file{a.file_count === 1 ? "" : "s"} ({bytes(a.bytes)}{P.t15}{a.reused && <> It belongs to run #{a.run_number}{P.t16}</>}
               {" "}{terms().say(P.t17)}
-            </p>
+            </PSub>
             <ErrorBox error={error} />
-            <div className="dialog-actions">
+            <DivActions>
               <button type="button" className="btn" onClick={() => dialog.current?.close()}>Cancel</button>
               <button type="submit" className="btn btn-danger-outline" disabled={busy}>{busy ? "Deleting…" : "Delete"}</button>
-            </div>
+            </DivActions>
           </form>
         </dialog>
       )}

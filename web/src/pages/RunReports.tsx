@@ -5,6 +5,7 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { bytes } from "../components/Security";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { DivLoading, PSub, SpanFaintSmall, SpanMono } from "../kit/bits";
 const P = await prose("pages.RunReports");
 
 const ENDED = ["succeeded", "failed", "skipped", "canceled"];
@@ -32,7 +33,7 @@ export function ReportsTab({ run, version }: { run: RunDetail; version: string }
   const choose = (key: string) => setChosen(key, "push");
 
   if (error) return <ErrorBox error={error} />;
-  if (!data) return <div className="loading">Loading…</div>;
+  if (!data) return <DivLoading>Loading…</DivLoading>;
   const kept = new Set(data.reports.map((r) => `${r.step}/${r.name}`));
   const missing = data.declared.filter((d) => !kept.has(d));
   if (data.reports.length === 0 && data.declared.length === 0) {
@@ -99,7 +100,7 @@ function ReportFrame({ r: latest, separate }: { r: HostedReport; separate: boole
       <div className="hframe-bar">
         <div className="hframe-title">
           <strong>{r.name}</strong>
-          <span className="faint small">from {r.step}{r.attempt > 1 ? `, attempt ${r.attempt}` : ""}</span>
+          <SpanFaintSmall>from {r.step}{r.attempt > 1 ? `, attempt ${r.attempt}` : ""}</SpanFaintSmall>
         </div>
         {r.url && (
           <a className="btn btn-sm" href={r.url} target="_blank" rel="noopener noreferrer">
@@ -118,7 +119,7 @@ function ReportFrame({ r: latest, separate }: { r: HostedReport; separate: boole
           sandbox={P.t5} referrerPolicy="no-referrer" loading="lazy" />
       ) : (
         <div className="empty empty-sm hframe-missing">
-          This report has no <span className="mono">{r.index}</span> {P.t6}<span className="mono">index:</span> to the report's start page.
+          This report has no <SpanMono>{r.index}</SpanMono> {P.t6}<SpanMono>index:</SpanMono> to the report's start page.
         </div>
       )}
     </section>
@@ -139,7 +140,7 @@ export function HTMLHowTo() {
     <div className="howto">
       <p>{terms().say(P.t8)}</p>
       <pre className="code">{P.t9}</pre>
-      <p className="sub">{P.t10}<span className="mono">index:</span> {P.t11}</p>
+      <PSub>{P.t10}<SpanMono>index:</SpanMono> {P.t11}</PSub>
     </div>
   );
 }

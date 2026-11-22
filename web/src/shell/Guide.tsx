@@ -9,6 +9,7 @@ import { guideFor } from "./guideData";
 import { learnFor } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import type { Explainer } from "./explainer";
+import { BtnSm } from "../kit/bits";
 
 /** Guide is the calm right-hand column: where you are, in plain words, and what you can do next. The
  * optional AI help shows only when a model is configured. */
@@ -79,7 +80,7 @@ function Ask({ explainer }: { explainer: Explainer | null }) {
     <div className="ask">
       <div className="eyebrow">Ask a model</div>
       {explainer ? (
-        <button type="button" className="btn btn-sm" disabled={busy} onClick={ask}><Icon name="spark" size="s" />{busy ? "Asking…" : explainer.label}</button>
+        <BtnSm disabled={busy} onClick={ask}><Icon name="spark" size="s" />{busy ? "Asking…" : explainer.label}</BtnSm>
       ) : (
         <p className="hint">A model is set up. Open a step that failed and ask it to explain, in plain words.</p>
       )}

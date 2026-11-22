@@ -2,6 +2,7 @@ import { ago, clock } from "../format";
 import type { DeploymentView } from "../api";
 import { Link } from "../components/ui";
 import { terms } from "../terms";
+import { SpanFaint } from "../kit/bits";
 
 /** Who did what to this delivery: commands given to the rollout, and what the launch Stations observed. */
 export function HistoryTab({ d, now, admin }: { d: DeploymentView; now: number; admin: boolean }) {
@@ -15,7 +16,7 @@ export function HistoryTab({ d, now, admin }: { d: DeploymentView; now: number; 
           <ol className="lw-list">
             {cmds.map((c) => (
               <li key={c.id}><strong>{c.action === "promote-full" ? "Full promotion" : c.action}</strong> by {c.origin === "person" ? c.actor : c.origin === "step" ? `step ${c.step}` : c.origin}
-                {" "}<span className="faint" title={clock(c.at)}>{ago(c.at, now)}</span> · {c.state === "done" ? (c.result ?? "done").replace(/_/g, " ") : c.state}{c.comment ? ` · “${c.comment}”` : ""}{c.detail ? ` · ${c.detail}` : ""}</li>
+                {" "}<SpanFaint title={clock(c.at)}>{ago(c.at, now)}</SpanFaint> · {c.state === "done" ? (c.result ?? "done").replace(/_/g, " ") : c.state}{c.comment ? ` · “${c.comment}”` : ""}{c.detail ? ` · ${c.detail}` : ""}</li>
             ))}
           </ol>
         )}
@@ -24,7 +25,7 @@ export function HistoryTab({ d, now, admin }: { d: DeploymentView; now: number; 
         <h2 id="lw-h-obs" className="lw-h">{terms().say("What the launch {runner} saw")}</h2>
         {timeline.length === 0 ? <p className="faint">Nothing observed yet.</p> : (
           <ol className="lw-list">
-            {timeline.map((t, i) => <li key={i}><span className="faint" title={clock(t.at)}>{ago(t.at, now)}</span> · {t.phase}{t.detail ? `: ${t.detail}` : ""}</li>)}
+            {timeline.map((t, i) => <li key={i}><SpanFaint title={clock(t.at)}>{ago(t.at, now)}</SpanFaint> · {t.phase}{t.detail ? `: ${t.detail}` : ""}</li>)}
           </ol>
         )}
       </section>

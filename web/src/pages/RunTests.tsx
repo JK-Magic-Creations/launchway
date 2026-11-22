@@ -6,6 +6,7 @@ import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing,
 import { CaseDetail } from "../components/TestCase";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnLink, BtnSm, DivLoading, SpanFaint, SpanFaintSmall, SpanHidden, SpanMono } from "../kit/bits";
 const P = await prose("pages.RunTests");
 
 type Filter = "" | "failed" | "passed" | "skipped" | "flaky";
@@ -59,7 +60,7 @@ export function TestsTab({ run, version, step, onStep }: {
   }, []);
 
   if (error) return <ErrorBox error={error} />;
-  if (!tests) return <div className="loading">Loading…</div>;
+  if (!tests) return <DivLoading>Loading…</DivLoading>;
   if (caseId) return <CaseView run={run} id={caseId} onBack={() => openCase(0)} />;
   if (!tests.totals) {
     const running = run.step_list.filter((s) => tests.declared.includes(s.id) && !["succeeded", "failed", "skipped", "canceled"].includes(s.status));
@@ -85,7 +86,7 @@ export function TestsTab({ run, version, step, onStep }: {
         <button type="button" className={"chip" + (view === "results" ? " chip-on" : "")} aria-pressed={view === "results"} onClick={() => chooseView("results")}>All results</button>
       </div>
       {view === "debrief"
-        ? <Suspense fallback={<div className="loading">Loading the Debrief…</div>}><DebriefView runId={run.id} version={version} openCase={(id) => { chooseView("results"); openCase(id); }} /></Suspense>
+        ? <Suspense fallback={<DivLoading>Loading the Debrief…</DivLoading>}><DebriefView runId={run.id} version={version} openCase={(id) => { chooseView("results"); openCase(id); }} /></Suspense>
         : <TestsView run={run} tests={tests} version={version} step={step} onStep={onStep} openCase={openCase} />}
     </>
   );
@@ -181,11 +182,11 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
         <TestBar t={t} />
         <div className="tsum-notes">
           {tests.flaky > 0 && (
-            <button type="button" className="linkbtn" onClick={() => setFilter("flaky")}>
+            <BtnLink onClick={() => setFilter("flaky")}>
               <Badge kind="flaky" title={P.t2}>{tests.flaky} flaky: show them</Badge>
-            </button>
+            </BtnLink>
           )}
-          {t.truncated && <span className="faint small">{P.t3}</span>}
+          {t.truncated && <SpanFaintSmall>{P.t3}</SpanFaintSmall>}
         </div>
         {tests.steps.length > 0 && <StepReports steps={tests.steps} run={run} active={step} onStep={onStep} />}
       </section>
@@ -211,7 +212,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
         </div>
         <div className="ttools-right">
           <label className="search">
-            <span className="visually-hidden">Search tests</span>
+            <SpanHidden>Search tests</SpanHidden>
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
             <input type="search" placeholder={P.t4} value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
@@ -273,7 +274,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
             ))}
           </div>
           <label className="select">
-            <span className="visually-hidden">Group by</span>
+            <SpanHidden>Group by</SpanHidden>
             <select value={grouping} onChange={(e) => setGrouping(e.target.value as Grouping)}>
               <option value="none">No grouping</option>
               <option value="step">Group by step</option>
@@ -285,13 +286,13 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
       </div>
       {(step || narrowed) && (
         <div className="tfilter-note">
-          {step && <>Showing {step}{shownStep?.reused_from ? <> (reused from #{shownStep.reused_from_number})</> : null} only. <button type="button" className="linkbtn" onClick={() => onStep("")}>Show every step</button>{" "}</>}
-          {narrowed && <>{page ? `${page.matching} result${page.matching === 1 ? "" : "s"} match.` : ""} <button type="button" className="linkbtn" onClick={clear}>Clear the filters</button></>}
+          {step && <>Showing {step}{shownStep?.reused_from ? <> (reused from #{shownStep.reused_from_number})</> : null} only. <BtnLink onClick={() => onStep("")}>Show every step</BtnLink>{" "}</>}
+          {narrowed && <>{page ? `${page.matching} result${page.matching === 1 ? "" : "s"} match.` : ""} <BtnLink onClick={clear}>Clear the filters</BtnLink></>}
         </div>
       )}
 
       <ErrorBox error={error} />
-      {!page ? <div className="loading">Loading…</div> : page.cases.length === 0 ? (
+      {!page ? <DivLoading>Loading…</DivLoading> : page.cases.length === 0 ? (
         <div className="empty empty-sm">
           {query ? <>No results match <strong>{query}</strong>.</> : filter === "failed" && !narrowed ? P.t5 : "Nothing to show."}
         </div>
@@ -303,7 +304,7 @@ function TestsView({ run, tests, version, step, onStep, openCase }: {
                 <h3 className="tgroup-head">
                   {grouping === "variant" && isBrowser(g.label) && <BrowserIcon />}
                   <span>{g.label}</span>
-                  <span className="faint">{g.cases.length}{g.cases.some(isBad) ? `, ${g.cases.filter(isBad).length} failing` : ""}</span>
+                  <SpanFaint>{g.cases.length}{g.cases.some(isBad) ? `, ${g.cases.filter(isBad).length} failing` : ""}</SpanFaint>
                 </h3>
               )}
               <ul className="tlist">
@@ -360,7 +361,7 @@ function CompareStrip({ run, version, openCase }: { run: RunDetail; version: str
     <section className="card tcmp" aria-label={`Compared with run ${cmp.previous.number}`}>
       <div className="tcmp-head">
         <h2 className="h-sm">Since <Link href={`/runs/${cmp.previous.id}?tab=tests`}>#{cmp.previous.number}</Link></h2>
-        <span className="faint small">the previous run of {run.branch || run.tag || "this ref"} with test results</span>
+        <SpanFaintSmall>the previous run of {run.branch || run.tag || "this ref"} with test results</SpanFaintSmall>
       </div>
       {same ? <p className="sub tcmp-same">{P.t7}</p> : (
         <div className="tcmp-cols">
@@ -396,9 +397,9 @@ function CompareGroup({ kind, title, items, count, run, openCase, none }: {
                 <span className="tcmp-name">{x.name}</span>
               </a>
               <span className="tcmp-sub">
-                {x.suite && x.suite !== x.name && <span className="mono">{x.suite}</span>}
+                {x.suite && x.suite !== x.name && <SpanMono>{x.suite}</SpanMono>}
                 {x.variant && <VariantPill variant={x.variant} />}
-                <span className="faint">{x.before ? `was ${testStatusLabel(x.before as TestCase["status"]).toLowerCase()}` : "new test"}</span>
+                <SpanFaint>{x.before ? `was ${testStatusLabel(x.before as TestCase["status"]).toLowerCase()}` : "new test"}</SpanFaint>
               </span>
             </li>
           ))}
@@ -434,13 +435,13 @@ function CaseView({ run, id, onBack }: { run: RunDetail; id: number; onBack: () 
   return (
     <div className="tests">
       <div>
-        <button type="button" className="btn btn-sm" onClick={onBack}>
+        <BtnSm onClick={onBack}>
           <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d="M10 3L5 8l5 5" /></svg>
           All test results
-        </button>
+        </BtnSm>
       </div>
       {error ? <ErrorBox error={error instanceof ApiError && error.status === 404 ? P.t12 : error} />
-        : !c ? <div className="loading">Loading…</div> : (
+        : !c ? <DivLoading>Loading…</DivLoading> : (
           <section className={"card tcv tcase-" + c.status} aria-label="Test result">
             <header className="tcv-head">
               <TestIcon status={c.status} size={24} />
@@ -478,10 +479,10 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
             <div className="treport-step">
               <button type="button" className={"linkbtn" + (active === s.step ? " linkbtn-on" : "")} aria-pressed={active === s.step}
                 onClick={() => onStep(active === s.step ? "" : s.step)}><strong>{s.step}</strong></button>
-              <span className="faint">{s.total} tests{failing(s) ? `, ${failing(s)} failing` : ""}{s.attempt > 1 ? `, attempt ${s.attempt}` : ""}</span>
+              <SpanFaint>{s.total} tests{failing(s) ? `, ${failing(s)} failing` : ""}{s.attempt > 1 ? `, attempt ${s.attempt}` : ""}</SpanFaint>
               {s.reused_from && <span className="badge-reused">Reused from <Link href={`/runs/${s.reused_from}?tab=tests`}>#{s.reused_from_number}</Link></span>}
               {s.attempts.length > 1 && (
-                <span className="faint small">earlier: {s.attempts.slice(0, -1).map((a) => `attempt ${a.attempt} ${failing(a)} failing`).join(", ")}</span>
+                <SpanFaintSmall>earlier: {s.attempts.slice(0, -1).map((a) => `attempt ${a.attempt} ${failing(a)} failing`).join(", ")}</SpanFaintSmall>
               )}
               <div className="treport-bar"><TestBar t={s} thin /></div>
             </div>
@@ -490,7 +491,7 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
                 <li key={f.path} className={f.error ? "tfile-bad" : undefined}>
                   <Mono>{f.path}</Mono>
                   {f.error ? <span className="tfile-err">{f.error}</span>
-                    : <span className="faint">{f.cases} tests, <span className="tformat">{formatLabel(f.format)}</span></span>}
+                    : <SpanFaint>{f.cases} tests, <span className="tformat">{formatLabel(f.format)}</span></SpanFaint>}
                   {f.warning && <span className="tfile-warn">{f.warning}</span>}
                 </li>
               ))}
@@ -536,7 +537,7 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
           {c.new_failure && <Badge kind="new" title={P.t15}>New failure</Badge>}
           {c.flaky && <Badge kind="flaky" title={P.t2}>Flaky</Badge>}
           {retries > 0 && !c.flaky && <Badge kind="info" title="The test tool ran it again">{retries + 1} tries</Badge>}
-          <span className="visually-hidden">{testStatusLabel(c.status)}</span>
+          <SpanHidden>{testStatusLabel(c.status)}</SpanHidden>
         </span>
         <span className="tcase-time">{testDuration(c.duration_ms)}</span>
         <svg className="tcase-caret" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 6l3 3 3-3" fill="none" /></svg>

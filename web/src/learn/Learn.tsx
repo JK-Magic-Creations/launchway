@@ -7,6 +7,7 @@ import { learnHref, loadArticle, loadIndex, loadManifest, type Article, type Man
 import { search } from "./search";
 import "../styles/learn.css";
 import { terms } from "../terms";
+import { PSub } from "../kit/bits";
 
 const PLAYGROUND_KEY = "launchway.playground";
 
@@ -64,7 +65,7 @@ export function LearnRoot({ path }: { path: string }) {
         <SearchBox key={q} q={q} />
       </div>
       {manifest.error && <div className="errorbox" role="alert">{manifest.error}</div>}
-      {!manifest.value && !manifest.error && <p className="sub">Loading…</p>}
+      {!manifest.value && !manifest.error && <PSub>Loading…</PSub>}
       {manifest.value && (
         <div className={"learn-grid" + (route.kind === "home" ? " home" : "")}>
           {route.kind !== "home" && (
@@ -162,7 +163,7 @@ function Page({ slug, manifest, version }: { slug: string; manifest: Manifest; v
   const { value: a, error } = useLoaded(() => loadArticle(slug), "p:" + slug);
   useEffect(() => { document.title = a ? `${a.title} · Learn · Launchway` : "Learn · Launchway"; }, [a]);
   if (error) return <div className="learn-article"><div className="errorbox" role="alert">{error} <a href="/learn" onClick={onLink}>Back to Learn</a></div></div>;
-  if (!a) return <div className="learn-article"><p className="sub">Loading…</p></div>;
+  if (!a) return <div className="learn-article"><PSub>Loading…</PSub></div>;
   return <ArticleView a={a} manifest={manifest} version={version} />;
 }
 
@@ -267,9 +268,9 @@ function Results({ q }: { q: string }) {
       <div className="eyebrow">Search</div>
       <h1>{q ? <>Results for “{q}”</> : "Search the documentation"}</h1>
       {error && <div className="errorbox" role="alert">{error}</div>}
-      {!idx && !error && <p className="sub">Searching…</p>}
-      {idx && q && hits.length === 0 && <p className="sub">Nothing found for “{q}”. Try fewer or simpler words, or <a href="/learn" onClick={onLink}>browse the contents</a>.</p>}
-      {idx && !q && <p className="sub">Type a word or two in the box above.</p>}
+      {!idx && !error && <PSub>Searching…</PSub>}
+      {idx && q && hits.length === 0 && <PSub>Nothing found for “{q}”. Try fewer or simpler words, or <a href="/learn" onClick={onLink}>browse the contents</a>.</PSub>}
+      {idx && !q && <PSub>Type a word or two in the box above.</PSub>}
       <ol className="learn-hits">
         {hits.map((h) => (
           <li key={h.slug + "#" + h.anchor}>

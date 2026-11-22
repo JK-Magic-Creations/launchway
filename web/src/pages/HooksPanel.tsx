@@ -4,6 +4,7 @@ import { Empty, ErrorBox, Mono } from "../components/ui";
 import { Sheet } from "../kit/layout";
 import { Chip } from "../kit/Status";
 import { forgeApi, type Delivery, type Hook, type HookScope } from "../forgeApi";
+import { BtnPrimary, BtnSm, DivFaintSmall, LabelField, PSub, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 
 const EVENT_HELP: Record<string, string> = {
   push: "a branch or tag moved",
@@ -52,19 +53,19 @@ export function HooksPanel({ scope, who }: { scope: HookScope; who: string }) {
   return (
     <>
       <Sheet title="Add a webhook" pad>
-        <p className="sub">Launchway sends each event to the address as signed JSON ({who}). Every delivery carries an HMAC-SHA256 signature in <Mono>X-Launchway-Signature-256</Mono>.</p>
+        <PSub>Launchway sends each event to the address as signed JSON ({who}). Every delivery carries an HMAC-SHA256 signature in <Mono>X-Launchway-Signature-256</Mono>.</PSub>
         <form onSubmit={add} className="inputs-form" aria-label="Add a webhook">
           <div className="tokenform-grid">
-            <label className="field"><span>Address</span><input value={url} required type="url" placeholder="https://ci.example.com/hook" onChange={(e) => setUrl(e.target.value)} /></label>
-            <label className="field"><span>Name (optional)</span><input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></label>
-            <label className="field"><span>Secret (optional)</span><input value={secret} type="password" autoComplete="off" placeholder="left empty, one is made and shown once" onChange={(e) => setSecret(e.target.value)} /></label>
+            <LabelField><span>Address</span><input value={url} required type="url" placeholder="https://ci.example.com/hook" onChange={(e) => setUrl(e.target.value)} /></LabelField>
+            <LabelField><span>Name (optional)</span><input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></LabelField>
+            <LabelField><span>Secret (optional)</span><input value={secret} type="password" autoComplete="off" placeholder="left empty, one is made and shown once" onChange={(e) => setSecret(e.target.value)} /></LabelField>
           </div>
           <fieldset className="events"><legend>Events</legend>
             {events.map((ev) => (
-              <label key={ev} className="check"><input type="checkbox" checked={chosen.includes(ev)} onChange={() => toggle(ev)} /> <Mono>{ev}</Mono> <span className="faint">{EVENT_HELP[ev]}</span></label>
+              <label key={ev} className="check"><input type="checkbox" checked={chosen.includes(ev)} onChange={() => toggle(ev)} /> <Mono>{ev}</Mono> <SpanFaint>{EVENT_HELP[ev]}</SpanFaint></label>
             ))}
           </fieldset>
-          <div><button type="submit" className="btn btn-primary" disabled={busy || !url.trim() || chosen.length === 0}>{busy ? "Adding…" : "Add webhook"}</button></div>
+          <div><BtnPrimary disabled={busy || !url.trim() || chosen.length === 0}>{busy ? "Adding…" : "Add webhook"}</BtnPrimary></div>
         </form>
       </Sheet>
       {made && (
@@ -82,13 +83,13 @@ export function HooksPanel({ scope, who }: { scope: HookScope; who: string }) {
             <div className="hook-head">
               <div><strong>{h.name}</strong> <Chip tone={h.active ? "ok" : "warn"}>{h.active ? "on" : "off"}</Chip></div>
               <div className="faint small mono">{h.url}</div>
-              <div className="faint small">{h.events.join(", ")}{h.has_secret ? " · signed" : " · not signed"}</div>
+              <DivFaintSmall>{h.events.join(", ")}{h.has_secret ? " · signed" : " · not signed"}</DivFaintSmall>
               {h.disabled_reason && <div className="callout callout-allowed" role="status">{h.disabled_reason}</div>}
             </div>
             <div className="hook-actions">
-              <button type="button" className="btn btn-sm" onClick={() => act(async () => { const d = await forgeApi.testHook(scope, h.id); setOpen(h.id); if (d.state !== "delivered") setError(new Error(d.error ?? "The address did not accept the test delivery.")); })}>Send a test</button>
-              <button type="button" className="btn btn-sm" onClick={() => setOpen(open === h.id ? null : h.id)}>{open === h.id ? "Hide log" : "Delivery log"}</button>
-              <button type="button" className="btn btn-sm" onClick={() => act(() => forgeApi.updateHook(scope, h.id, { active: !h.active }))}>{h.active ? "Turn off" : "Turn on"}</button>
+              <BtnSm onClick={() => act(async () => { const d = await forgeApi.testHook(scope, h.id); setOpen(h.id); if (d.state !== "delivered") setError(new Error(d.error ?? "The address did not accept the test delivery.")); })}>Send a test</BtnSm>
+              <BtnSm onClick={() => setOpen(open === h.id ? null : h.id)}>{open === h.id ? "Hide log" : "Delivery log"}</BtnSm>
+              <BtnSm onClick={() => act(() => forgeApi.updateHook(scope, h.id, { active: !h.active }))}>{h.active ? "Turn off" : "Turn on"}</BtnSm>
               <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => { if (window.confirm(`Delete the webhook "${h.name}" and its delivery log?`)) act(() => forgeApi.deleteHook(scope, h.id)); }}>Delete</button>
             </div>
             {open === h.id && <DeliveryLog scope={scope} hook={h} onError={setError} />}
@@ -109,11 +110,11 @@ function DeliveryLog({ scope, hook, onError }: { scope: HookScope; hook: Hook; o
   if (rows.length === 0) return <p className="sub pad">Nothing has been sent yet. Send a test, or push to the repository.</p>;
   return (
     <table className="table" aria-label="Delivery log">
-      <thead><tr><th>Event</th><th>Result</th><th>Attempts</th><th>Time</th><th>When</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+      <thead><tr><th>Event</th><th>Result</th><th>Attempts</th><th>Time</th><th>When</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
       <tbody>
         {rows.map((d) => (
           <tr key={d.id}>
-            <td><Mono>{d.event}</Mono>{d.redelivery_of && <span className="faint small"> (sent again)</span>}
+            <td><Mono>{d.event}</Mono>{d.redelivery_of && <SpanFaintSmall> (sent again)</SpanFaintSmall>}
               {show === d.id && <pre className="small mono" style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(d.payload, null, 2)}</pre>}
               {d.error && <div className="small bad-ink">{d.error}</div>}</td>
             <td><Chip tone={stateTone(d)}>{d.state}{d.status ? ` · ${d.status}` : ""}</Chip></td>
@@ -121,8 +122,8 @@ function DeliveryLog({ scope, hook, onError }: { scope: HookScope; hook: Hook; o
             <td>{d.duration_ms} ms</td>
             <td title={clock(Date.parse(d.created_at))}>{ago(Date.parse(d.created_at), now)}</td>
             <td className="td-actions">
-              <button type="button" className="btn btn-sm" onClick={() => setShow(show === d.id ? null : d.id)}>{show === d.id ? "Hide request" : "Request"}</button>{" "}
-              <button type="button" className="btn btn-sm" onClick={() => { forgeApi.redeliver(scope, hook.id, d.id).then(load, onError); }}>Send again</button>
+              <BtnSm onClick={() => setShow(show === d.id ? null : d.id)}>{show === d.id ? "Hide request" : "Request"}</BtnSm>{" "}
+              <BtnSm onClick={() => { forgeApi.redeliver(scope, hook.id, d.id).then(load, onError); }}>Send again</BtnSm>
             </td>
           </tr>
         ))}

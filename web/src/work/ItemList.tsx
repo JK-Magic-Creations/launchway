@@ -7,6 +7,7 @@ import { navigate } from "../router";
 import { Blank, csv, dueClass, ErrorPanel, itemHref, Labels, Loading, Prio, scopeLabel, StateTag, useLoad, Who, WorkPage } from "./common";
 import { workApi, scopeObject, type Item, type Page, type View } from "./workApi";
 import { terms } from "../terms";
+import { SpanFaint, SpanFaintSmall, TdNum, ThCol } from "../kit/bits";
 
 // The items of one project: a query box in the query language, filters, saved views, sorting, paging and a form for a new item.
 
@@ -96,7 +97,7 @@ export default function ItemList({ scope }: { scope: string }) {
           <div className="sheet tablewrap">
             <table className="table wk-table">
               <caption className="visually-hidden">Items in {scopeLabel(scope)}, {from} to {to} of {total}</caption>
-              <thead><tr><th scope="col">Item</th><th scope="col">State</th><th scope="col">Priority</th><th scope="col">Assigned</th><th scope="col">Estimate</th><th scope="col">Due</th></tr></thead>
+              <thead><tr><ThCol>Item</ThCol><ThCol>State</ThCol><ThCol>Priority</ThCol><ThCol>Assigned</ThCol><ThCol>Estimate</ThCol><ThCol>Due</ThCol></tr></thead>
               <tbody>{list.data.items.map((it) => <Row key={it.id} it={it} />)}</tbody>
             </table>
           </div>
@@ -124,7 +125,7 @@ function Row({ it }: { it: Item }) {
     <tr>
       <td>
         <div className="wk-title">
-          <span className="ref mono">{it.ref}</span> <span className="faint">{it.type}</span>
+          <span className="ref mono">{it.ref}</span> <SpanFaint>{it.type}</SpanFaint>
           {it.blocked && <span className="wk-flag">blocked</span>}
           {it.claim && !it.claim.expired && <span className="wk-agent-badge">agent working</span>}
         </div>
@@ -133,9 +134,9 @@ function Row({ it }: { it: Item }) {
       </td>
       <td><StateTag item={it} /></td>
       <td><Prio p={it.priority} /></td>
-      <td>{it.assignees.length ? <ul className="wk-people">{it.assignees.map((a) => <li key={a.name}><Who name={a.name} kind={a.kind} /></li>)}</ul> : <span className="faint">Unassigned</span>}</td>
-      <td className="num">{it.estimate ? it.estimate : <span className="faint">None</span>}</td>
-      <td className={"num " + dueClass(it)}>{it.due_at ? it.due_at.slice(0, 10) : <span className="faint">None</span>}</td>
+      <td>{it.assignees.length ? <ul className="wk-people">{it.assignees.map((a) => <li key={a.name}><Who name={a.name} kind={a.kind} /></li>)}</ul> : <SpanFaint>Unassigned</SpanFaint>}</td>
+      <TdNum>{it.estimate ? it.estimate : <SpanFaint>None</SpanFaint>}</TdNum>
+      <td className={"num " + dueClass(it)}>{it.due_at ? it.due_at.slice(0, 10) : <SpanFaint>None</SpanFaint>}</td>
     </tr>
   );
 }
@@ -182,9 +183,9 @@ export function BodyField({ value, onChange, label = "Description" }: { value: s
         <button type="button" className="wk-textbtn" aria-pressed={preview} onClick={() => setPreview(!preview)}>{preview ? "Edit" : "Preview"}</button>
       </div>
       {preview
-        ? <div className="wk-preview" aria-label="Preview">{value.trim() ? <Markdown text={value} /> : <span className="faint">Nothing to preview.</span>}</div>
+        ? <div className="wk-preview" aria-label="Preview">{value.trim() ? <Markdown text={value} /> : <SpanFaint>Nothing to preview.</SpanFaint>}</div>
         : <textarea id={id} rows={6} value={value} onChange={(e) => onChange(e.target.value)} maxLength={20000} placeholder="Markdown: **bold**, `code`, lists, links." />}
-      <span className="faint small">Markdown is allowed. Nothing you write is run as a page.</span>
+      <SpanFaintSmall>Markdown is allowed. Nothing you write is run as a page.</SpanFaintSmall>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { onLink } from "../../router";
 import { organizeApi, type TrailEntry } from "../../organizeApi";
 import { score } from "../../explorer/tree";
 import type { PanelProps } from "./registry";
+import { BtnSm, SpanFaintSmall } from "../../kit/bits";
 
 const ACTION: Record<string, string> = { viewed: "Opened", started: "Started", approved: "Approved", commented: "Commented", edited: "Edited" };
 
@@ -40,7 +41,7 @@ export default function ContinuePanel({ title, now }: PanelProps) {
             {(data.continue ?? []).map((e) => (
               <li key={e.kind + e.obj}>
                 <a href={e.href} onClick={onLink}><b>{e.title}</b></a>
-                <span className="faint small">{ACTION[e.action] ?? e.action} {ago(e.at, now)}</span>
+                <SpanFaintSmall>{ACTION[e.action] ?? e.action} {ago(e.at, now)}</SpanFaintSmall>
                 {e.changed && <span className="pn-changed small">{e.changed}</span>}
               </li>
             ))}
@@ -53,14 +54,14 @@ export default function ContinuePanel({ title, now }: PanelProps) {
           {days.map(([day, list]) => (
             <div key={day}>
               <h3 className="pn-day">{day}</h3>
-              <ul className="pn-list">{list.map((e) => <li key={e.kind + e.obj}><a href={e.href} onClick={onLink}>{e.title}</a><span className="faint small">{e.kind} · {ACTION[e.action] ?? e.action} {ago(e.at, now)}</span></li>)}</ul>
+              <ul className="pn-list">{list.map((e) => <li key={e.kind + e.obj}><a href={e.href} onClick={onLink}>{e.title}</a><SpanFaintSmall>{e.kind} · {ACTION[e.action] ?? e.action} {ago(e.at, now)}</SpanFaintSmall></li>)}</ul>
             </div>
           ))}
         </details>
         <div className="pn-ctl">
-          <button type="button" className="btn btn-sm" onClick={() => void act(() => organizeApi.pauseTrail(!data.paused), data.paused ? "History resumed." : "History paused.")}>{data.paused ? "Resume history" : "Pause history"}</button>
-          <button type="button" className="btn btn-sm" onClick={() => void act(() => organizeApi.clearTrail(), "Your history was cleared.")}>Clear my history</button>
-          <span className="faint small">Only you can see this. Kept {data.retention_days} days.</span>
+          <BtnSm onClick={() => void act(() => organizeApi.pauseTrail(!data.paused), data.paused ? "History resumed." : "History paused.")}>{data.paused ? "Resume history" : "Pause history"}</BtnSm>
+          <BtnSm onClick={() => void act(() => organizeApi.clearTrail(), "Your history was cleared.")}>Clear my history</BtnSm>
+          <SpanFaintSmall>Only you can see this. Kept {data.retention_days} days.</SpanFaintSmall>
         </div>
       </div>
     </section>

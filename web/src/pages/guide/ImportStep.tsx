@@ -5,6 +5,7 @@ import { importApi, type Connection, type ImportItem, type SourceRequest } from 
 import { Mono } from "../../components/ui";
 import { Unavailable, Wingman } from "./Frame";
 import { prose } from "../../prose";
+import { BtnPrimary, LabelField, SpanFaint } from "../../kit/bits";
 const P = await prose("pages.guide.ImportStep");
 
 type Phase = "choose" | "listing" | "pick" | "running" | "done";
@@ -70,11 +71,11 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
         <>
           {conns && conns.length > 0 && (
             <form className="gd-form" onSubmit={(e) => { e.preventDefault(); void list(); }} aria-label="Choose what to import">
-              <label className="field"><span>Server to import from</span>
-                <select value={conn} onChange={(e) => setConn(e.target.value)}>{conns.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.kind} {c.base_url})</option>)}</select></label>
-              <label className="field"><span>{P.t5}</span><input value={owner} onChange={(e) => setOwner(e.target.value)} /></label>
+              <LabelField><span>Server to import from</span>
+                <select value={conn} onChange={(e) => setConn(e.target.value)}>{conns.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.kind} {c.base_url})</option>)}</select></LabelField>
+              <LabelField><span>{P.t5}</span><input value={owner} onChange={(e) => setOwner(e.target.value)} /></LabelField>
               <label className="check"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> {P.t6}</label>
-              <div><button type="submit" className="btn btn-primary" disabled={!conn}>Find the repositories</button></div>
+              <div><BtnPrimary disabled={!conn}>Find the repositories</BtnPrimary></div>
             </form>
           )}
           <AddConnection pasteAction={paste} first={conns?.length === 0} onAdded={(n) => { setConn(n); void load(); onChange(); }} />
@@ -97,7 +98,7 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
                 <li key={p.source}>
                   {phase === "pick" && p.action !== "skip" && <input type="checkbox" id={"pick-" + p.source} checked={picked.has(p.source)} onChange={() => toggle(p.source)} aria-label={`Import ${p.source}`} />}
                   {phase === "pick" && p.action !== "skip" ? <label htmlFor={"pick-" + p.source}><Mono>{p.source}</Mono></label> : <Mono>{p.source}</Mono>}
-                  <span className="faint"> {p.action === "skip" ? `left alone: ${p.reason}` : p.visibility}</span>
+                  <SpanFaint> {p.action === "skip" ? `left alone: ${p.reason}` : p.visibility}</SpanFaint>
                   {r && (
                     <span role={r.state === "failed" ? "alert" : undefined}> {r.state === "verified" ? <strong>verified: {r.hosted_refs} of {r.source_refs} refs equal</strong>
                       : r.state === "queued" ? "copying and checking…" : <>{r.state}: {r.error}{r.differences?.length ? ` (${r.differences.join("; ")})` : ""}</>}</span>
@@ -153,16 +154,16 @@ function AddConnection({ pasteAction, first, onAdded }: { pasteAction: ReturnTyp
     <details open={first}>
       <summary>Add a server to import from</summary>
       <form className="gd-form" onSubmit={submit} aria-label="Add a server to import from">
-        <label className="field"><span>A name for it</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="oldgit" required /></label>
-        <label className="field"><span>What kind of server</span><select value={kind} onChange={(e) => setKind(e.target.value)}><option value="gitea">Gitea</option><option value="forgejo">Forgejo</option></select></label>
-        <label className="field"><span>Its address</span><input value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://git.example.com" required /></label>
+        <LabelField><span>A name for it</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="oldgit" required /></LabelField>
+        <LabelField><span>What kind of server</span><select value={kind} onChange={(e) => setKind(e.target.value)}><option value="gitea">Gitea</option><option value="forgejo">Forgejo</option></select></LabelField>
+        <LabelField><span>Its address</span><input value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://git.example.com" required /></LabelField>
         <fieldset className="field"><legend>The access token</legend>
           <label className="check"><input type="radio" name="gd-how" checked={how === "paste"} disabled={!canPaste} onChange={() => setHow("paste")} /> {P.t8}</label>
           {!canPaste && <p className="faint">Not available here: {pasteAction?.reason}</p>}
           <label className="check"><input type="radio" name="gd-how" checked={how === "env"} onChange={() => setHow("env")} /> {P.t9}</label>
         </fieldset>
-        {how === "paste" && canPaste && <label className="field"><span>The token</span><input type="password" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" required /></label>}
-        {how === "env" && <label className="field"><span>Variable name</span><input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="OLDGIT_TOKEN" /></label>}
+        {how === "paste" && canPaste && <LabelField><span>The token</span><input type="password" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" required /></LabelField>}
+        {how === "env" && <LabelField><span>Variable name</span><input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="OLDGIT_TOKEN" /></LabelField>}
         <p className="faint">{P.t10}<code>forge.mirror_allow</code>; the refusal says so.</p>
         {err && <div className="callout callout-bad" role="alert">{err}</div>}
         <div><button type="submit" className="btn" disabled={busy || !name.trim() || !base.trim()}>{busy ? "Adding…" : "Add server"}</button></div>

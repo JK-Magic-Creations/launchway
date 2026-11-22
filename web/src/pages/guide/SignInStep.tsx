@@ -5,6 +5,7 @@ import { actionOf, guideApi, type GuideStep, type SigninTestResult } from "../..
 import { Button } from "../../kit/layout";
 import { Unavailable, Wingman } from "./Frame";
 import { prose } from "../../prose";
+import { BtnPrimary, LabelField } from "../../kit/bits";
 const P = await prose("pages.guide.SignInStep");
 
 type Phase = "idle" | "starting" | "waiting" | "worked" | "failed";
@@ -72,12 +73,12 @@ export function SignInStep({ step, onChange }: { step: GuideStep; onChange: () =
       {open && test?.available && (
         <form className="gd-form" onSubmit={(e) => { e.preventDefault(); void begin(); }} aria-label="Test an identity provider">
           <p className="faint">{P.t4}<code>{location.origin}/auth/signin-test</code>; for real use it is <code>{location.origin}/auth/callback</code>.</p>
-          <label className="field"><span>{P.t5}</span><input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder={P.t6} required /></label>
-          <label className="field"><span>Client id</span><input value={clientId} onChange={(e) => setClientId(e.target.value)} required /></label>
-          <label className="field"><span>{P.t7}</span><input value={secretEnv} onChange={(e) => setSecretEnv(e.target.value)} aria-describedby="gd-secret-hint" />
-            <small id="gd-secret-hint">{P.t8}</small></label>
-          <label className="field"><span>{P.t9}</span><input value={groups} onChange={(e) => setGroups(e.target.value)} /></label>
-          <div><button type="submit" className="btn btn-primary" disabled={phase === "starting" || phase === "waiting"}>{phase === "starting" ? "Starting…" : P.t10}</button></div>
+          <LabelField><span>{P.t5}</span><input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder={P.t6} required /></LabelField>
+          <LabelField><span>Client id</span><input value={clientId} onChange={(e) => setClientId(e.target.value)} required /></LabelField>
+          <LabelField><span>{P.t7}</span><input value={secretEnv} onChange={(e) => setSecretEnv(e.target.value)} aria-describedby="gd-secret-hint" />
+            <small id="gd-secret-hint">{P.t8}</small></LabelField>
+          <LabelField><span>{P.t9}</span><input value={groups} onChange={(e) => setGroups(e.target.value)} /></LabelField>
+          <div><BtnPrimary disabled={phase === "starting" || phase === "waiting"}>{phase === "starting" ? "Starting…" : P.t10}</BtnPrimary></div>
         </form>
       )}
       <div aria-live="polite">

@@ -8,6 +8,7 @@ import { Blank, ErrorPanel, itemHref, Loading, scopeLabel, useLoad, WorkPage } f
 import { workApi, type ProposalGroup, type ProposeResult } from "./workApi";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { SpanFaintSmall } from "../kit/bits";
 const P = await prose("work.Proposals");
 
 // Proposals: findings that tools send in (the repository basics check, security findings, code quality). They arrive grouped, most severe
@@ -114,7 +115,7 @@ function Card({ g, checked, onCheck, onAct, all }: { g: ProposalGroup; all: Prop
         <ul id={id} className="wk-rows">
           {g.occurrences.map((o) => (
             <li key={o.dedupe_key}>
-              <strong>{o.title}</strong> <span className="faint small">{SEV[o.severity]}</span>
+              <strong>{o.title}</strong> <SpanFaintSmall>{SEV[o.severity]}</SpanFaintSmall>
               {o.body && <span className="block small">{o.body}</span>}
               {(o.evidence ?? []).map((u, i) => /^https?:\/\//.test(u) ? <a key={i} className="small" href={u} rel="noopener noreferrer" target="_blank">Evidence {i + 1}</a> : <code key={i} className="small">{u}</code>)}
             </li>

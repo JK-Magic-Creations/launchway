@@ -6,6 +6,7 @@ import { EmptyState, Sheet } from "../../kit/layout";
 import { CloneBox } from "../Repositories";
 import { RepoFrame, useRepo, when } from "./common";
 import { findReadme, Readme } from "./Readme";
+import { PSub } from "../../kit/bits";
 
 interface Facts { last: CommitEntry | null; branches: number; tags: number }
 
@@ -31,13 +32,13 @@ export function OverviewPage({ path }: { path: string }) {
     <RepoFrame path={path} tab="overview" title={path} actions={<CutReleaseForRepository cloneUrl={repo?.clone.https} />}
       sentence={repo ? <>{repo.visibility} repository{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</> : undefined} error={error}>
       {facts && (
-        <p className="sub" aria-label="Facts about the repository">
+        <PSub aria-label="Facts about the repository">
           Default branch <Mono>{branch}</Mono>
           {facts.last ? <> · last commit <a href={commitHref(path, facts.last.sha)}>{facts.last.subject}</a> by {facts.last.author}, {when(facts.last.committed_at)}</> : " · no commits yet"}
           {" · "}<a href={`/repositories/${path}/branches`}>{facts.branches} {facts.branches === 1 ? "branch" : "branches"}</a>
           {" · "}<a href={`/repositories/${path}/tags`}>{facts.tags} {facts.tags === 1 ? "tag" : "tags"}</a>
           {" · "}<a href={codeHref(path)}>Browse the files</a>
-        </p>
+        </PSub>
       )}
       {repo && <CloneBox repo={repo} />}
       {readme && root ? <Readme repo={path} commit={root.commit} entry={readme} dir="" refName={branch} />

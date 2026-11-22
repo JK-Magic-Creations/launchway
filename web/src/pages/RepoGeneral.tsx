@@ -5,6 +5,7 @@ import { forgeApi, type HostedRepo } from "../forgeApi";
 import { Button, Sheet } from "../kit/layout";
 import { navigate } from "../router";
 import { prose } from "../prose";
+import { LabelField, PSub } from "../kit/bits";
 const P = await prose("pages.RepoGeneral");
 
 /** A destructive change asks for the repository's name, typed in, and says what is lost. */
@@ -13,8 +14,8 @@ function Confirm({ repo, what, lost, action, busy, onGo, onCancel }: { repo: Hos
   return (
     <div role="group" aria-label={what} className="callout callout-warn">
       <p><strong>{what}.</strong> {lost}</p>
-      <label className="field"><span>Type <Mono>{repo.path}</Mono> to confirm</span>
-        <input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" data-autofocus /></label>
+      <LabelField><span>Type <Mono>{repo.path}</Mono> to confirm</span>
+        <input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" data-autofocus /></LabelField>
       <div className="actions">
         <Button kind="pri" disabled={busy || typed !== repo.path} onClick={onGo}>{busy ? "Working…" : action}</Button>
         <Button onClick={onCancel}>Cancel</Button>
@@ -49,7 +50,7 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
   if (!admin) {
     return (
       <Sheet title="General" pad>
-        <p className="sub" role="status">{P.t0}{repo.archived ? ", and it is archived" : ""}.</p>
+        <PSub role="status">{P.t0}{repo.archived ? ", and it is archived" : ""}.</PSub>
       </Sheet>
     );
   }
@@ -57,39 +58,39 @@ export function RepoGeneral({ repo, admin, onChanged }: { repo: HostedRepo; admi
   return (
     <Sheet title="General" pad>
       <ErrorBox error={error} />
-      {saved && <p className="sub" role="status">{saved}</p>}
+      {saved && <PSub role="status">{saved}</PSub>}
       <form className="inputs-form" aria-label="Rename the repository" onSubmit={(e) => { e.preventDefault(); void rename(); }}>
-        <label className="field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <p className="sub">{P.t1}<Mono>{owner}/{name.trim() || "…"}</Mono>{P.t2}</p>
+        <LabelField><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></LabelField>
+        <PSub>{P.t1}<Mono>{owner}/{name.trim() || "…"}</Mono>{P.t2}</PSub>
         <div><Button type="submit" disabled={busy || !name.trim() || name.trim() === repo.name}>Rename</Button></div>
       </form>
       <form className="inputs-form" aria-label="Visibility of the repository" onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { visibility }), "Visibility changed."); }}>
-        <label className="field"><span>Who may see it</span>
+        <LabelField><span>Who may see it</span>
           <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
             <option value="private">{P.t3}</option>
             <option value="internal">{P.t4}</option>
             <option value="public">{P.t5}</option>
-          </select></label>
+          </select></LabelField>
         <div><Button type="submit" disabled={busy || visibility === repo.visibility}>Change visibility</Button></div>
       </form>
       <form className="inputs-form" aria-label={P.t6} onSubmit={(e) => { e.preventDefault(); void run(() => forgeApi.update(owner, repo.name, { default_branch: branch }), "Default branch changed."); }}>
-        <label className="field"><span>Default branch</span>
-          <select value={branch} onChange={(e) => setBranch(e.target.value)}>{branchChoices.map((b) => <option key={b} value={b}>{b}</option>)}</select></label>
-        <p className="sub">{P.t7}</p>
+        <LabelField><span>Default branch</span>
+          <select value={branch} onChange={(e) => setBranch(e.target.value)}>{branchChoices.map((b) => <option key={b} value={b}>{b}</option>)}</select></LabelField>
+        <PSub>{P.t7}</PSub>
         <div><Button type="submit" disabled={busy || branch === (repo.default_branch ?? "main")}>Change default branch</Button></div>
       </form>
       <h3 className="h-sm">Archive and delete</h3>
       {repo.archived
-        ? <p className="sub">{P.t8}<Button disabled={busy} onClick={() => run(() => forgeApi.update(owner, repo.name, { archived: false }), P.t9)}>Unarchive</Button></p>
+        ? <PSub>{P.t8}<Button disabled={busy} onClick={() => run(() => forgeApi.update(owner, repo.name, { archived: false }), P.t9)}>Unarchive</Button></PSub>
         : asking === "archive"
           ? <Confirm repo={repo} what="Archive this repository" action="Archive" busy={busy} onCancel={() => setAsking("")}
               lost={P.t10} onGo={() => run(() => forgeApi.update(owner, repo.name, { archived: true }), "Archived.")} />
-          : <p className="sub">{P.t11}<Button onClick={() => setAsking("archive")}>Archive this repository</Button></p>}
+          : <PSub>{P.t11}<Button onClick={() => setAsking("archive")}>Archive this repository</Button></PSub>}
       {asking === "delete"
         ? <Confirm repo={repo} what="Delete this repository" action="Delete" busy={busy} onCancel={() => setAsking("")}
             lost={P.t12}
             onGo={() => run(async () => { await forgeApi.remove(owner, repo.name); navigate("/repositories"); }, "Deleted.")} />
-        : <p className="sub">{P.t13}<Button onClick={() => setAsking("delete")}>Delete this repository</Button></p>}
+        : <PSub>{P.t13}<Button onClick={() => setAsking("delete")}>Delete this repository</Button></PSub>}
     </Sheet>
   );
 }

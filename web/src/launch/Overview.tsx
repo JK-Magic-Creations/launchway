@@ -8,6 +8,7 @@ import { EmergencyReturn, WorkloadControls } from "./Controls";
 import { HealthTag } from "./Tree";
 import { terms } from "../terms";
 import { prose } from "../prose";
+import { BtnSm, ThCol, ThRow } from "../kit/bits";
 const P = await prose("launch.Overview");
 
 /** What happens next, and who may step in, in a sentence. Zero touch is the default: this says so. */
@@ -55,15 +56,15 @@ function Weights({ ro, sets }: { ro: LRollout; sets: LNode[] }) {
     <div className="lw-weights">
       <div className="lw-weights-head">
         <h2 className="lw-h">{P.t10}</h2>
-        <button type="button" className="btn btn-sm" aria-pressed={table} onClick={() => setTable(!table)}>{table ? "Show as a bar" : "Show as a table"}</button>
+        <BtnSm aria-pressed={table} onClick={() => setTable(!table)}>{table ? "Show as a bar" : "Show as a table"}</BtnSm>
       </div>
       {live !== null || want !== null ? (
         table ? (
           <table className="lw-table"><caption className="visually-hidden">Wanted and actual weights</caption>
-            <thead><tr><th scope="col">Measure</th><th scope="col">New version</th><th scope="col">Stable</th></tr></thead>
+            <thead><tr><ThCol>Measure</ThCol><ThCol>New version</ThCol><ThCol>Stable</ThCol></tr></thead>
             <tbody>
-              {want !== null && <tr><th scope="row">Wanted by the current step</th><td>{want}%</td><td>{100 - want}%</td></tr>}
-              {live !== null && <tr><th scope="row">Actual ({ro.actual_source})</th><td>{live}%</td><td>{100 - live}%</td></tr>}
+              {want !== null && <tr><ThRow>Wanted by the current step</ThRow><td>{want}%</td><td>{100 - want}%</td></tr>}
+              {live !== null && <tr><ThRow>Actual ({ro.actual_source})</ThRow><td>{live}%</td><td>{100 - live}%</td></tr>}
             </tbody>
           </table>
         ) : (
@@ -75,10 +76,10 @@ function Weights({ ro, sets }: { ro: LRollout; sets: LNode[] }) {
       ) : <p className="faint">{P.t11}</p>}
       <table className="lw-table lw-sets">
         <caption>{P.t12}</caption>
-        <thead><tr><th scope="col">ReplicaSet</th><th scope="col">Role</th><th scope="col">Revision</th><th scope="col">Replicas (ready of wanted)</th><th scope="col">Share of pods</th></tr></thead>
+        <thead><tr><ThCol>ReplicaSet</ThCol><ThCol>Role</ThCol><ThCol>Revision</ThCol><ThCol>Replicas (ready of wanted)</ThCol><ThCol>Share of pods</ThCol></tr></thead>
         <tbody>
           {sets.map((n) => (
-            <tr key={n.id}><th scope="row"><Mono>{n.name}</Mono></th><td><span className={`lw-role lw-role-${n.role}`}>{n.role}</span></td><td>{n.revision || "-"}</td>
+            <tr key={n.id}><ThRow><Mono>{n.name}</Mono></ThRow><td><span className={`lw-role lw-role-${n.role}`}>{n.role}</span></td><td>{n.revision || "-"}</td>
               <td>{n.replicas?.ready}/{n.replicas?.desired}</td><td>{total ? Math.round(((n.replicas?.desired ?? 0) * 100) / total) : 0}%</td></tr>
           ))}
         </tbody>
