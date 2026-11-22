@@ -102,7 +102,8 @@ The chart renders the Stations' settings into a file, `/etc/launchway-runner/run
 with `launchway runner --config`. Step pods are configured under `runner.kubernetes`: the helper
 image, CPU and memory requests and the memory limit per container, a node selector, image pull
 secrets, the ServiceAccount step pods run as (default: none, and no token mounted), how long a
-failed Sortie's pod is kept (`keepFailed`, default none), how old any pod may get (`maxPodAge`) and how long to wait for images (`startTimeout`).
+whether a step has a pod of its own, `per-step` (the default), or the Sortie one pod, `per-run` (`pod`; the earlier behavior, kept for one release), how long a
+failed Sortie's pod is kept with `per-run` (`keepFailed`, default none), how old any pod may get (`maxPodAge`) and how long to wait for images (`startTimeout`).
 `runner.extraArgs` adds flags, which override the file.
 
 `runner.secretStores` configures the secret stores Stations read (Vault, OpenBao, mounted files),
@@ -344,7 +345,8 @@ removed after each save. Who may start draft runs, and whether drafts may read s
 | Cargo, and the SBOMs and provenance kept as Cargo | PostgreSQL, unless `config.artifacts.store` says S3 ([docs/artifacts.md](../docs/artifacts.md): limits, backups, when to move to S3) | Their retention ends, or with the database |
 | Mirrors of Flight repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each Station's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
-| A Sortie's workspace | Its step pod in the step namespace | The Sortie ends in any state (at once; `keepFailed` can add a grace period), or the pod is older than `maxPodAge` (24 hours) with no step executing; any Station removes it, including the pods of Stations that were replaced |
+| A Sortie's workspace | The Station's copy of it (`runner.dataVolume`); each step's pod is filled from it and hands its files back | The Sortie ends in any state, or the copy is older than `maxPodAge` (24 hours) with no step executing, or the Station's pod goes (the steps then run again elsewhere) |
+| A step's pod | The step namespace | The step ends, however it ends; the Stations also remove the pods of attempts that hold no lease and of Sorties that ended (with `runner.kubernetes.pod: per-run`, one pod for the whole Sortie, kept for a failed Sortie for `keepFailed`) |
 | The development database | A PersistentVolumeClaim | `helm uninstall` deletes it |
 
 Nothing else is persisted. Secrets values never reach the servers or the database.

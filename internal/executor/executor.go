@@ -21,6 +21,9 @@ import (
 // Spec is one step attempt to execute.
 type Spec struct {
 	RunID      string            // the run it belongs to
+	StepID     string            // the step within the run (empty for a caller that has none)
+	Attempt    int               // which attempt of the step this is
+	LeaseID    string            // the lease this attempt runs under
 	Containers []ContainerSpec   // every container the run needs, services included
 	Container  string            // which of Containers this step runs in
 	Name       string            // unique, safe for a container name
@@ -191,6 +194,9 @@ func Auto() Executor {
 type Options struct {
 	Kubernetes KubernetesOptions
 	RunnerID   string
+	// DataDir is the runner's data directory; the Kubernetes executor keeps its copies of workspaces in a
+	// directory of it unless kubernetes.work_dir says otherwise.
+	DataDir string
 }
 
 // ByName returns the executor with the given name: auto, container, podman,
@@ -198,6 +204,9 @@ type Options struct {
 func ByName(name string, o Options) (Executor, error) {
 	switch name {
 	case "kubernetes", "k8s":
+		if o.Kubernetes.WorkDir == "" && o.DataDir != "" {
+			o.Kubernetes.WorkDir = filepath.Join(o.DataDir, "kubernetes")
+		}
 		return NewKubernetes(o.Kubernetes, o.RunnerID)
 	}
 	ex, err := byNameLocal(name)

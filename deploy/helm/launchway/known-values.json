@@ -322,6 +322,7 @@
       "helperImage": true,
       "imagePullSecrets": true,
       "keepFailed": true,
+      "pod": true,
       "maxCpu": true,
       "maxMemory": true,
       "maxPodAge": true,

@@ -58,6 +58,9 @@ func (k *Kubernetes) ExportContext(ctx context.Context, s Spec, c ContextSpec, d
 	if s.RunID == "" {
 		return false, errors.New("kubernetes: the step has no run")
 	}
+	if k.perStep() {
+		return false, nil // the workspace is a directory of the Station's (see WorkspaceDir)
+	}
 	pod := k.podFor(s.RunID)
 	if ok, err := k.podExists(ctx, pod); err != nil || !ok {
 		return false, err
@@ -266,6 +269,9 @@ func (k *Kubernetes) sizeOfDirs(ctx context.Context, pod, dir string, paths []st
 
 // ExportFile implements DirExporter.
 func (k *Kubernetes) ExportFile(ctx context.Context, s Spec, rel, dst string, max int64) (bool, error) {
+	if k.perStep() {
+		return false, nil
+	}
 	pod := k.podFor(s.RunID)
 	if ok, err := k.podExists(ctx, pod); err != nil || !ok {
 		return false, err

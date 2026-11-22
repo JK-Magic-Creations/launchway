@@ -11,10 +11,10 @@ step. It stays *queued*, the Sortie page, the API (`waiting_for` and `waiting_co
 command line (`launchway run show`) and MCP say what it waits for, and it is tried again after a
 pause that grows from 10 seconds to a minute:
 
-> waiting for room in the step namespace: this run has reserved 1 CPU across 1 pod; the namespace
-> allows 8 CPU and 7.8 CPU is reserved in all; this pod needs 0.5 CPU more, so 0.3 CPU must be
-> released first. This is what is reserved by the pods, not what a step uses: nothing ran out of
-> memory; held by runs #43–#50; this run is next after #52
+> waiting for room in the step namespace: this Sortie's steps build hold 1 CPU across 1 pod, and
+> release it when they end; the namespace allows 8 CPU and 7.8 CPU is reserved in all; this pod
+> needs 0.5 CPU more, so 0.3 CPU must be released first. This is what is reserved by the pods, not
+> what a step uses: nothing ran out of memory; held by runs #43–#50; this run is next after #52
 
 The sentence names the shortage, the Sorties that hold the room, and where this run is in line. Each
 reason has a stable code beside the sentence, for scripts:
@@ -26,6 +26,13 @@ reason has a stable code beside the sentence, for scripts:
 | `no_runner` | No Station (runner) that may take the step has been seen lately |
 | `runners_busy` | Every Station that may take the step is busy |
 | `retry_pause` | A retry waits out its pause |
+
+On Kubernetes each step has a pod of its own, which holds quota only while the step runs, so the sentence is
+about one step's pod: what it needs (its own container, the helper that holds the workspace and the services), and what is
+reserved by other pods. When the holders include steps of the **same** Sortie it names them: they are running and release
+the room when they end, so the wait is short and cannot be a deadlock. A pod of the Sortie's own that no step runs in (an
+attempt whose lease was lost) is never waited for: the Station removes it before it makes the step's pod. See
+[One pod for each step](../reference/runner-config.md#one-pod-for-each-step).
 
 A wait is not a failed attempt: the step runs as the same attempt, `retry` does not count it, and
 the Sortie's timeout does not stop counting, so a run does not wait for ever.
@@ -41,7 +48,8 @@ needed, or give the step namespace more quota, or let steps wait longer. `off` w
 
 Waiting only helps when room can come back. A single step that asks for more than the **whole**
 quota (for example 10 CPU in a namespace that allows 8) never can, so it fails at once with both
-numbers and what to change, instead of waiting for an hour.
+numbers and what to change, instead of waiting for an hour. On Kubernetes the check is made for the step's pod
+alone: the step's own container, the helper and the services, not the Sortie's other steps.
 
 ## Limits on concurrent Sorties {#limits-on-concurrent-runs}
 

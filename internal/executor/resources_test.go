@@ -528,7 +528,7 @@ func TestSumOfAsksCountsContainersWithoutALimit(t *testing.T) {
 	hard := corev1.ResourceList{corev1.ResourceLimitsMemory: q("4Gi")}
 	noLimit := []podAsk{{name: "a", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}},
 		{name: "b", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}}}
-	if err := checkQuotas("launchway-steps", []corev1.ResourceQuota{*quota("compute", hard, corev1.ResourceList{})}, noLimit); err == nil ||
+	if err := checkQuotas("launchway-steps", []corev1.ResourceQuota{*quota("compute", hard, corev1.ResourceList{})}, noLimit, "the run's pod", false); err == nil ||
 		!strings.Contains(err.Error(), "limits.memory") {
 		t.Fatalf("containers without limits slipped past a limits quota: %v", err)
 	}

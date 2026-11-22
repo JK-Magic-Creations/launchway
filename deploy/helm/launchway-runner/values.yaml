@@ -127,6 +127,13 @@ runner:
     # namespace quota; a resume refills a new pod from the Station's checkout. See the Station
     # configuration reference, "What happens to a Sortie's pod".
     keepFailed: ""
+    # -- How much of a Sortie one step pod holds. `per-step` (the default) makes a pod for each step
+    # attempt when the step starts and deletes it when the step ends, so the step namespace's quota
+    # is held only while a step runs and every step has the limits of its own container. `per-run`
+    # is the earlier behavior, one pod for the whole Sortie with a container for each image; it
+    # exists for one release so that an installation can go back without a downgrade, and will be
+    # removed. See the Station configuration reference, "One pod for each step".
+    pod: ""
     # -- The longest any step pod lives, whatever the server says about its Sortie, unless a step
     # of it is executing on that Station: the reaper's bound for pods that a crashed Station or a
     # forgotten run left behind. Default 24h; 0 turns the bound off.

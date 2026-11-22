@@ -425,3 +425,44 @@ func TestLimitsLoweredAfterTheRunWasCreatedHoldAContainersOwnSizeToo(t *testing.
 		}
 	}
 }
+
+// Two steps of one stage that use one image are not one reservation: the run's
+// container is sized for the larger (what a runner that makes one pod per run
+// needs), and each step is also told its own container, sized for itself
+// alone, which is what a pod per step is made from.
+func TestEachStepIsToldItsOwnContainerNotTheLargestOfItsImage(t *testing.T) {
+	e, _ := newEngine(t)
+	create(t, e, `pipeline: p
+steps:
+  test: { image: golang:1.27, run: go test, resources: { cpu: 2, memory: 8Gi } }
+  security: { image: golang:1.27, run: scan, resources: { cpu: 1, memory: 1Gi } }
+  plain: { image: golang:1.27, run: echo }
+`, Trigger{Event: "manual"})
+	got := map[string]*Job{}
+	for i := 0; i < 3; i++ {
+		j := take(t, e)
+		got[j.StepID] = j
+	}
+	for step, want := range map[string]string{"test": "8Gi", "security": "1Gi", "plain": "2Gi"} {
+		j := got[step]
+		if c := containerOf(t, j, j.Container); c.Memory != "8Gi" {
+			t.Errorf("%s: the run's container is sized for the largest step, got %s", step, c.Memory)
+		}
+		sc := j.StepContainer
+		if sc == nil || sc.Name != j.Container || sc.Memory != want || sc.MemoryLimit == "" {
+			t.Errorf("%s: its own container: %+v, want %s memory", step, sc, want)
+		}
+	}
+	if sc := got["security"].StepContainer; sc.CPU != "1" || sc.CPULimit != "1" || sc.Threads != 1 {
+		t.Errorf("security: %+v", sc)
+	}
+}
+
+func TestTheStepContainerIsTheStepsNotAServices(t *testing.T) {
+	e, _ := newEngine(t)
+	create(t, e, "pipeline: p\ncontainers:\n  db: { image: postgres:17, service: true }\nsteps:\n  a: { image: x, run: a }\n", Trigger{Event: "manual"})
+	j := take(t, e)
+	if j.StepContainer == nil || j.StepContainer.Service || j.StepContainer.Name != j.Container {
+		t.Fatalf("%+v", j.StepContainer)
+	}
+}

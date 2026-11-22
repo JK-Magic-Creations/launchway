@@ -33,6 +33,8 @@ kubernetes:
   image_pull_secrets: [regcred]
   keep_failed: 30m
   max_pod_age: 6h
+  pod: per-run
+  work_dir: /var/lib/launchway/k8s
   start_timeout: 5m
   run_as_user: 2000
   run_as_group: 3000
@@ -56,7 +58,7 @@ func TestRunnerConfigFile(t *testing.T) {
 	}
 	if k.Namespace != "file-ns" || k.HelperImage != "registry.example/busybox:1" || k.ServiceAccount != "builder" ||
 		k.NodeSelector["pool"] != "builds" || k.CPU != "250m" || k.Memory != "512Mi" || k.MemoryLimit != "2Gi" ||
-		len(k.ImagePullSecrets) != 1 || k.ImagePullSecrets[0] != "regcred" || k.KeepFailed != "30m" || k.MaxPodAge != "6h" || k.StartTimeout != "5m" ||
+		len(k.ImagePullSecrets) != 1 || k.ImagePullSecrets[0] != "regcred" || k.KeepFailed != "30m" || k.MaxPodAge != "6h" || k.Pod != "per-run" || k.WorkDir != "/var/lib/launchway/k8s" || k.StartTimeout != "5m" ||
 		k.Restricted != nil || *k.RunAsUser != 2000 || *k.RunAsGroup != 3000 {
 		t.Fatalf("kubernetes settings %+v", k)
 	}

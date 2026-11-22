@@ -211,7 +211,7 @@ func quotaSpec() Spec {
 
 func quotaRefusing(t *testing.T, text string) *Kubernetes {
 	t.Helper()
-	k := kubeWith(KubernetesOptions{})
+	k := kubeWith(KubernetesOptions{Pod: PodPerRun})
 	k.owner = "me"
 	k.startWait = time.Second
 	k.pods = map[string]*runPod{}

@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -54,6 +53,16 @@ type KubernetesOptions struct {
 	MaxPodAge         string   `yaml:"max_pod_age"`   // the longest any step pod may live, whatever the server says about its run; default 24h
 	StartTimeout      string   `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
 
+	// Pod says how much of a run one pod holds: per-step (the default), one pod for each step attempt, made when
+	// the step starts and deleted when it ends, so the namespace's quota is held only while a step runs; or
+	// per-run, the earlier behavior, one pod for the whole run with a container for each image. per-run is
+	// kept for one release, so that an installation can go back without a downgrade; it will be removed.
+	Pod string `yaml:"pod"`
+	// WorkDir is where a per-step Station keeps the copy of each run's workspace that the step pods start from
+	// and hand their files back to (see kubernetes_step.go). Default: a directory of the runner's data
+	// directory, or of the temporary directory when the executor is made without one.
+	WorkDir string `yaml:"work_dir"`
+
 	// Restricted, true unless set to false, makes step pods meet the Pod
 	// Security Standard "restricted": every container, services included,
 	// runs as RunAsUser and RunAsGroup instead of the image's own user, with
@@ -88,10 +97,13 @@ var homeEnv = []corev1.EnvVar{
 	{Name: "GOCACHE", Value: stepHome + "/.cache/go-build"},
 }
 
-// Kubernetes runs each run in one pod: a helper container that holds the
-// workspace, and one long-lived container per image the pipeline uses.
-// Steps are executed inside the container for their image, so steps of the
-// same run share files and start instantly once the pod is up.
+// Kubernetes runs each step attempt in a pod of its own (pod: per-step, the
+// default): the step's container, the helper container that holds the
+// workspace, and the run's service containers, made when the step starts and
+// deleted when it ends (see kubernetes_step.go). With pod: per-run it runs
+// each run in one pod, as it did before: a helper container, and one
+// long-lived container per image the pipeline uses, so that steps of the same
+// run share files and start instantly once the pod is up.
 type Kubernetes struct {
 	o          KubernetesOptions
 	cfg        *rest.Config
@@ -109,6 +121,13 @@ type Kubernetes struct {
 	pods  map[string]*runPod
 	noted map[string]bool // what has been said once (see noteOnce)
 	busy  map[string]int  // run → steps executing in this process now
+
+	// Per-step pods (kubernetes_step.go): the step pods executing in this
+	// process now, the runs' workspace copies, and what to say about a step
+	// that was killed, kept for ExplainExit after its pod is gone.
+	active  map[string]string // pod name → run
+	mirrors map[string]*mirror
+	notes   map[string]string
 }
 
 type runPod struct {
@@ -125,6 +144,9 @@ const (
 	labelOwner   = "launchway.dev/runner"
 	annoImages   = "launchway.dev/images"
 	annoReady    = "launchway.dev/workspace" // the WorkspaceID, once the workspace is copied in
+	labelKind    = "launchway.dev/pod"       // "step" on a pod that holds one step attempt; absent on a run's pod
+	annoStep     = "launchway.dev/step"
+	annoAttempt  = "launchway.dev/attempt"
 	helperName   = "workspace"
 )
 
@@ -208,6 +230,13 @@ func (o *KubernetesOptions) setDefaults() error {
 	if err := o.checkPriorityClass(); err != nil {
 		return err
 	}
+	switch o.Pod {
+	case "":
+		o.Pod = PodPerStep
+	case PodPerStep, PodPerRun:
+	default:
+		return fmt.Errorf("kubernetes: pod %q is not one of %s (one pod for each step, the default) or %s (one pod for the whole run, the earlier behavior)", o.Pod, PodPerStep, PodPerRun)
+	}
 	if o.HelperImage == "" {
 		o.HelperImage = "docker.io/library/busybox:1.37"
 	}
@@ -251,6 +280,11 @@ func (k *Kubernetes) Check(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("kubernetes: cannot list pods in namespace %q: %w", k.o.Namespace, err)
 	}
+	if k.perStep() {
+		if err := os.MkdirAll(k.workRoot(), 0o750); err != nil {
+			return fmt.Errorf("kubernetes: cannot make the directory for the run workspaces (kubernetes.work_dir): %w", err)
+		}
+	}
 	return nil
 }
 
@@ -259,6 +293,9 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		return -1, errors.New("kubernetes: the step has no run")
 	}
 	s = withDefaultContainer(s).withParallelism()
+	if k.perStep() {
+		return k.runInStepPod(ctx, s, out)
+	}
 	defer k.holdRun(s.RunID)()
 	rp, err := k.ensurePod(ctx, s, out)
 	if err != nil {
@@ -267,6 +304,13 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		}
 		return -1, err
 	}
+	return k.execStep(ctx, s, rp, out)
+}
+
+// execStep runs the step's script in its container of a pod that is up and
+// holds the workspace, streams its output, measures it, and reads its
+// outputs back. It is the same for a run's pod and a step's pod.
+func (k *Kubernetes) execStep(ctx context.Context, s Spec, rp *runPod, out Sink) (int, error) {
 	container := rp.containers[s.Container]
 	if container == "" {
 		k.forget(s.RunID)
@@ -433,7 +477,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		return nil, err
 	}
 	sys("Copying the workspace into the pod")
-	if err := k.uploadDir(ctx, rp.name, s.Workspace); err != nil {
+	if err := k.uploadDir(ctx, rp.name, s.Workspace, nil); err != nil {
 		return nil, infra("copying the workspace: %v", err)
 	}
 	patch := fmt.Sprintf(`{"metadata":{"annotations":{%q:%q}}}`, annoReady, s.WorkspaceID)
@@ -764,9 +808,10 @@ func (k *Kubernetes) upload(ctx context.Context, pod, dir string, files map[stri
 }
 
 // uploadDir copies a local directory into the pod's workspace.
-func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string) error {
+// base, if not nil, collects what was sent (see fileFP).
+func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string, base map[string]fileFP) error {
 	pr, pw := io.Pipe()
-	go func() { pw.CloseWithError(writeTar(pw, dir)) }()
+	go func() { pw.CloseWithError(writeTarNames(pw, dir, base)) }()
 	// Without a security context the containers may run as different users
 	// (root, or each image's own), so everything is made writable by all.
 	// In a restricted pod every container runs as the user that extracts the
@@ -785,7 +830,12 @@ func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string) error {
 	return nil
 }
 
-func writeTar(w io.Writer, root string) error {
+func writeTar(w io.Writer, root string) error { return writeTarNames(w, root, nil) }
+
+// writeTarNames writes the tree below root as a tar stream, and notes in sent,
+// if it is not nil, what it wrote at each path.
+func writeTarNames(w io.Writer, root string, sent map[string]fileFP) error {
+	settled := time.Now().Add(-2 * time.Second)
 	tw := tar.NewWriter(w)
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -817,6 +867,9 @@ func writeTar(w io.Writer, root string) error {
 		h.Uid, h.Gid, h.Uname, h.Gname = 0, 0, "", ""
 		if err := tw.WriteHeader(h); err != nil {
 			return err
+		}
+		if sent != nil {
+			sent[h.Name] = fingerprint(h, settled)
 		}
 		if info.Mode().IsRegular() {
 			f, err := os.Open(path)
@@ -854,125 +907,6 @@ func oneLine(s string) string {
 }
 
 func ptr[T any](v T) *T { return &v }
-
-// CollectFiles reads report files from the run's pod, where the workspace
-// is: the helper container lists the files below each glob's directory, and
-// reads each chosen file, at most as much as is left of the limits. Only
-// regular files are read; symbolic links are not followed.
-func (k *Kubernetes) CollectFiles(ctx context.Context, s Spec, globs []string, lim CollectLimits) (*Collected, error) {
-	out := &Collected{}
-	pod := podName(s.RunID, k.owner)
-	k.mu.Lock()
-	if rp := k.pods[s.RunID]; rp != nil {
-		pod = rp.name
-	}
-	k.mu.Unlock()
-	p := newPlanner(globs, lim)
-	searched := map[string]bool{}
-	for _, g := range globs {
-		base, depth := globBase(g)
-		key := fmt.Sprintf("%s\x00%d", base, depth)
-		if searched[key] {
-			continue
-		}
-		searched[key] = true
-		// find prints NUL-separated paths, so any name is read correctly. It
-		// does not follow symbolic links. ** never enters .git or
-		// node_modules unless a glob names them.
-		args := []string{"find", base}
-		if depth >= 0 {
-			args = append(args, "-maxdepth", fmt.Sprint(depth))
-		}
-		var prune []string
-		for _, d := range skippedDirs {
-			if !explicitlyNamed(globs, path.Join(base, d)) && base != d && !strings.HasPrefix(base, d+"/") {
-				prune = append(prune, d)
-			}
-		}
-		if len(prune) > 0 {
-			args = append(args, "(")
-			for i, d := range prune {
-				if i > 0 {
-					args = append(args, "-o")
-				}
-				args = append(args, "-name", d)
-			}
-			args = append(args, ")", "-prune", "-o")
-		}
-		args = append(args, "-type", "f", "-print0")
-		var list, stderr bytes.Buffer
-		lw := &limitedWriter{w: &list, n: 16 << 20}
-		script := `cd /workspace || exit 1; [ -d "$1" ] && [ ! -L "$1" ] || exit 0; exec find "$@"`
-		err := k.exec(ctx, pod, helperName, append([]string{"sh", "-c", script, "sh"}, args[1:]...), nil, lw, &stderr)
-		if err != nil && !lw.full {
-			return out, infra("listing files in pod %s: %v %s", pod, err, strings.TrimSpace(stderr.String()))
-		}
-		if lw.full {
-			p.note("the workspace has too many files where %s looks; only part of it was searched", g)
-		}
-		for _, name := range strings.Split(list.String(), "\x00") {
-			name = strings.TrimPrefix(name, "./")
-			if name == "" || strings.ContainsAny(name, "\n\r") {
-				continue
-			}
-			p.offer(name)
-		}
-	}
-	var used int64
-	for _, name := range p.chosen() {
-		n := p.budget(used)
-		if n <= 0 {
-			p.note("%s was not collected: the limit of %s for all files together was reached", name, bytesText(lim.MaxBytes))
-			continue
-		}
-		var data, stderr bytes.Buffer
-		lw := &limitedWriter{w: &data, n: n + 1}
-		// Only a regular file, never what a symbolic link points at.
-		err := k.exec(ctx, pod, helperName, []string{"sh", "-c",
-			`cd /workspace && [ -f "$1" ] && [ ! -L "$1" ] && [ "$(readlink -f "./$1")" = "/workspace/$1" ] || { echo "not a regular file inside the workspace" >&2; exit 3; }; exec head -c "$2" -- "$1"`,
-			"sh", name, fmt.Sprint(n + 1)}, nil, lw, &stderr)
-		if err != nil && !lw.full {
-			if ctx.Err() != nil {
-				return out, ctx.Err()
-			}
-			msg := strings.TrimSpace(stderr.String())
-			if msg == "" {
-				msg = err.Error()
-			}
-			p.note("%s could not be read: %s", name, oneLine(msg))
-			continue
-		}
-		f := CollectedFile{Path: name, Data: data.Bytes()}
-		if int64(len(f.Data)) > n {
-			f.Data, f.Cut = f.Data[:n], true
-			p.cutNote(name, n, 0)
-		}
-		used += int64(len(f.Data))
-		out.Files = append(out.Files, f)
-	}
-	out.Notes = p.notes
-	return out, nil
-}
-
-// limitedWriter keeps at most n bytes and then says it is full.
-type limitedWriter struct {
-	w    io.Writer
-	n    int64
-	full bool
-}
-
-func (l *limitedWriter) Write(b []byte) (int, error) {
-	if int64(len(b)) > l.n {
-		l.full = true
-		b = b[:l.n]
-	}
-	n, err := l.w.Write(b)
-	l.n -= int64(n)
-	if err == nil && l.full {
-		return n, io.ErrShortWrite
-	}
-	return n, err
-}
 
 // unschedulable says the scheduler has found no node with room for the pod.
 func unschedulable(p *corev1.Pod) bool {

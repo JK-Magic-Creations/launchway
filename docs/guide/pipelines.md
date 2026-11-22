@@ -100,8 +100,9 @@ steps:
   deploy: { container: gcloud, run: gcloud run deploy ..., needs: test, when: { branch: main } }
 ```
 
-On Kubernetes, a run is one pod: a container per toolbox plus the services, so steps start
-instantly once the pod is up. Its containers run as an ordinary user, not root, unless the
+On Kubernetes, each step runs in a pod of its own: the step's toolbox plus the helper that holds the workspace and
+the services, made when the step starts and removed when it ends. A step so has the memory and CPU of its own toolbox, even beside a step that uses the same one, and
+the Sortie holds quota only while a step runs. The cost is a pod start for each step, and each service starts afresh with each step. Its containers run as an ordinary user, not root, unless the
 Station's operator chose otherwise (see [Commands](commands.md)). On Podman, services run in a pod
 per Sortie. Plain `image:` steps still work, and each image used that way gets a container of its
 own.

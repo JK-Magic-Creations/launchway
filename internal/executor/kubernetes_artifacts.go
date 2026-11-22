@@ -33,6 +33,11 @@ func (k *Kubernetes) podFor(runID string) string {
 
 // StageFiles copies an artifact's files out of the run's pod.
 func (k *Kubernetes) StageFiles(ctx context.Context, s Spec, globs []string, lim StageLimits, dir string) (*Staged, error) {
+	if k.perStep() {
+		ws, unlock := k.readWorkspace(s)
+		defer unlock()
+		return stageLocal(ctx, ws, globs, lim, dir)
+	}
 	pod := k.podFor(s.RunID)
 	p := newPicker(globs)
 	searched := map[string]bool{}
@@ -166,6 +171,15 @@ func (k *Kubernetes) PlaceFiles(ctx context.Context, s Spec, files []PlacedFile,
 	if s.RunID == "" {
 		return errors.New("kubernetes: the step has no run")
 	}
+	if k.perStep() {
+		m, err := k.mirrorFor(s)
+		if err != nil {
+			return infra("preparing the run's workspace on the Station: %v", err)
+		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		return placeLocal(ctx, m.dir, files)
+	}
 	rp, err := k.ensurePod(ctx, withDefaultContainer(s), out)
 	if err != nil {
 		return err
@@ -264,6 +278,9 @@ func writePlacedTar(w io.Writer, files []PlacedFile) error {
 // WorkspaceInPod implements WorkspaceStager: the workspace is in the pod
 // once the runner has set it up for the run's workspace.
 func (k *Kubernetes) WorkspaceInPod(s Spec) bool {
+	if k.perStep() {
+		return k.workspaceMirror(s) != nil
+	}
 	k.mu.Lock()
 	rp := k.pods[s.RunID]
 	k.mu.Unlock()

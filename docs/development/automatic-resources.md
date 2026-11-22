@@ -1,7 +1,7 @@
 # Automatic resources: a design for review
 
-Status: proposal. Nothing in this document is built, except the measurement
-described in "What exists now". It is written for review with the owner.
+Status: proposal, with stage 0 and stage 1 built (see "Stage 1 as built"
+below). The rest is not built. It is written for review with the owner.
 
 ## The goal
 
@@ -570,7 +570,7 @@ packing.
 | Stage | What | Size (honest) |
 |---|---|---|
 | 0 (done in this branch) | Release on lost lease, restart sweep, heartbeat tolerance, truthful message, measurement and its display. | Done. |
-| 1 | One pod per step on Kubernetes: pod naming by step, workspace hand-over (reuse the checkout copy; add a per-run volume as an option), reaper changes, quota checks per step, tests with the fake client and one real-cluster rehearsal. Retires the per-image sizing in `runContainers`. | 2 to 3 weeks. The workspace hand-over and the real-cluster testing are most of it. |
+| 1 (done: see "Stage 1 as built") | One pod per step on Kubernetes: pod naming by step, workspace hand-over (reuse the checkout copy; add a per-run volume as an option), reaper changes, quota checks per step, tests with the fake client and one real-cluster rehearsal. Retires the per-image sizing in `runContainers`. | 2 to 3 weeks. The workspace hand-over and the real-cluster testing are most of it. |
 | 2 | Automatic figure: store history, compute figures, apply them when the run is created, first-run defaults, override as floor, display reserved, used and next figure. | 1 to 2 weeks. |
 | 3 | Kill recovery: one typed retry with more, the record and the plain message; the retry typing for infrastructure faults. | About 1 week. |
 | 4 | Environment hints for tools (requirement 3) with a documented table and tests per language image. | About 1 week; the table is easy, proving it on real images is the work. |
@@ -582,6 +582,149 @@ packing.
 
 Total: about 16 to 21 weeks of focused work, in the order above. Stages 1
 and 7 should begin together, so each stage is proved when it lands.
+
+## Stage 1 as built
+
+Stage 1 is built: the Kubernetes executor makes one pod for each step attempt
+(`kubernetes.pod: per-step`, the default). The earlier behavior stays for one
+release as `kubernetes.pod: per-run` (chart: `runner.kubernetes.pod`), so an
+installation can go back without a downgrade; it will be removed. The local,
+Podman, Docker and host executors are unchanged.
+
+### What was built
+
+- **A pod for each step attempt.** The pod holds the step's own container (its
+  image and its own requests and limits), the helper container that holds the
+  workspace, and the run's service containers, and nothing else. It is made when
+  the step starts and deleted when it ends, however it ends (success, failure,
+  cancel, timeout, lost lease). Its name is
+  `launchway-<step, 20 characters>-a<attempt>-<10 hex of a hash of run, step,
+  attempt, lease and Station>`: a valid DNS label, different for every attempt.
+  Labels carry the run, the Station and `launchway.dev/pod=step`; annotations the
+  step and attempt.
+- **The step's own container.** `runContainers` still sizes one container per
+  image for the largest step (older Stations and `per-run` use it). The server
+  now also sends `Job.StepContainer`, the step's container sized for that step
+  alone (`sizeContainer` with only that step), and a per-step Station uses it for
+  the step's container. Acceptance case 1 and 4 follow: two same-image steps get
+  two pods, each with its own memory; a run of any number of images never makes a
+  pod of more than the step's container, the helper and the services.
+- **The workspace between steps: through the Station.** The Station keeps a copy
+  of each running run's workspace on its own disk (`kubernetes.work_dir`, by
+  default `kubernetes` under its data directory), first made from the checkout,
+  which is never written to (for a run from a directory it is the person's own
+  files).
+  - A step's pod is filled from the copy when it starts.
+  - When the step ends, before the pod is deleted, the pod's whole workspace is
+    read back. The Station remembers what it sent (size, time, mode, link target
+    of each entry) and applies only what the step changed: a changed or new
+    file is written, with its time kept (so a cache's files keep theirs), a file
+    that was sent and did not come back is removed, and an entry that came back
+    as it was sent is left alone. That makes steps of one stage that run at the
+    same time merge correctly: neither puts back what the other removed or
+    changed (tested).
+  - Reports, Cargo, caches and image build contexts are read from the copy
+    after the step (and caches and fetched Cargo are put into it before the
+    step), through the same local code the other executors use, so a failed
+    step's reports are still there after its pod is gone. The runner builds an
+    image's context from the copy.
+  - Names are checked against escaping the copy (`os.Root`), links are kept as
+    links and never followed, and devices, pipes and sockets are not copied.
+- **Why through the Station.** It is what the first step's workspace always did
+  (the checkout is copied into the pod), it needs nothing from the cluster
+  (no storage class, no claim, no extra RBAC, no node affinity), and it makes
+  every artifact, cache and report path the same as on the other executors. The
+  per-run volume is kept as a documented option, not built: one claim mounted by
+  each step's pod in turn saves the transfer, but it needs a storage class and
+  permission to make claims, ReadWriteOnce confines the steps of a stage that run
+  at the same time to one node (so parallel steps would wait for each other's pod
+  or need ReadWriteMany), quota would also count the claim, and the volume must be
+  cleaned when a Station dies. It is worth building when workspaces of gigabytes
+  make the transfer the cost; until then `per-run` is the escape for such a run.
+- **Parallel steps.** Today they share one filesystem live. Now each starts from
+  the workspace as it was and hands back what it changed; they no longer see each
+  other's files while running. A step that needs another's files must `needs:` it,
+  as it always had to.
+- **Quota and waiting.** The checks (operator limits, LimitRanges, quota) are made
+  for the step's pod. A pod larger than the whole quota fails at once with both
+  numbers (requirement 4b, per step). When the pod only does not fit now, the
+  API server's own answer decides (the quota's status can be behind pods that
+  were just deleted) and the step waits with the sentence that names the steps of
+  the same run that hold room, what the namespace allows, what is reserved in all
+  and how much must be released.
+- **A run cannot wait on its own abandoned pods (requirement 4e, finding 3).**
+  Before a step makes its pod, the Station deletes its own pods of that run that
+  no step of its process runs in, and says so in the step's log. The reaper does
+  the same for a restarted Station (pods it made in an earlier process hold no
+  lease) and for a lost lease (`ReleaseRun`). Pods of another Station of the same
+  run are running steps and are waited for; they end by themselves.
+- **A restart of a Station (finding 5).** A restarted Station does not adopt the
+  step that was running: its lease is gone and the step runs again once, on a
+  lease of its own, while the steps that finished are kept. What changed is that
+  the abandoned pod is removed at once, so the retry never waits for its quota.
+  Adoption (reattaching to the running step) is stage 3, with the retry typing.
+
+### What changed for the parts around it
+
+| Part | Now |
+|---|---|
+| Image steps | They have no pod. The build context is read from the Station's copy of the workspace, which holds what the steps before left; the log says so. The `ExportContext` of a pod is used only with `per-run`. |
+| The usage sampler | It reads the cgroup of the step's own container in the step's own pod, so the figures are the step's alone (the earlier limitation "where two steps share a container the numbers are the container's" is gone on Kubernetes). |
+| Out-of-memory explanation | Looked at before the pod is deleted and kept for the runner, which asks after the step. |
+| Tool caches under HOME | They live in the pod and go with it: a later step starts with the Go build cache and the like cold (before, steps of a run shared them). Declare `cache:` for what should carry on. |
+| Services | They are part of every step's pod and start with it. A service's state no longer carries on to the next step, and each step pod counts the services against quota. This is a change for pipelines that relied on it (use `per-run` meanwhile). |
+| Inspection steps | Each is a step with its own pod, so an Inspection of many steps makes many short pods, not one pod of 14 containers. |
+| Private home, priority class, image pull secrets, restricted security context, user entry, readiness of services, the "waiting for the pod" notices | The same pod specification is used, so they are as before in each step pod. |
+| Report and artifact collection, cancel, timeouts, the "little progress" notice | Unchanged for the runner. A canceled step's workspace is read back within 30 seconds, so its reports are collected; a step that ended by itself gets 10 minutes. |
+
+### What it costs, measured
+
+Measured on a one-node kind cluster, images already on the node, for a step
+that does nothing, with a workspace of 2000 files of 10 KiB (20 MB), three steps in a row:
+
+| Part | Measured |
+|---|---|
+| Whole step (pod start, user-entry init container, hand-in, hand-out, delete) | 3.4 to 4.2 s |
+| Workspace into the pod | 0.14 to 0.51 s |
+| Workspace back to the Station | 0.07 to 0.21 s |
+
+A unit benchmark with the fake cluster (`BenchmarkStepWorkspaceHandOver`; tar runs
+locally, no network, so it is the Station's own work) gives, per step, for the
+hand-in, a no-op step and the hand-back: 19 ms for 100 files (400 KB), 149 ms for
+2000 files (20 MB), 595 ms for 20,000 files of 4 KiB (80 MB) and 154 ms for 100
+files of 1 MiB (100 MB). A real network adds the transfer through the API server.
+So for steps of a minute or more the cost is not noticeable; a run of many tiny
+steps is slower (the design accepted it: slower builds over an unstable platform),
+and workspaces of gigabytes pay on every step (use `per-run`, or the per-run
+volume, when that is built).
+
+### Acceptance cases and the tests that hold them
+
+| Case | Test (`internal/executor` unless noted) |
+|---|---|
+| 1. Two same-image steps killed together | `TestTwoStepsOfOneImageAtTheSameTimeHavePodsAndLimitsOfTheirOwn`; `internal/engine`: `TestEachStepIsToldItsOwnContainerNotTheLargestOfItsImage` |
+| 2. 16.9 GiB reserved while using 1 GiB | Quota is held only while a step runs: `TestAStepPodHoldsOnlyItsOwnContainerTheHelperAndTheServices`, `TestARetriedStepNeverWaitsForRoomItsOwnAbandonedPodHolds`, `TestAStepWaitsForRoomHeldByOthersAndSaysWhoHoldsIt` |
+| 3. Retry waiting on its own abandoned pod | `TestARetriedStepNeverWaitsForRoomItsOwnAbandonedPodHolds` (a retry on a restarted Station, 9 of 16 Gi held), and on a real cluster `TestKubernetesStepQuota` |
+| 4. Fourteen containers | `TestAStepPodHoldsOnlyItsOwnContainerTheHelperAndTheServices` |
+| 5. Restart of Stations | `TestARestartedStationSweepsThePodsOfAttemptsThatHoldNoLease`, `TestReleaseRunDeletesTheIdlePodsOfTheRunAndNotARunningStep` |
+| Pods gone after every outcome | `TestTheStepPodIsGoneAfterEveryOutcome` (success, failure, memory kill, cancel, image that cannot be pulled) |
+| Workspace hand-over | `TestTheWorkspaceGoesFromStepToStep`, `TestStepsAtTheSameTimeMergeAndNeitherUndoesTheOther`, `TestFilesAreReadFromAndPutInTheRunsWorkspaceWithoutAPod`, `TestHandingBackNeverWritesOutsideTheWorkspace` |
+| Sampler | `TestTheUsageIsReadFromTheStepsOwnPodAndContainer` |
+| A step that can never fit | `TestAStepThatCanNeverFitTheNamespaceFailsAtOnce` |
+
+The same behavior was rehearsed on a real cluster (a kind cluster, in a
+namespace made for the rehearsal and deleted after): `TestKubernetesStepPods`,
+`TestKubernetesStepOOM`, `TestKubernetesStepPodService`, `TestKubernetesStepQuota`
+(`LAUNCHWAY_TEST_KUBE_CONTEXT`), and the cache end-to-end test on Kubernetes.
+
+### Not done in stage 1
+
+Adoption of a running step by a restarted Station; the automatic figure (stage
+2); a per-run volume; reading only changed files back (the whole workspace is
+read, and only what changed is written on the Station); a refusal of a run whose
+largest step can never fit when the run is created (stage 5); the image-step
+test on Kubernetes (`internal/api/images_kubernetes_test.go`) needs BuildKit and
+was not run, though its wording was updated.
 
 ## Open questions for the owner
 

@@ -354,6 +354,9 @@
                 "minLength": 1
               }
             },
+            "pod": {
+              "enum": ["", "per-step", "per-run"]
+            },
             "keepFailed": {
               "type": "string",
               "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$"

@@ -359,7 +359,8 @@ See [Templates](#template-files) and [Reuse steps with library templates](../tut
 
 `containers` names images once, so steps can use them by name, and declares services that run
 beside the steps for the whole Sortie (a database for tests, say). All of a Sortie's containers share the
-workspace; on Kubernetes they share one pod, so services are reachable at `localhost`.
+workspace; on Kubernetes a step's pod holds its own container and the services, so services are reachable at `localhost`
+and start with each step's pod (a service's state does not carry on to the next step).
 
 Names match `^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`. `workspace` and names starting with `image-`
 are reserved.
@@ -1254,8 +1255,9 @@ steps:
 ```
 
 **Defaults.** A new installation starts with these for kind `step`, and an administrator changes
-them without a restart; a change applies to the next pod a Sortie starts (a Sortie's pod is made once, for
-its first step, and kept for its other steps). The values live in the database, so every server of
+them without a restart; a change applies to the next step that starts, on a Kubernetes Station that makes a pod
+for each step (with `pod: per-run`, to the next pod a Sortie starts: its pod is made once, for its first step, and kept
+for the others). The values live in the database, so every server of
 an installation agrees.
 
 **Upgrading does not change your pipelines.** An installation that is upgraded from a release before

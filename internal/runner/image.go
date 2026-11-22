@@ -97,7 +97,8 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	defer os.RemoveAll(meta)
 	images, builtinToken := r.builtinRegistry(job, mask, sys)
 	spec := executor.Spec{
-		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
+		RunID: job.RunID, StepID: job.StepID, Attempt: job.Attempt, LeaseID: job.LeaseID,
+		Containers: r.containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
 	}
 	outDir := filepath.Join(work, "build", imagebuild.OutDir)
@@ -222,6 +223,14 @@ func (r *Runner) buildContext(ctx context.Context, job *engine.Job, spec executo
 		}
 		// No pod yet: this is the run's first step, and the checkout is the
 		// workspace.
+	}
+	if wd, ok := r.Exec.(executor.WorkspaceDirer); ok {
+		// The run's workspace is a copy of the Station's, which the steps
+		// before this one wrote into, not the checkout.
+		if dir := wd.WorkspaceDir(spec); dir != "" {
+			ws = dir
+			sys("Using the build context %s from the run's workspace on the Station, where the steps before this one left their files", b.Context)
+		}
 	}
 	root, err := filepath.EvalSymlinks(ws)
 	if err != nil {

@@ -587,7 +587,7 @@ func cmdRunner(args []string) error {
 	if o.Deploy != nil {
 		return runDeployRunner(ctx, o, client, id, secretStores)
 	}
-	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
+	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id, DataDir: o.Data})
 	if err != nil {
 		return err
 	}
@@ -729,13 +729,6 @@ func cmdRun(args []string) error {
 			}
 		}
 	}
-	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser()})
-	if err != nil {
-		return err
-	}
-	if err := checkExecutor(context.Background(), ex); err != nil {
-		return err
-	}
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -745,6 +738,13 @@ func cmdRun(args []string) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
+	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser(), DataDir: filepath.Join(tmp, "runner")})
+	if err != nil {
+		return err
+	}
+	if err := checkExecutor(context.Background(), ex); err != nil {
+		return err
+	}
 
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 	localStore, err := blobstore.NewFilesystem(filepath.Join(tmp, "artifacts"))
@@ -921,6 +921,7 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 	o := &executor.KubernetesOptions{}
 	fs.StringVar(&o.Context, "k8s-context", "", "kubeconfig context for the kubernetes executor (default: current)")
 	fs.StringVar(&o.Namespace, "k8s-namespace", "", "namespace for step pods (default: the context's)")
+	fs.StringVar(&o.Pod, "k8s-pod", "", "how much of a run one pod holds in the kubernetes executor: per-step (default) or per-run (kubernetes.pod)")
 	fs.BoolFunc("k8s-unrestricted", "run step pods' containers as their images' own users (often root), "+
 		"without the restricted security context (kubernetes.restricted: false)", func(v string) error {
 		b, err := strconv.ParseBool(v)

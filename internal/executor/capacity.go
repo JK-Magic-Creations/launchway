@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -97,6 +98,7 @@ func quotaWait(pod string, err error, held *runHold) error {
 type runHold struct {
 	total map[string]resource.Quantity
 	pods  map[string]int
+	steps []string // the steps whose pods these are, when the pods are a step's each
 }
 
 // holdOf adds up what the pods ask of the quota. A pod that has ended holds
@@ -106,6 +108,9 @@ func holdOf(pods []corev1.Pod) *runHold {
 	for _, p := range pods {
 		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
 			continue
+		}
+		if st := p.Annotations[annoStep]; st != "" && !slices.Contains(h.steps, st) {
+			h.steps = append(h.steps, st)
 		}
 		add := func(name string, q resource.Quantity) {
 			t := h.total[name]
@@ -151,6 +156,10 @@ func (h *runHold) sentence(name string) string {
 	pl := "pods"
 	if n == 1 {
 		pl = "pod"
+	}
+	if len(h.steps) > 0 {
+		slices.Sort(h.steps)
+		return fmt.Sprintf("this Sortie's steps %s hold %s across %d %s, and release it when they end;", strings.Join(h.steps, ", "), describeAmount(name, q), n, pl)
 	}
 	return fmt.Sprintf("this run has reserved %s across %d %s;", describeAmount(name, q), n, pl)
 }

@@ -77,13 +77,13 @@ func (k *Kubernetes) checkResources(ctx context.Context, specs []ContainerSpec, 
 	if k.client == nil {
 		return specs, nil
 	}
-	if err := checkLimitRanges(ns, lrs, asks); err != nil {
+	if err := checkLimitRanges(ns, lrs, asks, k.podNoun()); err != nil {
 		return nil, err
 	}
 	rqs, err := k.client.CoreV1().ResourceQuotas(ns).List(ctx, metav1.ListOptions{})
 	switch {
 	case err == nil:
-		return specs, checkQuotas(ns, rqs.Items, asks)
+		return specs, checkQuotas(ns, rqs.Items, asks, k.podNoun(), k.perStep())
 	case apierrors.IsForbidden(err):
 		k.noteOnce("resourcequotas", sys, "The runner may not read the namespace's ResourceQuotas, so it cannot check the pod against them; the cluster will")
 	case ctx.Err() != nil:
@@ -227,7 +227,7 @@ func (k *Kubernetes) checkOperatorLimits(asks []podAsk) error {
 
 // checkLimitRanges holds the containers, and the pod as a whole, to what the
 // namespace's LimitRanges allow.
-func checkLimitRanges(ns string, lrs []corev1.LimitRange, asks []podAsk) error {
+func checkLimitRanges(ns string, lrs []corev1.LimitRange, asks []podAsk, noun string) error {
 	for _, lr := range lrs {
 		for _, item := range lr.Spec.Limits {
 			switch item.Type {
@@ -318,9 +318,11 @@ var quotaKeys = []struct {
 }
 
 // checkQuotas holds the pod to what the namespace's quotas hold in all: a pod
-// that could never fit fails; one that does not fit while other pods use the
-// quota is run again later.
-func checkQuotas(ns string, rqs []corev1.ResourceQuota, asks []podAsk) error {
+// that could never fit fails. One that does not fit while other pods use the
+// quota is run again later; with a pod for each step (exact is true) that is
+// left to the API server, which answers from the quota's live figures, where
+// the quota's status can lag behind pods that were just removed.
+func checkQuotas(ns string, rqs []corev1.ResourceQuota, asks []podAsk, noun string, exact bool) error {
 	for _, rq := range rqs {
 		for _, q := range quotaKeys {
 			total, n := sumAsks(asks, q.kind, q.r)
@@ -333,15 +335,18 @@ func checkQuotas(ns string, rqs []corev1.ResourceQuota, asks []podAsk) error {
 					continue
 				}
 				if total.Cmp(hard) > 0 {
-					return fmt.Errorf("the run's pod asks for %s %s in all (%d containers), which is above the %s that ResourceQuota %q in namespace %s allows "+
-						"(its %s); no pod of this size can run there", key, total.String(), n, hard.String(), rq.Name, ns, key)
+					return fmt.Errorf("%s asks for %s %s in all (%d containers), which is above the %s that ResourceQuota %q in namespace %s allows "+
+						"(its %s); no pod of this size can run there, so the step can never start: ask for less, or raise the quota", noun, key, total.String(), n, hard.String(), rq.Name, ns, key)
+				}
+				if exact {
+					continue
 				}
 				used := rq.Status.Used[key]
 				left := hard.DeepCopy()
 				left.Sub(used)
 				if total.Cmp(left) > 0 {
-					return infra("the run's pod asks for %s %s in all, but ResourceQuota %q in namespace %s has %s of its %s left (%s is in use by other pods); the step is tried again later",
-						key, total.String(), rq.Name, ns, left.String(), hard.String(), used.String())
+					return infra("%s asks for %s %s in all, but ResourceQuota %q in namespace %s has %s of its %s left (%s is in use by other pods); the step is tried again later",
+						noun, key, total.String(), rq.Name, ns, left.String(), hard.String(), used.String())
 				}
 			}
 		}
