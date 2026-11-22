@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"steps/go-licenses/lwstep"
 )
 
 // say prints a line the log shows as what the step decided.
@@ -18,12 +16,12 @@ func say(format string, a ...any) { fmt.Printf("launchway: "+format+"\n", a...) 
 func run(dir, command string) error {
 	fmt.Println("+ " + command)
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Env = dir, os.Stdout, os.Stderr, lwstep.Environ()
+	cmd.Dir, cmd.Stdout, cmd.Stderr, cmd.Env = dir, os.Stdout, os.Stderr, Environ()
 	return cmd.Run()
 }
 
 func main() {
-	lwstep.Run(func(s *lwstep.Step) error {
+	Run(func(s *Step) error {
 		ws := os.Getenv("LAUNCHWAY_WORKSPACE")
 		wd := s.String("working_directory")
 		if wd == "" {

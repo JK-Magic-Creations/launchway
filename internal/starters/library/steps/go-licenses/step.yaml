@@ -5,7 +5,7 @@ step: go-licenses
 contract: 1
 description: List the licenses of a Go module's dependencies; fail only for the types on license_deny
 toolchain: go@1.25
-command: go run .
+command: go run main.go lwstep.go
 inputs:
   working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository" }
   license_deny: { type: list, default: [], description: "go-licenses license types that fail the step (forbidden, restricted, ...); empty only lists them" }

@@ -16,7 +16,7 @@
 //
 // A step that returns an error fails (exit 1) with the message on stderr;
 // ErrAllowed makes it "failed but allowed" (64), NeedsPerson "needs a person" (65).
-package lwstep
+package main
 
 import (
 	"bytes"
@@ -233,7 +233,9 @@ func (s *Step) result(m map[string]any) {
 }
 
 // Summary adds a Markdown summary, shown on the step's page.
-func (s *Step) Summary(markdown string) { s.result(map[string]any{"t": "summary", "markdown": markdown}) }
+func (s *Step) Summary(markdown string) {
+	s.result(map[string]any{"t": "summary", "markdown": markdown})
+}
 
 // Annotate adds a note on a line of a file of the workspace; level is note, warning or error.
 func (s *Step) Annotate(level, file string, line int, message string) {
