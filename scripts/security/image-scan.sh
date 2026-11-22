@@ -12,7 +12,7 @@ work="$(mktemp -d)"; chmod 755 "$work"; trap 'rm -rf "$work"' EXIT
 $CONTAINER save -o "$work/image.tar" "$IMAGE"; chmod 644 "$work/image.tar"
 cache="${TRIVY_CACHE_DIR:-$HOME/.cache/launchway-trivy}"; mkdir -p "$cache"
 $CONTAINER run --rm --security-opt label=disable -v "$work:/work" -v "$ROOT/quality/trivy-ignore.yaml:/ignore.yaml:ro" -v "$cache:/root/.cache" \
-  "$TRIVY_IMAGE" image --input /work/image.tar --scanners vuln,secret --ignore-unfixed --ignorefile /ignore.yaml \
+  "$TRIVY_IMAGE" image --skip-version-check --input /work/image.tar --scanners vuln,secret --ignore-unfixed --ignorefile /ignore.yaml \
   --quiet --format json --output /work/r.json
 # The scan only means something if the scanner recognized the distribution: an image without
 # /etc/os-release is reported as having no operating system, and so no OS packages to check.

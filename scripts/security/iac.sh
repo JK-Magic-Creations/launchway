@@ -30,7 +30,7 @@ cache="${TRIVY_CACHE_DIR:-$HOME/.cache/launchway-trivy}"; mkdir -p "$cache"
 cp deploy/buildkit/buildkitd.yaml "$out/rendered/buildkitd.yaml"
 cp Dockerfile "$out/rendered/Dockerfile"
 $CONTAINER run --rm --security-opt label=disable -v "$out/rendered:/work:ro" -v "$ROOT/quality/trivy-ignore.yaml:/ignore.yaml:ro" -v "$cache:/root/.cache" \
-  "$TRIVY_IMAGE" config /work --severity HIGH,CRITICAL --exit-code 1 --ignorefile /ignore.yaml --quiet
+  "$TRIVY_IMAGE" config --skip-version-check /work --severity HIGH,CRITICAL --exit-code 1 --ignorefile /ignore.yaml --quiet
 echo "== hadolint"
 $CONTAINER run --rm --security-opt label=disable -i -v "$ROOT/.hadolint.yaml:/.config/hadolint.yaml:ro" "$HADOLINT_IMAGE" hadolint --failure-threshold warning - < Dockerfile
 echo "iac: all scans passed"

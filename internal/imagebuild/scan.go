@@ -34,6 +34,17 @@ type scanRequest struct {
 	log       func(string)
 }
 
+// scannerEnvironment is the environment every run of the scanner gets. The scanner must not dial out to ask whether a
+// newer version exists (TRIVY_SKIP_VERSION_CHECK, for the pinned 0.76 line; the same setting is --skip-version-check
+// in scripts/security): a Station whose egress is closed would wait for that call, and it would tell a third party
+// that a scan ran.
+var scannerEnvironment = [][2]string{
+	{"TRIVY_CACHE_DIR", "/cache"},
+	{"TRIVY_NO_PROGRESS", "true"},
+	{"TRIVY_DISABLE_TELEMETRY", "true"},
+	{"TRIVY_SKIP_VERSION_CHECK", "true"},
+}
+
 var repoRe = regexp.MustCompile(`^[a-z0-9.\-:/_]+$`)
 
 // scan runs the scanner on a builder.
@@ -46,14 +57,14 @@ func (b *builder) scan(ctx context.Context, image string, cfg ScannerConfig, req
 	}
 	base := llb.Image(image, llb.Platform(native))
 	in := llb.Local("image")
-	env := []llb.RunOption{
-		llb.AddEnv("TRIVY_CACHE_DIR", "/cache"),
-		llb.AddEnv("TRIVY_NO_PROGRESS", "true"),
-		llb.AddEnv("TRIVY_DISABLE_TELEMETRY", "true"),
+	var env []llb.RunOption
+	for _, kv := range scannerEnvironment {
+		env = append(env, llb.AddEnv(kv[0], kv[1]))
+	}
+	env = append(env,
 		llb.AddMount("/in", in, llb.Readonly),
 		llb.AddMount("/cache", llb.Scratch(), llb.AsPersistentCacheDir("launchway-trivy-cache", llb.CacheMountLocked)),
-		llb.IgnoreCache,
-	}
+		llb.IgnoreCache)
 	dbArgs := func() []string {
 		var a []string
 		if cfg.DBRepository != "" && repoRe.MatchString(cfg.DBRepository) {
