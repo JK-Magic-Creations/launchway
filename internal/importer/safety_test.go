@@ -52,7 +52,7 @@ func TestHostileYAMLIsRefused(t *testing.T) {
 }
 
 func TestEveryReaderSurvivesHostileInput(t *testing.T) {
-	paths := map[string]string{"hosted-workflows": ".github/workflows/x.yml", "stages-yaml": ".a-ci.yml", "jobs-config": ".ci/config.yml", "tasks-pipelines": "a-pipelines.yml", "groovy-declarative": "Jenkinsfile"}
+	paths := map[string]string{"hosted-workflows": ".github/workflows/x.yml", "stages-yaml": ".a-ci.yml", "jobs-config": ".ci/config.yml", "tasks-pipelines": "a-pipelines.yml", "groovy-declarative": "Pipelinefile"}
 	groovy := map[string][]byte{
 		"braces":  []byte("pipeline {" + strings.Repeat("stage('x') {", 3000)),
 		"strings": []byte("pipeline { stages { stage('x') { steps { sh '''never closed } } } }"),
@@ -65,7 +65,7 @@ func TestEveryReaderSurvivesHostileInput(t *testing.T) {
 		}
 		if f.ID == "groovy-declarative" {
 			for name, data := range groovy {
-				testRead(t, f, "Jenkinsfile", name, data)
+				testRead(t, f, "Pipelinefile", name, data)
 			}
 		}
 	}
@@ -126,18 +126,18 @@ func fuzzFormat(f *testing.F, id, path string) {
 	})
 }
 
-func FuzzHostedWorkflows(f *testing.F)  { fuzzFormat(f, "hosted-workflows", ".github/workflows/x.yml") }
-func FuzzStagesYAML(f *testing.F)       { fuzzFormat(f, "stages-yaml", ".a-ci.yml") }
-func FuzzGroovyDeclarative(f *testing.F) { fuzzFormat(f, "groovy-declarative", "Jenkinsfile") }
-func FuzzJobsConfig(f *testing.F)       { fuzzFormat(f, "jobs-config", ".ci/config.yml") }
-func FuzzTasksPipelines(f *testing.F)   { fuzzFormat(f, "tasks-pipelines", "a-pipelines.yml") }
+func FuzzHostedWorkflows(f *testing.F)   { fuzzFormat(f, "hosted-workflows", ".github/workflows/x.yml") }
+func FuzzStagesYAML(f *testing.F)        { fuzzFormat(f, "stages-yaml", ".a-ci.yml") }
+func FuzzGroovyDeclarative(f *testing.F) { fuzzFormat(f, "groovy-declarative", "Pipelinefile") }
+func FuzzJobsConfig(f *testing.F)        { fuzzFormat(f, "jobs-config", ".ci/config.yml") }
+func FuzzTasksPipelines(f *testing.F)    { fuzzFormat(f, "tasks-pipelines", "a-pipelines.yml") }
 
 func TestDetect(t *testing.T) {
 	cases := map[string]string{
 		".github/workflows/ci.yml": "hosted-workflows",
 		".x-ci.yml":                "stages-yaml",
-		"Jenkinsfile":              "groovy-declarative",
-		"web/Jenkinsfile":          "groovy-declarative",
+		"Pipelinefile":              "groovy-declarative",
+		"web/Pipelinefile":          "groovy-declarative",
 		".ci/config.yml":           "jobs-config",
 		"azure-pipelines.yml":      "tasks-pipelines",
 	}

@@ -9,7 +9,7 @@ import (
 
 func init() {
 	register(&Format{
-		ID: "groovy-declarative", Title: "Declarative Groovy pipeline file", Where: "a file with a pipeline { ... } block at the top (usually named Jenkinsfile; any file name works with --from)",
+		ID: "groovy-declarative", Title: "Declarative Groovy pipeline file", Where: "a file with a pipeline { ... } block at the top (its name usually ends in file; any file name works with --from)",
 		Detect: func(p string, head []byte) bool {
 			base := p
 			if i := strings.LastIndex(p, "/"); i >= 0 {
