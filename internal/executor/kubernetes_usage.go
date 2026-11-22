@@ -46,17 +46,20 @@ func (k *Kubernetes) startMeasuring(ctx context.Context, pod, container string, 
 	}()
 	go func() {
 		defer wg.Done()
-		_ = k.exec(loopCtx, pod, container, []string{"sh", "-c", sampleScript, "sh", "loop"}, nil, pw, io.Discard)
+		// The loop writes its process ID where finish can find it, so that it can be ended from the inside and its
+		// stream closed by the container, not torn down by the client (which the client logs as an error).
+		_ = k.exec(loopCtx, pod, container, []string{"sh", "-c", "echo $$ > " + samplerPID + "\n" + sampleScript, "sh", "loop"}, nil, pw, io.Discard)
 		pw.Close()
 	}()
 	var once sync.Once
 	return func(took time.Duration) {
 		once.Do(func() {
-			stop()
-			wg.Wait()
 			if took < 0 {
+				stop() // the step did not end normally: the container may be gone
+				wg.Wait()
 				return
 			}
+			k.endSampler(finalCtx, pod, container, &wg, stop)
 			final, ok := oneSample(finalCtx, run)
 			if !ok {
 				u.notMeasured("the container's use could not be read at the end of the step")
@@ -89,4 +92,25 @@ func (k *Kubernetes) reserved(s Spec) (memory, cpuMilli int64) {
 		}
 	}
 	return memory, cpuMilli
+}
+
+// samplerPID is where the sampling loop of a step's container writes its process ID (the container's /launchway
+// volume is in memory and is the step's own).
+const samplerPID = "/launchway/sampler.pid"
+
+// endSampler ends the sampling loop from the inside and waits for its stream to close. Cancelling the stream
+// instead makes the client log "Copying stdout failed ... use of closed network connection" for every step. If the
+// container cannot be reached the stream is cancelled after a few seconds.
+func (k *Kubernetes) endSampler(ctx context.Context, pod, container string, wg *sync.WaitGroup, cancel context.CancelFunc) {
+	kctx, stopK := context.WithTimeout(ctx, 5*time.Second)
+	defer stopK()
+	_ = k.exec(kctx, pod, container, []string{"sh", "-c", `kill "$(cat ` + samplerPID + `)" 2>/dev/null; true`}, nil, io.Discard, io.Discard)
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		cancel()
+		<-done
+	}
 }
