@@ -160,6 +160,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/organize/{area}/folders` | `organize` | `organize` | — | equal |
 | `PUT /api/v1/organize/{area}/labels` | `organize` | `organize` | — | equal |
 | `POST /api/v1/organize/{area}/move` | `organize` | `organize` | — | equal |
+| `GET /api/v1/owners/{owner}/activity` | `get_owner_activity` | `repos activity` | — | equal |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
@@ -331,6 +332,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/activity` | `get_repository_activity` | `repos activity` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues` | `list_archived_issues` | `repos archive list` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/archive/issues` | `import_archive` | `repos import-archive` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/archive/issues/{number}` | `get_archived_issue` | `repos archive show` | — | equal |
@@ -345,6 +347,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/commits` | `list_repository_commits` | `repos commits` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `get_repository_commit` | `repos show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `repos compare` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/contributors` | `get_repository_contributors` | `repos contributors` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts list` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
 | `POST /api/v1/repositories/{owner}/{name}/credentials` | — | `service-accounts token` | — | exempt: the repository settings page's view of who reaches a repository and its one-step credential; deploy keys, mirrors and service accounts have their own commands, and an agent must not make credentials |
 | `GET /api/v1/repositories/{owner}/{name}/dependencies` | `list_dependencies` | `deps list` | — | equal |
@@ -368,6 +371,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/inspections` | `get_repository_inspections` | `repos inspections` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/inspections` | `inspect_repository` | `repos inspect` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/languages` | `get_repository_languages` | `repos languages` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/merge-rules` | `get_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/merge-rules` | `set_pull_settings` | `pr rules` | `planned: launchway_merge_rule` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |

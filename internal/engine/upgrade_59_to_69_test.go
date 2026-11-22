@@ -82,6 +82,10 @@ func TestUpgradeFromSchema59KeepsEverythingAndAddsTheTrashLedger(t *testing.T) {
 	if left, err := store.PurgingRepositories(ctx, cur.Database()); err != nil || !slices.Equal(left, []string{"rep1"}) {
 		t.Fatalf("unfinished removals: %v %v", left, err)
 	}
+	// The removal of a later build also clears the tables of schema 70; this build of schema 69 has none, so they are made.
+	if _, err := cur.db.Exec(strings.ReplaceAll(overviewMigration.sql, "{{BIG}}", "BIGINT")); err != nil {
+		t.Fatal(err)
+	}
 	if removed, err := store.DeleteRepoRows(ctx, cur.Database(), "rep1", ".trash/"); err != nil || !removed {
 		t.Fatalf("removing the rows: %v %v", removed, err)
 	}

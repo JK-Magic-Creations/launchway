@@ -41,6 +41,7 @@ func addRepositoryTools(srv *mcp.Server, c *mcpCall) {
 	addArchiveTools(srv, c)
 	addFilesTools(srv, c)
 	addBrowseTools(srv, c)
+	addOverviewTools(srv, c)
 }
 
 type repositoryOut struct {

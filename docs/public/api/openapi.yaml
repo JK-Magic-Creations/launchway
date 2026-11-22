@@ -4042,6 +4042,37 @@ paths:
                 - organize
             x-launchway-access: signed-in
             x-launchway-audit: folder.update
+    /api/v1/owners/{owner}/activity:
+        get:
+            description: The same feed over every repository of the owner that the caller may read; a repository the caller cannot read adds nothing and is not named. Same parameters.
+            operationId: get_api_v1_owners_owner_activity
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The same feed over every repository of the owner that the caller may read; a repository the caller cannot read adds nothing and is not named.
+            tags:
+                - owners
+            x-launchway-access: signed-in
     /api/v1/owners/{owner}/hooks:
         get:
             description: As for a repository, for every repository of the owner.
@@ -9674,6 +9705,42 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.update
+    /api/v1/repositories/{owner}/{name}/activity:
+        get:
+            description: 'What happened lately, newest first: {"items": [{"id", "kind", "at", "actor", "repository", "title", "ref", "number", "project", "status", "version"}], "next"}. Kinds: push, tag, pull_opened, pull_merged, pull_closed, release and run (the last two from the Flights that watch the repository and that the caller may read). ?kind= takes a comma-separated list (pull means the three pull request kinds), ?limit= at most 100 (default 30); next goes in ?before= for the page after.'
+            operationId: get_api_v1_repositories_owner_name_activity
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What happened lately, newest first: {"items": [{"id", "kind", "at", "actor", "repository", "title", "ref", "number", "project", "status", "version"}], "next"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/archive/issues:
         get:
             description: 'The repository''s imported issues, newest number first, without their text: {"items": [...], "total", "open", "closed", "page", "per_page"}. Query: state (open, closed, all), q (text in titles, bodies and comments, ignoring case), page, per_page (default 50, at most 200). Read-only history; see [the archive format](archive-format.md).'
@@ -10194,6 +10261,42 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             summary: 'What a pull request from ?head= into ?base= (default: the default branch) would contain: commits, files, ahead and behind, mergeability, and the number of an open pull request between them.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/contributors:
+        get:
+            description: 'Commit counts per author on the default branch over ?period= (30d, 90d (default), 365d, all), made by a background job keyed by head commit (and, for a window, the day), never inside the request: {"state", "period", "commit", "contributors": [{"name", "email", "commits", "first", "last"}], "walked", "at_least", "error"}. state is done, computing (ask again in a few seconds) or failed. The walk looks at no more than 50,000 commits; when it stopped there at_least is true and every count is a lower bound. Merge commits are not counted; people are told apart by author address.'
+            operationId: get_api_v1_repositories_owner_name_contributors
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Commit counts per author on the default branch over ?period= (30d, 90d (default), 365d, all), made by a background job keyed by head commit (and, for a window, the day), never inside the request: {"state", "period", "commit", "contributors": [{"name", "email", "commits", "first", "last"}], "walked", "at_least", "error"}.'
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -11079,6 +11182,42 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.inspect
+    /api/v1/repositories/{owner}/{name}/languages:
+        get:
+            description: 'The languages by share of bytes at ?ref= (default: the default branch): {"commit", "languages": [{"name", "bytes", "files", "share"}], "total_bytes", "excluded_files", "unknown_files", "truncated", "rules", "cached"}. A small built-in extension map names the languages; vendor/, node_modules/, lock files, minified and generated files are left out. A .launchway/languages file in the repository overrides: lines PATTERN exclude, PATTERN include or PATTERN language=NAME, the last matching line winning. The answer for the default branch is kept per head commit.'
+            operationId: get_api_v1_repositories_owner_name_languages
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The languages by share of bytes at ?ref= (default: the default branch): {"commit", "languages": [{"name", "bytes", "files", "share"}], "total_bytes", "excluded_files", "unknown_files", "truncated", "rules", "cached"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/merge-rules:
         get:
             description: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass. Also actions: edit_rules and edit_settings (available to administrators of the repository, with the reason when not) and require_signed_commits (never available yet), so an interface offers only what can work.'

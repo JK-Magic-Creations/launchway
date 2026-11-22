@@ -148,7 +148,7 @@ func DeleteRepoLedger(ctx context.Context, x CtxExecer, repoID string) error {
 var repoOwnedTables = []struct{ table, column string }{
 	{"branch_rules", "repo_id"}, {"branch_writers", "repo_id"}, {"tag_rules", "repo_id"}, {"repo_mirrors", "repo_id"},
 	{"repo_webhooks", "repo_id"}, {"ssh_keys", "repo_id"}, {"repo_pull_settings", "repo_id"}, {"pull_counters", "repo_id"},
-	{"pull_queue", "repo_id"}, {"imported_comments", "repo_id"}, {"imported_issues", "repo_id"}, {"repo_aliases", "repo_id"},
+	{"pull_queue", "repo_id"}, {"imported_comments", "repo_id"}, {"imported_issues", "repo_id"}, {"repo_aliases", "repo_id"}, {"repo_languages", "repo_id"}, {"repo_contributors", "repo_id"},
 }
 
 // pullChildTables hold a pull request's ID in pull_id.

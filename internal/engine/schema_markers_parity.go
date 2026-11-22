@@ -15,3 +15,8 @@ var schemaMarkersTrash = schemaMarker{
 	schema: schemaTrash, feature: "who deleted a repository and when, and permanent removal",
 	tables: []string{"repo_trash"},
 }
+
+var schemaMarkersOverview = schemaMarker{
+	schema: schemaOverview, feature: "repository Overview: languages and contributors",
+	tables: []string{"repo_languages", "repo_contributors"},
+}
