@@ -69,7 +69,7 @@ func (s *Server) inspectionState(r *http.Request, repo forge.Repository) inspect
 	case standardsservice.SwitchedOff():
 		st.Reason = "Standing orders are switched off for this installation (" + standardsservice.OffEnv + "=off), so no check runs. An administrator removes that setting to turn them on."
 	case st.Project == "":
-		st.Reason = "No project watches this repository, and an Inspection is a run, which belongs to a project. Add a project that reads " + nonEmpty(repo.Clone.HTTPS, repo.Path) + " (see the server's configuration), then come back."
+		st.Reason = "No project watches this repository, and an Inspection is a Sortie, which belongs to a project. Add a project that reads " + nonEmpty(repo.Clone.HTTPS, repo.Path) + " (see the server's configuration), then come back."
 	case !s.authorize(id, auth.Operate, st.Project):
 		st.Reason = "You need the operator role on the project " + st.Project + " to start an Inspection."
 	default:
@@ -80,7 +80,7 @@ func (s *Server) inspectionState(r *http.Request, repo forge.Repository) inspect
 				online = online || r.Online && (r.Kind == "" || r.Kind == "build")
 			}
 			if !online {
-				st.Available, st.Reason = false, "No Station is online to take the run. Start one (Settings, Stations), or check that the built-in one is running."
+				st.Available, st.Reason = false, "No Station is online to take the Sortie. Start one (Settings, Stations), or check that the built-in one is running."
 			}
 		}
 	}

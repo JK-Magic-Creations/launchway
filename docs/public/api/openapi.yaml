@@ -10500,7 +10500,7 @@ paths:
             x-launchway-audit: webhook.test
     /api/v1/repositories/{owner}/{name}/inspections:
         get:
-            description: 'Whether an Inspection can be started now: {"available", "reason", "project", "branch", "runs": [{"id", "number", "status", "sha", "created_at"}]}. reason says in a sentence why not: Standing orders unavailable or switched off for the installation, no project watches the repository (an Inspection is a run, and a run belongs to a project), no operator role on that project, or no Station online. runs are the latest Inspections started by hand. Findings are the project''s: GET /api/v1/projects/{name}/findings.'
+            description: 'Whether an Inspection can be started now: {"available", "reason", "project", "branch", "runs": [{"id", "number", "status", "sha", "created_at"}]}. reason says in a sentence why not: Standing orders unavailable or switched off for the installation, no project watches the repository (an Inspection is a Sortie (run), and a Sortie belongs to a project), no operator role on that project, or no Station online. runs are the latest Inspections started by hand. Findings are the project''s: GET /api/v1/projects/{name}/findings.'
             operationId: get_api_v1_repositories_owner_name_inspections
             parameters:
                 - in: path
