@@ -409,7 +409,7 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/runs/{id}/usage` | `run-viewer` | — | What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from. `?step=` limits it to one step. `{"steps": [{"step", "attempts": [{"attempt", "measured", "method", "memory_peak_bytes", "cpu_peak_milli", "cpu_ms", "reserved_memory_bytes", "reserved_cpu_milli", "sizing", "sizing_runs", "sizing_text", "killed_for_memory", "note"}]}]}`. `sizing` is `declared` (written in the pipeline file), `learned` (from the step's earlier runs), `default` (the installation's) or `raised` (doubled after a kill for memory) |
+| `GET /api/v1/runs/{id}/usage` | `run-viewer` | — | What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from. `?step=` limits it to one step. `{"steps": [{"step", "attempts": [{"attempt", "measured", "method", "memory_peak_bytes", "cpu_peak_milli", "cpu_ms", "reserved_memory_bytes", "reserved_cpu_milli", "sizing", "sizing_runs", "sizing_text", "killed_for_memory", "note"}]}]}`. `sizing` is `declared` (written in the pipeline file), `learned` (from the step's earlier Sorties), `default` (the installation's) or `raised` (doubled after a kill for memory) |
 | `GET /api/v1/runs/{id}/images` | `run-viewer` | — | What a Sortie's image steps built: digest, tags, platforms, signature, provenance, SBOM and scan. `{"images": […]}` |
 | `GET /api/v1/images` | `signed-in` | — | Which run built a digest (`?digest=`), the latest image of a repository (`?repository=host/path`, with `?tag=`), or a Flight's images (`?project=`). `{"hits": […]}` |
 

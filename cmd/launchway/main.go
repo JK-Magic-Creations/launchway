@@ -722,20 +722,11 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	var runLibs []engine.LibrarySource
-	var libWork string
-	if !p.Expanded() {
-		// The starters that ship with Launchway need no server, and a library is read from the directory given for it.
-		if libWork, err = os.MkdirTemp("", "launchway-libs-"); err != nil {
-			return err
-		}
-		defer os.RemoveAll(libWork)
-		if p, runLibs, err = source.ExpandLocal(p, libDirs, libWork); err != nil {
-			return explainProblems(path, err)
-		}
-	} else if len(libDirs) > 0 {
-		return errors.New("--library: the pipeline uses no templates")
+	p, runLibs, cleanup, err := expandRunLibraries(p, path, libDirs)
+	if err != nil {
+		return err
 	}
+	defer cleanup()
 	if images == nil {
 		for _, s := range p.Steps {
 			if s.IsImage() {

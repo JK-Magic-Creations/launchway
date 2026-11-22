@@ -108,6 +108,24 @@ func SaveStepSizing(x Execer, run, step string, attempt int, sizing string, runs
 	return err
 }
 
+// handedOut reads what an attempt was handed out with (SaveStepSizing), if it was.
+func handedOut(x Queryer, run, step string, attempt int) (UsageRow, error) {
+	var prev UsageRow
+	rows, err := x.Query(`SELECT note FROM step_usage WHERE run_id = ? AND step_id = ? AND attempt = ?`, run, step, attempt)
+	if err != nil {
+		return prev, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var note string
+		if err := rows.Scan(&note); err != nil {
+			return prev, err
+		}
+		decodeMeta(note, &prev)
+	}
+	return prev, rows.Err()
+}
+
 // SaveStepUsage records one step attempt's use, replacing an earlier record
 // of the same attempt. What the attempt was handed out with (SaveStepSizing)
 // stays unless r says its own.
@@ -117,19 +135,10 @@ func SaveStepUsage(x ExecQuery, run string, r UsageRow) error {
 		m = 1
 	}
 	if r.Sizing == "" {
-		var old string
-		rows, err := x.Query(`SELECT note FROM step_usage WHERE run_id = ? AND step_id = ? AND attempt = ?`, run, r.Step, r.Attempt)
+		prev, err := handedOut(x, run, r.Step, r.Attempt)
 		if err != nil {
 			return err
 		}
-		if rows.Next() {
-			_ = rows.Scan(&old)
-		}
-		if err := rows.Close(); err != nil {
-			return err
-		}
-		var prev UsageRow
-		decodeMeta(old, &prev)
 		r.Sizing, r.SizingRuns = prev.Sizing, prev.SizingRuns
 	}
 	r.Note = encodeMeta(r)

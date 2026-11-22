@@ -333,23 +333,13 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			case "from":
 				p.From = ps.variableName(v2, where)
 			case "fields":
-				p.Fields = ps.strList(v2, where)
-				for _, f := range p.Fields {
-					if !fieldNameRe.MatchString(f) || f == objectNameField {
-						ps.add(v2, where, "%q is not a field name: use lower-case letters, digits and _, starting with a letter; name is every record's and is not listed", clipText(f, 40))
-					}
-				}
+				p.Fields = ps.parseFieldNames(v2, where)
 			case "options":
 				p.Options, optNode = ps.strList(v2, where), v2
 			}
 		})
-		if len(p.Fields) > 0 && p.Type != paramTypeObjects {
-			ps.add(nodes[k.Value], at+".fields", "fields are for a parameter of type objects; %s is a %s", k.Value, p.Type)
-		}
+		ps.checkParamKinds(p, at, nodes[k.Value], optNode)
 		if optNode != nil {
-			if p.Type == paramTypeBoolean || p.Type == paramTypeList || p.Type == paramTypeObjects {
-				ps.add(optNode, at+".options", "options are for strings and numbers")
-			}
 			opts := p.Options
 			p.Options = nil // check each against the type alone
 			for _, o := range opts {
@@ -825,18 +815,7 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
-		if len(c.Services) > 0 {
-			// A template's own service containers are renamed for the run; a name it does not have is the
-			// pipeline's.
-			svc := make([]string, len(c.Services))
-			for i, n := range c.Services {
-				svc[i] = n
-				if to, ok := sc.containers[n]; ok {
-					svc[i] = to
-				}
-			}
-			c.Services = svc
-		}
+		c.Services = sc.serviceNames(c.Services)
 		c.When, c.AI = sc.whenFor(c.When), c.AI.inScope(sc.prefix)
 		if sc.continueFail {
 			c.tolerate()
@@ -847,15 +826,7 @@ func (x *expander) emit(sc *scope) {
 		if !s.timeoutSet && sc.timeout != nil {
 			c.Timeout = *sc.timeout
 		}
-		if sc.resources != nil && c.ResourceKind() != "" {
-			c.Resources = overlayResources(c.Resources, sc.resources)
-			if c.resourcesLine == 0 {
-				c.resourcesLine = s.Line
-			}
-			if _, err := c.Resources.Parse(); err != nil {
-				x.problem(sc, c.resourcesLine, 0, "steps."+s.ID+".resources", "the resources of this stage, with those its use gives the template: %v", err)
-			}
-		}
+		x.planResources(sc, &c, s)
 		if sc.tmpl != nil && !s.IsApproval() {
 			env := make(map[string]string, len(s.Env)+len(sc.tmpl.Values))
 			for k, v := range s.Env {
@@ -995,5 +966,35 @@ func (x *expander) checkServices(out *Pipeline) {
 				x.problems = append(x.problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".services", Message: fmt.Sprintf("step %s: %s", s.ID, msg)})
 			}
 		}
+	}
+}
+
+// serviceNames writes the services a step lists as the run names them: a template's own service containers are
+// renamed for the run; a name it does not have is the pipeline's.
+func (sc *scope) serviceNames(names []string) []string {
+	if len(names) == 0 {
+		return names
+	}
+	out := make([]string, len(names))
+	for i, n := range names {
+		out[i] = n
+		if to, ok := sc.containers[n]; ok {
+			out[i] = to
+		}
+	}
+	return out
+}
+
+// planResources gives a script step the resources its use gives the template, where it sets none of its own.
+func (x *expander) planResources(sc *scope, c, from *Step) {
+	if sc.resources == nil || c.ResourceKind() == "" {
+		return
+	}
+	c.Resources = overlayResources(c.Resources, sc.resources)
+	if c.resourcesLine == 0 {
+		c.resourcesLine = from.Line
+	}
+	if _, err := c.Resources.Parse(); err != nil {
+		x.problem(sc, c.resourcesLine, 0, "steps."+from.ID+".resources", "the resources of this stage, with those its use gives the template: %v", err)
 	}
 }

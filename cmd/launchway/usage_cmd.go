@@ -32,7 +32,7 @@ func (cl *client) usage(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		if len(out.Steps) == 0 {
-			fmt.Fprintln(cl.out, "Nothing was recorded for this run.")
+			fmt.Fprintln(cl.out, "Nothing was recorded for this Sortie.")
 			return
 		}
 		for _, s := range out.Steps {

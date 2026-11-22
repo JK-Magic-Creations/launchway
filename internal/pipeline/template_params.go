@@ -193,15 +193,7 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 		case empty != "true" && empty != "false":
 			ps.add(emptyNode, at+".empty", "write empty: true (keep the step when the list is empty) or empty: false (keep it when the list has something)")
 		default:
-			isEmpty := strings.TrimSpace(ps.tmpl.values[name]) == ""
-			if p.Type == paramTypeList {
-				items, _ := ParseList(ps.tmpl.values[name])
-				isEmpty = len(items) == 0
-			}
-			if p.Type == paramTypeObjects {
-				isEmpty = len(ObjectItems(ps.tmpl.values[name])) == 0
-			}
-			t.keep = isEmpty == (empty == "true")
+			t.keep = paramEmpty(p, ps.tmpl.values[name]) == (empty == "true")
 		}
 	case equalsNode == nil && p.Type != paramTypeBoolean:
 		ps.add(n, at, "%s is a %s, not true or false: say which value keeps the step, with equals:", name, p.Type)
@@ -386,4 +378,16 @@ func clipText(s string, n int) string {
 		n--
 	}
 	return s[:n] + "…"
+}
+
+// paramEmpty says whether a parameter's value has nothing in it: no text, no items, no records.
+func paramEmpty(p *Param, v string) bool {
+	switch p.Type {
+	case paramTypeList:
+		items, _ := ParseList(v)
+		return len(items) == 0
+	case paramTypeObjects:
+		return len(ObjectItems(v)) == 0
+	}
+	return strings.TrimSpace(v) == ""
 }

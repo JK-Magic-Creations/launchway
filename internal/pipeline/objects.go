@@ -386,3 +386,25 @@ func (ps *parser) substituteEach(n *yaml.Node, at, key, member string, rec Objec
 	}
 	return &c
 }
+
+// parseFieldNames reads the fields a parameter of type objects lists.
+func (ps *parser) parseFieldNames(n *yaml.Node, at string) []string {
+	fields := ps.strList(n, at)
+	for _, f := range fields {
+		if !fieldNameRe.MatchString(f) || f == objectNameField {
+			ps.add(n, at, "%q is not a field name: use lower-case letters, digits and _, starting with a letter; name is every record's and is not listed", clipText(f, 40))
+		}
+	}
+	return fields
+}
+
+// checkParamKinds checks the keys of a parameter against its type: fields are for objects, options for strings
+// and numbers.
+func (ps *parser) checkParamKinds(p *Param, at string, name, optNode *yaml.Node) {
+	if len(p.Fields) > 0 && p.Type != paramTypeObjects {
+		ps.add(name, at+".fields", "fields are for a parameter of type objects; %s is a %s", p.Name, p.Type)
+	}
+	if optNode != nil && (p.Type == paramTypeBoolean || p.Type == paramTypeList || p.Type == paramTypeObjects) {
+		ps.add(optNode, at+".options", "options are for strings and numbers")
+	}
+}

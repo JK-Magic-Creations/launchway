@@ -197,8 +197,8 @@ func (c *cmd) autoSize(def *pipeline.Step, ct *pipeline.Container, orig *pipelin
 // and the log says so. A second kill, a step that declares its own memory and
 // a step already at the cap fail as before. It reports whether it queued the
 // retry, and has then recorded the attempt as failed.
-func (c *cmd) memoryRetry(l leaseRef, s *StepState, p *Payload, res Result) bool {
-	def := c.st.Pipeline.Step(l.stepID)
+func (c *cmd) memoryRetry(stepID string, s *StepState, p *Payload, res Result) bool {
+	def := c.st.Pipeline.Step(stepID)
 	if def == nil || c.st.CancelRequested || !memoryKilled(res) || def.ResourceKind() == "" || !c.e.knows(schemaResources) || !c.e.knows(schemaUsage) {
 		return false
 	}
@@ -223,10 +223,10 @@ func (c *cmd) memoryRetry(l leaseRef, s *StepState, p *Payload, res Result) bool
 	}
 	kills, had := 0, max(base.MemoryLimit, base.Memory)
 	for _, r := range rows {
-		if r.Step == l.stepID && r.Killed {
+		if r.Step == stepID && r.Killed {
 			kills++
 		}
-		if r.Step == l.stepID && r.Attempt == l.attempt && r.ReservedMemory > 0 {
+		if r.Step == stepID && r.Attempt == s.Attempt && r.ReservedMemory > 0 {
 			had = r.ReservedMemory
 		}
 	}
@@ -240,7 +240,7 @@ func (c *cmd) memoryRetry(l leaseRef, s *StepState, p *Payload, res Result) bool
 	}
 	next := min(2*had, capBytes)
 	c.emitFailure(p, res, true)
-	c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt + 1,
+	c.emit(StepQueued, Payload{Step: stepID, Attempt: s.Attempt + 1,
 		Reason: fmt.Sprintf("retry: killed for memory at %s; runs again with %s (what it used is kept for the next run)", SizeText(had), SizeText(next))})
 	return true
 }

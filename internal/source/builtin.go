@@ -6,11 +6,11 @@ package source
 // content hash where a Git library has a commit.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -264,50 +264,23 @@ func ExpandLocal(p *pipeline.Pipeline, dirs map[string]string, work string) (*pi
 
 // commitDirectory copies a directory into a new Git repository and commits it, and returns the commit.
 func commitDirectory(dir, repo string) (string, error) {
-	if err := os.MkdirAll(repo, 0o750); err != nil {
+	if err := os.CopyFS(repo, os.DirFS(dir)); err != nil {
 		return "", err
 	}
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(dir, p)
-		if d.IsDir() && d.Name() == ".git" {
-			return fs.SkipDir
-		}
-		dst := filepath.Join(repo, rel)
-		switch {
-		case d.IsDir():
-			return os.MkdirAll(dst, 0o750)
-		case !d.Type().IsRegular():
-			return nil
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(dst, b, info.Mode().Perm())
-	})
-	if err != nil {
+	if err := os.RemoveAll(filepath.Join(repo, ".git")); err != nil {
 		return "", err
 	}
-	run := func(args ...string) (string, error) {
-		cmd := exec.Command("git", append([]string{"-C", repo, "-c", "user.name=launchway", "-c", "user.email=run@localhost", "-c", "commit.gpgsign=false"}, args...)...)
-		out, err := cmd.CombinedOutput()
-		return strings.TrimSpace(string(out)), err
-	}
-	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, {"commit", "-q", "-m", "library"}} {
-		if out, err := run(args...); err != nil {
-			return "", fmt.Errorf("git %s: %s", args[0], out)
+	ctx := context.Background()
+	quiet := []string{"-c", "user.name=launchway", "-c", "user.email=run@localhost", "-c", "commit.gpgsign=false"}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, append(append([]string{}, quiet...), "commit", "-q", "-m", "library")} {
+		if _, err := gitOut(ctx, repo, args...); err != nil {
+			return "", fmt.Errorf("git %s: %w", args[len(args)-1], err)
 		}
 	}
-	sha, err := run("rev-parse", "HEAD")
+	sha, err := gitOut(ctx, repo, "rev-parse", "HEAD")
+	sha = strings.TrimSpace(sha)
 	if err != nil || !pipeline.IsCommitID(sha) {
-		return "", fmt.Errorf("git rev-parse: %s", sha)
+		return "", fmt.Errorf("git rev-parse: %v %s", err, sha)
 	}
 	return sha, nil
 }

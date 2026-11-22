@@ -138,10 +138,11 @@ func (u *StepUsage) Sentence() string {
 	var parts []string
 	switch {
 	case u.Measured:
+		line := fmt.Sprintf("used %s memory at most and %.2g CPU at most", SizeText(u.MemoryPeak), float64(u.CPUPeakMilli)/1000)
 		if u.ReservedMemory > 0 {
-			parts = append(parts, "reserved "+SizeText(u.ReservedMemory)+" memory")
+			line = "reserved " + SizeText(u.ReservedMemory) + " memory, " + line
 		}
-		parts = append(parts, fmt.Sprintf("used %s memory at most and %.2g CPU at most", SizeText(u.MemoryPeak), float64(u.CPUPeakMilli)/1000))
+		parts = append(parts, line)
 	case u.Note != "":
 		parts = append(parts, "use not measured: "+u.Note)
 	case u.Attempt > 0 && u.Sizing == "":

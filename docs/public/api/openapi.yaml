@@ -14691,7 +14691,7 @@ paths:
             x-launchway-audit: run.trust
     /api/v1/runs/{id}/usage:
         get:
-            description: 'What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from. ?step= limits it to one step. {"steps": [{"step", "attempts": [{"attempt", "measured", "method", "memory_peak_bytes", "cpu_peak_milli", "cpu_ms", "reserved_memory_bytes", "reserved_cpu_milli", "sizing", "sizing_runs", "sizing_text", "killed_for_memory", "note"}]}]}. sizing is declared (written in the pipeline file), learned (from the step''s earlier runs), default (the installation''s) or raised (doubled after a kill for memory)'
+            description: 'What each step of a Sortie used and was given, attempt by attempt, and where its memory and CPU came from. ?step= limits it to one step. {"steps": [{"step", "attempts": [{"attempt", "measured", "method", "memory_peak_bytes", "cpu_peak_milli", "cpu_ms", "reserved_memory_bytes", "reserved_cpu_milli", "sizing", "sizing_runs", "sizing_text", "killed_for_memory", "note"}]}]}. sizing is declared (written in the pipeline file), learned (from the step''s earlier Sorties), default (the installation''s) or raised (doubled after a kill for memory)'
             operationId: get_api_v1_runs_id_usage
             parameters:
                 - in: path

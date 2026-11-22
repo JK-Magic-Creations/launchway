@@ -176,9 +176,9 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 			if len(n.Content) > MaxAIInputs {
 				ps.add(n, where, "at most %d inputs", MaxAIInputs)
 			}
-			ps.eachEntry(n.Content, where, func(in *yaml.Node, at string) {
-				a.Inputs = append(a.Inputs, ps.parseAIInput(in, at))
-			})
+			for _, e := range ps.expandEntries(n.Content, where) {
+				a.Inputs = append(a.Inputs, ps.parseAIInput(e.n, e.at))
+			}
 		case "schema":
 			var m any
 			if err := n.Decode(&m); err != nil || n.Kind != yaml.MappingNode {

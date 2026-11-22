@@ -435,34 +435,18 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 				known = false
 				continue
 			}
-			for j, v := range vals {
-				if m := loopValueProblem(v); m != "" {
-					problems = append(problems, Problem{Line: f.Line, Path: at + "." + f.Keys[i], Message: m})
-					known = false
-				} else if slices.Contains(vals[:j], v) {
-					problems = append(problems, Problem{Line: f.Line, Path: at + "." + f.Keys[i], Message: fmt.Sprintf("%q is in the list twice", v)})
-					known = false
-				}
-			}
+			vp := loopValueProblems(vals, f.Line, at+"."+f.Keys[i])
+			problems = append(problems, vp...)
+			known = known && len(vp) == 0
 			lists[i] = vals
 		}
 		if !known {
 			replace[s.ID] = s.Needs
 			continue
 		}
-		for _, r := range s.eachRefs {
-			if r.attr == "" {
-				continue
-			}
-			l := f.list(r.key)
-			for _, name := range lists[slices.Index(f.Keys, r.key)] {
-				if _, ok := objectEach(l, name, r.attr, r.def, r.hasDef); !ok {
-					problems = append(problems, Problem{Line: r.line, Path: "steps." + s.ID, Message: fmt.Sprintf(
-						"{ each: %s, field: %s }: the record %q has no field %s; give it one, or write default: in the reference", r.key, r.attr, name, r.attr)})
-					known = false
-					break
-				}
-			}
+		if ps := s.fieldProblems(f, lists); len(ps) > 0 {
+			problems = append(problems, ps...)
+			known = false
 		}
 		if !known {
 			replace[s.ID] = s.Needs
@@ -685,4 +669,34 @@ func (f *ForEach) list(key string) LoopList {
 		return f.Lists[i]
 	}
 	return LoopList{}
+}
+
+// fieldProblems says which of a loop's records lack a field a step takes from them with { each: key, field: f }.
+func (s *Step) fieldProblems(f *ForEach, lists [][]string) Problems {
+	for _, r := range s.eachRefs {
+		if r.attr == "" {
+			continue
+		}
+		l := f.list(r.key)
+		for _, name := range lists[slices.Index(f.Keys, r.key)] {
+			if _, ok := objectEach(l, name, r.attr, r.def, r.hasDef); !ok {
+				return Problems{{Line: r.line, Path: "steps." + s.ID, Message: fmt.Sprintf(
+					"{ each: %s, field: %s }: the record %q has no field %s; give it one, or write default: in the reference", r.key, r.attr, name, r.attr)}}
+			}
+		}
+	}
+	return nil
+}
+
+// loopValueProblems says which values of a loop list cannot be part of a step's ID, or are in it twice.
+func loopValueProblems(vals []string, line int, path string) Problems {
+	var out Problems
+	for j, v := range vals {
+		if m := loopValueProblem(v); m != "" {
+			out = append(out, Problem{Line: line, Path: path, Message: m})
+		} else if slices.Contains(vals[:j], v) {
+			out = append(out, Problem{Line: line, Path: path, Message: fmt.Sprintf("%q is in the list twice", v)})
+		}
+	}
+	return out
 }

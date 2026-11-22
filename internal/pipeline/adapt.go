@@ -233,29 +233,7 @@ func (x *expander) adapt(sc *scope, use *Step, t *Template, at string) {
 	unknown := func(line int, path, id string) {
 		x.problem(sc, line, 0, at+"."+path, "the template %s has no stage %q; its stages are %s", t.Name, clipText(id, 40), stages())
 	}
-	for _, id := range a.StageOrder {
-		s, set := find(id), a.Stages[id]
-		switch {
-		case s == nil:
-			unknown(set.Line, "stages", id)
-		case (set.Resources != nil || set.ServicesSet || set.ServicesAll) && s.ResourceKind() == "":
-			x.problem(sc, set.Line, 0, at+".stages."+id, "the stage %s of %s runs no script, so it takes no resources or services", id, t.Name)
-		case set.Resources != nil || set.ServicesSet || set.ServicesAll:
-			c := *s
-			if set.Resources != nil {
-				c.Resources = overlayResources(set.Resources, s.Resources)
-				c.resourcesLine = set.Line
-			}
-			if set.ServicesSet || set.ServicesAll {
-				c.Services, c.ServicesSet = set.Services, set.ServicesSet
-			}
-			for i, o := range t.Steps {
-				if o == s {
-					t.Steps[i] = &c
-				}
-			}
-		}
-	}
+	x.adaptStages(sc, a, t, at, find, unknown)
 	for _, id := range a.Skip {
 		s := find(id)
 		if s == nil {
@@ -405,3 +383,30 @@ func (ps *parser) checkAdaptKeys(at string, keys map[string]*yaml.Node) {
 // useKeys are the keys a step that uses a template may have; the template
 // says everything else.
 var useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace", "stages", "resources"}
+
+// adaptStages applies the settings a use gives single stages: their resources and services.
+func (x *expander) adaptStages(sc *scope, a *Adaptation, t *Template, at string, find func(string) *Step, unknown func(int, string, string)) {
+	for _, id := range a.StageOrder {
+		s, set := find(id), a.Stages[id]
+		switch {
+		case s == nil:
+			unknown(set.Line, "stages", id)
+		case (set.Resources != nil || set.ServicesSet || set.ServicesAll) && s.ResourceKind() == "":
+			x.problem(sc, set.Line, 0, at+".stages."+id, "the stage %s of %s runs no script, so it takes no resources or services", id, t.Name)
+		case set.Resources != nil || set.ServicesSet || set.ServicesAll:
+			c := *s
+			if set.Resources != nil {
+				c.Resources = overlayResources(set.Resources, s.Resources)
+				c.resourcesLine = set.Line
+			}
+			if set.ServicesSet || set.ServicesAll {
+				c.Services, c.ServicesSet = set.Services, set.ServicesSet
+			}
+			for i, o := range t.Steps {
+				if o == s {
+					t.Steps[i] = &c
+				}
+			}
+		}
+	}
+}

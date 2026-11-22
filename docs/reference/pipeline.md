@@ -1334,7 +1334,7 @@ raises; it never gives more than the installation's `max_memory` (twice the defa
 is set). A step killed for memory (exit 137, with the Station's explanation) that was sized this way is
 run once more with twice the memory it had, within the same cap, and its log says so; a second kill
 fails the step. A step that writes its own memory is never changed and never run again for memory.
-The step's log says where its memory came from, and so do the run page, `runs show` and
+The step's log says where its memory came from, and so do the Sortie page, `runs show` and
 `GET /api/v1/runs/{id}/usage`: *declared in the pipeline file*, *learned from N runs*, *default*, or
 *raised after a memory kill*. CPU is not learned.
 
