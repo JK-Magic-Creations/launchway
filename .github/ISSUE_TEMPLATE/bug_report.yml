@@ -1,0 +1,75 @@
+name: Bug report
+description: Something does not work as the documentation says it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. **Do not put secrets in this form**: no tokens, passwords, keys or private addresses; replace them with placeholders.
+        A security problem goes to [private vulnerability reporting](https://github.com/JK-Magic-Creations/launchway/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that shows it, ideally starting from `make run`.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `launchway version`, or the commit you built.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Where
+      options:
+        - Server
+        - Runner
+        - Command line
+        - Web interface
+        - Helm chart
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - SQLite
+        - PostgreSQL
+        - Not sure
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, architecture, how you run it (binary, container, Kubernetes), and the browser if it is a web interface problem.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Relevant lines only, with secrets and private addresses removed.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and the documentation.
+          required: true
+        - label: I removed secrets and private addresses from everything above.
+          required: true

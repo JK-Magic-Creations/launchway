@@ -14,6 +14,21 @@ same version (packages write a pre-release as `1.4.0~rc.1`, which sorts before `
 
 Until 1.0 the project is young: a minor release may change behavior, and its notes say how.
 
+## Getting help
+
+- **A question or an idea:** [GitHub Discussions](https://github.com/JK-Magic-Creations/launchway/discussions).
+  Read the documentation first; the guides and the reference are in `docs/` and on the project's
+  documentation site.
+- **A bug or a feature request:** open an [issue](https://github.com/JK-Magic-Creations/launchway/issues/new/choose)
+  with the form that fits. Include the version (`launchway version`) and remove secrets and private
+  addresses from anything you paste.
+- **A security problem:** privately, as [SECURITY.md](SECURITY.md) describes. Never in an issue.
+- **Conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+The project is maintained by one person ([GOVERNANCE.md](GOVERNANCE.md)): answers are given on a
+best-effort basis, with no response-time commitment except for security reports. There is no paid
+support today; for a commercial license see [LICENSING.md](LICENSING.md).
+
 ## Which releases get fixes
 
 Fixes go into the latest minor release. Security fixes also go into the minor release before it.

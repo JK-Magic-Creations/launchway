@@ -1,0 +1,11 @@
+# The maintainer reviews everything. Today that is one person; see GOVERNANCE.md.
+#
+# The owner is the organisation's maintainers team. The team must exist in the GitHub organisation
+# and have write access to this repository, or GitHub ignores the line (the file view shows an error).
+* @JK-Magic-Creations/maintainers
+
+# Files that decide what runs with the repository's credentials, or what users are told to trust.
+/.github/ @JK-Magic-Creations/maintainers
+/packaging/release/ @JK-Magic-Creations/maintainers
+/SECURITY.md @JK-Magic-Creations/maintainers
+/GOVERNANCE.md @JK-Magic-Creations/maintainers

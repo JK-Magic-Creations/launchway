@@ -1,6 +1,6 @@
 # Contributing to Launchway
 
-Thank you for looking. Launchway is early: the foundation works and is tested, and most of the
+Thank you for looking. Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md); how decisions are made is in [GOVERNANCE.md](GOVERNANCE.md). Launchway is early: the foundation works and is tested, and most of the
 design is still to be built. Issues, ideas and pull requests are all welcome.
 
 ## Getting set up

@@ -29,18 +29,60 @@ header and a matching `Origin`. Every change and every sign-in is recorded in th
 
 ## Reporting a problem
 
-Please report security problems privately through GitHub's
-[private vulnerability reporting](https://github.com/jk-magic-creations/launchway/security/advisories/new)
-rather than in a public issue. We will acknowledge the report within 3 working days, give a first
-assessment within 10, and aim to fix confirmed high and critical problems within 30 days, telling you
-before anything is published. Fixed problems are published as GitHub security advisories, with credit
-if you want it. Please give us a reasonable time to fix a problem before you disclose it. The
-contact details are also in [security.txt](docs/public/.well-known/security.txt).
+Please report security problems **privately**, through GitHub's
+[private vulnerability reporting](https://github.com/JK-Magic-Creations/launchway/security/advisories/new),
+rather than in a public issue, a discussion or a pull request. Say what you found, how to reproduce
+it, which version or commit, and what you think an attacker gains. Do not include real secrets, and
+do not test against servers you do not own. The contact details are also in
+[security.txt](docs/public/.well-known/security.txt).
+
+What to expect:
+
+- **Acknowledgement** within 3 working days; a **first assessment** (accepted, needs more, or not
+  a vulnerability, with the reason) within 10.
+- **A fix** for confirmed high and critical problems aimed at within 30 days, lower severities in
+  the normal release cycle. These are aims for a project run by one maintainer, not promises; if
+  one will be missed, you will be told why.
+- **Updates** while we work, and notice before anything is published.
+
+### Disclosure
+
+Coordinated disclosure: we ask for a reasonable time to fix a problem before you disclose it, and
+no more than 90 days from your report unless we agree a different date together. When a fix is
+released, we publish a GitHub security advisory (with a CVE where one applies), describing the
+affected and fixed versions, and credit you if you want it. If a problem is being actively
+exploited, we may publish sooner. Reports made in good faith, within this policy, that avoid
+harming other people's data and services, will not be met with legal action.
+
+There is no bug bounty.
 
 ## Supported versions
 
-Fixes go into the latest minor release; security fixes also go into the minor release before it
-([SUPPORT.md](SUPPORT.md)). Until a first release is published, only the `main` branch is supported.
+| Version | Receives security fixes |
+|---|---|
+| The latest minor release | yes |
+| The minor release before it | yes |
+| Older releases | no: upgrade |
+| `main` (unreleased) | yes, as the next release |
+
+Launchway is before 1.0: a minor release can change behavior, and its notes say how. Versioning and
+what the project supports are in [SUPPORT.md](SUPPORT.md). If no release has been published yet
+(a tagged release is a draft until the maintainer has checked it), only `main` is supported.
+
+## Verifying what you run
+
+Every release is built by the project's release workflow from a tagged commit, not by hand:
+
+- `SHA256SUMS` has a keyless [Sigstore](https://www.sigstore.dev) signature by that workflow
+  (`SHA256SUMS.sigstore.json`), checked with `cosign verify-blob`.
+- Every binary, package and chart has a CycloneDX SBOM next to it.
+- The release files and the container images have signed build provenance, checked with
+  `gh attestation verify`; the images are signed, and carry SBOM and provenance attestations.
+- The build is reproducible: the release can be rebuilt and compared byte for byte.
+
+The exact commands, and how to rebuild a release, are in
+[Verifying downloads](docs/security/verify-downloads.md). In production, refer to container images
+by digest.
 
 ## How Launchway checks itself
 
