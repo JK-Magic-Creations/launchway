@@ -60,7 +60,7 @@ describe("runTiming", () => {
   });
   it("says why there is no estimate", () => {
     expect(runTiming({ as_of: 1, known: false, reason: "no_history", runs: 0 }, "running", 2).text).toContain("have not run before");
-    expect(runTiming({ as_of: 1, known: false, reason: "too_few", runs: 2 }, "running", 2).text).toContain("three earlier runs");
+    expect(runTiming({ as_of: 1, known: false, reason: "too_few", runs: 2 }, "running", 2).text).toContain("three earlier Sorties");
   });
   it("leaves out the wait for a person and says so", () => {
     const t = runTiming({ ...base, waiting_for_person: ["approve"] }, "running", 1_000_000);

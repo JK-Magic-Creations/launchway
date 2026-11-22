@@ -82,46 +82,46 @@ next pods, rendered by the new chart, refuse to start.
   applied yet".
 - *The deploy step orders the two changes.* When one deployment changes an Argo CD application's **own manifest**
   (its chart pin, `targetRevision`, applied by a parent application in an app-of-apps layout) and its **values**
-  (the image tag and digest), the deploy runner no longer writes one commit. It writes the manifest first,
-  asks the parent application to refresh (and to sync, when it does not sync by itself and the runner may sync
+  (the image tag and digest), the launch Station no longer writes one commit. It writes the manifest first,
+  asks the parent application to refresh (and to sync, when it does not sync by itself and the Station may sync
   it), **waits until the cluster shows the new pin in the application's spec**, and only then writes the values.
   After the sync it checks that every source was synced at what the deployment intended; a sync that ran with a
   mixed set is reported plainly and followed by a corrective sync. The step log says which mode is in use:
-  *CONTROLLER-ORDERED*, or *FALLBACK, two commits with a pause* where the cluster cannot be read (the runner then
+  *CONTROLLER-ORDERED*, or *FALLBACK, two commits with a pause* where the cluster cannot be read (the Station then
   waits a fixed time instead of watching the pin arrive). If the parent never applies the pin, the step fails
   and **the values are not written**, so nothing mixed can happen; run it again after syncing the parent.
   An ApplicationSet is refused with a plain message. An application without a parent and a deployment that
   changes only values or only the manifest keep the old behavior: one commit.
-- What the runner needs: get and patch on the application (refresh, sync) and get on the parent; syncing a parent
+- What the Station needs: get and patch on the application (refresh, sync) and get on the parent; syncing a parent
   also needs the parent to be listed in `deploy.targets.<name>.applications` for the project. Without the right
-  to patch, the runner waits for the parent to apply the pin itself.
+  to patch, the Station waits for the parent to apply the pin itself.
 - Alternatives considered: pinning the values to a commit in the application (no race, but every release then
   edits the application manifest too); disabling automated sync around a release (fights the parent's self-heal);
   one commit (the race this section is about).
 
-**Rollback, stuck operations and what the step says while it waits.** A rollback of a deployment that was
+**Return to base, stuck operations and what the step says while it waits.** A return to base of a deployment that was
 written as two commits reverts the values first (the previous image under the new chart) and then the application's
 own manifest in a commit of its own, and waits for the cluster to show the old pin. While a deployment waits for
 the controller, the step's log carries the controller's own account (sync and health, the operation's phase and
 message and retry count, the failing hook or resource with its message) each time it changes. A `ComparisonError`
 that lasts (default 20 seconds) fails the step with its full text. If the controller is retrying a sync that
 was started with revisions the application no longer points at, the step says so ("started with source 0 at X; the
-application now points at Y") and, unless the runner is configured with `KeepStaleOperations`, ends that operation
+application now points at Y") and, unless the Station is configured with `KeepStaleOperations`, ends that operation
 (it removes the application's `operation`, which needs the right to patch that application, the same right used for
-refresh and sync, and is done only for the application being deployed) so the application's own sync starts a
-fresh one. Not done yet: checking before a rollback that the chart being rolled back to still accepts the current
+refresh and sync, and is done only for the application being launched) so the application's own sync starts a
+fresh one. Not done yet: checking before a return to base that the chart being returned to still accepts the current
 values (a values key only the new chart knows makes the old chart refuse to render; the ComparisonError above now
-names the key, but the rollback does not yet remove it).
+names the key, but the return to base does not yet remove it).
 
 **What "compatible" means.** Between the two commits the application may sync the **new chart with the old
 image**. A chart must therefore work with the image of the release before it (the rule for every chart change:
 additive values, no required new mount). Where a release cannot do that (the chart removes something the old image
-needs), neither order is safe: schedule it with the application's automated sync paused, or deploy with
+needs), neither order is safe: schedule it with the application's automated sync paused, or launch with
 a window in which the application is not serving.
 
-**If you deploy by hand** (no deploy step): change the chart pin (the Application manifest) first, wait until the
+**If you launch by hand** (no launch step): change the chart pin (the Application manifest) first, wait until the
 parent has applied it (the application's spec shows the new `targetRevision`), and only then change the image tag
-or digest. Never in one commit and never the other way round. Roll back in the reverse order. A rollback by Launchway
+or digest. Never in one commit and never the other way round. Return to base in the reverse order. A return to base by Launchway
 reverts the values commit only; the chart pin stays at the new revision, which is safe for the same
 compatibility reason.
 
@@ -130,8 +130,6 @@ compatibility reason.
 render are still present and are no longer part of the release") and **fails** when any is a security-relevant kind
 (NetworkPolicy, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ServiceAccount, Ingress and route kinds,
 Secret) unless the step sets `sync.leftovers: warn`; other kinds only warn. Nothing is deleted for you.
-
-## Rolling back
 
 ## Returning to base {#rolling-back}
 

@@ -47,7 +47,7 @@ launchway state push PROJECT WORKSPACE state.json [--adopt]
 
 To use the state from your own machine, set the backend (`backend "http" {}`) and `TF_HTTP_ADDRESS=https://launchway.example/api/state/v1/PROJECT/WORKSPACE`, `TF_HTTP_LOCK_ADDRESS` and `TF_HTTP_UNLOCK_ADDRESS` to the same address with `/lock`, `TF_HTTP_USERNAME` to anything, and `TF_HTTP_PASSWORD` to an API token. To move existing state, `tofu init -migrate-state`, or `launchway state push`.
 
-If the repository declares a backend of its own, the step runs it as written and says plainly that Launchway cannot lock, version, show or roll back that state.
+If the repository declares a backend of its own, the step runs it as written and says plainly that Launchway cannot lock, version, show or return to base that state.
 
 ## Drift
 

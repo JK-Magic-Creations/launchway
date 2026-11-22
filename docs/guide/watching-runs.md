@@ -50,7 +50,7 @@ The page says how long things usually take, from earlier Sorties of the same pip
 
 **Past the usual.** After the 90th percentile the step shows a calm note, *taking longer than usual (usually ~2 min, now 5 min)*, with a link to compare with the step's last good run. It is not a failure and nothing is stopped.
 
-**The whole Sortie.** The top of the page says *about 6 min left*, from the longest path through the steps still to run, each at its typical time. Steps that run side by side count once. Steps that wait for a person (Clearance) are left out and named, *waiting for Clearance*, and the time left is what remains after the decision. Queue time is shown separately, with its reason, and is not counted either. If a step has no history the estimate says *at least*, and names it. A run with no history at all says *No estimate yet*. When the run is over the page says *took 8m 03s, 12% faster than usual*.
+**The whole Sortie.** The top of the page says *about 6 min left*, from the longest path through the steps still to run, each at its typical time. Steps that run side by side count once. Steps that wait for a person (Clearance) are left out and named, *waiting for Clearance*, and the time left is what remains after the decision. Time in the Holding pattern is shown separately, with its reason, and is not counted either. If a step has no history the estimate says *at least*, and names it. A run with no history at all says *No estimate yet*. When the run is over the page says *took 8m 03s, 12% faster than usual*.
 
 **What it does not know.** It assumes every ready step gets a Station at once. It cannot know that a change is bigger than usual. A renamed step starts with no history; each combination of a matrix is its own step with its own history.
 

@@ -530,6 +530,226 @@
       "path": "web/src/guided/pullNeeds.ts",
       "rule": "word:queue/2",
       "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/config_code.go",
+      "rule": "word:owner",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/config_code.go",
+      "rule": "word:rollback/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/config_code.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/debrief.go",
+      "rule": "word:debrief/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/debrief.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/event_sources.go",
+      "rule": "word:environment/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/event_sources.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/fleet.go",
+      "rule": "word:artifact/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/fleet.go",
+      "rule": "word:environment/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/main.go",
+      "rule": "word:rollback/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/main.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/release.go",
+      "rule": "word:artifact/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/release.go",
+      "rule": "word:rollback/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/run_triggers.go",
+      "rule": "word:deploy/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/run_triggers.go",
+      "rule": "word:environment/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/run_triggers.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "cmd/launchway/standards.go",
+      "rule": "word:run/2",
+      "why": "The word is in a command name, a flag, a field or a key quoted in usage text, which are stable identifiers and are not renamed with the words."
+    },
+    {
+      "path": "docs/development/quality-gates.md",
+      "rule": "word:canary/2",
+      "why": "A quoted name, a status or an event name of another kind of queue: not the Holding pattern of Sorties."
+    },
+    {
+      "path": "docs/reference/events.md",
+      "rule": "word:queue/3",
+      "why": "A quoted name, a status or an event name of another kind of queue: not the Holding pattern of Sorties."
+    },
+    {
+      "path": "docs/roadmap/roadmap.json",
+      "rule": "word:queue/3",
+      "why": "A quoted name, a status or an event name of another kind of queue: not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/config_code.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/launchlines.go",
+      "rule": "word:deploy/4",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_caches.go",
+      "rule": "word:registry/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_change.go",
+      "rule": "word:deploy/4",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_config_code.go",
+      "rule": "word:rollback/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_config_code.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_debrief.go",
+      "rule": "word:debrief/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_debrief.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_flow.go",
+      "rule": "word:deploy/4",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_flow.go",
+      "rule": "word:queue/3",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_logs.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_releases.go",
+      "rule": "word:artifact/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_releases.go",
+      "rule": "word:rollback/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_standards.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/mcp_tools.go",
+      "rule": "word:run/1",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/releases.go",
+      "rule": "word:artifact/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/run_triggers.go",
+      "rule": "word:deploy/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/api/run_triggers.go",
+      "rule": "word:run/2",
+      "why": "The word is in the name of a field, a key or a tool argument (jsonschema text and error text that quotes one): stable identifiers, not renamed with the words."
+    },
+    {
+      "path": "internal/config/chart_revision.go",
+      "rule": "word:deploy/4",
+      "why": "The word names a configuration key (registry.fallback) or the chart and image in an operator message: a stable name."
+    },
+    {
+      "path": "internal/config/registry.go",
+      "rule": "word:registry/2",
+      "why": "The word names a configuration key (registry.fallback) or the chart and image in an operator message: a stable name."
+    },
+    {
+      "path": "web/src/estimate.ts",
+      "rule": "word:queue/3",
+      "why": "The status words of the Status disc are shown beside the themed word, as the plain word the vocabulary always shows with it."
+    },
+    {
+      "path": "web/src/estimate.ts",
+      "rule": "word:run/1",
+      "why": "The status words of the Status disc are shown beside the themed word, as the plain word the vocabulary always shows with it."
+    },
+    {
+      "path": "web/src/kit/LaunchLine.tsx",
+      "rule": "word:runner/2",
+      "why": "The status words of the Status disc are shown beside the themed word, as the plain word the vocabulary always shows with it."
+    },
+    {
+      "path": "web/src/kit/Status.tsx",
+      "rule": "word:runner/2",
+      "why": "The status words of the Status disc are shown beside the themed word, as the plain word the vocabulary always shows with it."
     }
   ]
 }

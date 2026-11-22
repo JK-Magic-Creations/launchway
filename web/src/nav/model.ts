@@ -122,9 +122,9 @@ export const SECTIONS: Section[] = [
       { id: "runners", get label() { return say("{Runners}"); }, href: "/settings/runners", icon: "server", aka: "Runners", show: ({ me }) => me.runners },
       { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
       { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
-      { id: "rules", get label() { return say("{Standards}"); }, href: "/settings/rules", icon: "shield", aka: "Rules", show: ({ me }) => me.runners },
+      { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
       { id: "variables", label: "Variables", href: "/settings/variables", icon: "list" },
-      { id: "standards", label: "Standing orders", href: "/settings/standards", icon: "shield" },
+      { id: "standards", get label() { return say("{Standards}"); }, href: "/settings/standards", icon: "shield", aka: "Standards" },
       { id: "import", label: "Import repositories", href: "/repositories/import", icon: "code", show: ({ me }) => me.admin && (me as Me & { hosting?: boolean }).hosting === true },
       { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
       { id: "security", label: "Security", href: "/settings/security", icon: "shield", show: ({ me }) => me.admin },
@@ -184,7 +184,7 @@ function page(pattern: string, section: SectionId, tab: string | undefined, titl
 const projectCrumb = (p: Record<string, string>): Crumb => ({ label: p.name, href: `/projects/${enc(p.name)}/pipeline` });
 const togglesCrumb = (p: Record<string, string>): Crumb => ({ label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` });
 const projectSub = (sub: string, title: string, label: string) =>
-  page(`/projects/:name/${sub}`, "pipelines", undefined, (p) => `${title} of ${p.name}`, (p) => [projectCrumb(p), { label }]);
+  page(`/projects/:name/${sub}`, "pipelines", undefined, (p) => `${terms().say(title)} of ${p.name}`, (p) => [projectCrumb(p), { label: terms().say(label) }]);
 
 const repo = (p: Record<string, string>) => p.owner + "/" + p.name;
 const repoHref = (p: Record<string, string>) => `/repositories/${enc(p.owner)}/${enc(p.name)}`;
@@ -197,7 +197,7 @@ const repoSub = (sub: string, title: string, label: string, themed = false) => {
 };
 
 /** A page of Settings whose tab, title and trail are one word. */
-const settingsPage = (tab: string, label: string) => page(`/settings/${tab}`, "settings", tab, () => label, () => [{ label }]);
+const settingsPage = (tab: string, label: string) => page(`/settings/${tab}`, "settings", tab, () => terms().say(label), () => [{ label: terms().say(label) }]);
 
 export const PAGES: PageInfo[] = [
   page("/", "home", undefined, () => terms().say("{Home}"), () => []),
@@ -212,7 +212,7 @@ export const PAGES: PageInfo[] = [
   projectSub("tests", "Tests", "Tests and coverage"),
   projectSub("security", "Security", "Security"),
   projectSub("caches", "Caches", "Build caches"),
-  projectSub("standards", "Standing orders", "Standing orders"),
+  projectSub("standards", "{Standards}", "{Standards}"),
   page("/projects/:name/configuration", "pipelines", undefined, (p) => `Configuration of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Configuration" }]),
   page("/runs/:id/configuration/:step", "pipelines", undefined, (p) => `Configuration report of ${p.step}`, () => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: "Configuration report" }]),
   projectSub("variables", "Variables", "Variables"),
@@ -291,7 +291,7 @@ export const PAGES: PageInfo[] = [
   page("/settings/access/agents", "settings", "access", () => "Connect an agent",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Connect an agent" }]),
   page("/settings/approvals", "settings", "approvals", () => say("{Clearances}"), () => [{ label: say("{Clearances}") }]),
-  settingsPage("standards", "Standing orders"),
+  settingsPage("standards", "{Standards}"),
   settingsPage("variables", "Variables"),
   settingsPage("words", "Words"),
   settingsPage("rules", "Rules"),

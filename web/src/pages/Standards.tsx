@@ -172,14 +172,14 @@ export function ProjectStandardsPage({ name }: { name: string }) {
   const enc = encodeURIComponent(name);
   return (
     <div className="page page-wide sto">
-      <ProjectHead name={name} on="standards" title={<>Standing orders of {name}</>}
+      <ProjectHead name={name} on="standards" title={<>{terms().say("{Standards}")} of {name}</>}
         sentence={<>The checks every repository gets, on by default: what runs on <strong>{name}</strong>, why, and how to change it. Nothing here needs a change to the repository.</>} />
       <ErrorBox error={error} />
       {!data && !error && <div className="loading">Loading…</div>}
       {e && e.off.value && (
         <div className="callout callout-draft st-off" role="status">
-          <strong>Standing orders are switched off</strong> by {sourceText(e.off.from, w)}{e.off_reason ? <>: “{e.off_reason}”</> : null}. No check runs on this repository and no finding is recorded.
-          {" "}Whoever administers that level switches them back on in <Link href="/settings/standards">Settings, Standing orders</Link>.
+          <strong>{terms().say("{Standards}")} are switched off</strong> by {sourceText(e.off.from, w)}{e.off_reason ? <>: “{e.off_reason}”</> : null}. No check runs on this repository and no finding is recorded.
+          {" "}Whoever administers that level switches them back on in <Link href="/settings/standards">Settings, {terms().say("{Standards}")}</Link>.
         </div>
       )}
       {e && e.notices.length > 0 && (
@@ -336,7 +336,7 @@ export function SettingsStandardsPage() {
   const lockOf = (key: string) => draft.locks?.[key] !== undefined;
   return (
     <div className="page page-wide sto">
-      <PageHead eyebrow="Settings" title="Standing orders" sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
+      <PageHead eyebrow="Settings" title={terms().say("{Standards}")} sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
       <div className="toolbar st-level" role="group" aria-label="Level">
         {LEVELS.map((l) => <button key={l} type="button" className={"chip" + (level === l ? " chip-on" : "")} aria-pressed={level === l} onClick={() => { setLevel(l); setScope(""); }}>{w[l] ?? l}</button>)}
         {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? "squadron name" : "project name"} /></label>}
@@ -348,7 +348,7 @@ export function SettingsStandardsPage() {
       {cov && ready && (
         <section aria-labelledby="st-cov">
           <h2 id="st-cov" className="h-sm st-h">Which repositories have which checks</h2>
-          {cov.any_off && <div className="callout callout-draft" role="status"><strong>Standing orders are switched off for some repositories below.</strong> They are listed as off in the table.</div>}
+          {cov.any_off && <div className="callout callout-draft" role="status"><strong>{terms().say("{Standards}")} are switched off for some repositories below.</strong> They are listed as off in the table.</div>}
           {cov.projects.length === 0 ? <p className="faint">No repository here that you may see.</p> : (
             <div className="card card-flush table-scroll">
               <table className="table st-cov">
@@ -380,7 +380,7 @@ export function SettingsStandardsPage() {
           <p className="faint small">Leave a value on “inherit” to take it from the level above. A lock keeps every level below, and every repository’s own file, from weakening the value.</p>
           <fieldset>
             <legend>The switch</legend>
-            <label className="st-switch"><input type="checkbox" checked={off} onChange={(e) => set((s) => { s.off = e.target.checked; if (!e.target.checked) s.off_reason = ""; return s; })} /> Switch Standing orders off for everything below {w[level] ?? level}</label>
+            <label className="st-switch"><input type="checkbox" checked={off} onChange={(e) => set((s) => { s.off = e.target.checked; if (!e.target.checked) s.off_reason = ""; return s; })} /> Switch {terms().say("{Standards}")} off for everything below {w[level] ?? level}</label>
             {off && (
               <div className="callout callout-draft">
                 Nothing will be scanned and no finding recorded. This is written to the {terms().say("{Logbook}")}, and a reminder is shown on the Security pages while it is off.

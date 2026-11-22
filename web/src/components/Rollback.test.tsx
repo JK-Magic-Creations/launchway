@@ -67,10 +67,10 @@ describe("the rollback control follows what the server reports", () => {
   });
 
   it("offers no working button when it is not available, and says why and what would help", () => {
-    const a: ServerAction = { name: "rollback", available: false, who: "operator", reason: "no deploy runner is serving target cluster-a right now", would_help: "start or repair the deploy runner" };
+    const a: ServerAction = { name: "rollback", available: false, who: "operator", reason: "no deploy Station is serving target cluster-a right now", would_help: "start or repair the deploy runner" };
     render(<RollbackControl action={a} unit={unit} />);
     expect(screen.getByRole("button", { name: "Roll back" })).toBeDisabled();
-    expect(screen.getByText(/no deploy runner is serving target team/)).toBeInTheDocument();
+    expect(screen.getByText(/no deploy Station is serving target cluster-a/)).toBeInTheDocument();
     expect(screen.getByText(/[Ss]tart or repair the deploy runner/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Roll back:/ })).not.toBeInTheDocument();
   });

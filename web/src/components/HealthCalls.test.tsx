@@ -20,7 +20,7 @@ const view = {
 describe("the calls of a health check", () => {
   it("says how many answered, the sentence, and lists the failed calls", () => {
     render(<HealthCalls v={view} name="healthy" />);
-    expect(screen.getByText(/3 calls made by the deploy Station: 2 answered as expected, 1 did not/)).toBeInTheDocument();
+    expect(screen.getByText(/3 calls made by the launch Station: 2 answered as expected, 1 did not/)).toBeInTheDocument();
     expect(screen.getByText("Interval 1: 1 of 3 requests to /healthz returned 503")).toBeInTheDocument();
     expect(screen.getByText("returned 503")).toBeInTheDocument();
   });

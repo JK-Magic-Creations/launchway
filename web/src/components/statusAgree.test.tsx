@@ -49,6 +49,6 @@ describe("the reason", () => {
   it("a retry after a lost runner says so", () => {
     const s = step({ id: "test", status: "queued", attempt: 3, failure_cause: "infrastructure", retry: 3 });
     const d = { ...run({ status: "running" }), step_list: [s] } as unknown as RunDetail;
-    expect(whyWaiting(d, s, 1000)?.text).toBe("Retrying on another runner, attempt 3, because the last one stopped responding.");
+    expect(whyWaiting(d, s, 1000)?.text).toBe("Retrying on another Station, attempt 3, because the last one stopped responding.");
   });
 });

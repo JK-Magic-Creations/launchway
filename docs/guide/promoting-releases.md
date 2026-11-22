@@ -18,7 +18,7 @@ A promotion starts the project's own pipeline as a Sortie at the release's **tag
 | `digest` | the release's first image digest |
 | `digests` | every image digest, separated by commas |
 
-The pipeline uses them so that it deploys what was built rather than building again:
+The pipeline uses them so that it launches what was built rather than building again:
 
 ```yaml
 pipeline: shop
@@ -42,7 +42,7 @@ steps:
 
 A pipeline that declares none of `airfield`, `release` and `version` cannot be told what to promote, so promotion is **refused with a sentence that says so**, not run as a rebuild. Before starting the Sortie Launchway also checks that the tag still points to the released commit, that the checklist of the Airfield is met, and that the Sortie really ran at the release's commit (otherwise it is canceled and refused).
 
-In the web interface, open the release and use *Check and promote to AIRFIELD*, or use the matrix. From the command line: `launchway release promote PROJECT VERSION --airfield prod`. The dialog shows the checklist line by line first. The Airfield's own rules (who may deploy there, protected Airfields (environments) with reviewers) apply exactly as for any deployment.
+In the web interface, open the release and use *Check and promote to AIRFIELD*, or use the matrix. From the command line: `launchway release promote PROJECT VERSION --airfield prod`. The dialog shows the checklist line by line first. The Airfield's own rules (who may launch there, protected Airfields (environments) with reviewers) apply exactly as for any deployment.
 
 A **candidate** may be promoted to Airfields that are not protected, for testing. A protected Airfield takes only a published release. A withdrawn release is never promoted.
 

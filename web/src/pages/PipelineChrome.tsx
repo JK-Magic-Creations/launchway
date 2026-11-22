@@ -6,13 +6,14 @@ import { useLoad } from "../guided/useLoad";
 import { PageHead } from "../kit/layout";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { onLink } from "../router";
+import { terms } from "../terms";
 
 const PAGES: { id: string; label: string; path: (enc: string) => string }[] = [
   { id: "pipeline", label: "Pipeline", path: (e) => `/projects/${e}/pipeline` },
   { id: "history", label: "Runs", path: (e) => `/projects/${e}/pipeline?view=history` },
   { id: "tests", label: "Tests and coverage", path: (e) => `/projects/${e}/tests` },
   { id: "security", label: "Security", path: (e) => `/projects/${e}/security` },
-  { id: "standards", label: "Standing orders", path: (e) => `/projects/${e}/standards` },
+  { id: "standards", label: "{Standards}", path: (e) => `/projects/${e}/standards` },
   { id: "caches", label: "Build caches", path: (e) => `/projects/${e}/caches` },
   { id: "configuration", label: "Configuration", path: (e) => `/projects/${e}/configuration` },
   { id: "variables", label: "Variables", path: (e) => `/projects/${e}/variables` },
@@ -30,7 +31,7 @@ export function ProjectHead({ name, on, title, sentence, actions }: { name: stri
     <>
       <PageHead eyebrow={<>Pipelines · <EntityLink kind="project" name={name} /></>} title={title} sentence={sentence} actions={actions} />
       <nav className="pnav" aria-label={`Pages about the pipeline of ${name}`}>
-        {PAGES.map((p) => <a key={p.id} href={p.path(enc)} onClick={onLink} aria-current={on === p.id ? "page" : undefined}>{p.label}</a>)}
+        {PAGES.map((p) => <a key={p.id} href={p.path(enc)} onClick={onLink} aria-current={on === p.id ? "page" : undefined}>{terms().say(p.label)}</a>)}
         <span className="pnav-trend"><TrendStrip trend={trend} label={`The last ${trend.ticks.length} runs of ${name}`} /><RateText trend={trend} /></span>
       </nav>
     </>

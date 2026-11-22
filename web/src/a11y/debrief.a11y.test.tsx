@@ -90,7 +90,7 @@ describe("the Debrief does what it says", () => {
     expect(screen.getByText(/this change broke it/)).toBeTruthy();
     expect(screen.getByText(/so this change did not break it/)).toBeTruthy();
     expect(screen.getByText(/it did not run there/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "run #42" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Sortie #42" })).toBeTruthy();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search the failures" }), { target: { value: "login" } });
     expect(screen.queryByText("TestCheckoutTotals", { selector: ".dfail-name" })).toBeNull();
     expect(screen.getByText("renders the form", { selector: ".dfail-name" })).toBeTruthy();

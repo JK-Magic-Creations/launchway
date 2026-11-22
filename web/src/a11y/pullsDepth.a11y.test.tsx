@@ -35,8 +35,8 @@ describe.each(["light", "dark"])("Review depth views, %s theme", (theme) => {
   it("the merge queue box, with its place and the group asked to review", async () => {
     installServer(queued());
     await open();
-    await screen.findByText(/Number 2 in the queue for main, being tested/, {}, { timeout: 8000 });
-    expect(screen.getByRole("button", { name: "Take out of the queue" })).toBeTruthy();
+    await screen.findByText(/Number 2 in the merge queue for main, being tested/, {}, { timeout: 8000 });
+    expect(screen.getByRole("button", { name: "Take out of the merge queue" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Update the branch" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Merge$/ })).toBeNull();
     await screen.findByText("finance");

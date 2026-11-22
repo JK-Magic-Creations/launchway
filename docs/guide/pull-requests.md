@@ -140,7 +140,7 @@ A **protected branch** can carry merge rules. They are set per branch or pattern
 | Merge queue | Merges into the branch go through the merge queue (below) |
 | Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the Logbook |
 
-Every rule is checked by the server when a pull request is merged or queued, whichever way it is asked for:
+Every rule is checked by the server when a pull request is merged or added to the merge queue, whichever way it is asked for:
 the web page, the API, the CLI, MCP, auto-merge and the merge queue all get the same answer.
 
 Rules and the repository's other settings (which merge methods are allowed, deleting the source branch after a
@@ -174,12 +174,12 @@ the branch as it will be, not as it was when the pull request was last green.
    with the method it asked for. The page shows its place and links the Sortie (run) testing it.
 3. An entry that fails a required check, conflicts with the branch after the ones ahead of it merged, loses a
    required approval, or gets new commits (a force-push included) while it waits is **taken out with the reason**,
-   the person who queued it is told (Needs you, and the channels below), and the next entry goes on.
+   the person who added it to the merge queue is told (Needs you, and the channels below), and the next entry goes on.
 4. Its author or an operator can take it out at any time (`launchway pr queue N --cancel`).
 
 A merge queue never updates a branch that is itself protected: the entry is taken out and says so. A direct merge into a
 branch with a merge queue is refused; an administrator can still merge past it, saying why, as with any rule. Auto-merge
-queues the pull request instead of merging it.
+adds the pull request to the merge queue instead of merging it.
 
 Not built yet: testing several entries at once, each on top of the ones ahead, and splitting the batch to find
 the failing one. Today the merge queue is serial.

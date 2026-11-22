@@ -79,7 +79,7 @@ opens a new one; a dependency that was removed is closed.
 | containers | Containerfiles and Dockerfiles, and the image steps of `.launchway/pipeline.yaml` | base images by stage, what each pipeline builds and for which platforms |
 | requirements | `.launchway/requirements.yaml`, the pipeline, Containerfiles, Kubernetes manifests, manifests | what each component needs, declared and inferred |
 | sorties | the results of image steps | built images by digest and platform, the commit, and the components of the image's list of components |
-| deployments | what is deployed now | deployments, and which digests each one runs |
+| deployments | what is launched now | deployments, and which digests each one runs |
 | inventory, Depot (registry), infrastructure, clusters | machines and platforms with their discovered facts; Depot contents; infrastructure state; cluster workloads | machines, platforms, `hosts`, `configured-by`, `runs-on` |
 
 The last row is **typed adapters**: each is a small interface with tests that feed it fixtures. The work that owns
