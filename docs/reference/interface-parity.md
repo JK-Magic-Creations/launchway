@@ -134,6 +134,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/home` | — | — | — | exempt: a read model for the Home page, worked out from the same rule as attention, plus runs and projects that list_runs and list_projects give in full |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
+| `POST /api/v1/import/pipeline` | `import_pipeline` | `import pipeline` | `not needed by terraform` | equal |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
 | `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

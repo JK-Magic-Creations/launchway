@@ -57,6 +57,7 @@ Usage:
                      [-i name=value ...]
   launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that Flight too)
   launchway init     [--write] [--force]         propose the pipeline file for this repository from what it holds
+  launchway import   pipeline [--from FORMAT|auto] [--dir .] [--write] [--report FILE]  turn the pipeline files of another system into a Launchway pipeline, with a report of what needs a person
   launchway graph    [file]                     print a pipeline's graph as JSON; or ask the software graph (launchway graph impact|order|where|needs|spec ...)
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
@@ -133,6 +134,7 @@ var commands = map[string]func([]string) error{
 	"release":          cmdRelease,
 	"rollout":          cmdRollout,
 	"templates":        cmdTemplates,
+	"import":           cmdImport,
 	"policy":           cmdPolicy,
 	"waivers":          cmdWaivers,
 	"mcp":              cmdMCP,

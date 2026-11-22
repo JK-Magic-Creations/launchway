@@ -3320,6 +3320,31 @@ paths:
             tags:
                 - images
             x-launchway-access: signed-in
+    /api/v1/import/pipeline:
+        post:
+            description: 'Reads the pipeline files of another system sent in the body ({"format": "auto", "files": [{"path": ".github/workflows/ci.yml", "content": "..."}], "dry": false}) and returns the proposed Launchway pipeline for each with a finding for every construct: converted exactly, converted with a difference, or not converted. Nothing is stored or run; the files are limited in size, depth and expansion. dry: true switches off the steps that deliver. See [Move your pipelines over](../guide/move-your-pipelines.md).'
+            operationId: post_api_v1_import_pipeline
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Reads the pipeline files of another system sent in the body ({"format": "auto", "files": [{"path": ".github/workflows/ci.yml", "content": "..."}], "dry": false}) and returns the proposed Launchway pipeline for each with a finding for every construct: converted exactly, converted with a difference, or not converted.'
+            tags:
+                - import
+            x-launchway-access: any-viewer
     /api/v1/imports:
         post:
             description: '{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}. owner limits the listing to one user or Wing of the source, repository (owner/name) to one; without them it brings in everything the credential can see. dry_run lists what would be created and changes nothing. wait copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. mirror: false makes each an ordinary repository once copied and checked (needs wait). Answers {"dry_run", "items", "summary"}; each item has source, repository, url, visibility, action (create, resume, skip), state (planned, queued, verified, skipped, failed), reason, error (credentials removed), source_refs, hosted_refs, verified, differences and mirror_id. One repository failing does not stop the others.'

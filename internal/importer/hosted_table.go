@@ -111,7 +111,7 @@ var hostedTable = Table{
 		Next: "Use the job's timeout, or the timeout command in the script"},
 	{Code: "hosted.step.commands", Name: "Workflow commands and files (GITHUB_ENV, GITHUB_PATH, ::set-output, step summaries)", Class: Manual,
 		Note: "The script uses %s, which only the old system provides",
-		Next: "Export the variable or extend PATH in the same script; write key=value lines to $LAUNCHWAY_OUTPUTS to pass values on"},
+		Next: "Print messages with echo, export variables and extend PATH inside the same script, and write key=value lines to $LAUNCHWAY_OUTPUTS to pass values to later steps"},
 	{Code: "hosted.step.output_file", Name: "$GITHUB_OUTPUT", Class: Different,
 		Note: "The file for step outputs was replaced by $LAUNCHWAY_OUTPUTS; later steps of the same job cannot read it, only steps that need this one",
 		Next: "Read values in other steps as $LAUNCHWAY_NEEDS_<STEP>_<NAME>"},

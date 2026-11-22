@@ -61,7 +61,7 @@ manual    hosted.uses.setup_second     .github/workflows/odd.yml:15 The job sets
 manual    hosted.step.shell_other      .github/workflows/odd.yml:18 The step uses the shell pwsh, which Launchway does not run -> Put the script in a file and run it with its interpreter in an image that has it
 exact     hosted.step.run              .github/workflows/odd.yml:19 Commands carry over
 different hosted.step.output_file      .github/workflows/odd.yml:20 The file for step outputs was replaced by $LAUNCHWAY_OUTPUTS; later steps of the same job cannot read it, only steps that need this one -> Read values in other steps as $LAUNCHWAY_NEEDS_<STEP>_<NAME>
-manual    hosted.step.commands         .github/workflows/odd.yml:20 The script uses GITHUB_ENV, which only the old system provides -> Export the variable or extend PATH in the same script; write key=value lines to $LAUNCHWAY_OUTPUTS to pass values on
+manual    hosted.step.commands         .github/workflows/odd.yml:20 The script uses GITHUB_ENV, which only the old system provides -> Print messages with echo, export variables and extend PATH inside the same script, and write key=value lines to $LAUNCHWAY_OUTPUTS to pass values to later steps
 exact     hosted.step.run              .github/workflows/odd.yml:20 Commands carry over
 different hosted.step.shell            .github/workflows/odd.yml:24 The commands run with sh -e, not bash -> Check the script for bash-only syntax
 manual    hosted.step.if               .github/workflows/odd.yml:25 The step's condition `github.event_name == 'push'` is not carried; the step always runs -> Put the test in the script (if [ ... ]) or split the step into a job with a when: filter

@@ -226,6 +226,7 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addVerifyTools(srv, c)
 	addStepResourceTools(srv, c)
 	addRunLimitTools(srv, c)
+	addImportPipelineTool(srv, c)
 	addLaneTools(srv, c)
 	addRollbackReadTools(srv, c)
 	if c.mayOperate {

@@ -34,6 +34,7 @@ func exitAfter(err error, helping bool) {
 
 // helpTexts are the commands whose arguments are not parsed as flags only: asking for help prints this, and runs nothing.
 var helpTexts = map[string]string{
+	"import": importHelpText(),
 	"init": `Usage: launchway init [--write] [--force]
 
 Proposes the pipeline file for the repository in the current directory from what it holds (go.mod,

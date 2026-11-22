@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"bytes"
 	"fmt"
 	"path"
 	"regexp"
@@ -14,15 +15,17 @@ import (
 
 func init() {
 	register(&Format{
-		ID: "hosted-workflows", Title: "Hosted workflow files", Where: ".github/workflows/*.yml",
+		ID: "hosted-workflows", Title: "Hosted workflow files", Where: ".github/workflows/*.yml, and the same layout in a self-hosted forge's own dot-directory (.<forge>/workflows/*.yml)",
 		Detect: func(p string, head []byte) bool {
-			return strings.HasPrefix(p, ".github/workflows/") && (strings.HasSuffix(p, ".yml") || strings.HasSuffix(p, ".yaml"))
+			return workflowPath.MatchString(p) && bytes.Contains(head, []byte("jobs:")) || strings.HasPrefix(p, ".github/workflows/") && workflowPath.MatchString(p)
 		},
 		Read:     readHosted,
 		Table:    hostedTable,
 		Sections: []string{"Triggers", "Jobs", "Steps", "Expressions", "Actions"},
 	})
 }
+
+var workflowPath = regexp.MustCompile(`^\.[a-z0-9_-]+/workflows/[^/]+\.ya?ml$`)
 
 type hostedJob struct {
 	j         *Job
