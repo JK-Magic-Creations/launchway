@@ -22,10 +22,12 @@ export function Announcer() {
   const [assertive, setAssertive] = useState("");
   useEffect(() => {
     let tp: number | undefined; let ta: number | undefined;
+    const firsts = new Set<number>(); // the short waits before a sentence is set: they end with the region
     const say = (set: (s: string) => void, timer: "p" | "a") => (text: string) => {
       set("");
       // An empty value first, then the text, so that a repeated sentence is a change the browser reports.
-      window.setTimeout(() => set(text), 30);
+      const f = window.setTimeout(() => { firsts.delete(f); set(text); }, 30);
+      firsts.add(f);
       window.clearTimeout(timer === "p" ? tp : ta);
       const t = window.setTimeout(() => set(""), 8000);
       if (timer === "p") tp = t; else ta = t;
@@ -33,7 +35,7 @@ export function Announcer() {
     const p = say(setPolite, "p"); const a = say(setAssertive, "a");
     listeners.polite.add(p); listeners.assertive.add(a);
     pending.polite.splice(0).forEach(p); pending.assertive.splice(0).forEach(a);
-    return () => { listeners.polite.delete(p); listeners.assertive.delete(a); window.clearTimeout(tp); window.clearTimeout(ta); };
+    return () => { listeners.polite.delete(p); listeners.assertive.delete(a); window.clearTimeout(tp); window.clearTimeout(ta); firsts.forEach((f) => window.clearTimeout(f)); };
   }, []);
   return (
     <>
