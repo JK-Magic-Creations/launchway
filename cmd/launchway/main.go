@@ -557,7 +557,7 @@ func cmdRunner(args []string) error {
 	}
 	reportLimits, err := o.Reports.Limits()
 	if err != nil {
-		return fmt.Errorf("Station settings: %w", err)
+		return fmt.Errorf("settings of the Station: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

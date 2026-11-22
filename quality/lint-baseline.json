@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 459,
+  "total": 458,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -1152,12 +1152,6 @@
       "file": "internal/imagebuild/build.go",
       "linter": "gocyclo",
       "text": "cyclomatic complexity 113 of func `Build` is high (\u003e 30)",
-      "count": 1
-    },
-    {
-      "file": "internal/imagebuild/buildkit.go",
-      "linter": "contextcheck",
-      "text": "Function `solve$4` should pass the context parameter",
       "count": 1
     },
     {

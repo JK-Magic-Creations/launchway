@@ -286,7 +286,7 @@ func TestStaleOperationIsDetectedAndEnded(t *testing.T) {
 	bare, _ := bareRepo(t)
 	dyn, cl := fakeCluster(t, staleApp(bare))
 	a := agentFor(t, bare, cl)
-	it := engine.WatchItem{Key: "k", Project: "shop", Target: "homelab", Application: "shop", Repo: "gitops", Branch: "main"}
+	it := engine.WatchItem{Key: "k", Project: "shop", Target: "cluster-a", Application: "shop", Repo: "gitops", Branch: "main"}
 	it.Spec.Commit, it.Spec.Health, it.Spec.Windows = "0000000000000000000000000000000000000000", "application", "wait"
 	snap := a.Observe(context.Background(), it)
 	if snap.Error != "" || snap.App == nil {
@@ -341,7 +341,7 @@ func TestComparisonErrorFailsPromptlyWhenItLasts(t *testing.T) {
 	_, cl := fakeCluster(t, app)
 	a := agentFor(t, bare, cl)
 	a.ComparisonGrace = 30 * time.Millisecond
-	it := engine.WatchItem{Key: "k", Project: "shop", Target: "homelab", Application: "shop", Repo: "gitops", Branch: "main"}
+	it := engine.WatchItem{Key: "k", Project: "shop", Target: "cluster-a", Application: "shop", Repo: "gitops", Branch: "main"}
 	it.Spec.Commit, it.Spec.Health, it.Spec.Windows = "0000000000000000000000000000000000000000", "application", "wait"
 	first := a.Observe(context.Background(), it)
 	if v := deploy.Evaluate(it.Spec, first); v.Outcome != deploy.Continue || !strings.Contains(v.Detail, "ComparisonError") {
