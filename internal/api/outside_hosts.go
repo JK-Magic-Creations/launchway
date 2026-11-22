@@ -160,6 +160,11 @@ func (s *Server) putOutsideFlight(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	setAudit(r, name, "")
 	if in.Connection != "" || in.Repository != "" {
+		// One home: a Flight's repository is hosted here or on one connection, never both with no role.
+		if _, hosted := s.hostedRepoOfFlight(r.Context(), name); hosted {
+			writeErr(w, http.StatusConflict, "this Flight's repository is hosted by this Launchway; a Flight has one home. Move the code to the host first, or give the Flight the host's address (a push mirror is its own named role, alongside)")
+			return
+		}
 		if _, err := s.Hosts.Attach(r.Context(), name, in.Connection, in.Repository); err != nil {
 			s.failHosts(w, err)
 			return

@@ -12,7 +12,12 @@ type Base struct {
 	K    Kind
 	Caps Capabilities
 	Mat  Maturity
+	// Adds is what the host offers beyond the built-in forge (see Addition).
+	Adds []Addition
 }
+
+// Additions returns what the host adds.
+func (b Base) Additions() []Addition { return b.Adds }
 
 // Kind returns the kind.
 func (b Base) Kind() Kind { return b.K }

@@ -36,6 +36,7 @@ func Capabilities() forge.Capabilities {
 	c[forge.CapLand] = forge.Declaration{Support: forge.None,
 		Reason:     "merging stays on the host, under its branch protection",
 		Workaround: "Merge the pull request on the Git host"}
+	c[forge.CapAutoLand] = forge.Declaration{Support: forge.Native, Reason: "the host's own auto-merge, switched on for a pull request by Launchway; the merge itself stays the host's"}
 	c[forge.CapRules] = forge.Declaration{Support: forge.Emulated,
 		Reason:     "Launchway reads the host's branch protection but never changes it",
 		Workaround: "Change branch protection on the Git host"}
@@ -71,14 +72,14 @@ func New(c forge.Connection, g *egress.Guard) (*Provider, error) {
 		}
 		return c.Credential.Resolve()
 	})
-	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental}, conn: c, c: cl, ep: ep}, nil
+	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental, Adds: Additions()}, conn: c, c: cl, ep: ep}, nil
 }
 
 // NewWith makes a provider over explicit endpoints and a token reader: for the
 // release publisher of a push mirror, whose address and credential are the
 // mirror's and not a connection's. Every other behaviour is the connection's.
 func NewWith(c forge.Connection, ep Endpoints, g *egress.Guard, token func() (string, error)) *Provider {
-	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental}, conn: c, c: NewClient(ep, g, token), ep: ep}
+	return &Provider{Base: forge.Base{K: forge.KindGitHub, Caps: Capabilities(), Mat: forge.Experimental, Adds: Additions()}, conn: c, c: NewClient(ep, g, token), ep: ep}
 }
 
 // Client returns the connection's client, for the probe and the tests.
@@ -400,4 +401,15 @@ func Protected(rs []forge.RefRule, branch string) bool {
 		}
 	}
 	return false
+}
+
+// Additions is what this host offers beyond the built-in forge.
+func Additions() []forge.Addition {
+	return []forge.Addition{
+		{Key: forge.AdditionAutoMerge, Title: "Auto-merge", Drivable: true,
+			What: "The host merges a pull request by itself once its required reviews and checks pass; Launchway switches it on for a write-back pull request (write_back.merge: auto), so a deploy's pull request lands with no one waiting on it"},
+		{Key: "merge_queue", Title: "Merge queue", What: "The host can queue approved pull requests and test them together before they land; set it up in the host's branch protection"},
+		{Key: "required_reviews", Title: "Required reviews and code owners", What: "The host enforces who must approve a change (code owners, required approvals); Launchway's statuses can be made required alongside them"},
+		{Key: "checks_page", Title: "Checks on the pull request", What: "Each Sortie and failed step appears as a status on the pull request's checks, with a link back to the Sortie"},
+	}
 }

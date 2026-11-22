@@ -14,6 +14,7 @@ type proposals struct{ p *Provider }
 
 type apiPull struct {
 	Number   int        `json:"number"`
+	NodeID   string     `json:"node_id"`
 	Title    string     `json:"title"`
 	Body     string     `json:"body"`
 	State    string     `json:"state"`
@@ -54,7 +55,7 @@ func (a apiPull) proposal(repo forge.Repository) forge.Proposal {
 	return forge.Proposal{Repository: repo.ID, Number: a.Number, Title: a.Title, Body: a.Body,
 		Author: forge.Principal{Login: a.User.Login, Unlinked: true}, Source: src,
 		Target: forge.Ref{Name: "refs/heads/" + a.Base.Ref, Commit: a.Base.SHA}, State: st,
-		Head: a.Head.SHA, Base: a.Base.SHA, Authority: forge.AuthorityProvider, Ext: map[string]any{"fork": fork, "merge_commit": a.MergeSHA, "url": a.HTMLURL}}
+		Head: a.Head.SHA, Base: a.Base.SHA, Authority: forge.AuthorityProvider, Ext: map[string]any{"fork": fork, "merge_commit": a.MergeSHA, "url": a.HTMLURL, "node_id": a.NodeID}}
 }
 
 // List: GET /repos/{o}/{r}/pulls (https://docs.github.com/en/rest/pulls/pulls#list-pull-requests).

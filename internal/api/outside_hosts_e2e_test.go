@@ -166,12 +166,6 @@ func TestOutsideWriteBackCredentialAndRefusals(t *testing.T) {
 	if !strings.Contains(job.Deploy.WriteBack.Error, "pull_request") || job.Deploy.WriteBack.Token != "" {
 		t.Fatalf("%+v", job.Deploy.WriteBack)
 	}
-	// Launchway does not merge on this host: merge auto is refused in words.
-	job = wbJob("pull_request", "auto")
-	e.api.mintWriteBack(ctx, job)
-	if !strings.Contains(job.Deploy.WriteBack.Error, "person") {
-		t.Fatalf("%+v", job.Deploy.WriteBack)
-	}
 	// A tampered or expired handle opens nothing.
 	good := wbJob("pull_request", "person")
 	e.api.mintWriteBack(ctx, good)
@@ -277,5 +271,75 @@ func TestSummaryCommentCarriesTestAndFindingTotals(t *testing.T) {
 	}
 	if strings.Contains(summaryBody(&engine.RunSummary{Number: 1, SHA: sum.SHA}, ""), "Tests:") {
 		t.Error("totals shown when there are none")
+	}
+}
+
+// The host's own auto-merge is driven for a write-back pull request: merge auto is accepted, and once the pull
+// request is open the host is asked to merge it when its checks pass (and the step says what it waits for).
+func TestOutsideWriteBackSwitchesOnTheHostsAutoMerge(t *testing.T) {
+	e, h := hostsEnv(t)
+	job := wbJob("pull_request", "auto")
+	e.api.mintWriteBack(context.Background(), job)
+	if job.Deploy.WriteBack.Error != "" || job.Deploy.WriteBack.Handle == "" {
+		t.Fatalf("merge auto was refused on a host that has auto-merge: %+v", job.Deploy.WriteBack)
+	}
+	rec := httptest.NewRecorder()
+	e.api.outsideDeployPull(rec, httptest.NewRequest("POST", "/x", nil), job.Deploy.WriteBack.Handle, "open", 0, "Deploy dep1", "body")
+	var out map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &out)
+	if rec.Code != 200 || !strings.Contains(out["waiting_for"].(string), "auto-merge") {
+		t.Fatalf("%d %v", rec.Code, out)
+	}
+	h.Lock()
+	defer h.Unlock()
+	if h.AutoMerge[1] != "SQUASH" || len(h.Violations) != 0 {
+		t.Fatalf("auto-merge %v, violations %v", h.AutoMerge, h.Violations)
+	}
+}
+
+// With Git hosting off (no forge on the server) a Flight on an outside repository works fully: webhook and
+// polling, the checkout credential, statuses and the summary comment, the release tag through the group, and
+// write-back. The web interface shows no hosted-repository entry then: the session says hosting is off.
+func TestOutsideFlightsWorkWithHostingOff(t *testing.T) {
+	e, h := hostsEnv(t)
+	if e.api.Forge != nil {
+		t.Fatal("this test is for a server with Git hosting off")
+	}
+	ctx := context.Background()
+	// Checkout credential (the host's address is on the allow-list in this test).
+	g, _ := egress.New([]string{"127.0.0.1", "git.example.com"})
+	e.api.Hosts = hosts.New(e.eng.Database(), e.eng, g)
+	if c, ok, err := e.api.Credential(ctx, "pay-hooks"); err != nil || !ok || c.Secret != githubfake.Token {
+		t.Fatalf("credential %v %v", ok, err)
+	}
+	// A release tag is made through the Releases group, with no hosted repository anywhere.
+	r := httptest.NewRequest("POST", "/x", nil)
+	obj, outside, usable, err := e.api.createTagThroughGroup(r, "pay-hooks", "v1.0.0", strings.Repeat("a", 40), "Release 1.0.0")
+	if err != nil || !outside || !usable || obj == "" {
+		t.Fatalf("tag %q %v %v %v", obj, outside, usable, err)
+	}
+	// Statuses and the summary comment.
+	if ok, err := e.api.Hosts.ReportRun(ctx, "pay-hooks", forge.Result{Producer: "launchway", Name: "launchway/app", SHA: strings.Repeat("c", 40), State: forge.Passing, Summary: "ok"}); err != nil || !ok {
+		t.Fatalf("status %v %v", ok, err)
+	}
+	// Write-back by pull request, with the host's auto-merge.
+	job := wbJob("pull_request", "auto")
+	e.api.mintWriteBack(ctx, job)
+	if job.Deploy.WriteBack.Error != "" {
+		t.Fatalf("%+v", job.Deploy.WriteBack)
+	}
+	// An outside Flight cannot be attached to a repository this server hosts, and nothing here needs a forge.
+	h.Lock()
+	defer h.Unlock()
+	if len(h.Violations) != 0 {
+		t.Fatalf("violations: %v", h.Violations)
+	}
+	// The session tells the web interface that hosting is off, so it draws no hosted-repository entry.
+	rec := httptest.NewRecorder()
+	e.api.me(rec, httptest.NewRequest("GET", "/api/v1/me", nil))
+	var me map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &me)
+	if me["hosting"] != false {
+		t.Fatalf("hosting reported on: %v", me["hosting"])
 	}
 }

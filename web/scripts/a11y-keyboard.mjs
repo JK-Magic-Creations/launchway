@@ -155,6 +155,26 @@ await journey("change a variable: add one in a dialog with the keyboard, then se
   has(await snapshot(page.getByRole("main")), /region/, /us-east/);
 });
 
+await journey("connect a Git host: fill the form with the keyboard; a token that cannot be read is refused in words that are announced", async (page) => {
+  await open(page, "/settings/connections");
+  await tabTo(page, /^Name/);
+  await page.keyboard.type("acme-gh");
+  await tabTo(page, /Environment variable that holds the token/);
+  await page.keyboard.type("LAUNCHWAY_NO_SUCH_TOKEN");
+  await tabTo(page, /Add the connection/);
+  await page.keyboard.press("Enter");
+  const alert = page.getByRole("alert").filter({ hasText: /credential|LAUNCHWAY_NO_SUCH_TOKEN|environment/i });
+  await alert.first().waitFor();
+  const text = await alert.first().innerText();
+  assert.equal(/LAUNCHWAY_NO_SUCH_TOKEN/.test(text), true, "the refusal names the reference, never a value");
+});
+
+await journey("the code host of a project: with no connection the page says so and where to add one", async (page) => {
+  await open(page, "/projects/shop-api/outside");
+  has(await snapshot(page.getByRole("main")), /Code host of shop-api/);
+  await tabTo(page, /Settings/);
+});
+
 await journey("open Learn with the keyboard and search it", async (page) => {
   await open(page, "/");
   await tabTo(page, /^Learn/);

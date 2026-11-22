@@ -45,7 +45,9 @@ type Host struct {
 	Statuses []Status
 	Comments map[int64]string
 	Pulls    []map[string]any
-	Assets   map[int64][]byte
+	// AutoMerge is the pull requests that have the host's auto-merge on, by number, with the merge method.
+	AutoMerge map[int]string
+	Assets    map[int64][]byte
 }
 
 // Status is one commit status the fake received.
@@ -147,6 +149,35 @@ func (h *Host) route(r *http.Request, path string, in map[string]any, raw []byte
 	m := r.Method
 	if m == "GET" && path == "/api/v3/user" {
 		return 200, map[string]any{"login": "svc-launchway", "name": "Launchway service"}, true
+	}
+	if m == "POST" && path == "/api/graphql" {
+		q, _ := in["query"].(string)
+		vars, _ := in["variables"].(map[string]any)
+		id, _ := vars["id"].(string)
+		n := 0
+		for _, p := range h.Pulls {
+			if p["node_id"] == id {
+				n = p["number"].(int)
+			}
+		}
+		if n == 0 {
+			return 200, map[string]any{"errors": []any{map[string]any{"message": "Could not resolve to a PullRequest with the id " + id}}}, true
+		}
+		switch {
+		case strings.Contains(q, "enablePullRequestAutoMerge"):
+			if mm, _ := vars["m"].(string); mm != "MERGE" && mm != "SQUASH" && mm != "REBASE" {
+				return h.bad("auto-merge needs a merge method, got %q", mm)
+			}
+			if h.AutoMerge == nil {
+				h.AutoMerge = map[int]string{}
+			}
+			h.AutoMerge[n] = vars["m"].(string)
+		case strings.Contains(q, "disablePullRequestAutoMerge"):
+			delete(h.AutoMerge, n)
+		default:
+			return h.bad("unknown GraphQL operation")
+		}
+		return 200, map[string]any{"data": map[string]any{"ok": map[string]any{"clientMutationId": nil}}}, true
 	}
 	if m == "GET" && path == "/api/v3/user/repos" {
 		return 200, []any{repoJSON(h.Push)}, true
@@ -302,7 +333,7 @@ func (h *Host) routePulls(r *http.Request, m, sub string, in map[string]any, raw
 			}
 		}
 		n := len(h.Pulls) + 1
-		p := map[string]any{"number": n, "title": in["title"], "body": in["body"], "state": "open", "draft": in["draft"],
+		p := map[string]any{"number": n, "node_id": fmt.Sprintf("PR_node_%d", n), "title": in["title"], "body": in["body"], "state": "open", "draft": in["draft"],
 			"user": map[string]any{"login": "svc-launchway"},
 			"head": map[string]any{"ref": in["head"], "sha": strings.Repeat("b", 40), "repo": map[string]any{"full_name": "acme/app"}},
 			"base": map[string]any{"ref": in["base"], "sha": strings.Repeat("a", 40), "repo": map[string]any{"full_name": "acme/app"}}}

@@ -44,8 +44,8 @@ func (s *Service) WriteBackAuth(ctx context.Context, connection, path, branch, m
 			return PushAuth{}, fmt.Errorf("%w: %s on %s needs a pull request (required reviews or checks); set the Airfield's write_back mode to pull_request, which opens one", ErrProtected, branch, repo.Path)
 		}
 	case "pull_request":
-		if merge == "auto" {
-			return PushAuth{}, errors.New("this host's pull requests are merged on the host, not by Launchway: set write_back.merge to person (the step waits until the host merges it, by a person or by the host's own auto-merge)")
+		if merge == "auto" && !canAutoMerge(p) {
+			return PushAuth{}, errors.New("this host has no auto-merge Launchway can switch on: set write_back.merge to person (the step waits until the host merges it)")
 		}
 	}
 	cred, err := p.Access().Credential(ctx, repo, true)
@@ -53,6 +53,33 @@ func (s *Service) WriteBackAuth(ctx context.Context, connection, path, branch, m
 		return PushAuth{}, err
 	}
 	return PushAuth{URL: repo.Clone.HTTPS, Username: cred.Username, Secret: cred.Secret}, nil
+}
+
+// canAutoMerge says the host adds an auto-merge that Launchway can drive.
+func canAutoMerge(p forge.Provider) bool {
+	for _, a := range p.Additions() {
+		if a.Key == forge.AdditionAutoMerge && a.Drivable {
+			return true
+		}
+	}
+	return false
+}
+
+// EnableAutoMerge switches on the host's own auto-merge of a pull request the
+// step opened: the host merges it when its reviews and checks pass.
+func (s *Service) EnableAutoMerge(ctx context.Context, connection, path string, number int) error {
+	p, _, err := s.Provider(ctx, connection)
+	if err != nil {
+		return err
+	}
+	if !canAutoMerge(p) {
+		return fmt.Errorf("%w: this host has no auto-merge Launchway can switch on", forge.ErrInvalid)
+	}
+	repo, err := p.Repositories().Get(ctx, path)
+	if err != nil {
+		return err
+	}
+	return p.Land().AutoLand(ctx, repo, number, forge.StrategySquash, true)
 }
 
 // DeployPull is the state of a deploy step's pull request.

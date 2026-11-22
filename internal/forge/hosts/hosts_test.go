@@ -178,3 +178,40 @@ func TestWebhookReplayAndFlights(t *testing.T) {
 		t.Fatalf("a replay by delivery id is ignored: %+v %v", d, err)
 	}
 }
+
+// The Flight's view carries the address of the webhook to set up and when a delivery last arrived, so the page can
+// show both and say plainly what the host cannot do.
+func TestFlightViewHasTheWebhookAddressAndLastDelivery(t *testing.T) {
+	s, h := setup(t)
+	ctx := t.Context()
+	add(t, s, h)
+	s.PublicURL = "https://lw.example.com/"
+	if _, err := s.Attach(ctx, "shop", "gh", "acme/app"); err != nil {
+		t.Fatal(err)
+	}
+	v, err := s.View(ctx, "shop")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.WebhookURL != "https://lw.example.com/api/v1/outside-hosts/gh/webhook" || v.LastDelivery != 0 || v.Kind != "github" || len(v.Unsupported) == 0 || len(v.Additions) == 0 {
+		t.Fatalf("view %+v", v)
+	}
+	if _, err := s.Store().SeeDelivery(ctx, connectionID(t, s), "d-1"); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ = s.View(ctx, "shop"); v.LastDelivery == 0 {
+		t.Fatal("a delivery was received and the view does not say when")
+	}
+	if at, ok, err := s.LastDelivery(ctx, "gh"); err != nil || !ok || at.IsZero() {
+		t.Fatalf("last delivery %v %v %v", at, ok, err)
+	}
+}
+
+func connectionID(t *testing.T, s *hosts.Service) string {
+	t.Helper()
+	cs, err := s.Store().Connections(t.Context())
+	if err != nil || len(cs) != 1 {
+		t.Fatalf("%v %v", cs, err)
+	}
+	return cs[0].ID
+}

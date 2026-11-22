@@ -51,6 +51,21 @@ Where the host cannot do something the page says so, in words, and offers nothin
    **Test** says who the token is, when it expires (when the host reports it), and, for each feature above, whether the token has the permission or lacks it and what to grant. The host does not list a token's fine-grained permissions, so a write feature shows as lacking when the token can push to none of the repositories it reaches.
 6. Attach a Flight: choose the repository in the wizard, or `launchway repos outside attach FLIGHT --connection acme-gh --repository acme/app`. The two report switches (`--statuses`, `--comment`) are per Flight.
 
+## What the host adds
+
+A connection is an equal choice, not a reduced one: where the host offers more than Launchway's own forge, the Flight's **Code host** page lists it "from" the host, and says whether Launchway can switch it on. For GitHub:
+
+| Addition | What it gives | Launchway drives it |
+| --- | --- | --- |
+| Auto-merge | the host merges a pull request itself once its required reviews and checks pass | yes: with `write_back.merge: auto` a Launch's pull request has auto-merge switched on right after it is opened (by squash). If the host refuses (auto-merge is off for the repository), the step waits for a person and the Logbook says why |
+| Merge queue | approved pull requests are queued and tested together | no: set it up in the host's branch protection |
+| Required reviews and code owners | the host decides who must approve | no: the host enforces it; mark Launchway's statuses required beside it |
+| Checks on the pull request | each Sortie and failed step shows as a status with a link back | yes: the commit statuses above |
+
+## One home for a Flight
+
+A Flight's repository lives in exactly one place: hosted by this Launchway, or on one connection. Attaching a Flight whose repository is hosted here is refused. A push mirror is the one named way to have both, with the role "alongside" (a copy kept for one stated purpose); an import is "migrating" and ends when it is done. With Git hosting switched off (`forge.hosting` off) Flights on outside repositories work in full (triggers, checkout, statuses, releases and write-back) and the web interface shows no hosted-repository entry.
+
 ## Webhooks or polling
 
 Webhooks start a Sortie at once; polling is the fallback and also the check on them. On the host, add a webhook on the repository (or the owner) with:
@@ -62,12 +77,24 @@ Webhooks start a Sortie at once; polling is the fallback and also the check on t
 
 Launchway checks the signature with the connection's secret in constant time, refuses a call it cannot verify (an unknown connection, no secret and a wrong signature all answer `404`, and the failed calls count against the caller's address; a connection also accepts at most 300 calls a minute, and the rest answer `429`), ignores a delivery ID it has seen, and records each accepted delivery in the Logbook. A verified event only makes the Flights on that repository poll at once, so a forged or replayed call can at worst cause a poll. If Launchway cannot be reached from the host, do nothing: the Flight is polled on its schedule, as any Git address is.
 
-A pull request from a fork runs under the usual restricted pull-request rule: no secrets, no deploy steps. The audit line says the Sortie came from a fork.
+A pull request from a fork runs under the usual restricted pull-request rule: no secrets, no deploy steps, and the pipeline of the default branch, not the fork's. The audit line says the Sortie came from a fork, and so does the Sortie's page. Launchway asks the host who opened each pull request and whether it is from a fork before it runs one; if the host cannot be asked, the pull request waits (the decision says so) rather than running unchecked.
+
+A Flight whose connection has received no delivery for five minutes is polled through the host's API as well (every minute), so pull requests, their titles and their authors arrive even when the host cannot reach Launchway. The Sortie's page and `launchway runs show` say "Pull request #N: title, by author", with the host's link.
+
+## In the web interface
+
+- **Settings > Git hosts** (`/settings/connections`): add a connection (the names of the environment variables that hold the token and the webhook secret, never the values), **test** it (it lists, for each feature, whether the token has or lacks the permission and what to grant), and remove it.
+- **Connect a repository** has a picker: choose a connection, search the host, and the address is filled in; the new Flight is attached to that repository when it is created.
+- **Code host** (a tab on the Flight, `/projects/NAME/outside`): the attached repository, the two report switches, the webhook address with a copy button and the three setup steps, when a delivery last arrived, and "This host cannot do X: reason, what to do instead" for everything the host lacks.
+
+## How Launchway reads a private repository
+
+The server's own polling and the mirror of a Flight attached to an outside repository use the connection's token: it reaches git as an HTTP header in the one git process's own settings (never in the address, in the mirror's configuration or in a log), only to the connection's own address, with redirects off. The address is checked against the egress allow-list first. A Station gets the token the same way for the checkout.
 
 ## The limits
 
 - One token, narrow: an app-installation credential, which would make a short-lived token for each Sortie, is a planned addition; the connection has a place for it and needs no migration to add it. Until then a Station receives the connection's token for the Sortie's checkout.
-- The summary comment carries the Sortie's result and step counts. Test and findings counts in the comment are planned.
+- The summary comment carries the Sortie's result, step counts, test totals and findings counts: the same numbers the Sortie's page shows.
 - A Launch (deploy) writing back to an outside deployment repository: the connection can commit a file and open a pull request, and refuses a direct write to a protected branch, but the deploy step's own push still uses the credential you configured for it. Wiring the step to the connection is planned.
 - A connection cannot create repositories, merge, review, or change branch protection.
 - Self-managed installs: the API address is the base address plus `/api/v3` and uploads go to `/api/uploads`, as the host documents; give `--base-url` and nothing else unless your install differs.

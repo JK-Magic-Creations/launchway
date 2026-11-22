@@ -15,6 +15,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type outsideClaim struct {
 	Branch     string `json:"b"`
 	Work       string `json:"w"`
 	Mode       string `json:"m"`
+	Merge      string `json:"g,omitempty"`
 	Project    string `json:"p"`
 	Deployment string `json:"d"`
 	Expires    int64  `json:"e"`
@@ -90,7 +92,7 @@ func (s *Server) mintOutsideWriteBack(ctx context.Context, job *engine.Job) {
 	if d.Deadline > 0 {
 		until = max(time.UnixMilli(d.Deadline).Sub(s.Now())+time.Hour, 2*time.Hour)
 	}
-	h, err := s.signOutside(ctx, outsideClaim{Connection: conn, Repo: path, Branch: d.Branch, Work: wb.WorkBranch, Mode: wb.Mode,
+	h, err := s.signOutside(ctx, outsideClaim{Connection: conn, Repo: path, Branch: d.Branch, Work: wb.WorkBranch, Mode: wb.Mode, Merge: wb.Merge,
 		Project: job.Project, Deployment: d.Deployment, Expires: s.Now().Add(until).UnixMilli()})
 	if err != nil {
 		wb.Error = "a handle for the write-back could not be made: " + err.Error()
@@ -112,6 +114,19 @@ func (s *Server) outsideDeployPull(w http.ResponseWriter, r *http.Request, handl
 	switch op {
 	case "open":
 		out, err = s.Hosts.OpenDeployPull(r.Context(), c.Connection, c.Repo, c.Work, c.Branch, title, body)
+		if err == nil && c.Merge == "auto" && out.State == "open" {
+			// The host's own auto-merge: it merges the pull request when its reviews and checks pass.
+			am := s.Hosts.EnableAutoMerge(r.Context(), c.Connection, c.Repo, out.Number)
+			e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: "pipeline:" + c.Project, Action: "outside_host.auto_merge", Project: c.Project,
+				Target: c.Connection + ":" + c.Repo, Outcome: "ok", Detail: fmt.Sprintf("auto-merge switched on for pull request %d", out.Number)}
+			if am != nil {
+				e.Outcome, e.Detail = "failed", clip(errText(am), 300)
+				out.WaitingFor = "a person to merge it: the host would not switch on auto-merge (" + clip(errText(am), 120) + ")"
+			} else {
+				out.WaitingFor = "the host's auto-merge: it merges the pull request when its reviews and checks pass"
+			}
+			s.record(e)
+		}
 		if err == nil {
 			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "pipeline:" + c.Project, Action: "outside_host.pull_request", Project: c.Project,
 				Target: c.Connection + ":" + c.Repo, Outcome: "ok", Detail: "pull request " + out.URL + " from " + c.Work + " into " + c.Branch})

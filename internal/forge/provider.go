@@ -40,6 +40,9 @@ type Provider interface {
 	// Capabilities says, per feature, native, emulated or none, with the
 	// reason and the workaround in words.
 	Capabilities() Capabilities
+	// Additions is what the host offers that the built-in forge does not, shown
+	// on the Flight "from <host>"; a provider that has none returns nil.
+	Additions() []Addition
 	// Maturity is the label the provider carries until it has passed the
 	// conformance suite against a live service.
 	Maturity() Maturity

@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -87,6 +88,8 @@ type View struct {
 	Owners        []string           `json:"owners,omitempty"`
 	Enabled       bool               `json:"enabled"`
 	Capabilities  forge.Capabilities `json:"capabilities"`
+	// Additions is what the host offers beyond the built-in forge.
+	Additions []forge.Addition `json:"additions,omitempty"`
 }
 
 func view(c forge.Connection) View {
@@ -97,6 +100,7 @@ func view(c forge.Connection) View {
 	}
 	if c.Kind == forge.KindGitHub {
 		v.Capabilities = github.Capabilities()
+		v.Additions = github.Additions()
 	}
 	return v
 }
@@ -370,6 +374,15 @@ func (s *Service) SetReports(ctx context.Context, project string, statuses, comm
 type FlightView struct {
 	Flight
 	Unsupported map[forge.Capability]forge.Declaration `json:"unsupported,omitempty"`
+	// WebhookURL is the address the host's webhook calls (when Launchway knows
+	// its own address), and LastDelivery when one last arrived, in Unix ms (0:
+	// none on record). The page shows both so the setup can be checked.
+	WebhookURL   string `json:"webhook_url,omitempty"`
+	LastDelivery int64  `json:"last_delivery_at,omitempty"`
+	// Kind is the connection's host kind.
+	Kind string `json:"kind,omitempty"`
+	// Additions is what the host adds beyond the built-in forge, shown "from" the host.
+	Additions []forge.Addition `json:"additions,omitempty"`
 }
 
 // View returns the attachment of a project with the features its host lacks.
@@ -383,6 +396,16 @@ func (s *Service) View(ctx context.Context, project string) (FlightView, error) 
 		if d.Support != forge.Native {
 			v.Unsupported[k] = d
 		}
+	}
+	v.Additions = github.Additions()
+	if c, err := s.conn(ctx, f.Connection); err == nil {
+		v.Kind = string(c.Kind)
+		if at, ok, err := s.fl.OutsideLastDelivery(c.ID); err == nil && ok {
+			v.LastDelivery = at
+		}
+	}
+	if base := strings.TrimSuffix(s.PublicURL, "/"); base != "" {
+		v.WebhookURL = base + "/api/v1/outside-hosts/" + url.PathEscape(f.Connection) + "/webhook"
 	}
 	return v, nil
 }

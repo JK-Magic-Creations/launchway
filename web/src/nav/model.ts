@@ -132,6 +132,7 @@ export const SECTIONS: Section[] = [
     tabs: [
       { id: "overview", label: "Overview", href: "/settings", icon: "settings" },
       { id: "runners", get label() { return say("{Runners}"); }, href: "/settings/runners", icon: "server", aka: "Runners", show: ({ me }) => me.runners },
+      { id: "connections", label: "Git hosts", href: "/settings/connections", icon: "code", aka: "Connections", show: ({ me }) => me.admin },
       { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
       { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
       { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
@@ -314,6 +315,8 @@ export const PAGES: PageInfo[] = [
   page("/kit", "settings", undefined, () => "Design kit", () => [{ label: "Design kit" }]),
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
+  page("/settings/connections", "settings", "connections", () => "Connections to Git hosts", () => [{ label: "Connections to Git hosts" }]),
+  page("/projects/:name/outside", "pipelines", undefined, (p) => `Code host of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Code host" }]),
   page("/settings/runners", "settings", "runners", () => terms().say("{Runners}"), () => [{ label: terms().say("{Runners}") }]),
   settingsPage("access", "People and access"),
   page("/settings/access/keys", "settings", "access", () => "Keys for scripts",

@@ -1,3 +1,4 @@
+import { RunPullRequest } from "../components/RunPullRequest";
 import { RollbackBanner, RolledBackLine } from "../components/RollbackRun";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
@@ -296,6 +297,7 @@ function RunBody({ id }: { id: string }) {
           )}
         </>} />
       <ErrorBox error={actionErr} />
+      <RunPullRequest run={run} />
       {run.restriction && (
         <div className="notice" role="note" data-code={run.restriction.code}>
           <strong>{run.restriction.approved ? "Approved to run with secrets." : "Restricted run."}</strong> {run.restriction.summary}.

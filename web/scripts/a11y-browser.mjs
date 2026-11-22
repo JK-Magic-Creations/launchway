@@ -21,7 +21,7 @@ const PAGES = [
   ["A run waiting", `/runs/${runs.RUN_WAITING}`], ["Decisions", "/activity/approvals"], ["Pipelines", "/pipelines"], ["Code", "/projects"],
   ["A repository", "/projects/shop-api"], ["A pipeline", "/projects/shop-api/pipeline"], ["Deployments", "/deployments"],
   ["Applications", "/deployments/applications"], ["Environments", "/deployments/environments"], ["Images", "/depot"],
-  ["Library", "/library"], ["Settings", "/settings"], ["Runners", "/settings/runners"], ["People and access", "/settings/access"],
+  ["Library", "/library"], ["Settings", "/settings"], ["Runners", "/settings/runners"], ["Connections to Git hosts", "/settings/connections"], ["Code host of a project", "/projects/shop-api/outside"], ["People and access", "/settings/access"],
   ["Variables", "/settings/variables"], ["Rules", "/settings/rules"], ["Learn", "/learn"], ["A Learn page", "/learn/concepts/launch-line"],
   ["Accessibility guide", "/learn/guide/accessibility"], ["Conformance statement", "/learn/reference/accessibility-conformance"],
   ["Configuration", "/config"], ["First-run wizard", "/config/wizard/connect-repository"], ["Design kit", "/kit"],

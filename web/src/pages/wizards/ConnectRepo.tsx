@@ -8,6 +8,7 @@ import { configApi, notOffered, type ChangeRequest, type ConfigOverview, type Li
 import { navigate } from "../../router";
 import { Choices, CheckInput, CopyBlock, DefinedAt, ListInput, SelectInput, TextInput } from "../../components/ConfigForm";
 import { AllowHost } from "../../components/AllowHost";
+import { AttachAfterCreate, OutsidePicker, type OutsidePick } from "../../components/OutsidePicker";
 import { Link } from "../../components/ui";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
@@ -22,6 +23,8 @@ export interface RepoFlow {
   source: Source;
   /** The pipeline file to commit, for the file and sample choices. */
   pipelineText: string;
+  /** The repository chosen through a connection to a Git host, to attach the new project to. */
+  outside: OutsidePick | null;
 }
 
 const POLLS = [
@@ -50,7 +53,10 @@ function hasPassword(url: string): boolean {
 export function useRepoFlow(overview: ConfigOverview): RepoFlow {
   const lv = overview.levels;
   const proj = lv.project.singular.toLowerCase();
-  const [repo, setRepo] = useState("");
+  const [repo, setRepoText] = useState("");
+  const [outside, setOutside] = useState<OutsidePick | null>(null);
+  // Typing another address means the project is not on the chosen host repository any more.
+  const setRepo = (v: string) => { setRepoText(v); if (outside && v !== outside.address) setOutside(null); };
   const [nameEdit, setNameEdit] = useState<string | null>(null);
   const [unit, setUnit] = useState("");
   const [check, setCheck] = useState<{ state: "idle" | "checking" | "unavailable" | "error"; result?: RepoCheck; error?: string; repo?: string; branch?: string }>({ state: "idle" });
@@ -159,6 +165,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     render: (by) => (
       <>
         <p>Which Git repository should Launchway watch? It reads it to find the pipeline and to know when to start runs.</p>
+        <OutsidePicker picked={outside} onPick={(p) => { setOutside(p); if (p) { setRepoText(p.address); setNameEdit(null); } }} />
         <div className="cf-grid">
           <TextInput label="Repository address" required value={repo} onChange={setRepo} mono wide focusOnMount problems={by.repo}
             placeholder="https://git.example.com/team/shop.git or git@git.example.com:team/shop.git"
@@ -315,7 +322,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
     ),
   };
 
-  return { steps: [repoStep, branchStep, sourceStep, triggerStep], change, name: name.trim(), branch: effBranch, source, pipelineText };
+  return { steps: [repoStep, branchStep, sourceStep, triggerStep], change, name: name.trim(), branch: effBranch, source, pipelineText, outside };
 }
 
 function RepoCheckLine({ check, repo }: { check: { state: string; result?: RepoCheck; error?: string; repo?: string; branch?: string }; repo: string }) {
@@ -405,6 +412,7 @@ export function ConnectRepoWizard({ overview }: { overview: ConfigOverview }) {
         <>
           <CreatedList objects={created} overview={overview} />
           <PipelineToCommit flow={flow} />
+          {flow.outside && <AttachAfterCreate project={flow.name} pick={flow.outside} />}
           <h3 className="h-sm">Next</h3>
           <RunItNow name={flow.name} branch={flow.branch} />
           <ul className="cf-next">
