@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -187,5 +188,32 @@ func TestOutsideEnvCarriesOnePinPerOrigin(t *testing.T) {
 	j := strings.Join(env, "\n")
 	if !strings.Contains(j, "=http.curloptResolve\nGIT_CONFIG_VALUE_2=git.example.com:443:93.184.216.34") || !strings.Contains(j, "GIT_CONFIG_COUNT=3") {
 		t.Fatalf("env = %s", j)
+	}
+}
+
+type layoutOutside struct{ fakeOutside }
+
+func (layoutOutside) PullRefLayout(string) (forge.RefLayout, bool) {
+	return forge.RefLayout{Prefix: "refs/merge-requests", Suffix: "/head"}, true
+}
+
+// A host that publishes pull request heads elsewhere than refs/pull is read
+// the way it publishes them, and a project of no outside host is not changed.
+func TestPullRefLayoutComesFromTheOutsideHost(t *testing.T) {
+	p := &project{Project: Project{Name: "app"}}
+	if p.layout() != forge.PullRefLayout {
+		t.Fatalf("default: %v", p.layout())
+	}
+	p.outside = func() OutsideSource { return fakeOutside{} }
+	if p.layout() != forge.PullRefLayout {
+		t.Fatalf("a host with no layout: %v", p.layout())
+	}
+	p.outside = func() OutsideSource { return layoutOutside{} }
+	if got := p.layout().Ref(4); got != "refs/merge-requests/4/head" {
+		t.Fatalf("layout: %s", got)
+	}
+	p.PullRefs = forge.RefLayout{Prefix: "refs/x", Suffix: "/y"}
+	if got := p.layout().Ref(4); got != "refs/x/4/y" {
+		t.Fatalf("an explicit layout wins: %s", got)
 	}
 }

@@ -4,6 +4,7 @@ import { ProjectHead } from "./PipelineChrome";
 import { CopyBlock } from "../components/ConfigForm";
 import { Empty, ErrorBox, Link } from "../components/ui";
 import { Loading, useLoad } from "../work/common";
+import { hostKind, webhookSteps } from "../hostKinds";
 import { FEATURE_WORDS, outsideApi, type Connection, type FlightOutside, type OutsideRepository } from "../outsideApi";
 
 // The code host of a Flight: the outside repository it is attached to, the two report switches, the webhook to set
@@ -69,6 +70,9 @@ function Attached({ name, f, onChanged }: { name: string; f: FlightOutside; onCh
   };
   const detach = async () => { setError(null); try { await outsideApi.detach(name); onChanged(); } catch (e) { setError(e); } };
   const lacking = Object.entries(f.unsupported ?? {});
+  const hk = hostKind(f.kind);
+  const change = hk?.change ?? "pull request";
+  const hostName = hk?.name ?? "this host";
   return (
     <>
       <p>Attached to <strong>{f.repository}</strong> through the connection <strong>{f.connection}</strong>{f.kind ? ` (${f.kind})` : ""}.</p>
@@ -76,16 +80,14 @@ function Attached({ name, f, onChanged }: { name: string; f: FlightOutside; onCh
       <fieldset className="cf-fieldset">
         <legend>Report back to the host</legend>
         <label className="cf-checkline"><input type="checkbox" checked={f.report_statuses} onChange={(e) => set({ report_statuses: e.target.checked })} /> A commit status for each Sortie and each failed step</label>
-        <label className="cf-checkline"><input type="checkbox" checked={f.report_comment} onChange={(e) => set({ report_comment: e.target.checked })} /> One summary comment on each pull request, updated in place</label>
+        <label className="cf-checkline"><input type="checkbox" checked={f.report_comment} onChange={(e) => set({ report_comment: e.target.checked })} /> One summary comment on each {change}, updated in place</label>
       </fieldset>
       <section aria-labelledby="hook-h">
         <h2 id="hook-h" className="h-sm">Webhook</h2>
-        {f.webhook_url ? <CopyBlock title="Address to call" text={f.webhook_url} note="Add this as a webhook on the repository (or its owner)." /> :
+        {f.webhook_url ? <CopyBlock title="Address to call" text={f.webhook_url} note="Add this as a webhook on the repository." /> :
           <p>Launchway does not know its own public address, so it cannot show the webhook address. Set <code>forge.public_url</code>.</p>}
         <ol>
-          <li>Content type <code>application/json</code>.</li>
-          <li>The secret you stored for this connection.</li>
-          <li>Events: pushes and pull requests (tag pushes arrive as pushes).</li>
+          {webhookSteps(hk).map((t) => <li key={t}>{t}</li>)}
         </ol>
         <p role="status">{f.last_delivery_at ? <>Last delivery received {new Date(f.last_delivery_at).toLocaleString()}.</> : "No delivery received yet. Until one arrives the Flight is polled."}</p>
       </section>
@@ -101,10 +103,10 @@ function Attached({ name, f, onChanged }: { name: string; f: FlightOutside; onCh
       </section>
       {f.additions && f.additions.length > 0 && (
         <section aria-labelledby="adds-h">
-          <h2 id="adds-h" className="h-sm">What {f.kind === "github" ? "GitHub" : "this host"} adds</h2>
+          <h2 id="adds-h" className="h-sm">What {hostName} adds</h2>
           <ul>
             {f.additions.map((a) => (
-              <li key={a.key}><strong>{a.title}</strong> <span className="faint">from {f.kind === "github" ? "GitHub" : "the host"}</span>: {a.what}.{a.drivable ? " Launchway can switch it on for you." : " Use it on the host."}</li>
+              <li key={a.key}><strong>{a.title}</strong> <span className="faint">from {hk?.name ?? "the host"}</span>: {a.what}.{a.drivable ? " Launchway can switch it on for you." : " Use it on the host."}</li>
             ))}
           </ul>
         </section>

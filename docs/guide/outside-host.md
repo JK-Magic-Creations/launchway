@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kind `github`: the public service, and self-managed installs of it (give the install's address as the base address).
+This page covers the host kinds `github` and `gitlab`: each the public service and self-managed installs of it (give the install's address as the base address). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) follows, with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -99,6 +99,54 @@ The server's own polling and the mirror of a Flight attached to an outside repos
 - A connection cannot create repositories, merge, review, or change branch protection.
 - Self-managed installs: the API address is the base address plus `/api/v3` and uploads go to `/api/uploads`, as the host documents; give `--base-url` and nothing else unless your install differs.
 - This provider is labelled experimental until it has passed the conformance suite against the live service (`LAUNCHWAY_LIVE_GITHUB_TOKEN` and `LAUNCHWAY_LIVE_GITHUB_REPO` run that test).
+
+## GitLab
+
+The kind `gitlab` is the public service or a self-managed install (`--base-url https://git.example.com`; the API is at `<base>/api/v4`, as the documentation states). It does everything the table at the top lists. Where GitLab differs:
+
+- A **project** has a path (`group/subgroup/name`); a Flight's repository is that path. The **owners** list names top-level groups or users, and a project is allowed when its first path element is listed.
+- A **merge request** is what GitLab calls a pull request; the pages use its word. GitLab publishes each merge request's head at `refs/merge-requests/N/head`, and Launchway reads them there.
+- The webhook is checked by its **secret token** (the `X-Gitlab-Token` header, which GitLab sends as plain text; Launchway compares it in constant time). A replay is dropped by the delivery's unique ID (`webhook-id`, equal to the retry-stable `Idempotency-Key`; a host that sends neither gets an ID made from the body).
+- **Fork** means the merge request's source project differs from its target project.
+- A commit status has the states pending, success and failed; GitLab has no separate error state, so an errored step is published as failed with "error" first in the description. Descriptions are cut at 255 characters, the documented limit.
+- **Release files** are stored in the project's generic package registry (package `launchway-release`, version = the tag) and linked to the release as package links. That is the documented way to attach a file the host stores itself (release links only point at an address). A file whose name is already linked to the release is not uploaded again. GitLab's release API has **no pre-release flag**, so a Launch's "pre-release" mark is not sent; the release is published as a normal release. File names must not contain spaces or start or end with `~` or `@`.
+- **Write-back** commits with the repository files API (one call also cuts the new branch) and opens a merge request. A direct write to a branch whose push access level is "No one" is refused before anything is pushed, with a message that names the pull-request mode.
+- The summary is **one note** on the merge request, edited in place.
+- A token is a personal, project or group access token. Git over HTTPS sends it as the password with the user name `launchway` (the documentation does not name a user name).
+
+What GitLab adds (shown "from GitLab" on the Flight's Code host page):
+
+| Addition | What it gives | Launchway drives it |
+| --- | --- | --- |
+| Auto-merge | the host merges a merge request itself once its checks pass | yes: `write_back.merge: auto` sets it right after the merge request is opened (`auto_merge`); a host that refuses leaves the step waiting for a person |
+| Merge trains | merge requests are queued and tested with those ahead | no: set up on the host |
+| Approval rules | the host decides who must approve | no: the host enforces it |
+| Statuses on the merge request | each Sortie and failed step shows with a link back | yes: the commit statuses |
+
+What GitLab does not let a connection do, and what to do instead: create or delete projects (create on GitLab, then choose it); make or change a draft merge request (its API documentation has no draft parameter: toggle it on GitLab); merge, review, or change protected branches (do it on GitLab; mark the Launchway status name as required in the project's merge request settings so a failing Sortie blocks the merge); rebase as an auto-merge strategy.
+
+Token scopes and roles, per feature (from the token scope and permission tables in GitLab's documentation; **Test** reports each as has or lacks):
+
+| To | Token scope | Role on the project |
+| --- | --- | --- |
+| Choose a project, run Sorties, checkout | `read_api` and `read_repository` (or `api`) | Guest or higher |
+| Commit statuses | `api` | Developer |
+| The merge request note | `api` | Developer (Planner may comment, but statuses need Developer) |
+| Tags and release files (package registry) | `api` | Developer |
+| Releases | `api` | Maintainer (GitLab's Releases API page says Developer; its permissions page lists "Manage releases" as Maintainer: use Maintainer to be safe) |
+| File changes and write-back merge requests | `api` (`write_repository` alone does not work with the API) | Developer |
+| Refuse a direct write to a protected branch | `read_api` | the documentation names none; Maintainer manages protected branches |
+| The webhook (set by you) | none for the connection | Maintainer or Owner on the project, to add it |
+
+A token expires at midnight UTC on its expiry date; Test shows it for a personal access token (a project or group token has no record of its own to read, and Test says its scopes are unknown). This provider is labelled experimental until it has passed the conformance suite against a live installation (`LAUNCHWAY_LIVE_GITLAB_TOKEN`, `LAUNCHWAY_LIVE_GITLAB_PROJECT` and, for a self-managed install, `LAUNCHWAY_LIVE_GITLAB_BASE` run that test).
+
+```sh
+launchway repos host add acme-gl --kind gitlab \
+  --credential-env ACME_GL_TOKEN \
+  --webhook-secret-env ACME_GL_HOOK \
+  --owner acme
+launchway repos host test acme-gl
+```
 
 ## In the Logbook
 

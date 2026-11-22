@@ -231,6 +231,9 @@ func (s *Service) Webhook(ctx context.Context, name string, r *http.Request) (De
 	if e, ok := entryOf(c.Kind); ok && e.DeliveryHeader != "" {
 		id = r.Header.Get(e.DeliveryHeader)
 	}
+	if id == "" && len(evs) > 0 {
+		id = evs[0].DeliveryID // a host with no delivery header names a delivery by what the provider made of it
+	}
 	if id != "" {
 		fresh, err := s.st.SeeDelivery(ctx, c.ID, id)
 		if err != nil {
@@ -392,4 +395,22 @@ func (s *Service) Releases(ctx context.Context, project string) (forge.Releases,
 		return nil, repo, err
 	}
 	return p.Releases(), repo, nil
+}
+
+// ProposalRefs is where the Flight's host publishes the head of each pull
+// request as a ref; ok is false when the project is not attached.
+func (s *Service) ProposalRefs(ctx context.Context, project string) (forge.RefLayout, bool) {
+	f, err := s.Flight(ctx, project)
+	if err != nil {
+		return forge.RefLayout{}, false
+	}
+	c, err := s.conn(ctx, f.Connection)
+	if err != nil {
+		return forge.RefLayout{}, false
+	}
+	p, err := s.newProvider(c)
+	if err != nil {
+		return forge.RefLayout{}, false
+	}
+	return p.ProposalRefs(), true
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/forge"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -31,6 +32,13 @@ type OutsideSource interface {
 	// PullRequest reads one pull request of the project's repository from the
 	// host; ok is false for a project that is not attached.
 	PullRequest(ctx context.Context, project string, number int) (info PullRequestInfo, ok bool, err error)
+}
+
+// PullRefLayouter is implemented by an OutsideSource that knows where its
+// host publishes the heads of pull requests (refs/pull/<n>/head, or
+// refs/merge-requests/<n>/head, ...).
+type PullRefLayouter interface {
+	PullRefLayout(project string) (forge.RefLayout, bool)
 }
 
 type prKey struct {

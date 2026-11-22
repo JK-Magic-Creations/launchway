@@ -3,12 +3,13 @@ import { PageHead } from "../kit/layout";
 import { Empty, ErrorBox } from "../components/ui";
 import { CheckInput, SelectInput, TextInput } from "../components/ConfigForm";
 import { Loading, useLoad } from "../work/common";
+import { HOST_KINDS, hostKind, kindLabel } from "../hostKinds";
 import { outsideApi, type Connection, type ConnectionTest } from "../outsideApi";
 
 // Connections to outside Git hosts: a narrow service-account credential, kept as a reference to a secret, through
 // which a Flight keeps its code on a host Launchway does not own. Add one, test what its token may do, remove it.
 
-const KINDS = [{ value: "github", label: "GitHub, public or self-managed" }];
+const KINDS = HOST_KINDS.map((k) => ({ value: k.value, label: kindLabel(k) }));
 
 export function ConnectionsPage() {
   const load = useCallback(() => outsideApi.connections(), []);
@@ -16,7 +17,7 @@ export function ConnectionsPage() {
   return (
     <div className="page page-wide">
       <PageHead eyebrow="Settings" title="Connections to Git hosts"
-        sentence="Keep a Flight's code on a Git host you already use. A connection holds a narrow service-account token, only as the name of the secret that holds it, and every call it makes is audited." />
+        sentence="Keep a Flight's code on a Git host you already use. A connection holds a narrow service-account token, only as the name of its secret; every call is audited." />
       <ErrorBox error={error} />
       {loading && !data && <Loading what="connections" />}
       {data && data.length === 0 && <Empty title="No connection yet">Add one below, then choose a repository on it when you connect a repository.</Empty>}
@@ -99,13 +100,16 @@ function AddConnection({ onAdded }: { onAdded: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState("");
-  const valid = name.trim() !== "" && cred.trim() !== "";
+  const hk = hostKind(kind);
+  const needAddress = !!hk?.addressRequired;
+  const showAddress = needAddress || self;
+  const valid = name.trim() !== "" && cred.trim() !== "" && (!needAddress || base.trim() !== "");
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError(null); setDone("");
     try {
       await outsideApi.add({
-        name: name.trim(), kind, base_url: self && base.trim() ? base.trim() : undefined,
+        name: name.trim(), kind, base_url: showAddress && base.trim() ? base.trim() : undefined,
         credential: { env: cred.trim() }, webhook_secret: hook.trim() ? { env: hook.trim() } : undefined,
         owners: owners.split(",").map((o) => o.trim()).filter(Boolean),
       });
@@ -118,16 +122,16 @@ function AddConnection({ onAdded }: { onAdded: () => void }) {
     <section aria-labelledby="add-conn">
       <h2 id="add-conn" className="h-sm">Add a connection</h2>
       <form onSubmit={submit} className="cf-grid">
-        <TextInput label="Name" required value={name} onChange={setName} mono help="How Flights and commands refer to it: letters, digits and hyphens." />
+        <TextInput label="Name" required value={name} onChange={setName} mono help="Letters, digits and hyphens." />
         <SelectInput label="Kind of host" value={kind} onChange={setKind} options={KINDS} />
         <TextInput label="Environment variable that holds the token" required value={cred} onChange={setCred} mono placeholder="ACME_GH_TOKEN"
-          help="The name of a variable of the server, never the token itself. Use a fine-grained token of a service account." />
+          help="The name of a variable of the server, never the token itself. Use a service account." />
         <TextInput label="Environment variable that holds the webhook secret" value={hook} onChange={setHook} mono placeholder="ACME_GH_HOOK"
-          help="Optional. With it the host can tell Launchway about pushes at once; without it Flights are polled." />
-        <TextInput label="Owners it may reach" value={owners} onChange={setOwners} mono placeholder="acme, acme-labs" help="Comma separated. Empty means every owner the token reaches." wide />
-        <CheckInput label="A self-managed install" checked={self} onChange={setSelf} help="Give its address below instead of the public service." />
-        {self && <TextInput label="Address of the install" value={base} onChange={setBase} mono placeholder="https://git.example.com" wide
-          help="An internal address is refused unless the server's forge.mirror_allow lists it." />}
+          help="Optional. Without it Flights are polled." />
+        <TextInput label="Owners it may reach" value={owners} onChange={setOwners} mono placeholder="acme, acme-labs" help="Comma separated. Empty: every owner the token reaches." wide />
+        {!needAddress && <CheckInput label="A self-managed install" checked={self} onChange={setSelf} help="Give its address below instead of the public service." />}
+        {showAddress && <TextInput label="Address of the install" required={needAddress} value={base} onChange={setBase} mono placeholder="https://git.example.com" wide
+          help="An internal address needs forge.mirror_allow." />}
         <div className="cf-row">
           <button type="submit" className="btn btn-primary" disabled={!valid || busy}>{busy ? "Adding…" : "Add the connection"}</button>
           {done && <span role="status" className="cf-ok">{done}</span>}

@@ -167,6 +167,9 @@ func (g *Guard) check(ctx context.Context, raw string, pin bool) ([]string, erro
 			}
 		}
 		if addrs, err = lookup(ctx, host); err != nil || len(addrs) == 0 {
+			if allowedName {
+				return nil, nil // the administrator named this host; there is nothing to pin yet
+			}
 			return nil, fmt.Errorf("the host %s cannot be resolved from this server", host)
 		}
 	}

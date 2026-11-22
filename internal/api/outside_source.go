@@ -40,3 +40,12 @@ func (s *Server) PullRequest(ctx context.Context, project string, n int) (source
 	return source.PullRequestInfo{Number: n, Head: pr.Head, Base: strings.TrimPrefix(pr.Target.Name, "refs/heads/"), Title: pr.Title,
 		Author: pr.Author.Login, Draft: pr.State == forge.ProposalDraft, Fork: fork, URL: url}, true, nil
 }
+
+// PullRefLayout says where the Flight's host publishes the head of each pull
+// request as a ref (source.PullRefLayouter).
+func (s *Server) PullRefLayout(project string) (forge.RefLayout, bool) {
+	if s.Hosts == nil {
+		return forge.RefLayout{}, false
+	}
+	return s.Hosts.ProposalRefs(context.Background(), project)
+}

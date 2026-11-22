@@ -113,7 +113,7 @@ func TestPinGivesGitTheCheckedAddressesAndSurvivesAChangingResolver(t *testing.T
 }
 
 func TestPinPortsLiteralsAndAllowedNames(t *testing.T) {
-	g, _ := New([]string{"git.corp.example"})
+	g, _ := New([]string{"git.corp.example", "unlisted-but-allowed.corp.example"})
 	g.Lookup = lookup(map[string][]string{"git.corp.example": {"10.20.0.7"}, "h.example": {"93.184.216.34"}})
 	for url, want := range map[string][]string{
 		"http://h.example:3000/x.git":    {"h.example:3000:93.184.216.34"},

@@ -68,6 +68,11 @@ var allowedForIntegration = []string{
 	"internal/forge/mirror/import.go", "internal/forge/mirror/import_test.go", "internal/forge/mirror/source.go",
 	"web/src/pages/ImportRepositories.tsx", "web/src/pages/guide/ImportStep.tsx", "internal/api/guide_state.go", "web/src/pages/SetupGuide.test.tsx", "web/src/pages/ImportRepositories.test.tsx", "web/src/pages/Repository.tsx",
 	"docs/reference/cli.md",
+	// Outside Git hosts: a connection is of a kind the person picks, so the provider for each kind,
+	// its strict fake, the registry entries, the pages' labels and setup steps, and the guide name it
+	// (the API calls are the host's own documented ones, cited in comments).
+	"internal/forge/providers/gitlab/", "internal/forge/hosts/kind_gitlab.go", "internal/forge/hosts/kinds_test.go",
+	"internal/archtest/arch_test.go", "cmd/launchway/repos_host.go", "internal/api/mcp_outside_hosts.go", "web/src/hostKinds.ts", "web/src/pages/HostKinds.test.tsx", "docs/guide/outside-host.md",
 	// The project's own release and docs workflows run on a hosted CI service.
 	".github/", "packaging/", "docs/contributing/docs.md",
 	// The Argo CD test bed uses a throwaway Git server image.

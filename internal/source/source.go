@@ -804,10 +804,18 @@ func (p *project) refs(ctx context.Context) ([]Ref, error) {
 
 // layout is where the project's host publishes pull request heads.
 func (p *project) layout() forge.RefLayout {
-	if p.PullRefs.IsZero() {
-		return forge.PullRefLayout
+	if !p.PullRefs.IsZero() {
+		return p.PullRefs
 	}
-	return p.PullRefs
+	// A repository on an outside host publishes them the way that host does.
+	if p.outside != nil {
+		if o, ok := p.outside().(PullRefLayouter); ok {
+			if l, ok := o.PullRefLayout(p.Name); ok && !l.IsZero() {
+				return l
+			}
+		}
+	}
+	return forge.PullRefLayout
 }
 
 // pullRefs lists the heads of the repository's pull requests, as the host

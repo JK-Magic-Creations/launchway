@@ -10,7 +10,7 @@ import (
 
 const reposHostUsage = `Keeping code on another Git host (administrators; see the guide "Keep your code on another host"):
   launchway repos host list                                connections to outside Git hosts
-  launchway repos host add NAME --kind github              connect a host (the public service, or a self-managed
+  launchway repos host add NAME --kind KIND                connect a host of kind github or gitlab (the public service, or a self-managed
                          [--base-url URL] [--owner O]...   install with --base-url); --owner limits which owners or
                          [--credential-env NAME | --credential-file PATH]   groups Flights may use
                          [--webhook-secret-env NAME | --webhook-secret-file PATH]
@@ -121,7 +121,7 @@ func (cl *client) reposHost(args []string) error {
 
 func (cl *client) reposHostAdd(args []string) error {
 	fs := flag.NewFlagSet("repos host add", flag.ContinueOnError)
-	kind := fs.String("kind", "", "github")
+	kind := fs.String("kind", "", "github or gitlab")
 	base := fs.String("base-url", "", "a self-managed install's address; empty is the public service")
 	cenv := fs.String("credential-env", "", "the NAME of an environment variable of the server that holds the token")
 	cfile := fs.String("credential-file", "", "the path of a file on the server that holds the token")
@@ -134,7 +134,7 @@ func (cl *client) reposHostAdd(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *kind == "" || (*cenv != "" && *cfile != "") || (*wenv != "" && *wfile != "") {
-		return usageErr("launchway repos host add NAME --kind github [--base-url URL] [--owner O] [--credential-env NAME | --credential-file PATH] [--webhook-secret-env NAME | --webhook-secret-file PATH]")
+		return usageErr("launchway repos host add NAME --kind KIND [--base-url URL] [--owner O] [--credential-env NAME | --credential-file PATH] [--webhook-secret-env NAME | --webhook-secret-file PATH]")
 	}
 	body := map[string]any{"name": pos[0], "kind": *kind, "base_url": *base, "owners": []string(owners)}
 	if *cenv != "" {
