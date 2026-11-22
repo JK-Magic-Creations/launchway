@@ -696,6 +696,7 @@ func cmdRun(args []string) error {
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
 	imagesConfig := fs.String("images-config", "", "a file with the Station's images: section (builders and registries), for image steps")
+	unsandboxed := fs.Bool("allow-unsandboxed-steps", false, "let the host executor run custom steps although it cannot enforce their sandbox (no network, a read-only workspace)")
 	var given multi
 	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
@@ -723,7 +724,8 @@ func cmdRun(args []string) error {
 	var libs []engine.LibrarySource
 	if !p.Expanded() {
 		// The starters that ship with Launchway need no server.
-		if p, libs, err = source.ExpandBound(p); err != nil {
+		here, _ := os.Getwd()
+		if p, libs, err = source.ExpandBoundIn(p, here); err != nil {
 			return explainProblems(path, err)
 		}
 	}
@@ -744,7 +746,7 @@ func cmdRun(args []string) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser(), DataDir: filepath.Join(tmp, "runner")})
+	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser(), DataDir: filepath.Join(tmp, "runner"), AllowUnsandboxed: *unsandboxed})
 	if err != nil {
 		return err
 	}

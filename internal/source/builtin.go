@@ -119,13 +119,23 @@ func builtinTemplates() *LibraryTemplates {
 // with Launchway, and says where a runner gets them: for a run on one's own
 // machine, with no server and no Git library.
 func ExpandBound(p *pipeline.Pipeline) (*pipeline.Pipeline, []engine.LibrarySource, error) {
+	return ExpandBoundIn(p, "")
+}
+
+// ExpandBoundIn is ExpandBound that also reads the custom steps of the directory the pipeline is run in
+// (uses: ./steps/<name>); dir "" reads none.
+func ExpandBoundIn(p *pipeline.Pipeline, dir string) (*pipeline.Pipeline, []engine.LibrarySource, error) {
 	for _, l := range p.Libraries {
 		if !isBuiltin(l) {
 			return nil, nil, fmt.Errorf("the pipeline uses the library %s, which comes from a server: run it there (launchway run reads only the starters that ship with Launchway)", l.Name)
 		}
 		l.Commit, l.RefKind = starters.Commit(), "builtin"
 	}
-	out, _, err := pipeline.ExpandWith(p, func(_ *pipeline.Library, name string) ([]byte, error) { return builtinTemplate(name) }, nil)
+	var self *pipeline.SelfSource
+	if dir != "" {
+		self = &pipeline.SelfSource{Library: &pipeline.Library{Name: pipeline.SelfLibrary, Version: pipeline.OfflineCommit, Commit: pipeline.OfflineCommit, RefKind: "directory"}, Read: pipeline.DirReader(dir)}
+	}
+	out, _, err := pipeline.ExpandWithSelf(p, func(_ *pipeline.Library, name string) ([]byte, error) { return builtinTemplate(name) }, nil, self)
 	if err != nil {
 		return nil, nil, plainBuiltin(err)
 	}

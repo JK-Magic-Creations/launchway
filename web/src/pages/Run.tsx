@@ -22,6 +22,8 @@ import { useStepLog } from "../useStepLog";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
 import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, phaseLabel, verdictLabel } from "../components/Deployment";
 import { TemplateFacts } from "../components/Libraries";
+import { CustomStepPanel } from "./CustomStepPanel";
+import "../stepsApi";
 import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
@@ -590,6 +592,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
         </div>
       )}
       {step.caches && step.caches.length > 0 && <CacheResults project={run.project} caches={step.caches} />}
+      {(step.custom || (step.notes && step.notes.length > 0)) && <CustomStepPanel custom={step.custom} notes={step.notes} />}
       {step.policy_blocked && (
         <div className="callout callout-bad pol-step-callout">
           <span><strong>Blocked by policy.</strong> {terms().say("Nothing of this step reached a {runner} or the {environment}.")}</span>

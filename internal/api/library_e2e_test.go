@@ -33,14 +33,25 @@ type libEnv struct {
 func setupLibrary(t *testing.T, ex executor.Executor, appPipeline string, stores *secrets.Resolver) *libEnv {
 	t.Helper()
 	dir := t.TempDir()
+	return setupLibraryIn(t, ex, dir, testlib.NewLibrary(t, filepath.Join(dir, "lib")), map[string]string{".launchway/pipeline.yaml": appPipeline}, stores)
+}
+
+// setupLibraryWith is setupLibrary with a library the test made and the files of the application's repository.
+func setupLibraryWith(t *testing.T, ex executor.Executor, dir string, lib *testlib.Repo, appFiles map[string]string) *libEnv {
+	t.Helper()
+	return setupLibraryIn(t, ex, dir, lib, appFiles, nil)
+}
+
+func setupLibraryIn(t *testing.T, ex executor.Executor, dir string, lib *testlib.Repo, appFiles map[string]string, stores *secrets.Resolver) *libEnv {
+	t.Helper()
 	db := testdb.New(t)
 	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: 10 * time.Second, Logger: quiet()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	le := &libEnv{}
-	le.lib = testlib.NewLibrary(t, filepath.Join(dir, "lib"))
-	le.app = testlib.New(t, filepath.Join(dir, "app"), map[string]string{".launchway/pipeline.yaml": appPipeline})
+	le.lib = lib
+	le.app = testlib.New(t, filepath.Join(dir, "app"), appFiles)
 	mgr, err := source.NewManagerWithLibraries(eng, filepath.Join(dir, "data"), []source.Project{{Name: "app", URL: le.app.Bare}},
 		[]source.Library{{Name: "ci-templates", URL: le.lib.Bare}}, quiet())
 	if err != nil {

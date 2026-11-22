@@ -51,6 +51,9 @@ func (ps *parser) parseLibraries(n *yaml.Node, p *Pipeline) {
 		if !libNameRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid library name: use lower-case letters, digits and hyphens, starting with a letter (at most 40)", k.Value)
 		}
+		if k.Value == SelfLibrary {
+			ps.add(k, at, "the name %q is kept for the steps of the repository the pipeline is in (uses: ./steps/name); call the library something else", SelfLibrary)
+		}
 		l := &Library{Name: k.Value, Line: k.Line}
 		ps.eachKey(v, at, []string{"repo", "version"}, func(k2, v2 *yaml.Node) {
 			switch k2.Value {

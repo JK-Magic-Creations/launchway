@@ -189,6 +189,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `-i` | none | An input value, `name=value`. Give it once for each input; the others take their defaults. |
 | `--secrets-config` | none | A YAML file of secret stores. An `env` store, which reads your own environment, is always added. |
 | `--images-config` | none | A file with an `images:` section (builders and Depots (registries)), as in a Station's configuration. Required if a step builds an image. |
+| `--allow-unsandboxed-steps` | off | Let the host executor run [custom steps](step-manifest.md) although it cannot enforce their sandbox (no network, a read-only workspace). Without it a custom step needs a container executor. `uses: ./steps/NAME` reads the steps of the current directory. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 
 The run is recorded as Flight `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.

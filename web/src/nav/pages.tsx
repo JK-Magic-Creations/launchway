@@ -44,6 +44,8 @@ const ApplicationPage = lz(() => import("../pages/ApplicationView"), "Applicatio
 const LibraryPage = lz(() => import("../pages/Library"), "LibraryPage");
 const StartersPage = lz(() => import("../pages/Starters"), "StartersPage");
 const TemplatesPage = lz(() => import("../pages/Library"), "TemplatesPage");
+const StepsPage = lz(() => import("../pages/CustomSteps"), "StepsPage");
+const StepPage = lz(() => import("../pages/CustomSteps"), "StepPage");
 const TemplatePage = lz(() => import("../pages/TemplatePage"), "TemplatePage");
 const ImagesPage = lz(() => import("../pages/Images"), "ImagesPage");
 const ComponentsPage = lz(() => import("../pages/Components"), "ComponentsPage");
@@ -141,6 +143,8 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/library": return <LibraryPage />;
     case "/library/starters": return <StartersPage />;
     case "/library/templates": return <TemplatesPage />;
+    case "/library/steps": return <StepsPage />;
+    case "/library/steps/:library/:name": return <StepPage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
     case "/library/templates/:library/:name": return <TemplatePage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
     case "/depot": return <ImagesPage />;
     case "/depot/components": return <ComponentsPage />;

@@ -94,10 +94,10 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 	}
 	var self *SelfSource
 	if selfDir != "" {
-		self = &SelfSource{Library: &Library{Name: SelfLibrary, Version: OfflineCommit, Commit: OfflineCommit, RefKind: "directory"}, Read: dirReader(selfDir)}
+		self = &SelfSource{Library: &Library{Name: SelfLibrary, Version: OfflineCommit, Commit: OfflineCommit, RefKind: "directory"}, Read: DirReader(selfDir)}
 	}
 	out, _, err := ExpandWithSelf(p, func(l *Library, name string) ([]byte, error) {
-		return TemplateOrStep(dirReader(dirs[l.Name]), name, false)
+		return TemplateOrStep(DirReader(dirs[l.Name]), name, false)
 	}, vars, self)
 	return out, err
 }
@@ -114,10 +114,10 @@ func knownDirs(dirs map[string]string) string {
 	return " (given so far: " + strings.Join(names, ", ") + ")"
 }
 
-// dirReader reads files of a directory by their path from its root, for the
+// DirReader reads files of a directory by their path from its root, for the
 // templates and steps of a library checked out on disk. It never follows a
 // link out of the directory.
-func dirReader(dir string) func(path string) ([]byte, error) {
+func DirReader(dir string) func(path string) ([]byte, error) {
 	return func(path string) ([]byte, error) {
 		root, err := os.OpenRoot(dir)
 		if err != nil {
