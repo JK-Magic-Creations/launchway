@@ -202,3 +202,22 @@ func TestOutsideWriteBackCredentialAndRefusals(t *testing.T) {
 		t.Errorf("violations %v", h.Violations)
 	}
 }
+
+func TestOutsideSourceGivesTheConnectionsCredentialOnlyToAttachedFlights(t *testing.T) {
+	e, _ := hostsEnv(t)
+	// The fake host names its repositories on git.example.com, which the allow-list does not list: refused, with no secret in the message.
+	if _, ok, err := e.api.Credential(context.Background(), "pay-hooks"); ok || err == nil || strings.Contains(err.Error(), githubfake.Token) {
+		t.Fatalf("an address outside the allow-list was given a credential: %v %v", ok, err)
+	}
+	// Listed, the connection's credential is given, to the attached Flight only.
+	g, _ := egress.New([]string{"127.0.0.1", "git.example.com"})
+	svc := hosts.New(e.eng.Database(), e.eng, g)
+	e.api.Hosts = svc
+	c, ok, err := e.api.Credential(context.Background(), "pay-hooks")
+	if err != nil || !ok || c.Secret != githubfake.Token || !strings.HasPrefix(c.URL, "https://git.example.com/") {
+		t.Fatalf("credential = %+v %v %v", c, ok, err)
+	}
+	if _, ok, err := e.api.Credential(context.Background(), "not-attached"); ok || err != nil {
+		t.Fatalf("a project that is not attached got a credential: %v %v", ok, err)
+	}
+}

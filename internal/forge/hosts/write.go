@@ -284,3 +284,22 @@ func (s *Service) allowHook(name string) bool {
 	s.hookN[name]++
 	return s.hookN[name] <= s.hookCap()
 }
+
+// CheckedClone is Clone for a server that reads the repository itself (the
+// source poller and the mirror fetch): it also checks the clone address
+// against the egress allow-list, so that a connection can only ever send its
+// credential to the host it was added for. ok is false when the project is
+// not attached.
+func (s *Service) CheckedClone(ctx context.Context, project string) (CloneAuth, bool, error) {
+	ca, err := s.Clone(ctx, project)
+	if errors.Is(err, ErrNotAttached) {
+		return CloneAuth{}, false, nil
+	}
+	if err != nil {
+		return CloneAuth{}, false, err
+	}
+	if err := s.guard.Check(ctx, ca.URL); err != nil {
+		return CloneAuth{}, false, err
+	}
+	return ca, true, nil
+}

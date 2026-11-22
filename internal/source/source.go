@@ -131,6 +131,8 @@ type project struct {
 	// hosted says whether an address is one of this installation's own
 	// repositories, which are then read from its storage (see hosted.go).
 	hosted func() HostedLocal
+	// outside gives the credential of a project kept on another Git host (outside.go).
+	outside func() OutsideSource
 	// The mirror outlives a change of the project's settings: the new
 	// project shares it with the old one.
 	*mirror
@@ -165,6 +167,8 @@ type Manager struct {
 	hosted forgeLink
 	// hostedPtr reads this installation's own repositories from its storage (hosted.go).
 	hostedPtr atomic.Pointer[hostedHolder]
+	// outsidePtr reads repositories kept on outside Git hosts through their connections (outside.go).
+	outsidePtr atomic.Pointer[outsideHolder]
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
@@ -262,7 +266,7 @@ func (m *Manager) build(projects []Project, libraries []Library, old *catalog) (
 				return nil, err
 			}
 		}
-		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal}
+		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal, outside: m.outsideSource}
 		if old != nil {
 			if was := old.projects[p.Name]; was != nil && was.URL == p.URL {
 				np.mirror = was.mirror
@@ -717,6 +721,10 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 		return nil
 	}
 	if done, err := p.fetchHosted(ctx); done {
+		p.setErr(err)
+		return err
+	}
+	if done, err := p.fetchOutside(ctx); done {
 		p.setErr(err)
 		return err
 	}

@@ -148,6 +148,10 @@ func startOutsideHosts(ctx context.Context, cfg *config.Config, eng *engine.Engi
 	}
 	srv.Hosts = hosts.New(eng.Database(), eng, guard)
 	srv.Hosts.PublicURL = cfg.Forge.PublicURL
+	if srv.Projects != nil {
+		// A Flight on an outside repository polls and is read through its connection.
+		srv.Projects.SetOutsideSource(srv)
+	}
 	srv.StartOutsideReports(ctx)
 	log.Info("connections to outside Git hosts are available")
 	return nil
