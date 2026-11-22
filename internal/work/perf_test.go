@@ -105,7 +105,10 @@ func TestFiftyThousandItems(t *testing.T) {
 		}
 		return err
 	})
-	timed("create one more", 500*time.Millisecond, func() error {
+	// A create is one write, so its time includes the disk's flush. The limit guards against work that
+	// grows with the number of items (seconds, at fifty thousand), not against a busy disk: on a shared
+	// build disk under load a single flush has been measured at 0.9 s.
+	timed("create one more", 2*time.Second, func() error {
 		it, err := s.Create(ctx, bob, work.NewItem{Scope: proj, Title: "late"})
 		if err == nil && it.Number != 50001 {
 			err = fmt.Errorf("number %d", it.Number)
