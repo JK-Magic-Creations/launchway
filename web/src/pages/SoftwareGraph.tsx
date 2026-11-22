@@ -1,3 +1,5 @@
+/* A table that scrolls sideways is a region the keyboard can reach (axe: scrollable-region-focusable), so its tabindex is deliberate. */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ErrorBox, Link, Mono } from "../components/ui";
 import { Button, PageHead, Sheet } from "../kit/layout";
