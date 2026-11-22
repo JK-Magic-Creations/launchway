@@ -10,10 +10,12 @@ import { Choices, CopyBlock, DefinedAt, SecretRefInput, TextInput, type SecretRe
 import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
+import { prose } from "../../prose";
+const P = await prose("pages.wizards.AddVerify");
 
 const URL_HINT: Record<string, string> = {
-  prometheus: "http://prometheus-operated.monitoring.svc:9090", loki: "http://loki-gateway.monitoring.svc", clickhouse: "http://clickhouse.logging.svc:8123",
-  elasticsearch: "https://elasticsearch.logging.svc:9200", opensearch: "https://opensearch.logging.svc:9200", postgres: "postgres://reader@db.internal:5432/app", http: "https://status.example.com",
+  prometheus: P.t0, loki: P.t1, clickhouse: P.t2,
+  elasticsearch: P.t3, opensearch: P.t4, postgres: P.t5, http: "https://status.example.com",
 };
 
 export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }) {
@@ -39,7 +41,7 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
       fields: [{ path: "type" }],
       render: (by) => (
         <>
-          <p>Verify steps judge a deployment by what your monitoring says: error rates, latency, log messages. A health source is a monitoring system they may read, by name.</p>
+          <p>{P.t6}</p>
           <Choices legend="What kind of system is it?" value={type} onChange={(v) => { setType(v); if (!nameTouched) setName(v); }} problems={by.type} options={HEALTH_TYPES} />
         </>
       ),
@@ -52,7 +54,7 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
         <>
           <div className="cf-grid">
             <TextInput label="Name" value={name} onChange={(v) => { setName(v); setNameTouched(true); }} mono required problems={by.name}
-              help="What pipelines write in a verify step: source: prometheus." />
+              help={P.t7} />
             <DefinedAt overview={overview} value={unit} onChange={setUnit} />
           </div>
           <PickNames legend={`${proj.plural} that may read it`} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.projects}
@@ -65,15 +67,13 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
       render: () => (
         <>
           <div className="callout callout-info">
-            <strong>{terms().say("The address and credentials stay with the {deploy:do} {runners}")}</strong>, not on the server: they are next to your monitoring and run no one's scripts.
-            Launchway's server keeps only the name, the type and who may use it. Nothing typed here is stored; it only fills in the lines below for you to copy.
-          </div>
+            <strong>{terms().say(P.t8)}</strong>{P.t9}</div>
           <div className="cf-grid">
-            <TextInput label={terms().say("Its address, as the {deploy:do} {runners} reach it")} value={url} onChange={setUrl} mono wide placeholder={URL_HINT[type]} />
-            <SecretRefInput label="Its credentials, if it needs any (a reference)" value={secret} onChange={setSecret}
-              help={terms().say("The secret store, key and field on the {runners} where the token or password is kept. Never the secret itself.")} />
+            <TextInput label={terms().say(P.t10)} value={url} onChange={setUrl} mono wide placeholder={URL_HINT[type]} />
+            <SecretRefInput label={P.t11} value={secret} onChange={setSecret}
+              help={terms().say(P.t12)} />
           </div>
-          <CopyBlock title={terms().say("For the {deploy:do} {runners}' runner.yaml")} text={runnerYAML} note={terms().say("Add these lines to every {deploy:do} {runner} serving the {environments} where verify steps will read it, then restart those {runners}.")} />
+          <CopyBlock title={terms().say(P.t13)} text={runnerYAML} note={terms().say(P.t14)} />
         </>
       ),
     },
@@ -81,14 +81,14 @@ export function AddHealthSourceWizard({ overview }: { overview: ConfigOverview }
 
   return (
     <WizardRunner title="Add a health source" overview={overview}
-      intro="Metrics or logs that verify steps read to judge a deployment. Nothing is created until you confirm at the end."
+      intro={P.t15}
       steps={steps} changes={changes}
-      summaryExtra={<CopyBlock title={terms().say("Still to do on the {deploy:do} {runners}: runner.yaml")} text={runnerYAML} />}
+      summaryExtra={<CopyBlock title={terms().say(P.t16)} text={runnerYAML} />}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
-          <CopyBlock title={terms().say("On the {deploy:do} {runners}: runner.yaml")} text={runnerYAML} note={terms().say("Pipelines can name the source now; queries work once the {deploy:do} {runners} have these lines.")} />
-          <ul className="cf-next"><li><Link href="/runners">{terms().say("See the health sources each {runner} serves")}</Link></li></ul>
+          <CopyBlock title={terms().say(P.t17)} text={runnerYAML} note={terms().say(P.t18)} />
+          <ul className="cf-next"><li><Link href="/runners">{terms().say(P.t19)}</Link></li></ul>
         </>
       )} />
   );
@@ -124,12 +124,12 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
       fields: [{ path: "provider" }],
       render: (by) => (
         <>
-          <p>AI steps ask a model a question (summarize a failure, review a change); Launchway also uses one to explain failed steps. A model here is a name pipelines use, where it is, and who may use it.</p>
+          <p>{P.t20}</p>
           <Choices legend="Where is the model?" value={provider} onChange={(v) => { setProvider(v as typeof provider); setKey(null); }} problems={by.provider}
             options={[
-              { value: "anthropic", label: "Claude, through the Anthropic API", help: "Hosted models. Needs an API key, kept in a secret store. Prices are known, so each call shows its cost." },
-              { value: "openai-hosted", label: "A hosted service with an OpenAI-compatible API", help: "Any service that speaks chat completions. Needs its address and usually a key." },
-              { value: "openai-local", label: "A model server you run (OpenAI-compatible)", help: "Such as a local model server on your network: nothing leaves it, and it may need no key. Needs its address." },
+              { value: "anthropic", label: P.t21, help: P.t22 },
+              { value: "openai-hosted", label: P.t23, help: P.t24 },
+              { value: "openai-local", label: P.t25, help: P.t26 },
             ]} />
         </>
       ),
@@ -137,20 +137,20 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
     {
       id: "model", title: "The model and its key",
       fields: [{ path: "name", match: ["name", "names", "exists", "already"], value: name }, { path: "model", value: model }, { path: "endpoint", value: endpoint }, { path: "key", match: ["key is required", "key"], value: key }],
-      local: () => !name.trim() ? "Give the model a name for pipelines." : !model.trim() ? "Give the provider's model id." : prov === "openai" && !endpoint.trim() ? "Give the address of the model's API." : null,
+      local: () => !name.trim() ? P.t27 : !model.trim() ? "Give the provider's model id." : prov === "openai" && !endpoint.trim() ? P.t28 : null,
       render: (by) => (
         <>
           <div className="cf-grid">
             <TextInput label="Name pipelines use" value={name} onChange={(v) => setName(v.toLowerCase())} mono required placeholder="reviewer" problems={by.name}
-              help="Lower-case letters, digits and hyphens, at most 40 characters: model: reviewer in an AI step." />
+              help={P.t29} />
             <TextInput label="The provider's model id" value={model} onChange={setModel} mono required problems={by.model}
-              placeholder={prov === "anthropic" ? "claude-sonnet-5-5" : "qwen3:8b"} help="Exactly as the provider names it." />
+              placeholder={prov === "anthropic" ? "claude-sonnet-5-5" : "qwen3:8b"} help={P.t30} />
             {prov === "openai" && <TextInput label="API address" value={endpoint} onChange={setEndpoint} mono wide required problems={by.endpoint}
-              placeholder={provider === "openai-local" ? "http://models.internal:11434/v1" : "https://api.example.com/v1"} help="The base URL of its chat completions API." />}
+              placeholder={provider === "openai-local" ? P.t31 : "https://api.example.com/v1"} help={P.t32} />}
             <DefinedAt overview={overview} value={unit} onChange={setUnit} />
           </div>
-          <SecretRefInput label={provider === "openai-local" ? "API key (a reference; leave empty if it needs none)" : "API key (a reference)"} value={key} onChange={setKey} problems={by.key}
-            help={terms().say("Where the key is kept: a secret store the {runners} (and the server, to explain failures) have, and the key's name and field there. The key itself is never typed into Launchway.")} />
+          <SecretRefInput label={provider === "openai-local" ? P.t33 : "API key (a reference)"} value={key} onChange={setKey} problems={by.key}
+            help={terms().say(P.t34)} />
         </>
       ),
     },
@@ -161,27 +161,27 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
       render: (by) => (
         <>
           <PickNames legend={`${proj.plural} that may use it`} names={["*", ...projectNames]} value={projects} onChange={setProjects} problems={by.projects}
-            help="Each call costs money or capacity and sends the step's text to the model: list only those that should." />
+            help={P.t35} />
           <div className="cf-grid">
-            <TextInput label="Output tokens per call" type="number" value={maxTokens} onChange={setMaxTokens} placeholder="4096" problems={by.max_tokens} help="The longest answer. Default 4096." />
-            <TextInput label={terms().say("Calls per {run}")} type="number" value={callsPerRun} onChange={setCallsPerRun} placeholder="20" problems={by.calls_per_run} help="Stops a runaway loop. Default 20." />
-            <TextInput label={terms().say("Tokens per {project} per day")} type="number" value={tokensPerDay} onChange={setTokensPerDay} placeholder="no limit" problems={by.tokens_per_day} help="A daily budget, input plus output. Empty: no limit." />
+            <TextInput label="Output tokens per call" type="number" value={maxTokens} onChange={setMaxTokens} placeholder="4096" problems={by.max_tokens} help={P.t36} />
+            <TextInput label={terms().say("Calls per {run}")} type="number" value={callsPerRun} onChange={setCallsPerRun} placeholder="20" problems={by.calls_per_run} help={P.t37} />
+            <TextInput label={terms().say("Tokens per {project} per day")} type="number" value={tokensPerDay} onChange={setTokensPerDay} placeholder="no limit" problems={by.tokens_per_day} help={P.t38} />
           </div>
         </>
       ),
     },
   ];
 
-  const runnerNote = key?.store ? terms().say(`# runner.yaml of the {runners} that run AI steps\nai: true\n# and a secret store named "${key.store}" in its secrets: section that holds ${key.key}${key.field ? "#" + key.field : ""}\n`) : terms().say("# runner.yaml of the {runners} that run AI steps\nai: true\n");
+  const runnerNote = key?.store ? terms().say(`# runner.yaml of the {runners} that run AI steps\nai: true\n# and a secret store named "${key.store}" in its secrets: section that holds ${key.key}${key.field ? "#" + key.field : ""}\n`) : terms().say(P.t39);
   return (
     <WizardRunner title="Add an AI model" overview={overview}
-      intro="A model AI steps may ask. Nothing is created until you confirm at the end."
+      intro={P.t40}
       steps={steps} changes={changes}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
-          <CopyBlock title={terms().say("On the {runners}")} text={runnerNote} note={terms().say("{Runners} call models only when their runner.yaml says ai: true, and read the key from their own secret stores.")} />
-          <ul className="cf-next"><li><Link href="/runners">{terms().say("See which {runners} call models")}</Link></li></ul>
+          <CopyBlock title={terms().say("On the {runners}")} text={runnerNote} note={terms().say(P.t41)} />
+          <ul className="cf-next"><li><Link href="/runners">{terms().say(P.t42)}</Link></li></ul>
         </>
       )} />
   );

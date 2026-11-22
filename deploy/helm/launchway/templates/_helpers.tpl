@@ -305,7 +305,7 @@ owns may not appear in it.
        settings, imported once like the others): only what is set. */ -}}
 {{- $q := .Values.config.queues | default dict -}}
 {{- $queues := dict -}}
-{{- range $key, $value := dict "max_wait" $q.maxWait -}}
+{{- range $key, $value := dict "max_wait" $q.maxWait "deploy_pickup_wait" $q.deployPickupWait -}}
 {{- if $value }}{{ $_ := set $queues $key (toString $value) }}{{ end -}}
 {{- end -}}
 {{- range $key, $value := dict "runs" $q.runs "pipeline_runs" $q.pipelineRuns "pull_request_runs" $q.pullRequestRuns "push_runs" $q.pushRuns "schedule_runs" $q.scheduleRuns "manual_runs" $q.manualRuns "automation_runs" $q.automationRuns -}}

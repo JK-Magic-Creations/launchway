@@ -1,0 +1,17 @@
+{
+ "t0": "Who may change toggles and how, the keys applications read them with, and the changes scheduled for later.",
+ "t1": "On by default, and the team in charge. A reason is asked for every change; an approval by someone else in a protected {environment}. Turning one down needs a reason and is recorded; a level above can lock one.",
+ "t2": "Safeguards in each {environment}",
+ "t3": "Changing safeguards needs the admin role on ",
+ "t4": "A server key is a secret: it reads every rule, for one {environment}. A client key is public and can only ask for values of the toggles you made visible. Neither can change anything.",
+ "t5": "Listing keys needs the operator role.",
+ "t6": "Make a server key for a service that reads toggles, or a client key for a web page.",
+ "t7": "Nothing is scheduled. Set a time when changing a toggle to make it then.",
+ "t8": "server (a secret; reads rules)",
+ "t9": "Websites allowed to use it (addresses, separated by spaces) ",
+ "t10": "A reason is required for every change",
+ "t11": "A change waits for another person's approval",
+ "t12": "Mark the {environment} as watched for this many minutes after a change",
+ "t13": "Lock these settings for everything below this level",
+ "t14": "(required: you are turning a safeguard down)"
+}

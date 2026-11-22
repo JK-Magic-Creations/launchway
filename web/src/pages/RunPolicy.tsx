@@ -4,6 +4,7 @@ import { clock } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { ModeBadge, ResultBadge, RuleRow, VerdictPill, WaiverForm, WaiverList, type WaiverDraft } from "../components/Policy";
 import { terms } from "../terms";
+import { DivFaintSmall, DivLoading, SpanFaintSmall } from "../kit/bits";
 
 const POINT_WORDS: Record<string, string> = { run: "When the run started", deploy: "Before deploying", image: "Before pushing an image" };
 
@@ -28,7 +29,7 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
   useEffect(() => { load(true); }, [load, version]);
 
   if (error) return <ErrorBox error={error} />;
-  if (!data) return <div className="loading">Loading…</div>;
+  if (!data) return <DivLoading>Loading…</DivLoading>;
   const decisions = [...data.decisions].reverse();
   const blocked = decisions.find((d) => d.verdict === "block");
   return (
@@ -51,8 +52,8 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
           <div className="pol-decision-head">
             <div>
               <h3 className="h-sm">{pointTitle(d)}</h3>
-              <div className="faint small">{clock(d.at)} · decision {d.seq}{d.input.protected ? terms().say(" · protected {environment}") : ""}
-                {d.input.starter ? ` · started by ${d.input.starter}` : ""}</div>
+              <DivFaintSmall>{clock(d.at)} · decision {d.seq}{d.input.protected ? terms().say(" · protected {environment}") : ""}
+                {d.input.starter ? ` · started by ${d.input.starter}` : ""}</DivFaintSmall>
             </div>
             <VerdictPill verdict={d.verdict} />
           </div>
@@ -65,7 +66,7 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
                 <ResultBadge verdict={p.verdict} mode={p.policy.mode} />
                 <strong>{p.policy.name}</strong>
                 <ModeBadge mode={p.policy.mode} />
-                <span className="faint small">{p.policy.source}{p.policy.version ? ` @ ${p.policy.version.replace(/^(.{12}).*$/, "$1")}` : ""}</span>
+                <SpanFaintSmall>{p.policy.source}{p.policy.version ? ` @ ${p.policy.version.replace(/^(.{12}).*$/, "$1")}` : ""}</SpanFaintSmall>
               </div>
               {p.policy.description && <p className="sub small">{p.policy.description}</p>}
               <ul className="pol-rules">

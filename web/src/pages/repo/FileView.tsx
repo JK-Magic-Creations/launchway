@@ -4,6 +4,7 @@ import { Chip } from "../../kit/Status";
 import type { Run } from "../../highlight";
 import { CopyButton, IconAction } from "./common";
 import { NameIcon } from "./icons";
+import { BtnSm, SpanMono } from "../../kit/bits";
 
 const IMAGES = /\.(png|jpe?g|gif|webp|avif|svg)$/i;
 const CHUNK = 3000;
@@ -60,7 +61,7 @@ export function CodeLines({ text, path, hash, onHash }: { text: string; path: st
           })}
         </tbody>
       </table>
-      {count < lines.length && <p className="code-more"><button type="button" className="btn btn-sm" onClick={() => setShown(count + CHUNK)}>Show the next {Math.min(CHUNK, lines.length - count)} of {lines.length - count} lines</button></p>}
+      {count < lines.length && <p className="code-more"><BtnSm onClick={() => setShown(count + CHUNK)}>Show the next {Math.min(CHUNK, lines.length - count)} of {lines.length - count} lines</BtnSm></p>}
     </>
   );
 }
@@ -75,8 +76,8 @@ export function FileView({ repo, item, canWrite, hash, onHash, onEdit, onDelete 
   const permalink = `${location.origin}${codeHref(repo, item.commit, item.path)}${hash}`;
   const [jump, setJump] = useState("");
   const body = () => {
-    if (item.type === "submodule") return <p className="code-note">This is a submodule: it points at commit <span className="mono">{item.sha}</span> of another repository. Launchway shows what this repository holds, not what that one does.</p>;
-    if (item.type === "symlink") return <p className="code-note">A symbolic link to <span className="mono">{item.content}</span>.</p>;
+    if (item.type === "submodule") return <p className="code-note">This is a submodule: it points at commit <SpanMono>{item.sha}</SpanMono> of another repository. Launchway shows what this repository holds, not what that one does.</p>;
+    if (item.type === "symlink") return <p className="code-note">A symbolic link to <SpanMono>{item.content}</SpanMono>.</p>;
     if (item.truncated) return <p className="code-note">This file is {size(item.size)}, too large to show here. <a href={rawUrl(repo, item.commit, item.path)} download>Download it</a>, or clone the repository.</p>;
     if (IMAGES.test(name)) return <div className="code-image"><img src={rawUrl(repo, item.commit, item.path, true)} alt={name} /></div>;
     if (item.encoding === "base64") return <p className="code-note">This file is not text ({size(item.size)}), so there is nothing to show. <a href={rawUrl(repo, item.commit, item.path)} download>Download it</a>.</p>;

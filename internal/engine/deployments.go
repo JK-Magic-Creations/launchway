@@ -379,7 +379,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		c.dbFail(err)
 		return
 	}
-	deadline := c.now + def.Timeout.D().Milliseconds()
+	deadline := c.deployPickupDeadline()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
 		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected, Address: c.deployAddress(def)}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionApply}})
@@ -750,7 +750,7 @@ func (c *cmd) expireDeploy(id string, def *pipeline.Step) error {
 		if s.Dep != nil {
 			target = s.Dep.Target
 		}
-		reason = fmt.Sprintf("no deploy runner serving target %s took the step within %s", target, def.Timeout.Short())
+		reason = c.noRunnerReason(s, def, target)
 	case s.Status == StepWaitingS && s.WaitKind == WaitObserve:
 		var phase, detail, by string
 		var at int64

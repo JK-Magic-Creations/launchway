@@ -7,6 +7,9 @@ import { CopyBlock } from "./Tests";
 import { ErrorBox, Link } from "./ui";
 import "../standards.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { BtnSm, SpanMono, TdNum, ThCol, ThRow } from "../kit/bits";
+const P = await prose("components.Inspection");
 
 const STANDING_LABEL: Record<Standing, string> = {
   new: "New in this change", existing: "Already on the default branch", accepted: "Accepted risk", "false-positive": "False positive", unscored: "Not compared yet",
@@ -84,12 +87,12 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
         <div className="sf-body">
           <dl className="sf-dl">
             <div><dt>What</dt><dd>{f.title}</dd></div>
-            {(f.file || f.package) && <div><dt>Where</dt><dd>{f.package ? <>{f.package}{f.version ? " " + f.version : ""}{f.file ? <> in <span className="mono">{f.file}</span></> : null}</> : <span className="mono">{whereOf(f)}</span>}</dd></div>}
-            <div><dt>Found by</dt><dd>{f.tool}{check ? <> for the check “{check.title}”</> : null}, rule <span className="mono">{f.rule}</span>{help && <> · <a href={help} target="_blank" rel="noreferrer noopener">the tool’s description</a></>}</dd></div>
+            {(f.file || f.package) && <div><dt>Where</dt><dd>{f.package ? <>{f.package}{f.version ? " " + f.version : ""}{f.file ? <> in <SpanMono>{f.file}</SpanMono></> : null}</> : <SpanMono>{whereOf(f)}</SpanMono>}</dd></div>}
+            <div><dt>Found by</dt><dd>{f.tool}{check ? <> for the check “{check.title}”</> : null}, rule <SpanMono>{f.rule}</SpanMono>{help && <> · <a href={help} target="_blank" rel="noreferrer noopener">the tool’s description</a></>}</dd></div>
             {check && <div><dt>Why it matters</dt><dd>{check.why}</dd></div>}
             {(f.fix || f.fixed_in) && (
               <div><dt>How to fix</dt><dd>{f.fix || `Update to ${f.fixed_in} or later.`}{f.package && f.fixed_in && (
-                <CopyBlock label="Ask the dependency updater for the pull request" text={`launchway deps update ${f.package}`} />
+                <CopyBlock label={P.t0} text={`launchway deps update ${f.package}`} />
               )}</dd></div>
             )}
             {f.advisories && f.advisories.length > 0 && <div><dt>Also known as</dt><dd>{f.advisories.join(", ")}</dd></div>}
@@ -101,18 +104,18 @@ export function FindingCard({ f, project, profile, onChanged }: { f: Shown; proj
             )}
           </dl>
           <ErrorBox error={error} />
-          {may && accepted && <button type="button" className="btn btn-sm" disabled={busy} onClick={reopen}>End this decision</button>}
+          {may && accepted && <BtnSm disabled={busy} onClick={reopen}>End this decision</BtnSm>}
           {may && !accepted && f.status !== "fixed" && (
             <form className="sf-accept" onSubmit={(e) => { e.preventDefault(); accept(); }} aria-label={`Accept the risk of ${f.rule}`}>
               <h4 className="h-xs">Accept the risk</h4>
-              <p className="faint small">It stops counting on the date, is recorded with your name and your reason, and can be ended earlier.</p>
-              <label htmlFor={id + "-r"}>Why is this safe to live with?</label>
+              <p className="faint small">{P.t1}</p>
+              <label htmlFor={id + "-r"}>{P.t2}</label>
               <textarea id={id + "-r"} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} minLength={10} maxLength={500} required />
               <div className="sf-row">
                 <label htmlFor={id + "-d"}>Until</label>
                 <input id={id + "-d"} type="date" value={expires} min={inDays(1)} max={inDays(365)} onChange={(e) => setExpires(e.target.value)} required />
-                <label className="sf-check"><input type="checkbox" checked={falsePositive} onChange={(e) => setFalsePositive(e.target.checked)} /> It is not a problem (a false positive)</label>
-                {place && <label className="sf-check"><input type="checkbox" checked={whole} onChange={(e) => setWhole(e.target.checked)} /> The same for every open finding of this kind in <span className="mono">{place}</span> (for example, test vectors that look like secrets)</label>}
+                <label className="sf-check"><input type="checkbox" checked={falsePositive} onChange={(e) => setFalsePositive(e.target.checked)} /> {P.t3}</label>
+                {place && <label className="sf-check"><input type="checkbox" checked={whole} onChange={(e) => setWhole(e.target.checked)} /> {P.t4}<SpanMono>{place}</SpanMono> {P.t5}</label>}
                 <button type="submit" className="btn btn-sm" disabled={busy || reason.trim().length < 10}>Record the decision</button>
               </div>
             </form>
@@ -167,8 +170,8 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
       </div>
       <p className="insp-sum">{data.summary}</p>
       <p className="faint small insp-why">
-        {terms().say("Added by Standing orders: this repository’s pipeline did not ask for these steps; the server adds them to every {run}")}{data.profile_version ? ` (profile ${data.profile_version})` : ""}.{" "}
-        <Link href={`/projects/${encodeURIComponent(project)}/standards`}>Why each check runs, and how to change it</Link>.
+        {terms().say(P.t6)}{data.profile_version ? ` (profile ${data.profile_version})` : ""}.{" "}
+        <Link href={`/projects/${encodeURIComponent(project)}/standards`}>{P.t7}</Link>.
       </p>
       {data.notices && data.notices.length > 0 && (
         <ul className="insp-notices">{data.notices.map((n) => <li key={n}>{n}</li>)}</ul>
@@ -177,15 +180,15 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
         <div className="table-scroll">
           <table className="table insp-checks">
             <caption className="visually-hidden">The checks of this Inspection</caption>
-            <thead><tr><th scope="col">Check</th><th scope="col">What it does</th><th scope="col">Ran</th><th scope="col" className="num">New</th><th scope="col" className="num">Findings</th></tr></thead>
+            <thead><tr><ThCol>Check</ThCol><ThCol>What it does</ThCol><ThCol>Ran</ThCol><ThCol className="num">New</ThCol><ThCol className="num">Findings</ThCol></tr></thead>
             <tbody>
               {data.checks.map((c) => (
                 <tr key={c.id}>
-                  <th scope="row">{c.title}</th>
-                  <td>{c.state === "block" ? "Blocks a change that introduces a serious finding" : "Advises"}</td>
+                  <ThRow>{c.title}</ThRow>
+                  <td>{c.state === "block" ? P.t8 : "Advises"}</td>
                   <td>{c.ran ? "yes" : <strong className="sec-bad">did not run</strong>}</td>
-                  <td className="num">{c.new}</td>
-                  <td className="num">{c.total}</td>
+                  <TdNum>{c.new}</TdNum>
+                  <TdNum>{c.total}</TdNum>
                 </tr>
               ))}
             </tbody>
@@ -206,7 +209,7 @@ export function InspectionPanel({ runId, project, version }: { runId: string; pr
               {shown.map((f) => <FindingCard key={f.fingerprint + f.step} f={fromInspection(f)} project={project} profile={profile} onChanged={load} />)}
             </ul>
           )}
-          {data.truncated && <p className="faint small">{terms().say("Not every finding was kept for this {run}; the counts include them all.")}</p>}
+          {data.truncated && <p className="faint small">{terms().say(P.t9)}</p>}
         </>
       ) : <p className="faint">The checks found nothing.</p>}
     </section>

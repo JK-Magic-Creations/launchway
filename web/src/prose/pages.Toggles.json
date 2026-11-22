@@ -1,0 +1,23 @@
+{
+ "t0": "A value your application reads at run time, so that a feature can be turned on, off or rolled out to a share of users without a deployment.",
+ "t1": "Make one here, then read it in your application with the Go or TypeScript SDK. Safeguards are on from the start: a reason for every change, and an approval in a protected {environment}.",
+ "t2": "and what each does in each {environment}",
+ "t3": "May be finished with: see its page",
+ "t4": ". This is only a note: Launchway never removes or changes a toggle by itself.",
+ "t5": "lower-case letters and digits, with - _ or . between them",
+ "t6": "a person or team who will remove it",
+ "t7": "No {environment} is known to this {project} yet.",
+ "t8": "evaluations in the last 30 days, last on ",
+ "t9": "No application has reported evaluating it yet. Server SDKs report counts every minute.",
+ "t10": "Counts only: nothing about who was evaluated is stored.",
+ "t11": "Remove the check from your code first. The removal is kept in the history and can be reverted.",
+ "t12": "at once, whatever the rules said. This is never held for an approval, and is recorded. Revert it from the history when the trouble is over.",
+ "t13": ". The {environment} goes back to what it was before. A revert is never held for approval, and is recorded like any other change.",
+ "t14": "Why (recorded with the change) ",
+ "t15": "Make it at a later time (optional) ",
+ "t16": "Keep the toggles in a file in your repository (",
+ "t17": ") and change them in a pull request. Launchway shows how the file and the live toggles differ; it applies nothing by itself, and never removes a toggle the file leaves out.",
+ "t18": "Write the live toggles as a file",
+ "t19": "The file and the live toggles agree.",
+ "t20": "Differences between the file and the live toggles"
+}

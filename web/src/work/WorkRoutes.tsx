@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { match } from "../router";
+import { DivLoading, DivPage } from "../kit/bits";
 
 // The one entry the rest of the interface knows about: it picks the work page for an address and loads it. Each page is its own chunk.
 
@@ -23,7 +24,7 @@ const Settings = lz<{ scope: string }>(() => import("./WorkSettings"));
 const AREA: Record<string, React.ComponentType<{ scope: string }>> = { items: Items, board: Board, backlog: Backlog, sprints: Sprints, charts: Charts, roadmap: Roadmap, milestones: Milestones, proposals: Proposals, settings: Settings };
 
 export default function WorkRoutes({ path }: { path: string }) {
-  return <Suspense fallback={<div className="page"><div className="loading" role="status">Loading…</div></div>}>{pick(path)}</Suspense>;
+  return <Suspense fallback={<DivPage><DivLoading role="status">Loading…</DivLoading></DivPage>}>{pick(path)}</Suspense>;
 }
 
 function pick(path: string) {
@@ -38,5 +39,5 @@ function pick(path: string) {
   const area = match("/work/:scope/:area", clean);
   const Page = area ? AREA[area.area] : undefined;
   if (area && Page) return <Page key={area.scope + area.area} scope={area.scope} />;
-  return <div className="page"><div className="empty"><div className="empty-title">Nothing here</div><div className="empty-body">This work page does not exist.</div></div></div>;
+  return <DivPage><div className="empty"><div className="empty-title">Nothing here</div><div className="empty-body">This work page does not exist.</div></div></DivPage>;
 }

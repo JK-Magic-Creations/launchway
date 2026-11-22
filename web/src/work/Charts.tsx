@@ -2,6 +2,7 @@ import { Sheet } from "../kit/layout";
 import { Blank, ErrorPanel, Loading, scopeLabel, useLoad, WorkPage } from "./common";
 import { Bars, LAYER_CLASSES, Legend, PairBars, StackedAreas } from "./chartParts";
 import { workApi, type Cfd, type TimeStats, type Velocity } from "./workApi";
+import { TdNum, ThCol, ThRow } from "../kit/bits";
 
 // Velocity, cumulative flow, and how long work takes. Each chart has the same numbers in a table beside it.
 
@@ -22,8 +23,8 @@ export default function Charts({ scope }: { scope: string }) {
             <p className="small">Average completed: <strong className="num">{v.data.average.toFixed(1)} {v.data.unit}</strong> a sprint.</p>
             <div className="tablewrap"><table className="table wk-table">
               <caption>Velocity by sprint, in {v.data.unit}</caption>
-              <thead><tr><th scope="col">Sprint</th><th scope="col">Committed</th><th scope="col">Completed</th></tr></thead>
-              <tbody>{v.data.sprints.map((s) => <tr key={s.sprint}><th scope="row">{s.sprint}</th><td className="num">{s.committed}</td><td className="num">{s.completed}</td></tr>)}</tbody>
+              <thead><tr><ThCol>Sprint</ThCol><ThCol>Committed</ThCol><ThCol>Completed</ThCol></tr></thead>
+              <tbody>{v.data.sprints.map((s) => <tr key={s.sprint}><ThRow>{s.sprint}</ThRow><TdNum>{s.committed}</TdNum><TdNum>{s.completed}</TdNum></tr>)}</tbody>
             </table></div>
           </>
         )}
@@ -43,15 +44,15 @@ export default function Charts({ scope }: { scope: string }) {
             <Bars name="Items by how many days they took" unit="items" rows={t.data.histogram.map((b) => ({ label: b.label, value: b.count }))} />
             <div className="tablewrap"><table className="table wk-table">
               <caption>Items by days taken, {t.data.count} finished</caption>
-              <thead><tr><th scope="col">Days</th><th scope="col">Items</th></tr></thead>
-              <tbody>{t.data.histogram.map((b) => <tr key={b.label}><th scope="row">{b.label}</th><td className="num">{b.count}</td></tr>)}</tbody>
+              <thead><tr><ThCol>Days</ThCol><ThCol>Items</ThCol></tr></thead>
+              <tbody>{t.data.histogram.map((b) => <tr key={b.label}><ThRow>{b.label}</ThRow><TdNum>{b.count}</TdNum></tr>)}</tbody>
             </table></div>
             <div className="tablewrap"><table className="table wk-table">
               <caption>Typical times, in days</caption>
-              <thead><tr><th scope="col">Measure</th><th scope="col">Median</th><th scope="col">85th percentile</th><th scope="col">Mean</th></tr></thead>
+              <thead><tr><ThCol>Measure</ThCol><ThCol>Median</ThCol><ThCol>85th percentile</ThCol><ThCol>Mean</ThCol></tr></thead>
               <tbody>
-                <tr><th scope="row">Lead time</th><td className="num">{t.data.lead_median_days.toFixed(1)}</td><td className="num">{t.data.lead_p85_days.toFixed(1)}</td><td className="num">{t.data.lead_mean_days.toFixed(1)}</td></tr>
-                <tr><th scope="row">Cycle time</th><td className="num">{t.data.cycle_median_days.toFixed(1)}</td><td className="num">{t.data.cycle_p85_days.toFixed(1)}</td><td className="num">{t.data.cycle_mean_days.toFixed(1)}</td></tr>
+                <tr><ThRow>Lead time</ThRow><TdNum>{t.data.lead_median_days.toFixed(1)}</TdNum><TdNum>{t.data.lead_p85_days.toFixed(1)}</TdNum><TdNum>{t.data.lead_mean_days.toFixed(1)}</TdNum></tr>
+                <tr><ThRow>Cycle time</ThRow><TdNum>{t.data.cycle_median_days.toFixed(1)}</TdNum><TdNum>{t.data.cycle_p85_days.toFixed(1)}</TdNum><TdNum>{t.data.cycle_mean_days.toFixed(1)}</TdNum></tr>
               </tbody>
             </table></div>
           </>
@@ -72,8 +73,8 @@ function Flow({ data }: { data: Cfd }) {
       <Legend items={layers.slice().reverse().map((l) => ({ label: l.label, cls: l.cls }))} />
       <div className="tablewrap"><table className="table wk-table">
         <caption>Items in each state, last {shown.length} days</caption>
-        <thead><tr><th scope="col">Date</th>{data.states.map((s) => <th key={s.key} scope="col">{s.name}</th>)}</tr></thead>
-        <tbody>{shown.map((d) => <tr key={d.date}><th scope="row">{d.date}</th>{data.states.map((s) => <td key={s.key} className="num">{d.counts[s.key] ?? 0}</td>)}</tr>)}</tbody>
+        <thead><tr><ThCol>Date</ThCol>{data.states.map((s) => <ThCol key={s.key}>{s.name}</ThCol>)}</tr></thead>
+        <tbody>{shown.map((d) => <tr key={d.date}><ThRow>{d.date}</ThRow>{data.states.map((s) => <TdNum key={s.key}>{d.counts[s.key] ?? 0}</TdNum>)}</tr>)}</tbody>
       </table></div>
     </>
   );

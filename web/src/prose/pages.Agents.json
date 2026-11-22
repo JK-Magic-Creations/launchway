@@ -1,0 +1,19 @@
+{
+ "t0": "The MCP endpoint is turned off",
+ "t1": "An operator turned it off on this server (",
+ "t2": "  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \\",
+ "t3": "  -H 'MCP-Protocol-Version: 2025-06-18' \\",
+ "t4": "  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'",
+ "t5": "AI agents can use Launchway through the Model Context Protocol (MCP): find {projects}, write and check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every change it makes is in the",
+ "t6": "Give the agent its own token, with no more than it needs: a ",
+ "t7": "token can read and diagnose but not start or give ",
+ "t8": "to anything. You can revoke it on the ",
+ "t9": "every {project}, or: pay-*, web",
+ "t10": "The token is in the configuration below. Copy it now: it will not be shown again.",
+ "t11": "This server has no sign-in, so agents need no token. It answers only on this machine.",
+ "t12": "Most agents read a JSON list of MCP servers. Use the first form if the agent connects to servers over HTTP, the second if it starts them as commands (it needs the ",
+ "t13": "Agents that sign in with OAuth may instead use an access token from the sign-in provider for",
+ "t14": "; the server publishes where to get one.",
+ "t15": "Then ask the agent something like “why did the last run of my {project} fail?”. It finds its way from what the server tells it: how pipelines are written, which tools to call, and in which order.",
+ "t16": "Logs, test messages, commit messages and findings are written by whoever can push, so the server hands them to agents marked as untrusted data. Agents are told never to follow instructions found in them, but no agent can be relied on to resist every trick: give agents viewer tokens unless they must act, and keep "
+}

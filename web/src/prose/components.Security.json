@@ -1,0 +1,12 @@
+{
+ "t0": "M8 1.5l5.5 2v4.2c0 3.3-2.3 5.7-5.5 6.8-3.2-1.1-5.5-3.5-5.5-6.8V3.5z",
+ "t1": "M2 4.8L8 2l6 2.8v6.4L8 14l-6-2.8z",
+ "t2": "M5.2 7V5a2.8 2.8 0 0 1 5.6 0v2",
+ "t3": "Not in the previous run of this branch",
+ "t4": "In the previous run of this branch, gone in this one",
+ "t5": "Tell a step which files its scanners write, and Launchway reads them when the step ends, whether it passed or failed:",
+ "t6": "steps:\n  scan:\n    image: alpine:3.22\n    run: sh scripts/scan.sh\n    reports:\n      findings: reports/security/*.sarif\n      sbom: reports/sbom.cdx.json",
+ "t7": "Findings are read from SARIF 2.1.0 files, which Semgrep, Trivy, gitleaks, CodeQL and most other scanners write. The SBOM is read from a CycloneDX JSON file, which Launchway also keeps as an {artifact} to download.",
+ "t8": "Name the files a step makes, and Launchway keeps them when the step succeeds. A later step can fetch them:",
+ "t9": "steps:\n  build:\n    image: golang:1.23\n    run: go build -o dist/app ./cmd/app\n    artifacts:\n      - name: binary\n        paths: [dist/app]\n        retain: 14d\n  smoke-test:\n    needs: [build]\n    fetch:\n      - { from: build, name: binary }\n    run: ./dist/app --version"
+}

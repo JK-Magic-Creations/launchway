@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { BtnSm, SpanMono } from "../kit/bits";
 
 /** What went wrong in a part of the page, in words, with a way to try again; the rest of the page stays. */
 export class ErrorBoundary extends Component<{ name: string; resetKey?: string; children: ReactNode }, { error: Error | null }> {
@@ -20,9 +21,9 @@ export class ErrorBoundary extends Component<{ name: string; resetKey?: string; 
     if (!error) return this.props.children;
     return (
       <div className="callout callout-err" role="alert">
-        <p><strong>{this.props.name} could not be shown.</strong> Something in it failed while it was drawn: <span className="mono">{error.message || String(error)}</span>. The rest of the page works.</p>
+        <p><strong>{this.props.name} could not be shown.</strong> Something in it failed while it was drawn: <SpanMono>{error.message || String(error)}</SpanMono>. The rest of the page works.</p>
         <p className="faint small">This is a fault in Launchway, not in your pipeline. Trying again often helps; if it keeps failing, reload the page, and report it with the text above.</p>
-        <button type="button" className="btn btn-sm" onClick={() => this.setState({ error: null })}>Try again</button>
+        <BtnSm onClick={() => this.setState({ error: null })}>Try again</BtnSm>
       </div>
     );
   }

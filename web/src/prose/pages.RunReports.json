@@ -1,0 +1,14 @@
+{
+ "t0": "The steps that declare HTML reports did not keep them. Each step's log says why, for example a directory that did not exist.",
+ "t1": "M9 2.5h4.5V7M13.5 2.5L7 9M11.5 9.5v4h-9v-9h4",
+ "t2": "M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z",
+ "t3": "The step wrote this report, so it is shown sandboxed",
+ "t4": ": its scripts run, but it cannot act as you, read Launchway's pages or reach anything outside the report. Its link works for a few hours.",
+ "t5": "allow-scripts allow-popups allow-modals allow-downloads",
+ "t6": "page, so there is nothing to open. Set ",
+ "t7": "M4.8 11.5V9M7.3 11.5V6.5M9.8 11.5V8M4.5 4.2h4",
+ "t8": "Name the directory a tool writes its HTML report to, and Launchway keeps it with the {run} and shows it here, sandboxed:",
+ "t9": "steps:\n  e2e:\n    image: mcr.microsoft.com/playwright:v1.56.0\n    run: npx playwright test\n    reports:\n      html:\n        name: playwright\n        path: playwright-report",
+ "t10": "Any static site works: Playwright's and Karate's reports, an Allure site, coverage HTML. Add ",
+ "t11": "when the start page is not index.html."
+}

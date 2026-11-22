@@ -11,6 +11,9 @@ import {
 } from "../standardsApi";
 import { terms } from "../terms";
 import "../standards.css";
+import { prose } from "../prose";
+import { BtnSm, DivFaintSmall, DivLoading, SpanFaint, SpanFaintSmall, SpanHidden, SpanMono, TdNum, ThCol, ThRow } from "../kit/bits";
+const P = await prose("pages.Standards");
 
 type ProjectStandings = ProjectStandards;
 
@@ -53,47 +56,47 @@ function Chain({ v, w }: { v: Value<unknown>; w: Record<string, string> }) {
 function CheckRow({ c, w }: { c: EffectiveCheck; w: Record<string, string> }) {
   return (
     <tr className={c.active ? "" : "st-dim"}>
-      <th scope="row">
+      <ThRow>
         <span className="st-ct">{c.title}</span>
         <span className="st-why">{c.why}</span>
-        <span className="faint small">Tool {c.tool} ({c.license}); up to {Math.round(c.budget_seconds / 60)} minutes{c.network ? "; " + c.network : "; needs no network"}</span>
-      </th>
+        <SpanFaintSmall>Tool {c.tool} ({c.license}); up to {Math.round(c.budget_seconds / 60)} minutes{c.network ? "; " + c.network : "; needs no network"}</SpanFaintSmall>
+      </ThRow>
       {c.unavailable ? (
         // An unavailable check has no state to show and nothing to set: only the plain fact.
-        <><td><span className="faint">Not available yet</span></td><td><span className="faint">–</span></td></>
+        <><td><SpanFaint>Not available yet</SpanFaint></td><td><SpanFaint>–</SpanFaint></td></>
       ) : (
         <>
           <td>
             <span className={"st-state st-state-" + c.state.value}>{STATE_WORD[c.state.value]}</span>
-            {c.gates && c.state.value !== "block" && c.applies ? <span className="faint small"> can block</span> : null}
+            {c.gates && c.state.value !== "block" && c.applies ? <SpanFaintSmall> can block</SpanFaintSmall> : null}
             <LockNote v={c.state} w={w} />
             <Chain v={c.state} w={w} />
           </td>
           <td>{sourceText(c.state.from, w)}</td>
         </>
       )}
-      <td>{c.active ? <span className="st-on">{terms().say("Runs on every {run}")}</span> : <span className="faint">{c.reason}</span>}{c.applies && <div className="faint small">Because {c.because}</div>}</td>
+      <td>{c.active ? <span className="st-on">{terms().say("Runs on every {run}")}</span> : <SpanFaint>{c.reason}</SpanFaint>}{c.applies && <DivFaintSmall>Because {c.because}</DivFaintSmall>}</td>
     </tr>
   );
 }
 
 function Gate({ e, w }: { e: Effective; w: Record<string, string> }) {
   const rows: { label: string; v: Value<unknown>; text: string; hint: string }[] = [
-    { label: "A change is blocked at", v: e.fail_on, text: `${severityLabel(e.fail_on.value)} and above`, hint: "Only for checks set to block, and only for findings the change introduces." },
-    { label: "A vulnerability needs a fix to block", v: e.require_fix, text: e.require_fix.value ? "yes" : "no", hint: "Where no fixed version exists yet, it advises." },
-    { label: "Findings on the default branch", v: e.default_branch, text: e.default_branch.value === "block" ? terms().say("fail the {run}") : "are shown, never fail it", hint: "The backlog is yours to work down; nothing old blocks a change." },
-    { label: "A check that did not run", v: e.incomplete, text: e.incomplete.value === "fail" ? "fails the verdict" : "is shown, and the verdict stands", hint: "It is never taken for a clean result." },
-    { label: "Licenses denied", v: e.licenses_deny, text: e.licenses_deny.value.join(", ") || "none", hint: "A dependency under one of these is a finding." },
-    { label: "Licenses allowed", v: e.licenses_allow, text: e.licenses_allow.value.length ? e.licenses_allow.value.join(", ") : "any not denied", hint: "With a list, a license outside it is flagged; one that cannot be identified is always flagged." },
+    { label: "A change is blocked at", v: e.fail_on, text: `${severityLabel(e.fail_on.value)} and above`, hint: P.t0 },
+    { label: P.t1, v: e.require_fix, text: e.require_fix.value ? "yes" : "no", hint: P.t2 },
+    { label: P.t3, v: e.default_branch, text: e.default_branch.value === "block" ? terms().say("fail the {run}") : "are shown, never fail it", hint: P.t4 },
+    { label: "A check that did not run", v: e.incomplete, text: e.incomplete.value === "fail" ? "fails the verdict" : P.t5, hint: P.t6 },
+    { label: "Licenses denied", v: e.licenses_deny, text: e.licenses_deny.value.join(", ") || "none", hint: P.t7 },
+    { label: "Licenses allowed", v: e.licenses_allow, text: e.licenses_allow.value.length ? e.licenses_allow.value.join(", ") : "any not denied", hint: P.t8 },
   ];
   return (
     <table className="table st-gate">
-      <caption className="visually-hidden">The gates and license lists in effect</caption>
-      <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
+      <caption className="visually-hidden">{P.t9}</caption>
+      <thead><tr><ThCol>Setting</ThCol><ThCol>Value</ThCol><ThCol>From</ThCol></tr></thead>
       <tbody>
         {rows.map((r) => (
           <tr key={r.label}>
-            <th scope="row">{r.label}<span className="faint small st-hint">{r.hint}</span></th>
+            <ThRow>{r.label}<span className="faint small st-hint">{r.hint}</span></ThRow>
             <td><strong>{r.text}</strong><LockNote v={r.v} w={w} /><Chain v={r.v} w={w} /></td>
             <td>{sourceText(r.v.from, w)}</td>
           </tr>
@@ -112,7 +115,7 @@ function levelWords(): Record<string, string> {
 /** The open findings by day as a line, with the same numbers in a table. */
 function History({ s }: { s: Series }) {
   const pts = s.points;
-  if (pts.length < 2) return <p className="faint">The history starts when the default branch has been inspected on two different days.</p>;
+  if (pts.length < 2) return <p className="faint">{P.t10}</p>;
   const max = Math.max(1, ...pts.map((p) => p.total));
   const W2 = 560, H = 120, pad = 4;
   const x = (i: number) => pad + (i * (W2 - 2 * pad)) / (pts.length - 1);
@@ -128,8 +131,8 @@ function History({ s }: { s: Series }) {
       <details>
         <summary>The same as a table</summary>
         <div className="table-scroll"><table className="table">
-          <thead><tr><th scope="col">Day</th><th scope="col" className="num">Open</th><th scope="col" className="num">Critical</th><th scope="col" className="num">High</th><th scope="col" className="num">Medium</th><th scope="col" className="num">Low</th></tr></thead>
-          <tbody>{[...pts].reverse().slice(0, 30).map((p) => <tr key={p.day}><th scope="row">{p.day}</th><td className="num">{p.total}</td><td className="num">{p.critical}</td><td className="num">{p.high}</td><td className="num">{p.medium}</td><td className="num">{p.low}</td></tr>)}</tbody>
+          <thead><tr><ThCol>Day</ThCol><ThCol className="num">Open</ThCol><ThCol className="num">Critical</ThCol><ThCol className="num">High</ThCol><ThCol className="num">Medium</ThCol><ThCol className="num">Low</ThCol></tr></thead>
+          <tbody>{[...pts].reverse().slice(0, 30).map((p) => <tr key={p.day}><ThRow>{p.day}</ThRow><TdNum>{p.total}</TdNum><TdNum>{p.critical}</TdNum><TdNum>{p.high}</TdNum><TdNum>{p.medium}</TdNum><TdNum>{p.low}</TdNum></tr>)}</tbody>
         </table></div>
       </details>
     </figure>
@@ -156,13 +159,12 @@ export function ProjectStandardsPage({ name }: { name: string }) {
   return (
     <div className="page page-wide sto">
       <ProjectHead name={name} on="standards" title={<>{terms().say("{Standards}")} of {name}</>}
-        sentence={<>The checks every repository gets, on by default: what runs on <strong>{name}</strong>, why, and how to change it. Nothing here needs a change to the repository.</>} />
+        sentence={<>{P.t11}<strong>{name}</strong>{P.t12}</>} />
       <ErrorBox error={error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {e && e.off.value && (
         <div className="callout callout-draft st-off" role="status">
-          <strong>{terms().say("{Standards}")} are switched off</strong> by {sourceText(e.off.from, w)}{e.off_reason ? <>: “{e.off_reason}”</> : null}. No check runs on this repository and no finding is recorded.
-          {" "}Whoever administers that level switches them back on in <Link href="/settings/standards">Settings, {terms().say("{Standards}")}</Link>.
+          <strong>{terms().say("{Standards}")} are switched off</strong> by {sourceText(e.off.from, w)}{e.off_reason ? <>: “{e.off_reason}”</> : null}{P.t13}{" "}{P.t14}<Link href="/settings/standards">Settings, {terms().say("{Standards}")}</Link>.
         </div>
       )}
       {e && e.notices.length > 0 && (
@@ -171,22 +173,22 @@ export function ProjectStandardsPage({ name }: { name: string }) {
           <ul>{e.notices.map((n) => <li key={n}>{n}</li>)}</ul>
         </div>
       )}
-      {data?.empty && <p className="faint">The repository has no commit on its default branch yet, so only what applies to every repository is shown.</p>}
+      {data?.empty && <p className="faint">{P.t15}</p>}
 
       {e && (
         <>
           <section className="card" aria-labelledby="st-found">
-            <h2 id="st-found" className="h-sm">What was found in the repository</h2>
-            <ul className="chips st-eco">{e.detected.map((d) => <li key={d.ecosystem} className="chip">{d.title}<span className="visually-hidden"> ({d.because})</span></li>)}</ul>
-            <p className="faint small">The profile (version {e.profile_version}) adds the checks that fit what is in the repository. Open a check to see where its setting comes from.</p>
+            <h2 id="st-found" className="h-sm">{P.t16}</h2>
+            <ul className="chips st-eco">{e.detected.map((d) => <li key={d.ecosystem} className="chip">{d.title}<SpanHidden> ({d.because})</SpanHidden></li>)}</ul>
+            <p className="faint small">The profile (version {e.profile_version}{P.t17}</p>
           </section>
 
           <section aria-labelledby="st-checks">
             <h2 id="st-checks" className="h-sm st-h">Checks</h2>
             <div className="card card-flush table-scroll">
               <table className="table st-table">
-                <caption className="visually-hidden">The checks of the profile and how they apply to this repository</caption>
-                <thead><tr><th scope="col">Check</th><th scope="col">State</th><th scope="col">Set by</th><th scope="col">On this repository</th></tr></thead>
+                <caption className="visually-hidden">{P.t18}</caption>
+                <thead><tr><ThCol>Check</ThCol><ThCol>State</ThCol><ThCol>Set by</ThCol><ThCol>On this repository</ThCol></tr></thead>
                 {[...checksByEco.entries()].map(([eco, cs]) => (
                   <tbody key={eco} className="st-group">
                     <tr><th colSpan={4} scope="colgroup" className="st-eco-h">{profile?.ecosystems.find((x) => x.id === eco)?.title ?? eco}</th></tr>
@@ -207,7 +209,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
                   {e.exemptions.map((x, i) => (
                     <li key={i} className={x.expired ? "st-ignored" : ""}>
                       <strong>{[x.check && "check " + x.check, x.rule && "rule " + x.rule, x.package && "package " + x.package, x.path && x.path].filter(Boolean).join(", ")}</strong> until {x.expires}{x.expired ? " (ended)" : ""} — {x.reason}
-                      <span className="faint small"> From {sourceText(x.from, w)}.</span>
+                      <SpanFaintSmall> From {sourceText(x.from, w)}.</SpanFaintSmall>
                     </li>
                   ))}
                 </ul>
@@ -218,14 +220,14 @@ export function ProjectStandardsPage({ name }: { name: string }) {
           <section className="card" aria-labelledby="st-file">
             <h2 id="st-file" className="h-sm">The repository’s own settings</h2>
             <p>
-              {data?.file ? <>The repository has <span className="mono">.launchway/standards.yaml</span>; it is read from the default branch only, so a pull request cannot switch its own checks off.</>
-                : <>The repository has no <span className="mono">.launchway/standards.yaml</span>. A team can keep its choices in Git there: checks on or off, thresholds, license lists and exemptions with a reason and an end date. What a level above locked is shown as locked and cannot be weakened.</>}
+              {data?.file ? <>The repository has <SpanMono>.launchway/standards.yaml</SpanMono>{P.t19}</>
+                : <>The repository has no <SpanMono>.launchway/standards.yaml</SpanMono>{P.t20}</>}
             </p>
             {data?.file_problems && data.file_problems.length > 0 && (
-              <div className="callout callout-draft" role="alert"><strong>The file has problems</strong>, so what they name is left out until they are fixed:<ul>{data.file_problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
+              <div className="callout callout-draft" role="alert"><strong>The file has problems</strong>{P.t21}<ul>{data.file_problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>{terms().say("Show this {project}’s settings as a file")}</button>
-            {file && <textarea className="code st-file" readOnly rows={Math.min(24, file.from_settings.split("\n").length + 1)} aria-label={terms().say("This {project}’s settings as a repository file")} value={file.from_settings} />}
+            <BtnSm onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>{terms().say(P.t22)}</BtnSm>
+            {file && <textarea className="code st-file" readOnly rows={Math.min(24, file.from_settings.split("\n").length + 1)} aria-label={terms().say(P.t23)} value={file.from_settings} />}
           </section>
         </>
       )}
@@ -260,7 +262,7 @@ export function FindingsBacklog({ name }: { name: string }) {
     <>
       <ErrorBox error={error} />
       <section aria-labelledby="st-back">
-        <h2 id="st-back" className="h-sm st-h">Findings on the default branch</h2>
+        <h2 id="st-back" className="h-sm st-h">{P.t3}</h2>
         {series && list && (
           <div className="st-stats">
             <div><span className="st-n">{list.open}</span><span>open</span></div>
@@ -287,17 +289,17 @@ export function FindingsBacklog({ name }: { name: string }) {
         {list && list.findings.length === 0 && (
           <Empty title={status === "open" ? "Nothing open" : "Nothing here"}>
             {series && series.points.length === 0
-              ? <>The default branch has not been inspected yet. The first run on it records what it has; after that, a change is blocked only by what it adds.</>
+              ? <>{P.t24}</>
               : <>No findings match.</>}
           </Empty>
         )}
         {list && list.findings.length > 0 && (
           <ul className="sf-list">{list.findings.map((f) => <FindingCard key={f.fingerprint} f={fromTracked(f)} project={name} profile={profile} onChanged={reload} />)}</ul>
         )}
-        <p className="faint small">This backlog is the Inspection's: what the checks of {terms().say("{Standards}")} found, recorded when the verdict step of a {terms().say("{run}")} on the default branch ends. A {terms().say("{run}")}'s own Security tab also lists what your pipeline's own steps reported (for example a template's secret scan or static analysis), so it can show more; and a {terms().say("{run}")} whose verdict step did not finish does not update this list.</p>
-        {list && list.matched > list.findings.length && <p className="faint small">{list.findings.length} of {list.matched} shown; narrow it with the filters or export all.</p>}
-        {!canOperate(me, name) && <p className="faint small">{terms().say("You can read these. Accepting a risk needs the operator role on this {project}.")}</p>}
-        <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say("shows every {run}’s findings, including the tools you added yourself.")}</p>
+        <p className="faint small">{P.t25}{terms().say("{Standards}")} {P.t26}{terms().say("{run}")} on the default branch ends. A {terms().say("{run}")}{P.t27}{terms().say("{run}")} {P.t28}</p>
+        {list && list.matched > list.findings.length && <p className="faint small">{list.findings.length} of {list.matched} {P.t29}</p>}
+        {!canOperate(me, name) && <p className="faint small">{terms().say(P.t30)}</p>}
+        <p className="faint small">{P.t31}<Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say(P.t32)}</p>
       </section>
     </>
   );
@@ -349,35 +351,35 @@ export function SettingsStandardsPage() {
   const lockOf = (key: string) => draft.locks?.[key] !== undefined;
   return (
     <div className="page page-wide sto">
-      <PageHead eyebrow="Settings" title={terms().say("{Standards}")} sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
+      <PageHead eyebrow="Settings" title={terms().say("{Standards}")} sentence={P.t33} />
       <div className="toolbar st-level" role="group" aria-label="Level">
         {LEVELS.map((l) => <button key={l} type="button" className={"chip" + (level === l ? " chip-on" : "")} aria-pressed={level === l} onClick={() => { setLevel(l); setScope(""); }}>{w[l] ?? l}</button>)}
         {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? terms().say("{unit} name") : terms().say("{project} name")} /></label>}
       </div>
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}
-      {need && !scope && <p className="faint">Name the {(w[level] ?? level).toLowerCase()} to see and change its settings.</p>}
+      {need && !scope && <p className="faint">Name the {(w[level] ?? level).toLowerCase()} {P.t34}</p>}
 
       {cov && ready && (
         <section aria-labelledby="st-cov">
-          <h2 id="st-cov" className="h-sm st-h">Which repositories have which checks</h2>
-          {cov.any_off && <div className="callout callout-draft" role="status"><strong>{terms().say("{Standards}")} are switched off for some repositories below.</strong> They are listed as off in the table.</div>}
-          {cov.projects.length === 0 ? <p className="faint">No repository here that you may see.</p> : (
+          <h2 id="st-cov" className="h-sm st-h">{P.t35}</h2>
+          {cov.any_off && <div className="callout callout-draft" role="status"><strong>{terms().say("{Standards}")} {P.t36}</strong> {P.t37}</div>}
+          {cov.projects.length === 0 ? <p className="faint">{P.t38}</p> : (
             <div className="card card-flush table-scroll">
               <table className="table st-cov">
-                <caption className="visually-hidden">Checks in effect for each repository</caption>
-                <thead><tr><th scope="col">Repository</th>{(profile?.checks ?? []).filter((c) => c.available).map((c) => <th key={c.id} scope="col" className="st-covh"><span title={c.title}>{c.id}</span></th>)}<th scope="col">Open findings</th></tr></thead>
+                <caption className="visually-hidden">{P.t39}</caption>
+                <thead><tr><ThCol>Repository</ThCol>{(profile?.checks ?? []).filter((c) => c.available).map((c) => <ThCol key={c.id} className="st-covh"><span title={c.title}>{c.id}</span></ThCol>)}<ThCol>Open findings</ThCol></tr></thead>
                 <tbody>
                   {cov.projects.map((p) => (
                     <tr key={p.project}>
-                      <th scope="row"><Link href={`/projects/${encodeURIComponent(p.project)}/standards`}>{p.project}</Link>{p.unit ? <span className="faint small"> · {p.unit}</span> : null}</th>
+                      <ThRow><Link href={`/projects/${encodeURIComponent(p.project)}/standards`}>{p.project}</Link>{p.unit ? <SpanFaintSmall> · {p.unit}</SpanFaintSmall> : null}</ThRow>
                       {(profile?.checks ?? []).filter((c) => c.available).map((c) => {
                         const cell = p.checks[c.id];
                         if (p.off) return <td key={c.id} className="st-c st-c-off">off</td>;
-                        if (!cell) return <td key={c.id} className="st-c st-c-na"><span className="visually-hidden">does not apply</span>–</td>;
+                        if (!cell) return <td key={c.id} className="st-c st-c-na"><SpanHidden>does not apply</SpanHidden>–</td>;
                         return <td key={c.id} className={"st-c st-c-" + (cell.active ? cell.state : "off")}>{cell.active ? (cell.state === "block" ? "blocks" : "advises") : "off"}{cell.locked ? <span aria-label="locked"> 🔒</span> : null}</td>;
                       })}
-                      <td>{p.off ? <span className="faint">not recorded</span> : <>{p.open["critical"] ?? 0} critical, {p.open["high"] ?? 0} high, {p.open["medium"] ?? 0} medium</>}</td>
+                      <td>{p.off ? <SpanFaint>not recorded</SpanFaint> : <>{p.open["critical"] ?? 0} critical, {p.open["high"] ?? 0} high, {p.open["medium"] ?? 0} medium</>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -390,33 +392,32 @@ export function SettingsStandardsPage() {
       {cur && profile && ready && (
         <section className="card st-edit" aria-labelledby="st-edit">
           <h2 id="st-edit" className="h-sm">What {w[level] ?? level}{need ? " " + scope : ""} says</h2>
-          <p className="faint small">Leave a value on “inherit” to take it from the level above. A lock keeps every level below, and every repository’s own file, from weakening the value.</p>
+          <p className="faint small">{P.t40}</p>
           <fieldset>
             <legend>The switch</legend>
             <label className="st-switch"><input type="checkbox" checked={off} onChange={(e) => set((s) => { s.off = e.target.checked; if (!e.target.checked) s.off_reason = ""; return s; })} /> Switch {terms().say("{Standards}")} off for everything below {w[level] ?? level}</label>
             {off && (
               <div className="callout callout-draft">
-                Nothing will be scanned and no finding recorded. This is written to the {terms().say("{Logbook}")}, and a reminder is shown on the Security pages while it is off.
-                <label htmlFor="st-offr">Why? (at least 10 characters)</label>
+                {P.t41}{terms().say("{Logbook}")}{P.t42}<label htmlFor="st-offr">Why? (at least 10 characters)</label>
                 <input id="st-offr" value={draft.off_reason ?? ""} onChange={(e) => set((s) => { s.off_reason = e.target.value; return s; })} />
               </div>
             )}
-            <label className="st-lockl"><input type="checkbox" checked={lockOf("off")} onChange={(e) => lock("off", e.target.checked)} /> Lock: nothing below may switch them off</label>
+            <label className="st-lockl"><input type="checkbox" checked={lockOf("off")} onChange={(e) => lock("off", e.target.checked)} /> {P.t43}</label>
           </fieldset>
           <fieldset>
             <legend>Checks</legend>
             <table className="table st-edit-table">
-              <thead><tr><th scope="col">Check</th><th scope="col">State</th><th scope="col">Lock</th></tr></thead>
+              <thead><tr><ThCol>Check</ThCol><ThCol>State</ThCol><ThCol>Lock</ThCol></tr></thead>
               <tbody>
                 {profile.checks.filter((c) => c.available).map((c) => (
                   <tr key={c.id}>
-                    <th scope="row">{c.title}<span className="faint small st-hint">{c.id}, by default {c.default}</span></th>
+                    <ThRow>{c.title}<span className="faint small st-hint">{c.id}, by default {c.default}</span></ThRow>
                     <td>
                       <select aria-label={`State of ${c.title}`} value={draft.checks?.[c.id] ?? ""} onChange={(e) => set((s) => { s.checks = { ...(s.checks ?? {}) }; if (e.target.value) s.checks[c.id] = e.target.value as State; else delete s.checks[c.id]; return s; })}>
                         <option value="">inherit</option>{STATE_OPTIONS.filter((o) => o !== "block" || c.gates).map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </td>
-                    <td><label><input type="checkbox" checked={lockOf("check." + c.id)} onChange={(e) => lock("check." + c.id, e.target.checked)} /> <span className="visually-hidden">Lock {c.title}</span>lock</label></td>
+                    <td><label><input type="checkbox" checked={lockOf("check." + c.id)} onChange={(e) => lock("check." + c.id, e.target.checked)} /> <SpanHidden>Lock {c.title}</SpanHidden>lock</label></td>
                   </tr>
                 ))}
               </tbody>
@@ -445,14 +446,14 @@ export function SettingsStandardsPage() {
           </fieldset>
           <fieldset>
             <legend>Exemptions</legend>
-            <p className="faint small">Findings this level accepts, with a reason and an end date. Recorded decisions about single findings are made on the finding itself.</p>
+            <p className="faint small">{P.t44}</p>
             {(draft.ignore ?? []).length === 0 ? <p className="faint">None.</p> : (
               <ul className="st-ex">{(draft.ignore ?? []).map((x, i) => (
                 <li key={i}><strong>{[x.check && "check " + x.check, x.rule && "rule " + x.rule, x.package && "package " + x.package, x.path].filter(Boolean).join(", ")}</strong> until {x.expires} — {x.reason}{" "}
-                  <button type="button" className="btn btn-sm" onClick={() => set((s) => { s.ignore = (s.ignore ?? []).filter((_, j) => j !== i); return s; })}>Remove</button></li>
+                  <BtnSm onClick={() => set((s) => { s.ignore = (s.ignore ?? []).filter((_, j) => j !== i); return s; })}>Remove</BtnSm></li>
               ))}</ul>
             )}
-            <label className="st-lockl"><input type="checkbox" checked={lockOf("ignore")} onChange={(e) => lock("ignore", e.target.checked)} /> Lock: levels below and repository files may not add exemptions</label>
+            <label className="st-lockl"><input type="checkbox" checked={lockOf("ignore")} onChange={(e) => lock("ignore", e.target.checked)} /> {P.t45}</label>
           </fieldset>
           <p className="faint small">Version {cur.version}.</p>
           <button type="button" className="btn" disabled={busy} onClick={save}>Save these settings</button>

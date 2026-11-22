@@ -7,6 +7,7 @@ import { ErrorBox, Link, Mono } from "../components/ui";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { ModeBadge, ResultBadge, ScopeText, ShieldIcon, WaiverForm, WaiverList, type WaiverDraft } from "../components/Policy";
 import { terms } from "../terms";
+import { DivFaintSmall, DivLoading, DivPage, LabelField, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 const POINT_WORDS: Record<string, string> = { run: "run start", deploy: "before deploying", image: "before an image push" };
 
@@ -32,12 +33,12 @@ export function PolicyPage() {
     return by;
   }, [o]);
 
-  if (error && !o) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!o || !waivers) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error && !o) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!o || !waivers) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const total = o.sources.reduce((n, s) => n + s.policies.length, 0);
   const failing = o.sources.filter((s) => s.error);
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title={<>Policy</>} sentence={<>{terms().say("Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the {run} it judged, with the evidence;")} <strong>enforce</strong> {terms().say("stops a {run} or a step,")} <strong>report</strong> only records.</>} actions={<>{o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}</>} />
       <ErrorBox error={error} />
 
@@ -106,7 +107,7 @@ export function PolicyPage() {
           </table>
         </div>
       </section>
-    </div>
+    </DivPage>
   );
 }
 
@@ -119,21 +120,21 @@ function PolicyItem({ p, recent, now }: { p: PolicyDef; recent: PolicyVerdictRow
         <span className="pol-rulelist">{Object.keys(p.rules).map((r) => <Mono key={r}>{r}</Mono>)}</span>
       </div>
       {p.description && <p className="sub small">{p.description}</p>}
-      <div className="small"><span className="faint">Applies to:</span> <ScopeText p={p} /></div>
-      {p.file && <div className="faint small">{p.file}{p.line ? `:${p.line}` : ""}</div>}
+      <div className="small"><SpanFaint>Applies to:</SpanFaint> <ScopeText p={p} /></div>
+      {p.file && <DivFaintSmall>{p.file}{p.line ? `:${p.line}` : ""}</DivFaintSmall>}
       <details className="pol-ev-details">
         <summary>Rules as written</summary>
         <pre className="code">{JSON.stringify(p.rules, null, 2)}</pre>
       </details>
       <div className="pol-recent" aria-label={`Recent verdicts of ${p.name}`}>
-        <span className="faint small">Recent:</span>
-        {recent.length === 0 && <span className="faint small">{terms().say("no {run} judged yet")}</span>}
+        <SpanFaintSmall>Recent:</SpanFaintSmall>
+        {recent.length === 0 && <SpanFaintSmall>{terms().say("no {run} judged yet")}</SpanFaintSmall>}
         {recent.map((r) => (
           <Link key={r.run_id + r.at + (r.step ?? "")} href={`/runs/${r.run_id}?tab=policy`} className="pol-recent-item">
             <ResultBadge verdict={r.verdict} mode={r.mode} />
             <span>{r.project} #{r.run_number}</span>
-            <span className="faint">{r.step ? `${r.step}${r.environment ? ` → ${r.environment}` : ""}` : POINT_WORDS[r.point]}</span>
-            <span className="faint" title={clock(r.at)}>{ago(r.at, now)}</span>
+            <SpanFaint>{r.step ? `${r.step}${r.environment ? ` → ${r.environment}` : ""}` : POINT_WORDS[r.point]}</SpanFaint>
+            <SpanFaint title={clock(r.at)}>{ago(r.at, now)}</SpanFaint>
           </Link>
         ))}
       </div>
@@ -153,17 +154,17 @@ function GrantPicker({ projects, rules, onPick }: { projects: string[]; rules: R
       e.preventDefault();
       onPick({ project, policy, rule, deployRule: deployRules.includes(rule) });
     }}>
-      <label className="field"><span>{terms().say("{Project}")}</span>
+      <LabelField><span>{terms().say("{Project}")}</span>
         <select value={project} onChange={(e) => setProject(e.target.value)}>{projects.map((p) => <option key={p}>{p}</option>)}</select>
-      </label>
-      <label className="field"><span>Policy</span>
+      </LabelField>
+      <LabelField><span>Policy</span>
         <select value={policy} onChange={(e) => { setPolicy(e.target.value); setRule((rules[e.target.value] ?? [])[0] ?? ""); }}>
           {names.map((n) => <option key={n}>{n}</option>)}
         </select>
-      </label>
-      <label className="field"><span>Rule</span>
+      </LabelField>
+      <LabelField><span>Rule</span>
         <select value={rule} onChange={(e) => setRule(e.target.value)}>{(rules[policy] ?? []).map((r) => <option key={r}>{r}</option>)}</select>
-      </label>
+      </LabelField>
       <button type="submit" className="btn" disabled={!project || !policy || !rule}>Waive a rule…</button>
     </form>
   );

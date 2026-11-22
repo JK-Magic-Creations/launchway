@@ -21,6 +21,7 @@ import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
 import { currentViewTitle, onViewTitle } from "../urlState";
+import { DivPage, PSub } from "../kit/bits";
 
 // The table that says which page a path opens is a chunk of its own, with the pages it names: the first screen needs only the shell.
 const PageFor = lazy(() => import("../nav/pages").then((m) => ({ default: m.PageFor })));
@@ -159,7 +160,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <Route ctx={ctx} on={area} needs={badN + warnN} />
           <DoBarButton onOpen={() => setLayer("do")} />
           <div className="top-r">
-            <Suspense fallback={null}><InboxLink current={path === "/inbox"} /></Suspense>
+            <span className="top-inbox"><Suspense fallback={null}><InboxLink current={path === "/inbox"} /></Suspense></span>
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
             <a className={"btn btn-sm" + (isLearn(path) ? " on" : "")} href="/learn" onClick={onLink} aria-label={`${terms().label("learn")}: the documentation of this release`} aria-current={isLearn(path) ? "page" : undefined} data-act="learn"><Icon name="book" size="s" /><span className="hide-s">{terms().say("{Learn}")}</span></a>
             <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")} data-act="guide"><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>
@@ -177,7 +178,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           )}
           <div className="frame-head"><Breadcrumbs path={path} label={crumb} /></div>
           <CrumbLabelContext.Provider value={setCrumb}>
-            <Suspense fallback={<div className="page"><p className="sub">Loading…</p></div>}>
+            <Suspense fallback={<DivPage><PSub role="status">Loading…</PSub></DivPage>}>
               <ErrorBoundary name="This page" resetKey={path}><PageFor path={path} approvals={approvals} /></ErrorBoundary>
             </Suspense>
           </CrumbLabelContext.Provider>

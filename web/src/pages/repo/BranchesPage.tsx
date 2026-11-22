@@ -9,6 +9,9 @@ import { Dialog } from "../../kit/Dialog";
 import { EmptyState } from "../../kit/layout";
 import { Chip } from "../../kit/Status";
 import { CopyButton, MsgLink, RefSwitcher, RepoFrame, useRepo, when } from "./common";
+import { prose } from "../../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivLoading, LabelField, SpanFaint, SpanMono, ThCol } from "../../kit/bits";
+const P = await prose("pages.repo.BranchesPage");
 
 /** The branches of a repository: how far each is from the default branch, who changed it last, whether it is protected,
  * its open pull request; make one, delete one (and bring it back, with the commit named). */
@@ -51,10 +54,10 @@ export function BranchesPage({ path }: { path: string }) {
     try { await browseApi.makeBranch(path, notice.name, notice.was); announce(`Brought back ${notice.name}`); setNotice(null); load(); } catch (err) { setError(err); } finally { setBusy(false); }
   };
   return (
-    <RepoFrame path={path} tab="branches" title="Branches" sentence={<>How far each branch is from <span className="mono">{def || "the default branch"}</span>, counted in commits.</>} error={error}>
+    <RepoFrame path={path} tab="branches" title="Branches" sentence={<>How far each branch is from <SpanMono>{def || "the default branch"}</SpanMono>, counted in commits.</>} error={error}>
       {notice && (
         <div className="callout" role="status">
-          <p>Deleted <span className="mono">{notice.name}</span>. It pointed at <span className="mono">{notice.was}</span>, so nothing is lost: <button type="button" className="btn btn-sm" disabled={busy} onClick={restore}>Bring it back</button>
+          <p>Deleted <SpanMono>{notice.name}</SpanMono>. It pointed at <SpanMono>{notice.was}</SpanMono>, so nothing is lost: <BtnSm disabled={busy} onClick={restore}>Bring it back</BtnSm>
             {" "}or run <span className="mono small">git push origin {notice.was.slice(0, 10)}:refs/heads/{notice.name}</span> <CopyButton text={`git push origin ${notice.was}:refs/heads/${notice.name}`} what="the command" /></p>
         </div>
       )}
@@ -63,44 +66,44 @@ export function BranchesPage({ path }: { path: string }) {
       </div>
       {canWrite && (
         <form className="card branch-new" onSubmit={make} aria-label="Make a branch">
-          <label className="field"><span>New branch name</span><input value={name} required onChange={(e) => setName(e.target.value)} placeholder="feature/short-name" /></label>
+          <LabelField><span>New branch name</span><input value={name} required onChange={(e) => setName(e.target.value)} placeholder="feature/short-name" /></LabelField>
           <div className="field"><span>Start from</span><RefSwitcher repo={path} current={base || "…"} onPick={setFrom} label="Start from" /></div>
-          <button type="submit" className="btn btn-primary" disabled={busy || !name.trim() || !base}>Make branch</button>
+          <BtnPrimary disabled={busy || !name.trim() || !base}>Make branch</BtnPrimary>
         </form>
       )}
-      {items && items.length === 0 && <EmptyState title={q ? "No branch matches" : "No branches yet"}>{q ? `Nothing is called like “${q}”.` : "Push a first commit and its branch appears here."}</EmptyState>}
+      {items && items.length === 0 && <EmptyState title={q ? "No branch matches" : "No branches yet"}>{q ? `Nothing is called like “${q}”.` : P.t0}</EmptyState>}
       {items && items.length > 0 && (
         <section className="card" aria-label="Branches">
           <table className="tree-table branch-table">
             <caption className="sr-only">Branches, newest first</caption>
-            <thead><tr><th scope="col">Branch</th><th scope="col">Last commit</th><th scope="col">Behind / ahead</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><ThCol>Branch</ThCol><ThCol>Last commit</ThCol><ThCol>Behind / ahead</ThCol><ThCol><span className="sr-only">Actions</span></ThCol></tr></thead>
             <tbody>
               {items.map((b) => (
                 <tr key={b.name}>
                   <td><Link href={codeHref(path, b.name)} className="mono">{b.name}</Link> {b.default && <Chip>default</Chip>} {b.protected && <Chip tone="warn">protected</Chip>}
                     {b.open_pull ? <> <Link href={`/repositories/${path}/pulls/${b.open_pull}`}>pull request #{b.open_pull}</Link></> : null}</td>
-                  <td className="msg-cell"><MsgLink href={commitHref(path, b.commit)} text={b.subject || "(no message)"} /><div className="faint small">{b.author}, {when(b.committed_at)}</div></td>
-                  <td className="mono small">{b.default ? <span className="faint">the default</span> : b.ahead < 0 ? "unknown" : `${b.behind} behind, ${b.ahead} ahead`}</td>
+                  <td className="msg-cell"><MsgLink href={commitHref(path, b.commit)} text={b.subject || "(no message)"} /><DivFaintSmall>{b.author}, {when(b.committed_at)}</DivFaintSmall></td>
+                  <td className="mono small">{b.default ? <SpanFaint>the default</SpanFaint> : b.ahead < 0 ? "unknown" : `${b.behind} behind, ${b.ahead} ahead`}</td>
                   <td className="row-actions">
                     {!b.default && <Link href={compareHref(path, b.name, def)} className="btn btn-sm">Compare<span className="sr-only"> {b.name}</span></Link>}
-                    {canWrite && !b.default && <button type="button" className="btn btn-sm" onClick={() => { setRenaming(b); setNewName(b.name); setError(null); }}>Rename<span className="sr-only"> {b.name}</span></button>}
-                    {canWrite && !b.default && <button type="button" className="btn btn-sm" onClick={() => setAsking(b)}>Delete<span className="sr-only"> {b.name}</span></button>}
+                    {canWrite && !b.default && <BtnSm onClick={() => { setRenaming(b); setNewName(b.name); setError(null); }}>Rename<span className="sr-only"> {b.name}</span></BtnSm>}
+                    {canWrite && !b.default && <BtnSm onClick={() => setAsking(b)}>Delete<span className="sr-only"> {b.name}</span></BtnSm>}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {total > items.length && <p className="faint small code-note">The newest {items.length} of {total} are shown; type in the box to find the others.</p>}
+          {total > items.length && <p className="faint small code-note">The newest {items.length} of {total} {P.t1}</p>}
         </section>
       )}
-      {!items && !error && <div className="loading">Loading…</div>}
+      {!items && !error && <DivLoading>Loading…</DivLoading>}
       {renaming && (
         <Dialog label={`Rename ${renaming.name}`} onClose={() => setRenaming(null)}>
           <h2 className="h-sm">Rename {renaming.name}</h2>
           <form onSubmit={(e) => { e.preventDefault(); void rename(renaming); }}>
-            <label className="field"><span>New name</span><input value={newName} onChange={(e) => setNewName(e.target.value)} data-autofocus /></label>
-            <p className="faint small">{renaming.protected ? "It is protected: only the repository's administrators can rename it. " : ""}Pull requests and runs that name {renaming.name} are not moved, and everyone with a clone renames theirs with <span className="mono">git branch -m</span>.</p>
-            <div className="actions"><button type="submit" className="btn btn-primary" disabled={busy || !newName.trim() || newName.trim() === renaming.name}>{busy ? "Renaming…" : "Rename branch"}</button><button type="button" className="btn" onClick={() => setRenaming(null)}>Cancel</button></div>
+            <LabelField><span>New name</span><input value={newName} onChange={(e) => setNewName(e.target.value)} data-autofocus /></LabelField>
+            <p className="faint small">{renaming.protected ? P.t2 : ""}{P.t3}{renaming.name} {P.t4}<SpanMono>git branch -m</SpanMono>.</p>
+            <div className="actions"><BtnPrimary disabled={busy || !newName.trim() || newName.trim() === renaming.name}>{busy ? "Renaming…" : "Rename branch"}</BtnPrimary><button type="button" className="btn" onClick={() => setRenaming(null)}>Cancel</button></div>
           </form>
           <ErrorBox error={error} />
         </Dialog>
@@ -108,9 +111,9 @@ export function BranchesPage({ path }: { path: string }) {
       {asking && (
         <Dialog label={`Delete ${asking.name}`} onClose={() => setAsking(null)}>
           <h2 className="h-sm">Delete {asking.name}?</h2>
-          <p>It points at <span className="mono">{asking.commit}</span>{asking.ahead > 0 ? `, which has ${asking.ahead} ${asking.ahead === 1 ? "commit" : "commits"} that ${def} lacks` : ""}.
-            {asking.protected ? " It is protected: only the repository's administrators can delete it." : ""} The commits stay until the repository is cleaned up, and you will be shown how to bring the branch back.</p>
-          {asking.open_pull ? <p className="faint small">Pull request #{asking.open_pull} is open from it and will be closed.</p> : null}
+          <p>It points at <SpanMono>{asking.commit}</SpanMono>{asking.ahead > 0 ? `, which has ${asking.ahead} ${asking.ahead === 1 ? "commit" : "commits"} that ${def} lacks` : ""}.
+            {asking.protected ? P.t5 : ""} {P.t6}</p>
+          {asking.open_pull ? <p className="faint small">Pull request #{asking.open_pull} {P.t7}</p> : null}
           <div className="actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={() => del(asking)} data-autofocus>{busy ? "Deleting…" : "Delete branch"}</button><button type="button" className="btn" onClick={() => setAsking(null)}>Cancel</button></div>
           <ErrorBox error={error} />
         </Dialog>
@@ -151,46 +154,46 @@ export function TagsPage({ path }: { path: string }) {
     try { const r = await browseApi.deleteTag(path, t.name); setNotice(r); announce(`Deleted the tag ${t.name}`); setAsking(null); await load(); } catch (err) { setError(err); setAsking(null); } finally { setBusy(false); }
   };
   return (
-    <RepoFrame path={path} tab="tags" title="Tags" sentence="Names for commits that matter, such as a release." error={error}>
+    <RepoFrame path={path} tab="tags" title="Tags" sentence={P.t8} error={error}>
       {notice && (
         <div className="callout" role="status">
-          <p>Deleted the tag <span className="mono">{notice.name}</span>. It pointed at <span className="mono">{notice.was}</span>: <span className="mono small">git push origin {notice.was.slice(0, 10)}:refs/tags/{notice.name}</span> brings it back.</p>
+          <p>Deleted the tag <SpanMono>{notice.name}</SpanMono>. It pointed at <SpanMono>{notice.was}</SpanMono>: <span className="mono small">git push origin {notice.was.slice(0, 10)}:refs/tags/{notice.name}</span> brings it back.</p>
         </div>
       )}
       {canWrite && (
         <form className="card branch-new" onSubmit={make} aria-label="Make a tag">
-          <label className="field"><span>New tag name</span><input value={name} required onChange={(e) => setName(e.target.value)} placeholder="v1.0.0" /></label>
+          <LabelField><span>New tag name</span><input value={name} required onChange={(e) => setName(e.target.value)} placeholder="v1.0.0" /></LabelField>
           <div className="field"><span>Tag this commit or branch</span><RefSwitcher repo={path} current={base || "…"} onPick={setFrom} label="Tag this" /></div>
-          <button type="submit" className="btn btn-primary" disabled={busy || !name.trim() || !base}>Make tag</button>
+          <BtnPrimary disabled={busy || !name.trim() || !base}>Make tag</BtnPrimary>
         </form>
       )}
       <div className="code-bar"><label className="field grow"><span className="sr-only">Find a tag</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a tag" aria-label="Find a tag" /></label></div>
-      {items && items.length === 0 && <EmptyState title={q ? "No tag matches" : "No tags yet"}>{q ? `Nothing is called like “${q}”.` : <>{canWrite ? "Make one above, or tag " : "Tag "}a commit and push it: <span className="mono">git tag -a v1.0 -m "First release" &amp;&amp; git push origin v1.0</span></>}</EmptyState>}
+      {items && items.length === 0 && <EmptyState title={q ? "No tag matches" : "No tags yet"}>{q ? `Nothing is called like “${q}”.` : <>{canWrite ? "Make one above, or tag " : "Tag "}a commit and push it: <SpanMono>{P.t9}</SpanMono></>}</EmptyState>}
       {items && items.length > 0 && (
         <section className="card" aria-label="Tags">
           <table className="tree-table">
             <caption className="sr-only">Tags, newest first</caption>
-            <thead><tr><th scope="col">Tag</th><th scope="col">Message</th><th scope="col">Commit</th><th scope="col">Date</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><ThCol>Tag</ThCol><ThCol>Message</ThCol><ThCol>Commit</ThCol><ThCol>Date</ThCol><ThCol><span className="sr-only">Actions</span></ThCol></tr></thead>
             <tbody>
               {items.map((t) => (
                 <tr key={t.name}>
                   <td><Link href={codeHref(path, t.name)} className="mono">{t.name}</Link> {t.annotated && <Chip>annotated</Chip>}<SignatureBadge result={sigs[t.sha]} quiet /></td>
-                  <td>{t.annotated ? <span className="tag-msg">{t.message || t.subject}</span> : <span className="faint">{t.subject}</span>}{t.tagger && <div className="faint small">tagged by {t.tagger}</div>}</td>
+                  <td>{t.annotated ? <span className="tag-msg">{t.message || t.subject}</span> : <SpanFaint>{t.subject}</SpanFaint>}{t.tagger && <DivFaintSmall>tagged by {t.tagger}</DivFaintSmall>}</td>
                   <td><Link href={commitHref(path, t.commit)} className="mono">{t.commit.slice(0, 8)}</Link></td>
                   <td className="faint small">{when(t.committed_at)}</td>
-                  <td className="row-actions">{canWrite && <button type="button" className="btn btn-sm" onClick={() => setAsking(t)}>Delete<span className="sr-only"> {t.name}</span></button>}</td>
+                  <td className="row-actions">{canWrite && <BtnSm onClick={() => setAsking(t)}>Delete<span className="sr-only"> {t.name}</span></BtnSm>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {total > items.length && <p className="faint small code-note">The newest {items.length} of {total} are shown; type in the box to find the others.</p>}
+          {total > items.length && <p className="faint small code-note">The newest {items.length} of {total} {P.t1}</p>}
         </section>
       )}
-      {!items && !error && <div className="loading">Loading…</div>}
+      {!items && !error && <DivLoading>Loading…</DivLoading>}
       {asking && (
         <Dialog label={`Delete the tag ${asking.name}`} onClose={() => setAsking(null)}>
           <h2 className="h-sm">Delete the tag {asking.name}?</h2>
-          <p>It points at <span className="mono">{asking.commit}</span>. The commit stays; only the name goes, and you will be shown how to bring it back. Anyone who has fetched the tag keeps it until they delete it themselves.</p>
+          <p>It points at <SpanMono>{asking.commit}</SpanMono>{P.t10}</p>
           <div className="actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={() => del(asking)} data-autofocus>{busy ? "Deleting…" : "Delete tag"}</button><button type="button" className="btn" onClick={() => setAsking(null)}>Cancel</button></div>
         </Dialog>
       )}

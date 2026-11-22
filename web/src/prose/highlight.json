@@ -1,0 +1,15 @@
+{
+ "t0": "const let var function return if else for while do switch case break continue new this class extends import export from default async await try catch finally throw typeof instanceof in of null undefined true false void delete interface type enum implements public private protected readonly static as",
+ "t1": "package import func return if else for range switch case default break continue go defer select chan map struct interface type var const fallthrough goto nil true false iota",
+ "t2": "package import class interface extends implements public private protected static final abstract void int long double float boolean char byte short new return if else for while do switch case default break continue try catch finally throw throws this super null true false enum instanceof synchronized",
+ "t3": "auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while NULL true false",
+ "t4": "fn let mut const static struct enum impl trait pub use mod crate self super match if else for while loop break continue return as in ref move async await dyn where type unsafe true false",
+ "t5": "namespace using class struct interface public private protected static void int long string bool new return if else for foreach while do switch case break continue try catch finally throw null true false var async await",
+ "t6": "function class public private protected static return if else elseif foreach for while echo new use namespace null true false array",
+ "t7": "def class return if elif else for while in not and or is import from as with try except finally raise pass break continue lambda None True False yield global nonlocal async await",
+ "t8": "def class module end if elsif else unless while until for in do begin rescue ensure return yield require include nil true false self then case when",
+ "t9": "if then else elif fi for while do done case esac function in echo export local return exit set unset source true false",
+ "t10": "ifeq ifneq else endif include define endef",
+ "t11": "FROM RUN CMD LABEL EXPOSE ENV ADD COPY ENTRYPOINT VOLUME USER WORKDIR ARG ONBUILD",
+ "t12": "select from where insert into values update set delete create table drop alter index primary key not null and or join left right inner outer on group by order limit as in is distinct union all case when then else end"
+}

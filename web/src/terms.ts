@@ -9,6 +9,8 @@
 // (loadOverview calls setVocabulary) and web/src/vocabulary.json is a generated mirror of it, loaded lazily at
 // start so the words never weigh on the first download (loadVocabulary).
 
+import vocabularyUrl from "./vocabulary.json?url";
+import { readJson } from "./readJson";
 import { useSyncExternalStore } from "react";
 
 export type SetId = "aviation" | "business";
@@ -43,9 +45,9 @@ export function setVocabulary(words: readonly WordDef[], groups?: readonly Group
   listeners.forEach((l) => l());
 }
 
-/** loadVocabulary reads the generated mirror (a separate chunk, so it is not part of the first download). */
+/** loadVocabulary reads the generated mirror (a file beside the scripts, so it is not part of the first download). */
 export function loadVocabulary(): Promise<void> {
-  return import("./vocabulary.json").then((m) => { const d = (m.default ?? m) as { groups: Group[]; words: WordDef[] }; setVocabulary(d.words, d.groups); });
+  return readJson<{ groups: Group[]; words: WordDef[] }>(vocabularyUrl).then((d) => setVocabulary(d.words, d.groups));
 }
 
 export const SETS: Record<SetId, { name: string; blurb: string }> = {

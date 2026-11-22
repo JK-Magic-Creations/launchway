@@ -5,6 +5,7 @@ import { ErrorBox, Link } from "../../components/ui";
 import { Chip } from "../../kit/Status";
 import type { FileChange, Patch } from "../../pullsApi";
 import "../../styles/pulls.css";
+import { BtnSm } from "../../kit/bits";
 
 function ChangedFile({ repo, from, to, f, startOpen }: { repo: string; from: string; to: string; f: FileChange; startOpen: boolean }) {
   const [open, setOpen] = useState(startOpen);
@@ -20,12 +21,12 @@ function ChangedFile({ repo, from, to, f, startOpen }: { repo: string; from: str
         <Chip>{f.status}</Chip>
         {!f.binary && <span className="small"><span className="pr-add">+{f.additions}</span> <span className="pr-del">-{f.deletions}</span></span>}
         {f.status !== "deleted" && <Link href={codeHref(repo, to, f.path)} className="btn btn-sm">View file<span className="sr-only"> {f.path}</span></Link>}
-        <button type="button" className="btn btn-sm" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}<span className="sr-only"> changes to {f.path}</span></button>
+        <BtnSm aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}<span className="sr-only"> changes to {f.path}</span></BtnSm>
       </header>
       <div id={id}>
         <ErrorBox error={error} />
         {open && f.binary && <p className="pr-note faint">A binary file: there is no text to show.</p>}
-        {open && patch?.held && <p className="pr-note">This file's patch is large and was not loaded. <button type="button" className="btn btn-sm" onClick={() => load(true)}>Load anyway</button></p>}
+        {open && patch?.held && <p className="pr-note">This file's patch is large and was not loaded. <BtnSm onClick={() => load(true)}>Load anyway</BtnSm></p>}
         {open && patch && !patch.held && patch.diff && <DiffTable path={f.path} diff={patch.diff} />}
         {open && patch?.truncated && <p className="pr-note faint">The patch was cut at the size limit.</p>}
       </div>

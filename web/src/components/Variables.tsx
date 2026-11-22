@@ -9,6 +9,9 @@ import { variablesApi, VAR_TYPES, wireValue, type RecordedVar, type VarEntry, ty
 import { ErrorBox, Mono } from "./ui";
 import { onLink } from "../router";
 import "../variables.css";
+import { prose } from "../prose";
+import { BtnPrimary, DivActions, PSub } from "../kit/bits";
+const P = await prose("components.Variables");
 
 /** The words for a level, in this installation's terms: "Wing", "Squadron payments", "Project cart-api". */
 export function levelWord(level: VarLevel, scope?: string): string {
@@ -37,7 +40,7 @@ function Value({ v }: { v: Pick<VarResolved, "type" | "display"> }) {
   return (
     <span className="vr-val">
       <Mono>{v.display === "" ? "(empty)" : v.display}</Mono>
-      {v.type === "secret" && <span className="vr-ref" title={terms().say("A secret is only ever a reference; a {runner} looks it up when a step starts")}>reference</span>}
+      {v.type === "secret" && <span className="vr-ref" title={terms().say(P.t0)}>reference</span>}
     </span>
   );
 }
@@ -59,12 +62,12 @@ export function Chain({ chain }: { chain: VarLink[] | null | undefined }) {
   // The server sends null, not an empty list, for a variable nothing overrides.
   if (!chain || chain.length < 2) return null;
   return (
-    <ol className="vr-chain" aria-label="Values this one overrides, nearest first">
+    <ol className="vr-chain" aria-label={P.t1}>
       {chain.slice(1).map((l, i) => (
         <li key={i}>
           <s><Mono>{l.display === "" ? "(empty)" : l.display}</Mono></s>
           <span className="vr-from">{sourceWord(l)}</span>
-          {l.ignored && <span className="vr-ignored">{l.ignored}; kept, and counts again if unlocked</span>}
+          {l.ignored && <span className="vr-ignored">{l.ignored}{P.t2}</span>}
         </li>
       ))}
     </ol>
@@ -77,8 +80,7 @@ function FirstUse({ level, scope }: { level: VarLevel; scope?: string }) {
   return (
     <div className="vr-first">
       <strong>No variables here yet.</strong>
-      <p>{terms().say("A variable is a named setting, such as a {registry} or a number of replicas. Set one at")} {here} and everything below it gets it;
-        a nearer level can set the same name to override it, and a lock keeps it from being overridden. You need none of this to run a pipeline.</p>
+      <p>{terms().say(P.t3)} {here} {P.t4}</p>
     </div>
   );
 }
@@ -89,7 +91,7 @@ export function RuleNote({ rule }: { rule: string }) {
     <details className="vr-rule">
       <summary>How the nearest setting wins</summary>
       <p>{rule}</p>
-      <p>In code terms: the template's inputs are the interface, a variable at a wider level is the abstract class, a nearer one is the class that overrides it, and a lock is <code>final</code>.</p>
+      <p>{P.t5}<code>final</code>.</p>
     </details>
   );
 }
@@ -132,14 +134,14 @@ export function VariablesPanel({ level, scope, environment, compact, names, onCh
   };
 
   if (error && !view) return <ErrorBox error={error} />;
-  if (!view) return <p className="sub">Loading variables…</p>;
+  if (!view) return <PSub>Loading variables…</PSub>;
   return (
     <div className={"vr" + (compact ? " vr-compact" : "")}>
       {!compact && <RuleNote rule={view.rule} />}
       <ErrorBox error={error} />
       {said && <p className="vr-said" role="status">{said}</p>}
       {shown.length === 0 && (compact
-        ? <p className="sub">No variables in effect{names ? " for this pipeline" : ""}. {level === "project" && <a href={`/projects/${encodeURIComponent(scope ?? "")}/variables`} onClick={onLink}>Add one</a>}</p>
+        ? <PSub>No variables in effect{names ? " for this pipeline" : ""}. {level === "project" && <a href={`/projects/${encodeURIComponent(scope ?? "")}/variables`} onClick={onLink}>Add one</a>}</PSub>
         : <FirstUse level={level} scope={scope} />)}
       <ul className="vr-list">
         {shown.map((e) => (
@@ -197,13 +199,13 @@ function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLeve
     try {
       await variablesApi.set({ name, level, scope, environment: env || undefined, type, of: of || undefined, value: wireValue(type, text), description: desc || undefined });
       onSaved(name);
-    } catch (e) { setError(e instanceof SyntaxError ? new ApiError(400, "The value is not valid for this type: " + e.message) : e); setBusy(false); }
+    } catch (e) { setError(e instanceof SyntaxError ? new ApiError(400, P.t6 + e.message) : e); setBusy(false); }
   };
   return (
     <Dialog label={base ? `Set ${base.name}` : "Add a variable"} onClose={onClose}>
       <form className="vr-form" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <h2>{base ? (base.set_here ? `Change ${base.name}` : `Override ${base.name}`) : "Add a variable"} at {levelWord(level, scope)}</h2>
-        {base && !base.set_here && <p className="sub">Now it is {base.display} from {sourceWord(base.from)}. Setting it here makes this level's value win below it.</p>}
+        {base && !base.set_here && <PSub>Now it is {base.display} from {sourceWord(base.from)}{P.t7}</PSub>}
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} disabled={!!base} placeholder="registry" pattern="[a-z][a-z0-9_]{0,39}" required data-autofocus /></label>
         <label>Type
           <select value={type} onChange={(e) => setType(e.target.value as VarType)} disabled={typeLocked}>
@@ -216,14 +218,14 @@ function EditVariable({ level, scope, base, onClose, onSaved }: { level: VarLeve
             ? <select value={text || "true"} onChange={(e) => setText(e.target.value)}><option value="true">Yes</option><option value="false">No</option></select>
             : <input value={text} onChange={(e) => setText(e.target.value)} placeholder={type === "secret" ? "vault:apps/registry#token" : ""} required />}
         </label>
-        {type === "secret" && <p className="sub">{terms().say("Only the reference is kept. The secret itself stays in your secret store, and a {runner} looks it up when a step starts.")}</p>}
-        <label>{terms().say("Only for an {environment} (optional)")}<input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="production" /></label>
+        {type === "secret" && <PSub>{terms().say(P.t8)}</PSub>}
+        <label>{terms().say(P.t9)}<input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="production" /></label>
         <label>What it is for (optional)<input value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={200} /></label>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
-        </div>
+          <BtnPrimary disabled={busy}>{busy ? "Saving…" : "Save"}</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -239,12 +241,12 @@ function LockDialog({ entry, onClose, onLock }: { entry: VarEntry; onClose: () =
     <Dialog label={`Lock ${entry.name}`} onClose={onClose}>
       <form className="vr-form" onSubmit={(e) => { e.preventDefault(); onLock(reason); }}>
         <h2>Lock {entry.name}</h2>
-        <p className="sub">{terms().say("Nobody below this level can change it, a pipeline file or a {run} included. Settings below it are kept but ignored, and count again if you unlock it.")}</p>
-        <label>Why (shown to everyone it stops)<input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} required data-autofocus /></label>
-        <div className="dialog-actions">
+        <PSub>{terms().say(P.t10)}</PSub>
+        <label>{P.t11}<input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} required data-autofocus /></label>
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary">Lock</button>
-        </div>
+          <BtnPrimary>Lock</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -264,8 +266,8 @@ export function RunVariables({ runId }: { runId: string }) {
   return (
     <section className="card vr vr-compact" aria-labelledby="runvars-title">
       <h2 id="runvars-title">Variables in effect</h2>
-      <p className="sub">{terms().say("What this {run} used, as recorded when it was created. Changing a variable later does not change it.")}</p>
-      {rec.rerun_of && <p className="sub">A re-run: it used the variables of the run it repeats, as recorded.</p>}
+      <PSub>{terms().say(P.t12)}</PSub>
+      {rec.rerun_of && <PSub>{P.t13}</PSub>}
       <ul className="vr-list">
         {shown.map((e) => (
           <li key={e.name + (e.environment ?? "")} className="vr-item">

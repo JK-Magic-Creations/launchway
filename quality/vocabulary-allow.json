@@ -953,6 +953,12 @@
       "rule": "word:project",
       "contains": "project",
       "why": "An outside host's own word for a repository or its settings, quoted from its provider's declaration (a Launchway project is a Flight everywhere else). The page is generated."
+    },
+    {
+      "path": "web/src/pages/Registry.tsx",
+      "rule": "word:registry/2",
+      "contains": "registry.enabled",
+      "why": "The name of a configuration key, quoted."
     }
   ]
 }

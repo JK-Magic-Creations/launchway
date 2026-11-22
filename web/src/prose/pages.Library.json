@@ -1,0 +1,9 @@
+{
+ "t0": "The building blocks, to look things up. Every name opens its own page.",
+ "t1": "Ready-made pipelines, each in Git and pinned by version.",
+ "t2": "What your {runs} built, found by digest, repository or {project}.",
+ "t3": "What is inside your software, found by name across every {run}.",
+ "t4": "A template is a ready-made part of a pipeline, kept in a library repository in Git. A pipeline pins the version it uses, so a run can always be repeated exactly.",
+ "t5": "A library is a Git repository of templates. Once the server reads one, its templates are listed here with their versions.",
+ "t6": "This library has no templates at "
+}

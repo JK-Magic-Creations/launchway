@@ -9,6 +9,9 @@ import { useHostedRepos } from "../hostedRepos";
 import { terms } from "../../terms";
 import { FORMATS, importApi, type Finding, type ImportResult, type Plan } from "../../importApi";
 import "../../styles/import.css";
+import { prose } from "../../prose";
+import { DivLoading, DivPage, SpanFaintSmall } from "../../kit/bits";
+const P = await prose("pages.import.ImportWizard");
 
 // Import an existing pipeline: pick the pipeline files of another system (found in the Flight's repository, or pasted),
 // read the proposal beside the old text with each finding anchored to its line, fix the common gaps, and commit the result
@@ -42,9 +45,9 @@ export default function ImportPipelinePage({ name }: { name: string }) {
   };
 
   const head = <PageHead eyebrow={<a href={`/projects/${encodeURIComponent(name)}/pipeline`}>{name}</a>} title="Import an existing pipeline"
-    sentence={t.say("Bring the pipeline files another system left in this {project}'s repository, or paste them. Nothing is changed until you commit the result.")} />;
+    sentence={t.say(P.t0)} />;
   if (error && !project) return <div className="page imp-page">{head}<ErrorBox error={error} /></div>;
-  if (!project) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!project) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
 
   const pick = (src: Source[]) => { setFiles(src); setFixes({ templates: {}, secretKeys: {}, defaultImage: "" }); void run(src, dry, { templates: {}, secretKeys: {}, defaultImage: "" }, format); };
   return (
@@ -109,9 +112,9 @@ function Chooser({ repoPath, branch, onPick, busy, format, setFormat }: { repoPa
       <div role="group" aria-label="Where the files are" className="imp-tabs">
         <Button kind={mode === "repo" ? "pri" : undefined} sm onClick={() => setMode("repo")} disabled={!repoPath} aria-pressed={mode === "repo"}>From the repository</Button>
         <Button kind={mode === "paste" ? "pri" : undefined} sm onClick={() => setMode("paste")} aria-pressed={mode === "paste"}>Paste</Button>
-        {!repoPath && <span className="faint small"> Launchway can list files only in repositories it hosts.</span>}
+        {!repoPath && <SpanFaintSmall> {P.t1}</SpanFaintSmall>}
       </div>
-      {mode === "repo" && (found === null ? <p className="faint">Looking for pipeline files…</p> : found.length === 0 ? <p>No pipeline files of a known format were found on <code>{branch}</code>. Paste one instead.</p> : (
+      {mode === "repo" && (found === null ? <p className="faint">Looking for pipeline files…</p> : found.length === 0 ? <p>{P.t2}<code>{branch}</code>. Paste one instead.</p> : (
         <fieldset className="imp-files"><legend>Pipeline files found on <code>{branch}</code></legend>
           {found.map((p) => <label key={p}><input type="checkbox" checked={!!chosen[p]} onChange={(e) => setChosen({ ...chosen, [p]: e.target.checked })} /> <code>{p}</code></label>)}
         </fieldset>
@@ -124,7 +127,7 @@ function Chooser({ repoPath, branch, onPick, busy, format, setFormat }: { repoPa
               {FORMATS.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
             </select>
           </label>
-          <TextInput label="File name in the repository" mono value={path} onChange={setPath} help="The importer tells the format from the name, so give the name the file had." />
+          <TextInput label="File name in the repository" mono value={path} onChange={setPath} help={P.t3} />
           <label className="imp-field">The file's text
             <textarea className="mono imp-paste" rows={12} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
           </label>
@@ -159,23 +162,23 @@ function PlanView({ plan, sources, project, dry, busy, fixes, onDry, onFix }: {
         <b>{counts.exact}</b> converted exactly, <b>{counts.different}</b> converted with a difference, <b className={counts.manual ? "bad" : ""}>{counts.manual}</b> need a person.
       </p>
       <label className="imp-switch"><input type="checkbox" checked={dry} onChange={(e) => onDry(e.target.checked)} disabled={busy} />{" "}
-        Run beside the old system: switch off the steps that push, release or deploy until <code>enable_delivery</code> is true</label>
+        {P.t4}<code>enable_delivery</code> is true</label>
       <div className="imp-sides">
         <Pane title="The old file" id="imp-old" text={src?.content ?? ""} marked={mark.old} preRef={oldRef} />
-        <Pane title="The proposed Launchway pipeline" id="imp-new" text={plan.pipeline} marked={mark.neu} />
+        <Pane title={P.t5} id="imp-new" text={plan.pipeline} marked={mark.neu} />
       </div>
       <h3 className="h-sm">Findings</h3>
       <FindingsList findings={plan.findings} onJump={jump} />
       {(plan.secrets.length > 0 || templated.length > 0 || needsImage) && (
         <fieldset className="imp-fixes"><legend>Fix the common gaps</legend>
           {plan.secrets.map((n) => (
-            <TextInput key={n} label={`Secret ${n}: the name to create it under`} mono value={fixes.secretKeys[n] ?? n} onChange={(v) => onFix({ ...fixes, secretKeys: { ...fixes.secretKeys, [n]: v } })} help="A name only. The value is never read or shown; create it in the Station's secret store." />
+            <TextInput key={n} label={`Secret ${n}: the name to create it under`} mono value={fixes.secretKeys[n] ?? n} onChange={(v) => onFix({ ...fixes, secretKeys: { ...fixes.secretKeys, [n]: v } })} help={P.t6} />
           ))}
           {templated.map((s) => (
             <label key={s.job} className="imp-field"><input type="checkbox" checked={fixes.templates[s.job] !== "none"} onChange={(e) => onFix({ ...fixes, templates: { ...fixes.templates, [s.job]: e.target.checked ? "" : "none" } })} />{" "}
-              Step <code>{s.step}</code> uses the built-in template <code>launchway/{s.template}</code> (untick to write the commands out as steps)</label>
+              Step <code>{s.step}</code> uses the built-in template <code>launchway/{s.template}</code> {P.t7}</label>
           ))}
-          {needsImage && <TextInput label="Image for steps that named none" mono value={fixes.defaultImage} onChange={(v) => onFix({ ...fixes, defaultImage: v })} placeholder="docker.io/library/ubuntu:24.04" help="The image the old machine's tools would be found in." />}
+          {needsImage && <TextInput label={P.t8} mono value={fixes.defaultImage} onChange={(v) => onFix({ ...fixes, defaultImage: v })} placeholder={P.t9} help={P.t10} />}
         </fieldset>
       )}
       <Commit plan={plan} project={project} />
@@ -206,7 +209,7 @@ function FindingsList({ findings, onJump }: { findings: Finding[]; onJump: (f: F
         <Button sm kind={shown === "attention" ? "pri" : undefined} aria-pressed={shown === "attention"} onClick={() => setShown("attention")}>Differences and gaps</Button>
         <Button sm kind={shown === "all" ? "pri" : undefined} aria-pressed={shown === "all"} onClick={() => setShown("all")}>Everything</Button>
       </div>
-      {list.length === 0 ? <p>Nothing needs a person or differs.</p> : (
+      {list.length === 0 ? <p>{P.t11}</p> : (
         <ul className="imp-findings" aria-label="Findings">
           {list.map((f, i) => (
             <li key={i} className={"imp-f imp-" + f.class}>
@@ -229,7 +232,7 @@ function Commit({ plan, project }: { plan: Plan; project: Project }) {
     setState({ busy: true });
     try {
       const f = await api.pipeline(project.name, project.default_branch);
-      const r = await api.savePipeline(project.name, { base_ref: f.ref, base_sha: f.sha, pipeline: plan.pipeline, message: "Add a Launchway pipeline imported from " + plan.files.join(", "), branch: "" });
+      const r = await api.savePipeline(project.name, { base_ref: f.ref, base_sha: f.sha, pipeline: plan.pipeline, message: P.t12 + plan.files.join(", "), branch: "" });
       setState({ busy: false, url: r.pull_request_url, branch: r.branch });
       announce(`Saved on the branch ${r.branch}.`);
     } catch (e) { setState({ busy: false, error: e }); announce(e instanceof ApiError ? e.message : "That did not work.", "assertive"); }
@@ -241,13 +244,13 @@ function Commit({ plan, project }: { plan: Plan; project: Project }) {
   return (
     <section aria-label="3. Commit the result" className="imp-commit">
       <h3 className="h-sm">3. Commit the result</h3>
-      <p className="faint">The old files stay where they are. The new file is <code>.launchway/pipeline.yaml</code>.</p>
+      <p className="faint">{P.t13}<code>.launchway/pipeline.yaml</code>.</p>
       <div className="sq-actions">
-        <Button kind="pri" onClick={open} disabled={!may || state.busy} aria-busy={state.busy || undefined} title={may ? "" : "Saving to this repository is not available to you"}>{state.busy ? "Saving…" : "Save on a new branch for a pull request"}</Button>
+        <Button kind="pri" onClick={open} disabled={!may || state.busy} aria-busy={state.busy || undefined} title={may ? "" : P.t14}>{state.busy ? "Saving…" : P.t15}</Button>
         <Button onClick={download}>Download the file</Button>
         <LinkButton href={`/projects/${encodeURIComponent(project.name)}/pipeline/edit`}>Open the editor</LinkButton>
       </div>
-      {!may && <p className="faint small">Committing is not available for this repository, so download the file and add it yourself.</p>}
+      {!may && <p className="faint small">{P.t16}</p>}
       <ErrorBox error={state.error} />
       {state.branch && <p role="status">Saved on the branch <code>{state.branch}</code>.{state.url ? <> <a href={state.url}>Open the pull request</a>.</> : null}</p>}
     </section>

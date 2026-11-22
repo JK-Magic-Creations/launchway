@@ -1,0 +1,13 @@
+{
+ "t0": "Push a first commit and its branch appears here.",
+ "t1": "are shown; type in the box to find the others.",
+ "t2": "It is protected: only the repository's administrators can rename it. ",
+ "t3": "Pull requests and runs that name ",
+ "t4": "are not moved, and everyone with a clone renames theirs with ",
+ "t5": " It is protected: only the repository's administrators can delete it.",
+ "t6": "The commits stay until the repository is cleaned up, and you will be shown how to bring the branch back.",
+ "t7": "is open from it and will be closed.",
+ "t8": "Names for commits that matter, such as a release.",
+ "t9": "git tag -a v1.0 -m \"First release\" && git push origin v1.0",
+ "t10": ". The commit stays; only the name goes, and you will be shown how to bring it back. Anyone who has fetched the tag keeps it until they delete it themselves."
+}

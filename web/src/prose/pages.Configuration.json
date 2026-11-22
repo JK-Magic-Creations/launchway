@@ -1,0 +1,8 @@
+{
+ "t0": "What Ansible and OpenTofu or Terraform did to each Airfield, what has drifted since, and the state Launchway keeps for you.",
+ "t1": "; its reports appear here once it has run.",
+ "t2": "). To go back, run the playbook of that commit again: configuration is {rollback:did} by applying the previous definition, not by time travel.",
+ "t3": "This server has no root key, so it cannot keep Terraform or OpenTofu state: state holds secrets in clear text, and Launchway seals it. Create a root key first (",
+ "t4": "No state yet. The first apply of a plan step creates it, with nothing to set up.",
+ "t5": "Versions, locks and {rollback}:"
+}

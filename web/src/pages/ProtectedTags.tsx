@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ErrorBox, Mono } from "../components/ui";
 import { Sheet } from "../kit/layout";
 import { forgeApi, type HostedRepo, type TagRule } from "../forgeApi";
+import { BtnPrimary, BtnSm, LabelField, PSub, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 const blank = (pattern: string): TagRule => ({ pattern, create_role: "admin", change_role: "", pipelines: [] });
 
@@ -25,34 +26,34 @@ export function ProtectedTags({ repo }: { repo: HostedRepo }) {
   };
   return (
     <Sheet title="Protected tags" pad>
-      <p className="sub">A tag that matches a pattern such as <Mono>v*</Mono> is protected: by default only an administrator of this repository may make one, and nobody may move or delete it, so a version people have seen stays what it was. The rules hold for Git over HTTPS and SSH, for the API and for the tag a release makes.</p>
+      <PSub>A tag that matches a pattern such as <Mono>v*</Mono> is protected: by default only an administrator of this repository may make one, and nobody may move or delete it, so a version people have seen stays what it was. The rules hold for Git over HTTPS and SSH, for the API and for the tag a release makes.</PSub>
       <form onSubmit={save} className="inputs-form" aria-label="Protected tags">
         {rules.length === 0 && <p className="faint">No tag is protected.</p>}
         {rules.map((r, i) => (
           <fieldset key={r.pattern} className="card inputs-form">
             <legend><Mono>{r.pattern}</Mono></legend>
-            <label className="field"><span>Who may make a matching tag</span>
+            <LabelField><span>Who may make a matching tag</span>
               <select value={r.create_role} onChange={(e) => patch(i, { create_role: e.target.value })}>
                 <option value="admin">Administrators of the repository</option>
                 <option value="operator">Anyone who can push to the repository</option>
-              </select></label>
-            <label className="field"><span>Who may move or delete one</span>
+              </select></LabelField>
+            <LabelField><span>Who may move or delete one</span>
               <select value={r.change_role} onChange={(e) => patch(i, { change_role: e.target.value })}>
                 <option value="">Nobody</option>
                 <option value="admin">Administrators of the repository</option>
-              </select></label>
-            <label className="field"><span>Flights that may make one</span>
+              </select></LabelField>
+            <LabelField><span>Flights that may make one</span>
               <input value={texts[r.pattern] ?? r.pipelines.join(", ")} placeholder="ship-*, release"
                 onChange={(e) => { setTexts({ ...texts, [r.pattern]: e.target.value }); patch(i, { pipelines: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }); }} />
-              <small>Flight names or patterns whose credential may make a matching tag. They can never move or delete one.</small></label>
+              <small>Flight names or patterns whose credential may make a matching tag. They can never move or delete one.</small></LabelField>
             <div><button type="button" className="btn btn-danger-outline btn-sm" onClick={() => { setRules(rules.filter((_, j) => j !== i)); setSaved(false); }}>Remove the rule for {r.pattern}</button></div>
           </fieldset>
         ))}
-        <label className="field"><span>Protect tags matching</span><input value={adding} placeholder="v*" onChange={(e) => setAdding(e.target.value)} /></label>
-        <div><button type="button" className="btn btn-sm" disabled={!adding.trim() || rules.some((r) => r.pattern === adding.trim())}
-          onClick={() => { setRules([...rules, blank(adding.trim())]); setAdding(""); setSaved(false); }}>Add the pattern</button><span className="faint small"> It takes effect when you save.</span></div>
+        <LabelField><span>Protect tags matching</span><input value={adding} placeholder="v*" onChange={(e) => setAdding(e.target.value)} /></LabelField>
+        <div><BtnSm disabled={!adding.trim() || rules.some((r) => r.pattern === adding.trim())}
+          onClick={() => { setRules([...rules, blank(adding.trim())]); setAdding(""); setSaved(false); }}>Add the pattern</BtnSm><SpanFaintSmall> It takes effect when you save.</SpanFaintSmall></div>
         <ErrorBox error={error} />
-        <div><button type="submit" className="btn btn-primary">Save the protected tags</button>{saved && <span className="faint"> Saved.</span>}</div>
+        <div><BtnPrimary>Save the protected tags</BtnPrimary>{saved && <SpanFaint> Saved.</SpanFaint>}</div>
       </form>
     </Sheet>
   );

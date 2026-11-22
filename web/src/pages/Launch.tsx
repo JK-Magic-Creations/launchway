@@ -15,6 +15,7 @@ import { ObjectTree } from "../launch/Tree";
 import { useUrlState } from "../launch/useUrlState";
 import "../launch/launch.css";
 import { terms } from "../terms";
+import { DivLoading, DivPage, SpanFaint } from "../kit/bits";
 
 const KEYS = ["tab", "obj", "src", "prev", "follow", "wrap", "q", "range", "side", "left"] as const;
 const TABS = [
@@ -72,8 +73,8 @@ export function LaunchPage({ run, dep }: { run: string; dep: string }) {
     return c;
   }, [nodes]);
 
-  if (error && !detail) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!detail || !d) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error && !detail) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!detail || !d) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const ro = view?.tree.rollout;
   return (
     <div className="page lw-page">
@@ -87,7 +88,7 @@ export function LaunchPage({ run, dep }: { run: string; dep: string }) {
         </p>
         {view && <p className="lw-live" role="status">
           {health.bad > 0 ? `${health.bad} object${health.bad === 1 ? "" : "s"} not healthy` : "All objects healthy"}{health.run > 0 ? `, ${health.run} still starting` : ""}.
-          <span className="faint"> {terms().say("Read by a launch {runner}")} {Math.max(0, Math.round((now - view.tree.at) / 1000))}s ago; refreshes by itself.</span>
+          <SpanFaint> {terms().say("Read by a launch {runner}")} {Math.max(0, Math.round((now - view.tree.at) / 1000))}s ago; refreshes by itself.</SpanFaint>
         </p>}
       </header>
       {treeError != null && !view && <TreeProblem error={treeError} />}

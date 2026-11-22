@@ -1,0 +1,14 @@
+{
+ "t0": "Nothing has been pushed yet. Clone it, add a file, and push to the branch ",
+ "t1": "; the files appear here at once. To start from a repository you already have, ",
+ "t2": "Type part of a path, such as cmdmain",
+ "t3": "The list is partial: type more of the path.",
+ "t4": "Arrows move, Enter opens, Escape closes. Files at ",
+ "t5": "input, textarea, select, [contenteditable]",
+ "t6": ", a mirror: it takes no pushes",
+ "t7": "The change becomes one commit.",
+ "t8": ", with the last commit that changed each",
+ "t9": "Last changed further back than the search reaches",
+ "t10": "Entries marked “older” were last changed beyond the most recent 4000 commits of this folder; open History for the path to see them.",
+ "t11": "This repository has no README. Add a "
+}

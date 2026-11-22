@@ -1,0 +1,12 @@
+{
+ "t0": "Sign-in is off, so everyone acts as this user.",
+ "t1": "Groups decide what each person may do.",
+ "t2": "guided-tiles guided-tiles-wide",
+ "t3": "A key lets a script or the command line act as you, for as long as you choose.",
+ "t4": "What you are told of, by e-mail or in your inbox, and when.",
+ "t5": "Keys that let you clone and push over SSH, and the server's fingerprints to check.",
+ "t6": "The keys you sign commits and tags with, so they show as verified.",
+ "t7": "Let an AI assistant read your {runs} and, if you allow it, act on them.",
+ "t8": "/config/wizard/first-run?step=signin",
+ "t9": "So people use the accounts they have, and groups decide what each may do."
+}

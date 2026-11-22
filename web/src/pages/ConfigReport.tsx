@@ -4,6 +4,7 @@ import { useMe, canOperate } from "../auth";
 import { PageHead } from "../kit/layout";
 import { ErrorBox, Link, Mono } from "../components/ui";
 import "../config-code.css";
+import { DivLoading, DivPage, SpanFaint, ThCol, ThRow } from "../kit/bits";
 
 const STATUSES = ["failed", "unreachable", "changed", "ok", "skipped"] as const;
 const WORST: Record<string, number> = { failed: 0, unreachable: 1, changed: 2, ok: 3, skipped: 4 };
@@ -75,17 +76,17 @@ function AnsibleView({ rep, run }: { rep: ConfigReport<AnsibleDocument>; run: st
         <table className="cc-matrix">
           <caption className="sr-only">Hosts by plays: the worst outcome of each host in each play</caption>
           <thead>
-            <tr><th scope="col">Host</th><th scope="col">Outcome</th>{doc.plays.map((p, i) => <th key={i} scope="col">{p.name || `Play ${i + 1}`}</th>)}</tr>
+            <tr><ThCol>Host</ThCol><ThCol>Outcome</ThCol>{doc.plays.map((p, i) => <ThCol key={i}>{p.name || `Play ${i + 1}`}</ThCol>)}</tr>
           </thead>
           <tbody>
             {hosts.length === 0 && <tr><td colSpan={doc.plays.length + 2} className="faint">No host matches.</td></tr>}
             {hosts.map((h) => (
               <tr key={h.host}>
-                <th scope="row">{h.host}</th>
+                <ThRow>{h.host}</ThRow>
                 <td><Cell status={h.outcome} /></td>
                 {doc.plays.map((p, i) => {
                   const rs = p.tasks.map((t) => t.results[h.host]).filter(Boolean);
-                  return <td key={i}>{rs.length ? <Cell status={worst(rs)} /> : <span className="faint">—</span>}</td>;
+                  return <td key={i}>{rs.length ? <Cell status={worst(rs)} /> : <SpanFaint>—</SpanFaint>}</td>;
                 })}
               </tr>
             ))}
@@ -109,7 +110,7 @@ function AnsibleView({ rep, run }: { rep: ConfigReport<AnsibleDocument>; run: st
       </section>
       <section className="card" aria-label="Failed and unreachable tasks">
         {STATUSES.slice(0, 2).map((s) => doc.plays.flatMap((p) => p.tasks.flatMap((t) => Object.entries(t.results).filter(([h, r]) => r.status === s && (!host || h === host))
-          .map(([h, r]) => <div key={`${s}-${t.name}-${h}`} className="cc-row"><Cell status={s} /><Mono>{h}</Mono><span>{t.name}</span>{r.msg && <span className="faint">{r.msg}</span>}</div>))))}
+          .map(([h, r]) => <div key={`${s}-${t.name}-${h}`} className="cc-row"><Cell status={s} /><Mono>{h}</Mono><span>{t.name}</span>{r.msg && <SpanFaint>{r.msg}</SpanFaint>}</div>))))}
       </section>
     </>
   );
@@ -130,18 +131,18 @@ function PlanView({ rep }: { rep: ConfigReport<PlanDocument> }) {
       <section className="card" aria-label="Resources">
         <table className="cc-matrix">
           <caption className="sr-only">Resources, destroys and replacements first</caption>
-          <thead><tr><th scope="col">Resource</th><th scope="col">Action</th><th scope="col">Changes</th></tr></thead>
+          <thead><tr><ThCol>Resource</ThCol><ThCol>Action</ThCol><ThCol>Changes</ThCol></tr></thead>
           <tbody>
             {plan.resources.length === 0 && <tr><td colSpan={3} className="faint">No resource changes.</td></tr>}
             {plan.resources.map((r) => (
               <tr key={r.address}>
-                <th scope="row"><Mono>{r.address}</Mono></th>
+                <ThRow><Mono>{r.address}</Mono></ThRow>
                 <td><span className={`cc-cell ${r.action === "delete" || r.action === "replace" ? "cc-failed" : r.action === "update" ? "cc-changed" : "cc-ok"}`}>{r.action}</span></td>
                 <td>
                   {(r.attrs ?? []).map((a) => (
                     <div key={a.path}><Mono>{a.path}</Mono>: {a.sensitive ? <em>(sensitive, hidden)</em> : <>{a.before ? <del>{a.before}</del> : null} {a.after ? <ins>{a.after}</ins> : null}</>}{a.forces_replacement ? " (forces replacement)" : ""}</div>
                   ))}
-                  {r.attrs_cut && <span className="faint">More attributes differ than are listed.</span>}
+                  {r.attrs_cut && <SpanFaint>More attributes differ than are listed.</SpanFaint>}
                 </td>
               </tr>
             ))}
@@ -162,15 +163,15 @@ export function ConfigReportPage({ run, step }: { run: string; step: string }) {
   useEffect(() => { configApi.report(run, step, kind).then(setRep).catch(setError); }, [run, step, kind]);
   const project = rep?.report.project;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={<>{project ? <Link href={`/projects/${encodeURIComponent(project)}/configuration`}>{project}</Link> : "Configuration"} · <Link href={`/runs/${encodeURIComponent(run)}`}>run {rep?.report.run_number ?? ""}</Link></>}
         title={<>{rep?.report.kind === "plan" ? "Plan" : "Ansible run"}: {step}</>}
         sentence={rep ? <>{rep.report.environment ? <>Airfield <Mono>{rep.report.environment}</Mono>. </> : null}Commit <Mono>{rep.report.commit.slice(0, 8)}</Mono>.</> : undefined} />
       <ErrorBox error={error} />
-      {!rep && !error && <div className="loading">Loading…</div>}
+      {!rep && !error && <DivLoading>Loading…</DivLoading>}
       {rep?.report.status === "unreadable" && <div className="callout callout-bad" role="alert">The report could not be read: {rep.report.recap}</div>}
       {rep && rep.report.kind === "ansible" && rep.report.status !== "unreadable" && <AnsibleView rep={rep as ConfigReport<AnsibleDocument>} run={run} />}
       {rep && rep.report.kind === "plan" && rep.report.status !== "unreadable" && <PlanView rep={rep as ConfigReport<PlanDocument>} />}
-    </div>
+    </DivPage>
   );
 }

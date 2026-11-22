@@ -7,6 +7,8 @@ import { Unavailable, Wingman } from "./Frame";
 import { Link } from "../../components/ui";
 import { ADD_FLIGHT } from "../squadrons/shared";
 import { terms } from "../../terms";
+import { prose } from "../../prose";
+const P = await prose("pages.guide.OtherSteps");
 
 /** Step 5: is a runner connected, and how to add another. */
 export function RunnerStep({ step }: { step: GuideStep }) {
@@ -14,13 +16,13 @@ export function RunnerStep({ step }: { step: GuideStep }) {
     <>
       <p>{step.summary}</p>
       <Wingman learn={{ label: terms().say("Learn more about {runners}"), slug: "guide/runner-identity" }}>
-        {terms().say("A {runner} is the machine that runs the steps of your pipelines.")} {step.state === "done" ? "One is already connected, which is all you need to start; add more for capacity or for other kinds of machine." : "Until one is connected, no pipeline step can run."}
+        {terms().say(P.t0)} {step.state === "done" ? P.t1 : P.t2}
       </Wingman>
       <div className="gd-choices">
         <LinkButton href="/config/wizard/add-runner" kind={step.state === "done" ? undefined : "pri"}>{terms().say("Add a {runner}")}</LinkButton>
         <LinkButton href="/settings/runners">{terms().say("See the {runners}")}</LinkButton>
       </div>
-      <p className="faint">{terms().say("With the Helm chart, {runners} come with the installation; on another machine,")} <code>launchway runner --server ADDRESS --join TOKEN</code> {terms().say("joins one with a short-lived join token made under {Runners}.")}</p>
+      <p className="faint">{terms().say(P.t3)} <code>{P.t4}</code> {terms().say(P.t5)}</p>
     </>
   );
 }
@@ -38,20 +40,19 @@ export function HostingStep({ step, kubernetes, onChange }: { step: GuideStep; k
       const spec: Spec = { ...o.spec, forge: { ...((o.spec as { forge?: object }).forge ?? {}), hosting: true } } as Spec;
       await configApi.apply([{ kind: "installation", name: "installation", spec, version: o.version }]);
       setSaved(true); onChange();
-    } catch (e) { setErr(e instanceof ApiError ? e.message : "Launchway could not be reached. Try again shortly."); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof ApiError ? e.message : P.t6); } finally { setBusy(false); }
   };
   return (
     <>
       <p>{step.summary}</p>
       <Wingman learn={{ label: "Learn more about Git over SSH", slug: "guide/git-over-ssh" }}>
-        With Git hosting on, Launchway keeps your repositories itself: pushing, pull requests and mirrors. Git over HTTPS needs nothing more. Git over SSH needs a port for it
-        (<code>forge.ssh.listen</code>) and your people's SSH keys; <code>launchway doctor ssh</code> checks it afterwards.
+        {P.t7}<code>forge.ssh.listen</code>) and your people's SSH keys; <code>launchway doctor ssh</code> checks it afterwards.
       </Wingman>
       {on?.available && !saved && <div><button type="button" className="btn btn-primary" onClick={() => void turnOn()} disabled={busy}>{busy ? "Saving…" : "Turn on Git hosting"}</button></div>}
       {step.state !== "done" && <Unavailable action={on} />}
       {saved && (
         <div className="callout callout-info" role="status">
-          Saved. A restart is needed: this server reads the setting only when it starts. {kubernetes ? <>In the Launchway namespace, roll the pods with <code>kubectl rollout restart deploy -l app.kubernetes.io/component=server</code>.</> : <>Restart the service (<code>systemctl restart launchway</code>) or start the program again.</>} Then come back to this step.
+          {P.t8}{kubernetes ? <>{P.t9}<code>{P.t10}</code>.</> : <>Restart the service (<code>systemctl restart launchway</code>) or start the program again.</>} Then come back to this step.
         </div>
       )}
       {err && <div className="callout callout-bad" role="alert">{err}</div>}
@@ -66,9 +67,7 @@ export function PipelineStep({ step }: { step: GuideStep }) {
     <>
       <p>{step.summary}</p>
       <Wingman learn={{ label: "Learn more about pipelines", slug: "guide/pipelines" }}>
-        Pick one repository (for example one you just imported; its address is on its page under Repositories) and a starter. Launchway shows the pipeline before anything is created, and offers it as a file
-        to commit; it never changes your application behind your back.
-      </Wingman>
+        {P.t11}</Wingman>
       {!start?.available && <Unavailable action={start} />}
       {start?.available && <p><LinkButton href={ADD_FLIGHT} kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton></p>}
     </>
@@ -81,10 +80,9 @@ export function FinishStep({ items }: { items: ChecklistItem[] }) {
   const mark = { ok: "ok", attention: "needs attention", unknown: "not known" } as const;
   return (
     <>
-      <p>{attention === 0 ? "Everything this check can see is in order." : `${attention} ${attention === 1 ? "thing needs" : "things need"} your attention.`}</p>
+      <p>{attention === 0 ? P.t12 : `${attention} ${attention === 1 ? "thing needs" : "things need"} your attention.`}</p>
       <Wingman learn={{ label: "Read the hardening checklist", slug: "security/hardening" }}>
-        This is the same plain checklist <code>launchway doctor security</code> prints. It looks at sign-in, encryption in transit and at rest and who can reach you. It changes nothing.
-      </Wingman>
+        {P.t13}<code>launchway doctor security</code> {P.t14}</Wingman>
       <ul className="gd-check">
         {items.map((i) => (
           <li key={i.id} data-state={i.state}>
@@ -95,10 +93,10 @@ export function FinishStep({ items }: { items: ChecklistItem[] }) {
       </ul>
       <h3 className="h-sm">What to do next</h3>
       <ul className="cf-next">
-        <li><Link href="/settings/access">Invite the people who will use it</Link></li>
-        <li><Link href="/deployments/environments">{terms().say("Add an {environment} to {deploy:do} to")}</Link></li>
-        <li><Link href="/settings/rules">Choose the rules every pipeline is held to</Link></li>
-        <li><Link href="/learn/howto/install-in-ten-minutes">Read what to do after the first sign-in</Link></li>
+        <li><Link href="/settings/access">{P.t15}</Link></li>
+        <li><Link href="/deployments/environments">{terms().say(P.t16)}</Link></li>
+        <li><Link href="/settings/rules">{P.t17}</Link></li>
+        <li><Link href={P.t18}>{P.t19}</Link></li>
       </ul>
     </>
   );

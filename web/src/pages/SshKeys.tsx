@@ -4,6 +4,9 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import { forgeApi, type SshInfo, type SshKey } from "../forgeApi";
 import "../triggers.css";
+import { prose } from "../prose";
+import { BtnPrimary, DivFaintSmall, DivPage, LabelField, PSub, SpanFaint, SpanHidden } from "../kit/bits";
+const P = await prose("pages.SshKeys");
 
 /** Whether this server hosts repositories: the calls answer feature_off (404) when it does not. */
 export function useHosting(): "on" | "off" | null {
@@ -42,10 +45,10 @@ export function SshKeysPage() {
   if (hosting === null) return null;
   if (hosting === "off") {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Settings" title="SSH keys" />
-        <Empty title="Git hosting is off on this server">SSH keys are for the repositories Launchway hosts. An administrator turns hosting on with the installation setting <Mono>forge.hosting</Mono>.</Empty>
-      </div>
+        <Empty title={P.t0}>{P.t1}<Mono>forge.hosting</Mono>.</Empty>
+      </DivPage>
     );
   }
 
@@ -64,27 +67,27 @@ export function SshKeysPage() {
     try { await forgeApi.deleteMyKey(k.id); load(); } catch (err) { setError(err); }
   };
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="SSH keys"
-        sentence={<>Keys that let you clone and push over SSH. A key can belong to one owner only: you, or one repository as a <Link href="/repositories">deploy key</Link>.</>} />
+        sentence={<>{P.t2}<Link href="/repositories">deploy key</Link>.</>} />
 
       {info && !info.enabled && (
         <div className="callout callout-allowed" role="status">
-          <strong>Git over SSH is not turned on yet.</strong> You can add keys now; they work once an administrator sets <Mono>forge.ssh.listen</Mono>. Until then, clone over HTTPS with an <Link href="/settings/access/keys">API token</Link>.
+          <strong>{P.t3}</strong> {P.t4}<Mono>forge.ssh.listen</Mono>{P.t5}<Link href="/settings/access/keys">API token</Link>.
         </div>
       )}
 
       <Sheet title="Add a key" pad>
         <form onSubmit={add} className="inputs-form" aria-label="Add an SSH key">
           <div className="tokenform-grid">
-            <label className="field"><span>Name</span><input value={name} maxLength={100} placeholder="for example: work laptop" onChange={(e) => setName(e.target.value)} /></label>
-            <label className="field"><span>Expires (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
+            <LabelField><span>Name</span><input value={name} maxLength={100} placeholder="for example: work laptop" onChange={(e) => setName(e.target.value)} /></LabelField>
+            <LabelField><span>Expires (optional)</span><input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></LabelField>
           </div>
-          <label className="field"><span>Public key</span>
-            <textarea value={pub} required rows={3} className="mono" placeholder="ssh-ed25519 AAAA… (the line in your .pub file)" onChange={(e) => setPub(e.target.value)} />
-          </label>
-          <p className="sub">ed25519, ECDSA, or RSA of at least 3072 bits. Make one with <Mono>ssh-keygen -t ed25519</Mono>. Never paste a private key.</p>
-          <div><button type="submit" className="btn btn-primary" disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</button></div>
+          <LabelField><span>Public key</span>
+            <textarea value={pub} required rows={3} className="mono" placeholder={P.t6} onChange={(e) => setPub(e.target.value)} />
+          </LabelField>
+          <PSub>{P.t7}<Mono>ssh-keygen -t ed25519</Mono>. Never paste a private key.</PSub>
+          <div><BtnPrimary disabled={busy || !pub.trim()}>{busy ? "Adding…" : "Add key"}</BtnPrimary></div>
         </form>
       </Sheet>
 
@@ -93,14 +96,14 @@ export function SshKeysPage() {
         {keys && keys.length === 0 && <Empty title="You have no SSH keys" />}
         {keys && keys.length > 0 && (
           <table className="table">
-            <thead><tr><th>Name</th><th>Fingerprint</th><th>Expires</th><th>Last used</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+            <thead><tr><th>Name</th><th>Fingerprint</th><th>Expires</th><th>Last used</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
             <tbody>
               {keys.map((k) => (
                 <tr key={k.id}>
-                  <td>{k.name}<div className="faint small">{k.type}</div></td>
+                  <td>{k.name}<DivFaintSmall>{k.type}</DivFaintSmall></td>
                   <td className="mono small">{k.fingerprint}</td>
                   <td>{k.expires_at ? (Date.parse(k.expires_at) <= now ? <span className="bad-ink">expired</span> : clock(Date.parse(k.expires_at))) : "never"}</td>
-                  <td>{k.last_used_at ? <span title={clock(Date.parse(k.last_used_at))}>{ago(Date.parse(k.last_used_at), now)}<span className="faint"> from {k.last_used_from}</span></span> : "never"}</td>
+                  <td>{k.last_used_at ? <span title={clock(Date.parse(k.last_used_at))}>{ago(Date.parse(k.last_used_at), now)}<SpanFaint> from {k.last_used_from}</SpanFaint></span> : "never"}</td>
                   <td className="td-actions"><button type="button" className="btn btn-danger-outline btn-sm" onClick={() => remove(k)}>Delete</button></td>
                 </tr>
               ))}
@@ -110,11 +113,10 @@ export function SshKeysPage() {
       </Sheet>
 
       <Sheet title="Verify this server" id="host-keys">
-        {info && !info.enabled && <p className="sub pad">Git over SSH is off, so the server presents no host key yet.</p>}
+        {info && !info.enabled && <p className="sub pad">{P.t8}</p>}
         {info && info.enabled && (
           <>
-            <p className="sub pad">The first time you connect to <Mono>{sshAddress(info)}</Mono>, <Mono>ssh</Mono> shows a fingerprint and asks whether to trust it. It must be one of these.
-              {info.certificates && " This server also accepts certificates from its organization's authority."}</p>
+            <p className="sub pad">The first time you connect to <Mono>{sshAddress(info)}</Mono>, <Mono>ssh</Mono> {P.t9}{info.certificates && P.t10}</p>
             <table className="table">
               <thead><tr><th>Type</th><th>Fingerprint (SHA256)</th></tr></thead>
               <tbody>{info.host_keys.map((h) => <tr key={h.algorithm}><td>{h.type}</td><td className="mono small">{h.fingerprint}</td></tr>)}</tbody>
@@ -122,6 +124,6 @@ export function SshKeysPage() {
           </>
         )}
       </Sheet>
-    </div>
+    </DivPage>
   );
 }

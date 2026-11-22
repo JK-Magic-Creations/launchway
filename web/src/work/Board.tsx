@@ -6,6 +6,7 @@ import { announce } from "../kit/announce";
 import { ActionMenu, Blank, dueClass, ErrorPanel, itemHref, Labels, Loading, Prio, scopeHref, scopeLabel, useLoad, Who, WorkPage } from "./common";
 import { workApi, type Board as BoardData, type Column, type Item, type Sprint } from "./workApi";
 import { terms } from "../terms";
+import { SpanFaintSmall } from "../kit/bits";
 
 // The board: one column for each state of the workflow. Dragging a card is a convenience; every move can also be made with the
 // keyboard through the card's "Move to…" menu, which also reorders. What was done is said in a live region.
@@ -121,7 +122,7 @@ function Card({ it, cols, first, last, onMove, onUp, onDown }: { it: Item; cols:
         <Link href={itemHref(it.ref)} className="wk-link">{it.title}</Link>
         <Labels list={it.labels} />
         <div className="foot">
-          {it.assignees.length ? <span className="wk-people">{it.assignees.map((a) => <Who key={a.name} name={a.name} kind={a.kind} />)}</span> : <span className="faint small">Unassigned</span>}
+          {it.assignees.length ? <span className="wk-people">{it.assignees.map((a) => <Who key={a.name} name={a.name} kind={a.kind} />)}</span> : <SpanFaintSmall>Unassigned</SpanFaintSmall>}
           {it.blocked && <span className="wk-flag">blocked</span>}
           {it.due_at && <span className={"small num " + dueClass(it)}>due {it.due_at.slice(0, 10)}</span>}
         </div>

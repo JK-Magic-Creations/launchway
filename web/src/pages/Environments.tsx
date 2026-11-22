@@ -8,6 +8,9 @@ import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../componen
 import { VerifyPill } from "../components/Verification";
 import { PageHead } from "../kit/layout";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, PSub, SpanFaint, ThCol, ThRow } from "../kit/bits";
+const P = await prose("pages.Environments");
 
 // EnvironmentsPage shows, for every service of every project, what each
 // environment runs, what is being deployed there now, and who holds or waits
@@ -36,23 +39,23 @@ export function EnvironmentsPage() {
   return (
     <div className="page page-wide">
       <PageHead eyebrow={terms().say("{Deploys}")} title={terms().say("{Environments}")}
-        sentence={terms().say("What each {environment} runs, by service, and what is being {deploy:did} there now. Checked every 5 seconds.")}
+        sentence={terms().say(P.t0)}
         actions={envs && envs.length > 0 ? <WizardButton wizard="add-environment" label={terms().say("Add an {environment}")} /> : undefined} />
       <ErrorBox error={error} />
-      {envs === null && !error && <div className="loading">Loading…</div>}
+      {envs === null && !error && <DivLoading>Loading…</DivLoading>}
       {envs && envs.length === 0 && <NoEnvironments />}
       {envs && envs.length > 0 && (
         <>
           {unobserved.length > 0 && (
             <div className="callout callout-draft">
               {unobserved.map((e) => (
-                <div key={e.name}><strong>{e.name}</strong>{terms().say(": no {deploy:do} {runner} observes target")} <Mono>{e.target}</Mono>, so deployments there cannot finish and nothing shown for it is current.</div>
+                <div key={e.name}><strong>{e.name}</strong>{terms().say(P.t1)} <Mono>{e.target}</Mono>{P.t2}</div>
               ))}
             </div>
           )}
           {rows.length === 0 ? (
-            <Empty title={terms().say("Nothing has been {deploy:did} yet")}>
-              {terms().say("{Environments} are set up:")} {envs.map((e) => e.name).join(", ")}{terms().say(". A {run} {deploy:does} to one when it reaches a step with")} <Mono>kind: deploy</Mono>.
+            <Empty title={terms().say(P.t3)}>
+              {terms().say("{Environments} are set up:")} {envs.map((e) => e.name).join(", ")}{terms().say(P.t4)} <Mono>kind: deploy</Mono>.
               <Example />
             </Empty>
           ) : (
@@ -62,31 +65,31 @@ export function EnvironmentsPage() {
                   <tr>
                     <th className="envgrid-corner">Service</th>
                     {envs.map((e) => (
-                      <th key={e.name} scope="col">
+                      <ThCol key={e.name}>
                         <div className="envgrid-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>}</div>
                         <div className="envgrid-target">target <Mono>{e.target}</Mono></div>
                         <ObserverLine env={e} now={now} />
-                      </th>
+                      </ThCol>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.project + "/" + r.service}>
-                      <th scope="row" className="envgrid-svc">
+                      <ThRow className="envgrid-svc">
                         <span className="envgrid-svc-name">{r.service}</span>
-                        {r.project !== r.service && <span className="faint"> of {r.project}</span>}
+                        {r.project !== r.service && <SpanFaint> of {r.project}</SpanFaint>}
                         {r.project === r.service && <span className="faint envgrid-svc-proj">project {r.project}</span>}
-                      </th>
+                      </ThRow>
                       {envs.map((e) => {
                         const u = e.services.find((x) => x.project === r.project && x.service === r.service);
                         const vs = verifs.filter((v) => v.environment === e.name && v.project === r.project && v.service === r.service);
                         return (
                           <td key={e.name} data-env={e.name}>
-                            <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <span className="faint">· {e.target}</span></span>
+                            <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <SpanFaint>· {e.target}</SpanFaint></span>
                             {u ? <UnitCell env={e} unit={u} now={now} tick={tick} />
-                              : allows(e, r.project) ? <span className="faint">{terms().say("Nothing {deploy:did} here yet.")}</span>
-                              : vs.length === 0 ? <span className="faint">{r.project} {terms().say("may not {deploy:do} here.")}</span> : null}
+                              : allows(e, r.project) ? <SpanFaint>{terms().say(P.t5)}</SpanFaint>
+                              : vs.length === 0 ? <SpanFaint>{r.project} {terms().say("may not {deploy:do} here.")}</SpanFaint> : null}
                             {vs.length > 0 && <Verifications list={vs} now={now} />}
                           </td>
                         );
@@ -105,7 +108,7 @@ export function EnvironmentsPage() {
 
 function ProtectedPill({ env }: { env: string }) {
   return (
-    <span className="dpill dpill-lock env-protected"
+    <span className={P.t6}
       title={`${env} is protected: the person who started a run may not promote or retry its deployments here; someone else with the operator role must. Anyone with the operator role may abort.`}>
       protected
     </span>
@@ -122,14 +125,14 @@ function LiveLine({ live, now }: { live: LiveView; now: number }) {
   return (
     <div className="unit-live">
       {live.snapshot?.app && <div className="unit-line"><AppChips app={live.snapshot.app} muted={old} /></div>}
-      {live.snapshot?.error && <div className="unit-line small dep-msg-bad">{terms().say("The {runner} cannot see the application:")} {live.snapshot.error}</div>}
+      {live.snapshot?.error && <div className="unit-line small dep-msg-bad">{terms().say(P.t7)} {live.snapshot.error}</div>}
       <div className={"unit-line small " + (old ? "dfresh-warn" : "faint")} data-case={old ? "live-stale" : "live"}>
-        observed {ago(live.observed_at, now)}{live.observed_by ? ` by ${live.observed_by}` : ""}{old ? ": what is shown may be out of date" : ""}
+        observed {ago(live.observed_at, now)}{live.observed_by ? ` by ${live.observed_by}` : ""}{old ? P.t8 : ""}
       </div>
       {live.drift && (
         <div className={`callout unit-drift ${live.drift === "missing" ? "callout-bad" : "callout-draft"}${old ? " stale" : ""}`} role="status" aria-label="Drift" data-drift={live.drift}>
-          {live.drift === "out_of_sync" ? <>OutOfSync: Argo CD reports that what runs differs from Git{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
-            : live.drift === "differs" ? <>Live differs from the last deployment{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
+          {live.drift === "out_of_sync" ? <>{P.t9}{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
+            : live.drift === "differs" ? <>{P.t10}{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
             : live.drift === "missing" ? <>The application is gone{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
             : <>{live.drift}{live.drift_detail ? `: ${live.drift_detail}` : ""}</>}
         </div>
@@ -145,7 +148,7 @@ function observing(e: EnvironmentView, now: number): boolean {
 function ObserverLine({ env, now }: { env: EnvironmentView; now: number }) {
   return observing(env, now)
     ? <div className="envgrid-observer"><span className="online online-on" />observed by {env.observer}</div>
-    : <div className="envgrid-observer envgrid-observer-none"><span className="online" />{terms().say("no {deploy:do} {runner} observes target")} {env.target}</div>;
+    : <div className={P.t11}><span className="online" />{terms().say(P.t12)} {env.target}</div>;
 }
 
 // allows reports whether a project may deploy to an environment, matching
@@ -179,14 +182,14 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
           <span className="unit-since" title={clock(cur.since)}>since {ago(cur.since, now)}, by <Link href={`/runs/${cur.run}`}>{terms().say("{run} #")}{cur.run_number}</Link></span>
         </div>
       ) : (
-        <div className="unit-current"><span className="faint">{terms().say("Nothing Launchway {deploy:did} is known to run here.")}</span></div>
+        <div className="unit-current"><SpanFaint>{terms().say(P.t13)}</SpanFaint></div>
       )}
       {last && (
         <div className="unit-last">
           {showLast && (
             <div className="unit-line">
               <Link href={`/runs/${last.run_id}?step=${encodeURIComponent(last.verdict === "rolled_back" || last.verdict === "rollback_failed" ? (last.rollback_step ?? last.step) : last.step)}`}>#{last.run_number}</Link>
-              {!last.verdict && <span className="faint">deploying</span>}
+              {!last.verdict && <SpanFaint>deploying</SpanFaint>}
               <Mono>{last.version}</Mono>
               <DeployStatePill d={last} now={now} />
             </div>
@@ -201,7 +204,7 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
         </div>
       )}
       {live && <LiveLine live={live} now={now} />}
-      {idle && !live && <div className="unit-line small faint">{terms().say("Not observed while idle (needs a {deploy:do} {runner} of this release)")}</div>}
+      {idle && !live && <div className="unit-line small faint">{terms().say(P.t14)}</div>}
       {(unit.lock || unit.waiting.length > 0) && (
         <div className="unit-lock">
           {unit.lock && (
@@ -236,8 +239,8 @@ function History({ env, project, service, tick, now }: { env: string; project: s
     <details className="unit-history" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary>History</summary>
       <ErrorBox error={error} />
-      {open && list === null && !error && <div className="faint small">Loading…</div>}
-      {list && list.length === 0 && <div className="faint small">No deployments.</div>}
+      {open && list === null && !error && <DivFaintSmall>Loading…</DivFaintSmall>}
+      {list && list.length === 0 && <DivFaintSmall>No deployments.</DivFaintSmall>}
       {list && list.length > 0 && (
         <ol className="unit-history-list">
           {list.map((d) => (
@@ -245,7 +248,7 @@ function History({ env, project, service, tick, now }: { env: string; project: s
               <Link href={`/runs/${d.run_id}?step=${encodeURIComponent(d.step)}`}>#{d.run_number}</Link>
               <Mono>{d.version}</Mono>
               <DeployStatePill d={d} now={now} />
-              <span className="faint" title={clock(d.opened_at)}>{ago(d.opened_at, now)}</span>
+              <SpanFaint title={clock(d.opened_at)}>{ago(d.opened_at, now)}</SpanFaint>
             </li>
           ))}
         </ol>
@@ -263,7 +266,7 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
       <Link href={`/runs/${v.run_id}?step=${encodeURIComponent(v.step)}`}>#{v.run_number}</Link>
       <VerifyPill v={{ outcome: v.outcome, override: v.overridden_by ? v.outcome : undefined, status: v.status || (v.outcome === "running" ? "running" : undefined) }} now={now} />
       {v.version && <Mono>{v.version}</Mono>}
-      <span className="faint" title={clock(v.started_at)}>{ago(v.decided_at || v.started_at, now)}</span>
+      <SpanFaint title={clock(v.started_at)}>{ago(v.decided_at || v.started_at, now)}</SpanFaint>
     </>
   );
   return (
@@ -272,7 +275,7 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
       <div className="unit-line">{row(latest)}</div>
       <div className="unit-verif-summary">
         {latest.outcome === "running" && !latest.summary ? `interval ${Math.min(latest.intervals + 1, latest.total)} of ${latest.total}` : latest.summary}
-        {latest.overridden_by && <span className="faint"> (marked by {latest.overridden_by})</span>}
+        {latest.overridden_by && <SpanFaint> (marked by {latest.overridden_by})</SpanFaint>}
       </div>
       {rest.length > 0 && (
         <details className="unit-history">
@@ -295,11 +298,10 @@ function NoEnvironments() {
   return (
     <>
       <WizardEmpty title={terms().say("No {environments} yet")} wizard="add-environment" label={terms().say("Add an {environment}")}
-        text={terms().say("An {environment} is a place runs {deploy:do} to, such as staging or prod: add one to see what runs where and to {deploy:do} with a protected, queued, recorded step.")} />
+        text={terms().say(P.t15)} />
       <details className="card">
-        <summary className="h-sm">{terms().say("How a pipeline {deploy:does} to an {environment}")}</summary>
-        <p className="sub">{terms().say("A {run} {deploy:does} when it reaches a step with")} <Mono>kind: deploy</Mono>: the step commits the new version to your GitOps repository,
-          asks Argo CD to sync, and waits until the application is healthy.</p>
+        <summary className="h-sm">{terms().say(P.t16)}</summary>
+        <PSub>{terms().say(P.t17)} <Mono>kind: deploy</Mono>{P.t18}</PSub>
         <Example />
       </details>
     </>
@@ -309,21 +311,8 @@ function NoEnvironments() {
 function Example() {
   return (
     <div className="howto">
-      <p className="sub">{terms().say("In a {project}'s")} <Mono>.launchway/pipeline.yaml</Mono>:</p>
-      <pre className="code">{terms().say(`  deploy-prod:
-    kind: {deploy:do}
-    needs: build
-    {environment}: prod
-    version: { output: build.tag }
-    argocd:
-      application: shop
-      write_back:
-        repo: gitops
-        branch: main
-        changes:
-          - file: apps/shop.yaml
-            image: team/shop
-            tag: { output: build.tag }`)}</pre>
+      <PSub>{terms().say("In a {project}'s")} <Mono>.launchway/pipeline.yaml</Mono>:</PSub>
+      <pre className="code">{terms().say(P.t19)}</pre>
     </div>
   );
 }

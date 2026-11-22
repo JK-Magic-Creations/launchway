@@ -1,0 +1,16 @@
+{
+ "t0": "Bring repositories from another Git server into Launchway: the same names and visibility, every branch, tag and note copied and checked. Nothing on the other server changes. By default each stays a pull mirror, so the other server is still the primary until you stop mirroring each one.",
+ "t1": "Add one below: its kind, its address and where the server reads its token from.",
+ "t2": "Only this user or organization (empty: everything the token can see)",
+ "t3": "Keep each as a pull mirror of its source (the staged move)",
+ "t4": "The source lists no repositories this token can see.",
+ "t5": "Large repositories take a while. A repository that fails does not stop the others, and importing again resumes it.",
+ "t6": "Every ref was checked against the source",
+ "t7": "Some repositories did not finish",
+ "t8": "Each repository above was compared with its source ref by ref. A repository that failed can be imported again: it resumes. Each one is under ",
+ "t9": "; open one and use its Mirrors tab to stop mirroring and make it the primary.",
+ "t10": "Where the server reads the token from",
+ "t11": "An environment variable of the server",
+ "t12": "A reference only: the token is never typed here or kept by Launchway.",
+ "t13": "An address on a private network is refused unless an administrator has listed it in "
+}

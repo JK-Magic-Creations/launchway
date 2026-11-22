@@ -8,6 +8,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { levelWords } from "../configKinds";
 import "../config.css";
 import { terms } from "../terms";
+import { BtnSm, DivLoading, DivPage } from "../kit/bits";
 
 // ConfigListPage lists the objects of one kind, with where each is defined,
 // who manages it, and the deleted ones on request (to restore them).
@@ -28,9 +29,9 @@ export function ConfigListPage({ kind }: { kind: string }) {
   // A singleton has one page: its object.
   useEffect(() => { if (k?.singleton) navigate(`/config/${k.path}/${k.singleton}`); }, [k]);
 
-  if (ovError) return <div className="page"><ErrorBox error={ovError} /></div>;
-  if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!k) return <div className="page"><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration">There is no {kind}. <Link href="/config">Back to configuration</Link>.</Empty></div>;
+  if (ovError) return <DivPage><ErrorBox error={ovError} /></DivPage>;
+  if (!overview) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  if (!k) return <DivPage><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration">There is no {kind}. <Link href="/config">Back to configuration</Link>.</Empty></DivPage>;
 
   const label = kindLabel(overview, k);
   const one = kindLabel(overview, k, false);
@@ -50,7 +51,7 @@ export function ConfigListPage({ kind }: { kind: string }) {
         </div></>} />
       <ErrorBox error={error} />
       <label className="checkline"><input type="checkbox" checked={deleted} onChange={(e) => setDeleted(e.target.checked)} /> Show deleted ones too</label>
-      {objects === null && !error && <div className="loading">Loading…</div>}
+      {objects === null && !error && <DivLoading>Loading…</DivLoading>}
       {objects && objects.length === 0 && (
         <Empty title={`No ${label.toLowerCase()} yet`}>
           {wiz ? <><Link href={`/config/wizard/${wiz.id}`}>{wiz.title}</Link> with a few questions, or <Link href={`/config/${k.path}/new`}>fill in a form</Link>.</>
@@ -72,7 +73,7 @@ export function ConfigListPage({ kind }: { kind: string }) {
                 {showLevel && <span>{levelOf(overview, o.unit)}</span>}
                 <span>version {o.version}</span>
                 <span>{o.deleted ? `deleted ${ago(o.deleted_at ?? 0)}${o.deleted_by ? ` by ${o.deleted_by}` : ""}` : `changed ${ago(o.updated_at)}${o.updated_by ? ` by ${o.updated_by}` : ""}`}</span>
-                {o.deleted && <button type="button" className="btn btn-sm" disabled={busy === o.name} onClick={() => restore(o)}>Restore</button>}
+                {o.deleted && <BtnSm disabled={busy === o.name} onClick={() => restore(o)}>Restore</BtnSm>}
               </div>
             </li>
           ))}

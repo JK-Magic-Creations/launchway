@@ -6,6 +6,9 @@ import { useInstallation } from "../guided/facts";
 import { PageLearn } from "../learn/LearnLink";
 import { useTerms, terms } from "../terms";
 import "../styles/starters.css";
+import { prose } from "../prose";
+import { BtnSm, DivLoading, DivPage, PSub, SpanFaint, ThCol, ThRow } from "../kit/bits";
+const P = await prose("pages.Starters");
 
 const FLIGHT = "flight plan";
 
@@ -24,16 +27,16 @@ export function StartersPage() {
   const flights = shown.filter((t) => t.kind === FLIGHT);
   const steps = shown.filter((t) => t.kind !== FLIGHT);
   return (
-    <div className="page">
+    <DivPage>
       <header className="page-head">
         <div>
           <h1>{words.say("{Hangar}")}</h1>
-          <p className="sub">Ready-made pipelines and building blocks that come with Launchway. Write <Mono>uses: launchway/go-service</Mono> and nothing else, or a repository with no pipeline file gets the one that fits it.</p>
+          <PSub>{P.t0}<Mono>uses: launchway/go-service</Mono> {P.t1}</PSub>
           <PageLearn />
         </div>
       </header>
       <ErrorBox error={error} />
-      {!data && !error && <div className="loading">Loading…</div>}
+      {!data && !error && <DivLoading>Loading…</DivLoading>}
       {data && (
         <>
           <div className="starters-filter" role="search">
@@ -46,12 +49,12 @@ export function StartersPage() {
               </select>
             </label>
           </div>
-          {shown.length === 0 && <Empty title="Nothing matches">Try another word, or show everything.</Empty>}
-          {flights.length > 0 && <Group title={words.say("{Flight_plans}")} blurb="A whole pipeline for a kind of repository. Most repositories need only this." items={flights} />}
-          {steps.length > 0 && <Group title={words.say("{Maneuvers}")} blurb="One building block, to put in a pipeline you write yourself." items={steps} />}
+          {shown.length === 0 && <Empty title="Nothing matches">{P.t2}</Empty>}
+          {flights.length > 0 && <Group title={words.say("{Flight_plans}")} blurb={P.t3} items={flights} />}
+          {steps.length > 0 && <Group title={words.say("{Maneuvers}")} blurb={P.t4} items={steps} />}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -80,9 +83,9 @@ function Starter({ t }: { t: TemplateInfo }) {
           <h3 id={id} className="h-sm"><Mono>launchway/{t.name}</Mono></h3>
           <p>{plain(t.description)}</p>
         </div>
-        <button type="button" className="btn btn-sm" aria-expanded={open} aria-controls={`${id}-more`} onClick={() => setOpen(!open)}>
+        <BtnSm aria-expanded={open} aria-controls={`${id}-more`} onClick={() => setOpen(!open)}>
           {open ? "Hide details" : "Show details"}
-        </button>
+        </BtnSm>
       </div>
       {open && <Details t={t} id={`${id}-more`} />}
     </article>
@@ -95,10 +98,10 @@ function Details({ t, id }: { t: TemplateInfo; id: string }) {
       <h4 className="h-xs">Inputs</h4>
       {t.params.length === 0 ? <p className="faint">It takes no inputs.</p> : (
         <table className="starter-params">
-          <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+          <thead><tr><ThCol>Name</ThCol><ThCol>Type</ThCol><ThCol>Default</ThCol><ThCol>What it does</ThCol></tr></thead>
           <tbody>{t.params.map((p) => (
             <tr key={p.name}>
-              <th scope="row"><Mono>{p.name}</Mono></th><td>{p.type}</td>
+              <ThRow><Mono>{p.name}</Mono></ThRow><td>{p.type}</td>
               <td>{p.default === undefined ? <em>required</em> : <Mono>{p.default === "" ? "(empty)" : p.default}</Mono>}</td>
               <td>{p.description}{p.options && p.options.length > 0 && <>{p.description && !p.description.endsWith(".") ? "." : ""} One of {p.options.map((o, i) => <span key={o}>{i > 0 && ", "}<Mono>{o}</Mono></span>)}.</>}</td>
             </tr>
@@ -119,9 +122,9 @@ function Example({ text }: { text: string }) {
   };
   return (
     <>
-      <h4 className="h-xs">An example file <span className="faint">(.launchway/pipeline.yaml)</span></h4>
+      <h4 className="h-xs">An example file <SpanFaint>(.launchway/pipeline.yaml)</SpanFaint></h4>
       <pre className="starter-code">{text}</pre>
-      <button type="button" className="btn btn-sm" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
+      <BtnSm onClick={copy}>{copied ? "Copied" : "Copy"}</BtnSm>
     </>
   );
 }
@@ -142,11 +145,11 @@ function WhatItRuns({ steps }: { steps: TemplateStep[] }) {
   for (const s of steps) (cols[d(s.id)] ??= []).push(s);
   return (
     <>
-      <h4 className="h-xs">What it runs <span className="faint">(with every input at its default)</span></h4>
-      <ol className="starter-graph" aria-label="Steps, in the order they run; steps in one column run together">
+      <h4 className="h-xs">What it runs <SpanFaint>{P.t5}</SpanFaint></h4>
+      <ol className="starter-graph" aria-label={P.t6}>
         {cols.filter(Boolean).map((col, i) => (
           <li key={i} className="starter-col">
-            <ul>{col.map((s) => <li key={s.id} title={s.description}><Mono>{s.id.replace(/^ci\//, "")}</Mono>{s.kind === "image" && <span className="faint"> image</span>}<span className="faint starter-step-d">{s.description}</span></li>)}</ul>
+            <ul>{col.map((s) => <li key={s.id} title={s.description}><Mono>{s.id.replace(/^ci\//, "")}</Mono>{s.kind === "image" && <SpanFaint> image</SpanFaint>}<span className="faint starter-step-d">{s.description}</span></li>)}</ul>
           </li>
         ))}
       </ol>
@@ -178,17 +181,17 @@ function UseThis({ t }: { t: TemplateInfo }) {
     <div className="starter-use">
       <h4 className="h-xs">Use this</h4>
       {projects.length === 0 ? (
-        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> {terms().say("in your repository. (Opening a pull request from here needs a {project} you may save to.)")}</p>
+        <p className="faint">Copy the example into <Mono>.launchway/pipeline.yaml</Mono> {terms().say(P.t7)}</p>
       ) : (
         <div className="starter-use-row">
           <label>Add it to <select value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">{terms().say("choose a {project}")}</option>
             {projects.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select></label>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!project || busy} onClick={go}>{busy ? "Adding…" : "Open a pull request adding this file"}</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!project || busy} onClick={go}>{busy ? "Adding…" : P.t8}</button>
         </div>
       )}
-      {done && <p role="status">Saved on the branch <Mono>{done.branch}</Mono>. {done.url ? <a href={done.url} target="_blank" rel="noreferrer">Open the pull request</a> : "Open a pull request from it in your Git host."}</p>}
+      {done && <p role="status">Saved on the branch <Mono>{done.branch}</Mono>. {done.url ? <a href={done.url} target="_blank" rel="noreferrer">Open the pull request</a> : P.t9}</p>}
       <ErrorBox error={err} />
     </div>
   );

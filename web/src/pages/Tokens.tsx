@@ -11,6 +11,9 @@ import { ServiceAccountsSection } from "./ServiceAccounts";
 import { parseRepositories, parseRanges } from "./tokenLimits";
 import "../triggers.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { BtnPrimary, DivFaintSmall, DivPage, LabelField, PSub, SpanFaint, SpanHidden } from "../kit/bits";
+const P = await prose("pages.Tokens");
 
 const EXPIRY = [7, 30, 90, 180, 365, 730, 3650];
 const ROLES: Role[] = ["viewer", "operator", "admin"];
@@ -50,10 +53,10 @@ export function TokensPage() {
 
   if (me?.auth_mode !== "oidc") {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Settings" title={<>API tokens</>} />
-        <Empty title="API tokens need sign-in">This server has no sign-in, so there is nobody to make a token for.</Empty>
-      </div>
+        <Empty title="API tokens need sign-in">{P.t0}</Empty>
+      </DivPage>
     );
   }
 
@@ -88,70 +91,70 @@ export function TokensPage() {
   const repoList = repoParsed.ok ? repoParsed.values : [];
   const rangeList = rangeParsed.ok ? rangeParsed.values : [];
   const formProblem = (!repoParsed.ok && repoParsed.problem) || (!rangeParsed.ok && rangeParsed.problem) ||
-    (repoList.length > 0 && projects.trim() ? "A token for repositories can do nothing else, so it cannot also name a list. Make two tokens." : "");
+    (repoList.length > 0 && projects.trim() ? P.t1 : "");
   const maxDays = limits?.max_days ?? 365;
   const roles = ROLES.slice(0, limits?.your_role ? ROLES.indexOf(limits.your_role) + 1 : 0);
   return (
-    <div className="page">
-      <PageHead eyebrow="Settings" title={<>API tokens</>} sentence={<>For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>{terms().say("). A token acts as you, with the rights you have when it is used, never more than the role and {projects} it is limited to, until it expires or is revoked.")}</>} />
+    <DivPage>
+      <PageHead eyebrow="Settings" title={<>API tokens</>} sentence={<>For scripts, the <Mono>launchway</Mono> {P.t2}<Link href="/settings/access/agents">Connect an agent</Link>{terms().say(P.t3)}</>} />
 
       <section className="card">
         <form onSubmit={create} className="inputs-form" aria-label="Make a token">
           <div className="tokenform-grid">
-            <label className="field">
+            <LabelField>
               <span>Name</span>
               <input value={name} maxLength={100} required placeholder="for example: release script" onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label className="field">
+            </LabelField>
+            <LabelField>
               <span>Expires after</span>
               <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
                 {EXPIRY.filter((d) => d <= maxDays).map((d) => <option key={d} value={d}>{d} days</option>)}
                 {!EXPIRY.includes(maxDays) && <option value={maxDays}>{maxDays} days</option>}
               </select>
-            </label>
-            <label className="field">
+            </LabelField>
+            <LabelField>
               <span>Role</span>
               <select value={role} onChange={(e) => setRole(e.target.value as Role | "")}>
                 <option value="">Same as mine{limits?.your_role ? ` (${limits.your_role})` : ""}</option>
                 {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
               </select>
-            </label>
-            <label className="field">
+            </LabelField>
+            <LabelField>
               <span>{terms().say("{Projects}")}</span>
-              <input value={projects} placeholder={terms().say("every {project}, or: pay-*, web")} onChange={(e) => setProjects(e.target.value)} />
-            </label>
-            <label className="field">
+              <input value={projects} placeholder={terms().say(P.t4)} onChange={(e) => setProjects(e.target.value)} />
+            </LabelField>
+            <LabelField>
               <span>Repositories</span>
               <input value={repos} list="token-repos" placeholder="none, or: acme/shop, acme/*" aria-describedby="token-repos-help" onChange={(e) => setRepos(e.target.value)} />
               <datalist id="token-repos">{choices.map((c) => <option key={c} value={c} />)}</datalist>
-            </label>
-            <label className="field">
+            </LabelField>
+            <LabelField>
               <span>Access to them</span>
               <select value={access} disabled={!repoList.length} onChange={(e) => setAccess(e.target.value as "read" | "write")}>
                 <option value="read">Read only</option>
                 <option value="write">Read and push</option>
               </select>
-            </label>
-            <label className="field">
+            </LabelField>
+            <LabelField>
               <span>Only from addresses</span>
               <input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} />
-            </label>
+            </LabelField>
           </div>
-          <p className="sub" id="token-repos-help">Name repositories (pick from the list, or type <Mono>owner/name</Mono> or <Mono>owner/*</Mono>) and the token reaches those and nothing else. Address ranges limit where it may be used from.</p>
+          <PSub id="token-repos-help">{P.t5}<Mono>owner/name</Mono> or <Mono>owner/*</Mono>{P.t6}</PSub>
           {formProblem && <p className="bad-ink" role="alert">{formProblem}</p>}
-          <p className="sub">Every token expires, after at most {maxDays} days on this server. The role can be no higher than your own.</p>
-          <div><button type="submit" className="btn btn-primary" disabled={busy || !name.trim() || !!formProblem}>{busy ? "Making…" : "Make token"}</button></div>
+          <PSub>{P.t7}{maxDays} {P.t8}</PSub>
+          <div><BtnPrimary disabled={busy || !name.trim() || !!formProblem}>{busy ? "Making…" : "Make token"}</BtnPrimary></div>
         </form>
       </section>
 
       {made && (
         <div className="callout callout-ok tokenmade" role="status">
-          <strong>Your new token "{made.name}". Copy it now: it will not be shown again.</strong>
+          <strong>Your new token "{made.name}{P.t9}</strong>
           <div className="tokenvalue">
             <input readOnly value={made.token} aria-label="The new token" onFocus={(e) => e.currentTarget.select()} className="mono" />
             <button type="button" className="btn" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
           </div>
-          <span>On the command line: <Mono>{`launchway login --server ${location.origin}`}</Mono> and paste it. In scripts, send it as <Mono>Authorization: Bearer …</Mono>.</span>
+          <span>On the command line: <Mono>{`launchway login --server ${location.origin}`}</Mono> {P.t10}<Mono>Authorization: Bearer …</Mono>.</span>
           <button type="button" className="btn" onClick={() => setMade(null)}>Done</button>
         </div>
       )}
@@ -163,11 +166,11 @@ export function TokensPage() {
       {me.admin && all && (
         <>
           <h2 className="h-sm" style={{ marginTop: 24 }}>Everyone's tokens</h2>
-          <p className="sub">{terms().say("As an admin of every {project} you can revoke any token, for example one that leaked or whose owner left.")}</p>
+          <PSub>{terms().say(P.t11)}</PSub>
           {all.length === 0 ? <Empty title="Nobody has a token" /> : <TokenTable tokens={all} owner onRevoke={(t) => revoke(t, true)} />}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -176,16 +179,16 @@ function TokenTable({ tokens, owner, onRevoke }: { tokens: Token[]; owner?: bool
   return (
     <div className="card card-flush">
       <table className="table">
-        <thead><tr>{owner && <th>{terms().say("{Owner}")}</th>}<th>Name</th><th>Limited to</th><th>Made</th><th>Expires</th><th>Last used</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+        <thead><tr>{owner && <th>{terms().say("{Owner}")}</th>}<th>Name</th><th>Limited to</th><th>Made</th><th>Expires</th><th>Last used</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
         <tbody>
           {tokens.map((t) => (
             <tr key={t.id}>
               {owner && <td>{t.user}</td>}
               <td>{t.name}<div className="faint small mono">{t.id}</div></td>
-              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.repo_access ? <>{t.repo_access === "write" ? "read and push" : "read only"}: {t.repositories?.length ? t.repositories.map((r) => r.pattern).join(", ") : "no repository left"}</> : t.projects?.length ? t.projects.join(", ") : terms().say("every {project}")}{t.source_ranges?.length ? <div className="faint small">only from {t.source_ranges.join(", ")}</div> : null}</td>
+              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.repo_access ? <>{t.repo_access === "write" ? "read and push" : "read only"}: {t.repositories?.length ? t.repositories.map((r) => r.pattern).join(", ") : "no repository left"}</> : t.projects?.length ? t.projects.join(", ") : terms().say("every {project}")}{t.source_ranges?.length ? <DivFaintSmall>only from {t.source_ranges.join(", ")}</DivFaintSmall> : null}</td>
               <td title={clock(t.created_at)}>{ago(t.created_at, now)}</td>
               <td>{t.expires_at <= now ? <span className="bad-ink">expired</span> : clock(t.expires_at)}</td>
-              <td>{t.last_used ? <span title={clock(t.last_used)}>{ago(t.last_used, now)}{t.last_used_from && <span className="faint"> from {t.last_used_from}</span>}</span> : "never"}</td>
+              <td>{t.last_used ? <span title={clock(t.last_used)}>{ago(t.last_used, now)}{t.last_used_from && <SpanFaint> from {t.last_used_from}</SpanFaint>}</span> : "never"}</td>
               <td className="td-actions"><button type="button" className="btn btn-danger-outline btn-sm" onClick={() => onRevoke(t)}>Revoke</button></td>
             </tr>
           ))}

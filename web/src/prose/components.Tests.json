@@ -1,0 +1,10 @@
+{
+ "t0": "Tell a step which files its tests write, and Launchway reads them when the step ends, whether it passed or failed:",
+ "t1": "steps:\n  test:\n    image: python:3.12\n    run: pytest --junitxml=reports/unit.xml\n    reports:\n      tests: reports/*.xml",
+ "t2": "The format is worked out from each file. Launchway reads ",
+ "t3": "Screenshots, videos and traces the tests attach are shown with each result when the step names the directory they are written to:",
+ "t4": "    reports:\n      tests:\n        paths: test-results/results.json\n        attachments: test-results",
+ "t5": "JUnit XML (pytest, Maven Surefire and Failsafe, Gradle, Jest, Vitest, PHPUnit, RSpec, Mocha, Playwright, Cypress), ",
+ "t6": "go test -json, Cucumber JSON (Karate, cucumber-js, Cucumber-JVM), Karate JSON, Playwright JSON, mochawesome (Cypress), CTRF, ",
+ "t7": "TestNG, NUnit 3, xUnit.net v2, .NET TRX, TAP and Robot Framework output.xml"
+}

@@ -1,4 +1,6 @@
-// A small syntax highlighter. It is its own chunk, loaded only when a file is opened, and it does one job:
+
+import { prose } from "./prose";
+const P = await prose("highlight");// A small syntax highlighter. It is its own chunk, loaded only when a file is opened, and it does one job:
 // split each line into runs of comment, string, number, keyword and plain text. It builds data, never markup,
 // so what a file contains cannot become HTML. It does not understand a language, only its lexical shapes.
 
@@ -9,22 +11,22 @@ interface Lang { line: string[]; block?: [string, string]; str: string; kw: Set<
 const words = (s: string) => new Set(s.split(" "));
 const C = (kw: string, extra: Partial<Lang> = {}): Lang => ({ line: ["//"], block: ["/*", "*/"], str: "\"'`", kw: words(kw), ...extra });
 const HASH = (kw: string, extra: Partial<Lang> = {}): Lang => ({ line: ["#"], str: "\"'", kw: words(kw), ...extra });
-const JS = "const let var function return if else for while do switch case break continue new this class extends import export from default async await try catch finally throw typeof instanceof in of null undefined true false void delete interface type enum implements public private protected readonly static as";
+const JS = P.t0;
 const LANGS: Record<string, Lang> = {
-  go: C("package import func return if else for range switch case default break continue go defer select chan map struct interface type var const fallthrough goto nil true false iota"),
+  go: C(P.t1),
   js: C(JS), ts: C(JS), jsx: C(JS), tsx: C(JS), mjs: C(JS), cjs: C(JS),
-  java: C("package import class interface extends implements public private protected static final abstract void int long double float boolean char byte short new return if else for while do switch case default break continue try catch finally throw throws this super null true false enum instanceof synchronized"),
-  c: C("auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while NULL true false"),
-  rs: C("fn let mut const static struct enum impl trait pub use mod crate self super match if else for while loop break continue return as in ref move async await dyn where type unsafe true false", { str: "\"" }),
-  cs: C("namespace using class struct interface public private protected static void int long string bool new return if else for foreach while do switch case break continue try catch finally throw null true false var async await"),
-  php: C("function class public private protected static return if else elseif foreach for while echo new use namespace null true false array", { line: ["//", "#"] }),
-  py: HASH("def class return if elif else for while in not and or is import from as with try except finally raise pass break continue lambda None True False yield global nonlocal async await", { multi: ['"""', "'''"] }),
-  rb: HASH("def class module end if elsif else unless while until for in do begin rescue ensure return yield require include nil true false self then case when"),
-  sh: HASH("if then else elif fi for while do done case esac function in echo export local return exit set unset source true false"),
+  java: C(P.t2),
+  c: C(P.t3),
+  rs: C(P.t4, { str: "\"" }),
+  cs: C(P.t5),
+  php: C(P.t6, { line: ["//", "#"] }),
+  py: HASH(P.t7, { multi: ['"""', "'''"] }),
+  rb: HASH(P.t8),
+  sh: HASH(P.t9),
   yaml: HASH("true false null yes no"), yml: HASH("true false null yes no"), toml: HASH("true false"),
-  mk: HASH("ifeq ifneq else endif include define endef"), dockerfile: HASH("FROM RUN CMD LABEL EXPOSE ENV ADD COPY ENTRYPOINT VOLUME USER WORKDIR ARG ONBUILD"),
+  mk: HASH(P.t10), dockerfile: HASH(P.t11),
   json: { line: [], str: "\"", kw: words("true false null") },
-  sql: { line: ["--"], block: ["/*", "*/"], str: "'\"", kw: words("select from where insert into values update set delete create table drop alter index primary key not null and or join left right inner outer on group by order limit as in is distinct union all case when then else end") },
+  sql: { line: ["--"], block: ["/*", "*/"], str: "'\"", kw: words(P.t12) },
   css: { line: [], block: ["/*", "*/"], str: "\"'", kw: words("important") },
   html: { line: [], block: ["<!--", "-->"], str: "\"'", kw: words(""), tags: true }, xml: { line: [], block: ["<!--", "-->"], str: "\"'", kw: words(""), tags: true },
   svg: { line: [], block: ["<!--", "-->"], str: "\"'", kw: words(""), tags: true },

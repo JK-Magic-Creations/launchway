@@ -13,7 +13,7 @@ const FORBIDDEN = [
   /put these lines in the configuration file/i,
 ];
 
-const sources = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const sources = import.meta.glob(["./**/*.ts", "./**/*.tsx", "./prose/*.json", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 describe("wording", () => {
   for (const [path, text] of Object.entries(sources)) {

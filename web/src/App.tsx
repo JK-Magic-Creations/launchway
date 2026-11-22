@@ -9,6 +9,7 @@ import { ErrorBox } from "./components/ui";
 import { InstallationProvider } from "./guided/facts";
 import { Frame } from "./shell/Frame";
 import { isLearn } from "./nav/model";
+import { DivLoading, DivPage } from "./kit/bits";
 
 
 // Loaded only when someone not signed in opens Learn: the first page needs none of it.
@@ -51,13 +52,13 @@ function AppBody() {
     return () => window.removeEventListener(SIGNED_OUT, out);
   }, []);
 
-  if (who.state === "loading") return <div className="page"><div className="loading">Loading…</div></div>;
-  const wait = <div className="page"><div className="loading">Loading…</div></div>;
+  if (who.state === "loading") return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  const wait = <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   if (who.state === "setup") return <Suspense fallback={wait}><SetupPage /></Suspense>;
   if (who.state === "accept") return <Suspense fallback={wait}><AcceptPage /></Suspense>;
-  if (who.state === "error") return <div className="page"><ErrorBox error={who.error} /></div>;
+  if (who.state === "error") return <DivPage><ErrorBox error={who.error} /></DivPage>;
   // The documentation needs no sign-in: it is the public text of this release, and shows nothing of this installation.
-  if (who.state === "out" && isLearn(location.pathname)) return <Suspense fallback={<div className="page"><div className="loading">Loading…</div></div>}><PublicLearn /></Suspense>;
+  if (who.state === "out" && isLearn(location.pathname)) return <Suspense fallback={<DivPage><DivLoading>Loading…</DivLoading></DivPage>}><PublicLearn /></Suspense>;
   if (who.state === "out") return <Suspense fallback={wait}><SignInPage next={who.next} /></Suspense>;
   return (
     <MeContext.Provider value={who.me}>
@@ -70,7 +71,7 @@ function Shell({ me }: { me: Me }) {
   const approvals = useApprovals();
   // The words come with the settings: they are known before the first page is drawn.
   const { overview, error } = useOverview();
-  if (!overview && !error) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!overview && !error) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   return (
     <InstallationProvider me={me} approvals={approvals.list ?? []}>
       {me.sign_in_off && <Suspense fallback={null}><NoSignInBanner off={me.sign_in_off} /></Suspense>}

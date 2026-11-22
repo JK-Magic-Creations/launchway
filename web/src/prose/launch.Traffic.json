@@ -1,0 +1,11 @@
+{
+ "t0": "% of real traffic; testing through ",
+ "t1": "No route object splits traffic here: the services ",
+ "t2": "decide, by which ReplicaSet each selects.",
+ "t3": "Actual share to the new version: ",
+ "t4": "No analysis or test has run for this delivery",
+ "t5": "No traffic metrics are measured here yet: requests per second, error rate and latency for the stable and the new version come from a metrics source. To see them, add a verify step with metrics and name a health source (see ",
+ "t6": "); they are then drawn here with the query shown.",
+ "t7": "What the verify steps measured: each metric against its threshold, and for a built-in health check every call the launch {runner} made.",
+ "t8": "No test job is running or was kept."
+}

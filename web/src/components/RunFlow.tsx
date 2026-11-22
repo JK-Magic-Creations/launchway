@@ -1,6 +1,7 @@
 import type { RunDetail } from "../api";
 import { Link } from "./ui";
 import { terms } from "../terms";
+import { BtnLink } from "../kit/bits";
 
 /**
  * What flow control says about a run, above its steps: where it waits in its
@@ -33,7 +34,7 @@ export function RunFlowBanners({ run, done, onSelect }: { run: RunDetail; done: 
           <strong>{allowedFailed.length === 1 ? `${allowedFailed[0].id} failed, and the pipeline allows that` : `${allowedFailed.length} steps failed, and the pipeline allows that`}.</strong>{" "}
           Their steps have <code>on_failure: continue</code>{terms().say(", so the {run} goes on as if they had succeeded:")}{" "}
           {allowedFailed.map((s, i) => (
-            <span key={s.id}>{i > 0 && ", "}<button type="button" className="linkbtn" onClick={() => onSelect(s.id)}>{s.id}</button></span>
+            <span key={s.id}>{i > 0 && ", "}<BtnLink onClick={() => onSelect(s.id)}>{s.id}</BtnLink></span>
           ))}.
         </div>
       )}

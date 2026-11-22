@@ -14,6 +14,7 @@ import { onLink } from "../router";
 import { terms } from "../terms";
 import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { useNow, type Approvals } from "../live";
+import { DivLoading, DivPage, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 /** The approvals waiting for a decision, each as a card: what is asked, the evidence available today,
  * what happens next, and the decision with a reason. A person who may not decide is told exactly why. */
@@ -26,11 +27,11 @@ export function DecisionsPage({ approvals }: { approvals: Approvals }) {
   const settings = useLoad<ApprovalSettings>(settingsFn);
   const list = approvals.list;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Activity" title="Waiting for a decision"
         sentence={list === null ? "Loading." : list.length === 0 ? "Nothing is waiting for a person." : <><b>{list.length} {list.length === 1 ? "run is" : "runs are"} waiting.</b> Each card says what is asked and what you can see before you say {t.label("go")} or {t.label("no_go")}.</>} />
       <ErrorBox error={approvals.error} />
-      {list === null && !approvals.error && <div className="loading">Loading…</div>}
+      {list === null && !approvals.error && <DivLoading>Loading…</DivLoading>}
       {list && list.length === 0 && (
         <Sheet><EmptyState title="All clear" action={<LinkButton href="/activity" icon="arrow">{terms().say("See the {runs}")}</LinkButton>}>
           {terms().say("A {run} waits here when it reaches a step that needs")} {t.lower("clearance")}. Nothing is waiting now.
@@ -41,7 +42,7 @@ export function DecisionsPage({ approvals }: { approvals: Approvals }) {
           {list.map((a) => <ApprovalCard key={a.run_id + "/" + a.step_id} a={a} me={me} project={inst.projects.find((p) => p.name === a.project)} settings={settings.data} now={now} />)}
         </div>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -84,9 +85,9 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
           </p>
           <div className="row wrap">
             {diff ? <a className="btn btn-sm" href={diff} target="_blank" rel="noreferrer noopener"><Icon name="code" size="s" />See the change in the repository</a>
-              : <span className="faint small">{project ? "This repository has no web address, so there is no link to the change." : ""}</span>}
+              : <SpanFaintSmall>{project ? "This repository has no web address, so there is no link to the change." : ""}</SpanFaintSmall>}
             <a className="btn btn-sm" href={`/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`} onClick={onLink}>{terms().say("Open the {run}")}</a>
-            {left > 0 && <span className="faint small" title={clock(a.deadline)}>expires {clock(a.deadline)}</span>}
+            {left > 0 && <SpanFaintSmall title={clock(a.deadline)}>expires {clock(a.deadline)}</SpanFaintSmall>}
           </div>
           <Decide a={a} refusal={refusal} />
         </div>
@@ -120,7 +121,7 @@ function Decide({ a, refusal }: { a: Approval; refusal: Refusal | null }) {
       )}
       {!noReject && (
         <>
-          <label htmlFor={`why-${a.run_id}-${a.step_id}`}>Reason <span className="faint">(kept with the decision{noApprove ? "" : `; needed for ${t.lower("no_go")}`})</span></label>
+          <label htmlFor={`why-${a.run_id}-${a.step_id}`}>Reason <SpanFaint>(kept with the decision{noApprove ? "" : `; needed for ${t.lower("no_go")}`})</SpanFaint></label>
           <textarea id={`why-${a.run_id}-${a.step_id}`} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} placeholder="For example: tests pass and the release notes are ready." />
           <ErrorBox error={error} />
           <div className="acts decide">

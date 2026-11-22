@@ -11,8 +11,11 @@ import { terms } from "../terms";
 import { EntityLink } from "./EntityLink";
 import { ErrorBox } from "./ui";
 import "../rollback.css";
+import { prose } from "../prose";
+import { DivActions, DivFaintSmall, LabelField, SpanFaint, SpanFaintSmall } from "../kit/bits";
+const P = await prose("components.Rollback");
 
-const RB_NOTE = "A rollback restores the version only. It never restores a database or configuration.";
+const RB_NOTE = P.t0;
 
 /** A sentence from the server, ended with a full stop if it has none. */
 const stop = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) + (/[.!?)]$/.test(s) ? "" : ".") : "");
@@ -34,9 +37,9 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
       <div className="rb-control">
         <div className="row">
           <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: false })} title={`${terms().say("{Rollback:do}")} (${terms().say("{rollback:plain}")}): ${first.consequence}`}>{terms().say("{Rollback:do}")}: {first.version}</Button>
-          {targets.length > 1 && <Button {...sm} onClick={() => setOpen({ pick: true, queue: false })}title={terms().say("{Rollback:do} (in plain words, {rollback:plain}) to an older version of your choice")}>{terms().say("{Rollback:do}")}: another version…</Button>}
+          {targets.length > 1 && <Button {...sm} onClick={() => setOpen({ pick: true, queue: false })}title={terms().say(P.t1)}>{terms().say("{Rollback:do}")}: another version…</Button>}
         </div>
-        {!compact && <p className="rb-why">{action.emergency ? terms().say("Emergency action on a protected {environment}: no approval first; an approver reviews it afterwards.") : "Goes back to the previous successful deployment unless you choose another."}</p>}
+        {!compact && <p className="rb-why">{action.emergency ? terms().say(P.t2) : P.t3}</p>}
         {open && <RollbackDialog action={action} unit={unit} pick={open.pick} queue={open.queue} onClose={() => setOpen(null)} />}
       </div>
     );
@@ -48,7 +51,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
         <p className="rb-why"><b>Cannot start yet.</b> {stop(action.reason)}</p>
         <div className="row">
           <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: true })}>{terms().say("Queue the {rollback}")}{holder ? ` behind run #${holder}` : ""}</Button>
-          {action.instead && <span className="faint small">or cancel that run first</span>}
+          {action.instead && <SpanFaintSmall>or cancel that run first</SpanFaintSmall>}
         </div>
         {open && <RollbackDialog action={action} unit={unit} pick={false} queue={open.queue} onClose={() => setOpen(null)} />}
       </div>
@@ -57,7 +60,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
   return (
     <div className="rb-control">
       <Button {...sm} disabled title={action.reason}>{terms().say("{Rollback:do}")}</Button>
-      <p className="rb-why">{terms().say("Cannot {rollback:do}")} {where}: {stop(action.reason).replace(/^./, (c) => c.toLowerCase())}{action.would_help ? <> <span className="faint">To change that: {stop(action.would_help)}</span></> : null}</p>
+      <p className="rb-why">{terms().say("Cannot {rollback:do}")} {where}: {stop(action.reason).replace(/^./, (c) => c.toLowerCase())}{action.would_help ? <> <SpanFaint>To change that: {stop(action.would_help)}</SpanFaint></> : null}</p>
     </div>
   );
 }
@@ -111,26 +114,26 @@ function RollbackDialog({ action, unit, pick, queue, onClose }: { action: Server
         <p className="rb-then"><b>What happens.</b> {t.consequence}.
           {t.reverts.length > 0 && <ul>{t.reverts.map((r) => <li key={r.deployment}>revert {r.version} from <EntityLink kind="run" name={terms().say(`{run} #${r.run_number}`)} id={r.run} /></li>)}</ul>}
         </p>
-        <p className="rb-note">{RB_NOTE} {terms().say("It takes the {environment}'s lock like any deployment, and is recorded in the")} {terms().lower("logbook")}.</p>
-        {(t.suggestions ?? []).length > 0 && <div><div className="faint small">Before you go ahead</div><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
-        {action.emergency && !action.requires_approval && <div className="callout callout-wait">{terms().say("This is an emergency action on a protected {environment}: it needs no approval first, and an approver reviews it afterwards.")}</div>}
-        {action.emergency && action.requires_approval && <div className="callout callout-wait">{terms().say("This {environment} asks for an approval first, even for an emergency: the {rollback} waits for one.")}</div>}
+        <p className="rb-note">{RB_NOTE} {terms().say(P.t4)} {terms().lower("logbook")}.</p>
+        {(t.suggestions ?? []).length > 0 && <div><DivFaintSmall>Before you go ahead</DivFaintSmall><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
+        {action.emergency && !action.requires_approval && <div className="callout callout-wait">{terms().say(P.t5)}</div>}
+        {action.emergency && action.requires_approval && <div className="callout callout-wait">{terms().say(P.t6)}</div>}
         {toggles && toggles.changes.length > 0 && (
           <fieldset className="rb-toggles">
             <legend>Toggle changes since {t.version} went live</legend>
             <p className="rb-note">{toggles.note}</p>
             <ul className="rb-suggest">{toggles.changes.map((c) => <li key={c.id}><b>{c.toggle}</b> by {c.actor}: {c.reason}</li>)}</ul>
-            <label className="row"><input type="checkbox" checked={alsoToggles} onChange={(e) => setAlsoToggles(e.target.checked)} /> Also revert these toggle changes (recorded, never held for approval)</label>
+            <label className="row"><input type="checkbox" checked={alsoToggles} onChange={(e) => setAlsoToggles(e.target.checked)} /> {P.t7}</label>
           </fieldset>
         )}
-        {queue && <div className="callout callout-wait">{terms().say("Another deployment holds the lock. The {rollback} waits for it and then goes first.")}</div>}
-        <label className="field"><span>{terms().say("Why are you {rollback:doing}? (required, kept with the {rollback})")}</span>
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder="For example: checkout fails for customers since this version" /></label>
+        {queue && <div className="callout callout-wait">{terms().say(P.t8)}</div>}
+        <LabelField><span>{terms().say(P.t9)}</span>
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder={P.t10} /></LabelField>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-danger-outline" disabled={busy || noReason} title={noReason ? "Say why first" : undefined}>{busy ? "Starting…" : terms().say(`{Rollback:do}: ${t.version}`)}</button>
-        </div>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -146,7 +149,7 @@ export function DeploymentRollback({ d }: { d: DeploymentView }) {
   if (!a || d.verdict !== "deployed") return null;
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="faint small" style={{ marginBottom: 4 }}>{terms().say("{Rollback} after success")}</div>
+      <DivFaintSmall style={{ marginBottom: 4 }}>{terms().say("{Rollback} after success")}</DivFaintSmall>
       <RollbackControl action={a} unit={{ project: d.project, service: d.service, environment: d.environment }} compact />
     </div>
   );

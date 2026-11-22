@@ -44,6 +44,13 @@ A step waits for room for at most `queues.max_wait` (default **60 minutes**, in 
 After that it fails with the reason and what to change: free up room by canceling runs that are not
 needed, or give the step namespace more quota, or let steps wait longer. `off` waits for ever.
 
+### Waiting for a Station to take a Launch step
+
+A Launch step (and its return to base) is taken by a Station of the pool that serves its Airfield's target.
+It waits for one for at most `queues.deploy_pickup_wait` (default **15 minutes**; `off` waits for
+ever) and then fails saying that no Station took it. The step's own `timeout` does not run
+during that wait: it starts when a Station takes the step.
+
 ### Steps that can never start fail at once
 
 Waiting only helps when room can come back. A single step that asks for more than the **whole**

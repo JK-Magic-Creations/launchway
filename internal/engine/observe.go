@@ -142,7 +142,8 @@ func (e *Engine) tryLeaseDeploy(r RunnerInfo, targets []string) (*Job, error) {
 				leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil(), cd.run, cd.step, s.Attempt); err != nil {
 				return err
 			}
-			c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID})
+			// The step's time limit starts now: time spent waiting for a runner is not the step's.
+			c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID, Deadline: c.now + def.Timeout.D().Milliseconds()})
 			j, err := c.deployJob(cd.step, leaseID)
 			if err != nil {
 				return err

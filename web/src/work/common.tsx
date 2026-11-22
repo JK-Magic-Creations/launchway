@@ -6,6 +6,7 @@ import { Button, PageHead } from "../kit/layout";
 import { terms } from "../terms";
 import type { Item } from "./workApi";
 import "./work.css";
+import { DivLoading } from "../kit/bits";
 
 // Pieces every work page uses. Nothing here is in the first download: only the lazy work pages import it.
 
@@ -61,7 +62,7 @@ export function useLoad<T>(key: string, load: () => Promise<T>): { data?: T; err
 }
 
 export function Loading({ what }: { what?: string }) {
-  return <div className="loading" role="status">Loading{what ? " " + what : ""}…</div>;
+  return <DivLoading role="status">Loading{what ? " " + what : ""}…</DivLoading>;
 }
 
 /** What the server said, and what to try next. */

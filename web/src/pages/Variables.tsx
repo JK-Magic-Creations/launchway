@@ -6,6 +6,7 @@ import { PageHead, Sheet } from "../kit/layout";
 import { useTerms, terms } from "../terms";
 import { VAR_LEVELS, type VarLevel } from "../variablesApi";
 import { ProjectHead } from "./PipelineChrome";
+import { DivPage, PSub } from "../kit/bits";
 
 /** Settings → Variables: the variables at one level, with what each inherits from above. */
 export function SettingsVariablesPage() {
@@ -23,7 +24,7 @@ export function SettingsVariablesPage() {
   const word = (l: VarLevel) => t.label(l);
   const needsScope = level === "unit" || level === "project";
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Variables" sentence="Named settings you set once at a level. Everything below gets them; a nearer level can override one, and a lock keeps it from being overridden." />
       <Sheet pad>
         <div className="vr-tabs" role="tablist" aria-label="Level">
@@ -39,10 +40,10 @@ export function SettingsVariablesPage() {
           )}
         </div>
         {needsScope && choices.length === 0
-          ? <p className="sub">There is no {word(level).toLowerCase()} yet. {level === "unit" ? "Create one in Configuration." : terms().say("Add a {project} first.")}</p>
+          ? <PSub>There is no {word(level).toLowerCase()} yet. {level === "unit" ? "Create one in Configuration." : terms().say("Add a {project} first.")}</PSub>
           : <VariablesPanel key={level + ":" + chosen} level={level} scope={needsScope ? chosen : undefined} />}
       </Sheet>
-    </div>
+    </DivPage>
   );
 }
 
@@ -51,7 +52,7 @@ export function ProjectVariablesPage({ name }: { name: string }) {
   const [env, setEnv] = useState("");
   const [applied, setApplied] = useState("");
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="variables" title={`Variables of ${name}`}
         sentence={terms().say("Everything that reaches this {project} from above, and what it sets itself. Set a variable here to override the one from a wider level, unless a lock stops it.")} />
       <Sheet pad>
@@ -61,7 +62,7 @@ export function ProjectVariablesPage({ name }: { name: string }) {
         </form>
         <VariablesPanel key={applied} level="project" scope={name} environment={applied || undefined} />
       </Sheet>
-    </div>
+    </DivPage>
   );
 }
 

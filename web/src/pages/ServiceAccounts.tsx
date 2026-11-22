@@ -5,6 +5,7 @@ import { ErrorBox, Mono } from "../components/ui";
 import { triggersApi, type NewToken, type ServiceAccount } from "../triggers";
 import { terms } from "../terms";
 import { parseRanges, parseRepositories } from "./tokenLimits";
+import { BtnPrimary, BtnSm, DivFaintSmall, LabelField, PSub, SpanHidden } from "../kit/bits";
 
 const ROLES: Role[] = ["viewer", "operator", "admin"];
 
@@ -49,17 +50,17 @@ export function ServiceAccountsSection() {
   return (
     <section aria-labelledby="service-accounts-h">
       <h2 className="h-sm" id="service-accounts-h" style={{ marginTop: 24 }}>Service accounts</h2>
-      <p className="sub">An account with no password and no sign-in that owns the tokens of one automation. {terms().say("Its tokens never have more than its role, and the {logbook} names the token on every request.")}</p>
+      <PSub>An account with no password and no sign-in that owns the tokens of one automation. {terms().say("Its tokens never have more than its role, and the {logbook} names the token on every request.")}</PSub>
       <ErrorBox error={error} />
       <form className="inputs-form" aria-label="Make a service account" onSubmit={(e) => { e.preventDefault(); void run(async () => { await triggersApi.createServiceAccount({ name: name.trim(), role, description: description.trim() }); setName(""); setDescription(""); }); }}>
         <div className="tokenform-grid">
-          <label className="field"><span>Name</span><input value={name} required placeholder="for example: gitops-controller" onChange={(e) => setName(e.target.value)} /></label>
-          <label className="field"><span>Role</span>
+          <LabelField><span>Name</span><input value={name} required placeholder="for example: gitops-controller" onChange={(e) => setName(e.target.value)} /></LabelField>
+          <LabelField><span>Role</span>
             <select value={role} onChange={(e) => setRole(e.target.value as Role)}>{ROLES.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}</select>
-          </label>
-          <label className="field"><span>What it is for</span><input value={description} maxLength={300} onChange={(e) => setDescription(e.target.value)} /></label>
+          </LabelField>
+          <LabelField><span>What it is for</span><input value={description} maxLength={300} onChange={(e) => setDescription(e.target.value)} /></LabelField>
         </div>
-        <div><button type="submit" className="btn btn-primary" disabled={!name.trim()}>Make service account</button></div>
+        <div><BtnPrimary disabled={!name.trim()}>Make service account</BtnPrimary></div>
       </form>
       {made && (
         <div className="callout callout-ok tokenmade" role="status">
@@ -71,34 +72,34 @@ export function ServiceAccountsSection() {
       {forName && (
         <form className="inputs-form" aria-label={`Make a token for ${forName}`} onSubmit={makeToken}>
           <div className="tokenform-grid">
-            <label className="field"><span>Token name</span><input value={tokenName} required onChange={(e) => setTokenName(e.target.value)} /></label>
-            <label className="field"><span>Repositories</span><input value={repos} placeholder="none, or: acme/shop, acme/*" onChange={(e) => setRepos(e.target.value)} /></label>
-            <label className="field"><span>Access to them</span>
+            <LabelField><span>Token name</span><input value={tokenName} required onChange={(e) => setTokenName(e.target.value)} /></LabelField>
+            <LabelField><span>Repositories</span><input value={repos} placeholder="none, or: acme/shop, acme/*" onChange={(e) => setRepos(e.target.value)} /></LabelField>
+            <LabelField><span>Access to them</span>
               <select value={access} disabled={!repoParsed.ok || !repoParsed.values.length} onChange={(e) => setAccess(e.target.value as "read" | "write")}>
                 <option value="read">Read only</option><option value="write">Read and push</option>
               </select>
-            </label>
-            <label className="field"><span>Only from addresses</span><input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} /></label>
+            </LabelField>
+            <LabelField><span>Only from addresses</span><input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} /></LabelField>
           </div>
           {problem && <p className="bad-ink" role="alert">{problem}</p>}
-          <div><button type="submit" className="btn btn-primary" disabled={!tokenName.trim() || !!problem}>Make token for {forName}</button>{" "}
+          <div><BtnPrimary disabled={!tokenName.trim() || !!problem}>Make token for {forName}</BtnPrimary>{" "}
             <button type="button" className="btn" onClick={() => setForName(null)}>Cancel</button></div>
         </form>
       )}
-      {list && list.length === 0 && <p className="sub">No service accounts yet. On the command line: <Mono>launchway service-accounts create NAME</Mono>.</p>}
+      {list && list.length === 0 && <PSub>No service accounts yet. On the command line: <Mono>launchway service-accounts create NAME</Mono>.</PSub>}
       {list && list.length > 0 && (
         <div className="card card-flush">
           <table className="table">
-            <thead><tr><th>Name</th><th>Role</th><th>State</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>State</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
             <tbody>
               {list.map((a) => (
                 <tr key={a.name}>
-                  <td>{a.name}{a.description && <div className="faint small">{a.description}</div>}</td>
+                  <td>{a.name}{a.description && <DivFaintSmall>{a.description}</DivFaintSmall>}</td>
                   <td>{roleName(a.role)}</td>
                   <td>{a.disabled ? "switched off" : "on"}</td>
                   <td className="td-actions">
-                    <button type="button" className="btn btn-sm" disabled={a.disabled} onClick={() => setForName(a.name)}>Make token</button>{" "}
-                    <button type="button" className="btn btn-sm" onClick={() => void run(() => triggersApi.updateServiceAccount(a.name, { disabled: !a.disabled }))}>{a.disabled ? "Switch on" : "Switch off"}</button>{" "}
+                    <BtnSm disabled={a.disabled} onClick={() => setForName(a.name)}>Make token</BtnSm>{" "}
+                    <BtnSm onClick={() => void run(() => triggersApi.updateServiceAccount(a.name, { disabled: !a.disabled }))}>{a.disabled ? "Switch on" : "Switch off"}</BtnSm>{" "}
                     <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => { if (window.confirm(`Delete ${a.name} and every token it owns? Anything using them stops working at once.`)) void run(() => triggersApi.deleteServiceAccount(a.name)); }}>Delete</button>
                   </td>
                 </tr>

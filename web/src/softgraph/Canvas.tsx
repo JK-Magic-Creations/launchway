@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../kit/layout";
 import { layout, MAX_SHOWN, type Layout, type LEdge, type LNode } from "./layout";
+import { PSub } from "../kit/bits";
 
 /** The picture of the graph. It is an extra: everything it shows is also in the table beside it, which a keyboard
  * and a screen reader use. Layout is computed in a worker where there is one. */
@@ -44,7 +45,7 @@ export default function Canvas({ nodes, edges, focus, highlight, selected, onSel
         <Button sm onClick={() => move(0, -80)}>Move down</Button>
         <Button sm onClick={() => setView({ k: 1, x: 0, y: 0 })}>Reset the view</Button>
       </div>
-      {placed.shown < placed.total && <p className="sub" role="status">The picture shows {MAX_SHOWN} of {placed.total} nodes, nearest the focus first. Filter by kind, or follow the table, to see the rest.</p>}
+      {placed.shown < placed.total && <PSub role="status">The picture shows {MAX_SHOWN} of {placed.total} nodes, nearest the focus first. Filter by kind, or follow the table, to see the rest.</PSub>}
       <svg role="img" aria-label={`Picture of the graph: ${placed.shown} nodes. The table beside it lists the same things.`}
         viewBox={`0 0 ${Math.max(600, placed.width)} ${Math.max(200, placed.height)}`} className="sg-svg"
         onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 0.9); } }}

@@ -16,6 +16,7 @@ import { Status, stateOf } from "../kit/Status";
 import { TrendStrip } from "../kit/Trend";
 import { useNow } from "../live";
 import { terms } from "../terms";
+import { DivLoading, DivPage, SpanFaint } from "../kit/bits";
 
 // The grouped, searchable list loads after the first paint; the flat list is what shows meanwhile.
 const Explorer = lazy(() => import("../explorer/PipelinesExplorer"));
@@ -34,12 +35,12 @@ export function CodeListPage() {
     for (const r of all ?? []) m.set(r.project, [...(m.get(r.project) ?? []), r]);
     return m;
   }, [all]);
-  if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (!inst.loaded) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const rows = inst.projects;
   const flat = flatList(rows, by, now);
   const unreachable = rows.filter((p) => p.error).length;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Code" title="Repositories"
         sentence={rows.length === 0 && hosted.length > 0 ? terms().say(`${hosted.length} ${hosted.length === 1 ? "repository is" : "repositories are"} hosted by Launchway; none is connected as a {project} with a pipeline yet.`) : rows.length === 0 ? "Your code lives in Git repositories. None is connected yet." : unreachable > 0 ? <><b>{unreachable} {unreachable === 1 ? "repository cannot" : "repositories cannot"} be reached.</b> The others are read normally.</> : `${rows.length} ${rows.length === 1 ? "repository" : "repositories"} connected, all reachable.`}
         actions={<><LinkButton href="/graph" sm>Graph</LinkButton>{hosting === "on" && <LinkButton href="/repositories" sm>Hosted by Launchway</LinkButton>}{rows.length > 0 ? <AddButtons sm /> : null}</>} />
@@ -71,7 +72,7 @@ export function CodeListPage() {
       ) : (
         <Suspense fallback={flat}><Explorer as="projects" projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -89,9 +90,9 @@ function flatList(rows: Project[], by: Map<string, RunSummary[]>, now: number) {
                     <div className="sb mono">{p.url}</div>
                     {p.error && <div className="sb" style={{ color: "var(--bad-ink)" }}>Cannot reach the repository: {p.error}</div>}
                   </div>
-                  <div className="cell"><span className="faint">default</span> <b className="mono">{p.default_branch}</b></div>
+                  <div className="cell"><SpanFaint>default</SpanFaint> <b className="mono">{p.default_branch}</b></div>
                   <div className="cell" style={{ minWidth: 190 }}>
-                    {r ? <><Status state={stateOf(r.status)} /><span><EntityLink kind="run" name={`#${r.number}`} id={r.id} /> {ago(r.created_at, now)}</span></> : <span className="faint">{terms().say("No {runs} yet")}</span>}
+                    {r ? <><Status state={stateOf(r.status)} /><span><EntityLink kind="run" name={`#${r.number}`} id={r.id} /> {ago(r.created_at, now)}</span></> : <SpanFaint>{terms().say("No {runs} yet")}</SpanFaint>}
                   </div>
                   <div className="cell"><TrendStrip trend={trendOf(by.get(p.name) ?? [])} label={`The last runs of ${p.name}`} /></div>
                 </li>

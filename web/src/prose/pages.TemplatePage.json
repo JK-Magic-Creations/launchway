@@ -1,0 +1,11 @@
+{
+ "t0": "A template with no description.",
+ "t1": "The Git repository of the library ",
+ "t2": "No {project} on this server uses it yet.",
+ "t3": "and gives the inputs below. Launchway reads the template from Git at that version, so the same pipeline always means the same steps.",
+ "t4": "It gives nothing to later steps.",
+ "t5": "A pipeline that asks for an input that does not exist is refused before it runs.",
+ "t6": "This library has no tags yet, so pipelines pin a branch or a commit.",
+ "t7": "What changed between two versions will appear here once releases carry notes.",
+ "t8": "No {project} on this server pins this template. A {project} that does is listed here with the version it uses."
+}

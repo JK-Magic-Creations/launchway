@@ -14,6 +14,9 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { terms } from "../terms";
 import { releasesApi, type Cell, type Formation, type Measures, type Report } from "../releasesApi";
 import "../releases.css";
+import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, DivPage, SpanFaint, SpanHidden, ThCol, ThRow } from "../kit/bits";
+const P = await prose("pages.ReleasesManage");
 
 const relHref = (project: string, version: string) => `/deployments/releases/${encodeURIComponent(project)}/${encodeURIComponent(version)}`;
 const HEALTH: Record<string, { tone?: Tone; word: string }> = { healthy: { tone: "ok", word: "healthy" }, failed: { tone: "bad", word: "failed" }, returned: { tone: "warn", word: "returned to base" } };
@@ -28,25 +31,25 @@ export function ReleaseMatrixPage() {
   const [back, setBack] = useState<null | { project: string; airfield: string; version?: string }>(null);
   const m = data.data;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Deployments · Releases" title="Where each release is"
-        sentence={terms().say("Each row is a {project}, each column an Airfield. What runs in an Airfield is what was last launched there; a release is what gets promoted from one to the next.")} />
+        sentence={terms().say(P.t0)} />
       <ReleasesNav path="/deployments/releases/matrix" />
       <ErrorBox error={data.error} />
-      {data.loading && !m && <div className="loading">Loading…</div>}
-      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">{terms().say("Once a {project} has a release, or a pipeline has launched something into an Airfield, it appears here.")}</EmptyState></Sheet>}
+      {data.loading && !m && <DivLoading>Loading…</DivLoading>}
+      {m && m.rows.length === 0 && <Sheet><EmptyState title="Nothing to show yet">{terms().say(P.t1)}</EmptyState></Sheet>}
       {m && m.rows.length > 0 && (
         <Sheet>
           <div className="rel-table-wrap">
             <table className="rel-table">
-              <caption className="visually-hidden">Which release runs in which Airfield</caption>
-              <thead><tr><th scope="col">{terms().say("{Project}")}</th>{m.airfields.map((a) => <th key={a} scope="col">{a}</th>)}</tr></thead>
+              <caption className="visually-hidden">{P.t2}</caption>
+              <thead><tr><ThCol>{terms().say("{Project}")}</ThCol>{m.airfields.map((a) => <ThCol key={a}>{a}</ThCol>)}</tr></thead>
               <tbody>
                 {m.rows.map((row) => (
                   <tr key={row.project}>
-                    <th scope="row" style={{ background: "transparent", textTransform: "none", letterSpacing: 0, fontSize: 14, color: "inherit" }}>
-                      <EntityLink kind="project" name={row.project} />{row.latest && <div className="faint small">latest {row.latest}</div>}
-                    </th>
+                    <ThRow style={{ background: "transparent", textTransform: "none", letterSpacing: 0, fontSize: 14, color: "inherit" }}>
+                      <EntityLink kind="project" name={row.project} />{row.latest && <DivFaintSmall>latest {row.latest}</DivFaintSmall>}
+                    </ThRow>
                     {row.cells.map((c) => <td key={c.airfield}><CellView c={c} project={row.project} now={now} latest={row.latest}
                       mayPromote={!!m.can_promote.find((p) => p.project === row.project && p.airfield === c.airfield)}
                       mayReturn={canOperate(me, row.project)} onPromote={(version) => setPromote({ project: row.project, version, airfield: c.airfield })}
@@ -60,24 +63,24 @@ export function ReleaseMatrixPage() {
       )}
       {promote && <PromoteDialog {...promote} onClose={() => setPromote(null)} onDone={data.reload} />}
       {back && <ReturnDialog {...back} onClose={() => setBack(null)} onDone={data.reload} />}
-    </div>
+    </DivPage>
   );
 }
 
 function CellView({ c, project, now, latest, mayPromote, mayReturn, onPromote, onReturn }: { c: Cell; project: string; now: number; latest?: string; mayPromote: boolean; mayReturn: boolean; onPromote: (version: string) => void; onReturn: () => void }) {
   const h = HEALTH[c.health];
   if (!c.version && !c.launching) {
-    return <div className="rel-cell"><span className="faint">nothing launched</span>{mayPromote && latest && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<span className="visually-hidden"> to {c.airfield}</span></Button>}</div>;
+    return <div className="rel-cell"><SpanFaint>nothing launched</SpanFaint>{mayPromote && latest && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<SpanHidden> to {c.airfield}</SpanHidden></Button>}</div>;
   }
   return (
     <div className="rel-cell">
       {c.version && <span className="v">{c.release_id ? <a href={relHref(project, c.version)} onClick={onLink}>{c.version}</a> : c.version}{" "}{h && <Chip tone={h.tone}>{h.word}</Chip>}</span>}
-      {c.version && <span className="m">since {ago(c.since ?? 0, now)} <span className="faint">({clock(c.since ?? 0)})</span>{c.by ? ` by ${c.by}` : ""}{c.run && <> · <EntityLink kind="run" name={`Sortie #${c.run_number}`} id={c.run} /></>}</span>}
-      {!c.release_id && c.version && <span className="m">{terms().say("not a release of this {project}")}</span>}
+      {c.version && <span className="m">since {ago(c.since ?? 0, now)} <SpanFaint>({clock(c.since ?? 0)})</SpanFaint>{c.by ? ` by ${c.by}` : ""}{c.run && <> · <EntityLink kind="run" name={`Sortie #${c.run_number}`} id={c.run} /></>}</span>}
+      {!c.release_id && c.version && <span className="m">{terms().say(P.t3)}</span>}
       {c.launching && <span className="m"><Chip tone="run">launching {c.launching.version}</Chip> since {ago(c.launching.since, now)}</span>}
       <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {mayPromote && latest && c.version !== latest && !c.launching && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<span className="visually-hidden"> to {c.airfield}</span></Button>}
-        {mayReturn && c.version && !c.launching && <Button sm onClick={onReturn}>Return to base<span className="visually-hidden"> {project} in {c.airfield}</span></Button>}
+        {mayPromote && latest && c.version !== latest && !c.launching && <Button sm onClick={() => onPromote(latest)}>Promote {latest}<SpanHidden> to {c.airfield}</SpanHidden></Button>}
+        {mayReturn && c.version && !c.launching && <Button sm onClick={onReturn}>Return to base<SpanHidden> {project} in {c.airfield}</SpanHidden></Button>}
       </span>
     </div>
   );
@@ -106,20 +109,20 @@ export function ReleaseCalendarPage() {
   };
   const entries = data.data?.entries ?? [];
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Deployments · Releases" title="Release calendar"
         sentence={`What is planned, in progress and done, and the periods when nothing is promoted (a ${hold}). A plan is a reminder: promoting stays a person's action.`} />
-      <ReleasesNav path="/deployments/releases/calendar" />
+      <ReleasesNav path={P.t4} />
       <ErrorBox error={data.error} />
-      {data.loading && !data.data && <div className="loading">Loading…</div>}
-      {data.data && entries.length === 0 && <Sheet><EmptyState title="Nothing on the calendar">Promotions and freezes from two weeks ago to a month ahead appear here.</EmptyState></Sheet>}
+      {data.loading && !data.data && <DivLoading>Loading…</DivLoading>}
+      {data.data && entries.length === 0 && <Sheet><EmptyState title="Nothing on the calendar">{P.t5}</EmptyState></Sheet>}
       {entries.length > 0 && (
-        <Sheet title="Two weeks back to a month ahead">
+        <Sheet title={P.t6}>
           <ul className="rel-cal" aria-label="Calendar entries">
             {entries.map((e, i) => (
               <li key={i} className={e.kind === "freeze" ? "freeze" : ""}>
                 <span className="when">{clock(e.at)}{e.end ? <> to {clock(e.end)}</> : null}</span>
-                <span>{e.kind === "freeze" ? e.title : e.release ? <a href={relHref(e.project ?? "", e.version ?? "")} onClick={onLink}>{e.title}</a> : e.title}{e.by ? <span className="faint"> · {e.by}</span> : null}</span>
+                <span>{e.kind === "freeze" ? e.title : e.release ? <a href={relHref(e.project ?? "", e.version ?? "")} onClick={onLink}>{e.title}</a> : e.title}{e.by ? <SpanFaint> · {e.by}</SpanFaint> : null}</span>
                 <span><Chip tone={e.kind === "freeze" ? (e.state === "in force" ? "bad" : undefined) : e.kind === "in_progress" ? "run" : e.kind === "done" ? "ok" : "warn"}>{kindWord[e.kind]}{e.state && e.kind === "freeze" ? `: ${e.state}` : ""}</Chip></span>
               </li>
             ))}
@@ -136,7 +139,7 @@ export function ReleaseCalendarPage() {
             <label>Why<input type="text" value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={500} /></label>
             <Button kind="pri" type="submit" disabled={!to || !reason.trim()}>Start the {hold}</Button>
           </form>
-          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} {terms().say("nothing is promoted unless an administrator of the {project} overrides, with a reason that is kept in the")} {terms().lower("logbook")}.</p>
+          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>In a {hold} {terms().say(P.t7)} {terms().lower("logbook")}.</p>
           <ErrorBox error={error} />
         </Sheet>
       )}
@@ -144,10 +147,10 @@ export function ReleaseCalendarPage() {
         <Sheet title={`Current and coming ${terms().plural("hold").toLowerCase()}`}>
           <ul className="rowlist">{(freezes.data ?? []).filter((f) => !f.canceled && f.to > now).map((f) => (
             <li key={f.id}><div className="main"><div className="nm">{f.project || terms().say("Every {project}")} · {f.airfield || "every Airfield"}</div><div className="sb">{f.reason} · until {clock(f.to)}</div></div>
-              {(f.project ? me?.roles[f.project] === "admin" || me?.admin : me?.admin) && <div className="cell"><Button sm onClick={async () => { try { await releasesApi.cancelFreeze(f.id); freezes.reload(); data.reload(); } catch (e) { setError(e); } }}>End it<span className="visually-hidden"> ({f.reason})</span></Button></div>}</li>))}</ul>
+              {(f.project ? me?.roles[f.project] === "admin" || me?.admin : me?.admin) && <div className="cell"><Button sm onClick={async () => { try { await releasesApi.cancelFreeze(f.id); freezes.reload(); data.reload(); } catch (e) { setError(e); } }}>End it<SpanHidden> ({f.reason})</SpanHidden></Button></div>}</li>))}</ul>
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -170,21 +173,21 @@ export function ReleaseFormationsPage() {
     try { await releasesApi.createFormation(name.trim(), "", members.split(/[\s,]+/).filter(Boolean), byDeps ? "dependencies" : undefined); setName(""); setMembers(""); data.reload(); } catch (e) { setError(e); }
   };
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Deployments · Releases" title="Formations"
-        sentence={terms().say("A Formation groups releases of several {projects} that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started.")} />
-      <ReleasesNav path="/deployments/releases/formations" />
+        sentence={terms().say(P.t8)} />
+      <ReleasesNav path={P.t9} />
       <ErrorBox error={data.error} />
-      {data.loading && !data.data && <div className="loading">Loading…</div>}
-      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">Write one below: the releases, in the order they should go out. The order is yours, or tick "Order by dependencies" and the software graph puts what the others depend on first.</EmptyState></Sheet>}
+      {data.loading && !data.data && <DivLoading>Loading…</DivLoading>}
+      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">{P.t10}</EmptyState></Sheet>}
       {(data.data ?? []).map((f) => (
         <Sheet key={f.id} title={<>{f.name} <Chip tone={f.state === "done" ? "ok" : f.state === "partial" || f.state === "failed" ? "bad" : f.state === "promoting" ? "run" : undefined}>{f.state}</Chip></>}>
           <ol className="rowlist" style={{ listStyle: "decimal inside" }} aria-label={`Members of ${f.name}, in order`}>
             {f.members.map((m) => (
-              <li key={m.release_id}><div className="main rel-member"><a href={relHref(m.project, m.version)} onClick={onLink}>{m.project} {m.version}</a><Chip tone={MEMBER[m.state]?.tone}>{MEMBER[m.state]?.word ?? m.state}</Chip>{m.detail && <span className="faint">{m.detail}</span>}</div></li>
+              <li key={m.release_id}><div className="main rel-member"><a href={relHref(m.project, m.version)} onClick={onLink}>{m.project} {m.version}</a><Chip tone={MEMBER[m.state]?.tone}>{MEMBER[m.state]?.word ?? m.state}</Chip>{m.detail && <SpanFaint>{m.detail}</SpanFaint>}</div></li>
             ))}
           </ol>
-          {f.order_source === "dependencies" && <p className="faint small">Ordered by dependencies: the software graph put what the others depend on first.</p>}
+          {f.order_source === "dependencies" && <p className="faint small">{P.t11}</p>}
           {f.state === "planned" && any && (
             <div className="rel-inline">
               <label>Promote to<select value={airfield[f.id] ?? ""} onChange={(e) => setAirfield({ ...airfield, [f.id]: e.target.value })}><option value="">Choose an Airfield</option>{(mx.data?.airfields ?? []).map((a) => <option key={a}>{a}</option>)}</select></label>
@@ -197,14 +200,14 @@ export function ReleaseFormationsPage() {
         <Sheet title="Make a formation">
           <form className="rel-inline" onSubmit={(e) => { e.preventDefault(); if (name.trim() && members.trim()) make(); }}>
             <label>Name<input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={64} /></label>
-            <label>{terms().say("Releases, in order, as {project}@version")}<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
-            <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> Order by dependencies (the software graph puts what others depend on first)</label>
+            <label>{terms().say(P.t12)}<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
+            <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> {P.t13}</label>
             <Button kind="pri" type="submit" disabled={!name.trim() || !members.trim()}>Make the formation</Button>
           </form>
           <ErrorBox error={error} />
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -225,19 +228,19 @@ export function ReleaseReportPage() {
   const projects = [...new Set((list.data ?? []).map((r) => r.project))];
   const rep = data.data;
   return (
-    <div className="page">
-      <PageHead eyebrow="Deployments · Releases" title="Release report" sentence="What shipped, when it reached each Airfield, and the four measures of delivery worked out from what Launchway already records." />
+    <DivPage>
+      <PageHead eyebrow="Deployments · Releases" title="Release report" sentence={P.t14} />
       <ReleasesNav path="/deployments/releases/report" />
       <div className="toolbar2">
-        <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span><select value={project} onChange={(e) => setProject(e.target.value)}><option value="">{terms().say("Every {project}")}</option>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
-        <label className="select"><span className="visually-hidden">Period</span><select value={days} onChange={(e) => setDays(e.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></label>
+        <label className="select"><SpanHidden>{terms().say("{Project}")}</SpanHidden><select value={project} onChange={(e) => setProject(e.target.value)}><option value="">{terms().say("Every {project}")}</option>{projects.map((p) => <option key={p}>{p}</option>)}</select></label>
+        <label className="select"><SpanHidden>Period</SpanHidden><select value={days} onChange={(e) => setDays(e.target.value)}><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></label>
         <a className="btn" href={releasesApi.reportUrl({ project: project || undefined, from, format: "html" })}>Export as HTML</a>
         <a className="btn" href={releasesApi.reportUrl({ project: project || undefined, from })} target="_blank" rel="noreferrer">Open the JSON</a>
       </div>
       <ErrorBox error={data.error} />
-      {data.loading && !rep && <div className="loading">Loading…</div>}
+      {data.loading && !rep && <DivLoading>Loading…</DivLoading>}
       {rep && <ReportBody rep={rep} />}
-    </div>
+    </DivPage>
   );
 }
 
@@ -251,8 +254,8 @@ function ReportBody({ rep }: { rep: Report }) {
       <Sheet title="The four delivery measures">
         <div className="rel-measures">
           <div><div className="k">Frequency</div><div className="v">{m.frequency_per_week.toFixed(2)}</div><div className="f">successful launches a week; {m.launches} launches in all</div></div>
-          <div><div className="k">Lead time (median)</div><div className="v">{hours(m.lead_time_median_s)}</div><div className="f">from the commit to the Airfield, over {m.lead_time_count} launches</div></div>
-          <div><div className="k">Change failure rate</div><div className="v">{pct(m.change_failure_rate)}</div><div className="f">{m.failures} of {m.launches} launches failed or were returned to base</div></div>
+          <div><div className="k">Lead time (median)</div><div className="v">{hours(m.lead_time_median_s)}</div><div className="f">{P.t15}{m.lead_time_count} launches</div></div>
+          <div><div className="k">Change failure rate</div><div className="v">{pct(m.change_failure_rate)}</div><div className="f">{m.failures} of {m.launches} {P.t16}</div></div>
           <div><div className="k">Time to restore (median)</div><div className="v">{hours(m.time_to_restore_median_s)}</div><div className="f">{m.restore_count} restored, {m.unrestored} not yet</div></div>
         </div>
       </Sheet>
@@ -267,11 +270,11 @@ function ReportBody({ rep }: { rep: Report }) {
               })}
               <text x="10" y={h + 16}>{day(rep.from)}</text><text x={w - 10} y={h + 16} textAnchor="end">{day(rep.to)}</text>
             </svg>
-            <p className="rel-hint">Launches that succeeded in the accent color; launches that failed or were returned to base in red.</p>
+            <p className="rel-hint">{P.t17}</p>
           </div>
           <div className="rel-table-wrap"><table className="rel-table">
             <caption>The same numbers as a table</caption>
-            <thead><tr><th scope="col">From</th><th scope="col" className="n">Launches</th><th scope="col" className="n">Failed</th><th scope="col" className="n">Median lead time</th></tr></thead>
+            <thead><tr><ThCol>From</ThCol><ThCol className="n">Launches</ThCol><ThCol className="n">Failed</ThCol><ThCol className="n">Median lead time</ThCol></tr></thead>
             <tbody>{series.map((s: Measures, i) => <tr key={i}><td>{day(rep.from + i * rep.step_seconds * 1000)}</td><td className="n">{s.launches}</td><td className="n">{s.failures}</td><td className="n">{hours(s.lead_time_median_s)}</td></tr>)}</tbody></table></div>
         </Sheet>
       )}
@@ -279,15 +282,15 @@ function ReportBody({ rep }: { rep: Report }) {
         <Sheet title="By Airfield">
           <div className="rel-table-wrap"><table className="rel-table">
             <caption className="visually-hidden">Measures by Airfield</caption>
-            <thead><tr><th scope="col">Airfield</th><th scope="col" className="n">Launches</th><th scope="col" className="n">Failed</th><th scope="col" className="n">Failure rate</th><th scope="col" className="n">Median lead time</th><th scope="col" className="n">Median time to restore</th></tr></thead>
+            <thead><tr><ThCol>Airfield</ThCol><ThCol className="n">Launches</ThCol><ThCol className="n">Failed</ThCol><ThCol className="n">Failure rate</ThCol><ThCol className="n">Median lead time</ThCol><ThCol className="n">Median time to restore</ThCol></tr></thead>
             <tbody>{Object.entries(rep.by_airfield).sort().map(([k, x]) => <tr key={k}><td>{k}</td><td className="n">{x.launches}</td><td className="n">{x.failures}</td><td className="n">{pct(x.change_failure_rate)}</td><td className="n">{hours(x.lead_time_median_s)}</td><td className="n">{hours(x.time_to_restore_median_s)}</td></tr>)}</tbody></table></div>
         </Sheet>
       )}
       <Sheet title="What shipped">
-        {rep.shipped.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>No release was published in this period.</p> : (
+        {rep.shipped.length === 0 ? <p className="rel-hint" style={{ padding: "14px 16px" }}>{P.t18}</p> : (
           <div className="rel-table-wrap"><table className="rel-table">
-            <caption className="visually-hidden">Releases published in the period and when each reached each Airfield</caption>
-            <thead><tr><th scope="col">Release</th><th scope="col">Published</th><th scope="col">Reached</th><th scope="col" className="n">Failures</th><th scope="col" className="n">Returns</th></tr></thead>
+            <caption className="visually-hidden">{P.t19}</caption>
+            <thead><tr><ThCol>Release</ThCol><ThCol>Published</ThCol><ThCol>Reached</ThCol><ThCol className="n">Failures</ThCol><ThCol className="n">Returns</ThCol></tr></thead>
             <tbody>{rep.shipped.map((s) => (
               <tr key={s.release.id}><td><a href={relHref(s.release.project, s.release.version)} onClick={onLink}>{s.release.project} {s.release.version}</a></td><td>{day(s.release.published_at ?? 0)} by {s.release.published_by}</td>
                 <td>{s.reached.length === 0 ? "no Airfield yet" : s.reached.map((a) => `${a.airfield} ${day(a.at)}${a.lead_seconds ? ` (lead ${hours(a.lead_seconds)})` : ""}`).join("; ")}</td><td className="n">{s.failures}</td><td className="n">{s.returns}</td></tr>))}</tbody></table></div>

@@ -1,0 +1,5 @@
+{
+ "t0": "pipeline: my-service\non:\n  push: { branches: [main, \"release/*\"] }\n\n# Toolboxes, named once and shared by steps. Services run\n# beside the steps and are reachable at localhost.\ncontainers:\n  go:    { image: golang:1.27, memory: 2Gi }\n  db:    { image: postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }\n\nsteps:\n  lint:\n    description: Look for common mistakes\n    container: go\n    run: go vet ./...\n\n  test:\n    container: go\n    run: go test ./...\n    retry: 1\n\n  build:\n    image: alpine:3.22\n    needs: [lint, test]\n    run: |\n      echo \"building $LAUNCHWAY_COMMIT\"\n      echo digest=sha256:example >> \"$LAUNCHWAY_OUTPUTS\"\n\n  deploy:\n    image: alpine:3.22\n    needs: build\n    when: { branch: main }\n    run: echo \"deploying $LAUNCHWAY_NEEDS_BUILD_DIGEST\"\n",
+ "t1": "Write a pipeline and see the graph it becomes. Checked by the same code the server uses; nothing runs. To change a {project}'s pipeline, open it from",
+ "t2": "Steps that say uses: library/template are expanded from the libraries this server allows"
+}

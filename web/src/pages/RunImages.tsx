@@ -7,6 +7,7 @@ import { terms } from "../terms";
 import {
   DIGEST_KEEP, ImageIcon, artifactDownload, findArtifact, keySourceText, levelWords, scanCounts, scanPolicy, shortImageRef,
 } from "../components/Images";
+import { BtnLink, DivFaintSmall, DivLoading, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
 
 type Show = (tab: "security" | "artifacts") => void;
 
@@ -31,7 +32,7 @@ export function ImagesTab({ run, version, onStep, onShow }: {
   }, [run.id, version]);
 
   if (error && !images) return <ErrorBox error={error} />;
-  if (!images) return <div className="loading">Loading…</div>;
+  if (!images) return <DivLoading>Loading…</DivLoading>;
   const steps = imageSteps(run);
   if (steps.length === 0) {
     return <Empty title={terms().say("This {run} builds no images")}>No step of its pipeline is an image step.</Empty>;
@@ -67,12 +68,12 @@ function NoImage({ step, onStep }: { step: StepView; onStep: (s: string) => void
       <div className="imgcard-head">
         <h3 id={`img-${step.id}`} className="imgcard-title">
           <ImageIcon size={16} />
-          <button type="button" className="linkbtn" onClick={() => onStep(step.id)}>{step.id}</button>
+          <BtnLink onClick={() => onStep(step.id)}>{step.id}</BtnLink>
         </h3>
         <StatusPill status={step.status} />
       </div>
       <p className={step.status === "failed" ? "imgcard-why tfile-err" : "imgcard-why sub"}>{why}</p>
-      {step.status === "failed" && <p className="sub small">Its log says more: <button type="button" className="linkbtn" onClick={() => onStep(step.id)}>open {step.id}</button>.</p>}
+      {step.status === "failed" && <p className="sub small">Its log says more: <BtnLink onClick={() => onStep(step.id)}>open {step.id}</BtnLink>.</p>}
     </section>
   );
 }
@@ -90,7 +91,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
       <div className="imgcard-head">
         <h3 id={`img-${img.step}`} className="imgcard-title">
           <ImageIcon size={16} />
-          <button type="button" className="linkbtn" onClick={() => onStep(img.step)}>{img.step}</button>
+          <BtnLink onClick={() => onStep(img.step)}>{img.step}</BtnLink>
         </h3>
         <StatusPill status={img.outcome} />
         <span className="imgbadges">
@@ -106,7 +107,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
       <div className="imgdigest">
         <span className="imgdigest-label">Digest</span>
         <CopyValue value={img.digest} label={`digest of ${img.step}`} keep={DIGEST_KEEP} />
-        <span className="faint small">{platforms.length > 1 ? `an index of ${platforms.length} platforms` : "one platform"}, {bytes(img.size)}</span>
+        <SpanFaintSmall>{platforms.length > 1 ? `an index of ${platforms.length} platforms` : "one platform"}, {bytes(img.size)}</SpanFaintSmall>
       </div>
 
       {img.scan?.failed && (
@@ -126,10 +127,10 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
         <dd>
           {tags.length ? (
             <ul className="imgtags">
-              {tags.map((t) => <li key={t}><span className="mono">{t}</span></li>)}
+              {tags.map((t) => <li key={t}><SpanMono>{t}</SpanMono></li>)}
             </ul>
-          ) : <span className="faint">none</span>}
-          {tags.length > 0 && !img.pushed && <div className="faint small">{terms().say("Not pushed, so no {registry} has these tags.")}</div>}
+          ) : <SpanFaint>none</SpanFaint>}
+          {tags.length > 0 && !img.pushed && <DivFaintSmall>{terms().say("Not pushed, so no {registry} has these tags.")}</DivFaintSmall>}
         </dd>
         <dt>Size</dt><dd>{bytes(img.size)} compressed{platforms.length > 1 ? ", every platform together" : ""}</dd>
         <dt>Signature</dt>
@@ -140,7 +141,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
           {img.signatures && img.signatures.length > 0 && (
             <details className="imgsigs">
               <summary>{img.signatures.length} signature tag{img.signatures.length === 1 ? "" : "s"} written</summary>
-              <ul className="imgtags">{img.signatures.map((s) => <li key={s}><span className="mono">{s}</span></li>)}</ul>
+              <ul className="imgtags">{img.signatures.map((s) => <li key={s}><SpanMono>{s}</SpanMono></li>)}</ul>
             </details>
           )}
         </dd>
@@ -155,7 +156,7 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
         <dd>
           {img.sbom ? "Made from the image" : "None"}
           {img.sbom && <ArtifactLinks art={sbomArt} name={img.sbom_artifact} arts={arts} onShow={onShow} />}
-          {img.sbom && <> · <button type="button" className="linkbtn" onClick={() => onShow("security")}>See its components</button></>}
+          {img.sbom && <> · <BtnLink onClick={() => onShow("security")}>See its components</BtnLink></>}
         </dd>
       </dl>
 
@@ -188,12 +189,12 @@ function ImageCard({ img, run, arts, onStep, onShow }: {
           {img.steps !== undefined && img.steps > 0 && (
             <><dt>Steps</dt><dd>{img.steps} build step{img.steps === 1 ? "" : "s"}, {img.cached ?? 0} of {img.steps} from the cache</dd></>
           )}
-          <dt>Cache</dt><dd>{img.cache ? <span className="mono imgref">{img.cache}</span> : <span className="faint">none</span>}</dd>
+          <dt>Cache</dt><dd>{img.cache ? <span className="mono imgref">{img.cache}</span> : <SpanFaint>none</SpanFaint>}</dd>
           <dt>Base images</dt>
           <dd>
             {img.base_images?.length ? (
-              <ul className="imgtags">{img.base_images.map((b) => <li key={b}><span className="mono" title={b}>{baseImage(b)}</span></li>)}</ul>
-            ) : <span className="faint">not recorded</span>}
+              <ul className="imgtags">{img.base_images.map((b) => <li key={b}><SpanMono title={b}>{baseImage(b)}</SpanMono></li>)}</ul>
+            ) : <SpanFaint>not recorded</SpanFaint>}
           </dd>
         </dl>
       </div>
@@ -213,7 +214,7 @@ function ScanSummary({ img, onShow }: { img: ImageView; onShow: Show }) {
         {s.failed
           ? <span className="artst artst-bad">Failed the step</span>
           : s.mode === "enforce" ? <span className="artst artst-kept">Passed</span> : null}
-        <span className="faint small">{scanPolicy(s)}</span>
+        <SpanFaintSmall>{scanPolicy(s)}</SpanFaintSmall>
       </div>
       {c.total > 0 ? (
         <>
@@ -223,7 +224,7 @@ function ScanSummary({ img, onShow }: { img: ImageView; onShow: Show }) {
       ) : <p className="sub imgscan-none">The scan found nothing.</p>}
       {c.total > 0 && (
         <p className="sub small">
-          Every finding is on the <button type="button" className="linkbtn" onClick={() => onShow("security")}>Security tab</button>, found by Trivy.
+          Every finding is on the <BtnLink onClick={() => onShow("security")}>Security tab</BtnLink>, found by Trivy.
         </p>
       )}
     </div>
@@ -233,11 +234,11 @@ function ScanSummary({ img, onShow }: { img: ImageView; onShow: Show }) {
 // ArtifactLinks offers the artifact that keeps a file: download it, or see it on the Artifacts tab.
 function ArtifactLinks({ art, name, arts, onShow }: { art?: ArtifactView; name?: string; arts: ArtifactView[] | null; onShow: Show }) {
   if (!name || !arts) return null;
-  if (!art) return <span className="faint">, not kept</span>;
-  if (art.status !== "kept") return <span className="faint"> {terms().say("· the {artifact} is")} {art.status === "failed" ? "not kept" : art.status}</span>;
+  if (!art) return <SpanFaint>, not kept</SpanFaint>;
+  if (art.status !== "kept") return <SpanFaint> {terms().say("· the {artifact} is")} {art.status === "failed" ? "not kept" : art.status}</SpanFaint>;
   return (
     <> · <a href={artifactDownload(art)} download aria-label={terms().say(`Download the ${name} {artifact}`)}>Download</a>
-      {" "}· <button type="button" className="linkbtn" onClick={() => onShow("artifacts")}>{terms().say("See in {Artifacts}")}</button></>
+      {" "}· <BtnLink onClick={() => onShow("artifacts")}>{terms().say("See in {Artifacts}")}</BtnLink></>
   );
 }
 

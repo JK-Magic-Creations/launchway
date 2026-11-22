@@ -271,6 +271,8 @@ type DeployState struct {
 	Previous    *DeployRef
 	Holder      *DeployRef // waiting for the lock: who holds it
 	OpenedAt    int64
+	// TakenAt is when a deploy runner last took the step (0: none has).
+	TakenAt int64
 	// Action is the action queued, running or last done (apply or revert),
 	// ActionDone whether it is done, and Facts what the runner did.
 	Action     string
@@ -690,6 +692,13 @@ func (st *RunState) applyLeased(ev Event, s *StepState) {
 	// run to that runner. Nor do verify and ai steps, or a step with a runner
 	// of its own (schema 27).
 	if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
+		// The time limit of the step runs from here (the event says until when), and the step was taken.
+		if p.Deadline > 0 {
+			s.Deadline = p.Deadline
+		}
+		if s.Dep != nil {
+			s.Dep.TakenAt = ev.At
+		}
 		return
 	}
 	if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI() || def.HasOwnRunner()) {

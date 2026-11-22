@@ -1,6 +1,7 @@
 import type { DeployAnalysis, DeployMetric, StepCause } from "../api";
 import { clock } from "../format";
 import { Mono } from "./ui";
+import { SpanFaint } from "../kit/bits";
 
 // What a failed step says about itself: one plain sentence, the evidence
 // behind it (for an analysis: each metric with its counts and the failing
@@ -28,7 +29,7 @@ export function AnalysisEvidence({ run, failedOnly }: { run: DeployAnalysis; fai
           <div className="cause-metric-head">
             <strong>{m.name}</strong>
             <span className={"dpill dpill-" + (BAD.has(m.phase) ? "bad" : m.phase === "Successful" ? "ok" : "run")}>{m.phase.toLowerCase()}</span>
-            <span className="faint">{m.successful} passed, {m.failed + m.error} failed{m.inconclusive ? `, ${m.inconclusive} inconclusive` : ""} of {m.count} measured</span>
+            <SpanFaint>{m.successful} passed, {m.failed + m.error} failed{m.inconclusive ? `, ${m.inconclusive} inconclusive` : ""} of {m.count} measured</SpanFaint>
           </div>
           <p className="faint small">{metricChecks(m)}.</p>
           {(m.measurements ?? []).length > 0 && (
@@ -38,7 +39,7 @@ export function AnalysisEvidence({ run, failedOnly }: { run: DeployAnalysis; fai
                   <span aria-hidden>{x.phase === "Successful" ? "✓" : x.phase === "Running" || x.phase === "Pending" ? "…" : "✗"}</span>
                   <span>{x.phase.toLowerCase()}</span>
                   {x.value && <Mono>{x.value}</Mono>}
-                  {x.at ? <span className="faint">{clock(x.at)}</span> : null}
+                  {x.at ? <SpanFaint>{clock(x.at)}</SpanFaint> : null}
                   {x.message && <span className="cause-msg">{x.message}</span>}
                 </li>
               ))}

@@ -7,6 +7,9 @@ import { announce } from "../kit/announce";
 import { Blank, ErrorPanel, itemHref, Loading, money, scopeLabel, useLoad, when, WorkPage } from "./common";
 import { workApi, type Agent, type AgentLogEntry, type SpendRow } from "./workApi";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { DivFaintSmall, PSub, SpanFaint, SpanFaintSmall, TdNum, ThCol, ThRow } from "../kit/bits";
+const P = await prose("work.Agents");
 
 // The agent registry: who may work on items without a person, how much each may spend, a switch that stops one at once, and
 // where the money went. A token is shown once, when it is made, and never again.
@@ -27,7 +30,7 @@ export default function Agents() {
   const refresh = () => { agents.reload(); spend.reload(); };
 
   return (
-    <WorkPage title="Agents" eyebrow={<Link href="/work">Work</Link>} sentence="Agents work on items next to people. Each one has its own token, limits and budget, and you can switch any of them off at once."
+    <WorkPage title="Agents" eyebrow={<Link href="/work">Work</Link>} sentence={P.t0}
       actions={<Button kind="pri" icon="plus" aria-expanded={adding} onClick={() => setAdding(!adding)}>Register an agent</Button>}>
       {token && <TokenOnce t={token} onDone={() => setToken(null)} />}
       {adding && <Register repos={repos.data ?? []} onCancel={() => setAdding(false)} onMade={(agent, tok) => { setAdding(false); setToken({ agent, token: tok, rotated: false }); refresh(); }} />}
@@ -35,22 +38,21 @@ export default function Agents() {
       {agents.loading && <Loading what="agents" />}
       {agents.data && list.length === 0 && !adding && (
         <Blank title="No agents yet" action={<Button kind="pri" icon="plus" onClick={() => setAdding(true)}>Register an agent</Button>}>
-          Register an agent to let it pick up items, open pull requests and report what it spends. It gets a token that works for it alone.
-        </Blank>
+          {P.t1}</Blank>
       )}
       {list.length > 0 && (
         <div className="sheet tablewrap">
           <table className="table wk-table">
             <caption className="visually-hidden">Registered agents</caption>
-            <thead><tr><th scope="col">Agent</th><th scope="col">State</th><th scope="col">Queue</th><th scope="col">Active</th><th scope="col">Today</th><th scope="col">In review</th><th scope="col">Spent today</th></tr></thead>
+            <thead><tr><ThCol>Agent</ThCol><ThCol>State</ThCol><ThCol>Queue</ThCol><ThCol>Active</ThCol><ThCol>Today</ThCol><ThCol>In review</ThCol><ThCol>Spent today</ThCol></tr></thead>
             <tbody>
               {list.map((a) => (
                 <tr key={a.id} className={picked === a.name ? "on" : ""}>
-                  <th scope="row"><button type="button" className="wk-textbtn strong" aria-pressed={picked === a.name} onClick={() => setPicked(picked === a.name ? null : a.name)}>{a.name}</button>
-                    <div className="faint small">{a.model || "model not set"}{a.class ? `, ${a.class} jobs` : ""}</div></th>
+                  <ThRow><button type="button" className="wk-textbtn strong" aria-pressed={picked === a.name} onClick={() => setPicked(picked === a.name ? null : a.name)}>{a.name}</button>
+                    <DivFaintSmall>{a.model || "model not set"}{a.class ? `, ${a.class} jobs` : ""}</DivFaintSmall></ThRow>
                   <td>{a.disabled ? <Chip tone="bad">Switched off</Chip> : <Chip tone="ok">On</Chip>}</td>
-                  <td className="num">{a.queued}</td><td className="num">{a.active}</td><td className="num">{a.today}</td><td className="num">{a.in_review}</td>
-                  <td className="num">{money(a.used_cents_day)}{a.budget_cents_day ? ` of ${money(a.budget_cents_day)}` : " (no limit)"}</td>
+                  <TdNum>{a.queued}</TdNum><TdNum>{a.active}</TdNum><TdNum>{a.today}</TdNum><TdNum>{a.in_review}</TdNum>
+                  <TdNum>{money(a.used_cents_day)}{a.budget_cents_day ? ` of ${money(a.budget_cents_day)}` : " (no limit)"}</TdNum>
                 </tr>
               ))}
             </tbody>
@@ -59,21 +61,21 @@ export default function Agents() {
       )}
       {current && <AgentPanel key={current.name} a={current} onChanged={refresh} onToken={(t) => setToken({ agent: current.name, token: t, rotated: true })} onError={setError} />}
       <Sheet title="Spend" pad>
-        <p className="sub">{spend.data?.note ? spend.data.note[0].toUpperCase() + spend.data.note.slice(1) + "." : ""}</p>
+        <PSub>{spend.data?.note ? spend.data.note[0].toUpperCase() + spend.data.note.slice(1) + "." : ""}</PSub>
         <ErrorPanel error={spend.error} onRetry={spend.reload} />
         {spend.data && spend.data.rows.length === 0 && <p className="faint">Nothing has been spent yet.</p>}
         {spend.data && spend.data.rows.length > 0 && (
           <div className="tablewrap"><table className="table wk-table">
-            <caption className="visually-hidden">{terms().say("Spend by agent, {project} and item")}</caption>
-            <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Budget</th><th scope="col">Spent</th><th scope="col">Remaining</th><th scope="col">Tokens</th></tr></thead>
+            <caption className="visually-hidden">{terms().say(P.t2)}</caption>
+            <thead><tr><ThCol>Name</ThCol><ThCol>Kind</ThCol><ThCol>Budget</ThCol><ThCol>Spent</ThCol><ThCol>Remaining</ThCol><ThCol>Tokens</ThCol></tr></thead>
             <tbody>{spend.data.rows.map((r, i) => (
               <tr key={r.kind + r.name + i}>
-                <th scope="row">{r.kind === "item" ? <Link href={itemHref(r.name)}>{r.name}</Link> : r.name}</th>
+                <ThRow>{r.kind === "item" ? <Link href={itemHref(r.name)}>{r.name}</Link> : r.name}</ThRow>
                 <td>{r.kind}</td>
-                <td className="num">{r.budget_cents ? money(r.budget_cents) : <span className="faint">No limit</span>}</td>
-                <td className="num">{money(r.spent_cents)}</td>
-                <td className="num">{r.budget_cents ? money(r.remaining_cents ?? 0) : <span className="faint">Not limited</span>}</td>
-                <td className="num">{r.spent_tokens.toLocaleString("en-US")}</td>
+                <TdNum>{r.budget_cents ? money(r.budget_cents) : <SpanFaint>No limit</SpanFaint>}</TdNum>
+                <TdNum>{money(r.spent_cents)}</TdNum>
+                <TdNum>{r.budget_cents ? money(r.remaining_cents ?? 0) : <SpanFaint>Not limited</SpanFaint>}</TdNum>
+                <TdNum>{r.spent_tokens.toLocaleString("en-US")}</TdNum>
               </tr>
             ))}</tbody>
           </table></div>
@@ -87,12 +89,12 @@ export default function Agents() {
 function TokenOnce({ t, onDone }: { t: { agent: string; token: string; rotated: boolean }; onDone: () => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
-    try { await navigator.clipboard.writeText(t.token); setCopied(true); announce("Token copied."); } catch { announce("Could not copy. Select the token and copy it by hand.", "assertive"); }
+    try { await navigator.clipboard.writeText(t.token); setCopied(true); announce("Token copied."); } catch { announce(P.t3, "assertive"); }
   };
   return (
     <section className="wk-token" role="alert" aria-label="New agent token">
       <h2>{t.rotated ? `New token for ${t.agent}` : `${t.agent} is registered`}</h2>
-      <p><strong>This is the only time the token is shown.</strong> Copy it now and store it where the agent reads its secrets. Launchway keeps only a hash, so it cannot show it again.{t.rotated && " The old token no longer works."}</p>
+      <p><strong>{P.t4}</strong> {P.t5}{t.rotated && P.t6}</p>
       <div className="wk-token-box"><input id="wk-token-value" className="mono" readOnly value={t.token} aria-label="Token" onFocus={(e) => e.currentTarget.select()} /><Button onClick={copy} icon="copy">{copied ? "Copied" : "Copy token"}</Button></div>
       <Button kind="pri" onClick={onDone}>I have stored it</Button>
     </section>
@@ -131,7 +133,7 @@ function Register({ repos, onMade, onCancel }: { repos: HostedRepo[]; onMade: (a
         <div className="wk-f"><label htmlFor={ids.b}>Budget a day (dollars)</label><input id={ids.b} type="number" min="0" step="0.01" value={f.budget} onChange={set("budget")} placeholder="no limit" /></div>
         <div className="wk-f"><label htmlFor={ids.t}>Tokens a day</label><input id={ids.t} type="number" min="0" value={f.tokens} onChange={set("tokens")} placeholder="no limit" /></div>
       </div>
-      <label className="wk-check"><input type="checkbox" checked={f.merge} onChange={(e) => setF({ ...f, merge: e.target.checked })} />{terms().say("It may merge its own pull requests (only where the {project}'s rules also allow it)")}</label>
+      <label className="wk-check"><input type="checkbox" checked={f.merge} onChange={(e) => setF({ ...f, merge: e.target.checked })} />{terms().say(P.t7)}</label>
       <ErrorPanel error={error} />
       <div className="acts"><Button type="submit" kind="pri" disabled={!f.name.trim()}>Register and show token</Button><Button onClick={onCancel}>Cancel</Button></div>
     </form>
@@ -156,7 +158,7 @@ function AgentPanel({ a, onChanged, onToken, onError }: { a: Agent; onChanged: (
   };
   return (
     <Sheet title={a.name} pad actions={a.disabled ? <Chip tone="bad">Switched off</Chip> : <Chip tone="ok">On</Chip>}>
-      <p className="sub">{a.description || "No description."} Registered at {scopeLabel(scopeText(a))} by {a.owner}. {a.last_seen ? `Last seen ${when(a.last_seen)}.` : "Never seen yet."} Token {a.token_hint ? `ends ${a.token_hint}` : "hidden"}.</p>
+      <PSub>{a.description || "No description."} Registered at {scopeLabel(scopeText(a))} by {a.owner}. {a.last_seen ? `Last seen ${when(a.last_seen)}.` : "Never seen yet."} Token {a.token_hint ? `ends ${a.token_hint}` : "hidden"}.</PSub>
       <div className="acts wk-agent-acts">
         <Button kind={a.disabled ? "ok" : "bad"} onClick={() => setConfirm("off")}>{a.disabled ? "Switch on" : "Switch off"}</Button>
         <Button onClick={() => setConfirm("rotate")}>Rotate token</Button>
@@ -169,7 +171,7 @@ function AgentPanel({ a, onChanged, onToken, onError }: { a: Agent; onChanged: (
       )}
       {confirm === "rotate" && (
         <div className="callout callout-wait" role="alertdialog" aria-label="Confirm">
-          <span>Make a new token for {a.name}? The old one stops working at once, so the agent stops until it has the new one.</span>
+          <span>Make a new token for {a.name}{P.t8}</span>
           <Button kind="bad" onClick={rotate}>Yes, rotate</Button><Button onClick={() => setConfirm("")}>Cancel</Button>
         </div>
       )}
@@ -185,9 +187,9 @@ function AgentPanel({ a, onChanged, onToken, onError }: { a: Agent; onChanged: (
       </form>
       <h3 className="h-sm">Recent actions</h3>
       <ErrorPanel error={acts.error} onRetry={acts.reload} />
-      {acts.data && acts.data.length === 0 && <p className="faint">This agent has not done anything yet.</p>}
+      {acts.data && acts.data.length === 0 && <p className="faint">{P.t9}</p>}
       {acts.data && acts.data.length > 0 && (
-        <ol className="wk-timeline">{acts.data.slice(0, 20).map((x, i) => <li key={i}><strong>{x.action.replace(/_/g, " ")}</strong>{x.item && <> <Link href={itemHref(x.item)}>{x.item}</Link></>}{x.detail && <> {x.detail}</>} <span className="faint small">{when(x.at)}</span></li>)}</ol>
+        <ol className="wk-timeline">{acts.data.slice(0, 20).map((x, i) => <li key={i}><strong>{x.action.replace(/_/g, " ")}</strong>{x.item && <> <Link href={itemHref(x.item)}>{x.item}</Link></>}{x.detail && <> {x.detail}</>} <SpanFaintSmall>{when(x.at)}</SpanFaintSmall></li>)}</ol>
       )}
     </Sheet>
   );

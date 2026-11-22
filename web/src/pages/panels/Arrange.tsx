@@ -3,6 +3,7 @@ import { announce } from "../../kit/announce";
 import { Dialog } from "../../kit/Dialog";
 import { PANEL_TYPES, panelType, type Field, type PanelDef, type Size } from "./registry";
 import "./panels.css";
+import { BtnPrimary, BtnSm, SpanFaintSmall } from "../../kit/bits";
 
 export interface HomeDoc { view?: "mine" | "all"; order?: string[]; hidden?: string[]; open?: Record<string, boolean>; panels?: PanelDef[] }
 export const BUILTIN: { id: string; title: string }[] = [
@@ -63,19 +64,19 @@ export function Arrange({ docs, panelsOf, canShare, customized, onSave, onReset 
             <li key={it.id} draggable onDragStart={(e) => { setDragging(it.id); e.dataTransfer.setData("text/plain", it.id); }} onDragEnd={() => { setDragging(null); setOver(null); }}
               onDragOver={(e) => { e.preventDefault(); setOver(it.id); }} onDrop={(e) => { e.preventDefault(); if (dragging && dragging !== it.id) move(dragging, i); setOver(null); }} className={over === it.id && dragging !== it.id ? "over" : ""}>
               <span className={hidden.has(it.id) ? "faint" : ""}>{it.title}{hidden.has(it.id) ? " (hidden)" : ""}{it.custom ? " · panel" : ""}</span>
-              <button type="button" className="btn btn-sm" disabled={i === 0} onClick={() => move(it.id, i - 1)} aria-label={`Move ${it.title} up`}>Up</button>
-              <button type="button" className="btn btn-sm" disabled={i === items.length - 1} onClick={() => move(it.id, i + 1)} aria-label={`Move ${it.title} down`}>Down</button>
-              <button type="button" className="btn btn-sm" onClick={() => toggle(it.id)}>{hidden.has(it.id) ? "Show" : "Hide"}<span className="sr-only"> {it.title}</span></button>
+              <BtnSm disabled={i === 0} onClick={() => move(it.id, i - 1)} aria-label={`Move ${it.title} up`}>Up</BtnSm>
+              <BtnSm disabled={i === items.length - 1} onClick={() => move(it.id, i + 1)} aria-label={`Move ${it.title} down`}>Down</BtnSm>
+              <BtnSm onClick={() => toggle(it.id)}>{hidden.has(it.id) ? "Show" : "Hide"}<span className="sr-only"> {it.title}</span></BtnSm>
               {it.custom && <>
                 <label className="small">Width <select value={it.custom.size} aria-label={`Width of ${it.title}`} onChange={(e) => resize(it.custom!, Number(e.target.value) as Size)}><option value={1}>1 column</option><option value={2}>2 columns</option><option value={3}>3 columns</option></select></label>
-                <button type="button" className="btn btn-sm" onClick={() => remove(it.custom!)} aria-label={`Remove ${it.title}`}>Remove</button>
+                <BtnSm onClick={() => remove(it.custom!)} aria-label={`Remove ${it.title}`}>Remove</BtnSm>
               </>}
             </li>
           ))}
         </ul>
         <div className="pn-ctl">
           <button type="button" className="btn btn-sm btn-primary" onClick={() => setAdding(true)}>Add a panel</button>
-          <button type="button" className="btn btn-sm" disabled={mode === "me" && !customized} onClick={onReset}>Reset to the default</button>
+          <BtnSm disabled={mode === "me" && !customized} onClick={onReset}>Reset to the default</BtnSm>
         </div>
       </div>
       {adding && <Dialog label="Add a panel" onClose={() => setAdding(false)}><AddPanel onClose={() => setAdding(false)} onAdd={(p) => { void save({ panels: [...panels, p], order: [...order, p.id] }); announce(`${p.title} added.`); setAdding(false); }} /></Dialog>}
@@ -104,11 +105,11 @@ function AddPanel({ onAdd, onClose }: { onAdd: (p: PanelDef) => void; onClose: (
         <label key={f.key}>{f.label}
           {f.kind === "textarea" ? <textarea value={vals[f.key] ?? ""} maxLength={4000} onChange={(e) => setVals({ ...vals, [f.key]: e.target.value })} required={f.required} />
             : <input value={vals[f.key] ?? ""} maxLength={300} onChange={(e) => setVals({ ...vals, [f.key]: e.target.value })} required={f.required} />}
-          {f.help && <span className="faint small">{f.help}</span>}
+          {f.help && <SpanFaintSmall>{f.help}</SpanFaintSmall>}
         </label>
       ))}
       <label>Width<select value={size} onChange={(e) => setSize(Number(e.target.value) as Size)}><option value={1}>1 column</option><option value={2}>2 columns</option><option value={3}>3 columns</option></select></label>
-      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary" disabled={missing}>Add panel</button></div>
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary disabled={missing}>Add panel</BtnPrimary></div>
     </form>
   );
 }

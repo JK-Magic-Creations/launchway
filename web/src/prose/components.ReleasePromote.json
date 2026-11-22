@@ -1,0 +1,9 @@
+{
+ "t0": "Nothing is built again: the Sortie starts at this release's tag with its version and, where it has one, its image digest.",
+ "t1": "(a comment helps the next person)",
+ "t2": "Override what stops it, and say why (an administrator's decision, recorded in the ",
+ "t3": "For example: customer outage, fix approved by the on-call lead",
+ "t4": "An administrator of the {project} may override what stops it, with a reason.",
+ "t5": "What stops it cannot be overridden: it has to be met.",
+ "t6": "It goes back to the release it ran before, by a {rollback}: the same rules, the same lock, and the reason is kept with it. A {rollback} never restores a database or configuration."
+}

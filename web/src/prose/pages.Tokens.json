@@ -1,0 +1,14 @@
+{
+ "t0": "This server has no sign-in, so there is nobody to make a token for.",
+ "t1": "A token for repositories can do nothing else, so it cannot also name a list. Make two tokens.",
+ "t2": "command line and AI agents (see ",
+ "t3": "). A token acts as you, with the rights you have when it is used, never more than the role and {projects} it is limited to, until it expires or is revoked.",
+ "t4": "every {project}, or: pay-*, web",
+ "t5": "Name repositories (pick from the list, or type ",
+ "t6": ") and the token reaches those and nothing else. Address ranges limit where it may be used from.",
+ "t7": "Every token expires, after at most ",
+ "t8": "days on this server. The role can be no higher than your own.",
+ "t9": "\". Copy it now: it will not be shown again.",
+ "t10": "and paste it. In scripts, send it as ",
+ "t11": "As an admin of every {project} you can revoke any token, for example one that leaked or whose owner left."
+}

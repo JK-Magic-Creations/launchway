@@ -4,6 +4,7 @@ import { Mono } from "./ui";
 import type { RunWithTriggers } from "../triggers";
 import "../triggers.css";
 import { terms } from "../terms";
+import { PSub, SpanFaint } from "../kit/bits";
 
 // RunTrigger shows what a run was started with: the schedule or webhook
 // that started it, and its input values with what each input is.
@@ -28,7 +29,7 @@ export function RunTrigger({ run }: { run: RunDetail }) {
             return (
               <div key={n} style={{ display: "contents" }}>
                 <dt title={i?.description}>{n}</dt>
-                <dd>{show(v, i?.type)}{i?.default !== undefined && i.default === v ? <span className="faint"> (default)</span> : null}</dd>
+                <dd>{show(v, i?.type)}{i?.default !== undefined && i.default === v ? <SpanFaint> (default)</SpanFaint> : null}</dd>
               </div>
             );
           })}
@@ -40,9 +41,9 @@ export function RunTrigger({ run }: { run: RunDetail }) {
 
 function show(v: string, type?: string) {
   if (type === "list") {
-    try { const items = JSON.parse(v) as string[]; return items.length ? items.join(", ") : <span className="faint">(empty list)</span>; } catch { /* as it is */ }
+    try { const items = JSON.parse(v) as string[]; return items.length ? items.join(", ") : <SpanFaint>(empty list)</SpanFaint>; } catch { /* as it is */ }
   }
-  return v === "" ? <span className="faint">(empty)</span> : v;
+  return v === "" ? <SpanFaint>(empty)</SpanFaint> : v;
 }
 
 /** Says, in a re-run dialog, that the inputs are carried over. */
@@ -50,9 +51,9 @@ export function RerunInputsNote({ run }: { run: RunDetail }) {
   const d = (run as RunWithTriggers).trigger_detail;
   if (!d?.inputs || Object.keys(d.inputs).length === 0) return null;
   return (
-    <p className="sub">
+    <PSub>
       {terms().say("The re-run keeps this {run}'s inputs (")}{Object.entries(d.inputs).map(([k, v]) => `${k}=${v}`).join(", ")}): the steps it reuses ran with them.
       {" "}{terms().say("To run with other values, start a new {run}.")}
-    </p>
+    </PSub>
   );
 }

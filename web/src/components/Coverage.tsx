@@ -3,6 +3,7 @@ import type { CoverageCounter, CoverageTotals, CoverageTrend } from "../api";
 import { shortSha } from "../format";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { PSub, SpanHidden, SpanMono } from "../kit/bits";
 
 // Pieces shared by a run's Coverage tab and a project's coverage trend.
 
@@ -53,7 +54,7 @@ export function Delta({ now, before, label, href }: { now: number | null; before
         {kind === "up" ? <path d="M6 2l4 6H2z" /> : kind === "down" ? <path d="M6 10L2 4h8z" /> : <path d="M2 4.5h8M2 7.5h8" fill="none" strokeWidth="1.6" />}
       </svg>
       <span aria-hidden="true">{text}</span><span aria-hidden="true" className="cdelta-vs"> vs {label}</span>
-      <span className="visually-hidden">{words}</span>
+      <SpanHidden>{words}</SpanHidden>
     </>
   );
   return href
@@ -81,7 +82,7 @@ export function MiniBar({ c, label }: { c?: CoverageCounter; label: string }) {
     <span className="cmini">
       <span className="cmini-num">{pct(r)}</span>
       <span className="cmini-bar" aria-hidden="true">{r !== null && <span className={"cfill-" + level(r)} style={{ width: `${Math.max(r, 2)}%` }} />}</span>
-      <span className="visually-hidden">{label}</span>
+      <SpanHidden>{label}</SpanHidden>
     </span>
   );
 }
@@ -90,7 +91,7 @@ export function MiniBar({ c, label }: { c?: CoverageCounter; label: string }) {
 export function CoverageHowTo({ compact }: { compact?: boolean }) {
   return (
     <div className="howto">
-      {!compact && <p>Name the coverage report a step writes, and Launchway reads it when the step ends. With <span className="mono">fail_under</span> the step fails when coverage is lower:</p>}
+      {!compact && <p>Name the coverage report a step writes, and Launchway reads it when the step ends. With <SpanMono>fail_under</SpanMono> the step fails when coverage is lower:</p>}
       <pre className="code">{`steps:
   test:
     image: node:22
@@ -99,7 +100,7 @@ export function CoverageHowTo({ compact }: { compact?: boolean }) {
       coverage:
         paths: coverage/lcov.info
         fail_under: 80`}</pre>
-      <p className="sub">Cobertura XML (coverage.py, Istanbul, .NET coverlet), JaCoCo XML, Clover XML, LCOV, Go coverprofiles (<span className="mono">go test -coverprofile</span>) and Istanbul's json-summary are read. <span className="mono">fail_under</span> also takes <span className="mono">{"{ lines: 80, branches: 60, functions: 70 }"}</span>.</p>
+      <PSub>Cobertura XML (coverage.py, Istanbul, .NET coverlet), JaCoCo XML, Clover XML, LCOV, Go coverprofiles (<SpanMono>go test -coverprofile</SpanMono>) and Istanbul's json-summary are read. <SpanMono>fail_under</SpanMono> also takes <SpanMono>{"{ lines: 80, branches: 60, functions: 70 }"}</SpanMono>.</PSub>
     </div>
   );
 }

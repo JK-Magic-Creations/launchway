@@ -2,6 +2,7 @@ import { type CacheResult } from "../cacheApi";
 import { bytes } from "./Security";
 import { Link, Mono } from "./ui";
 import "../caches.css";
+import { SpanFaintSmall, SpanMono } from "../kit/bits";
 
 const WORDS: Record<CacheResult["result"], string> = {
   hit: "Restored", fallback: "Restored an older entry", miss: "No entry", expired: "Too old", saved: "Saved", not_saved: "Not saved",
@@ -44,13 +45,13 @@ export function CacheResults({ project, caches }: { project: string; caches: Cac
             <span>{sentence(c)}</span>
             {c.key && <span className="faint mono small" title={c.key}>key {c.key.slice(0, 8)}…</span>}
             {c.entry_key && (
-              <span className="faint small">
-                {c.result === "expired" ? "entry found" : "entry restored"}: key <span className="mono" title={c.entry_key}>{c.entry_key.slice(0, 8)}…</span>
+              <SpanFaintSmall>
+                {c.result === "expired" ? "entry found" : "entry restored"}: key <SpanMono title={c.entry_key}>{c.entry_key.slice(0, 8)}…</SpanMono>
                 {c.generation ? `, generation ${c.generation}` : ""}{c.age_seconds !== undefined ? `, ${span(c.age_seconds)} old` : ""}
                 {c.max_age_seconds ? ` (a cache may be ${span(c.max_age_seconds)})` : ""}
-              </span>
+              </SpanFaintSmall>
             )}
-            {c.saved_generation ? <span className="faint small">saved generation {c.saved_generation}</span> : null}
+            {c.saved_generation ? <SpanFaintSmall>saved generation {c.saved_generation}</SpanFaintSmall> : null}
             {c.key_parts && c.key_parts.length > 0 && (
               <details className="cc-key">
                 <summary>What the key is made of</summary>

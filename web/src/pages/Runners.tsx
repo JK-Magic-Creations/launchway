@@ -9,12 +9,15 @@ import { bytes } from "../components/Security";
 import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivFaintSmall, DivPage, LabelField, PSub, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
+const P = await prose("pages.Runners");
 
 // Where Launchway's releases are published (see packaging/README.md): every release holds
 // install.sh, the binaries and packages, both Helm charts as .tgz files, and SHA256SUMS with its
 // Sigstore signature. Images are ghcr.io/jk-magic-creations/launchway and .../launchway-runner.
-export const RELEASES_URL = "https://github.com/JK-Magic-Creations/launchway/releases";
-export const RUNNER_IMAGE = "ghcr.io/jk-magic-creations/launchway-runner";
+export const RELEASES_URL = P.t0;
+export const RUNNER_IMAGE = P.t1;
 
 // releaseVersion is the server's version when it is a release (v1.4.0, v1.4.0-rc.1), so that a
 // new runner gets the same release as the server; development builds give "".
@@ -76,26 +79,26 @@ export function RunnersPage() {
 
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
-    <div className="page">
-      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say("Machines that run steps. A {runner} only ever connects out to the server, so it can sit in any network. Each belongs to a pool, which decides which {projects}' work it may take.")}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
+    <DivPage>
+      <PageHead eyebrow="Settings" title={<>{terms().say("{Runners}")}</>} sentence={<>{terms().say(P.t2)}</>} actions={<><WizardButton wizard="add-runner" label={terms().say("Add a {runner}")} /></>} />
       <ErrorBox error={error} />
 
       {legacy.length > 0 && (
         <div className="callout callout-draft" role="status">
-          <strong>{legacy.length === 1 ? terms().say("1 {runner} uses") : terms().say(`${legacy.length} {runners} use`)} a shared token, which gives no per-runner identity.</strong>{" "}
-          {terms().say("The server cannot tell {runners} with the same token apart, so it trusts what each says about itself, and a leaked token lets anyone take that pool's work. Enroll them with a join token instead")}{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
+          <strong>{legacy.length === 1 ? terms().say("1 {runner} uses") : terms().say(`${legacy.length} {runners} use`)} {P.t3}</strong>{" "}
+          {terms().say(P.t4)}{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
         </div>
       )}
 
       {pools && <PoolsCard pools={pools.pools} runners={runners ?? []} />}
 
       <h2 className="h-sm rn-h">{terms().say("{Runners}")}</h2>
-      {runners && runners.length === 0 && <WizardEmpty title={terms().say("No {runners} have connected yet")} wizard="add-runner" label={terms().say("Add a {runner}")}
-        text={terms().say("A {runner} is a machine, container or Kubernetes pod that does the steps of {runs}: without one, runs wait.")} />}
+      {runners && runners.length === 0 && <WizardEmpty title={terms().say(P.t5)} wizard="add-runner" label={terms().say("Add a {runner}")}
+        text={terms().say(P.t6)} />}
       {runners && runners.length > 0 && (
-        <div className="card card-flush table-scroll rn-scroll">
+        <div className={P.t7}>
           <table className="table rn-table">
-            <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><span className="visually-hidden">Actions</span></th>}</tr></thead>
+            <thead><tr><th>{terms().say("{Runner}")}</th><th>Pool</th><th>Identity</th><th>Accepts</th><th>Running</th><th>Last seen</th>{manage && <th><SpanHidden>Actions</SpanHidden></th>}</tr></thead>
             <tbody>
               {runners.map((r) => {
                 const revoked = !!r.identity?.revoked_at;
@@ -104,21 +107,21 @@ export function RunnersPage() {
                     <td>
                       <span className={"online " + (r.online ? "online-on" : "")} role="img" aria-label={r.online ? "online" : "offline"} />{r.name}
                       <div className="faint small mono">{r.id}</div>
-                      <div className="faint small">
+                      <DivFaintSmall>
                         {r.executor === "deploy" ? terms().say("{deploy:do} {runner}") : r.executor}{r.version && <> · <Mono>{r.version}</Mono></>}
                         {r.os && <> · {r.os}/{r.arch}</>}{r.images && <> · builds images</>}
-                      </div>
+                      </DivFaintSmall>
                       {(r.labels?.length ?? 0) > 0 && <div className="rn-labels">{r.labels!.map((l) => <span key={l} className="rn-label">{l}</span>)}</div>}
                     </td>
                     <td>
                       <Mono>{r.pool || "default"}</Mono>
-                      {r.targets?.length ? <div className="faint small">serves {r.targets.join(", ")}</div> : null}
+                      {r.targets?.length ? <DivFaintSmall>serves {r.targets.join(", ")}</DivFaintSmall> : null}
                     </td>
                     <td><IdentityCell r={r} now={now} /></td>
                     <td className="rn-accept">{acceptSummary(r.accept)}</td>
                     <td>
-                      {(r.work?.length ?? 0) === 0 ? <span className="faint">nothing</span> : r.work!.map((w) => (
-                        <div key={w.run + w.step}><Link href={`/runs/${w.run}`}>{w.project} #{w.number}</Link> <span className="faint">{w.step}</span></div>
+                      {(r.work?.length ?? 0) === 0 ? <SpanFaint>nothing</SpanFaint> : r.work!.map((w) => (
+                        <div key={w.run + w.step}><Link href={`/runs/${w.run}`}>{w.project} #{w.number}</Link> <SpanFaint>{w.step}</SpanFaint></div>
                       ))}
                     </td>
                     <td>{revoked ? "revoked" : r.online ? "connected" : `offline, last seen ${ago(r.last_seen, now)}`}</td>
@@ -126,8 +129,8 @@ export function RunnersPage() {
                       <td className="td-actions">
                         {r.identity && !revoked && (
                           <div className="rn-actions">
-                            <button type="button" className="btn btn-sm" onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
-                              title={terms().say("Ask the {runner} to make a new key at its next request")}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</button>
+                            <BtnSm onClick={() => rotate(r)} disabled={!!r.identity.rotate_asked}
+                              title={terms().say(P.t8)}>{r.identity.rotate_asked ? "Rotation asked" : "Rotate key"}</BtnSm>
                             <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => revoke(r)}>Revoke</button>
                           </div>
                         )}
@@ -149,15 +152,15 @@ export function RunnersPage() {
       )}
       {pools && !manage && (
         <section className="card">
-          <h2 className="h-sm">{terms().say("Add a {runner} on another machine")}</h2>
-          <p className="sub">{terms().say("Someone who manages {runners} (the role")} <Mono>runner_admin</Mono> {terms().say("names, admin by default, on every {project}) makes a join token for a pool here. With it, on the machine:")}</p>
+          <h2 className="h-sm">{terms().say(P.t9)}</h2>
+          <PSub>{terms().say(P.t10)} <Mono>runner_admin</Mono> {terms().say(P.t11)}</PSub>
           <pre className="code">{`launchway runner --server ${location.origin} --join <join token>`}</pre>
         </section>
       )}
       <StoreCard />
       <ModelsSection />
       <HealthSourcesSection />
-    </div>
+    </DivPage>
   );
 }
 
@@ -188,28 +191,28 @@ function StoreCard() {
           : <span className="pill pill-bad">Not kept on this server</span>}
       </div>
       {!st.available && st.problem && <div className="callout callout-bad">{st.problem}</div>}
-      {st.available && st.why && <p className="sub">{st.why}</p>}
+      {st.available && st.why && <PSub>{st.why}</PSub>}
       {st.available && st.store === "database" && !st.why && (
-        <p className="sub">{terms().say("{Artifacts}, SBOMs and provenance are kept in the database, shared by every server. Nothing else to run.")}</p>
+        <PSub>{terms().say(P.t12)}</PSub>
       )}
       {u && (
         <div className="store-usage">
           <div className="store-meter" role="meter" aria-label="Store used" aria-valuemin={0} aria-valuemax={u.limit_bytes} aria-valuenow={u.used_bytes}>
-            <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.max(share * 100, u.used_bytes > 0 ? 1 : 0)}%` }} />
+            <span className={share >= 0.8 ? P.t13 : "store-meter-fill"} style={{ width: `${Math.max(share * 100, u.used_bytes > 0 ? 1 : 0)}%` }} />
           </div>
           <div className="store-figures">
             <span><b>{bytes(u.used_bytes)}</b> of {bytes(u.limit_bytes)} used</span>
-            <span className="faint">{u.objects} {u.objects === 1 ? "object" : "objects"}</span>
-            {u.open_uploads > 0 && <span className="faint">{u.open_uploads} uploading</span>}
-            {u.collect_bytes > 0 && <span className="faint">{bytes(u.collect_bytes)} being freed</span>}
-            <span className="faint">files up to {bytes(u.max_object_bytes)}</span>
+            <SpanFaint>{u.objects} {u.objects === 1 ? "object" : "objects"}</SpanFaint>
+            {u.open_uploads > 0 && <SpanFaint>{u.open_uploads} uploading</SpanFaint>}
+            {u.collect_bytes > 0 && <SpanFaint>{bytes(u.collect_bytes)} being freed</SpanFaint>}
+            <SpanFaint>files up to {bytes(u.max_object_bytes)}</SpanFaint>
           </div>
         </div>
       )}
       {!u && st.available && (
-        <p className="sub">{st.kept.files} {st.kept.files === 1 ? "file" : "files"} kept, {bytes(st.kept.bytes)}.</p>
+        <PSub>{st.kept.files} {st.kept.files === 1 ? "file" : "files"} kept, {bytes(st.kept.bytes)}.</PSub>
       )}
-      {st.advice.map((a) => <div key={a} className="callout callout-wait store-advice">{a}</div>)}
+      {st.advice.map((a) => <div key={a} className={P.t14}>{a}</div>)}
     </section>
   );
 }
@@ -220,16 +223,16 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-bad">revoked</span>
-        <div className="faint small">by {id.revoked_by || "?"} {ago(id.revoked_at, now)}{id.revoke_reason && <>: {id.revoke_reason}</>}</div>
+        <DivFaintSmall>by {id.revoked_by || "?"} {ago(id.revoked_at, now)}{id.revoke_reason && <>: {id.revoke_reason}</>}</DivFaintSmall>
       </div>
     );
   }
   if (id) {
     return (
       <div>
-        <span className="pill pill-ok">enrolled</span>{id.ephemeral && <span className="faint small"> ephemeral</span>}
-        <div className="faint small mono" title={terms().say("The fingerprint of the {runner}'s public key")}>{id.key_fingerprint}</div>
-        <div className="faint small" title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</div>
+        <span className="pill pill-ok">enrolled</span>{id.ephemeral && <SpanFaintSmall> ephemeral</SpanFaintSmall>}
+        <div className="faint small mono" title={terms().say(P.t15)}>{id.key_fingerprint}</div>
+        <DivFaintSmall title={clock(id.key_created_at)}>key made {ago(id.key_created_at, now)}; enrolled {ago(id.enrolled_at, now)}{id.enrolled_by && <> with a token from {id.enrolled_by}</>}</DivFaintSmall>
       </div>
     );
   }
@@ -238,20 +241,20 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
     return (
       <div>
         <span className="pill pill-ok">enrolled</span>
-        <div className="faint small">{terms().say("its key and enrolment are shown to those who manage {runners}")}</div>
+        <DivFaintSmall>{terms().say(P.t16)}</DivFaintSmall>
       </div>
     );
   }
   return (
     <div>
       <span className="pill pill-warn">{r.auth === "pool" ? "pool token" : "shared token"}</span>
-      <div className="faint small">no identity of its own</div>
+      <DivFaintSmall>no identity of its own</DivFaintSmall>
     </div>
   );
 }
 
 function acceptSummary(a?: RunnerAccept) {
-  if (!a) return <span className="faint">anything its pool serves</span>;
+  if (!a) return <SpanFaint>anything its pool serves</SpanFaint>;
   const parts: string[] = [];
   const list = (name: string, l?: string[]) => { if (l?.length) parts.push(`${name} ${l.join(", ")}`); };
   list("projects", a.projects);
@@ -271,7 +274,7 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
   return (
     <>
       <h2 className="h-sm rn-h">Pools</h2>
-      <div className="card card-flush table-scroll rn-scroll">
+      <div className={P.t7}>
         <table className="table">
           <thead><tr><th>Pool</th><th>Serves</th><th>{terms().say("{Runners} may use")}</th><th>Online</th></tr></thead>
           <tbody>
@@ -279,16 +282,16 @@ function PoolsCard({ pools, runners }: { pools: RunnerPool[]; runners: Runner[] 
               const online = runners.filter((r) => r.online && (r.pool || "default") === p.name && !r.identity?.revoked_at).length;
               return (
                 <tr key={p.name}>
-                  <td><Mono>{p.name}</Mono><div className="faint small">{p.kind === "build" ? "build" : "deploy"} pool{!p.configured && ", not configured"}</div></td>
+                  <td><Mono>{p.name}</Mono><DivFaintSmall>{p.kind === "build" ? "build" : "deploy"} pool{!p.configured && ", not configured"}</DivFaintSmall></td>
                   <td>
                     {p.kind === "deploy" ? <>targets {p.targets.join(", ")}</>
                       : p.projects.length ? <>projects {p.projects.join(", ")}</>
-                      : <>{terms().say("every {project} no other pool serves")}</>}
-                    {p.events.length > 0 && <div className="faint small">only runs started by {p.events.join(", ")}</div>}
+                      : <>{terms().say(P.t17)}</>}
+                    {p.events.length > 0 && <DivFaintSmall>only runs started by {p.events.join(", ")}</DivFaintSmall>}
                   </td>
                   <td>
                     {p.require_identity ? <span className="pill pill-ok">{terms().say("enrolled {runners} only")}</span>
-                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><div className="faint small">set require_identity to refuse the shared token</div></>
+                      : p.shared_token ? <><span className="pill pill-warn">enrolled or shared token</span><DivFaintSmall>{P.t18}</DivFaintSmall></>
                       : terms().say("enrolled {runners}")}
                   </td>
                   <td>{online}</td>
@@ -336,42 +339,42 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
   return (
     <section className="card rn-add">
       <h2 className="h-sm">{terms().say("Add a {runner}")}</h2>
-      <p className="sub">{terms().say("Make a join token for a pool. A {runner} enrols with it once: it makes a key that never leaves it, and gets an identity of its own that can be revoked on its own. The token is shown once, and stored only as a hash.")}</p>
+      <PSub>{terms().say(P.t19)}</PSub>
       <form onSubmit={create} className="inputs-form" aria-label="Make a join token">
         <div className="rn-form">
-          <label className="field">
+          <LabelField>
             <span>Pool</span>
             <select value={pool} onChange={(e) => setPool(e.target.value)}>
               {pools.map((x) => <option key={x.name} value={x.name}>{x.name} ({x.kind})</option>)}
             </select>
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>{terms().say("{Runners} it may enroll")}</span>
             <input type="number" min={1} max={10000} value={uses} onChange={(e) => setUses(Math.max(1, Number(e.target.value) || 1))} />
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Valid for</span>
             <select value={ttl} onChange={(e) => setTTL(e.target.value)}>{TTLS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Labels</span>
             <input value={labels} placeholder="for example: arm64, gpu" onChange={(e) => setLabels(e.target.value)} />
-          </label>
-          <label className="field">
+          </LabelField>
+          <LabelField>
             <span>Description</span>
             <input value={description} maxLength={200} placeholder="what or where it is for" onChange={(e) => setDescription(e.target.value)} />
-          </label>
+          </LabelField>
         </div>
         <label className="rn-check">
           <input type="checkbox" checked={ephemeral} onChange={(e) => setEphemeral(e.target.checked)} />
-          <span>{terms().say("Ephemeral: each {runner} is revoked when it leaves (for pods that enroll when they start)")}</span>
+          <span>{terms().say(P.t20)}</span>
         </label>
-        <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make join token"}</button></div>
+        <div><BtnPrimary disabled={busy}>{busy ? "Making…" : "Make join token"}</BtnPrimary></div>
       </form>
 
       {made && commands && (
         <div className="callout callout-ok rn-made" role="status">
-          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}. Copy it now: it will not be shown again.</strong>
+          <strong>Join token for pool {made.t.pool}: {made.t.max_uses === 1 ? terms().say("one {runner}") : `${made.t.max_uses} runners`}, until {clock(made.t.expires_at)}{P.t21}</strong>
           <div className="tokenvalue">
             <input readOnly value={made.token} aria-label="The join token" onFocus={(e) => e.currentTarget.select()} className="mono" />
             <button type="button" className="btn" onClick={() => copy("token", made.token)}>{copied === "token" ? "Copied" : "Copy"}</button>
@@ -384,7 +387,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
           {commands[tab].map((c) => (
             <div key={c.title} className="rn-cmd">
               <div className="rn-cmd-head"><span>{c.title}</span>
-                <button type="button" className="btn btn-sm" onClick={() => copy(c.title, c.text)}>{copied === c.title ? "Copied" : "Copy"}</button></div>
+                <BtnSm onClick={() => copy(c.title, c.text)}>{copied === c.title ? "Copied" : "Copy"}</BtnSm></div>
               <pre className="code">{c.text}</pre>
             </div>
           ))}
@@ -400,7 +403,7 @@ type Cmd = { title: string; text: string };
 function installCommands(origin: string, token: string, t: JoinToken, version: string, p?: RunnerPool): Record<"vm" | "container" | "kubernetes", Cmd[]> {
   const labels = t.labels.length ? `\nlabels: [${t.labels.join(", ")}]` : "";
   const projects = p && p.kind === "build" && p.projects.length ? p.projects : [];
-  const acceptYaml = `accept:${projects.length ? `\n  projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}]` : "\n  # projects: [shop, \"web-*\"]"}
+  const acceptYaml = `accept:${projects.length ? `\n  projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}]` : P.t22}
   # images: ["registry.example.com/*"]
   pull_requests: false
   drafts: false
@@ -409,23 +412,23 @@ function installCommands(origin: string, token: string, t: JoinToken, version: s
   return {
     vm: [
       {
-        title: "Install and enroll (Linux with systemd; the installer verifies what it downloads)",
+        title: P.t23,
         text: `curl -fsSLO ${installerURL(version)}\nsudo sh install.sh ${version ? `--version ${version} ` : ""}--server ${origin} --join ${token}`,
       },
-      { title: "Or, with the launchway binary already on the machine", text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
-      { title: terms().say("/etc/launchway/runner.yaml: the {runner}'s own limits (optional)"), text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
+      { title: P.t24, text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
+      { title: terms().say(P.t25), text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
     ],
     container: [
-      { title: terms().say("Run the {runner} in a container"), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
+      { title: terms().say(P.t26), text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
     ],
     kubernetes: [
       { title: "The join token, as a Secret", text: `kubectl create namespace launchway-runner\nkubectl -n launchway-runner create secret generic launchway-runner-join --from-literal=token=${token}` },
       {
-        title: "runner-values.yaml (the runner-only chart)",
+        title: P.t27,
         text: `server:\n  url: ${origin}\nrunner:\n  join: { existingSecret: launchway-runner-join }\n  kubernetes: { namespace: launchway-steps, createNamespace: true }${t.labels.length ? `\n  labels: [${t.labels.join(", ")}]` : ""}${projects.length ? `\n  accept: { projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}], pull_requests: false }` : ""}`,
       },
-      { title: version ? "Install" : "Install (from a source checkout; releases publish the chart as a .tgz)", text: `helm upgrade --install launchway-runners ${runnerChart(version)} -n launchway-runner -f runner-values.yaml` },
-      ...(t.ephemeral || t.max_uses > 1 ? [] : [{ title: "Note", text: "Each pod enrols when it starts: make the token ephemeral, with enough uses for every pod start." }]),
+      { title: version ? "Install" : P.t28, text: `helm upgrade --install launchway-runners ${runnerChart(version)} -n launchway-runner -f runner-values.yaml` },
+      ...(t.ephemeral || t.max_uses > 1 ? [] : [{ title: "Note", text: P.t29 }]),
     ],
   };
 }
@@ -435,19 +438,19 @@ function JoinTokens({ tokens, now, onRevoke }: { tokens: JoinToken[]; now: numbe
   return (
     <>
       <h2 className="h-sm rn-h">Join tokens</h2>
-      <div className="card card-flush table-scroll rn-scroll">
+      <div className={P.t7}>
         <table className="table">
-          <thead><tr><th>Token</th><th>Pool</th><th>Used</th><th>State</th><th>Made</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+          <thead><tr><th>Token</th><th>Pool</th><th>Used</th><th>State</th><th>Made</th><th><SpanHidden>Actions</SpanHidden></th></tr></thead>
           <tbody>
             {tokens.map((t) => (
               <tr key={t.id}>
-                <td><span className="mono small">{t.id}</span>{t.description && <div className="faint small">{t.description}</div>}
+                <td><span className="mono small">{t.id}</span>{t.description && <DivFaintSmall>{t.description}</DivFaintSmall>}
                   {t.labels.length > 0 && <div className="rn-labels">{t.labels.map((l) => <span key={l} className="rn-label">{l}</span>)}</div>}</td>
-                <td><Mono>{t.pool}</Mono>{t.ephemeral && <div className="faint small">ephemeral</div>}</td>
+                <td><Mono>{t.pool}</Mono>{t.ephemeral && <DivFaintSmall>ephemeral</DivFaintSmall>}</td>
                 <td>{t.uses} of {t.max_uses}</td>
                 <td>
                   <span className={"pill " + (t.state === "active" ? "pill-ok" : t.state === "revoked" ? "pill-bad" : "pill-idle")}>{t.state}</span>
-                  <div className="faint small">{t.state === "active" ? `until ${clock(t.expires_at)}` : t.revoked_at ? `by ${t.revoked_by}` : ""}</div>
+                  <DivFaintSmall>{t.state === "active" ? `until ${clock(t.expires_at)}` : t.revoked_at ? `by ${t.revoked_by}` : ""}</DivFaintSmall>
                 </td>
                 <td title={clock(t.created_at)}>{ago(t.created_at, now)} by {t.created_by}</td>
                 <td className="td-actions">{t.state === "active" && <button type="button" className="btn btn-danger-outline btn-sm" onClick={() => onRevoke(t)}>Revoke</button>}</td>

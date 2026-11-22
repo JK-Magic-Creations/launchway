@@ -994,7 +994,7 @@ func (s *Server) ui() http.Handler {
 	if _, err := fs.Stat(s.UI, "index.html"); err != nil {
 		return http.HandlerFunc(noUI)
 	}
-	files := http.FileServerFS(s.UI)
+	files := textFiles(s.UI, http.FileServerFS(s.UI))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path != "" {

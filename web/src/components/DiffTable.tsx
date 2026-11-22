@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { TdNum } from "../kit/bits";
 
 export interface Row { kind: "hunk" | "add" | "del" | "ctx"; old?: number; neu?: number; text: string }
 
@@ -27,7 +28,7 @@ export function DiffTable({ path, diff }: { path: string; diff: string }) {
       {rows.map((r, i) => r.kind === "hunk"
         ? <tbody key={i}><tr className="hunk"><td colSpan={4}>{r.text}</td></tr></tbody>
         : <tbody key={i}><tr className={r.kind}>
-          <td className="num">{r.old ?? ""}</td><td className="num">{r.neu ?? ""}</td>
+          <TdNum>{r.old ?? ""}</TdNum><TdNum>{r.neu ?? ""}</TdNum>
           <td className="sign" aria-hidden="true">{r.kind === "add" ? "+" : r.kind === "del" ? "-" : ""}</td><td>{r.text}</td></tr></tbody>)}
     </table>
   );

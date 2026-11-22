@@ -7,6 +7,7 @@ import { squadronsApi, type OrganizeProposal, type OrganizeResult, type Squadron
 import { terms } from "../terms";
 import { unitNameProblem } from "./squadrons/shared";
 import "../moveflights.css";
+import { BtnSm, DivLoading, DivPage, SpanFaintSmall } from "../kit/bits";
 
 // Organize into Squadrons: for Flights that sit in no Squadron the server proposes groups (from folders people
 // made and from name prefixes). The person renames a group, merges two, moves a Flight between groups or leaves
@@ -28,8 +29,8 @@ export function OrganizePage() {
   const t = terms();
   const title = `Organize into ${t.say("{Units}")}`;
 
-  if (error && !proposal) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!list || !proposal) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error && !proposal) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!list || !proposal) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   return (
     <div className="page og">
       <PageHead eyebrow={t.say("{Units}")} title={title} sentence={say("Sort the {projects} that sit in no {unit} into named {units}. Nothing changes until you apply, and the whole change can be undone.")} />
@@ -113,7 +114,7 @@ function Wizard({ proposal, existing, onChanged }: { proposal: OrganizeProposal;
           <p role="status">
             {undone ? say("Undone: the {projects} are back where they were and the groups this change made are removed.")
               : say(`Filed ${plural(result.moved.length, "{project}", "{projects}")} in one audited change${result.created.length ? `, and made ${plural(result.created.length, "{unit}", "{units}")}: ${result.created.join(", ")}` : ""}.`)}
-            {!undone && <> <button type="button" className="btn btn-sm" disabled={busy} onClick={() => void undo()}>Undo</button></>}
+            {!undone && <> <BtnSm disabled={busy} onClick={() => void undo()}>Undo</BtnSm></>}
           </p>
           {err && <p role="alert" className="err">{err}</p>}
           {!undone && (result.blocked?.length ?? 0) > 0 && (
@@ -150,7 +151,7 @@ function Wizard({ proposal, existing, onChanged }: { proposal: OrganizeProposal;
           const exists = existing.includes(g.name);
           return (
             <li key={g.id} className="og-group">
-              <h2 className="h-sm">{g.name || "(no name)"} <span className="faint small">({plural(g.flights.length, say("{project}"), say("{projects}"))}{g.source === "folder" ? ", from a folder" : g.source === "prefix" ? ", from a shared name start" : ""})</span></h2>
+              <h2 className="h-sm">{g.name || "(no name)"} <SpanFaintSmall>({plural(g.flights.length, say("{project}"), say("{projects}"))}{g.source === "folder" ? ", from a folder" : g.source === "prefix" ? ", from a shared name start" : ""})</SpanFaintSmall></h2>
               <label htmlFor={nameId}>{say("Name of the {unit}")}
                 <input id={nameId} type="text" value={g.name} onChange={(e) => rename(g.id, e.target.value)} aria-invalid={problems.has(g.id)} aria-describedby={`${nameId}-p`} />
               </label>

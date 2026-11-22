@@ -9,6 +9,7 @@ import { terms } from "../terms";
 import { EntityLink } from "./EntityLink";
 import { ErrorBox } from "./ui";
 import "../rollback.css";
+import { BtnPrimary, DivActions, LabelField, SpanFaint, SpanFaintSmall } from "../kit/bits";
 
 /** The page of a rollback run opens with what it is, in one sentence, who asked and why, what it undoes, and
  * whether an approver has reviewed it. */
@@ -30,10 +31,10 @@ export function RollbackBanner({ run, onChanged }: { run: RunDetail; onChanged: 
       <dl>
         <dt>Restores</dt><dd><b>{r.to.version}</b>{terms().say(", {deploy:did} by")} <EntityLink kind="run" name={terms().say(`{run} #${r.to.run_number}`)} id={r.to.run} />{r.to.at ? ` ${ago(r.to.at, now)}` : ""}</dd>
         <dt>Instead of</dt><dd><b>{r.from.version}</b>, from <EntityLink kind="run" name={terms().say(`{run} #${r.from.run_number}`)} id={r.from.run} /></dd>
-        <dt>Why</dt><dd>{r.reason} <span className="faint">(asked by {r.actor})</span></dd>
+        <dt>Why</dt><dd>{r.reason} <SpanFaint>(asked by {r.actor})</SpanFaint></dd>
         <dt>Undoes</dt><dd>{r.reverts.length === 0 ? "No commit: the deployments after it changed nothing in Git."
           : r.reverts.map((x, i) => <span key={x.deployment}>{i > 0 && ", "}{x.version} (<EntityLink kind="run" name={terms().say(`{run} #${x.run_number}`)} id={x.run} />)</span>)}
-          {r.reverts.length > 1 ? <span className="faint">, newest first</span> : null}</dd>
+          {r.reverts.length > 1 ? <SpanFaint>, newest first</SpanFaint> : null}</dd>
         {r.emergency && <><dt>Review</dt><dd><ReviewState r={r} run={run} mayReview={waiting && mayReview} now={now} onChanged={onChanged} /></dd></>}
       </dl>
       <p className="rb-note">{r.note}</p>
@@ -94,13 +95,13 @@ export function ReviewDialog({ items, onClose, onDone }: { items: ReviewItem[]; 
       <form className="rb-form" onSubmit={(e) => { e.preventDefault(); if (comment.trim()) go(); }}>
         <h2>{terms().say("Review the {rollback} of")} {it.service} in {it.environment}</h2>
         <p className="rb-then">{it.actor} rolled it back from {it.from_version} to {it.to_version} as an emergency: “{it.reason}”. It went ahead without an approval first.</p>
-        <label className="field"><span>What did you check? (required, kept in the {terms().lower("logbook")})</span>
-          <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} required data-autofocus placeholder="For example: the incident is real and the revert matches it" /></label>
+        <LabelField><span>What did you check? (required, kept in the {terms().lower("logbook")})</span>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} required data-autofocus placeholder="For example: the incident is real and the revert matches it" /></LabelField>
         <ErrorBox error={error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={busy || !comment.trim()}>{busy ? "Saving…" : "Acknowledge"}</button>
-        </div>
+          <BtnPrimary disabled={busy || !comment.trim()}>{busy ? "Saving…" : "Acknowledge"}</BtnPrimary>
+        </DivActions>
       </form>
     </Dialog>
   );
@@ -114,7 +115,7 @@ export function NeedsReview({ items, environment, onChanged }: { items: ReviewIt
   const list = (items ?? []).filter((i) => !environment || i.environment === environment);
   if (list.length === 0) return null;
   return (
-    <Sheet title="Needs review" actions={<span className="faint small">{list.length} {terms().say(list.length === 1 ? "{emergency_rollback}" : "{emergency_rollbacks}")} without an approver's acknowledgment</span>}>
+    <Sheet title="Needs review" actions={<SpanFaintSmall>{list.length} {terms().say(list.length === 1 ? "{emergency_rollback}" : "{emergency_rollbacks}")} without an approver's acknowledgment</SpanFaintSmall>}>
       {list.map((i) => (
         <div key={i.run} className="need warn">
           <div className="ico-tile warn"><span aria-hidden>!</span></div>

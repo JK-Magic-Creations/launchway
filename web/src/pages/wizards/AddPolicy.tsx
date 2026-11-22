@@ -10,6 +10,8 @@ import { PolicyRules } from "../../components/PolicyRules";
 import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, type StepDef } from "./Wizards";
 import { terms } from "../../terms";
+import { prose } from "../../prose";
+const P = await prose("pages.wizards.AddPolicy");
 
 export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
   const proj = overview.levels.project;
@@ -50,8 +52,8 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
       local: () => !Object.keys(rules).length ? "Tick at least one rule." : null,
       render: (by) => catalogue === null ? <p className="faint">Reading the rule catalog…</p> : (
         <>
-          {catError && <p className="cf-problem">The catalog could not be read: {catError}</p>}
-          <p>A policy is a set of rules every run it applies to must meet. There is no policy language to learn: each rule checks one thing, and the pipeline's authors cannot switch it off.</p>
+          {catError && <p className="cf-problem">{P.t0}{catError}</p>}
+          <p>{P.t1}</p>
           <PolicyRules catalogue={catalogue} rules={rules} onChange={setRules} problems={by} />
         </>
       ),
@@ -60,10 +62,10 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
       id: "mode", title: "Enforce or report",
       fields: [{ path: "mode" }],
       render: (by) => (
-        <Choices legend="What happens when a rule fails?" value={mode} onChange={(v) => setMode(v as "report" | "enforce")} problems={by.mode}
+        <Choices legend={P.t2} value={mode} onChange={(v) => setMode(v as "report" | "enforce")} problems={by.mode}
           options={[
-            { value: "report", label: "Report only", badge: "start here", help: terms().say("The verdict is recorded and shown as a warning on the {run}; nothing is stopped. Use it to see how many {runs} would fail before you enforce.") },
-            { value: "enforce", label: "Enforce", help: terms().say("A failing rule stops the step (a {deploy:do}, an image push) or the run at its start, saying why. Someone with the right role can grant a time-limited waiver.") },
+            { value: "report", label: "Report only", badge: "start here", help: terms().say(P.t3) },
+            { value: "enforce", label: "Enforce", help: terms().say(P.t4) },
           ]} />
       ),
     },
@@ -76,13 +78,13 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
             help={`Nothing ticked: every ${proj.singular.toLowerCase()}.`} />
           {hasDeploy ? (
             <PickNames legend={terms().say("{Environments}")} names={envNames} value={environments} onChange={setEnvironments}
-              help={terms().say("Only deployments to these are judged by the {deploy:do} rules. Nothing ticked: every {environment}. Most teams scope {deploy:do} rules to production.")} />
-          ) : <p className="cf-help">{terms().say("{Environments}: only rules judged before {deploy:doing} can be scoped to {environments}, and this policy has none.")}</p>}
+              help={terms().say(P.t5)} />
+          ) : <p className="cf-help">{terms().say(P.t6)}</p>}
           <div className="cf-grid">
             <ListInput label="Branches" value={branches} onChange={setBranches} placeholder="main, release/*"
-              help="Only runs of these branches. A run of a tag or a pull request has no branch, so it would not match. Empty: any." />
+              help={P.t7} />
           </div>
-          <PickNames legend="Events" names={EVENTS} value={events} onChange={setEvents} help={terms().say("Only runs started by these. Nothing ticked: every {run}.")} placeholder="" />
+          <PickNames legend="Events" names={EVENTS} value={events} onChange={setEvents} help={terms().say(P.t8)} placeholder="" />
         </>
       ),
     },
@@ -93,9 +95,9 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
       render: (by) => (
         <div className="cf-grid">
           <TextInput label="Name" value={name} onChange={(v) => setName(v.toLowerCase())} mono required placeholder="prod-evidence" problems={by.name}
-            help="Lower-case letters, digits and hyphens. It is shown wherever its verdict is." />
+            help={P.t9} />
           <TextInput label="Description" value={description} onChange={setDescription} wide problems={by.description}
-            placeholder="Production deployments need tests and a second person's approval" help="Why the policy exists, in a sentence people will read when it stops them." />
+            placeholder={P.t10} help={P.t11} />
           <DefinedAt overview={overview} value={unit} onChange={setUnit} />
         </div>
       ),
@@ -104,15 +106,15 @@ export function AddPolicyWizard({ overview }: { overview: ConfigOverview }) {
 
   return (
     <WizardRunner title="Add a policy" overview={overview}
-      intro="Rules runs must meet. Nothing is created until you confirm at the end."
+      intro={P.t12}
       steps={steps} changes={name.trim() ? realChanges : changes}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
           <h3 className="h-sm">Next</h3>
           <ul className="cf-next">
-            <li><Link href="/policy">See policies and their verdicts</Link></li>
-            {mode === "report" && <li>When the warnings look right, set its mode to enforce on <Link href={`/config/policies/${encodeURIComponent(name.trim())}`}>its page</Link>.</li>}
+            <li><Link href="/policy">{P.t13}</Link></li>
+            {mode === "report" && <li>{P.t14}<Link href={`/config/policies/${encodeURIComponent(name.trim())}`}>its page</Link>.</li>}
           </ul>
         </>
       )} />

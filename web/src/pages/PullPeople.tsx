@@ -4,6 +4,7 @@ import { Link } from "../components/ui";
 import { LaunchLine, toStations } from "../kit/LaunchLine";
 import { Chip } from "../kit/Status";
 import { terms } from "../terms";
+import { BtnSm, SpanFaint } from "../kit/bits";
 
 /** The launch line of the latest run of a pull request, the same line the Home and Activity pages draw (the kit's
  * LaunchLine, through its public props), with the run's number, its state in words and a link to it. It sits under
@@ -27,7 +28,7 @@ export function PullRunLine({ runId, head }: { runId: string | undefined; head: 
   if (!line) return failed ? <p className="faint small pr-runline">{terms().say("The latest {run},")} <Link href={`/runs/${runId}`}>{runId}</Link>, cannot be shown here.</p> : null;
   return (
     <section className="pr-runline" aria-label={terms().say("Latest {run}")}>
-      <div className="pr-runline-head"><span>{terms().say("Latest {run}:")} <Link href={`/runs/${line.run}`}>#{line.number} of {line.project}</Link> <span className="faint">{line.now}</span></span></div>
+      <div className="pr-runline-head"><span>{terms().say("Latest {run}:")} <Link href={`/runs/${line.run}`}>#{line.number} of {line.project}</Link> <SpanFaint>{line.now}</SpanFaint></span></div>
       <LaunchLine stations={toStations(line.stations)} label={`The pipeline's launch line for run #${line.number}`} />
     </section>
   );
@@ -46,11 +47,11 @@ export function PullList({ title, items, editable, noun, none, chip, onAdd, onRe
   return (
     <div role="group" aria-label={title}>
       <h3>{title}</h3>
-      {items.length === 0 && <span className="faint">{none}</span>}
+      {items.length === 0 && <SpanFaint>{none}</SpanFaint>}
       <ul className="pr-people">
         {items.map((n) => (
           <li key={n}>{chip ? <Chip>{n}</Chip> : n}
-            {editable && <button type="button" className="btn btn-sm" disabled={busy} aria-label={`Remove ${n} from ${title.toLowerCase()}`} onClick={() => run(() => onRemove(n))}>Remove</button>}
+            {editable && <BtnSm disabled={busy} aria-label={`Remove ${n} from ${title.toLowerCase()}`} onClick={() => run(() => onRemove(n))}>Remove</BtnSm>}
           </li>
         ))}
       </ul>

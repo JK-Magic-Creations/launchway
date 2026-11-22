@@ -10,6 +10,7 @@ import { ComparePage } from "./ComparePage";
 import { OverviewPage } from "./OverviewPage";
 import { SearchPage } from "./SearchPage";
 import { SecurityPage } from "./SecurityPage";
+import { DivPage } from "../../kit/bits";
 
 /** The one lazy entry to every page that reads a repository's code. */
 export function RepoCodeRoute({ view, path, sha }: { view: string; path: string; sha?: string }) {
@@ -24,6 +25,6 @@ export function RepoCodeRoute({ view, path, sha }: { view: string; path: string;
     case "tags": return <TagsPage path={path} />;
     case "search": return <SearchPage path={path} />;
     case "code": return <CodePage path={path} />;
-    default: return <div className="page"><EmptyState title="Nothing here">There is no page called {view} in a repository. <Link href={`/repositories/${path}/code`}>Open the code</Link>.</EmptyState></div>;
+    default: return <DivPage><EmptyState title="Nothing here">There is no page called {view} in a repository. <Link href={`/repositories/${path}/code`}>Open the code</Link>.</EmptyState></DivPage>;
   }
 }

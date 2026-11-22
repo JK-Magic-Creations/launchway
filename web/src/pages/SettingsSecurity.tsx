@@ -6,6 +6,7 @@ import { Chip } from "../kit/Status";
 import { Icon } from "../kit/Icon";
 import { PageHead, Sheet } from "../kit/layout";
 import { terms } from "../terms";
+import { DivPage } from "../kit/bits";
 
 /** Settings → Security: whether what the server stores is encrypted at rest, said plainly. Read-only: the root key is
  * held outside the database and is rotated or replaced on the server host with `launchway encryption`. */
@@ -23,14 +24,14 @@ export function SettingsSecurityPage() {
   if (!me) return null;
   if (!me.admin) {
     return (
-      <div className="page">
+      <DivPage>
         <PageHead eyebrow="Settings" title="Security" />
         <Sheet pad><div className="note"><Icon name="lock" />Only an administrator can see how this server's secrets are protected.</div></Sheet>
-      </div>
+      </DivPage>
     );
   }
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Settings" title="Security"
         sentence="Whether the secrets this server stores are encrypted at rest, and where the key that protects them is held." />
       <ErrorBox error={error} />
@@ -69,6 +70,6 @@ export function SettingsSecurityPage() {
           </Sheet>
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

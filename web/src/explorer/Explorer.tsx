@@ -11,6 +11,9 @@ import { pinToHome } from "./pin";
 import { buildTree, highlight, isFlightSeg, itemScore, nodeKey, ROOT, visibleNodes, worst, type Seg, type Tone, type XItem, type XNode } from "./tree";
 import { FlightCheck, MoveFlightsBar, useFlightSelection, type FlightSelection } from "../components/MoveFlights";
 import "./explorer.css";
+import { prose } from "../prose";
+import { BtnPrimary, BtnSm, SpanFaint, SpanFaintSmall } from "../kit/bits";
+const P = await prose("explorer.Explorer");
 
 // The Explorer: one component for every long list (pipelines, repositories, projects, Sorties). A tree of
 // places on the left (levels, then folders), the selected place's items on the right as cards or a table, a
@@ -222,7 +225,7 @@ export function Explorer(p: ExplorerProps) {
         <label className="xp-chk"><input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} /> Mine</label>
         <div className="xp-seg" role="group" aria-label="Show as">
           {(["cards", "table"] as const).map((v) => (
-            <button key={v} type="button" className="btn btn-sm" aria-pressed={view === v} onClick={() => { setView(v); p.savePreference?.("view", v); }}>{v === "cards" ? "Cards" : "Table"}</button>
+            <BtnSm key={v} aria-pressed={view === v} onClick={() => { setView(v); p.savePreference?.("view", v); }}>{v === "cards" ? "Cards" : "Table"}</BtnSm>
           ))}
         </div>
         {p.toolbar}
@@ -232,12 +235,12 @@ export function Explorer(p: ExplorerProps) {
       <div className="xp-body">
         <nav className="xp-side" aria-label={`${p.noun.plural} by place`}>
           <div className="xp-side-h">
-            <button type="button" className="btn btn-sm" onClick={() => openAll(true)}>Expand all</button>
-            <button type="button" className="btn btn-sm" onClick={() => openAll(false)}>Collapse all</button>
+            <BtnSm onClick={() => openAll(true)}>Expand all</BtnSm>
+            <BtnSm onClick={() => openAll(false)}>Collapse all</BtnSm>
           </div>
           <Tree nodes={shownTree} open={effectiveOpen} selected={selected} rootLabel={rootLabel} onSelect={choose} onToggle={toggle} q={q} onDrop={arranging ? dropFolder : undefined} />
-          {p.onCollections && <div className="xp-side-f"><button type="button" className="btn btn-sm" onClick={() => setCreating("collection")}>New collection</button></div>}
-          {p.onCreateFolder && <div className="xp-side-f"><button type="button" className="btn btn-sm" onClick={() => setCreating("folder")}>New folder</button></div>}
+          {p.onCollections && <div className="xp-side-f"><BtnSm onClick={() => setCreating("collection")}>New collection</BtnSm></div>}
+          {p.onCreateFolder && <div className="xp-side-f"><BtnSm onClick={() => setCreating("folder")}>New folder</BtnSm></div>}
           {p.emptyHint && <p className="faint small xp-hint">{p.emptyHint}</p>}
         </nav>
 
@@ -249,23 +252,23 @@ export function Explorer(p: ExplorerProps) {
                 {crumbs.map((c, i) => <li key={c.key}>{i === crumbs.length - 1 ? <span aria-current="page">{c.label}</span> : <button type="button" className="xp-crumb" onClick={() => choose(c.key)}>{c.label}</button>}</li>)}
               </ol>
             </nav>
-            <span className="faint small" role="status">{list.length} of {p.items.length} {p.noun.plural}{filtering ? " match" : ""}</span>
+            <SpanFaintSmall role="status">{list.length} of {p.items.length} {p.noun.plural}{filtering ? " match" : ""}</SpanFaintSmall>
             <span className="xp-grow" />
-            <button type="button" className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText(location.href); announce("Link to this view copied."); }}>Copy link to this view</button>
-            <button type="button" className="btn btn-sm" onClick={() => { const t = `${p.noun.plural[0].toUpperCase()}${p.noun.plural.slice(1)}${filtering ? ": " + (q.trim() || [status !== "all" && status, label, kind, favOnly && "favorites", mineOnly && "mine"].filter(Boolean).join(", ")) : ""}`; pinToHome(t, location.pathname + location.search).then(() => announce("Pinned to your Home."), () => announce("Could not pin this view.", "assertive")); }}>Pin to Home</button>
-            {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arrangeMode === "everyone"} onClick={() => { const on = arrangeMode !== "everyone"; setArrangeMode(on ? "everyone" : "off"); announce(on ? "Arranging for everyone is on: drag an item onto a folder, or use Move to." : "Arranging is off."); }}>{arrangeMode === "everyone" ? "Done arranging" : "Arrange for everyone"}</button>}
-            {p.onCollections && <button type="button" className="btn btn-sm" aria-pressed={meMode} onClick={() => { const on = !meMode; setArrangeMode(on ? "me" : "off"); announce(on ? "Arranging for you is on: drag an item onto a collection, or use Add to collection. Nothing changes for anyone else." : "Arranging is off."); }}>{meMode ? "Done arranging" : "Arrange for me"}</button>}
+            <BtnSm onClick={() => { void navigator.clipboard?.writeText(location.href); announce("Link to this view copied."); }}>Copy link to this view</BtnSm>
+            <BtnSm onClick={() => { const t = `${p.noun.plural[0].toUpperCase()}${p.noun.plural.slice(1)}${filtering ? ": " + (q.trim() || [status !== "all" && status, label, kind, favOnly && "favorites", mineOnly && "mine"].filter(Boolean).join(", ")) : ""}`; pinToHome(t, location.pathname + location.search).then(() => announce("Pinned to your Home."), () => announce("Could not pin this view.", "assertive")); }}>Pin to Home</BtnSm>
+            {p.onMove && <BtnSm aria-pressed={arrangeMode === "everyone"} onClick={() => { const on = arrangeMode !== "everyone"; setArrangeMode(on ? "everyone" : "off"); announce(on ? P.t0 : "Arranging is off."); }}>{arrangeMode === "everyone" ? "Done arranging" : "Arrange for everyone"}</BtnSm>}
+            {p.onCollections && <BtnSm aria-pressed={meMode} onClick={() => { const on = !meMode; setArrangeMode(on ? "me" : "off"); announce(on ? P.t1 : "Arranging is off."); }}>{meMode ? "Done arranging" : "Arrange for me"}</BtnSm>}
           </div>
-          {meMode && <p className="callout" role="note">Arranging for you: collections are yours alone. An item shows in a collection without moving for anyone else; drag it onto a collection, or use <b>Add to collection…</b> on it.</p>}
-          {arrangeMode === "everyone" && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
+          {meMode && <p className="callout" role="note">{P.t2}<b>Add to collection…</b> on it.</p>}
+          {arrangeMode === "everyone" && <p className="callout" role="note">{P.t3}{p.noun.plural}{P.t4}<b>Move to…</b> on it.</p>}
           {p.flights && <MoveFlightsBar selection={selection} onMoved={p.flights.onMoved} />}
-          {last && <p role="status" className="xp-undo"><b>{last.item.name}</b> was moved. <button type="button" className="btn btn-sm" onClick={() => { void p.onMove?.(last.item, last.from); announce("Move undone."); setLast(null); }}>Undo</button></p>}
+          {last && <p role="status" className="xp-undo"><b>{last.item.name}</b> was moved. <BtnSm onClick={() => { void p.onMove?.(last.item, last.from); announce("Move undone."); setLast(null); }}>Undo</BtnSm></p>}
 
           {list.length === 0 ? (
             <div className="xp-empty" role="status">
               <b>No {p.noun.singular} matches.</b>
-              <p className="faint">{filtering ? "Nothing fits the filters. " : "Nothing is in this place yet. "}Try fewer words, or clear the filters.</p>
-              {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
+              <p className="faint">{filtering ? "Nothing fits the filters. " : P.t5}{P.t6}</p>
+              {filtering && <BtnSm onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</BtnSm>}
             </div>
           ) : (
             <Results sel={p.flights ? selection : undefined} strip={p.strip !== false} results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
@@ -423,7 +426,7 @@ function Results({ sel, strip, results, list, view, group, q, now, arranging, me
       <div style={virtual ? { height: total * rowH, position: "relative" } : undefined}>
         <ul className={"xp-list " + view} style={virtual ? { position: "absolute", top: head, left: 0, right: 0 } : undefined}>
           {rows.slice(first, last).map((r, i) => r.kind === "head" ? (
-            <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <span className="faint">({r.count})</span></h2></li>
+            <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <SpanFaint>({r.count})</SpanFaint></h2></li>
           ) : (
             <li key={"r" + first + i} className="xp-row" style={{ height: virtual ? rowH : undefined, gridTemplateColumns: view === "cards" ? `repeat(${cols}, 1fr)` : undefined }}>
               {r.items!.map((it) => view === "cards" ? <Card key={it.id} sel={sel} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} sel={sel} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
@@ -438,7 +441,7 @@ function Results({ sel, strip, results, list, view, group, q, now, arranging, me
 interface ItemProps { sel?: FlightSelection; strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
 
 function Strip({ history, name }: { history: Tone[]; name: string }) {
-  if (history.length === 0) return <span className="faint small">no results yet</span>;
+  if (history.length === 0) return <SpanFaintSmall>no results yet</SpanFaintSmall>;
   const c = history.reduce<Record<string, number>>((m, t) => ({ ...m, [t]: (m[t] ?? 0) + 1 }), {});
   const text = `Recent results of ${name}: ` + Object.entries(c).map(([t, n]) => `${n} ${TONE_WORD[t as Tone]}`).join(", ");
   return <span className="trend" role="img" aria-label={text} title={text}>{history.map((t, i) => <i key={i} className={t === "none" ? "skip" : t} />)}</span>;
@@ -458,13 +461,13 @@ function Card({ sel, strip, results, it, q, now, arranging, meMode, inCollection
       </header>
       <Place it={it} />
       {it.description && <p className="small xp-desc"><Hl text={it.description} q={q} /></p>}
-      {results && <p className="small">{it.last ? <>{it.last.href ? <a href={it.last.href} onClick={onLink}>{it.last.text}</a> : it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <> · <b>{it.running} running</b></>}</p>}
+      {results && <p className="small">{it.last ? <>{it.last.href ? <a href={it.last.href} onClick={onLink}>{it.last.text}</a> : it.last.text} <SpanFaint>{ago(it.last.at, now)}</SpanFaint></> : <SpanFaint>Not run yet</SpanFaint>}{it.running > 0 && <> · <b>{it.running} running</b></>}</p>}
       <div className="xp-foot">{results && strip && <Strip history={it.history} name={it.name} />}
         {it.labels.length > 0 && <span className="xp-labels">{it.labels.slice(0, 3).map((l) => <span key={l} className="vchip"><Hl text={l} q={q} /></span>)}</span>}
         <span className="xp-grow" />
         {(it.actions ?? []).slice(0, 2).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
-        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</button>}
-        {meMode && inCollection && <button type="button" className="btn btn-sm" onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</button>}
+        {arranging && <BtnSm onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</BtnSm>}
+        {meMode && inCollection && <BtnSm onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</BtnSm>}
       </div>
     </article>
   );
@@ -477,11 +480,11 @@ function TableRow({ sel, strip, results, it, q, now, arranging, meMode, inCollec
         <a href={it.href} onClick={onLink}><Hl text={it.name} q={q} /></a>
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}</span>
       <Place it={it} />
-      {results ? <span className="small">{it.last ? <>{it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <b> · {it.running} running</b>}</span> : <span className="small faint">{it.description}</span>}
+      {results ? <span className="small">{it.last ? <>{it.last.text} <SpanFaint>{ago(it.last.at, now)}</SpanFaint></> : <SpanFaint>Not run yet</SpanFaint>}{it.running > 0 && <b> · {it.running} running</b>}</span> : <span className="small faint">{it.description}</span>}
       {results && strip ? <Strip history={it.history} name={it.name} /> : <span />}
       <span className="xp-acts">{(it.actions ?? []).slice(0, 1).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
-        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</button>}
-        {meMode && inCollection && <button type="button" className="btn btn-sm" onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</button>}</span>
+        {arranging && <BtnSm onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</BtnSm>}
+        {meMode && inCollection && <BtnSm onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</BtnSm>}</span>
     </div>
   );
 }
@@ -491,14 +494,14 @@ function MoveForm({ item, folders, onMove, onClose }: { item: XItem; folders: { 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onMove(item, to); }} className="xp-dialog">
       <h2 className="h-sm">Move {item.name}</h2>
-      <p className="faint small">This changes the folders for everyone who can see it.</p>
+      <p className="faint small">{P.t7}</p>
       <label>Folder
         <select data-autofocus value={to} onChange={(e) => setTo(e.target.value)}>
           <option value="">Not in a folder</option>
           {folders.map((f) => <option key={f.id} value={f.id}>{f.path}</option>)}
         </select>
       </label>
-      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Move</button></div>
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary>Move</BtnPrimary></div>
     </form>
   );
 }
@@ -511,7 +514,7 @@ function NewFolder({ where, onCreate, onClose, what = "folder" }: { where: strin
       <h2 className="h-sm">New {what} in {where}</h2>
       <label>Name<input data-autofocus value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
       {err && <p role="alert" className="err">{err}</p>}
-      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Make {what}</button></div>
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary>Make {what}</BtnPrimary></div>
     </form>
   );
 }
@@ -522,7 +525,7 @@ function CollectForm({ item, collections, onAdd, onClose }: { item: XItem; colle
   return (
     <form onSubmit={(e) => { e.preventDefault(); onAdd(item, to, name); }} className="xp-dialog">
       <h2 className="h-sm">Add {item.name} to a collection</h2>
-      <p className="faint small">A collection is yours alone. {item.name} stays where it is for everyone else.</p>
+      <p className="faint small">A collection is yours alone. {item.name} {P.t8}</p>
       <label>Collection
         <select data-autofocus value={to} onChange={(e) => setTo(e.target.value)}>
           {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -530,7 +533,7 @@ function CollectForm({ item, collections, onAdd, onClose }: { item: XItem; colle
         </select>
       </label>
       {to === "" && <label>Name<input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} required /></label>}
-      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Add</button></div>
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><BtnPrimary>Add</BtnPrimary></div>
     </form>
   );
 }

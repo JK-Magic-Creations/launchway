@@ -8,6 +8,7 @@ import { BodyField } from "./ItemList";
 import { Blank, csv, ErrorPanel, itemHref, Labels, Loading, money, Prio, Progress, scopeHref, scopeLabel, scopeOf, StateTag, useLoad, when, Who, WorkPage } from "./common";
 import { workApi, type Comment, type ItemDetail, type Link as ItemLink, type Page, type WorkEvent } from "./workApi";
 import { terms } from "../terms";
+import { DivFaintSmall, SpanFaint, SpanFaintSmall, SpanMono, ThCol } from "../kit/bits";
 
 // One item: its fields, description, acceptance checklist, links, code, delivery status, comments and history.
 
@@ -25,7 +26,7 @@ export default function ItemPage({ itemRef }: { itemRef: string }) {
   return (
     <WorkPage scope={scope} on="items" eyebrow={<><Link href="/work">Work</Link> / <Link href={scopeHref(scope)}>{scopeLabel(scope)}</Link></>}
       title={<><span className="mono wk-ref">{it.ref}</span> {it.title}</>}
-      sentence={<span className="wk-chips"><StateTag item={it} /><Prio p={it.priority} /><span className="faint">{it.type}</span>{it.blocked && <span className="wk-flag">blocked by {it.blocked_by?.join(", ")}</span>}</span>}>
+      sentence={<span className="wk-chips"><StateTag item={it} /><Prio p={it.priority} /><SpanFaint>{it.type}</SpanFaint>{it.blocked && <span className="wk-flag">blocked by {it.blocked_by?.join(", ")}</span>}</span>}>
       {it.labels.includes("machine-proposed") && <p className="faint small wk-proposed">Proposed by {it.labels.find((l) => l.startsWith("source:"))?.slice(7) ?? "a tool"}. See <Link href={scopeHref(scope, "proposals")}>Proposals</Link>.</p>}
       <AgentBanner it={it} onTaken={item.reload} can={can("take_over")} />
       <div className="wk-cols">
@@ -146,7 +147,7 @@ function Children({ it }: { it: ItemDetail }) {
       <ErrorPanel error={kids.error} />
       {kids.data && kids.data.items.length > 0 && (
         <ul className="wk-rows">{kids.data.items.map((k) => (
-          <li key={k.id}><span className="mono">{k.ref}</span> <Link href={itemHref(k.ref)}>{k.title}</Link> <StateTag item={k} /></li>
+          <li key={k.id}><SpanMono>{k.ref}</SpanMono> <Link href={itemHref(k.ref)}>{k.title}</Link> <StateTag item={k} /></li>
         ))}</ul>
       )}
     </Sheet>
@@ -183,12 +184,12 @@ function Code({ it }: { it: ItemDetail }) {
       {it.code.length === 0 ? <p className="faint">No branches, pull requests or commits are linked. Name {it.ref} in a branch, a commit message or a pull request and it links here.</p> : (
         <div className="tablewrap"><table className="table wk-table">
           <caption className="visually-hidden">Code linked to {it.ref}</caption>
-          <thead><tr><th scope="col">Kind</th><th scope="col">Where</th><th scope="col">Title</th><th scope="col">State</th></tr></thead>
+          <thead><tr><ThCol>Kind</ThCol><ThCol>Where</ThCol><ThCol>Title</ThCol><ThCol>State</ThCol></tr></thead>
           <tbody>{it.code.map((c) => (
             <tr key={c.id}>
               <td>{c.kind === "pull" ? "Pull request" : c.kind === "run" ? terms().say("{Run}") : c.kind[0]!.toUpperCase() + c.kind.slice(1)}</td>
               <td className="mono">{c.kind === "pull" && c.repo ? <Link href={`/repositories/${c.repo}/pulls/${c.ref}`}>{c.repo}#{c.ref}</Link> : <>{c.repo ? c.repo + " " : ""}{c.kind === "commit" ? c.ref.slice(0, 8) : c.ref}</>}</td>
-              <td>{c.title}{c.closes && <span className="faint"> (closes this item)</span>}</td>
+              <td>{c.title}{c.closes && <SpanFaint> (closes this item)</SpanFaint>}</td>
               <td>{c.state ? <span className={`wk-code-state s-${c.state}`}>{c.state}</span> : ""}</td>
             </tr>
           ))}</tbody>
@@ -225,11 +226,11 @@ function Details({ it, editable, onSaved }: { it: ItemDetail; editable: boolean;
         <dl className="wk-dl">
           <dt>State</dt><dd><StateTag item={it} /></dd>
           <dt>Priority</dt><dd><Prio p={it.priority} /></dd>
-          <dt>Assigned</dt><dd>{it.assignees.length ? it.assignees.map((a) => <Who key={a.name} name={a.name} kind={a.kind} />) : <span className="faint">Unassigned</span>}</dd>
-          <dt>Labels</dt><dd>{it.labels.length ? <Labels list={it.labels} /> : <span className="faint">None</span>}</dd>
-          <dt>Estimate</dt><dd>{it.estimate || <span className="faint">None</span>}</dd>
-          <dt>Milestone</dt><dd>{it.milestone || <span className="faint">None</span>}</dd>
-          <dt>Sprint</dt><dd>{it.sprint || <span className="faint">None</span>}</dd>
+          <dt>Assigned</dt><dd>{it.assignees.length ? it.assignees.map((a) => <Who key={a.name} name={a.name} kind={a.kind} />) : <SpanFaint>Unassigned</SpanFaint>}</dd>
+          <dt>Labels</dt><dd>{it.labels.length ? <Labels list={it.labels} /> : <SpanFaint>None</SpanFaint>}</dd>
+          <dt>Estimate</dt><dd>{it.estimate || <SpanFaint>None</SpanFaint>}</dd>
+          <dt>Milestone</dt><dd>{it.milestone || <SpanFaint>None</SpanFaint>}</dd>
+          <dt>Sprint</dt><dd>{it.sprint || <SpanFaint>None</SpanFaint>}</dd>
           <dt>Reporter</dt><dd>{it.reporter}</dd>
         </dl>
       </Sheet>
@@ -292,7 +293,7 @@ function Links({ it, editable, onChanged }: { it: ItemDetail; editable: boolean;
             const w = linkWords(l, it.ref);
             return (
               <li key={l.id}>
-                <span className="faint">{w.word}</span> <Link href={itemHref(w.other)}>{w.other}</Link>{w.title && <> {w.title}</>}
+                <SpanFaint>{w.word}</SpanFaint> <Link href={itemHref(w.other)}>{w.other}</Link>{w.title && <> {w.title}</>}
                 {editable && <Button sm kind="ghost" aria-label={`Remove link: ${w.word} ${w.other}`} onClick={() => remove(l)}>Remove</Button>}
               </li>
             );
@@ -316,7 +317,7 @@ function Attachments({ it }: { it: ItemDetail }) {
     <Sheet title="Attachments" pad>
       {it.attachments.length === 0 ? <p className="faint">No files attached.</p> : (
         <ul className="wk-rows">{it.attachments.map((a) => (
-          <li key={a.id}><a href={workApi.attachmentUrl(a.id)} download={a.name}>{a.name}</a> <span className="faint small">{Math.max(1, Math.round(a.size / 1024))} KB, {a.by}, {when(a.at)}</span></li>
+          <li key={a.id}><a href={workApi.attachmentUrl(a.id)} download={a.name}>{a.name}</a> <SpanFaintSmall>{Math.max(1, Math.round(a.size / 1024))} KB, {a.by}, {when(a.at)}</SpanFaintSmall></li>
         ))}</ul>
       )}
     </Sheet>
@@ -368,7 +369,7 @@ function CommentView({ c, mine, onChanged }: { c: Comment; mine: boolean; onChan
   };
   return (
     <li className="wk-comment">
-      <div className="who"><Who name={c.author} kind={c.author_kind} /> <span className="faint small">{when(c.created_at)}</span>
+      <div className="who"><Who name={c.author} kind={c.author_kind} /> <SpanFaintSmall>{when(c.created_at)}</SpanFaintSmall>
         {c.edits ? <button type="button" className="wk-textbtn" aria-expanded={!!edits} onClick={history}>edited {c.edits} {c.edits === 1 ? "time" : "times"}</button> : null}
         {mine && !editing && <button type="button" className="wk-textbtn" onClick={() => setEditing(true)}>Edit</button>}
       </div>
@@ -381,7 +382,7 @@ function CommentView({ c, mine, onChanged }: { c: Comment; mine: boolean; onChan
       {edits && (
         <div className="wk-edits" role="region" aria-label="Earlier versions of this comment">
           {edits.length === 0 ? <p className="faint small">No earlier versions.</p> : edits.map((e, i) => (
-            <blockquote key={i}><div className="faint small">Version {i + 1}, {when(e.created_at || e.edited_at)}</div><Markdown text={e.body} /></blockquote>
+            <blockquote key={i}><DivFaintSmall>Version {i + 1}, {when(e.created_at || e.edited_at)}</DivFaintSmall><Markdown text={e.body} /></blockquote>
           ))}
         </div>
       )}
@@ -411,7 +412,7 @@ function History({ itemRef, version }: { itemRef: string; version: number }) {
         {(ev.data ?? []).slice().reverse().map((e) => (
           <li key={e.seq} className={e.actor_kind === "agent" ? "by-agent" : ""}>
             <Who name={e.actor} kind={e.actor_kind} /> {describe(e)}
-            <span className="faint small"> {when(e.at)}{e.via ? `, via ${e.via}` : ""}</span>
+            <SpanFaintSmall> {when(e.at)}{e.via ? `, via ${e.via}` : ""}</SpanFaintSmall>
           </li>
         ))}
       </ol>

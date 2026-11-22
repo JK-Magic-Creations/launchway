@@ -12,6 +12,9 @@ import { PolicyRules } from "../components/PolicyRules";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../config.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { DivLoading, DivPage, SpanFaint, ThCol } from "../kit/bits";
+const P = await prose("pages.ConfigObject");
 
 // ConfigObjectPage shows one configuration object: a form for its settings
 // with an explanation under each, a raw tab for anything without a field,
@@ -21,9 +24,9 @@ export function ConfigObjectPage({ kind, name }: { kind: string; name: string })
   const path = usePath();
   const { overview, error: ovError } = useOverview();
   const k = kindOf(overview, kind);
-  if (ovError) return <div className="page"><ErrorBox error={ovError} /></div>;
-  if (!overview) return <div className="page"><div className="loading">Loading…</div></div>;
-  if (!k) return <div className="page"><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration"><Link href="/config">Back to configuration</Link></Empty></div>;
+  if (ovError) return <DivPage><ErrorBox error={ovError} /></DivPage>;
+  if (!overview) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
+  if (!k) return <DivPage><ConfigNav overview={overview} path={path} /><Empty title="No such kind of configuration"><Link href="/config">Back to configuration</Link></Empty></DivPage>;
   return <Editor key={k.name + "/" + name} k={k} name={name} overview={overview} path={path} />;
 }
 
@@ -99,7 +102,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
       if (take === null) { setBusy(false); return; }
       const r = await configApi.put(k.path, name, { unit: unit || undefined, spec, comment: comment || undefined, version: obj!.version, take_ownership: take || undefined });
       setComment("");
-      setSaved(r.changed ? `Saved: version ${r.object.version}. Every server uses it within seconds.` : "Nothing changed, so nothing was saved.");
+      setSaved(r.changed ? `Saved: version ${r.object.version}. Every server uses it within seconds.` : P.t0);
       if (["installation", "organisation", "unit"].includes(k.name) || unit !== obj?.unit) loadOverview(true).catch(() => {});
       load();
     } catch (e) {
@@ -118,7 +121,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
   };
   const remove = async () => {
     if (!obj) return;
-    const what = k.name === "project" ? terms().say(" Its {runs} and history are kept; it stops being watched.") : "";
+    const what = k.name === "project" ? terms().say(P.t1) : "";
     if (!window.confirm(`Delete ${one.toLowerCase()} ${name}? It stops applying at once.${what} You can restore it from this page.`)) return;
     setBusy(true); setError(null);
     const take = await takeOwnership();
@@ -134,14 +137,14 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
     catch (e) { setError(e); } finally { setBusy(false); }
   };
 
-  if (loaded.state === "loading") return <div className="page"><ConfigNav overview={overview} path={path} /><div className="loading">Loading…</div></div>;
+  if (loaded.state === "loading") return <DivPage><ConfigNav overview={overview} path={path} /><DivLoading>Loading…</DivLoading></DivPage>;
   if (loaded.state === "error") {
     return (
-      <div className="page"><ConfigNav overview={overview} path={path} />
+      <DivPage><ConfigNav overview={overview} path={path} />
         {loaded.error instanceof ApiError && loaded.error.status === 404
           ? <Empty title={`No ${one.toLowerCase()} ${name}`}>It does not exist. <Link href={`/config/${k.path}`}>See them all</Link>.</Empty>
           : <ErrorBox error={loaded.error} />}
-      </div>
+      </DivPage>
     );
   }
   const wiz = isNew ? wizardFor(k.name) : undefined;
@@ -154,27 +157,27 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
         <dl className="cf-meta">
           <div><dt>Version</dt><dd>{obj.version}</dd></div>
           {obj.updated_at > 0 && <div><dt>Changed</dt><dd title={clock(obj.updated_at)}>{ago(obj.updated_at)}{obj.updated_by ? ` by ${obj.updated_by}` : ""}</dd></div>}
-          <div><dt>Managed by</dt><dd>{obj.version === 0 ? "nobody yet: the built-in defaults" : managerLabel(obj.managed_by)}</dd></div>
+          <div><dt>Managed by</dt><dd>{obj.version === 0 ? P.t2 : managerLabel(obj.managed_by)}</dd></div>
           {k.levels && overview.units_in_use && <div><dt>Defined at</dt><dd>{levelOf(overview, obj.unit)}</dd></div>}
         </dl>
       )}
 
       {wiz && <div className="callout callout-info">Not sure what to put? <Link href={`/config/wizard/${wiz.id}`}>{wiz.title}</Link> asks a few questions instead.</div>}
       {obj?.managed_by === "terraform" && (
-        <div className="callout callout-draft" role="note"><strong>Managed by Terraform.</strong> It is read-only here: change it in Terraform. If you must change it here, saving asks you to take it over from Terraform, which is recorded.</div>
+        <div className="callout callout-draft" role="note"><strong>Managed by Terraform.</strong> {P.t3}</div>
       )}
       {obj?.managed_by === "import" && (
-        <div className="callout callout-info" role="note">This was imported from a configuration file. The file's copy is now ignored: changes made here are the ones that count.</div>
+        <div className="callout callout-info" role="note">{P.t4}</div>
       )}
       {deleted && (
         <div className="callout callout-bad cf-row" role="status">
-          <span><strong>Deleted</strong> {ago(obj!.deleted_at ?? 0)}{obj!.deleted_by ? ` by ${obj!.deleted_by}` : ""}: it does not apply. Restoring it brings it back as it was.</span>
+          <span><strong>Deleted</strong> {ago(obj!.deleted_at ?? 0)}{obj!.deleted_by ? ` by ${obj!.deleted_by}` : ""}{P.t5}</span>
           <button type="button" className="btn" disabled={busy} onClick={restore}>Restore</button>
         </div>
       )}
       {(conflict || moved) && (
         <div className="callout callout-bad cf-row" role="alert">
-          <span><strong>Someone else changed this since you opened it.</strong> Your change was not saved, so theirs is not lost. Reload to see their version, then make your change again (copy it from the Raw tab first if it is long).</span>
+          <span><strong>{P.t6}</strong> {P.t7}</span>
           <button type="button" className="btn" onClick={() => { setLoaded({ state: "loading" }); load(); }}>Reload</button>
         </div>
       )}
@@ -213,9 +216,9 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
         </div>
         {!deleted && (
           <div className="cf-savebar">
-            <TextInput label="Why (kept in the history, optional)" value={comment} onChange={setComment} placeholder="for example: the team moved to the new cluster" />
+            <TextInput label={P.t8} value={comment} onChange={setComment} placeholder={P.t9} />
             <div className="cf-savebar-row">
-              {dirty ? <CheckLine check={check} okText="The server's checks pass: you can save." /> : <span className="faint cf-checkstate">{isNew ? "Fill in the settings." : "No changes yet."}</span>}
+              {dirty ? <CheckLine check={check} okText={P.t10} /> : <span className="faint cf-checkstate">{isNew ? "Fill in the settings." : "No changes yet."}</span>}
               <span className="cf-spacer" />
               {obj && !k.singleton && <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={remove}>Delete</button>}
               {obj && dirty && <button type="button" className="btn" disabled={busy} onClick={() => { setSpec(obj.spec ?? {}); setUnit(obj.unit ?? ""); }}>Undo changes</button>}
@@ -236,9 +239,9 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
 
 function managerLabel(m: string): string {
   switch (m) {
-    case "api": return "this page, the API or the command line";
+    case "api": return P.t11;
     case "terraform": return "Terraform";
-    case "import": return "an import of a configuration file";
+    case "import": return P.t12;
     default: return m || "unknown";
   }
 }
@@ -249,7 +252,7 @@ function Unformed({ kind, spec }: { kind: string; spec: Spec }) {
   if (kind === "policy") known.add("rules");
   const rest = Object.keys(spec).filter((k) => !known.has(k));
   if (!rest.length) return null;
-  return <p className="cf-help">Also set, without a field here: {rest.map((r, i) => <span key={r}>{i ? ", " : ""}<Mono>{r}</Mono></span>)}. They are kept as they are; edit them on the Raw tab.</p>;
+  return <p className="cf-help">{P.t13}{rest.map((r, i) => <span key={r}>{i ? ", " : ""}<Mono>{r}</Mono></span>)}{P.t14}</p>;
 }
 
 function RawEditor({ spec, onChange }: { spec: Spec; onChange: (s: Spec) => void }) {
@@ -257,17 +260,17 @@ function RawEditor({ spec, onChange }: { spec: Spec; onChange: (s: Spec) => void
   const [bad, setBad] = useState("");
   return (
     <div className="cf-field cf-wide">
-      <label htmlFor="cf-raw" className="cf-label">The settings as JSON, with the configuration file's keys</label>
-      <textarea id="cf-raw" className="cf-input cf-textarea cf-raw mono" value={text} spellCheck={false} aria-describedby="cf-raw-help cf-raw-bad"
+      <label htmlFor="cf-raw" className="cf-label">{P.t15}</label>
+      <textarea id="cf-raw" className={P.t16} value={text} spellCheck={false} aria-describedby="cf-raw-help cf-raw-bad"
         onChange={(e) => {
           setText(e.target.value);
           try {
             const v = JSON.parse(e.target.value);
-            if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("the settings must be an object: { … }");
+            if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error(P.t17);
             setBad(""); onChange(v);
           } catch (err) { setBad(err instanceof Error ? err.message : String(err)); }
         }} />
-      <div id="cf-raw-help" className="cf-help">Every key the configuration file has for this kind works here, including those without a field on the Settings tab. The server checks it as you type.</div>
+      <div id="cf-raw-help" className="cf-help">{P.t18}</div>
       <div id="cf-raw-bad" className="cf-problems" aria-live="polite">{bad && <div className="cf-problem">Not valid JSON yet: {bad}</div>}</div>
     </div>
   );
@@ -285,14 +288,14 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
   return (
     <section className="card" aria-labelledby="cf-eff-h">
       <h2 id="cf-eff-h" className="cf-h">What applies to this {overview.levels.project.singular.toLowerCase()}</h2>
-      <p className="cf-help">Settings it has itself, and what it gets from the levels above it. Change a value where it comes from.</p>
+      <p className="cf-help">{P.t19}</p>
       <ErrorBox error={error} />
       {ef && (
         <div className="cf-two">
           <div>
             <h3 className="h-sm">Settings</h3>
             <table className="cf-table">
-              <thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">From</th></tr></thead>
+              <thead><tr><ThCol>Setting</ThCol><ThCol>Value</ThCol><ThCol>From</ThCol></tr></thead>
               <tbody>{ef.settings.map((s) => (
                 <tr key={s.key}><td className="mono">{s.key}</td><td className="mono">{fmt(s.value)}</td><td><span className={`cf-from cf-from-${s.from}`}>{from(s.from)}</span></td></tr>
               ))}</tbody>
@@ -302,7 +305,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
             <h3 className="h-sm">Shared objects that apply</h3>
             {ef.objects.length === 0 ? <p className="faint">None.</p> : (
               <table className="cf-table">
-                <thead><tr><th scope="col">What</th><th scope="col">Name</th><th scope="col">From</th></tr></thead>
+                <thead><tr><ThCol>What</ThCol><ThCol>Name</ThCol><ThCol>From</ThCol></tr></thead>
                 <tbody>{ef.objects.map((o) => {
                   const kk = overview.kinds.find((x) => x.name === o.kind);
                   return (
@@ -341,7 +344,7 @@ function History({ changes, overview }: { changes: ConfigChange[] | null; overvi
                 <span className={`cf-action cf-action-${c.action}`}>{c.action}</span>
                 <strong>version {c.version}</strong>
                 <span>by {c.actor || "someone"}</span>
-                <span className="faint" title={clock(c.at)}>{ago(c.at)}</span>
+                <SpanFaint title={clock(c.at)}>{ago(c.at)}</SpanFaint>
                 {c.managed_by && c.managed_by !== "api" && <span className="cf-pill">{managerLabel(c.managed_by)}</span>}
               </div>
               {c.comment && <div className="cf-hist-comment">“{c.comment}”</div>}

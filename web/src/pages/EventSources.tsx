@@ -5,6 +5,7 @@ import { useLoad } from "../guided/useLoad";
 import { Button, Sheet } from "../kit/layout";
 import { sourcesApi, type EventSource, type SourceTest } from "../eventsApi";
 import { terms } from "../terms";
+import { BtnPrimary, LabelField, SpanFaintSmall } from "../kit/bits";
 
 /** Mapping lines are written one to a line as input=expression. */
 function parseMapping(text: string): Record<string, string> {
@@ -42,10 +43,10 @@ export default function EventSources() {
   };
 
   return (
-    <Sheet title="Event sources" actions={<span className="faint small">{terms().say("An address other systems call, signed, to start a {run}.")}</span>}>
-      <label className="field"><span>{terms().say("{Project}")}</span>
+    <Sheet title="Event sources" actions={<SpanFaintSmall>{terms().say("An address other systems call, signed, to start a {run}.")}</SpanFaintSmall>}>
+      <LabelField><span>{terms().say("{Project}")}</span>
         <select value={chosen} onChange={(e) => setProject(e.target.value)}>{(projects.data ?? []).map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
-      </label>
+      </LabelField>
       <ErrorBox error={err ?? list.error} />
       {secret && (
         <div role="status" className="card">
@@ -60,9 +61,9 @@ export default function EventSources() {
           <li key={s.id}>
             <b>{s.name}</b>{!s.enabled && " (off)"} <span className="mono small">{s.url}</span>
             <div className="small">{Object.entries(s.mapping).map(([k, v]) => <div key={k} className="mono">{k} = {v}</div>)}{s.filter && <div className="mono">filter: {s.filter}</div>}</div>
-            <label className="field"><span>Try a body for {s.name}</span>
+            <LabelField><span>Try a body for {s.name}</span>
               <textarea rows={3} value={body[s.name] ?? ""} onChange={(e) => setBody({ ...body, [s.name]: e.target.value })} />
-            </label>
+            </LabelField>
             <Button sm onClick={() => test(s)} aria-label={`Try the body on ${s.name}`}>Try it</Button>{" "}
             <Button sm onClick={() => run(sourcesApi.setEnabled(chosen, s.name, !s.enabled))} aria-label={`${s.enabled ? "Turn off" : "Turn on"} ${s.name}`}>{s.enabled ? "Turn off" : "Turn on"}</Button>{" "}
             <Button sm onClick={() => sourcesApi.rotate(chosen, s.name).then((r) => { setSecret({ name: s.name, value: r.secret }); setErr(null); }).catch(setErr)} aria-label={`New secret for ${s.name}`}>New secret</Button>{" "}
@@ -80,12 +81,12 @@ export default function EventSources() {
       </ul>
       <form onSubmit={create}>
         <h3>New source</h3>
-        <label className="field"><span>Name</span><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-        <label className="field"><span>Inputs, one per line as input=expression</span><textarea rows={3} value={form.mapping} onChange={(e) => setForm({ ...form, mapping: e.target.value })} /></label>
-        <label className="field"><span>Filter (must be true)</span><input value={form.filter} onChange={(e) => setForm({ ...form, filter: e.target.value })} /></label>
-        <label className="field"><span>Dedupe key</span><input value={form.dedupe} onChange={(e) => setForm({ ...form, dedupe: e.target.value })} /></label>
-        <label className="field"><span>Debounce seconds</span><input inputMode="numeric" value={form.debounce} onChange={(e) => setForm({ ...form, debounce: e.target.value })} /></label>
-        <button type="submit" className="btn btn-primary">Make the source</button>
+        <LabelField><span>Name</span><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></LabelField>
+        <LabelField><span>Inputs, one per line as input=expression</span><textarea rows={3} value={form.mapping} onChange={(e) => setForm({ ...form, mapping: e.target.value })} /></LabelField>
+        <LabelField><span>Filter (must be true)</span><input value={form.filter} onChange={(e) => setForm({ ...form, filter: e.target.value })} /></LabelField>
+        <LabelField><span>Dedupe key</span><input value={form.dedupe} onChange={(e) => setForm({ ...form, dedupe: e.target.value })} /></LabelField>
+        <LabelField><span>Debounce seconds</span><input inputMode="numeric" value={form.debounce} onChange={(e) => setForm({ ...form, debounce: e.target.value })} /></LabelField>
+        <BtnPrimary>Make the source</BtnPrimary>
       </form>
     </Sheet>
   );

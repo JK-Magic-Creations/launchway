@@ -3,24 +3,27 @@ import { Button, Sheet } from "../kit/layout";
 import { announce } from "../kit/announce";
 import { csv, ErrorPanel, Loading, scopeLabel, useLoad, WorkPage } from "./common";
 import { workApi, type Autonomy, type FieldDef, type ReviewPolicy, type Settings, type SettingsAnswer, type StateDef, type TypeDef } from "./workApi";
+import { prose } from "../prose";
+import { PSub, SpanFaint, SpanFaintSmall, SpanHidden, ThCol } from "../kit/bits";
+const P = await prose("work.WorkSettings");
 
 // How work is set up in a project: the workflow, who may move work, types, fields, the close rule, and the rules for agents,
 // including the autonomy policy and the review policy. A level the server does not act on yet is shown, disabled, and says so.
 
 const CATEGORIES = ["todo", "doing", "review", "done", "cancelled"];
 const LEVELS: { level: number; name: string; text: string }[] = [
-  { level: 0, name: "Propose only", text: "An agent may open a pull request but a person does everything after it." },
-  { level: 1, name: "A person approves and merges", text: "A person approves and merges what an agent proposes. This is the default." },
-  { level: 2, name: "Merge small, safe changes", text: "A change that passes every check and touches only listed paths may merge without a person." },
+  { level: 0, name: "Propose only", text: P.t0 },
+  { level: 1, name: "A person approves and merges", text: P.t1 },
+  { level: 2, name: "Merge small, safe changes", text: P.t2 },
   { level: 3, name: "Level 3", text: "" },
   { level: 4, name: "Level 4", text: "" },
 ];
-const WHO: [string, string][] = [["anyone", "Anyone who may change the item"], ["human", "A person, never an agent"], ["maintainer", "Someone who maintains the Flight"]];
+const WHO: [string, string][] = [["anyone", P.t3], ["human", "A person, never an agent"], ["maintainer", P.t4]];
 const CLASSES = ["small", "medium", "large"];
 
 function sourceText(a: SettingsAnswer, scope: string): string {
   const src = a.autonomy.source;
-  if (src === "default") return "The default: no policy has been set at any level.";
+  if (src === "default") return P.t5;
   if (src === scope) return `Set here, for ${scopeLabel(scope)}.`;
   return `Inherited from ${scopeLabel(src)}. Saving a level here overrides it for ${scopeLabel(scope)}.`;
 }
@@ -66,8 +69,8 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaved(false);
-    if (level > 1 && !(aut?.reason ?? "").trim()) { setError(new Error("Say why the autonomy level is raised. The reason is recorded.")); return; }
-    if (level >= 2 && !(aut?.paths ?? []).length) { setError(new Error("Level 2 needs the paths an agent may change without a person, such as docs/**.")); return; }
+    if (level > 1 && !(aut?.reason ?? "").trim()) { setError(new Error(P.t6)); return; }
+    if (level >= 2 && !(aut?.paths ?? []).length) { setError(new Error(P.t7)); return; }
     setBusy(true);
     const out: Settings = { ...a.own };
     out.prefix = prefix.trim() || undefined;
@@ -90,21 +93,21 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
 
   return (
     <WorkPage scope={scope} on="settings" title="Settings" sentence={`How work is set up in ${scopeLabel(scope)}. What is not set here is inherited from the levels above.`}>
-      {!editable && <p className="callout callout-wait" role="note">You can read these settings but not change them. Only a person who maintains {scopeLabel(scope)} can.</p>}
+      {!editable && <p className="callout callout-wait" role="note">{P.t8}{scopeLabel(scope)} can.</p>}
       <form onSubmit={save} className="wk-settings">
         <fieldset disabled={!editable} className="wk-fs">
           <Sheet title="General" pad>
             <div className="wk-grid">
-              <TextField label="Item prefix" value={prefix} onChange={setPrefix} hint="The letters in front of a number, such as PAY in PAY-12." />
+              <TextField label="Item prefix" value={prefix} onChange={setPrefix} hint={P.t9} />
               <div className="wk-f"><label htmlFor="wk-unit">Estimates are in</label><select id="wk-unit" value={unit} onChange={(e) => setUnit(e.target.value)}><option value="points">Points</option><option value="hours">Hours</option></select></div>
             </div>
           </Sheet>
 
           <Sheet title="Workflow" pad>
-            <p className="sub">The states an item moves through, in board order. A work-in-progress limit warns when a column holds more; it never blocks a move.</p>
+            <PSub>{P.t10}</PSub>
             <div className="tablewrap"><table className="table wk-table">
               <caption className="visually-hidden">Workflow states</caption>
-              <thead><tr><th scope="col">Key</th><th scope="col">Name</th><th scope="col">Meaning</th><th scope="col">Limit</th><th scope="col">Who may move work here</th><th scope="col"><span className="visually-hidden">Remove</span></th></tr></thead>
+              <thead><tr><ThCol>Key</ThCol><ThCol>Name</ThCol><ThCol>Meaning</ThCol><ThCol>Limit</ThCol><ThCol>Who may move work here</ThCol><ThCol><SpanHidden>Remove</SpanHidden></ThCol></tr></thead>
               <tbody>
                 {states.map((s, i) => (
                   <tr key={i}>
@@ -124,7 +127,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
           <Sheet title="Types" pad>
             <div className="tablewrap"><table className="table wk-table">
               <caption className="visually-hidden">Item types</caption>
-              <thead><tr><th scope="col">Key</th><th scope="col">Name</th><th scope="col">Starting text</th><th scope="col">Off</th></tr></thead>
+              <thead><tr><ThCol>Key</ThCol><ThCol>Name</ThCol><ThCol>Starting text</ThCol><ThCol>Off</ThCol></tr></thead>
               <tbody>{types.map((t, i) => (
                 <tr key={i}>
                   <td><input aria-label={`Key of type ${i + 1}`} value={t.key} onChange={(e) => { setTypes(types.map((x, j) => (j === i ? { ...x, key: e.target.value } : x))); setTypesDirty(true); }} /></td>
@@ -137,7 +140,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
           </Sheet>
 
           <Sheet title="Custom fields" pad>
-            {fields.length === 0 && <p className="faint">No custom fields. Add one to record something every item should carry, such as a customer or a release.</p>}
+            {fields.length === 0 && <p className="faint">{P.t11}</p>}
             {fields.map((f, i) => (
               <div className="wk-grid wk-fieldrow" key={i}>
                 <div className="wk-f"><label htmlFor={`cf-k-${i}`}>Key</label><input id={`cf-k-${i}`} value={f.key} onChange={(e) => { setFields(fields.map((x, j) => (j === i ? { ...x, key: e.target.value } : x))); setFieldsDirty(true); }} /></div>
@@ -155,30 +158,30 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
             <div className="wk-grid">
               <div className="wk-f"><label htmlFor="cl-on">Close rule</label>
                 <select id="cl-on" value={close.on} onChange={(e) => { setClose({ ...close, on: e.target.value }); setCloseDirty(true); }}>
-                  <option value="merge">Move the item when the pull request merges</option>
-                  <option value="review">Move to review when it opens; only a person finishes it</option>
-                  <option value="never">Only link; never move the item</option>
+                  <option value="merge">{P.t12}</option>
+                  <option value="review">{P.t13}</option>
+                  <option value="never">{P.t14}</option>
                 </select></div>
               <div className="wk-f"><label htmlFor="cl-st">State it moves to</label>
                 <select id="cl-st" value={close.state} onChange={(e) => { setClose({ ...close, state: e.target.value }); setCloseDirty(true); }}>{states.map((s) => <option key={s.key} value={s.key}>{s.name || s.key}</option>)}</select></div>
-              <div className="wk-f span"><label htmlFor="cl-v">Words that close an item</label><input id="cl-v" value={close.verbs} onChange={(e) => { setClose({ ...close, verbs: e.target.value }); setCloseDirty(true); }} /><span className="faint small">Written in a pull request, as in "fixes PAY-12". Other words only link.</span></div>
+              <div className="wk-f span"><label htmlFor="cl-v">Words that close an item</label><input id="cl-v" value={close.verbs} onChange={(e) => { setClose({ ...close, verbs: e.target.value }); setCloseDirty(true); }} /><SpanFaintSmall>{P.t15}</SpanFaintSmall></div>
             </div>
           </Sheet>
 
           <Sheet title="Agent rules" pad>
             <label className="wk-check big"><input type="checkbox" checked={rules.enabled} onChange={(e) => setRules({ ...rules, enabled: e.target.checked })} />Agents may work here</label>
-            <p className="faint small">Turn this off to stop every agent at once in {scopeLabel(scope)} and below. Work they hold is released.</p>
-            {!rules.enabled && <p className="callout callout-bad" role="note">Agents are switched off here. None can claim or change work until you turn this back on.</p>}
-            <label className="wk-check"><input type="checkbox" checked={rules.human} onChange={(e) => setRules({ ...rules, human: e.target.checked })} />A person must approve an agent's pull request</label>
+            <p className="faint small">{P.t16}{scopeLabel(scope)} {P.t17}</p>
+            {!rules.enabled && <p className="callout callout-bad" role="note">{P.t18}</p>}
+            <label className="wk-check"><input type="checkbox" checked={rules.human} onChange={(e) => setRules({ ...rules, human: e.target.checked })} />{P.t19}</label>
             <label className="wk-check"><input type="checkbox" checked={rules.merge} onChange={(e) => setRules({ ...rules, merge: e.target.checked })} />Agents may merge</label>
-            {loosened && <TextField label="Why are you loosening these safeguards? (required, recorded)" value={rules.reason} onChange={(v) => setRules({ ...rules, reason: v })} required />}
+            {loosened && <TextField label={P.t20} value={rules.reason} onChange={(v) => setRules({ ...rules, reason: v })} required />}
           </Sheet>
 
           <AutonomySection scope={scope} a={a} level={level} aut={aut} setAut={setAut} editable={editable} onResumed={onSaved} />
           <ReviewSection rev={rev} setRev={setRev} />
 
           <Sheet title="Difficulty and agent classes" pad>
-            <p className="sub">Which classes of agent may take an item of each difficulty. A difficulty with no choice is open to every class.</p>
+            <PSub>{P.t21}</PSub>
             {CLASSES.map((d) => (
               <fieldset key={d} className="wk-radios inline"><legend>{d[0]!.toUpperCase() + d.slice(1)} items may be taken by</legend>
                 {CLASSES.map((c) => (
@@ -199,7 +202,7 @@ function Form({ scope, a, onSaved }: { scope: string; a: SettingsAnswer; onSaved
 
 function TextField({ label, value, onChange, hint, required, type }: { label: string; value: string; onChange: (v: string) => void; hint?: string; required?: boolean; type?: string }) {
   const id = useId();
-  return <div className="wk-f"><label htmlFor={id}>{label}</label><input id={id} type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} />{hint && <span className="faint small">{hint}</span>}</div>;
+  return <div className="wk-f"><label htmlFor={id}>{label}</label><input id={id} type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} />{hint && <SpanFaintSmall>{hint}</SpanFaintSmall>}</div>;
 }
 
 function AutonomySection({ scope, a, level, aut, setAut, editable, onResumed }: {
@@ -223,7 +226,7 @@ function AutonomySection({ scope, a, level, aut, setAut, editable, onResumed }: 
       </dl>
       {st.paused && (
         <div className="callout callout-wait" role="alert">
-          <span>Autonomy is paused: {st.failures} of {st.pause_after} allowed failures were reached. Every agent change needs a person until someone resumes it.</span>
+          <span>Autonomy is paused: {st.failures} of {st.pause_after} {P.t22}</span>
           {editable && (
             <span className="wk-inline">
               <input aria-label="Reason for resuming" value={resumeWhy} onChange={(e) => setResumeWhy(e.target.value)} placeholder="Why it is safe to resume" />
@@ -234,28 +237,28 @@ function AutonomySection({ scope, a, level, aut, setAut, editable, onResumed }: 
       )}
       <ErrorPanel error={err} />
       <fieldset className="wk-radios">
-        <legend>How far may an agent's work go without a person?</legend>
+        <legend>{P.t23}</legend>
         {LEVELS.map((l) => {
           const off = l.level > 2;
           return (
             <label key={l.level} className={"wk-radio" + (off ? " off" : "")}>
               <input type="radio" name="autonomy-level" value={l.level} checked={level === l.level} disabled={off} onChange={() => patch({ level: l.level })} />
-              <span><strong>Level {l.level}{off ? "" : `: ${l.name}`}</strong>{off ? <span className="faint"> Not yet available</span> : <span className="faint small block">{l.text}</span>}</span>
+              <span><strong>Level {l.level}{off ? "" : `: ${l.name}`}</strong>{off ? <SpanFaint> Not yet available</SpanFaint> : <span className="faint small block">{l.text}</span>}</span>
             </label>
           );
         })}
       </fieldset>
       {level >= 2 && (
         <div className="wk-grid">
-          <TextField label="Paths an agent may change without a person" value={(cur.paths ?? []).join(", ")} onChange={(v) => patch({ paths: csv(v) })} hint="Patterns such as docs/**, separated by commas. Required at level 2." required />
+          <TextField label={P.t24} value={(cur.paths ?? []).join(", ")} onChange={(v) => patch({ paths: csv(v) })} hint={P.t25} required />
           <TextField label="Item types" value={(cur.types ?? []).join(", ")} onChange={(v) => patch({ types: csv(v) })} hint="Empty means any type." />
           <TextField label="Most files in a change" type="number" value={String(cur.max_files ?? "")} onChange={(v) => patch({ max_files: v ? Number(v) : undefined })} hint="Empty means 10." />
           <TextField label="Most lines in a change" type="number" value={String(cur.max_lines ?? "")} onChange={(v) => patch({ max_lines: v ? Number(v) : undefined })} hint="Empty means 200." />
-          <TextField label="Pause after this many failures" type="number" value={String(cur.pause_after ?? "")} onChange={(v) => patch({ pause_after: v ? Number(v) : undefined })} hint="Empty means 3." />
+          <TextField label={P.t26} type="number" value={String(cur.pause_after ?? "")} onChange={(v) => patch({ pause_after: v ? Number(v) : undefined })} hint="Empty means 3." />
           <TextField label="Counted over this many days" type="number" value={String(cur.pause_days ?? "")} onChange={(v) => patch({ pause_days: v ? Number(v) : undefined })} hint="Empty means 14." />
         </div>
       )}
-      {raised && <TextField label="Reason for raising the level (required, recorded)" value={cur.reason ?? ""} onChange={(v) => patch({ reason: v })} required />}
+      {raised && <TextField label={P.t27} value={cur.reason ?? ""} onChange={(v) => patch({ reason: v })} required />}
     </Sheet>
   );
 }
@@ -267,18 +270,18 @@ function ReviewSection({ rev, setRev }: { rev: ReviewPolicy | undefined; setRev:
   return (
     <Sheet title="Agent review policy" pad>
       <fieldset className="wk-radios">
-        <legend>Does another agent's review count as an approval?</legend>
-        <label className="wk-radio"><input type="radio" name="review-mode" checked={!indep} onChange={() => patch({ mode: "human_only" })} /><span>Only a person's review counts<span className="faint small block">An agent's review is shown as advice. This is the default.</span></span></label>
-        <label className="wk-radio"><input type="radio" name="review-mode" checked={indep} onChange={() => patch({ mode: "independent_agent_allowed" })} /><span>An independent agent's approval may count<span className="faint small block">Only for pull requests that match the paths and sizes below.</span></span></label>
+        <legend>{P.t28}</legend>
+        <label className="wk-radio"><input type="radio" name="review-mode" checked={!indep} onChange={() => patch({ mode: "human_only" })} /><span>Only a person's review counts<span className="faint small block">{P.t29}</span></span></label>
+        <label className="wk-radio"><input type="radio" name="review-mode" checked={indep} onChange={() => patch({ mode: "independent_agent_allowed" })} /><span>{P.t30}<span className="faint small block">{P.t31}</span></span></label>
       </fieldset>
       {indep && (
         <div className="wk-grid">
-          <TextField label="Paths it covers" value={(cur.paths ?? []).join(", ")} onChange={(v) => patch({ paths: csv(v) })} hint="Patterns such as docs/**. Required." required />
+          <TextField label="Paths it covers" value={(cur.paths ?? []).join(", ")} onChange={(v) => patch({ paths: csv(v) })} hint={P.t32} required />
           <TextField label="Item types" value={(cur.types ?? []).join(", ")} onChange={(v) => patch({ types: csv(v) })} />
           <TextField label="Most files" type="number" value={String(cur.max_files ?? "")} onChange={(v) => patch({ max_files: v ? Number(v) : undefined })} />
           <TextField label="Most lines" type="number" value={String(cur.max_lines ?? "")} onChange={(v) => patch({ max_lines: v ? Number(v) : undefined })} />
-          <TextField label="Check a sample of merges (percent)" type="number" value={String(cur.sample_percent ?? "")} onChange={(v) => patch({ sample_percent: v ? Number(v) : undefined })} hint="A person looks at this share of merges an agent approved, afterwards." />
-          <label className="wk-check"><input type="checkbox" checked={!!cur.require_different_model} onChange={(e) => patch({ require_different_model: e.target.checked })} />The reviewing agent must run on a different model</label>
+          <TextField label={P.t33} type="number" value={String(cur.sample_percent ?? "")} onChange={(v) => patch({ sample_percent: v ? Number(v) : undefined })} hint={P.t34} />
+          <label className="wk-check"><input type="checkbox" checked={!!cur.require_different_model} onChange={(e) => patch({ require_different_model: e.target.checked })} />{P.t35}</label>
           <TextField label="Why (required, recorded)" value={cur.reason ?? ""} onChange={(v) => patch({ reason: v })} required />
         </div>
       )}

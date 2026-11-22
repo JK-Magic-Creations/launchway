@@ -9,14 +9,15 @@ import { squadronsApi, type SquadronList } from "../../squadronsApi";
 import { terms } from "../../terms";
 import { AddButtons, AddSquadronButton, squadronHref, WhyNot } from "./shared";
 import "../../squadrons.css";
+import { DivLoading, DivPage } from "../../kit/bits";
 
 /** Every Squadron, with how many Flights it holds and what needs a person; below, the Flights that are in none. */
 export function UnitListPage() {
   const fn = useCallback(() => squadronsApi.list(), []);
   const { data, error } = useLoad<SquadronList>(fn, 20000);
   const t = terms();
-  if (error && !data) return <div className="page"><ErrorBox error={error} /></div>;
-  if (!data) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error && !data) return <DivPage><ErrorBox error={error} /></DivPage>;
+  if (!data) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const rows = data.squadrons ?? [];
   const unfiled = data.unfiled ?? [];
   const needs = rows.reduce((n, s) => n + s.needs, 0);

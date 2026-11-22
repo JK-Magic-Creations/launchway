@@ -1,0 +1,13 @@
+{
+ "t0": "Git hosting is off on this server",
+ "t1": "SSH keys are for the repositories Launchway hosts. An administrator turns hosting on with the installation setting ",
+ "t2": "Keys that let you clone and push over SSH. A key can belong to one owner only: you, or one repository as a ",
+ "t3": "Git over SSH is not turned on yet.",
+ "t4": "You can add keys now; they work once an administrator sets ",
+ "t5": ". Until then, clone over HTTPS with an ",
+ "t6": "ssh-ed25519 AAAA… (the line in your .pub file)",
+ "t7": "ed25519, ECDSA, or RSA of at least 3072 bits. Make one with ",
+ "t8": "Git over SSH is off, so the server presents no host key yet.",
+ "t9": "shows a fingerprint and asks whether to trust it. It must be one of these.",
+ "t10": " This server also accepts certificates from its organization's authority."
+}

@@ -27,6 +27,7 @@ const (
 	CauseScriptExit     = "script_exit"     // a command exited with an error
 	CauseRefused        = "refused"         // policy, a gate or a rule did not allow the step
 	CauseRunnerLost     = "runner_lost"     // the runner stopped responding
+	CauseNoRunner       = "no_runner"       // no deploy runner took the step within queues.deploy_pickup_wait
 	CauseCommand        = "command_failed"  // a command given to the rollout was not applied
 	CauseOther          = "other"
 )
@@ -179,6 +180,8 @@ func (st *RunState) deriveCause(s *StepState, def *pipeline.Step) *StepCause {
 	switch {
 	case strings.HasPrefix(e, policyBlockedPrefix) || strings.HasPrefix(e, runRefusedPrefix) || strings.Contains(e, "do not run in") || strings.HasPrefix(e, "deploy steps"):
 		c.Kind, c.Summary = CauseRefused, sentence(e)
+	case def != nil && def.IsDeployKind() && strings.HasPrefix(e, noDeployRunnerPrefix):
+		c.Kind, c.Summary = CauseNoRunner, fmt.Sprintf("The %s was never started: %s", name, sentence(e))
 	case s.FailCause == pipeline.CauseInfrastructure || strings.Contains(e, "runner stopped") || strings.Contains(e, "stopped responding"):
 		c.Kind, c.Summary = CauseRunnerLost, fmt.Sprintf("The runner of %s stopped responding%s", s.ID, tail(e))
 	case s.FailCause == pipeline.CauseTimeout || strings.Contains(e, "timed out") || (def != nil && def.IsDeployKind() && strings.HasPrefix(e, "not ") && strings.Contains(e, " within ")):

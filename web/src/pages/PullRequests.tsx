@@ -9,6 +9,7 @@ import { Chip } from "../kit/Status";
 import { Markdown } from "../markdown";
 import { pullsApi, type BranchComparison, type Pull } from "../pullsApi";
 import "../styles/pulls.css";
+import { BtnPrimary, DivFaintSmall, DivPage, LabelField, PSub, SpanFaintSmall } from "../kit/bits";
 
 export const pullHref = (path: string, n?: number | "new") => `/repositories/${path}/pulls${n === undefined ? "" : "/" + n}`;
 
@@ -38,7 +39,7 @@ export function PullRequestsPage({ path }: { path: string }) {
   }, [path, filter, label]);
   useEffect(load, [load]);
   return (
-    <div className="page">
+    <DivPage>
       <PageHead title={`Pull requests of ${path}`} sentence="Changes on their way from one branch to another: review them, see what they need, merge them."
         actions={<Button kind="pri" onClick={() => navigate(pullHref(path, "new"))}>New pull request</Button>} />
       <RepoTabs path={path} on="pulls" />
@@ -55,7 +56,7 @@ export function PullRequestsPage({ path }: { path: string }) {
           <div key={p.id} className="pr-row" data-testid="pull">
             <div>
               <Link href={pullHref(path, p.number)} className="pr-title">{p.title}</Link> {stateChip(p)} {p.labels.map((l) => <Chip key={l}>{l}</Chip>)}
-              <div className="faint small">#{p.number} by {p.author}, {ago(Date.parse(p.updated_at))}: <Mono>{p.source_branch}</Mono> into <Mono>{p.target_branch}</Mono></div>
+              <DivFaintSmall>#{p.number} by {p.author}, {ago(Date.parse(p.updated_at))}: <Mono>{p.source_branch}</Mono> into <Mono>{p.target_branch}</Mono></DivFaintSmall>
             </div>
             <div className="faint small pr-row-side">
               {p.state === "open" && (p.mergeability.state === "conflicts" ? <Chip tone="bad">Conflicts</Chip> : p.mergeability.state === "clean" ? <Chip tone="ok">Merges cleanly</Chip> : <Chip>Checking</Chip>)}
@@ -64,7 +65,7 @@ export function PullRequestsPage({ path }: { path: string }) {
           </div>
         ))}
       </Sheet>
-    </div>
+    </DivPage>
   );
 }
 
@@ -104,40 +105,40 @@ export function NewPullRequestPage({ path, branches }: { path: string; branches?
     } catch (err) { setError(err); setBusy(false); }
   };
   return (
-    <div className="page">
+    <DivPage>
       <PageHead title="New pull request" sentence={`Choose the branch with the changes and the branch they go into, in ${path}.`} />
       <Sheet pad>
         <div className="tokenform-grid">
-          <label className="field"><span>Branch with the changes</span><input value={head} list="pr-branches" placeholder="my-change" onChange={(e) => setHead(e.target.value)} /></label>
-          <label className="field"><span>Into (default: the default branch)</span><input value={target} list="pr-branches" placeholder="main" onChange={(e) => setTarget(e.target.value)} /></label>
+          <LabelField><span>Branch with the changes</span><input value={head} list="pr-branches" placeholder="my-change" onChange={(e) => setHead(e.target.value)} /></LabelField>
+          <LabelField><span>Into (default: the default branch)</span><input value={target} list="pr-branches" placeholder="main" onChange={(e) => setTarget(e.target.value)} /></LabelField>
         </div>
         {branches && <datalist id="pr-branches">{branches.map((b) => <option key={b} value={b} />)}</datalist>}
       </Sheet>
       <ErrorBox error={error} />
       {shown && (
         <>
-          <p className="sub" role="status">
+          <PSub role="status">
             {shown.ahead} commit{shown.ahead === 1 ? "" : "s"} ahead and {shown.behind} behind {shown.base}; {shown.changes.total} file{shown.changes.total === 1 ? "" : "s"} changed (+{shown.changes.additions} -{shown.changes.deletions}).{" "}
             {shown.mergeability.state === "conflicts" ? `It would have conflicts in ${(shown.mergeability.conflicting_files ?? []).join(", ")}.` : shown.mergeability.state === "clean" ? "It merges cleanly." : "Whether it merges is not known yet."}
-          </p>
+          </PSub>
           {shown.existing_pull ? <p className="callout callout-allowed">Pull request <Link href={pullHref(path, shown.existing_pull)}>#{shown.existing_pull}</Link> already goes between these branches.</p> : null}
           <Sheet title="Commits">
             {shown.commits.length === 0 && <Empty title="Nothing to merge">The branch has no commits that {shown.base} lacks.</Empty>}
-            {shown.commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}</span><span className="faint small">{c.author}</span></div>)}
+            {shown.commits.map((c) => <div key={c.sha} className="pr-row"><span>{c.subject}</span><SpanFaintSmall>{c.author}</SpanFaintSmall></div>)}
           </Sheet>
           {!shown.existing_pull && shown.commits.length > 0 && (
             <Sheet title="Open it" pad>
               <form onSubmit={create} className="inputs-form" aria-label="Open a pull request">
-                <label className="field"><span>Title</span><input value={titled} required maxLength={256} onChange={(e) => setTitle(e.target.value)} /></label>
-                <label className="field"><span>Description (Markdown)</span><textarea value={body} rows={6} onChange={(e) => { setTyped(true); setBody(e.target.value); }} />{templateFrom && !typed && <small>Started from <Mono>{templateFrom}</Mono> in the repository.</small>}</label>
+                <LabelField><span>Title</span><input value={titled} required maxLength={256} onChange={(e) => setTitle(e.target.value)} /></LabelField>
+                <LabelField><span>Description (Markdown)</span><textarea value={body} rows={6} onChange={(e) => { setTyped(true); setBody(e.target.value); }} />{templateFrom && !typed && <small>Started from <Mono>{templateFrom}</Mono> in the repository.</small>}</LabelField>
                 {body.trim() && <div className="pr-preview" aria-label="Preview"><Markdown text={body} /></div>}
                 <label className="check"><input type="checkbox" checked={draft} onChange={(e) => setDraft(e.target.checked)} /> Open it as a draft</label>
-                <div><button type="submit" className="btn btn-primary" disabled={busy || !titled.trim()}>{busy ? "Opening…" : "Open pull request"}</button></div>
+                <div><BtnPrimary disabled={busy || !titled.trim()}>{busy ? "Opening…" : "Open pull request"}</BtnPrimary></div>
               </form>
             </Sheet>
           )}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

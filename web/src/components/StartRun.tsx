@@ -8,6 +8,7 @@ import { RefPicker } from "./RefPicker";
 import { OverridesEditor } from "./Libraries";
 import { StartInputs, useStartInputs } from "./StartInputs";
 import { VariablesPanel } from "./Variables";
+import { BtnPrimary, DivActions, PSub } from "../kit/bits";
 
 // StartDialog asks which branch or tag to run, and the pipeline's inputs, then starts the run.
 export function StartDialog({ project, onClose }: { project: Project; onClose: () => void }) {
@@ -39,7 +40,7 @@ export function StartDialog({ project, onClose }: { project: Project; onClose: (
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="start-title">
       <form method="dialog" onSubmit={(e) => { e.preventDefault(); start(); }}>
         <h2 id="start-title">Start a run of {project.name}</h2>
-        <p className="sub">Branches and tags are read from the repository now. The pipeline file at the chosen commit is what runs{project.pipeline ? ", or, if it has none, the pipeline configured on the server" : ""}.</p>
+        <PSub>Branches and tags are read from the repository now. The pipeline file at the chosen commit is what runs{project.pipeline ? ", or, if it has none, the pipeline configured on the server" : ""}.</PSub>
         <RefPicker project={project.name} defaultBranch={project.default_branch} chosen={pick?.name ?? ""} onChoose={setPick} />
         {pick && (
           <div className="refpick">
@@ -58,10 +59,10 @@ export function StartDialog({ project, onClose }: { project: Project; onClose: (
         <ErrorBox error={error instanceof ApiError && error.problems
           ? error.message + ":\n" + error.problems.map((p) => (p.file ? `${p.library}: ${p.file}` : "") + (p.line ? ` line ${p.line}` : "") + ": " + p.message).join("\n")
           : error} />
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={!pick || busy || !inputs.ready}>{busy ? "Starting…" : "Start run"}</button>
-        </div>
+          <BtnPrimary disabled={!pick || busy || !inputs.ready}>{busy ? "Starting…" : "Start run"}</BtnPrimary>
+        </DivActions>
       </form>
     </dialog>
   );

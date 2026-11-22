@@ -4,6 +4,7 @@ import { forgeApi, type HostedRepo, type RepoReach as Reach, type SshKey } from 
 import { mirrorsApi, type Mirror } from "../mirrors";
 import { clock } from "../format";
 import { parseRanges } from "./tokenLimits";
+import { BtnPrimary, LabelField, PSub, SpanFaint } from "../kit/bits";
 
 /**
  * "Who can reach this repository": people by role, deploy keys, tokens (service-account tokens
@@ -44,33 +45,33 @@ export function RepoReach({ repo }: { repo: HostedRepo }) {
       <h2 className="h-sm" id="reach-h">Who can reach this repository</h2>
       <ErrorBox error={error} />
       <h3 className="h-xs">People</h3>
-      {reach && reach.people.length === 0 ? <p className="sub">No access bindings cover this repository.</p> : (
-        <ul>{reach?.people.map((p, i) => <li key={i}>{p.who} <span className="faint">({p.kind}) can {p.role === "viewer" ? "read" : p.role === "operator" ? "read and push" : "administer"} it</span></li>)}</ul>
+      {reach && reach.people.length === 0 ? <PSub>No access bindings cover this repository.</PSub> : (
+        <ul>{reach?.people.map((p, i) => <li key={i}>{p.who} <SpanFaint>({p.kind}) can {p.role === "viewer" ? "read" : p.role === "operator" ? "read and push" : "administer"} it</SpanFaint></li>)}</ul>
       )}
       <h3 className="h-xs">Deploy keys</h3>
-      {keys.length === 0 ? <p className="sub">None.</p> : <ul>{keys.map((k) => <li key={k.id}>{k.name} <span className="faint">{k.can_write ? "read and push" : "read only"}, over SSH</span></li>)}</ul>}
+      {keys.length === 0 ? <PSub>None.</PSub> : <ul>{keys.map((k) => <li key={k.id}>{k.name} <SpanFaint>{k.can_write ? "read and push" : "read only"}, over SSH</SpanFaint></li>)}</ul>}
       <h3 className="h-xs">Tokens limited to repositories that include this one</h3>
-      {reach && reach.tokens.length === 0 ? <p className="sub">None.</p> : (
+      {reach && reach.tokens.length === 0 ? <PSub>None.</PSub> : (
         <ul>{reach?.tokens.map((t) => (
-          <li key={t.id}>{t.name} <span className="faint">of {t.owner}: {t.access === "write" ? "read and push" : "read only"} through <Mono>{t.pattern}</Mono>, expires {clock(t.expires_at)}{t.source_ranges?.length ? `, only from ${t.source_ranges.join(", ")}` : ""}</span></li>
+          <li key={t.id}>{t.name} <SpanFaint>of {t.owner}: {t.access === "write" ? "read and push" : "read only"} through <Mono>{t.pattern}</Mono>, expires {clock(t.expires_at)}{t.source_ranges?.length ? `, only from ${t.source_ranges.join(", ")}` : ""}</SpanFaint></li>
         ))}</ul>
       )}
       <h3 className="h-xs">Mirrors</h3>
-      {mirrors.length === 0 ? <p className="sub">None.</p> : <ul>{mirrors.map((m) => <li key={m.id}>{m.direction} mirror <span className="faint">{m.url}</span></li>)}</ul>}
+      {mirrors.length === 0 ? <PSub>None.</PSub> : <ul>{mirrors.map((m) => <li key={m.id}>{m.direction} mirror <SpanFaint>{m.url}</SpanFaint></li>)}</ul>}
 
       <h3 className="h-xs">Make a credential for this repository</h3>
-      <p className="sub">A token over HTTPS Git for this repository alone, as a deploy key is over SSH. It belongs to a service account made for it, so it does not depend on a person.</p>
+      <PSub>A token over HTTPS Git for this repository alone, as a deploy key is over SSH. It belongs to a service account made for it, so it does not depend on a person.</PSub>
       <form className="inputs-form" aria-label="Make a credential for this repository" onSubmit={make}>
         <div className="tokenform-grid">
-          <label className="field"><span>Name</span><input value={tokenName} required placeholder="for example: build system" onChange={(e) => setTokenName(e.target.value)} /></label>
-          <label className="field"><span>Access</span>
-            <select value={access} onChange={(e) => setAccess(e.target.value as "read" | "write")}><option value="read">Read only</option><option value="write">Read and push</option></select></label>
-          <label className="field"><span>Expires after</span>
-            <select value={days} onChange={(e) => setDays(Number(e.target.value))}>{[30, 90, 180, 365].map((d) => <option key={d} value={d}>{d} days</option>)}</select></label>
-          <label className="field"><span>Only from addresses</span><input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} /></label>
+          <LabelField><span>Name</span><input value={tokenName} required placeholder="for example: build system" onChange={(e) => setTokenName(e.target.value)} /></LabelField>
+          <LabelField><span>Access</span>
+            <select value={access} onChange={(e) => setAccess(e.target.value as "read" | "write")}><option value="read">Read only</option><option value="write">Read and push</option></select></LabelField>
+          <LabelField><span>Expires after</span>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))}>{[30, 90, 180, 365].map((d) => <option key={d} value={d}>{d} days</option>)}</select></LabelField>
+          <LabelField><span>Only from addresses</span><input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} /></LabelField>
         </div>
         {!parsed.ok && <p className="bad-ink" role="alert">{parsed.problem}</p>}
-        <div><button type="submit" className="btn btn-primary" disabled={!tokenName.trim() || !parsed.ok}>Make credential</button></div>
+        <div><BtnPrimary disabled={!tokenName.trim() || !parsed.ok}>Make credential</BtnPrimary></div>
       </form>
       {made && (
         <div className="callout callout-ok tokenmade" role="status">

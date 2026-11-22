@@ -1,0 +1,12 @@
+{
+ "t0": "Holds the rollout where it is: no new step starts until it is resumed.",
+ "t1": "Lets a rollout a person paused carry on.",
+ "t2": "Replaces the workload's pods one by one (a rolling restart): the service keeps answering.",
+ "t3": "Changes the number of replicas, within what this Airfield allows.",
+ "t4": "Through the launch {runner} of",
+ "t5": "Abort and return to the last good release",
+ "t6": " Protected {environment}: no approval first, an approver reviews it afterwards.",
+ "t7": "The rollout is aborted first, so all traffic goes back to the stable version. ",
+ "t8": "through Git, as Return to base does. A database or configuration is never restored.",
+ "t9": "(required, kept with the return)"
+}

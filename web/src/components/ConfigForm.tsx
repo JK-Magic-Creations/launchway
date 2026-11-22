@@ -10,6 +10,7 @@ import { configApi, type ChangeRequest, type ConfigOverview, type Spec } from ".
 import { navigate } from "../router";
 import { terms } from "../terms";
 import { sayField } from "../configKinds";
+import { BtnPrimary, BtnSm, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
 
 // ---- spec paths ----
 
@@ -434,7 +435,7 @@ export function useServerCheck(changes: ChangeRequest[] | null, delay = 450): Se
 export function CheckLine({ check, okText = "The server's checks pass." }: { check: ServerCheck; okText?: string }) {
   return (
     <div className="cf-checkstate" aria-live="polite">
-      {check.checking ? <span className="faint">Checking with the server…</span>
+      {check.checking ? <SpanFaint>Checking with the server…</SpanFaint>
         : check.failure ? <span className="cf-problem">The server could not check this: {check.failure instanceof Error ? check.failure.message : String(check.failure)}</span>
         : check.problems.length === 0 ? <span className="cf-ok">{okText}</span>
         : <span className="cf-problem">{check.problems.length === 1 ? "The server found a problem." : `The server found ${check.problems.length} problems.`}</span>}
@@ -468,11 +469,11 @@ export function CopyBlock({ title, text, note }: { title: string; text: string; 
     <div className="cf-copy">
       <div className="cf-copy-head">
         <span className="cf-copy-title">{title}</span>
-        <button type="button" className="btn btn-sm" onClick={copy} aria-label={`Copy: ${title}`}>{copied ? "Copied" : "Copy"}</button>
+        <BtnSm onClick={copy} aria-label={`Copy: ${title}`}>{copied ? "Copied" : "Copy"}</BtnSm>
       </div>
       {note && <div className="cf-help">{note}</div>}
       <pre className="code cf-code">{text}</pre>
-      <span className="visually-hidden" aria-live="polite">{copied ? "Copied to the clipboard" : ""}</span>
+      <SpanHidden aria-live="polite">{copied ? "Copied to the clipboard" : ""}</SpanHidden>
     </div>
   );
 }
@@ -555,8 +556,8 @@ export function DiffTable({ rows }: { rows: { path: string; before?: string; aft
           <span className="mono cf-diff-key">{r.path}</span>
           <span className="cf-diff-vals">
             {r.before !== undefined && <del className="cf-del mono" aria-label={`was ${r.before}`}>{r.before}</del>}
-            {r.before !== undefined && r.after !== undefined && <span aria-hidden="true" className="faint"> → </span>}
-            {r.after !== undefined ? <ins className="cf-ins mono" aria-label={`now ${r.after}`}>{r.after}</ins> : <span className="faint small"> (removed)</span>}
+            {r.before !== undefined && r.after !== undefined && <SpanFaint aria-hidden="true"> → </SpanFaint>}
+            {r.after !== undefined ? <ins className="cf-ins mono" aria-label={`now ${r.after}`}>{r.after}</ins> : <SpanFaintSmall> (removed)</SpanFaintSmall>}
           </span>
         </li>
       ))}
@@ -594,7 +595,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
             <li key={s.id} className={"cf-stepdot" + (i < at ? " cf-done" : i === at ? " cf-now" : "")} aria-current={i === at ? "step" : undefined}>
               <span className="cf-stepnum" aria-hidden="true">{i < at ? "✓" : i + 1}</span>
               <span className="cf-steptitle">{s.title}</span>
-              <span className="visually-hidden">{i < at ? " (done)" : i === at ? " (current step)" : ""}</span>
+              <SpanHidden>{i < at ? " (done)" : i === at ? " (current step)" : ""}</SpanHidden>
             </li>
           ))}
         </ol>
@@ -609,7 +610,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
               <button type="button" className="btn cf-cancel" onClick={cancel}>Cancel</button>
               <span className="cf-spacer" />
               {onBack && at > 0 && <button type="button" className="btn" onClick={onBack} disabled={busy}>Back</button>}
-              {onNext && <button type="submit" className="btn btn-primary" disabled={busy || nextDisabled}>{busy ? "Working…" : nextLabel}</button>}
+              {onNext && <BtnPrimary disabled={busy || nextDisabled}>{busy ? "Working…" : nextLabel}</BtnPrimary>}
             </div>
           )}
         </form>
@@ -627,7 +628,7 @@ export function WillCreate({ changes, labels }: { changes: ChangeRequest[]; labe
         {changes.map((c) => (
           <li key={c.kind + "/" + c.name} className="cf-will">
             <div className="cf-will-head"><span className="cf-kindtag">{labels?.[c.kind] ?? c.kind}</span> <strong className="mono">{c.name}</strong>
-              {c.unit ? <span className="faint"> in {c.unit}</span> : null}</div>
+              {c.unit ? <SpanFaint> in {c.unit}</SpanFaint> : null}</div>
             <SpecYAML spec={c.spec ?? {}} />
           </li>
         ))}

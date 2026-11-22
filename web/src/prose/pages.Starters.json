@@ -1,0 +1,12 @@
+{
+ "t0": "Ready-made pipelines and building blocks that come with Launchway. Write ",
+ "t1": "and nothing else, or a repository with no pipeline file gets the one that fits it.",
+ "t2": "Try another word, or show everything.",
+ "t3": "A whole pipeline for a kind of repository. Most repositories need only this.",
+ "t4": "One building block, to put in a pipeline you write yourself.",
+ "t5": "(with every input at its default)",
+ "t6": "Steps, in the order they run; steps in one column run together",
+ "t7": "in your repository. (Opening a pull request from here needs a {project} you may save to.)",
+ "t8": "Open a pull request adding this file",
+ "t9": "Open a pull request from it in your Git host."
+}

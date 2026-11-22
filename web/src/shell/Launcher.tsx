@@ -2,6 +2,7 @@ import { Dialog } from "../kit/Dialog";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
 import { visibleSections, visibleTabs, type Ctx } from "../nav/model";
+import { SpanFaintSmall } from "../kit/bits";
 
 /** Launcher is "All areas": every area with its one line of help and its pages. It complements the top
  * row (where hover help also lives) and is the phone's sixth tab. */
@@ -16,7 +17,7 @@ export function Launcher({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
           <button type="button" className="iconbtn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
       </div>
-      <p className="lg-learn"><a href="/learn" onClick={go}><Icon name="book" size="s" />New here? Learn how Launchway works</a><span className="faint small"> The documentation of this release, in the product.</span></p>
+      <p className="lg-learn"><a href="/learn" onClick={go}><Icon name="book" size="s" />New here? Learn how Launchway works</a><SpanFaintSmall> The documentation of this release, in the product.</SpanFaintSmall></p>
       <div className="lg-grid">
         {visibleSections(ctx).map((s) => {
           const tabs = visibleTabs(s, ctx);

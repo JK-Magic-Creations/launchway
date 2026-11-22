@@ -9,6 +9,7 @@ import { Chip, Status, type State, type Tone } from "../kit/Status";
 import { EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { useNow } from "../live";
 import { terms } from "../terms";
+import { DivLoading, DivPage, SpanHidden } from "../kit/bits";
 
 const TONE: Record<string, Tone | undefined> = { ok: "ok", warn: "warn", bad: "bad", run: "run", idle: undefined };
 const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", quiet: "skip" };
@@ -23,10 +24,10 @@ export function ApplicationsListPage() {
   const shown = useMemo(() => inst.applications.filter((a) => (filter === "all" || needsLook(a)) && (!q || a.name.toLowerCase().includes(q.toLowerCase()))), [inst.applications, filter, q]);
   const look = inst.applications.filter(needsLook).length;
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow={terms().say("{Deploys}")} title="Applications"
         sentence={terms().say("Argo CD keeps your cluster the same as what is in Git; each application is one thing it keeps in step. These are the ones a {deploy:do} {runner} has looked at.")} />
-      {!inst.loaded && <div className="loading">Loading…</div>}
+      {!inst.loaded && <DivLoading>Loading…</DivLoading>}
       {inst.loaded && inst.applications.length === 0 && (
         <Sheet><EmptyState title="No applications seen yet" action={<LinkButton href="/deployments/environments" icon="arrow">{terms().say("See the {environments}")}</LinkButton>}>
           {terms().say("An application appears here once a pipeline has {deploy:did} it and a {deploy:do} {runner} has observed it. Add a deploy step to a pipeline, and make sure a {deploy:do} {runner} serves the {environment}'s target.")}
@@ -39,7 +40,7 @@ export function ApplicationsListPage() {
               <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>All<span className="n">{inst.applications.length}</span></button>
               <button type="button" aria-pressed={filter === "look"} onClick={() => setFilter("look")}>Needs a look<span className="n">{look}</span></button>
             </div>
-            <label className="select"><span className="visually-hidden">Search applications</span>
+            <label className="select"><SpanHidden>Search applications</SpanHidden>
               <input type="search" placeholder="Search applications" value={q} onChange={(e) => setQ(e.target.value)} />
             </label>
           </div>
@@ -67,6 +68,6 @@ export function ApplicationsListPage() {
           <p className="faint small">{terms().say("Applications Argo CD runs that no pipeline has {deploy:did} are not listed: no {deploy:do} {runner} has been asked to look at them.")}</p>
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

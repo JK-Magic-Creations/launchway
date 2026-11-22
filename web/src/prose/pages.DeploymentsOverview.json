@@ -1,0 +1,8 @@
+{
+ "t0": "No {environment} exists yet, so nothing can be {deploy:did}.",
+ "t1": "{Environments} are set up, but nothing has been {deploy:did} to them yet.",
+ "t2": "Everything Launchway {deploy:did} is running as expected.",
+ "t3": "An {environment} is a named place your software goes, like staging or production. A pipeline says {deploy:do} to staging; the {environment} says where that is. It takes one minute and {deploy:does} nothing.",
+ "t4": "Nothing has been {deploy:did} yet",
+ "t5": "A {run} {deploy:does} to an {environment} when it reaches a deploy step. The applications and their diagnoses will appear here once a {deploy:do} {runner} has looked at one."
+}

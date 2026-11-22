@@ -1,0 +1,20 @@
+{
+ "t0": "Lets the rollout go on past the pause it waits at.",
+ "t1": "Skips the remaining canary steps and analyses: the new version gets all traffic.",
+ "t2": "Stops the rollout: all traffic goes back to the stable version.",
+ "t3": "Starts the aborted rollout again from its first step.",
+ "t4": "What is shown may be out of date. The command will be applied when a {deploy:do} {runner} reaches the cluster, and only if the rollout is still where it is shown; you can withdraw it until then.",
+ "t5": "(optional, kept with the command)",
+ "t6": "FAILED, it did not take effect (the reason is below)",
+ "t7": "callout callout-bad dctl-confirm",
+ "t8": "The new version gets all traffic now, and the remaining steps and analyses are skipped.",
+ "t9": " An analysis of this version has failed: promoting past it ships a version a check rejected.",
+ "t10": " An analysis is still running, and promoting stops waiting for it.",
+ "t11": "Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or {rollback:do}.",
+ "t12": "Say why in the comment above first: promoting fully needs a reason, which is kept in the ",
+ "t13": "btn btn-danger dctl-full-confirm",
+ "t14": "? All traffic goes back to the stable version.",
+ "t15": "btn btn-danger dctl-abort-confirm",
+ "t16": "canceling the {run} (on_cancel: abort)",
+ "t17": "waiting for a {deploy:do} {runner} to take it"
+}

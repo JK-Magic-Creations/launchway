@@ -614,7 +614,7 @@ func (c *cmd) startRestore(id string, def *pipeline.Step) {
 		return
 	}
 	prev := &DeployRef{Deployment: r.From.Deployment, Run: r.From.Run, Number: r.From.RunNumber, Version: r.From.Version}
-	deadline := c.now + def.Timeout.D().Milliseconds()
+	deadline := c.deployPickupDeadline()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
 		Application: def.ArgoCD.Application, Mode: "rollback", Version: r.To.Version, Previous: prev, Deadline: deadline, Protected: &env.Protected}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionRevert}})

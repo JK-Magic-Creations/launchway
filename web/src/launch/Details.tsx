@@ -3,6 +3,7 @@ import { ErrorBox, Mono } from "../components/ui";
 import { launchApi, type LNode, type TreeView } from "../launchApi";
 import { ago, clock } from "../format";
 import { ChangeTag, HealthTag } from "./Tree";
+import { BtnSm, SpanFaint, SpanHidden, ThCol, ThRow } from "../kit/bits";
 
 /** One object: its status, what the controller says, its events, what it holds, and its manifest. */
 export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node: LNode; now: number; onLogs: (q: Record<string, string>) => void; onSelect: (id: string) => void }) {
@@ -27,10 +28,10 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
       <p className="lw-det-sub">
         <HealthTag h={node.health} /> <ChangeTag c={node.change} />
         {node.role && <> <span className={`lw-role lw-role-${node.role}`}>{node.role}</span></>}
-        {node.created ? <span className="faint"> · created {ago(node.created, now)}<span className="visually-hidden"> ({clock(node.created)})</span></span> : null}
-        {node.namespace && <span className="faint"> · namespace <Mono>{node.namespace}</Mono></span>}
+        {node.created ? <SpanFaint> · created {ago(node.created, now)}<SpanHidden> ({clock(node.created)})</SpanHidden></SpanFaint> : null}
+        {node.namespace && <SpanFaint> · namespace <Mono>{node.namespace}</Mono></SpanFaint>}
       </p>
-      {node.message && <p className="lw-msg"><span className="faint">The controller says: </span>{node.message}</p>}
+      {node.message && <p className="lw-msg"><SpanFaint>The controller says: </SpanFaint>{node.message}</p>}
       {node.not_ready && (
         <div className="callout callout-bad lw-why" role="note">
           <strong>Why this is not ready.</strong> {node.not_ready.why}
@@ -46,20 +47,20 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
           <h3 className="h-xs">Containers</h3>
           <table className="lw-table">
             <caption className="visually-hidden">Containers of {node.name}</caption>
-            <thead><tr><th scope="col">Container</th><th scope="col">State</th><th scope="col">Restarts</th><th scope="col">Logs</th></tr></thead>
+            <thead><tr><ThCol>Container</ThCol><ThCol>State</ThCol><ThCol>Restarts</ThCol><ThCol>Logs</ThCol></tr></thead>
             <tbody>
               {node.containers.map((c) => (
                 <tr key={c.name + (c.init ? "i" : "")}>
-                  <th scope="row"><Mono>{c.name}</Mono>{c.init && <span className="faint"> (init)</span>}<div className="faint lw-small"><Mono>{c.image}</Mono></div></th>
+                  <ThRow><Mono>{c.name}</Mono>{c.init && <SpanFaint> (init)</SpanFaint>}<div className="faint lw-small"><Mono>{c.image}</Mono></div></ThRow>
                   <td>{c.state}{c.reason ? `: ${c.reason}` : ""}{c.exit_code !== undefined ? ` (exit ${c.exit_code})` : ""}{c.state === "running" && !c.ready ? ", not ready" : ""}</td>
                   <td>{c.restarts}</td>
                   <td>
                     {v.can_logs ? (
                       <>
-                        <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name })}>Read<span className="visually-hidden"> logs of {c.name}</span></button>
-                        {c.previous && c.restarts > 0 && <> <button type="button" className="btn btn-sm" onClick={() => onLogs({ pod: node.name, container: c.name, previous: "1" })}>Earlier run<span className="visually-hidden"> of {c.name}</span></button></>}
+                        <BtnSm onClick={() => onLogs({ pod: node.name, container: c.name })}>Read<SpanHidden> logs of {c.name}</SpanHidden></BtnSm>
+                        {c.previous && c.restarts > 0 && <> <BtnSm onClick={() => onLogs({ pod: node.name, container: c.name, previous: "1" })}>Earlier run<SpanHidden> of {c.name}</SpanHidden></BtnSm></>}
                       </>
-                    ) : <span className="faint">needs the operator role</span>}
+                    ) : <SpanFaint>needs the operator role</SpanFaint>}
                   </td>
                 </tr>
               ))}
@@ -74,21 +75,21 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
       {node.kind === "Service" && (
         <>
           <p>Ports: {node.ports?.length ? node.ports.join(", ") : "none"}.</p>
-          <p>Selects: {node.selects?.length ? node.selects.map((s, i) => <span key={s}>{i > 0 && ", "}{link(s)}</span>) : <span className="faint">no running ReplicaSet of this release</span>}.</p>
+          <p>Selects: {node.selects?.length ? node.selects.map((s, i) => <span key={s}>{i > 0 && ", "}{link(s)}</span>) : <SpanFaint>no running ReplicaSet of this release</SpanFaint>}.</p>
         </>
       )}
       {node.weights && node.weights.length > 0 && (
         <>
           <h3 className="h-xs">Where requests go</h3>
           <table className="lw-table"><caption className="visually-hidden">Backends of {node.name} and their weights</caption>
-            <thead><tr><th scope="col">Backend</th><th scope="col">Weight</th><th scope="col">Only when</th></tr></thead>
-            <tbody>{node.weights.map((w, i) => <tr key={i}><th scope="row"><Mono>{w.backend}</Mono></th><td>{w.weight}</td><td>{w.match || "always"}</td></tr>)}</tbody>
+            <thead><tr><ThCol>Backend</ThCol><ThCol>Weight</ThCol><ThCol>Only when</ThCol></tr></thead>
+            <tbody>{node.weights.map((w, i) => <tr key={i}><ThRow><Mono>{w.backend}</Mono></ThRow><td>{w.weight}</td><td>{w.match || "always"}</td></tr>)}</tbody>
           </table>
         </>
       )}
       {node.kind === "ConfigMap" && node.data && (
         <>
-          <h3 className="h-xs">Data <span className="faint">(anything that looks like a secret is hidden: <Mono>***</Mono>)</span></h3>
+          <h3 className="h-xs">Data <SpanFaint>(anything that looks like a secret is hidden: <Mono>***</Mono>)</SpanFaint></h3>
           <dl className="lw-data">
             {Object.entries(node.data).map(([k, val]) => <div key={k}><dt><Mono>{k}</Mono></dt><dd><pre className="lw-pre">{val}</pre></dd></div>)}
           </dl>
@@ -110,7 +111,7 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
           {node.events.map((e, i) => (
             <li key={i} className={e.type === "Warning" ? "lw-warn" : ""}>
               <strong>{e.type === "Warning" ? "Warning" : "Normal"}</strong> {e.reason}: {e.message}
-              <span className="faint"> · {e.count > 1 ? `${e.count} times, ` : ""}last {ago(e.last, now)}</span>
+              <SpanFaint> · {e.count > 1 ? `${e.count} times, ` : ""}last {ago(e.last, now)}</SpanFaint>
             </li>
           ))}
         </ul>
@@ -120,7 +121,7 @@ export function Details({ v, node, now, onLogs, onSelect }: { v: TreeView; node:
       {yaml?.id === node.id ? <pre className="lw-pre lw-yaml" aria-label={`Manifest of ${node.name}`}>{yaml.text}</pre> : (
         <p>
           <button type="button" className="btn" disabled={busy} onClick={showManifest}>{busy ? "Reading…" : "Show the live manifest"}</button>
-          <span className="faint"> Secret values and anything that looks like one are hidden.</span>
+          <SpanFaint> Secret values and anything that looks like one are hidden.</SpanFaint>
         </p>
       )}
       <ErrorBox error={error} />

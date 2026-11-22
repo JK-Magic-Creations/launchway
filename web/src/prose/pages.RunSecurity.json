@@ -1,0 +1,21 @@
+{
+ "t0": "security reports, but none were read. The step's log says why, for example a glob that matched no files.",
+ "t1": "This run has no security findings",
+ "t2": "accepted as a risk or marked a false positive (with a reason and an end date, on the project's Security page) and ",
+ "t3": "compared with the previous run of this branch (",
+ "t4": "No earlier run of this branch has findings to compare with.",
+ "t5": "Not every finding was kept; see the notes under each step.",
+ "t6": "that this {run} no longer has.",
+ "t7": "Nothing was fixed: every finding of the previous run is still here.",
+ "t8": "Nothing new since the previous {run}.",
+ "t9": "The scanners ran and found nothing.",
+ "t10": "No findings match these filters.",
+ "t11": "The individual findings were removed to keep the {project}'s storage within its limit; the totals remain.",
+ "t12": "A secret: its value is never stored or shown",
+ "t13": "— its value is never stored or shown. Remove it from the code, and change it wherever it is used: anyone who can read the repository may already know it.",
+ "t14": "In the previous run of this branch (",
+ "t15": "Component name, such as requests",
+ "t16": "The SBOM file is no longer kept",
+ "t17": "components were kept for search.",
+ "t18": "The components were removed to keep the {project}'s storage within its limit; the totals remain."
+}

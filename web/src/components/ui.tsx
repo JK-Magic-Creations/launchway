@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { RunStatus, StepStatus } from "../api";
 import { onLink } from "../router";
 import { terms, useTerms } from "../terms";
+import { SpanHidden, SpanMono } from "../kit/bits";
 
 type AnyStatus = RunStatus | StepStatus;
 
@@ -63,7 +64,7 @@ export function StatusPill({ status, label }: { status: AnyStatus | "rolled_back
     <span className={`pill pill-${tone(status as AnyStatus)}`} data-status={status}>
       <StatusIcon status={status as AnyStatus} size={14} />
       {label ?? p!.themed}
-      {p && p.themed.toLowerCase() !== p.plain.toLowerCase() && <span className="pill-plain"><span aria-hidden="true">{" · "}</span><span className="visually-hidden">, </span>{p.plain.toLowerCase()}</span>}
+      {p && p.themed.toLowerCase() !== p.plain.toLowerCase() && <span className="pill-plain"><span aria-hidden="true">{" · "}</span><SpanHidden>, </SpanHidden>{p.plain.toLowerCase()}</span>}
     </span>
   );
 }
@@ -134,7 +135,7 @@ export function ErrorBox({ error }: { error: unknown }) {
 }
 
 export function Mono({ children }: { children: ReactNode }) {
-  return <span className="mono">{children}</span>;
+  return <SpanMono>{children}</SpanMono>;
 }
 
 export function BranchIcon() {

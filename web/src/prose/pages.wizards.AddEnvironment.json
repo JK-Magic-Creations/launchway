@@ -1,0 +1,23 @@
+{
+ "t0": "Give the {environment} a name.",
+ "t1": "An {environment} is a place deploy steps {deploy:do} to, such as staging or production. Pipelines name it in their deploy steps.",
+ "t2": "As pipelines will write it: {environment}: staging. Letters, digits, dots, hyphens and underscores.",
+ "t3": "The person who started a run may not promote or retry its deployment here: someone else with the operator role must. Anyone with the operator role may still abort. The usual choice for production.",
+ "t4": "When several {runs} wait to {deploy:do} the same service here",
+ "t5": "A {run} waiting for the {environment} is skipped when a newer run of the same service starts waiting, so the latest version arrives soonest.",
+ "t6": "Every {run} {deploy:does}, in turn",
+ "t7": "Each waiting run {deploy:does} in order. Slower, but every version passes through the {environment} (useful when each must be tested there).",
+ "t8": "before a deployment here, either add an approval step (kind ",
+ "t9": ") before the deploy step in the pipeline, or ",
+ "t10": "rule for this {environment}, which every pipeline must then meet in its",
+ "t11": "Deployments here are done by {deploy:do} {runners} that serve target",
+ "t12": ". Until one does, deploy steps to this {environment} wait.",
+ "t13": "Which {runners} {deploy:do} here?",
+ "t14": "Nothing to add: its {runners} will take this {environment}'s deployments.",
+ "t15": "A new {deploy:do} pool for this target",
+ "t16": "Made with the {environment}. Then add a {runner} to it: the next wizard gives you the command.",
+ "t17": "The {environment} works as soon as a {deploy:do} pool lists its target.",
+ "t18": "It takes only {runners} enrolled with a join token for it, so no shared token can {deploy:do} here.",
+ "t19": "A place to {deploy:do} to. Nothing is created until you confirm at the end.",
+ "t20": "{Deploy:do} there from a pipeline: a step with"
+}

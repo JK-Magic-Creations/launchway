@@ -7,6 +7,9 @@ import { Link } from "../components/ui";
 import { Blank, ErrorPanel, itemHref, Loading, scopeLabel, useLoad, WorkPage } from "./common";
 import { workApi, type ProposalGroup, type ProposeResult } from "./workApi";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { SpanFaintSmall } from "../kit/bits";
+const P = await prose("work.Proposals");
 
 // Proposals: findings that tools send in (the repository basics check, security findings, code quality). They arrive grouped, most severe
 // first, and wait for a person. Accepting a group makes one item; dismissing it is remembered, so the same finding is not proposed again.
@@ -45,7 +48,7 @@ export default function Proposals({ scope }: { scope: string }) {
   return (
     <WorkPage scope={scope} on="proposals" title="Proposals" sentence={`Problems that tools found in ${scopeLabel(scope)}, waiting for you to decide what becomes work.`}
       actions={<>
-        {isProject && <Button onClick={health}>Check this repository's basics</Button>}
+        {isProject && <Button onClick={health}>{P.t0}</Button>}
         <Button kind="pri" disabled={pending.length === 0} onClick={() => setAct({ kind: "all", groups: pending })}>Accept all</Button>
       </>}>
       <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true" data-testid="proposals-live">{message}</div>
@@ -73,8 +76,8 @@ export default function Proposals({ scope }: { scope: string }) {
       {list.loading && <Loading what="proposals" />}
       {list.data && groups.length === 0 && (
         <Blank title={state === "pending" || state === "" ? "Nothing is waiting for you" : "Nothing in this state"}
-          action={isProject ? <Button onClick={health}>Check this repository's basics</Button> : state ? <Button onClick={() => setState("")}>Show all</Button> : undefined}>
-          {terms().say("A proposal is a problem a tool found, such as a missing README or a weak dependency, offered to you as work instead of filed on its own. Launchway points out issues from day one without flooding the board: each tool opens at most 10 new items in a {run}, and the rest wait together in one summary item.")}
+          action={isProject ? <Button onClick={health}>{P.t0}</Button> : state ? <Button onClick={() => setState("")}>Show all</Button> : undefined}>
+          {terms().say(P.t1)}
         </Blank>
       )}
       <ul className="wk-props">
@@ -112,7 +115,7 @@ function Card({ g, checked, onCheck, onAct, all }: { g: ProposalGroup; all: Prop
         <ul id={id} className="wk-rows">
           {g.occurrences.map((o) => (
             <li key={o.dedupe_key}>
-              <strong>{o.title}</strong> <span className="faint small">{SEV[o.severity]}</span>
+              <strong>{o.title}</strong> <SpanFaintSmall>{SEV[o.severity]}</SpanFaintSmall>
               {o.body && <span className="block small">{o.body}</span>}
               {(o.evidence ?? []).map((u, i) => /^https?:\/\//.test(u) ? <a key={i} className="small" href={u} rel="noopener noreferrer" target="_blank">Evidence {i + 1}</a> : <code key={i} className="small">{u}</code>)}
             </li>
@@ -163,18 +166,18 @@ function Decide({ scope, act, all, onClose, onDone, onError }: { scope: string; 
     <Dialog label={label} onClose={onClose} className="wk-dialog">
       <form onSubmit={go} className="wk-form">
         <h2>{label}</h2>
-        {act.kind === "all" && <p>This makes <strong>{g.length}</strong> {g.length === 1 ? "item" : "items"}, one for each waiting group. Continue?</p>}
-        {act.kind === "accept" && g.length > 1 && <p>This makes {g.length} items, one for each selected group.</p>}
+        {act.kind === "all" && <p>This makes <strong>{g.length}</strong> {g.length === 1 ? "item" : "items"}{P.t2}</p>}
+        {act.kind === "accept" && g.length > 1 && <p>This makes {g.length} {P.t3}</p>}
         {act.kind === "accept" && g.length === 1 && (
           <>
-            <p>This makes one item. You can change how it starts.</p>
+            <p>{P.t4}</p>
             <div className="wk-f"><label htmlFor={ids.t}>Title</label><input id={ids.t} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
             <div className="wk-f"><label htmlFor={ids.p}>Priority</label><select id={ids.p} value={priority} onChange={(e) => setPriority(e.target.value)}><option value="">As proposed</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select></div>
           </>
         )}
         {act.kind === "dismiss" && (
           <>
-            <p>Dismissed findings are not proposed again, even when the tool reports them in a later run.</p>
+            <p>{P.t5}</p>
             <div className="wk-f"><label htmlFor={ids.r}>Why</label><input id={ids.r} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Not a problem for us" /></div>
           </>
         )}

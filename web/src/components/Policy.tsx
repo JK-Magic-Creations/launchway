@@ -4,6 +4,7 @@ import { clock } from "../format";
 import { ErrorBox, Link, Mono } from "./ui";
 import "../policy.css";
 import { terms } from "../terms";
+import { BtnPrimary, DivFaintSmall, LabelField, SpanFaint } from "../kit/bits";
 
 /** The words for an evaluation's verdict, and the tone it is drawn in. */
 export const VERDICT: Record<PolicyVerdict, { label: string; tone: string }> = {
@@ -49,10 +50,10 @@ export function ScopeText({ p }: { p: PolicyDef }) {
   const s = p.scope ?? {};
   const parts: [string, string[] | undefined][] = [["projects", s.projects], ["environments", s.environments], ["branches", s.branches], ["events", s.events]];
   const set = parts.filter(([, v]) => v && v.length);
-  if (!set.length) return <span className="faint">{terms().say("every {run}")}</span>;
+  if (!set.length) return <SpanFaint>{terms().say("every {run}")}</SpanFaint>;
   return (
     <span className="pol-scope">
-      {set.map(([k, v]) => <span key={k} className="pol-scope-item"><span className="faint">{k}</span> {v!.map((x) => <Mono key={x}>{x}</Mono>)}</span>)}
+      {set.map(([k, v]) => <span key={k} className="pol-scope-item"><SpanFaint>{k}</SpanFaint> {v!.map((x) => <Mono key={x}>{x}</Mono>)}</span>)}
     </span>
   );
 }
@@ -84,7 +85,7 @@ export function EvidenceList({ list, run }: { list: EvidenceRef[]; run: string }
           <li key={i}>
             <span className="pol-ev-kind">{EVIDENCE_WORD[e.kind] ?? e.kind}</span>
             {href ? <Link href={href}>{e.text}</Link> : <span>{e.text}</span>}
-            {other && <span className="faint"> (in run #{e.run_number})</span>}
+            {other && <SpanFaint> (in run #{e.run_number})</SpanFaint>}
           </li>
         );
       })}
@@ -104,8 +105,8 @@ export function RuleRow({ r, mode, run, onWaive }: { r: RuleResult; mode: string
           <button type="button" className="btn btn-sm pol-waive-btn" onClick={onWaive}>Waive…</button>
         )}
       </div>
-      <div className="pol-found"><span className="faint">Found:</span> {r.found}</div>
-      {r.verdict !== "pass" && <div className="pol-want"><span className="faint">Needs:</span> {r.want}</div>}
+      <div className="pol-found"><SpanFaint>Found:</SpanFaint> {r.found}</div>
+      {r.verdict !== "pass" && <div className="pol-want"><SpanFaint>Needs:</SpanFaint> {r.want}</div>}
       {r.waiver && <WaiverNote w={r.waiver} />}
       {r.waivers && r.waivers.length > 0 && <div className="pol-note">Findings waived one by one: {r.waivers.map((id) => <Mono key={id}>{id} </Mono>)}</div>}
       {r.notes?.map((n, i) => <div key={i} className="pol-note">{n}</div>)}
@@ -169,18 +170,18 @@ export function WaiverForm({ draft, maxDays, onDone, onCancel }: {
   return (
     <form className="pol-waiver-form" onSubmit={submit} aria-label={`Waive ${draft.policy} ${draft.rule}`}>
       <div className="pol-waiver-title">Waive <Mono>{draft.policy}</Mono> / <Mono>{draft.rule}</Mono> for <strong>{draft.project}</strong></div>
-      <label className="field">
+      <LabelField>
         <span>Reason (recorded, and shown wherever the verdict is)</span>
         <textarea required maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)}
           placeholder="for example: CVE-2026-1234 has no fix yet; the service is not exposed; tracked in SEC-88" />
-      </label>
+      </LabelField>
       <div className="pol-waiver-row">
-        <label className="field">
+        <LabelField>
           <span>Expires after</span>
           <select value={hours} onChange={(e) => setHours(Number(e.target.value))}>
             {HOURS.filter((h) => h <= maxDays * 24).map((h) => <option key={h} value={h}>{h < 24 ? `${h} hours` : `${h / 24} days`}</option>)}
           </select>
-        </label>
+        </LabelField>
         {draft.run && (
           <label className="pol-check"><input type="checkbox" checked={thisRun} onChange={(e) => setThisRun(e.target.checked)} />
             Only run #{draft.runNumber}</label>
@@ -190,25 +191,25 @@ export function WaiverForm({ draft, maxDays, onDone, onCancel }: {
             Only in {draft.environment}</label>
         )}
         {draft.deployRule && !draft.environment && (
-          <label className="field">
+          <LabelField>
             <span>{terms().say("{Environment} (optional; every one if empty)")}</span>
             <input value={envText} maxLength={63} placeholder="prod" onChange={(e) => setEnvText(e.target.value)} />
-          </label>
+          </LabelField>
         )}
         {draft.findings && draft.findings.length > 0 && (
-          <label className="field">
+          <LabelField>
             <span>One finding only (optional)</span>
             <select value={finding} onChange={(e) => setFinding(e.target.value)}>
               <option value="">The whole rule</option>
               {draft.findings.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
-          </label>
+          </LabelField>
         )}
       </div>
       {draft.deployRule && <p className="faint small">{terms().say("On a protected {environment}, a waiver granted by the person who started the run does not count.")}</p>}
       <ErrorBox error={error} />
       <div className="pol-waiver-actions">
-        <button type="submit" className="btn btn-primary" disabled={busy || !reason.trim()}>{busy ? "Waiving…" : "Grant waiver"}</button>
+        <BtnPrimary disabled={busy || !reason.trim()}>{busy ? "Waiving…" : "Grant waiver"}</BtnPrimary>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>
       </div>
     </form>
@@ -235,15 +236,15 @@ export function WaiverList({ waivers, mayRevoke, onChange, showProject = true }:
             <div className="pol-waiver-head">
               <span className={`pol-badge pol-${w.state === "active" ? "warn" : "idle"}`}>{w.state ?? "active"}</span>
               <Mono>{w.policy}</Mono> / <Mono>{w.rule}</Mono>
-              <span className="faint">{showProject ? waiverScope(w) : waiverScope(w).split(", ").slice(1).join(", ")}</span>
+              <SpanFaint>{showProject ? waiverScope(w) : waiverScope(w).split(", ").slice(1).join(", ")}</SpanFaint>
               {w.state === "active" && mayRevoke(w) && <button type="button" className="btn btn-sm btn-danger-outline pol-revoke" onClick={() => revoke(w)}>Revoke</button>}
             </div>
             <div className="pol-waiver-reason">“{w.reason}”</div>
-            <div className="faint small">
+            <DivFaintSmall>
               by {w.granted_by} on {clock(w.granted_at)}, {w.state === "expired" ? "expired" : "expires"} {clock(w.expires_at)}
               {w.revoked_at ? ` · revoked by ${w.revoked_by} on ${clock(w.revoked_at)}${w.revoke_reason ? `: ${w.revoke_reason}` : ""}` : ""}
               {" · "}<Mono>{w.id}</Mono>
-            </div>
+            </DivFaintSmall>
           </li>
         ))}
       </ul>

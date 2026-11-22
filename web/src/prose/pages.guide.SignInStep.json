@@ -1,0 +1,18 @@
+{
+ "t0": "The browser blocked the second window. Allow pop-ups for this page, or open the address below yourself.",
+ "t1": "Launchway could not be reached. Try again shortly.",
+ "t2": "Learn more about sign-in and access",
+ "t3": "Built-in accounts (a password and an authenticator) are a complete, secure choice, and the way back in if a provider ever breaks. Connect an identity provider only if your organization has one. I test it with a real sign-in in a second window first, and nothing about how people sign in changes until you decide.",
+ "t4": "First make an application (an OpenID Connect client) for Launchway in your provider. Its redirect address for the test is ",
+ "t5": "The provider's address (issuer)",
+ "t6": "https://sso.example.com/realms/acme",
+ "t7": "Name of the environment variable that holds the client secret",
+ "t8": "The secret is never typed here: put it in this variable on every server.",
+ "t9": "Groups claim (if your provider uses another name than groups)",
+ "t10": "Test the sign-in in a second window",
+ "t11": "Waiting for you to sign in at the provider in the second window. ",
+ "t12": ". Fix what it says and test again; nothing has changed.",
+ "t13": ". Nothing about how people sign in has changed yet, and the built-in administrator stays as the way back in.",
+ "t14": "Add this to the server's settings file, or to the chart's ",
+ "t15": "Built-in accounts can stay on beside the provider, so a mistake in the provider's settings cannot lock everyone out."
+}

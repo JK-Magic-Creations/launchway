@@ -11,6 +11,7 @@ import { togglesApi, type Change } from "../togglesApi";
 import { ErrorBox } from "./ui";
 import "../toggles.css";
 import { terms } from "../terms";
+import { BtnPrimary, DivActions, SpanFaintSmall, SpanMono } from "../kit/bits";
 
 type Item = { at: number; key: string; node: React.ReactNode };
 
@@ -35,7 +36,7 @@ export function EnvironmentChanges({ environment, projects, deployments }: { env
   const changes = tl.data ?? [];
   if (!tl.data || changes.length === 0) return null;
   const items: Item[] = [
-    ...deployments.map((d) => ({ at: d.opened_at, key: "d" + d.id, node: <><b>Deployed</b> <span className="mono">{d.version}</span> of {d.service}{d.mode === "rollback" ? " (a rollback)" : ""}</> })),
+    ...deployments.map((d) => ({ at: d.opened_at, key: "d" + d.id, node: <><b>Deployed</b> <SpanMono>{d.version}</SpanMono> of {d.service}{d.mode === "rollback" ? " (a rollback)" : ""}</> })),
     ...changes.map((c) => ({ at: c.at, key: "t" + c.id, node: <><b>{terms().say("{Toggle}")}</b> <a href={`/projects/${encodeURIComponent(c.project_name)}/toggles/${encodeURIComponent(c.toggle)}`} onClick={onLink}>{c.toggle}</a> {c.action === "state" ? "changed" : c.action}{c.status === "pending" ? " (waiting for approval)" : ""} by {c.actor}: {c.reason}</> })),
   ].sort((a, b) => b.at - a.at).slice(0, 25);
   const lastDeploy = Math.max(0, ...deployments.filter((d) => d.deployed_at).map((d) => d.deployed_at!));
@@ -47,7 +48,7 @@ export function EnvironmentChanges({ environment, projects, deployments }: { env
     try { await togglesApi.revertSince(project, environment, lastDeploy, reason.trim()); setAsking(null); setReason(""); tl.reload(); } catch (e) { setError(e); }
   };
   return (
-    <Sheet title="Deployments and toggle changes together" actions={<span className="faint small">newest first</span>}>
+    <Sheet title="Deployments and toggle changes together" actions={<SpanFaintSmall>newest first</SpanFaintSmall>}>
       <ErrorBox error={error} />
       <ul className="tg-timeline">{items.map((i) => <li key={i.key}><span className="tg-when" title={clock(i.at)}>{ago(i.at, now)}</span><span>{i.node}</span></li>)}</ul>
       {since.length > 0 && [...byProject].map(([p, n]) => (me?.admin || canOperate(me, p)) && (
@@ -61,7 +62,7 @@ export function EnvironmentChanges({ environment, projects, deployments }: { env
             <p>Every toggle of {asking} changed in {environment} after the last deployment goes back to what it was. A revert is never held for approval and is recorded like any change.</p>
             <label>Why <input value={reason} onChange={(e) => setReason(e.target.value)} required data-autofocus /></label>
             <ErrorBox error={error} />
-            <div className="dialog-actions"><button type="button" className="btn" onClick={() => setAsking(null)}>Cancel</button><button type="submit" className="btn btn-primary" disabled={reason.trim() === ""}>Revert them</button></div>
+            <DivActions><button type="button" className="btn" onClick={() => setAsking(null)}>Cancel</button><BtnPrimary disabled={reason.trim() === ""}>Revert them</BtnPrimary></DivActions>
           </form>
         </Dialog>
       )}

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { ArtifactView, FindingCounts, FindingStatus, Severity } from "../api";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { PSub, SpanHidden, SpanMono } from "../kit/bits";
+const P = await prose("components.Security");
 
 // Pieces shared by the run's Security and Artifacts tabs, the run lists, a
 // project's security page and the component search.
@@ -77,13 +80,13 @@ export function FindingCountBadge({ c }: { c: FindingCounts }) {
   const title = `Security findings: ${SEVERITIES.filter((s) => c[s] > 0).map((s) => `${c[s]} ${s}`).join(", ") || "none"}`;
   return n > 0
     ? <span className="fcount fcount-bad" title={title}><ShieldIcon />{seriousLabel(c)}</span>
-    : <span className="fcount" title={title}><ShieldIcon />{c.total}<span className="visually-hidden"> findings</span></span>;
+    : <span className="fcount" title={title}><ShieldIcon />{c.total}<SpanHidden> findings</SpanHidden></span>;
 }
 
 export function ArtifactCount({ n }: { n: number }) {
   return (
     <span className="fcount" title={`${n} artifact${n === 1 ? "" : "s"} kept`}>
-      <BoxIcon />{n}<span className="visually-hidden"> artifact{n === 1 ? "" : "s"}</span>
+      <BoxIcon />{n}<SpanHidden> artifact{n === 1 ? "" : "s"}</SpanHidden>
     </span>
   );
 }
@@ -91,7 +94,7 @@ export function ArtifactCount({ n }: { n: number }) {
 export function ShieldIcon({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
-      <path d="M8 1.5l5.5 2v4.2c0 3.3-2.3 5.7-5.5 6.8-3.2-1.1-5.5-3.5-5.5-6.8V3.5z" />
+      <path d={P.t0} />
     </svg>
   );
 }
@@ -99,7 +102,7 @@ export function ShieldIcon({ size = 13 }: { size?: number }) {
 export function BoxIcon({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
-      <path d="M2 4.8L8 2l6 2.8v6.4L8 14l-6-2.8z" /><path d="M2 4.8L8 7.6l6-2.8M8 7.6V14" />
+      <path d={P.t1} /><path d="M2 4.8L8 7.6l6-2.8M8 7.6V14" />
     </svg>
   );
 }
@@ -107,7 +110,7 @@ export function BoxIcon({ size = 13 }: { size?: number }) {
 export function LockIcon({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
-      <rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.2 7V5a2.8 2.8 0 0 1 5.6 0v2" />
+      <rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={P.t2} />
     </svg>
   );
 }
@@ -115,8 +118,8 @@ export function LockIcon({ size = 13 }: { size?: number }) {
 const STATUS_LABEL: Record<FindingStatus, string> = { new: "New", existing: "Existing", fixed: "Fixed" };
 
 export function FindingStatusBadge({ s }: { s?: FindingStatus }) {
-  if (s === "new") return <span className="tbadge tbadge-new" title="Not in the previous run of this branch">New</span>;
-  if (s === "fixed") return <span className="tbadge fbadge-fixed" title="In the previous run of this branch, gone in this one">Fixed</span>;
+  if (s === "new") return <span className="tbadge tbadge-new" title={P.t3}>New</span>;
+  if (s === "fixed") return <span className="tbadge fbadge-fixed" title={P.t4}>Fixed</span>;
   return null;
 }
 
@@ -178,7 +181,7 @@ export function CopyValue({ value, label, keep = 12 }: { value: string; label: s
   };
   return (
     <span className="copyval">
-      <span className="mono" title={value}>{value.length > keep ? value.slice(0, keep) + "…" : value}</span>
+      <SpanMono title={value}>{value.length > keep ? value.slice(0, keep) + "…" : value}</SpanMono>
       <button type="button" className="linkbtn copyval-btn" onClick={copy} aria-label={`Copy ${label}`}>{copied ? "Copied" : "Copy"}</button>
     </span>
   );
@@ -188,15 +191,9 @@ export function CopyValue({ value, label, keep = 12 }: { value: string; label: s
 export function FindingsHowTo({ compact }: { compact?: boolean }) {
   return (
     <div className="howto">
-      {!compact && <p>Tell a step which files its scanners write, and Launchway reads them when the step ends, whether it passed or failed:</p>}
-      <pre className="code">{`steps:
-  scan:
-    image: alpine:3.22
-    run: sh scripts/scan.sh
-    reports:
-      findings: reports/security/*.sarif
-      sbom: reports/sbom.cdx.json`}</pre>
-      <p className="sub">{terms().say("Findings are read from SARIF 2.1.0 files, which Semgrep, Trivy, gitleaks, CodeQL and most other scanners write. The SBOM is read from a CycloneDX JSON file, which Launchway also keeps as an {artifact} to download.")}</p>
+      {!compact && <p>{P.t5}</p>}
+      <pre className="code">{P.t6}</pre>
+      <PSub>{terms().say(P.t7)}</PSub>
     </div>
   );
 }
@@ -205,20 +202,8 @@ export function FindingsHowTo({ compact }: { compact?: boolean }) {
 export function ArtifactsHowTo({ compact }: { compact?: boolean }) {
   return (
     <div className="howto">
-      {!compact && <p>Name the files a step makes, and Launchway keeps them when the step succeeds. A later step can fetch them:</p>}
-      <pre className="code">{`steps:
-  build:
-    image: golang:1.23
-    run: go build -o dist/app ./cmd/app
-    artifacts:
-      - name: binary
-        paths: [dist/app]
-        retain: 14d
-  smoke-test:
-    needs: [build]
-    fetch:
-      - { from: build, name: binary }
-    run: ./dist/app --version`}</pre>
+      {!compact && <p>{P.t8}</p>}
+      <pre className="code">{P.t9}</pre>
     </div>
   );
 }

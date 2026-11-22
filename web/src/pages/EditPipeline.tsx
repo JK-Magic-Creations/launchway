@@ -12,6 +12,9 @@ import { VariablesPanel } from "../components/Variables";
 import { OverridesEditor } from "../components/Libraries";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono } from "../components/ui";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { BtnPrimary, BtnSm, DivActions, DivLoading, DivPage, LabelField, PSub, SpanFaint, SpanFaintSmall, SpanMono } from "../kit/bits";
+const P = await prose("pages.EditPipeline");
 
 // Git is the only place a pipeline is kept. This page reads the file from a
 // branch, lets you change it, run the change as a draft without saving it,
@@ -138,13 +141,13 @@ export function EditPipelinePage({ name }: { name: string }) {
 
   if (loadErr) {
     return (
-      <div className="page">
-        <ErrorBox error={loadErr instanceof ApiError && loadErr.status === 404 ? (ref ? terms().say(`${name} has no branch called ${ref}, or no such {project}.`) : terms().say("This {project} does not exist.")) : loadErr} />
+      <DivPage>
+        <ErrorBox error={loadErr instanceof ApiError && loadErr.status === 404 ? (ref ? terms().say(`${name} has no branch called ${ref}, or no such {project}.`) : terms().say(P.t0)) : loadErr} />
         <Link href="/projects">{terms().say("Back to {projects}")}</Link>
-      </div>
+      </DivPage>
     );
   }
-  if (!file || text === null || !project) return <div className="page"><div className="loading">Reading the repository…</div></div>;
+  if (!file || text === null || !project) return <DivPage><DivLoading>Reading the repository…</DivLoading></DivPage>;
 
   const rights = project.editor;
   const runDraft = async () => {
@@ -156,7 +159,7 @@ export function EditPipelinePage({ name }: { name: string }) {
   };
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
-    catch { setActionErr(new Error("Copying did not work in this browser; select the text and copy it instead.")); }
+    catch { setActionErr(new Error(P.t1)); }
   };
   const download = () => {
     const url = URL.createObjectURL(new Blob([text], { type: "application/yaml" }));
@@ -173,7 +176,7 @@ export function EditPipelinePage({ name }: { name: string }) {
   };
   const draftTitle = !rights.may_draft
     ? (rights.drafts_allow === "none" ? `Draft runs are turned off for ${name}` : `Draft runs of ${name} need the ${rights.drafts_allow} role`)
-    : !valid ? "Fix the problems first" : "Run this text against the branch's latest commit, without saving it";
+    : !valid ? "Fix the problems first" : P.t2;
 
   return (
     <div className="page page-wide">
@@ -182,7 +185,7 @@ export function EditPipelinePage({ name }: { name: string }) {
           <h1>Pipeline of {name}</h1>
           <div className="run-meta">
             <button type="button" className="refbtn" onClick={() => setPicking(true)} aria-label={`Branch ${file.ref}; choose another`}>
-              <BranchIcon /><span className="mono">{file.ref}</span><span aria-hidden="true">▾</span>
+              <BranchIcon /><SpanMono>{file.ref}</SpanMono><span aria-hidden="true">▾</span>
             </button>
             <span className="meta mono" title={file.sha}><CommitIcon />{shortSha(file.sha)}</span>
             <span className="meta">“{file.subject}” by {file.author}, {ago(file.committed_at)}</span>
@@ -197,43 +200,41 @@ export function EditPipelinePage({ name }: { name: string }) {
             {busy ? "Starting…" : "Run this draft"}
           </button>
           <button type="button" className="btn btn-primary" disabled={!rights.may_save || (!dirty && file.exists)}
-            title={!rights.may_save ? "Saving is not available; see below" : !dirty && file.exists ? "Nothing has changed" : "Commit this text to the repository"}
+            title={!rights.may_save ? P.t3 : !dirty && file.exists ? "Nothing has changed" : P.t4}
             onClick={() => setSaving(true)}>Save…</button>
         </div>
       </header>
 
       {actionErr instanceof ApiError && actionErr.problems
-        ? <ProblemList problems={actionErr.problems} title="The server found problems; nothing was started" onJump={(l) => editor.current?.goToLine(l)} />
+        ? <ProblemList problems={actionErr.problems} title={P.t5} onJump={(l) => editor.current?.goToLine(l)} />
         : <ErrorBox error={actionErr} />}
       {!file.exists && !file.configured && (
         <div className="callout callout-info">
-          <strong>{file.ref} has no pipeline yet.</strong> Below is a starting point. Nothing is in the repository until you save it.
-        </div>
+          <strong>{file.ref} has no pipeline yet.</strong> {P.t6}</div>
       )}
       {!file.exists && file.configured && (
         <div className="callout callout-info">
-          <strong>{file.ref} has no pipeline file, so {name} runs the pipeline configured for it on the server</strong>
+          <strong>{file.ref} has no pipeline file, so {name} {P.t7}</strong>
           {project.pipeline && <>: the template <Mono>{project.pipeline.template}</Mono> of <Mono>{project.pipeline.library}@{project.pipeline.version}</Mono></>}.
-          {" "}Below is that pipeline written as a file. Saving it puts the file in the repository, where it takes the configuration's place.
-        </div>
+          {" "}{P.t8}</div>
       )}
       {rights.may_draft && libraryNames.length > 0 && (
         <details className="advanced card">
-          <summary>Advanced: run the draft with other library versions{Object.keys(overrides).length > 0 && ` (${Object.keys(overrides).length} set)`}</summary>
+          <summary>{P.t9}{Object.keys(overrides).length > 0 && ` (${Object.keys(overrides).length} set)`}</summary>
           <OverridesEditor value={overrides} onChange={setOverrides} names={libraryNames} />
         </details>
       )}
       {restored && (
-        <div className="callout callout-info callout-row">
-          <span>Your unsaved edits from earlier in this tab are back.</span>
-          <button type="button" className="btn btn-sm" onClick={discard}>Discard them</button>
+        <div className={P.t10}>
+          <span>{P.t11}</span>
+          <BtnSm onClick={discard}>Discard them</BtnSm>
         </div>
       )}
       {older && (
-        <div className="callout callout-wait callout-row">
-          <span>You have unsaved edits made at <Mono>{shortSha(older.sha)}</Mono>, but {file.ref} is now at <Mono>{shortSha(file.sha)}</Mono>. Using them would undo what changed since, unless you merge by hand.</span>
-          <button type="button" className="btn btn-sm" onClick={() => { setText(older.text); setOlder(null); }}>Use my edits</button>
-          <button type="button" className="btn btn-sm" onClick={discard}>Discard them</button>
+        <div className={P.t12}>
+          <span>{P.t13}<Mono>{shortSha(older.sha)}</Mono>, but {file.ref} is now at <Mono>{shortSha(file.sha)}</Mono>{P.t14}</span>
+          <BtnSm onClick={() => { setText(older.text); setOlder(null); }}>Use my edits</BtnSm>
+          <BtnSm onClick={discard}>Discard them</BtnSm>
         </div>
       )}
       <SaveNotice project={project} me={me?.user ?? ""} />
@@ -246,12 +247,12 @@ export function EditPipelinePage({ name }: { name: string }) {
       <div className="split split-play">
         <section className="card card-flush editor-card">
           <div className="editor-bar">
-            <span className="faint small">{checking ? "Checking…" : valid ? "No problems" : problems.length ? `${problems.length} problem${problems.length === 1 ? "" : "s"}` : ""}</span>
+            <SpanFaintSmall>{checking ? "Checking…" : valid ? "No problems" : problems.length ? `${problems.length} problem${problems.length === 1 ? "" : "s"}` : ""}</SpanFaintSmall>
             <span className="editor-bar-actions">
               <KeyHelp line={cursorLine} />
-              <button type="button" className="btn btn-sm" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
-              <button type="button" className="btn btn-sm" onClick={download}>Download</button>
-              <button type="button" className="btn btn-sm" disabled={!dirty} onClick={discard}>Discard edits</button>
+              <BtnSm onClick={copy}>{copied ? "Copied" : "Copy"}</BtnSm>
+              <BtnSm onClick={download}>Download</BtnSm>
+              <BtnSm disabled={!dirty} onClick={discard}>Discard edits</BtnSm>
             </span>
           </div>
           <PipelineEditor ref={editor} text={text} onChange={setText} problems={problems} label={`${file.path} on ${file.ref}`} onCursorLine={setCursorLine} />
@@ -259,15 +260,15 @@ export function EditPipelinePage({ name }: { name: string }) {
         <PipelinePreview res={res} error={checkErr} onJump={(l) => editor.current?.goToLine(l)}
           notes={<DraftNote project={project} />} />
       </div>
-      <aside className="vr-aside" aria-label="Variables in effect for this pipeline">
+      <aside className="vr-aside" aria-label={P.t15}>
         <h3>Variables in effect</h3>
-        <p className="sub">What a template input or a <code>from:</code> binding in this pipeline would get, and from where. A lock above beats anything you write here.</p>
+        <PSub>What a template input or a <code>from:</code> {P.t16}</PSub>
         <VariablesPanel level="project" scope={name} compact />
       </aside>
 
       {picking && (
         <Dialog title={`Edit the pipeline on another branch of ${name}`} onClose={() => setPicking(false)}>
-          <p className="sub">Unsaved edits stay with the branch they were made on, in this tab.</p>
+          <PSub>{P.t17}</PSub>
           <RefPicker project={name} defaultBranch={project.default_branch} chosen={file.ref} onChoose={chooseBranch} branchesOnly />
         </Dialog>
       )}
@@ -289,15 +290,14 @@ function SaveNotice({ project, me }: { project: Project; me: string }) {
   if (!project.push) {
     return (
       <div className="callout callout-info">
-        <strong>Saving is not set up for {project.name}.</strong> {terms().say("An administrator can allow it in the {project}'s settings (")}<a href={`/config/projects/${encodeURIComponent(project.name)}`}>Saving from the editor</a>); each save is then a commit on a new branch.
-        Until then, use <em>Copy</em> or <em>Download</em> and commit the file yourself.
+        <strong>Saving is not set up for {project.name}.</strong> {terms().say(P.t18)}<a href={`/config/projects/${encodeURIComponent(project.name)}`}>Saving from the editor</a>{P.t19}<em>Copy</em> or <em>Download</em> and commit the file yourself.
       </div>
     );
   }
   if (!project.editor.may_save) {
     return (
       <div className="callout callout-info">
-        You can try changes here, but saving needs the operator role on {project.name}{me ? `, which ${me} does not have` : ""}.
+        {P.t20}{project.name}{me ? `, which ${me} does not have` : ""}.
         Use <em>Copy</em> or <em>Download</em> to pass your change on.
       </div>
     );
@@ -308,14 +308,13 @@ function SaveNotice({ project, me }: { project: Project; me: string }) {
 // DraftNote explains what a draft run of this project does differently.
 function DraftNote({ project }: { project: Project }) {
   const r = project.editor;
-  if (r.drafts_allow === "none") return <p className="sub">Draft runs are turned off for {project.name}.</p>;
+  if (r.drafts_allow === "none") return <PSub>Draft runs are turned off for {project.name}.</PSub>;
   return (
-    <p className="sub">
-      <strong>Run this draft</strong> runs this text against the branch's latest commit without saving it.
-      In a draft, a step with a <Mono>when</Mono> condition runs only if it lists <Mono>event: draft</Mono>
-      {r.draft_secrets ? "." : <>, and steps that declare <Mono>secrets</Mono> fail without running: drafts of {project.name} may not read secrets.</>}
+    <PSub>
+      <strong>Run this draft</strong> {P.t21}<Mono>when</Mono> {P.t22}<Mono>event: draft</Mono>
+      {r.draft_secrets ? "." : <>, and steps that declare <Mono>secrets</Mono> {P.t23}{project.name} may not read secrets.</>}
       {!r.may_draft && <> Starting one needs the {r.drafts_allow} role on {project.name}.</>}
-    </p>
+    </PSub>
   );
 }
 
@@ -327,9 +326,9 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
       <form method="dialog" onSubmit={(e) => e.preventDefault()}>
         <h2>{title}</h2>
         {children}
-        <div className="dialog-actions">
+        <DivActions>
           <button type="button" className="btn" onClick={() => ref.current?.close()}>Close</button>
-        </div>
+        </DivActions>
       </form>
     </dialog>
   );
@@ -395,20 +394,20 @@ function SaveDialog({ project, file, text, valid, checking, problems, onClose, o
           </div>
           {!done.direct && (done.pull_request_url
             ? <p><a href={done.pull_request_url} target="_blank" rel="noopener noreferrer">Open a pull request into {done.base_ref}</a> on the Git host.</p>
-            : <p className="sub">Open a pull request from <Mono>{done.branch}</Mono> into <Mono>{done.base_ref}</Mono> on your Git host to have it reviewed.</p>)}
-          <p className="sub">The editor now shows {done.branch}.</p>
+            : <PSub>Open a pull request from <Mono>{done.branch}</Mono> into <Mono>{done.base_ref}</Mono> {P.t24}</PSub>)}
+          <PSub>The editor now shows {done.branch}.</PSub>
           <ErrorBox error={error} />
-          <div className="dialog-actions">
+          <DivActions>
             <button type="button" className="btn" onClick={close}>Done</button>
             {project.editor.may_save && (
               <button type="button" className="btn btn-primary" disabled={starting} onClick={runBranch}>{starting ? "Starting…" : "Run this branch"}</button>
             )}
-          </div>
+          </DivActions>
         </form>
       ) : (
         <form method="dialog" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <h2 id="save-title">Save the pipeline of {project.name}</h2>
-          <p className="sub">Commits {file.path} to the repository as you{me?.user ? ` (${me.user})` : ""}, with Launchway as the committer. Only this file changes.</p>
+          <PSub>Commits {file.path} to the repository as you{me?.user ? ` (${me.user})` : ""}{P.t25}</PSub>
           <fieldset className="field choices">
             <legend>Where</legend>
             <label className="choice">
@@ -417,34 +416,34 @@ function SaveDialog({ project, file, text, valid, checking, problems, onClose, o
             </label>
             <label className={"choice" + (directOK ? "" : " choice-off")}>
               <input type="radio" name="target" checked={direct} disabled={!directOK} onChange={() => setDirect(true)} />
-              <span>Directly to <Mono>{file.ref}</Mono>{!directOK && <span className="faint"> (not allowed for this branch)</span>}</span>
+              <span>Directly to <Mono>{file.ref}</Mono>{!directOK && <SpanFaint> (not allowed for this branch)</SpanFaint>}</span>
             </label>
           </fieldset>
-          <label className="field">
+          <LabelField>
             <span>Commit message</span>
             <textarea rows={3} value={message} maxLength={4000} onChange={(e) => setMessage(e.target.value)} />
-          </label>
-          {checking && <p className="sub" role="status">Checking the pipeline…</p>}
+          </LabelField>
+          {checking && <PSub role="status">Checking the pipeline…</PSub>}
           {!valid && !checking && (
             <div className="callout callout-bad">
               The pipeline has {problems.length || "some"} problem{problems.length === 1 ? "" : "s"}. {project.editor.may_force
-                ? <label className="choice"><input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} /> <span>Save it anyway (you are an admin of {project.name})</span></label>
+                ? <label className="choice"><input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} /> <span>{P.t26}{project.name})</span></label>
                 : "Fix them before saving."}
             </div>
           )}
           {error instanceof ApiError && error.problems
-            ? <ProblemList problems={error.problems} title="The server found problems; nothing was saved" />
+            ? <ProblemList problems={error.problems} title={P.t27} />
             : <ErrorBox error={error} />}
           {stale && (
-            <div className="dialog-actions dialog-actions-left">
+            <div className={P.t28}>
               <button type="button" className="btn" onClick={() => onRebase(true)}>Load the latest {file.ref}, keep my edits</button>
               <button type="button" className="btn" onClick={() => onRebase(false)}>Discard my edits</button>
             </div>
           )}
-          <div className="dialog-actions">
+          <DivActions>
             <button type="button" className="btn" onClick={close}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={busy || checking || (!valid && !force)}>{busy ? "Saving…" : direct ? `Commit to ${file.ref}` : "Commit to a new branch"}</button>
-          </div>
+            <BtnPrimary disabled={busy || checking || (!valid && !force)}>{busy ? "Saving…" : direct ? `Commit to ${file.ref}` : "Commit to a new branch"}</BtnPrimary>
+          </DivActions>
         </form>
       )}
     </dialog>

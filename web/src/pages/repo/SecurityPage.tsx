@@ -8,6 +8,9 @@ import { ago } from "../../format";
 import { terms } from "../../terms";
 import { FindingsBacklog } from "../Standards";
 import { RepoFrame } from "./common";
+import { prose } from "../../prose";
+import { DivLoading, PSub, SpanFaintSmall } from "../../kit/bits";
+const P = await prose("pages.repo.SecurityPage");
 
 /** What is wrong with a repository's code, and a button to look now: the Inspection (the same checks every run gets)
  * started by hand, and the findings of the project that watches it. */
@@ -27,22 +30,22 @@ export function SecurityPage({ path }: { path: string }) {
   };
   return (
     <RepoFrame path={path} tab="security" title="Security"
-      sentence={<>What the Inspection finds in this repository: secrets, known vulnerabilities in dependencies, unsafe code patterns, licences and the rest that fit what it holds. {terms().say("Every {run} gets it; here you can ask for it now.")}</>}>
+      sentence={<>{P.t0}{terms().say(P.t1)}</>}>
       <ErrorBox error={error} />
-      {!st && !error && <div className="loading">Loading…</div>}
+      {!st && !error && <DivLoading>Loading…</DivLoading>}
       {st && (
         <Sheet title="Inspect now" pad>
-          <p className="sub">Starts a run of only the Inspection at <Mono>{st.branch || "the default branch"}</Mono>, whatever the repository's pipeline says, or whether it has one. It reads the files and changes nothing.</p>
+          <PSub>{P.t2}<Mono>{st.branch || "the default branch"}</Mono>{P.t3}</PSub>
           <div className="actions">
             <Button kind="pri" disabled={busy || !st.available} onClick={go}>{busy ? "Starting…" : "Inspect now"}</Button>
             {st.project && <Link href={`/projects/${encodeURIComponent(st.project)}/standards`}>Which checks apply</Link>}
           </div>
           {!st.available && st.reason && <p className="callout callout-draft" role="status">{st.reason}</p>}
-          {started && <p role="status">Started: <Link href={`/runs/${started.id}?tab=security`}>run {started.number}</Link>. Findings appear below when it ends.</p>}
+          {started && <p role="status">Started: <Link href={`/runs/${started.id}?tab=security`}>run {started.number}</Link>{P.t4}</p>}
           {(st.runs ?? []).length > 0 && (
             <ul className="plain" aria-label="Latest Inspections">
               {(st.runs ?? []).map((r) => (
-                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>{terms().say("{Run}")} {r.number}</Link> <Chip>{r.status}</Chip> <span className="faint small">at {r.sha.slice(0, 8)}, {ago(r.created_at)}</span></li>
+                <li key={r.id}><Link href={`/runs/${r.id}?tab=security`}>{terms().say("{Run}")} {r.number}</Link> <Chip>{r.status}</Chip> <SpanFaintSmall>at {r.sha.slice(0, 8)}, {ago(r.created_at)}</SpanFaintSmall></li>
               ))}
             </ul>
           )}
@@ -50,7 +53,7 @@ export function SecurityPage({ path }: { path: string }) {
       )}
       {st && st.project && <FindingsBacklog name={st.project} />}
       {st && !st.project && (
-        <Sheet><EmptyState title="No findings yet">{terms().say("Findings are kept under a {project}, and no {project} watches this repository yet. Add a {project} that reads it (in the server's configuration); then an Inspection, here or on any {run}, records what it finds and this page lists it.")}</EmptyState></Sheet>
+        <Sheet><EmptyState title="No findings yet">{terms().say(P.t5)}</EmptyState></Sheet>
       )}
     </RepoFrame>
   );

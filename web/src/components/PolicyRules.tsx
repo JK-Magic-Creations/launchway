@@ -6,6 +6,7 @@ import type { RuleInfo } from "../api";
 import { POINT, RULES, type RuleField } from "../configKinds";
 import { Problems, splitList } from "./ConfigForm";
 import { terms } from "../terms";
+import { SpanMono } from "../kit/bits";
 
 type Rules = Record<string, unknown>;
 
@@ -114,7 +115,7 @@ function TemplatesValue({ value, onChange }: { value: Tmpl[]; onChange: (v: Tmpl
           const versions = splitList(rest.join(" "));
           return versions.length ? { library, template, versions } : { library, template };
         }))} />
-      <span id={id} className="cf-help">One per line: library/template, then the versions allowed, such as <span className="mono">ci-templates/security-scan v3, v3.*</span>.</span>
+      <span id={id} className="cf-help">One per line: library/template, then the versions allowed, such as <SpanMono>ci-templates/security-scan v3, v3.*</SpanMono>.</span>
     </label>
   );
 }

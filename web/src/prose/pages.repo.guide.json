@@ -1,0 +1,10 @@
+{
+ "t0": "The files at a branch, tag or commit. Press t to find a file by name, j and k to move through the list.",
+ "t1": "Who last changed each line. Blame before this change shows the file as it was before that commit.",
+ "t2": "The history of a branch, or of one file or folder.",
+ "t3": "What one change did, and the runs it started.",
+ "t4": "How two branches differ, with a way to open a pull request.",
+ "t5": "How far each branch is from the default; deleting one tells you how to bring it back.",
+ "t6": "Names for commits that matter, such as a release.",
+ "t7": "Find text in this repository's files. Results say when they are partial."
+}

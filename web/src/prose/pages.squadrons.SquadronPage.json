@@ -1,0 +1,13 @@
+{
+ "t0": "It may have been renamed or removed.",
+ "t1": "Everything here is fine or still going.",
+ "t2": "This {unit} has no {projects} yet",
+ "t3": "A {unit} is a named folder of {projects} with its own people and shared settings. A {project} is one repository and its pipelines. Add the first one and its results appear here.",
+ "t4": "No one has been given a role on this {unit} itself. People keep the roles they hold above it.",
+ "t5": "Settings shared by its {projects}",
+ "t6": "This {unit} sets nothing of its own: its {projects} use the settings of the levels above.",
+ "t7": "These pipelines have no trigger: nothing starts them but a person. They are how operations work (a rollout, a restore, a cleanup) is done here.",
+ "t8": "This list may be missing some. Reading every pipeline took too long, so not every ",
+ "t9": "None found in the time allowed.",
+ "t10": "None: something starts every pipeline here."
+}

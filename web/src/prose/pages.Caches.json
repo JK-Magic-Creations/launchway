@@ -1,0 +1,22 @@
+{
+ "t0": "build layers in the {registry} (",
+ "t1": "), apart from this list: the {registry} holds them, and the Images pages show what it holds.",
+ "t2": "No step in this pipeline uses a cache",
+ "t3": "Nothing is kept between runs, so every {run} downloads its dependencies again. To keep a directory, give a step a",
+ "t4": ", with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:",
+ "t5": "cache:\n  - name: go\n    paths: [.cache/go-mod, .cache/go-build]\n    key: { files: [\"**/go.sum\"], text: go-1.27 }\n    fallback: latest\n    max_age: 7d",
+ "t6": "A step keeps a directory between runs with a ",
+ "t7": "key; the first {run} saves it and the next restores it.",
+ "t8": "cache:\n  - name: pip\n    paths: [.cache/pip]\n    key: { files: [requirements.txt] }",
+ "t9": "What its steps keep between runs (the ",
+ "t10": "key of a step). A pull request restores the default branch's entries and saves into its own scope only.",
+ "t11": "Caching is turned off for this {project}.",
+ "t12": "Every lookup misses and nothing is saved (",
+ "t13": "this {project}'s own cache policy",
+ "t14": "key. An administrator changes this with ",
+ "t15": " Entries kept before are not restored, and end after their idle days.",
+ "t16": "store-meter-fill store-meter-high",
+ "t17": ". When a save would pass it, the least recently used entries are ended to make room.",
+ "t18": "an older entry, no longer restored",
+ "t19": "Deleting entries needs the operator role on this {project}."
+}

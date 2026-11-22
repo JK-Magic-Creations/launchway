@@ -8,6 +8,9 @@ import { bytes } from "../components/Security";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../caches.css";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { DivFaintSmall, DivLoading, DivPage, SpanFaint, SpanFaintSmall, SpanHidden } from "../kit/bits";
+const P = await prose("pages.Caches");
 
 type Column = "name" | "scope" | "platform" | "bytes" | "last_used_at" | "hits" | "run_number";
 
@@ -46,32 +49,23 @@ function NothingCached({ use, project }: { use?: CacheUse; project: string }) {
   const layers = use?.layers ?? [];
   const where = layers.length > 0 ? (
     <p className="faint small">
-      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} {terms().say("build layers in the {registry} (")}{layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}{terms().say("), apart from this list: the {registry} holds them, and the Images pages show what it holds.")}{" "}
+      The image step{layers.length === 1 ? "" : "s"} {layers.map((l) => l.step).join(", ")} keep{layers.length === 1 ? "s" : ""} {terms().say(P.t0)}{layers.map((l) => <Mono key={l.step}>{l.registry}/{l.repository}</Mono>)}{terms().say(P.t1)}{" "}
       <Link href={`/projects/${encodeURIComponent(project)}/pipeline`}>See the pipeline</Link>.
     </p>
   ) : null;
   if (none) {
     return (
-      <Empty title="No step in this pipeline uses a cache">
-        {terms().say("Nothing is kept between runs, so every {run} downloads its dependencies again. To keep a directory, give a step a")} <Mono>cache</Mono>, with a key made of the lock files and the toolchain, so that a changed dependency starts a new one:
-        <pre className="code">{`cache:
-  - name: go
-    paths: [.cache/go-mod, .cache/go-build]
-    key: { files: ["**/go.sum"], text: go-1.27 }
-    fallback: latest
-    max_age: 7d`}</pre>
+      <Empty title={P.t2}>
+        {terms().say(P.t3)} <Mono>cache</Mono>{P.t4}<pre className="code">{P.t5}</pre>
         {where}
       </Empty>
     );
   }
   return (
     <Empty title="Nothing is cached yet">
-      A step keeps a directory between runs with a <Mono>cache</Mono> {terms().say("key; the first {run} saves it and the next restores it.")}
+      {P.t6}<Mono>cache</Mono> {terms().say(P.t7)}
       {use && use.steps.length > 0 && <> Steps that ask for one: {use.steps.map((s) => <Mono key={s.step}>{s.step} ({s.caches.join(", ")})</Mono>)}.</>}
-      <pre className="code">{`cache:
-  - name: pip
-    paths: [.cache/pip]
-    key: { files: [requirements.txt] }`}</pre>
+      <pre className="code">{P.t8}</pre>
       {where}
     </Empty>
   );
@@ -132,37 +126,34 @@ export function ProjectCachesPage({ name }: { name: string }) {
   const t = list?.totals;
   const share = t && t.quota_bytes > 0 ? t.bytes / t.quota_bytes : 0;
   return (
-    <div className="page">
+    <DivPage>
       <ProjectHead name={name} on="caches" title={<>Caches of {name}</>}
-        sentence={<>What its steps keep between runs (the <Mono>cache</Mono> key of a step). A pull request restores the default branch's entries and saves into its own scope only.</>} />
+        sentence={<>{P.t9}<Mono>cache</Mono> {P.t10}</>} />
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}
 
       {list && !list.policy.enabled && (
         <div className="callout callout-draft" role="status">
-          <strong>{terms().say("Caching is turned off for this {project}.")}</strong> Every lookup misses and nothing is saved
-          ({list.policy.source === "project" ? terms().say("this {project}'s own cache policy") : `the ${terms().lower("installation")}'s cache policy`}); steps run as without
-          a <Mono>cache</Mono> key. An administrator changes this with <Mono>launchway caches policy</Mono> or the API.
-          {list.entries.length > 0 && " Entries kept before are not restored, and end after their idle days."}
+          <strong>{terms().say(P.t11)}</strong> {P.t12}{list.policy.source === "project" ? terms().say(P.t13) : `the ${terms().lower("installation")}'s cache policy`}); steps run as without
+          a <Mono>cache</Mono> {P.t14}<Mono>launchway caches policy</Mono> or the API.
+          {list.entries.length > 0 && P.t15}
         </div>
       )}
 
-      {list === null && !error && <div className="loading">Loading…</div>}
+      {list === null && !error && <DivLoading>Loading…</DivLoading>}
       {list && t && (
         <section className="card" aria-label="Quota">
           <div className="cc-use">
             <span><strong>{bytes(t.bytes)}</strong> of {bytes(t.quota_bytes)}</span>
             <span>{t.entries === 1 ? "1 entry" : `${t.entries} entries`}</span>
-            <span className="faint">An entry may hold {bytes(t.max_entry_bytes)} · ended after {t.idle_days} {t.idle_days === 1 ? "day" : "days"} without being restored</span>
+            <SpanFaint>An entry may hold {bytes(t.max_entry_bytes)} · ended after {t.idle_days} {t.idle_days === 1 ? "day" : "days"} without being restored</SpanFaint>
           </div>
           <div className="store-meter cc-meter" role="meter" aria-label="Cache quota used" aria-valuemin={0} aria-valuemax={t.quota_bytes} aria-valuenow={t.bytes}
             aria-valuetext={`${bytes(t.bytes)} of ${bytes(t.quota_bytes)}`}>
-            <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, t.bytes > 0 ? 1 : 0))}%` }} />
+            <span className={share >= 0.8 ? P.t16 : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, t.bytes > 0 ? 1 : 0))}%` }} />
           </div>
           <p className="faint small">
-            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? terms().say("for this {project}") : list.policy.source === "installation" ? `for the ${terms().lower("installation")}` : "by default"}.
-            When a save would pass it, the least recently used entries are ended to make room.
-          </p>
+            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? terms().say("for this {project}") : list.policy.source === "installation" ? `for the ${terms().lower("installation")}` : "by default"}{P.t17}</p>
         </section>
       )}
 
@@ -175,7 +166,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
             <ul className="cc-names">
               {names.map(([n, v]) => (
                 <li key={n}>
-                  <span><span className="cc-name">{n}</span> <span className="faint">{v.entries === 1 ? "1 entry" : `${v.entries} entries`}, {bytes(v.bytes)}</span></span>
+                  <span><span className="cc-name">{n}</span> <SpanFaint>{v.entries === 1 ? "1 entry" : `${v.entries} entries`}, {bytes(v.bytes)}</SpanFaint></span>
                   {mayDelete && (
                     <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => deleteName(n, v.entries)}
                       aria-label={`Delete every entry of the cache ${n}`}>Delete all</button>
@@ -200,26 +191,26 @@ export function ProjectCachesPage({ name }: { name: string }) {
                         {c.label}
                         <span className="cc-arrow" aria-hidden="true">{sort.col === c.col ? (sort.desc ? "▼" : "▲") : ""}</span>
                       </button>
-                      {c.col === "name" && <span className="faint small"> and key</span>}
+                      {c.col === "name" && <SpanFaintSmall> and key</SpanFaintSmall>}
                     </th>
                   ))}
-                  {mayDelete && <th><span className="visually-hidden">Actions</span></th>}
+                  {mayDelete && <th><SpanHidden>Actions</SpanHidden></th>}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((e) => (
                   <tr key={e.id}>
                     <td>
-                      <strong>{e.name}</strong>{e.status === "uploading" && <span className="faint"> (being saved)</span>}
+                      <strong>{e.name}</strong>{e.status === "uploading" && <SpanFaint> (being saved)</SpanFaint>}
                       <div className="cc-key" title={e.key}>{shortKey(e.key)}…{e.generation > 1 ? `, generation ${e.generation}` : ""}</div>
-                      <div className="faint small">{e.pipeline || "an older entry, no longer restored"}{e.sensitive ? ", sensitive" : ""}</div>
+                      <DivFaintSmall>{e.pipeline || P.t18}{e.sensitive ? ", sensitive" : ""}</DivFaintSmall>
                     </td>
                     <td className="cc-scope">{e.scope}</td>
                     <td>{e.platform}</td>
                     <td className="cc-num" title={`${e.bytes.toLocaleString()} bytes in ${e.files.toLocaleString()} files`}>{bytes(e.bytes)}</td>
                     <td className="cc-num" title={clock(e.last_used_at)}>{ago(e.last_used_at, now)}</td>
                     <td className="cc-num">{e.hits === 1 ? "once" : `${e.hits} times`}</td>
-                    <td className="cc-num">{e.run_id ? <Link href={`/runs/${e.run_id}`}>#{e.run_number || "?"}</Link> : <span className="faint">unknown</span>}</td>
+                    <td className="cc-num">{e.run_id ? <Link href={`/runs/${e.run_id}`}>#{e.run_number || "?"}</Link> : <SpanFaint>unknown</SpanFaint>}</td>
                     {mayDelete && (
                       <td className="td-actions">
                         <button type="button" className="btn btn-danger-outline btn-sm" disabled={busy} onClick={() => deleteEntry(e)}
@@ -231,9 +222,9 @@ export function ProjectCachesPage({ name }: { name: string }) {
               </tbody>
             </table>
           </div>
-          {!mayDelete && <p className="faint small">{terms().say("Deleting entries needs the operator role on this {project}.")}</p>}
+          {!mayDelete && <p className="faint small">{terms().say(P.t19)}</p>}
         </>
       )}
-    </div>
+    </DivPage>
   );
 }

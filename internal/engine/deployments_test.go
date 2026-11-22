@@ -625,16 +625,23 @@ func TestCancelAbandonsTheDeployment(t *testing.T) {
 	}
 }
 
-// Nobody serving the target: the step fails at its deadline, saying so.
+// Nobody serving the target: the step fails when the pickup wait (15 minutes by default, not the step's own 10)
+// is over, saying so and naming the setting.
 func TestNoDeployRunnerTimesOut(t *testing.T) {
 	e, clk := newDeployEngine(t, prodEnv)
 	id := createShop(t, e, shopPipeline, 1)
 	build(t, e, id, "1")
 	clk.Add(11 * time.Minute)
 	e.expireWaits()
+	want(t, statuses(t, e, id), "deploy-prod", "queued")
+	clk.Add(5 * time.Minute)
+	e.expireWaits()
 	want(t, statuses(t, e, id), "deploy-prod", "failed", "rollback-prod", "queued")
-	if v := stepOf(t, e, id, "deploy-prod"); !strings.Contains(v.Error, "no deploy runner serving target cluster-a") {
-		t.Fatalf("reason %q", v.Error)
+	v := stepOf(t, e, id, "deploy-prod")
+	for _, w := range []string{"no deploy runner serving target cluster-a took the step within 15m", "queues.deploy_pickup_wait"} {
+		if !strings.Contains(v.Error, w) {
+			t.Fatalf("reason %q lacks %q", v.Error, w)
+		}
 	}
 }
 

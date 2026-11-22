@@ -4,6 +4,7 @@ import { Link } from "../../components/ui";
 import { Button } from "../../kit/layout";
 import { navigate } from "../../router";
 import { RefSwitcher, RepoFrame, useFetched, useQuery, useRepo } from "./common";
+import { LabelField, SpanFaintSmall, SpanMono } from "../../kit/bits";
 
 function Snippet({ text, ranges }: { text: string; ranges?: [number, number][] }) {
   const chars = [...text];
@@ -50,14 +51,14 @@ export function SearchPage({ path }: { path: string }) {
   const submit = (e: React.FormEvent) => { e.preventDefault(); if (q.trim()) navigate(address(ref)); };
   const fileHref = (f: FileMatches, line?: number) => codeHref(path, res?.commit ?? current, f.path) + (line ? `#L${line}` : "");
   return (
-    <RepoFrame path={path} tab="search" title="Search the code" sentence={<>Looks through the files of <span className="mono">{current}</span> in this repository. It reads the repository itself, so a result is never older than the last push.</>} error={error}
+    <RepoFrame path={path} tab="search" title="Search the code" sentence={<>Looks through the files of <SpanMono>{current}</SpanMono> in this repository. It reads the repository itself, so a result is never older than the last push.</>} error={error}
       actions={<RefSwitcher repo={path} current={current} onPick={(r) => navigate(address(r))} />}>
       <form className="card search-form" role="search" aria-label="Search this repository" onSubmit={submit}>
         <label className="field grow"><span>Search for</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} required placeholder={regex ? "A regular expression, such as func (Get|Put)" : "Text to find"} /></label>
-        <label className="field"><span>Look in</span>
-          <select value={where} onChange={(e) => setWhere(e.target.value)}><option value="content">File contents</option><option value="path">File names and paths</option><option value="both">Both</option></select></label>
-        <label className="field"><span>Folder</span><input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="whole repository" /></label>
-        <label className="field"><span>Extensions</span><input value={ext} onChange={(e) => setExt(e.target.value)} placeholder="go, ts" /></label>
+        <LabelField><span>Look in</span>
+          <select value={where} onChange={(e) => setWhere(e.target.value)}><option value="content">File contents</option><option value="path">File names and paths</option><option value="both">Both</option></select></LabelField>
+        <LabelField><span>Folder</span><input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="whole repository" /></LabelField>
+        <LabelField><span>Extensions</span><input value={ext} onChange={(e) => setExt(e.target.value)} placeholder="go, ts" /></LabelField>
         <label className="check"><input type="checkbox" checked={regex} onChange={(e) => setRegex(e.target.checked)} /> Regular expression</label>
         <label className="check"><input type="checkbox" checked={matchCase} onChange={(e) => setCase(e.target.checked)} /> Match case</label>
         <Button kind="pri" type="submit" disabled={busy || !q.trim()}>{busy ? "Searching…" : "Search"}</Button>
@@ -65,7 +66,7 @@ export function SearchPage({ path }: { path: string }) {
       <div aria-live="polite">
         {res && (
           <p className="code-note" role="status">
-            {res.matches === 0 ? `Nothing found for “${urlQ}”.` : `${res.matches} ${res.matches === 1 ? "match" : "matches"} in ${res.files.length} ${res.files.length === 1 ? "file" : "files"}`} <span className="faint small">({res.millis} ms)</span>
+            {res.matches === 0 ? `Nothing found for “${urlQ}”.` : `${res.matches} ${res.matches === 1 ? "match" : "matches"} in ${res.files.length} ${res.files.length === 1 ? "file" : "files"}`} <SpanFaintSmall>({res.millis} ms)</SpanFaintSmall>
             {res.partial && <strong className="partial"> Partial results: {res.reason}.</strong>}
           </p>
         )}

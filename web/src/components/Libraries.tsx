@@ -3,6 +3,7 @@ import type { GraphGroup, GraphLibrary, LibraryOverrides } from "../api";
 import { shortSha } from "../format";
 import { Mono } from "./ui";
 import { terms } from "../terms";
+import { BtnSm, PSub } from "../kit/bits";
 
 // LibraryList shows the libraries a pipeline used: name@version and the
 // commit it resolved to, and any override asked for when the run started.
@@ -59,7 +60,7 @@ export function OverridesEditor({ value, onChange, names }: {
   };
   return (
     <div className="overrides">
-      <p className="sub">{terms().say("Use another version of a library for this run only, to try a change before it is released: a branch, a tag or a full commit id. The {run} records both versions.")}</p>
+      <PSub>{terms().say("Use another version of a library for this run only, to try a change before it is released: a branch, a tag or a full commit id. The {run} records both versions.")}</PSub>
       {names && names.length > 0 && <datalist id="override-names">{names.map((n) => <option key={n} value={n} />)}</datalist>}
       {rows.map(([k, v], i) => (
         <Fragment key={i}>
@@ -68,12 +69,12 @@ export function OverridesEditor({ value, onChange, names }: {
               onChange={(e) => update(rows.map((r, j) => (j === i ? [e.target.value, r[1]] : r)))} />
             <input aria-label="Version to use" placeholder="branch, tag or commit" value={v} maxLength={128}
               onChange={(e) => update(rows.map((r, j) => (j === i ? [r[0], e.target.value] : r)))} />
-            <button type="button" className="btn btn-sm" onClick={() => update(rows.filter((_, j) => j !== i))}
-              aria-label="Remove this override">Remove</button>
+            <BtnSm onClick={() => update(rows.filter((_, j) => j !== i))}
+              aria-label="Remove this override">Remove</BtnSm>
           </div>
         </Fragment>
       ))}
-      <div><button type="button" className="btn btn-sm" onClick={() => setRows([...rows, ["", ""]])}>Add an override</button></div>
+      <div><BtnSm onClick={() => setRows([...rows, ["", ""]])}>Add an override</BtnSm></div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { EncryptionStep } from "./guide/EncryptionStep";
 import { ImportStep } from "./guide/ImportStep";
 import { FinishStep, HostingStep, PipelineStep, RunnerStep } from "./guide/OtherSteps";
 import "./guide.css";
+import { DivLoading, DivPage, PSub } from "../kit/bits";
 
 // The first-run guide: what comes after the first administrator. Each step can be skipped and come back to; each asks the
 // server what can be done now, so a step that cannot work says why instead of offering a button that fails.
@@ -40,8 +41,8 @@ export function SetupGuidePage() {
   const next = (id: string) => { const i = STEPS.findIndex((s) => s.id === id); if (i < STEPS.length - 1) go(STEPS[i + 1].id); };
   const unskip = (id: string) => { const n = skipped.filter((x) => x !== id); setSkipped(n); saveSkipped(n); };
 
-  if (error) return <div className="page">{error instanceof ApiError && error.status === 403 ? <ErrorBox error={new Error("Only administrators use the setup guide.")} /> : <ErrorBox error={error} />}</div>;
-  if (!g) return <div className="page"><div className="loading">Loading…</div></div>;
+  if (error) return <DivPage>{error instanceof ApiError && error.status === 403 ? <ErrorBox error={new Error("Only administrators use the setup guide.")} /> : <ErrorBox error={error} />}</DivPage>;
+  if (!g) return <DivPage><DivLoading>Loading…</DivLoading></DivPage>;
   const server = (id: string) => g.steps.find((s) => s.id === id);
   const state = (id: string): "done" | "skipped" | "todo" | "unavailable" => {
     if (id === "finish") return g.checklist.some((c) => c.state === "attention") ? "todo" : "done";
@@ -55,7 +56,7 @@ export function SetupGuidePage() {
   const step = server(cur.id);
 
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Setup" title="Set up your installation" sentence={`${doneCount} of ${STEPS.length} steps are done. Skip any step and come back to it; nothing here is needed to run a pipeline.`}
         actions={<Link href="/config/wizard/first-run">Name your organization and choose the words</Link>} />
       <div className="gd-layout">
@@ -76,7 +77,7 @@ export function SetupGuidePage() {
           </ol>
         </nav>
         <Sheet title={cur.title} pad className="gd-panel">
-          <p className="sub">{cur.blurb}</p>
+          <PSub>{cur.blurb}</PSub>
           {cur.id === "sign-in" && step && <SignInStep step={step} onChange={() => { reload(); next("sign-in"); }} />}
           {cur.id === "encryption" && step && <EncryptionStep step={step} onChange={reload} />}
           {cur.id === "runner" && step && <RunnerStep step={step} />}
@@ -94,6 +95,6 @@ export function SetupGuidePage() {
           )}
         </Sheet>
       </div>
-    </div>
+    </DivPage>
   );
 }

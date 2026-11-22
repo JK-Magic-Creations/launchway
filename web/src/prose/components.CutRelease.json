@@ -1,0 +1,12 @@
+{
+ "t0": "Write three numbers separated by dots, such as 1.4.0 (a pre-release may follow, as in 1.4.0-rc.1). Leave the v off: the tag gets it.",
+ "t1": "Write the year first and then numbers separated by dots, such as 2026.11.22.",
+ "t2": "Use letters, digits, dots, dashes and plus signs, starting with a letter or digit.",
+ "t3": "Reading what changed since the last release…",
+ "t4": "The next version is proposed from the changes since the last release. You choose.",
+ "t5": "the repository Launchway hosts; a push mirror copies the tag out like any other ref",
+ "t6": "Launchway cannot write the tag in this Flight's repository (it is not hosted here and its configuration has no push section). Make the annotated tag yourself and adopt it from New release.",
+ "t7": "No changes were found since the last release.",
+ "t8": "succeeded at this commit, so there are no built files. The release is still made; add files from its page.",
+ "t9": "Cutting makes the annotated tag and publishes the release. A published release never changes; if something is wrong, withdraw it and cut a new one."
+}

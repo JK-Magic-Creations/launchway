@@ -1,0 +1,17 @@
+{
+ "t0": "The catalog could not be read: ",
+ "t1": "A policy is a set of rules every run it applies to must meet. There is no policy language to learn: each rule checks one thing, and the pipeline's authors cannot switch it off.",
+ "t2": "What happens when a rule fails?",
+ "t3": "The verdict is recorded and shown as a warning on the {run}; nothing is stopped. Use it to see how many {runs} would fail before you enforce.",
+ "t4": "A failing rule stops the step (a {deploy:do}, an image push) or the run at its start, saying why. Someone with the right role can grant a time-limited waiver.",
+ "t5": "Only deployments to these are judged by the {deploy:do} rules. Nothing ticked: every {environment}. Most teams scope {deploy:do} rules to production.",
+ "t6": "{Environments}: only rules judged before {deploy:doing} can be scoped to {environments}, and this policy has none.",
+ "t7": "Only runs of these branches. A run of a tag or a pull request has no branch, so it would not match. Empty: any.",
+ "t8": "Only runs started by these. Nothing ticked: every {run}.",
+ "t9": "Lower-case letters, digits and hyphens. It is shown wherever its verdict is.",
+ "t10": "Production deployments need tests and a second person's approval",
+ "t11": "Why the policy exists, in a sentence people will read when it stops them.",
+ "t12": "Rules runs must meet. Nothing is created until you confirm at the end.",
+ "t13": "See policies and their verdicts",
+ "t14": "When the warnings look right, set its mode to enforce on "
+}

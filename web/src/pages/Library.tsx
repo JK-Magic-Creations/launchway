@@ -5,36 +5,39 @@ import { Empty, ErrorBox, Link } from "../components/ui";
 import { ago } from "../format";
 import { useInstallation } from "../guided/facts";
 import { terms } from "../terms";
+import { prose } from "../prose";
+import { DivPage, PSub, SpanFaint } from "../kit/bits";
+const P = await prose("pages.Library");
 
 /** The library's front page: the building blocks that have something to show. */
 export function LibraryPage() {
   const inst = useInstallation();
   const t = inst.facts.libraries ?? 0;
   return (
-    <div className="page">
+    <DivPage>
       <header className="page-head">
         <div>
           <h1>Library</h1>
-          <p className="sub">The building blocks, to look things up. Every name opens its own page.</p>
+          <PSub>{P.t0}</PSub>
         </div>
       </header>
       <div className="guided-tiles">
         {t > 0 && (
           <Link href="/library/templates" className="guided-tile">
             <span className="guided-tile-n">{t}</span>
-            <span>{t === 1 ? "library of templates" : "libraries of templates"}<br /><span className="faint">Ready-made pipelines, each in Git and pinned by version.</span></span>
+            <span>{t === 1 ? "library of templates" : "libraries of templates"}<br /><SpanFaint>{P.t1}</SpanFaint></span>
           </Link>
         )}
         <Link href="/depot" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">▣</span>
-          <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or {project}.")}</span></span>
+          <span>Images<br /><SpanFaint>{terms().say(P.t2)}</SpanFaint></span>
         </Link>
         <Link href="/depot/components" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">◫</span>
-          <span>Components<br /><span className="faint">{terms().say("What is inside your software, found by name across every {run}.")}</span></span>
+          <span>Components<br /><SpanFaint>{terms().say(P.t3)}</SpanFaint></span>
         </Link>
       </div>
-    </div>
+    </DivPage>
   );
 }
 
@@ -43,18 +46,18 @@ export function TemplatesPage() {
   const inst = useInstallation();
   const libs = inst.libraries;
   return (
-    <div className="page">
+    <DivPage>
       <header className="page-head">
         <div>
           <h1>Templates</h1>
-          <p className="sub">A template is a ready-made part of a pipeline, kept in a library repository in Git. A pipeline pins the version it uses, so a run can always be repeated exactly.</p>
+          <PSub>{P.t4}</PSub>
         </div>
       </header>
       {inst.loaded && libs.length === 0 && (
-        <Empty title="No libraries yet">A library is a Git repository of templates. Once the server reads one, its templates are listed here with their versions.</Empty>
+        <Empty title="No libraries yet">{P.t5}</Empty>
       )}
       {libs.map((l) => <LibraryCard key={l.name} lib={l} />)}
-    </div>
+    </DivPage>
   );
 }
 
@@ -65,19 +68,19 @@ function LibraryCard({ lib }: { lib: LibraryInfo }) {
   return (
     <section className="card" aria-labelledby={`lib-${lib.name}`}>
       <div className="card-head">
-        <h2 id={`lib-${lib.name}`} className="h-sm">{lib.name}{data && <span className="faint"> {data.version}</span>}</h2>
-        {lib.last_fetch > 0 && <span className="faint">read {ago(lib.last_fetch)}</span>}
+        <h2 id={`lib-${lib.name}`} className="h-sm">{lib.name}{data && <SpanFaint> {data.version}</SpanFaint>}</h2>
+        {lib.last_fetch > 0 && <SpanFaint>read {ago(lib.last_fetch)}</SpanFaint>}
       </div>
       <ErrorBox error={error} />
       {!data && !error && <p className="faint">Loading…</p>}
-      {data && data.templates.length === 0 && <p className="faint">This library has no templates at {data.version}.</p>}
+      {data && data.templates.length === 0 && <p className="faint">{P.t6}{data.version}.</p>}
       {data && data.templates.length > 0 && (
         <ul className="guided-rows guided-rows-flat">
           {data.templates.map((t) => (
             <li key={t.name} className="guided-row">
               <div className="guided-row-main">
                 <EntityLink kind="template" name={t.name} library={lib.name} className="guided-row-name" />
-                <span className="faint">{t.description || "No description."}</span>
+                <SpanFaint>{t.description || "No description."}</SpanFaint>
               </div>
               <div className="guided-row-side faint">
                 {t.params.length} {t.params.length === 1 ? "input" : "inputs"}

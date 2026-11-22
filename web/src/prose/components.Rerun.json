@@ -1,0 +1,14 @@
+{
+ "t0": "Choose any step: it and the steps after it run again in a new {run}; the steps before it are reused, nothing is rebuilt.",
+ "t1": "That step and every step after it run again. The steps before it are reused as they ended here, with the same outputs and the same image digest; the next screen lists them.",
+ "t2": "A new {run} at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this {run}.",
+ "t3": " (a draft run of the same text)",
+ "t4": "Outputs are kept. Files earlier steps wrote to the workspace are not; steps that need them should be included in the re-run.",
+ "t5": "Nothing: every step runs again.",
+ "t6": "continues this same {run}, and is not offered once a deployment opened: a half-done deployment is never continued. A",
+ "t7": "is a new {run} from a fresh checkout: outputs of reused steps are kept, files they wrote are not, and a deploy step that runs again makes a new deployment of the same version.",
+ "t8": "for this same build; it still counts",
+ "t9": "Nothing is rebuilt: the steps before it are reused as they ended.",
+ "t10": "(it comes after the step you start from).",
+ "t11": "Makes a new deployment of the same version, recorded as an attempt of this re-run."
+}

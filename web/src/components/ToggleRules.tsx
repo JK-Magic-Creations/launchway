@@ -3,6 +3,7 @@ import { OPERATORS, showValue, valueOf, type Clause, type Rule, type Serve, type
 import { Button } from "../kit/layout";
 import "../toggles.css";
 import { terms } from "../terms";
+import { PSub, SpanFaint } from "../kit/bits";
 
 // The editor of what a toggle does in one environment: on or off, what it serves while off, prerequisites,
 // rules in order (conditions on the context, then a value or a percentage), and what everyone else gets. Every
@@ -55,7 +56,7 @@ function ServeEditor({ type, serve, onChange, label }: { type: ToggleType; serve
           <label>taken over <input value={serve.rollout?.by ?? ""} placeholder="key" onChange={(e) => onChange({ rollout: { ...serve.rollout!, by: e.target.value || undefined } })} /></label>
         </div>
       )}
-      {mode === "rollout" && many && <p className="sub">This rollout has {buckets.length} shares. Edit it in the toggles file or with <code>launchway toggles rules</code>; it is kept as it is here.</p>}
+      {mode === "rollout" && many && <PSub>This rollout has {buckets.length} shares. Edit it in the toggles file or with <code>launchway toggles rules</code>; it is kept as it is here.</PSub>}
       {mode === "rollout" && <p className="sub tg-help">The same key always lands in the same share, so raising the percentage keeps everyone who already has it.</p>}
     </fieldset>
   );
@@ -86,8 +87,8 @@ function RuleEditor({ r, n, count, type, segments, onChange, onMove, onRemove }:
   return (
     <li className="tg-rule">
       <fieldset>
-        <legend>Rule {n + 1}{r.id ? <span className="faint"> ({r.id})</span> : null}: the first rule that matches decides</legend>
-        <p className="sub">{clauses.length === 0 ? "No conditions: this rule matches everyone." : "When all of these are true:"}</p>
+        <legend>Rule {n + 1}{r.id ? <SpanFaint> ({r.id})</SpanFaint> : null}: the first rule that matches decides</legend>
+        <PSub>{clauses.length === 0 ? "No conditions: this rule matches everyone." : "When all of these are true:"}</PSub>
         <ul className="tg-clauses">{clauses.map((c, i) => <ClauseRow key={i} c={c} i={i} segments={segments} onChange={(x) => onChange({ ...r, clauses: clauses.map((y, j) => (j === i ? x : y)) })} onRemove={() => onChange({ ...r, clauses: clauses.filter((_, j) => j !== i) })} />)}</ul>
         <Button sm type="button" onClick={() => onChange({ ...r, clauses: [...clauses, { attribute: "", op: "equals", values: [] }] })}>Add a condition</Button>
         <ServeEditor type={type} label={`Rule ${n + 1} serves`} serve={r.serve} onChange={(serve) => onChange({ ...r, serve })} />
@@ -126,7 +127,7 @@ export function ToggleRules({ type, state, onChange, segments, otherToggles }: {
       </ul>
       {otherToggles.length > 0 && <div><Button sm type="button" onClick={() => onChange({ ...state, prerequisites: [...prereqs, { toggle: "", value: true }] })}>Add a prerequisite</Button></div>}
       <h3>Rules</h3>
-      {rules.length === 0 && <p className="sub">No rules: everyone gets what is below.</p>}
+      {rules.length === 0 && <PSub>No rules: everyone gets what is below.</PSub>}
       <ol className="tg-rules">
         {rules.map((r, i) => (
           <RuleEditor key={r.id ?? i} r={r} n={i} count={rules.length} type={type} segments={segments}

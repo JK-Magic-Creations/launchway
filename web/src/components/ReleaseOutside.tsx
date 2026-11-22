@@ -5,6 +5,7 @@ import { Chip, type Tone } from "../kit/Status";
 import { Button, Sheet } from "../kit/layout";
 import { useNow } from "../live";
 import { releasesApi, type OutsidePublish, type ReleaseView } from "../releasesApi";
+import { SpanHidden, ThCol } from "../kit/bits";
 
 const TONE: Record<OutsidePublish["state"], Tone | undefined> = { pending: "warn", published: "ok", failed: "bad" };
 const WORD: Record<OutsidePublish["state"], string> = { pending: "Waiting", published: "Published", failed: "Failed" };
@@ -31,7 +32,7 @@ export function OutsideSheet({ v, onChanged }: { v: ReleaseView; onChanged: () =
       <p className="rel-hint" style={{ padding: "12px 16px 0" }}>A push mirror that publishes releases makes this release on the host it copies to: the same tag, title, notes and files. If that fails, this release is not affected.</p>
       <div className="rel-table-wrap"><table className="rel-table">
         <caption className="visually-hidden">This release on the outside Git host of each push mirror</caption>
-        <thead><tr><th scope="col">Mirror</th><th scope="col">State</th><th scope="col">Where</th><th scope="col">Tries</th><th scope="col">Updated</th><th scope="col"><span className="visually-hidden">Actions</span></th></tr></thead>
+        <thead><tr><ThCol>Mirror</ThCol><ThCol>State</ThCol><ThCol>Where</ThCol><ThCol>Tries</ThCol><ThCol>Updated</ThCol><ThCol><SpanHidden>Actions</SpanHidden></ThCol></tr></thead>
         <tbody>{list.map((o) => (
           <tr key={o.id}>
             <td>{o.mirror_url ?? o.mirror_id}</td>
@@ -39,7 +40,7 @@ export function OutsideSheet({ v, onChanged }: { v: ReleaseView; onChanged: () =
             <td>{o.url ? <a href={o.url} rel="noreferrer noopener">{o.url}</a> : "not yet"}</td>
             <td className="n">{o.attempts}</td>
             <td title={clock(o.updated_at)}>{ago(o.updated_at, now)}</td>
-            <td>{o.state === "failed" && v.may.outside_retry && <Button sm disabled={busy === o.mirror_id} onClick={() => retry(o)}>Retry<span className="visually-hidden"> on {o.mirror_url ?? o.mirror_id}</span></Button>}</td>
+            <td>{o.state === "failed" && v.may.outside_retry && <Button sm disabled={busy === o.mirror_id} onClick={() => retry(o)}>Retry<SpanHidden> on {o.mirror_url ?? o.mirror_id}</SpanHidden></Button>}</td>
           </tr>))}</tbody></table></div>
       <ErrorBox error={error} />
     </Sheet>

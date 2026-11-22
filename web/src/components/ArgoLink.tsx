@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { argoLink, normalizeArgoUrl, saveArgoUrl, storedArgoUrl } from "../guided/argo";
 import { Icon } from "../kit/Icon";
+import { BtnSm, SpanFaintSmall } from "../kit/bits";
 
 /** The address of the Argo CD console, kept in this browser. */
 export function useArgoUrl(): [string, (u: string) => void] {
@@ -28,8 +29,8 @@ export function OpenInArgo({ application, resource, sm, kind }: {
       <label className="visually-hidden" htmlFor="argo-url">Address of Argo CD</label>
       <input id="argo-url" type="url" placeholder="https://argocd.example.com" value={text} onChange={(e) => setText(e.target.value)} ref={(el) => el?.focus()} />
       <button type="submit" className="btn btn-primary btn-sm" disabled={!ok}>Save and open</button>
-      <button type="button" className="btn btn-sm" onClick={() => setAsking(false)}>Cancel</button>
-      <span className="faint small">Kept in this browser only.</span>
+      <BtnSm onClick={() => setAsking(false)}>Cancel</BtnSm>
+      <SpanFaintSmall>Kept in this browser only.</SpanFaintSmall>
     </form>
   );
 }

@@ -7,6 +7,7 @@ import { navigate } from "../router";
 import { Blank, ErrorPanel, Loading, Progress, scopeHref, scopeLabel, useLoad, WorkPage } from "./common";
 import { Legend, Lines } from "./chartParts";
 import { workApi, type Burndown, type Sprint } from "./workApi";
+import { DivFaintSmall, SpanFaintSmall, SpanHidden, TdNum, ThCol, ThRow } from "../kit/bits";
 
 // Sprints: the list with create, start and complete (with a choice of where unfinished work goes), and one sprint's page with what was
 // committed against what was done, each person's capacity, the advice when the plan is over capacity, and the burndown as a chart and a table.
@@ -35,16 +36,16 @@ export default function Sprints({ scope }: { scope: string }) {
         <div className="sheet tablewrap">
           <table className="table wk-table">
             <caption className="visually-hidden">Sprints of {scopeLabel(scope)}</caption>
-            <thead><tr><th scope="col">Sprint</th><th scope="col">State</th><th scope="col">Dates</th><th scope="col">Committed</th><th scope="col">Completed</th><th scope="col">Items</th><th scope="col"><span className="visually-hidden">Actions</span></th></tr></thead>
+            <thead><tr><ThCol>Sprint</ThCol><ThCol>State</ThCol><ThCol>Dates</ThCol><ThCol>Committed</ThCol><ThCol>Completed</ThCol><ThCol>Items</ThCol><ThCol><SpanHidden>Actions</SpanHidden></ThCol></tr></thead>
             <tbody>
               {sprints.map((s) => (
                 <tr key={s.id}>
-                  <th scope="row"><Link href={`/work/${encodeURIComponent(scope)}/sprints/${encodeURIComponent(s.id)}`}>{s.name}</Link>{s.goal && <div className="faint small">{s.goal}</div>}</th>
+                  <ThRow><Link href={`/work/${encodeURIComponent(scope)}/sprints/${encodeURIComponent(s.id)}`}>{s.name}</Link>{s.goal && <DivFaintSmall>{s.goal}</DivFaintSmall>}</ThRow>
                   <td><Chip tone={tone(s.state)}>{s.state}</Chip></td>
-                  <td className="num">{day(s.start_at)} to {day(s.end_at)}</td>
-                  <td className="num">{s.committed} {s.unit}</td>
-                  <td className="num">{s.completed} {s.unit}</td>
-                  <td className="num">{s.items_done} of {s.items}</td>
+                  <TdNum>{day(s.start_at)} to {day(s.end_at)}</TdNum>
+                  <TdNum>{s.committed} {s.unit}</TdNum>
+                  <TdNum>{s.completed} {s.unit}</TdNum>
+                  <TdNum>{s.items_done} of {s.items}</TdNum>
                   <td className="acts">
                     {s.state === "planned" && <Button sm onClick={() => start(s)}>Start</Button>}
                     {s.state === "active" && <Button sm onClick={() => setCompleting(s)}>Complete</Button>}
@@ -84,7 +85,7 @@ function NewSprint({ scope, onDone, onCancel }: { scope: string; onDone: () => v
         <div className="wk-f span"><label htmlFor={ids.goal}>Goal</label><input id={ids.goal} value={f.goal} onChange={set("goal")} maxLength={300} /></div>
         <div className="wk-f"><label htmlFor={ids.s}>Starts</label><input id={ids.s} type="date" value={f.start} onChange={set("start")} required /></div>
         <div className="wk-f"><label htmlFor={ids.e}>Ends</label><input id={ids.e} type="date" value={f.end} onChange={set("end")} required /></div>
-        <div className="wk-f span"><label htmlFor={ids.cap}>Capacity of each person</label><input id={ids.cap} value={f.capacity} onChange={set("capacity")} placeholder="ada=8, sam=5" /><span className="faint small">One name, an equals sign and a number, separated by commas. Leave empty to plan without capacity.</span></div>
+        <div className="wk-f span"><label htmlFor={ids.cap}>Capacity of each person</label><input id={ids.cap} value={f.capacity} onChange={set("capacity")} placeholder="ada=8, sam=5" /><SpanFaintSmall>One name, an equals sign and a number, separated by commas. Leave empty to plan without capacity.</SpanFaintSmall></div>
       </div>
       <ErrorPanel error={error} />
       <div className="acts"><Button type="submit" kind="pri" disabled={!f.name.trim() || !f.start || !f.end}>Create sprint</Button><Button onClick={onCancel}>Cancel</Button></div>
@@ -137,12 +138,12 @@ export function SprintPage({ scope, id }: { scope: string; id: string }) {
       <Sheet title="Commitment against what is done" pad>
         <div className="tablewrap"><table className="table wk-table">
           <caption className="visually-hidden">Commitment and completion of {s.name}</caption>
-          <thead><tr><th scope="col">Measure</th><th scope="col">{s.unit[0]!.toUpperCase() + s.unit.slice(1)}</th></tr></thead>
+          <thead><tr><ThCol>Measure</ThCol><ThCol>{s.unit[0]!.toUpperCase() + s.unit.slice(1)}</ThCol></tr></thead>
           <tbody>
-            <tr><th scope="row">Committed</th><td className="num">{s.committed}</td></tr>
-            <tr><th scope="row">Completed</th><td className="num">{s.completed}</td></tr>
-            <tr><th scope="row">Added after the sprint started</th><td className="num">{s.added}</td></tr>
-            <tr><th scope="row">Items done</th><td className="num">{s.items_done} of {s.items}</td></tr>
+            <tr><ThRow>Committed</ThRow><TdNum>{s.committed}</TdNum></tr>
+            <tr><ThRow>Completed</ThRow><TdNum>{s.completed}</TdNum></tr>
+            <tr><ThRow>Added after the sprint started</ThRow><TdNum>{s.added}</TdNum></tr>
+            <tr><ThRow>Items done</ThRow><TdNum>{s.items_done} of {s.items}</TdNum></tr>
           </tbody>
         </table></div>
       </Sheet>
@@ -150,9 +151,9 @@ export function SprintPage({ scope, id }: { scope: string; id: string }) {
         {people.length === 0 ? <p className="faint">No capacity was set for this sprint, so there is nothing to compare the commitment with. Edit the sprint to say how much each person can take on.</p> : (
           <div className="tablewrap"><table className="table wk-table">
             <caption className="visually-hidden">Capacity of each person in {s.name}</caption>
-            <thead><tr><th scope="col">Person</th><th scope="col">Capacity ({s.unit})</th></tr></thead>
-            <tbody>{people.map(([n, v]) => <tr key={n}><th scope="row">{n}</th><td className="num">{v}</td></tr>)}
-              <tr><th scope="row">Total</th><td className="num">{s.total_capacity}</td></tr></tbody>
+            <thead><tr><ThCol>Person</ThCol><ThCol>Capacity ({s.unit})</ThCol></tr></thead>
+            <tbody>{people.map(([n, v]) => <tr key={n}><ThRow>{n}</ThRow><TdNum>{v}</TdNum></tr>)}
+              <tr><ThRow>Total</ThRow><TdNum>{s.total_capacity}</TdNum></tr></tbody>
           </table></div>
         )}
       </Sheet>
@@ -167,8 +168,8 @@ export function SprintPage({ scope, id }: { scope: string; id: string }) {
             <Legend items={[{ label: "Remaining", cls: "s-a" }, { label: "Ideal", cls: "s-ideal" }]} />
             <div className="tablewrap"><table className="table wk-table">
               <caption>Burndown of {s.name}, in {bd.data.unit}</caption>
-              <thead><tr><th scope="col">Date</th><th scope="col">Remaining</th><th scope="col">Ideal</th><th scope="col">Done</th></tr></thead>
-              <tbody>{bd.data.points.map((p) => <tr key={p.date}><th scope="row">{p.date}</th><td className="num">{p.remaining}</td><td className="num">{p.ideal}</td><td className="num">{p.done}</td></tr>)}</tbody>
+              <thead><tr><ThCol>Date</ThCol><ThCol>Remaining</ThCol><ThCol>Ideal</ThCol><ThCol>Done</ThCol></tr></thead>
+              <tbody>{bd.data.points.map((p) => <tr key={p.date}><ThRow>{p.date}</ThRow><TdNum>{p.remaining}</TdNum><TdNum>{p.ideal}</TdNum><TdNum>{p.done}</TdNum></tr>)}</tbody>
             </table></div>
           </>
         )}

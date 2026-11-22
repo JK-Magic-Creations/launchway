@@ -11,6 +11,7 @@ import { onLink } from "../../router";
 import { RepoTabs, type RepoTabId } from "../../components/RepoTabs";
 import { ActionPicture, type ActionIcon } from "./icons";
 import "../../styles/code.css";
+import { BtnSm, SpanFaintSmall, SpanMono } from "../../kit/bits";
 
 /** useQuery is the address's query, re-read when the address changes. */
 export function useQuery(): URLSearchParams {
@@ -70,7 +71,7 @@ export function useCopy(): (text: string, what: string) => void {
 export function CopyButton({ text, what, label, icon }: { text: string; what: string; label?: string; icon?: ActionIcon }) {
   const copy = useCopy();
   if (icon) return <button type="button" className="btn btn-sm btn-icon" onClick={() => copy(text, what)} aria-label={`Copy ${what}`} title={label ?? `Copy ${what}`}><ActionPicture name={icon} /></button>;
-  return <button type="button" className="btn btn-sm" onClick={() => copy(text, what)} aria-label={`Copy ${what}`}>{label ?? "Copy"}</button>;
+  return <BtnSm onClick={() => copy(text, what)} aria-label={`Copy ${what}`}>{label ?? "Copy"}</BtnSm>;
 }
 
 /** A commit's message as a link: normal weight, a subdued color, one line cut with an ellipsis; the whole message is
@@ -164,8 +165,8 @@ export function RefSwitcher({ repo, current, onPick, label = "Switch branch or t
           <ul id="refsw-list" role="listbox" aria-label="Matches">
             {list.map((n, i) => (
               <li key={n} id={`refsw-${i}`} role="option" aria-selected={i === at} className={i === at ? "on" : ""} onMouseDown={(e) => { e.preventDefault(); pick(n); }}>
-                <span className="mono">{n.length === 40 ? n.slice(0, 10) : n}</span>{n === current && <span className="faint small"> current</span>}
-                {i >= (items?.length ?? 0) && <span className="faint small"> commit</span>}
+                <SpanMono>{n.length === 40 ? n.slice(0, 10) : n}</SpanMono>{n === current && <SpanFaintSmall> current</SpanFaintSmall>}
+                {i >= (items?.length ?? 0) && <SpanFaintSmall> commit</SpanFaintSmall>}
               </li>
             ))}
             {items && list.length === 0 && <li className="faint small" role="presentation">Nothing is called that. To open a commit, type at least 7 of its characters.</li>}

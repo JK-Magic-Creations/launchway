@@ -4,6 +4,8 @@
 
 import type { IconName } from "../kit/Icon";
 import { terms } from "../terms";
+import { prose } from "../prose";
+const P = await prose("shell.guideData");
 
 export interface GuideEntry {
   title: string;
@@ -15,7 +17,7 @@ export interface GuideEntry {
 export const GUIDE: Record<string, GuideEntry> = {
   "/": {
     title: "You are on Home",
-    text: "Every change you make travels along a line, from the commit to running software. Home shows what needs you, then the changes on their way and where each one is.",
+    text: P.t0,
     does: [
       { icon: "plus", label: "Add a {project}", href: "/projects/new" },
       { icon: "gate", label: "See what is waiting for you", href: "/activity/approvals" },
@@ -24,112 +26,112 @@ export const GUIDE: Record<string, GuideEntry> = {
   },
   "/projects": {
     title: "Your {projects}",
-    text: "A {project} is one piece of software, kept in a Git repository. Open one to see its pipeline, its {runs} and where it is running.",
+    text: P.t1,
     does: [{ icon: "plus", label: "Add a {project}", href: "/projects/new" }],
   },
   "/repositories/:owner/:name/pulls": {
     title: "Pull requests",
-    text: "A pull request is a change on its way from one branch to another. Each row says who wants what merged where, and whether it merges cleanly. Open one to review it and see what it needs.",
+    text: P.t2,
   },
   "/repositories/:owner/:name/pulls/new": {
     title: "A new pull request",
-    text: "Choose the branch with the changes and the branch they go into. You see the commits and whether it merges cleanly before you open it.",
+    text: P.t3,
   },
   "/repositories/:owner/:name/pulls/:number": {
     title: "A pull request",
-    text: "The change, its conversation and its files. The box at the top says in one sentence what it still needs, such as a review or a passing check, and offers only what you can do now. Press j and k to move between files, n and p between comments.",
+    text: P.t4,
     does: [{ icon: "activity", label: "See every {run}", href: "/activity" }],
   },
   "/projects/:name": {
     title: "A project",
-    text: "Everything about one piece of software: what it is, where it comes from, who uses it, what happened to it and what you can do with it.",
+    text: P.t5,
     does: [{ icon: "activity", label: "See every {run}", href: "/activity" }],
   },
   "/pipelines": {
     title: "Pipelines",
-    text: "A pipeline is a set of steps that runs when something happens, such as a push. Each row says which {project} it belongs to and how its last {run} went.",
+    text: P.t6,
     does: [{ icon: "play", label: "Try a pipeline without saving", href: "/playground" }],
   },
   "/depot": {
     title: "Images",
-    text: "Everything your pipelines build lives here. Find an image by its {project}, its repository or its digest, then see which run built it.",
-    does: [{ icon: "search", label: "Find a component in every {run}", href: "/depot/components" }],
+    text: P.t7,
+    does: [{ icon: "search", label: P.t8, href: "/depot/components" }],
   },
   "/depot/components": {
     title: "Components",
-    text: "What is inside your software, found by name across every {run}. Each hit says which run and which {project}, so you know what a new problem touches.",
+    text: P.t9,
     does: [{ icon: "package", label: "Find an image", href: "/depot" }],
   },
   "/deployments": {
     get title() { return terms().say("{Deploys}"); },
-    text: "Where your software is running. Each {environment} shows what is {deploy:did} there and whether it is healthy. Anything that is not healthy tells you why.",
-    does: [{ icon: "plus", label: "Add an {environment}", href: "/config/wizard/add-environment" }],
+    text: P.t10,
+    does: [{ icon: "plus", label: "Add an {environment}", href: P.t11 }],
   },
   "/deployments/environments": {
     title: "{Environments}",
-    text: "An {environment} is a named place your software goes, such as staging or production. Open one to see what runs there and who put it there.",
-    does: [{ icon: "plus", label: "Add an {environment}", href: "/config/wizard/add-environment" }],
+    text: P.t12,
+    does: [{ icon: "plus", label: "Add an {environment}", href: P.t11 }],
   },
   "/activity": {
     title: "Activity",
-    text: "Every {run}, newest first, and everything waiting for a person. Filter by status to find the {runs} that stopped.",
+    text: P.t13,
     does: [{ icon: "gate", label: "Decide what is waiting", href: "/activity/approvals" }],
   },
   "/activity/approvals": {
     title: "Waiting for a decision",
-    text: "A {run} stops here when a rule needs {clearance} from a person. Read what it will do, then say {Go} or {No_go}. Your choice is recorded with your name.",
+    text: P.t14,
     does: [{ icon: "users", label: "See who may give {clearance}", href: "/settings/access" }],
   },
   "/runs/:id": {
     title: "A run",
-    text: "A {run} puts one version of your code through the pipeline. Watch the line fill in from left to right, and choose a step to read its log. If a step stopped, the red box says why in plain words.",
+    text: P.t15,
     does: [{ icon: "activity", label: "All {runs}", href: "/activity" }],
   },
   "/library": {
     title: "The Library",
-    text: "Ready-made pieces for pipelines. Pick a template to start from something that already works.",
+    text: P.t16,
   },
   "/settings": {
     title: "Settings",
-    text: "Set up once, then rarely come back. Start with People and access, then add a {runner} so steps have somewhere to run.",
+    text: P.t17,
     does: [{ icon: "users", label: "People and access", href: "/settings/access" }],
   },
   "/settings/runners": {
     title: "{Runners}",
-    text: "{Runners} are the machines that do the work of your steps. Each says when it was last seen, so you know which are answering.",
+    text: P.t18,
     does: [{ icon: "plus", label: "Add a {runner}", href: "/config/wizard/add-runner" }],
   },
   "/settings/variables": {
     title: "Variables",
-    text: "A variable is a named setting you set once at a level: the {installation}, the {organization}, a {unit} or a {project}. Everything below gets it. A nearer level can set the same name to override it, and a lock keeps it from being overridden. Nothing here is needed to run a pipeline.",
+    text: P.t19,
   },
   "/projects/:name/variables": {
     title: "Variables of this {project}",
-    text: "What reaches this {project} from above, and what it sets itself. The nearest setting wins; struck-through values are what it overrides. Override here with one click, unless a lock above stops it.",
+    text: P.t20,
   },
   "/settings/words": {
     title: "Words",
-    text: "Launchway's own words for its levels and parts: the {guide} and the {logbook}. Choose a set or rename any word; only the labels change.",
+    text: P.t21,
   },
   "/settings/audit": {
     title: "{Logbook}",
-    text: "Every sign-in and every change, with who did it and when. Search for a person, an action or an object.",
+    text: P.t22,
   },
   "/learn": {
     title: "{Learn}",
-    text: "The documentation of the release you are running, here in the product. Choose a path, or search. Nothing leaves this server.",
+    text: P.t23,
   },
   "/learn/:a": {
     title: "{Learn}",
-    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
+    text: P.t24,
   },
   "/learn/:a/:b": {
     title: "{Learn}",
-    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
+    text: P.t24,
   },
   "/kit": {
     title: "The design kit",
-    text: "The parts every Launchway screen is built from, in light and dark. Change the theme with the moon button and look at each part in both.",
+    text: P.t25,
   },
 };
 

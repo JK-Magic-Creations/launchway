@@ -17,6 +17,7 @@ import { onLink } from "../router";
 import { terms } from "../terms";
 import { oneOf, useUrlState } from "../urlState";
 import { organizeApi } from "../organizeApi";
+import { DivLoading, DivPage, SpanFaintSmall, SpanHidden, SpanMono } from "../kit/bits";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
 const EventsPage = lazy(() => import("./Events").then((m) => ({ default: m.EventsPage })));
@@ -88,7 +89,7 @@ function RunsActivity() {
       {counts.running > 0 ? `${counts.running} running now.` : "Nothing is running now."}</>;
 
   return (
-    <div className="page">
+    <DivPage>
       <PageHead eyebrow="Activity" title={terms().say("{Runs}")} sentence={sentence}
         actions={<span className={"vchip " + (live ? "run" : "")}><span className={live ? "st run" : "st idle"} aria-hidden="true" style={{ width: 12, height: 12 }} />{live ? "Live" : "Connecting"}</span>} />
 
@@ -103,7 +104,7 @@ function RunsActivity() {
           {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
         </div>}
         {(projects.data?.length ?? 0) > 1 && (
-          <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span>
+          <label className="select"><SpanHidden>{terms().say("{Project}")}</SpanHidden>
             <select value={project} onChange={(e) => setProject(e.target.value, "push")}>
               <option value="">{terms().say("All {projects}")}</option>
               {projects.data!.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
@@ -111,7 +112,7 @@ function RunsActivity() {
           </label>
         )}
         {laneNames.length > 0 && (
-          <label className="select"><span className="visually-hidden">Lane</span>
+          <label className="select"><SpanHidden>Lane</SpanHidden>
             <select value={lane} onChange={(e) => setLane(e.target.value, "push")}>
               <option value="">All lanes</option>
               {laneNames.map((n) => <option key={n} value={n}>lane {n}</option>)}
@@ -124,26 +125,26 @@ function RunsActivity() {
         <Sheet title={<>How <EntityLink kind="project" name={project} /> has been doing</>} actions={<RateText trend={trend} />}>
           <div className="sh-b row wrap">
             <TrendStrip trend={trend} label={`The last ${trend.ticks.length} runs of ${project}`} />
-            <span className="faint small">oldest to newest{trend.median ? `, a typical run takes ${durationShort(trend.median)}` : ""}</span>
+            <SpanFaintSmall>oldest to newest{trend.median ? `, a typical run takes ${durationShort(trend.median)}` : ""}</SpanFaintSmall>
           </div>
         </Sheet>
       )}
 
       <Suspense fallback={null}><QueuePanel project={project} /></Suspense>
       <ErrorBox error={runs.error} />
-      {list === null && !runs.error && <div className="loading">Loading…</div>}
+      {list === null && !runs.error && <DivLoading>Loading…</DivLoading>}
       {list && list.length === 0 && (
         <Sheet><EmptyState title={filtered ? terms().say("No {runs} match") : terms().say("No {runs} yet")}>
-          {filtered ? "Try another filter." : <>Start one from <Link href="/projects">Code</Link>, push to a watched branch, or try <span className="mono">launchway run</span> in a repository.</>}
+          {filtered ? "Try another filter." : <>Start one from <Link href="/projects">Code</Link>, push to a watched branch, or try <SpanMono>launchway run</SpanMono> in a repository.</>}
         </EmptyState></Sheet>
       )}
-      {list && list.length > 0 && by === "place" && <Suspense fallback={<div className="loading">Loading…</div>}><RunsExplorer runs={list} now={now} me={me?.user ?? ""} /></Suspense>}
+      {list && list.length > 0 && by === "place" && <Suspense fallback={<DivLoading>Loading…</DivLoading>}><RunsExplorer runs={list} now={now} me={me?.user ?? ""} /></Suspense>}
       {list && list.length > 0 && by === "list" && (
-        <Sheet title={terms().say("{Runs}")} actions={<span className="faint small">Newest first. Each dot is a place the change has to pass.</span>}>
+        <Sheet title={terms().say("{Runs}")} actions={<SpanFaintSmall>Newest first. Each dot is a place the change has to pass.</SpanFaintSmall>}>
           {list.map((r) => <RunRow key={r.id} r={r} line={byRun.get(r.id)} now={now} />)}
         </Sheet>
       )}
-    </div>
+    </DivPage>
   );
 }
 
@@ -170,8 +171,8 @@ export function RunRow({ r, line, now }: { r: RunSummary; line?: LaunchLineView;
       </div>
       <LaunchLine stations={stations} compact />
       <div className="now"><Status state={TONE[tone] ?? "skip"} /><span>{sentence}</span>
-        {r.tests && <span className="faint small">{r.tests.failed > 0 ? `${r.tests.failed} of ${r.tests.total} tests failed` : `${r.tests.total} tests`}</span>}
-        {r.findings && r.findings.total > 0 && <span className="faint small">{r.findings.critical + r.findings.high > 0 ? `${r.findings.critical + r.findings.high} serious findings` : `${r.findings.total} findings`}</span>}
+        {r.tests && <SpanFaintSmall>{r.tests.failed > 0 ? `${r.tests.failed} of ${r.tests.total} tests failed` : `${r.tests.total} tests`}</SpanFaintSmall>}
+        {r.findings && r.findings.total > 0 && <SpanFaintSmall>{r.findings.critical + r.findings.high > 0 ? `${r.findings.critical + r.findings.high} serious findings` : `${r.findings.total} findings`}</SpanFaintSmall>}
       </div>
     </a>
   );

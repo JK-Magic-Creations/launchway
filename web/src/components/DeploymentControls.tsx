@@ -5,6 +5,9 @@ import { ErrorBox, Mono } from "./ui";
 import { terms } from "../terms";
 import { freshness } from "./Deployment";
 import { RolloutOverview } from "./RolloutOverview";
+import { prose } from "../prose";
+import { BtnSm, LabelField, SpanFaint } from "../kit/bits";
+const P = await prose("components.DeploymentControls");
 
 // Controlling a deployment's Argo Rollouts rollout: Promote, Promote full,
 // Abort and Retry, and the commands given so far. A command is applied by
@@ -26,10 +29,10 @@ const VERB: Record<RolloutAction, string> = {
 
 /** What each action does, for the button's title. */
 const WHAT: Record<RolloutAction, string> = {
-  promote: "Lets the rollout go on past the pause it waits at.",
-  "promote-full": "Skips the remaining canary steps and analyses: the new version gets all traffic.",
-  abort: "Stops the rollout: all traffic goes back to the stable version.",
-  retry: "Starts the aborted rollout again from its first step.",
+  promote: P.t0,
+  "promote-full": P.t1,
+  abort: P.t2,
+  retry: P.t3,
 };
 
 const ACTIONS: RolloutAction[] = ["promote", "promote-full", "abort", "retry"];
@@ -171,22 +174,22 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
       <h4 className="h-xs">Control the rollout</h4>
       {uncertain && anyEnabled && (
         <p className="dctl-uncertain" role="note">
-          {terms().say("What is shown may be out of date. The command will be applied when a {deploy:do} {runner} reaches the cluster, and only if the rollout is still where it is shown; you can withdraw it until then.")}
+          {terms().say(P.t4)}
         </p>
       )}
       {anyEnabled && (
-        <label className="field">
-          <span>Comment <span className="faint">(optional, kept with the command)</span></span>
+        <LabelField>
+          <span>Comment <SpanFaint>{P.t5}</SpanFaint></span>
           <textarea className="dctl-comment" aria-label="Comment on the command" value={comment} maxLength={2000} rows={2}
             onChange={(e) => setComment(e.target.value)} />
-        </label>
+        </LabelField>
       )}
       <ErrorBox error={error} />
       {latest && latest.state !== "withdrawn" && (() => {
         const st = stateOf(latest);
         return (
           <p className={`dctl-last dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : "status"}>
-            Last command, {actionLabel(latest.action).toLowerCase()} by {whoGave(latest)}: {latest.state === "done" && latest.result === "failed" ? "FAILED, it did not take effect (the reason is below)" : st.text}.
+            Last command, {actionLabel(latest.action).toLowerCase()} by {whoGave(latest)}: {latest.state === "done" && latest.result === "failed" ? P.t6 : st.text}.
           </p>
         );
       })()}
@@ -205,26 +208,25 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
         })}
       </div>
       {confirmFull && (
-        <div className="callout callout-bad dctl-confirm" role="alertdialog" aria-label="Confirm full promotion">
+        <div className={P.t7} role="alertdialog" aria-label="Confirm full promotion">
           <span>
-            <strong>Promote {d.service} in {d.environment} fully?</strong> The new version gets all traffic now, and the remaining steps and analyses are skipped.
-            {(d.snapshot?.analysis ?? []).some((a) => a.phase === "Failed" || a.phase === "Error")
-              ? " An analysis of this version has failed: promoting past it ships a version a check rejected."
-              : (d.snapshot?.analysis ?? []).some((a) => a.phase === "Running") ? " An analysis is still running, and promoting stops waiting for it." : ""}
-            {" "}{terms().say("Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or {rollback:do}.")}
-            {!comment.trim() && <strong> Say why in the comment above first: promoting fully needs a reason, which is kept in the {terms().lower("logbook")}.</strong>}
+            <strong>Promote {d.service} in {d.environment} fully?</strong> {P.t8}{(d.snapshot?.analysis ?? []).some((a) => a.phase === "Failed" || a.phase === "Error")
+              ? P.t9
+              : (d.snapshot?.analysis ?? []).some((a) => a.phase === "Running") ? P.t10 : ""}
+            {" "}{terms().say(P.t11)}
+            {!comment.trim() && <strong> {P.t12}{terms().lower("logbook")}.</strong>}
           </span>
           <span className="dctl-confirm-actions">
-            <button type="button" className="btn btn-danger dctl-full-confirm" disabled={busy || !comment.trim()} onClick={() => { setConfirmFull(false); give("promote-full"); }}>Yes, promote fully</button>
+            <button type="button" className={P.t13} disabled={busy || !comment.trim()} onClick={() => { setConfirmFull(false); give("promote-full"); }}>Yes, promote fully</button>
             <button type="button" className="btn" disabled={busy} onClick={() => setConfirmFull(false)}>Not yet</button>
           </span>
         </div>
       )}
       {confirmAbort && (
-        <div className="callout callout-bad dctl-confirm" role="alertdialog" aria-label="Confirm abort">
-          <span>Abort the rollout of {d.service} in {d.environment}? All traffic goes back to the stable version.</span>
+        <div className={P.t7} role="alertdialog" aria-label="Confirm abort">
+          <span>Abort the rollout of {d.service} in {d.environment}{P.t14}</span>
           <span className="dctl-confirm-actions">
-            <button type="button" className="btn btn-danger dctl-abort-confirm" disabled={busy} onClick={() => give("abort")}>Yes, abort</button>
+            <button type="button" className={P.t15} disabled={busy} onClick={() => give("abort")}>Yes, abort</button>
             <button type="button" className="btn" disabled={busy} onClick={() => setConfirmAbort(false)}>Keep it going</button>
           </span>
         </div>
@@ -243,7 +245,7 @@ function whoGave(c: CommandView): string {
   switch (c.origin) {
     case "step": return `step ${c.step}`;
     case "pauses": return `step ${c.step} (pauses: promote)`;
-    case "on_cancel": return terms().say("canceling the {run} (on_cancel: abort)");
+    case "on_cancel": return terms().say(P.t16);
     default: return c.actor;
   }
 }
@@ -254,7 +256,7 @@ function stateOf(c: CommandView): { text: string; tone: string } {
     case "pending":
       return c.detail
         ? { text: `handed back: ${c.detail}; it will be tried again`, tone: "warn" }
-        : { text: terms().say("waiting for a {deploy:do} {runner} to take it"), tone: "wait" };
+        : { text: terms().say(P.t17), tone: "wait" };
     case "taken":
       return { text: `taken by ${c.taken_by || terms().say("a {deploy:do} {runner}")}`, tone: "run" };
     case "withdrawn":
@@ -291,11 +293,11 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
               <div className="dcmd-head">
                 <strong>{actionLabel(c.action)}</strong>
                 <span>by {whoGave(c)}</span>
-                <span className="faint" title={clock(c.at)}>{ago(c.at, now)}</span>
+                <SpanFaint title={clock(c.at)}>{ago(c.at, now)}</SpanFaint>
                 <span className={`dpill dpill-${st.tone}`}>{c.state === "done" ? (c.result ?? "done").replace(/_/g, " ") : c.state}</span>
               </div>
               {c.comment && <blockquote className="approval-comment">{c.comment}</blockquote>}
-              <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <span className="faint">, {clock(c.done_at)}</span> : null}.</div>
+              <div className={`dcmd-state dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : undefined}>{st.text.replace(/^./, (x) => x.toUpperCase())}{c.done_at && c.state !== "pending" && c.state !== "taken" ? <SpanFaint>, {clock(c.done_at)}</SpanFaint> : null}.</div>
               <div className="dep-notes">
                 <span>for the rollout {c.expect.step !== undefined ? <>{terms().say("at {canary} step")} {c.expect.step + 1}{c.expect.paused ? ", paused" : ""}</> : c.expect.paused ? "paused" : "as it was"}</span>
                 {c.expect.pod_hash && <span>pod template <Mono>{c.expect.pod_hash}</Mono></span>}
@@ -303,7 +305,7 @@ function CommandList({ run, d, now, commands, controls, onChange }: {
               </div>
               {c.state === "pending" && controls?.withdraw && (
                 <div>
-                  <button type="button" className="btn btn-sm" disabled={busy === c.id} onClick={() => withdraw(c)}>Withdraw</button>
+                  <BtnSm disabled={busy === c.id} onClick={() => withdraw(c)}>Withdraw</BtnSm>
                 </div>
               )}
               {error?.id === c.id && <ErrorBox error={error.e} />}

@@ -4,10 +4,13 @@ import { actionOf, guideApi, type GuideStep } from "../../guideApi";
 import { importApi, type Connection, type ImportItem, type SourceRequest } from "../../mirrors";
 import { Mono } from "../../components/ui";
 import { Unavailable, Wingman } from "./Frame";
+import { prose } from "../../prose";
+import { BtnPrimary, LabelField, SpanFaint } from "../../kit/bits";
+const P = await prose("pages.guide.ImportStep");
 
 type Phase = "choose" | "listing" | "pick" | "running" | "done";
 
-const msg = (e: unknown) => (e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Launchway could not be reached. Try again shortly.");
+const msg = (e: unknown) => (e instanceof ApiError ? e.message : e instanceof Error ? e.message : P.t0);
 
 /** Step 7: bring repositories in from another Git server. A connection (address and a token, pasted once where this server can keep it,
  * or named as a variable), the list found, a choice of all or some, then each one copied and checked ref by ref with a retry for failures. */
@@ -60,20 +63,19 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
   return (
     <>
       <p>{step.summary}</p>
-      <Wingman learn={{ label: "Learn more about importing and mirroring", slug: "reference/cli", anchor: "launchway-repos-import-verify-and-connection" }}>
-        I copy every branch, tag and note from the other server and compare them, ref by ref, with the source. Nothing on the other server changes. Keep each repository a mirror while people move over, or take it
-        over at once; the same thing for a whole server is <code>launchway repos import-all --connection NAME</code>.
+      <Wingman learn={{ label: P.t1, slug: "reference/cli", anchor: P.t2 }}>
+        {P.t3}<code>{P.t4}</code>.
       </Wingman>
       <Unavailable action={add} />
       {add?.available && phase === "choose" && (
         <>
           {conns && conns.length > 0 && (
             <form className="gd-form" onSubmit={(e) => { e.preventDefault(); void list(); }} aria-label="Choose what to import">
-              <label className="field"><span>Server to import from</span>
-                <select value={conn} onChange={(e) => setConn(e.target.value)}>{conns.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.kind} {c.base_url})</option>)}</select></label>
-              <label className="field"><span>Only this user or organization (empty: everything the token can see)</span><input value={owner} onChange={(e) => setOwner(e.target.value)} /></label>
-              <label className="check"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> Keep each one a pull mirror of its source (the staged move), instead of taking it over now</label>
-              <div><button type="submit" className="btn btn-primary" disabled={!conn}>Find the repositories</button></div>
+              <LabelField><span>Server to import from</span>
+                <select value={conn} onChange={(e) => setConn(e.target.value)}>{conns.map((c) => <option key={c.name} value={c.name}>{c.name} ({c.kind} {c.base_url})</option>)}</select></LabelField>
+              <LabelField><span>{P.t5}</span><input value={owner} onChange={(e) => setOwner(e.target.value)} /></LabelField>
+              <label className="check"><input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} /> {P.t6}</label>
+              <div><BtnPrimary disabled={!conn}>Find the repositories</BtnPrimary></div>
             </form>
           )}
           <AddConnection pasteAction={paste} first={conns?.length === 0} onAdded={(n) => { setConn(n); void load(); onChange(); }} />
@@ -96,7 +98,7 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
                 <li key={p.source}>
                   {phase === "pick" && p.action !== "skip" && <input type="checkbox" id={"pick-" + p.source} checked={picked.has(p.source)} onChange={() => toggle(p.source)} aria-label={`Import ${p.source}`} />}
                   {phase === "pick" && p.action !== "skip" ? <label htmlFor={"pick-" + p.source}><Mono>{p.source}</Mono></label> : <Mono>{p.source}</Mono>}
-                  <span className="faint"> {p.action === "skip" ? `left alone: ${p.reason}` : p.visibility}</span>
+                  <SpanFaint> {p.action === "skip" ? `left alone: ${p.reason}` : p.visibility}</SpanFaint>
                   {r && (
                     <span role={r.state === "failed" ? "alert" : undefined}> {r.state === "verified" ? <strong>verified: {r.hosted_refs} of {r.source_refs} refs equal</strong>
                       : r.state === "queued" ? "copying and checking…" : <>{r.state}: {r.error}{r.differences?.length ? ` (${r.differences.join("; ")})` : ""}</>}</span>
@@ -111,7 +113,7 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
               <button type="button" className="btn" onClick={() => setPhase("choose")}>Back</button>
             </div>
           )}
-          {phase === "running" && <div className="gd-choices"><span role="status">Copying and checking, one at a time…</span><button type="button" className="btn" onClick={() => { stop.current = true; }}>Stop after this one</button></div>}
+          {phase === "running" && <div className="gd-choices"><span role="status">{P.t7}</span><button type="button" className="btn" onClick={() => { stop.current = true; }}>Stop after this one</button></div>}
           {phase === "done" && (
             <div aria-live="polite">
               <div className={"callout " + (failed.length ? "callout-bad" : "callout-ok")}>
@@ -152,17 +154,17 @@ function AddConnection({ pasteAction, first, onAdded }: { pasteAction: ReturnTyp
     <details open={first}>
       <summary>Add a server to import from</summary>
       <form className="gd-form" onSubmit={submit} aria-label="Add a server to import from">
-        <label className="field"><span>A name for it</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="oldgit" required /></label>
-        <label className="field"><span>What kind of server</span><select value={kind} onChange={(e) => setKind(e.target.value)}><option value="gitea">Gitea</option><option value="forgejo">Forgejo</option></select></label>
-        <label className="field"><span>Its address</span><input value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://git.example.com" required /></label>
+        <LabelField><span>A name for it</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="oldgit" required /></LabelField>
+        <LabelField><span>What kind of server</span><select value={kind} onChange={(e) => setKind(e.target.value)}><option value="gitea">Gitea</option><option value="forgejo">Forgejo</option></select></LabelField>
+        <LabelField><span>Its address</span><input value={base} onChange={(e) => setBase(e.target.value)} placeholder="https://git.example.com" required /></LabelField>
         <fieldset className="field"><legend>The access token</legend>
-          <label className="check"><input type="radio" name="gd-how" checked={how === "paste"} disabled={!canPaste} onChange={() => setHow("paste")} /> Paste it now, once (kept in a file only this server can read; never shown again)</label>
+          <label className="check"><input type="radio" name="gd-how" checked={how === "paste"} disabled={!canPaste} onChange={() => setHow("paste")} /> {P.t8}</label>
           {!canPaste && <p className="faint">Not available here: {pasteAction?.reason}</p>}
-          <label className="check"><input type="radio" name="gd-how" checked={how === "env"} onChange={() => setHow("env")} /> Name the environment variable of the server that holds it</label>
+          <label className="check"><input type="radio" name="gd-how" checked={how === "env"} onChange={() => setHow("env")} /> {P.t9}</label>
         </fieldset>
-        {how === "paste" && canPaste && <label className="field"><span>The token</span><input type="password" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" required /></label>}
-        {how === "env" && <label className="field"><span>Variable name</span><input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="OLDGIT_TOKEN" /></label>}
-        <p className="faint">An address on a private network is refused until an administrator lists it in <code>forge.mirror_allow</code>; the refusal says so.</p>
+        {how === "paste" && canPaste && <LabelField><span>The token</span><input type="password" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" required /></LabelField>}
+        {how === "env" && <LabelField><span>Variable name</span><input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="OLDGIT_TOKEN" /></LabelField>}
+        <p className="faint">{P.t10}<code>forge.mirror_allow</code>; the refusal says so.</p>
         {err && <div className="callout callout-bad" role="alert">{err}</div>}
         <div><button type="submit" className="btn" disabled={busy || !name.trim() || !base.trim()}>{busy ? "Adding…" : "Add server"}</button></div>
       </form>

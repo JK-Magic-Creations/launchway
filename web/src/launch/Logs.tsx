@@ -4,6 +4,7 @@ import { announce } from "../kit/announce";
 import { useNow } from "../live";
 import { launchApi, type LNode, type LogLine, type LogQuery, type TreeView } from "../launchApi";
 import { terms } from "../terms";
+import { BtnSm } from "../kit/bits";
 
 const MAX_LINES = 4000;
 const RANGES: [string, string, number][] = [["all", "All that was read", 0], ["5m", "Last 5 minutes", 300], ["15m", "Last 15 minutes", 900], ["1h", "Last hour", 3600]];
@@ -78,7 +79,7 @@ function Pane({ title, lines, state, notes, error, search, wrap, interleaved, fo
           </div>
         ))}
       </div>
-      {!stick && <button type="button" className="btn btn-sm" onClick={() => { setStick(true); if (box.current) box.current.scrollTop = box.current.scrollHeight; }}>Jump to the end</button>}
+      {!stick && <BtnSm onClick={() => { setStick(true); if (box.current) box.current.scrollTop = box.current.scrollHeight; }}>Jump to the end</BtnSm>}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ErrorBox } from "./ui";
 import { InputsForm } from "./InputsForm";
 import { checkValue, initialValue, triggersApi, type InputsInfo, type InputValue } from "../triggers";
+import { DivLoading } from "../kit/bits";
 
 export interface StartInputsState {
   info: InputsInfo | null;
@@ -80,7 +81,7 @@ export function useStartInputs(project: string, ref: string): StartInputsState {
 export function StartInputs({ state }: { state: StartInputsState }) {
   const { info, loadErr } = state;
   if (loadErr) return <ErrorBox error={loadErr} />;
-  if (!info) return <div className="loading">Reading the pipeline's inputs…</div>;
+  if (!info) return <DivLoading>Reading the pipeline's inputs…</DivLoading>;
   if (info.problems?.length) {
     return (
       <div className="callout callout-bad" role="alert">

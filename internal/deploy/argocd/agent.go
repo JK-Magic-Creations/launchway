@@ -30,6 +30,8 @@ type Agent struct {
 	// commit before asking it to sync anyway; default 60s. RunningTimeout is
 	// how long it waits for a sync already running to end; default 2m.
 	SeeTimeout, RunningTimeout time.Duration
+	// SeeEvery is how often an action that waits for Argo CD to see a new commit looks again; default 2s.
+	SeeEvery time.Duration
 	// WindowEvery is how often an action held by a sync window looks again;
 	// default 30s.
 	WindowEvery time.Duration
@@ -536,9 +538,17 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
-		case <-time.After(2 * time.Second):
+		case <-time.After(a.seeEvery()):
 		}
 	}
+}
+
+// seeEvery is how often an action waiting for Argo CD to see a commit looks again.
+func (a *Agent) seeEvery() time.Duration {
+	if a.SeeEvery > 0 {
+		return a.SeeEvery
+	}
+	return 2 * time.Second
 }
 
 // Observe reads what a watched deployment's application, rollout and

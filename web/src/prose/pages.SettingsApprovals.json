@@ -1,0 +1,14 @@
+{
+ "t0": "Approvals: who may approve their own runs",
+ "t1": "stops a run until a person says ",
+ "t2": "the person who started the run may not give it",
+ "t3": "once people sign in, so a second pair of eyes always looks at a change before it goes further. They may still say ",
+ "t4": ". Without sign-in everyone is the same person, so giving ",
+ "t5": "This also decides who may promote or retry a deployment on a protected {environment}. In force now:",
+ "t6": "Yes without sign-in, no with sign-in.",
+ "t7": "The person who started a {run} cannot give it.",
+ "t8": "People may give it for their own runs",
+ "t9": "Faster for small teams, with no second look.",
+ "t10": "Saved. It applies within a few seconds and is in the history of the ",
+ "t11": "Only an administrator can change this. Ask one if you need to give "
+}

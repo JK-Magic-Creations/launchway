@@ -1,0 +1,12 @@
+{
+ "t0": "It may have been removed, or you may not be allowed to see it.",
+ "t1": "Nothing has been {deploy:did} here yet.",
+ "t2": "Everything {deploy:did} here is running as expected.",
+ "t3": "The matrix of all {environments}",
+ "t4": "A {run} {deploy:does} here when it reaches a deploy step for this {environment}.",
+ "t5": "; protected: the person who started a run may not promote or retry its deployments here",
+ "t6": "No {deploy:do} {runner} watches it, so a deployment here cannot finish.",
+ "t7": "No {project} {deploy:does} here yet.",
+ "t8": "Every {run} waiting for the lock is kept.",
+ "t9": "A {run} waiting for the lock is skipped when a newer run of the same service starts waiting."
+}

@@ -2,6 +2,7 @@ import { lazy } from "react";
 import type { Approvals } from "../live";
 import { Empty, Link } from "../components/ui";
 import { locate } from "./model";
+import { DivPage } from "../kit/bits";
 
 // Pages load when first opened, so the first page needs less script (the
 // run page with its charts is the largest).
@@ -203,6 +204,6 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
 }
 
 function NotFound() {
-  return <div className="page"><Empty title="Nothing here">This page does not exist. <Link href="/">Go to Home</Link>.</Empty></div>;
+  return <DivPage><Empty title="Nothing here">This page does not exist. <Link href="/">Go to Home</Link>.</Empty></DivPage>;
 }
 

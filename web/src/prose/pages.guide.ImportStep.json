@@ -1,0 +1,13 @@
+{
+ "t0": "Launchway could not be reached. Try again shortly.",
+ "t1": "Learn more about importing and mirroring",
+ "t2": "launchway-repos-import-verify-and-connection",
+ "t3": "I copy every branch, tag and note from the other server and compare them, ref by ref, with the source. Nothing on the other server changes. Keep each repository a mirror while people move over, or take it over at once; the same thing for a whole server is ",
+ "t4": "launchway repos import-all --connection NAME",
+ "t5": "Only this user or organization (empty: everything the token can see)",
+ "t6": "Keep each one a pull mirror of its source (the staged move), instead of taking it over now",
+ "t7": "Copying and checking, one at a time…",
+ "t8": "Paste it now, once (kept in a file only this server can read; never shown again)",
+ "t9": "Name the environment variable of the server that holds it",
+ "t10": "An address on a private network is refused until an administrator lists it in "
+}
